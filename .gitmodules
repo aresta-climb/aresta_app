@@ -4,3 +4,6 @@
 [submodule "libs"]
 	path = libs
 	url = https://github.com/acecmg/kmon-api.git
+[submodule "kmon_api"]
+	path = kmon_api
+	url = https://github.com/acecmg/kmon_api.git
