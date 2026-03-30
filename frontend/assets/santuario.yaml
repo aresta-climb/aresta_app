@@ -1,0 +1,574 @@
+id: br-mg-santa-luzia-santuario
+nome: Santuário
+creditos:
+- Edição Janeiro 2024
+arquivos_markdown:
+- titulo: Capa
+  conteudo: "# GUIA DE ESCALADA SANTUÁRIO\n\n![Capa](imagens/pagina_0_imagem_0.webp)\n\
+    \n**Edição:** Janeiro 2024  \n**Versão:** 1"
+- titulo: Como Chegar
+  conteudo: '# COMO CHEGAR (HOW TO ACCESS)
+
+
+    **Coordenadas (coordinates):**
+
+    - **Bar do Sr. João:** [R. Santo Antônio - Ribeirão da Mata, Santa Luzia - MG](https://maps.google.com/?q=-19.7061,-43.8741)
+
+    - **Santuário:** 19°42''25.0"S, 43°52''17.3"W
+
+
+    **Distâncias (distances):**
+
+    - Belo Horizonte (centro) - 33 km
+
+    - Confins - 24 km
+
+
+    Estacione o carro perto do **Bar do Sr. João**, e faça o restante da trilha a
+    pé. Desça a rua principal até encontrar a linha de trem, e comece uma trilha rápida
+    de **900 m**. O Santuário encontra-se à direita da linha de trem.
+
+
+    *Park your car near **Sr João''s Bar** and walk the rest of the trail. Go down
+    the main road until you reach the railway line and start a quick **900 metres**
+    walk. The Sanctuary is to the right of the railway line.*
+
+
+    ![Mapa de Acesso](imagens/pagina_2_imagem_0.webp)
+
+    ![Trilha](imagens/pagina_2_imagem_1.webp)
+
+    ![Placa Pare](imagens/pagina_2_imagem_2.webp)'
+- titulo: Comércio Local
+  conteudo: '# COMÉRCIO LOCAL (LOCAL BUSINESS)
+
+
+    ## BAR DO SR. JOÃO
+
+
+    - **Endereço (Address):** Rua Santo Antônio - Ribeirão da Mata, Santa Luzia -
+    MG
+
+    - **Recomendações:** Pastel frito na hora, sucos, açaí, refrigerantes, cerveja
+    e almoço (necessita agendar com antecedência).
+
+
+    *Recommendations: freshly fried pastel, juices, açaí, sodas, beer and lunch (you
+    need to make an appointment in advance).*
+
+
+    ![Sr. João 1](imagens/pagina_3_imagem_0.webp)
+
+    ![Sr. João 2](imagens/pagina_3_imagem_1.webp)
+
+    ![Sr. João 3](imagens/pagina_3_imagem_2.webp)'
+- titulo: Informações
+  conteudo: '# INFORMAÇÕES (INFORMATIONS)
+
+
+    Dentro do domo do Santuário não chove, e só bate sol no início da manhã, por isso
+    é um local perfeito para escalada durante todo o ano.
+
+
+    *It doesn''t rain inside the Sanctuary''s dome and the sun only hits it early
+    in the morning, making it a perfect place for climbing all year long.*
+
+
+    - Respeite o local, ele é sagrado para a comunidade. (*Respect the area, it is
+    sacred to the community.*)
+
+    - Leve o seu lixo ao sair. Respeite a fauna e flora do lugar. (*Take out your
+    litter when you leave. Respect the local fauna and flora.*)
+
+    - Não escreva nas pedras. (*Don''t write on the rocks.*)
+
+    - Somente pratique escalada se tiver o domínio da técnica e do uso dos equipamentos.
+    (*Only climb if you have mastered the technique and use of the equipment.*)
+
+
+    ![Escalada 1](imagens/pagina_4_imagem_0.webp)
+
+    ![Logo Climb](imagens/pagina_4_imagem_1.webp)
+
+    ![Logo J Gariglio](imagens/pagina_4_imagem_2.webp)
+
+    ![Logo v15](imagens/pagina_4_imagem_3.webp)'
+- titulo: Como Usar Este Guia
+  conteudo: '# COMO USAR ESTE GUIA (HOW TO USE THIS GUIDE)
+
+
+    Este Guia tem a função de informar, facilitar e divulgar as vias de escalada do
+    Santuário.
+
+    *The purpose of this Guide is to inform, facilitate and disseminate the Sanctuary''s
+    climbing routes.*
+
+
+    Todas as vias possuem placas de identificação em sua base. As vias são divididas
+    em partes (P1, P2, P3, P4), cada uma tem um grau que é cumulativo com a parte
+    anterior.
+
+    *All the routes have nametags at their bases. The tracks are divided into parts
+    (P1, P2, P3, P4), each one has a grade that is cumulative with the previous part.*
+
+
+    ![Guia de Legenda](imagens/pagina_5_imagem_0.webp)'
+- titulo: Mapa dos Setores
+  conteudo: '# MAPA DOS SETORES (MAP OF THE SECTORS)
+
+
+    O Santuário é dividido em três setores principais:
+
+    1. **Setor Clube da Luta**
+
+    2. **Setor Santa Linea**
+
+    3. **Setor Democracia**
+
+
+    ![Mapa Geral](imagens/pagina_6_imagem_0.webp)'
+picos:
+- nome: Santuário
+  estado: Minas Gerais
+  setores:
+  - conteudo:
+      nome: Setor Clube da Luta
+      mapas:
+      - caminho_imagem_mapa: imagens/pagina_8_imagem_0.webp
+      escaladas:
+      - via_esportiva:
+          nome: POLLY SHELBY
+          id_no_mapa: '1'
+          dificuldade: BR_9C
+      - via_esportiva:
+          nome: BLACK DOG
+          id_no_mapa: '2'
+          dificuldade: BR_9C
+      - via_esportiva:
+          nome: INCONSCIENTE COLETIVO
+          id_no_mapa: '3'
+          dificuldade: BR_9B
+      - via_esportiva:
+          nome: DISCÍPULOS DE BIBIU
+          id_no_mapa: '4'
+          dificuldade: BR_9A
+      - via_esportiva:
+          nome: EL NINHO
+          id_no_mapa: '5'
+          dificuldade: BR_7C
+      - via_multiplas_enfiadas:
+          nome: O PECADOR
+          id_no_mapa: '6'
+          dificuldade_maxima: BR_8B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+      - via_multiplas_enfiadas:
+          nome: PROMESSA É DÍVIDA
+          id_no_mapa: '7'
+          dificuldade_maxima: BR_8A
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8A
+      - via_multiplas_enfiadas:
+          nome: RINS DE PEDRA
+          id_no_mapa: '8'
+          dificuldade_maxima: BR_8B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_5SUP
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+      - via_multiplas_enfiadas:
+          nome: PAGADOR DE PROMESSA
+          id_no_mapa: '9'
+          dificuldade_maxima: BR_8B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_8A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+      - via_esportiva:
+          nome: BIBI CORAGEM
+          id_no_mapa: '10'
+          dificuldade: BR_7C
+      - via_esportiva:
+          nome: DE MALANDRO A GRANFINO
+          id_no_mapa: '11'
+          dificuldade: BR_10A
+      - via_esportiva:
+          nome: CLUBE DA LUTA
+          id_no_mapa: '12'
+          dificuldade: BR_9B
+      - via_esportiva:
+          nome: ROLO COMPRESSOR
+          id_no_mapa: '13'
+          dificuldade: BR_9B
+      - via_multiplas_enfiadas:
+          nome: O ESPECIALISTA
+          id_no_mapa: '14'
+          dificuldade_maxima: BR_9C
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_9B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9C
+      - via_esportiva:
+          nome: O GUARDA COSTA
+          id_no_mapa: '15'
+          dificuldade: BR_9B
+      - via_esportiva:
+          nome: MARIA MADALENA
+          id_no_mapa: '16'
+          dificuldade: PROJETO
+      descricao: '# SETOR CLUBE DA LUTA
+
+
+        Logo após o Setor Santa Linea, o Setor Clube da Luta abriga algumas das vias
+        mais difíceis do Santuário.
+
+
+        ![Ação](imagens/pagina_7_imagem_0.webp)'
+  - conteudo:
+      nome: Setor Santa Linea
+      mapas:
+      - caminho_imagem_mapa: imagens/pagina_10_imagem_0.webp
+      escaladas:
+      - via_multiplas_enfiadas:
+          nome: MEU AMIGO CHARLIE BROWN
+          id_no_mapa: '1'
+          dificuldade_maxima: BR_10A
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7C
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_10A
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_10A
+      - via_multiplas_enfiadas:
+          nome: PAI NOSSO
+          id_no_mapa: '2'
+          dificuldade_maxima: BR_9B
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7C
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8C
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_9B
+      - via_multiplas_enfiadas:
+          nome: NEM TUDO É PERFEITO
+          id_no_mapa: '3'
+          dificuldade_maxima: BR_9B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_8B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9B
+      - via_multiplas_enfiadas:
+          nome: DIAS DE LUTA DIAS DE GLÓRIA
+          id_no_mapa: '4'
+          dificuldade_maxima: BR_10A
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_9A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_10A
+      - via_multiplas_enfiadas:
+          nome: MADE IN BRAZIL
+          id_no_mapa: '5'
+          dificuldade_maxima: BR_10B
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_8A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9B
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_10B
+      - via_multiplas_enfiadas:
+          nome: SANTA KLAUSS
+          id_no_mapa: '6'
+          dificuldade_maxima: BR_9C
+          numero_enfiadas: 4
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_8C
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9C
+          - via_esportiva:
+              nome: P3
+              dificuldade: PROJETO
+          - via_esportiva:
+              nome: P4
+              dificuldade: PROJETO
+      - via_esportiva:
+          nome: ÓPANGARE
+          id_no_mapa: '7'
+          dificuldade: BR_9A
+      - via_esportiva:
+          nome: BERBARIDADE MÁXIMA
+          id_no_mapa: '8'
+          dificuldade: BR_8A
+      - via_esportiva:
+          nome: SANTA INQUISIÇÃO
+          id_no_mapa: '9'
+          dificuldade: PROJETO
+      - via_multiplas_enfiadas:
+          nome: TIRANOS DE PLANTÃO
+          id_no_mapa: '10'
+          dificuldade_maxima: BR_7C
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7C
+          - via_esportiva:
+              nome: P2
+              dificuldade: PROJETO
+          - via_esportiva:
+              nome: P3
+              dificuldade: PROJETO
+      - via_multiplas_enfiadas:
+          nome: SANTO GRAU
+          id_no_mapa: '11'
+          dificuldade_maxima: BR_9B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_9B
+          - via_esportiva:
+              nome: P2
+              dificuldade: PROJETO
+      - via_multiplas_enfiadas:
+          nome: SANTA LINEA
+          id_no_mapa: '12'
+          dificuldade_maxima: BR_11A
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_10A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_11A
+          - via_esportiva:
+              nome: P3
+              dificuldade: PROJETO
+      - via_multiplas_enfiadas:
+          nome: SÓ OS LOUCOS SABEM
+          id_no_mapa: '13'
+          dificuldade_maxima: BR_9A
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_8A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9A
+      - via_multiplas_enfiadas:
+          nome: CHÁ NA CARTOLINA
+          id_no_mapa: '14'
+          dificuldade_maxima: BR_9B
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_9B
+      - via_multiplas_enfiadas:
+          nome: AVE MARIA
+          id_no_mapa: '15'
+          dificuldade_maxima: BR_9C
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_9C
+      descricao: '# SETOR SANTA LINEA
+
+
+        O setor central do Santuário, com vias clássicas e técnicas.
+
+
+        ![Ação](imagens/pagina_9_imagem_0.webp)'
+  - conteudo:
+      nome: Setor Democracia
+      mapas:
+      - caminho_imagem_mapa: imagens/pagina_12_imagem_0.webp
+      escaladas:
+      - via_esportiva:
+          nome: O PODER DO ROCAMBOLE
+          id_no_mapa: '1'
+          dificuldade: BR_10A
+      - via_esportiva:
+          nome: TETO DE VIDRO
+          id_no_mapa: '2'
+          dificuldade: BR_9A
+      - via_esportiva:
+          nome: PECADO CAPITAL
+          id_no_mapa: '3'
+          dificuldade: BR_8C
+      - via_esportiva:
+          nome: GÊNESIS
+          id_no_mapa: '4'
+          dificuldade: BR_8B
+      - via_esportiva:
+          nome: VIA INACABADA 1
+          id_no_mapa: '5'
+          dificuldade: INDEFINIDO
+      - via_esportiva:
+          nome: RIBEIRÃO DA MATA
+          id_no_mapa: '6'
+          dificuldade: BR_7B
+      - via_esportiva:
+          nome: SEU JOÃOZITO
+          id_no_mapa: '7'
+          dificuldade: BR_6SUP
+      - via_multiplas_enfiadas:
+          nome: BUFFALO BILL
+          id_no_mapa: '8'
+          dificuldade_maxima: BR_9B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_9A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9B
+      - via_multiplas_enfiadas:
+          nome: HANIBALL
+          id_no_mapa: '9'
+          dificuldade_maxima: BR_9C
+          numero_enfiadas: 3
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_9B
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_9C
+      - via_multiplas_enfiadas:
+          nome: DEMOCRACIA
+          id_no_mapa: '10'
+          dificuldade_maxima: BR_9A
+          numero_enfiadas: 4
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7A
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8A
+          - via_esportiva:
+              nome: P3
+              dificuldade: BR_9A
+          - via_esportiva:
+              nome: P4
+              dificuldade: PROJETO
+      - via_multiplas_enfiadas:
+          nome: DIA DE REIS
+          id_no_mapa: '11'
+          dificuldade_maxima: BR_8B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7C
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+      - via_multiplas_enfiadas:
+          nome: JOANA D'ARC
+          id_no_mapa: '12'
+          dificuldade_maxima: BR_8C
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7B
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8C
+      - via_esportiva:
+          nome: ARTE SACRA
+          id_no_mapa: '13'
+          dificuldade: BR_8A
+      - via_multiplas_enfiadas:
+          nome: SANTA FÉ
+          id_no_mapa: '14'
+          dificuldade_maxima: BR_8B
+          numero_enfiadas: 2
+          enfiadas:
+          - via_esportiva:
+              nome: P1
+              dificuldade: BR_7C
+          - via_esportiva:
+              nome: P2
+              dificuldade: BR_8B
+      - via_esportiva:
+          nome: VIA INACABADA 2
+          id_no_mapa: '15'
+          dificuldade: BR_9A
+      descricao: '# SETOR DEMOCRACIA
+
+
+        O setor mais à direita do Santuário.
+
+
+        ![Ação](imagens/pagina_11_imagem_0.webp)'
