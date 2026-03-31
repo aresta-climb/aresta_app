@@ -128,7 +128,7 @@ class BrowsePage extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
