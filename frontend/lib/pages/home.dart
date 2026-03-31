@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'browse.dart';
+import '../main.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -14,7 +14,7 @@ class HomePage extends StatelessWidget {
     const Color obsidianBrown = Color(0xFF543E35);
     const Color nobleBlack = Color(0xFF1F2128);
 
-    // A little map with data from the options
+    // A little map with data from the crag options
     final List<Map<String, dynamic>> downloadedPicos = [
       {
         'nome': 'Gruta do Baú',
@@ -57,7 +57,7 @@ class HomePage extends StatelessWidget {
         backgroundColor: beastHide, // Using a "Leather/Hide" color for the AppBar
         centerTitle: true,
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.5),
+        shadowColor: Colors.black.withValues(alpha: 0.5),
       ),
 
       // Big main page container
@@ -106,30 +106,28 @@ class HomePage extends StatelessWidget {
                     // Calculate the actual index in the list using modulo
                     final int actualIndex = index % actualCount;
 
-                    // Adding extra right padding only to the last element (Adicionar novo local)
-                    // to create space before the first element loops back around.
+                    /* Adding extra right padding only to the last element (Adicionar novo local)
+                      to create space before the first element loops back around.*/
                     final double rightPadding = (actualIndex == downloadedPicos.length) ? 40.0 : 10.0;
 
-                    //----------------------------------------------------------
-                    // Check if it's the last item in our sequence
-                    // If it is, we'll use this format
+                    /*----------------------------------------------------------
+                      Check if it's the last item in our sequence,
+                      if it is, we'll use this format.*/
                     if (actualIndex == downloadedPicos.length) {
                       return Padding(
                         padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
                         child: InkWell(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const brwose()),
-                            );
+                            // Call helper to switch to the "Explorar" tab when clicked (index 2)
+                            MainNavigationWrapper.switchTab(2);
                           },
                           borderRadius: BorderRadius.circular(24),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.2), // (Adicionar novo local) color
+                              color: Colors.grey.withValues(alpha: 0.2), // (Adicionar novo local) color
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: fishBone.withOpacity(0.3),
+                                color: fishBone.withValues(alpha: 0.3),
                                 width: 2,
                                 style: BorderStyle.solid,
                               ),
@@ -139,14 +137,14 @@ class HomePage extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.add_circle_outline, // Big plus sign
-                                  color: fishBone.withOpacity(0.6),
+                                  color: fishBone.withValues(alpha: 0.6),
                                   size: 80,
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   'Adicionar novo local',
                                   style: TextStyle(
-                                    color: fishBone.withOpacity(0.6),
+                                    color: fishBone.withValues(alpha: 0.6),
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -158,8 +156,8 @@ class HomePage extends StatelessWidget {
                       );
                     }
 
-                    //----------------------------------------------------------
-                    // If it isn't, we'll use this format
+                    /*----------------------------------------------------------
+                      If it isn't, we'll use this other format*/
                     final pico = downloadedPicos[actualIndex];
                     return Padding(
                       padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
@@ -169,7 +167,7 @@ class HomePage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
+                              color: Colors.black.withValues(alpha: 0.4),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -196,7 +194,7 @@ class HomePage extends StatelessWidget {
                                   Text(
                                     pico['local'] as String,
                                     style: TextStyle(
-                                      color: nobleBlack.withOpacity(0.7),
+                                      color: nobleBlack.withValues(alpha: 0.7),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -207,7 +205,7 @@ class HomePage extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: nobleBlack.withOpacity(0.1),
+                                  color: nobleBlack.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Text(
@@ -235,7 +233,7 @@ class HomePage extends StatelessWidget {
                 padding: EdgeInsets.all(20.0),
                 child: Center(
                   child: Text(
-                    'Deslize para ver seus picos',
+                    'Deslize para ver seus downloads',
                     style: TextStyle(
                       color: fishBone,
                       fontStyle: FontStyle.italic,
