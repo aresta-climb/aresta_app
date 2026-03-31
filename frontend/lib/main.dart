@@ -106,10 +106,19 @@ class GPSPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color nobleBlack = Color(0xFF1F2128);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1F2128),
+      backgroundColor: nobleBlack,
       appBar: AppBar(
-        title: const Text('GPS'),
+        title: const Text(
+          'GPS',
+          style: TextStyle(
+            color: nobleBlack,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: const Color(0xFFAE8F68),
         centerTitle: true,
       ),
