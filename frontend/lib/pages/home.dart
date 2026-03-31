@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'browse.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -115,34 +116,43 @@ class HomePage extends StatelessWidget {
                     if (actualIndex == downloadedPicos.length) {
                       return Padding(
                         padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.2), // (Adicionar novo local) color
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: fishBone.withOpacity(0.3),
-                              width: 2,
-                              style: BorderStyle.solid,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const brwose()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withOpacity(0.2), // (Adicionar novo local) color
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: fishBone.withOpacity(0.3),
+                                width: 2,
+                                style: BorderStyle.solid,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_circle_outline, // Big plus sign
-                                color: fishBone.withOpacity(0.6),
-                                size: 80,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Adicionar novo local',
-                                style: TextStyle(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_circle_outline, // Big plus sign
                                   color: fishBone.withOpacity(0.6),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                  size: 80,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Adicionar novo local',
+                                  style: TextStyle(
+                                    color: fishBone.withOpacity(0.6),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
