@@ -1,17 +1,25 @@
-# frontend
+# Kmon App (Frontend)
 
-A new Flutter project.
+Aplicativo de escalada para centralizar informações de picos.
 
-## Getting Started
+## Visão Geral
 
-This project is a starting point for a Flutter application.
+O Kmon é um guia de escalada digital que permite aos usuários baixar informações sobre picos de escalada locais para acesso offline, visualizar mapas (GPS) e explorar novos locais.
 
-A few resources to get you started if this is your first Flutter project:
+## Tecnologias
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Flutter**: Framework para desenvolvimento cross-platform.
+- **Dart**: Linguagem de programação.
+- **Protocol Buffers**: método de serialização de dados estruturados.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Funcionalidades Atuais
+
+- **Home**: Visualização em carrossel dos guias baixados.
+- **Explorar**: Lista de picos disponíveis para download.
+- **GPS (Placeholder)**: Futura funcionalidade de localização.
+
+## Como começar
+
+1. Certifique-se de ter o Flutter instalado.
+2. Execute `flutter pub get` para instalar as dependências.
+3. Execute `flutter run` para iniciar o aplicativo.
