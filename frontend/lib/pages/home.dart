@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../functions/home_functions.dart';
+import '../functions/common_functions.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -10,7 +11,7 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: nobleBlack,
-      appBar: buildHomeAppBar(),
+      appBar: buildCommonAppBar('Home'),
       body: buildHomeBody(downloadedPicos),
     );
   }

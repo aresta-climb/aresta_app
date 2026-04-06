@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-
-// Color palette
-const Color beastHide = Color(0xFFAE8F68);
-const Color nobleBlack = Color(0xFF1F2128);
-const Color fishBone = Color(0xFFE4DAC5);
+import 'common_functions.dart';
 
 List<Map<String, String>> getAvailableCrags() {
   // A little map with data from the crag options
@@ -15,24 +11,6 @@ List<Map<String, String>> getAvailableCrags() {
     {'name': 'Serra do Cipó', 'location': 'Santana do Riacho, MG'},
     {'name': 'Ouro Preto', 'location': 'Ouro Preto, MG'},
   ];
-}
-
-PreferredSizeWidget buildBrowseAppBar() {
-  return AppBar(
-    title: const Text(
-      'Explorar Locais',
-      style: TextStyle(
-        color: nobleBlack,
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-      ),
-    ),
-    backgroundColor: beastHide,
-    centerTitle: true,
-    elevation: 4,
-    shadowColor: Colors.black.withValues(alpha: 0.5),
-  );
 }
 
 Widget buildBrowseBody(List<Map<String, String>> availableCrags) {

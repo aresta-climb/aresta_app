@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../functions/browse_functions.dart';
+import '../functions/common_functions.dart';
 
 class BrowsePage extends StatelessWidget {
   const BrowsePage({super.key});
@@ -10,18 +11,8 @@ class BrowsePage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: nobleBlack,
-      appBar: buildBrowseAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            buildBrowseSectionTitle('Picos Disponíveis'),
-            const SizedBox(height: 20),
-            ...availableCrags.map((crag) => buildCragListItem(crag)),
-          ],
-        ),
-      ),
+      appBar: buildCommonAppBar('Explorar Locais'),
+      body: buildBrowseBody(availableCrags),
     );
   }
 }

@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
-
-// Color palette
-const Color fishBone = Color(0xFFE4DAC5);
-const Color sycoraxBronze = Color(0xFFC9B595);
-const Color beastHide = Color(0xFFAE8F68);
-const Color leatherWork = Color(0xFF896449);
-const Color obsidianBrown = Color(0xFF543E35);
-const Color nobleBlack = Color(0xFF1F2128);
+import 'common_functions.dart';
 
 List<Map<String, dynamic>> getDownloadedPicos() {
   // A little map with data from the crag options
@@ -33,23 +26,9 @@ List<Map<String, dynamic>> getDownloadedPicos() {
   ];
 }
 
-PreferredSizeWidget buildHomeAppBar() {
-  return AppBar(
-    title: const Text(
-      'Home',
-      style: TextStyle(
-        color: nobleBlack, // Text contrast on the brown AppBar
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-      ),
-    ),
-    backgroundColor: beastHide,
-    centerTitle: true,
-    elevation: 4,
-    shadowColor: Colors.black.withValues(alpha: 0.5),
-  );
-}
+const Color sycoraxBronze = Color(0xFFC9B595);
+const Color leatherWork = Color(0xFF896449);
+const Color obsidianBrown = Color(0xFF543E35);
 
 Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
   // Big main page container
@@ -71,7 +50,7 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          buildSectionHeader('Guias Baixados'),
+          buildSectionHeader('Guias Recentes'),
           buildPicosCarousel(downloadedPicos),
           buildFooterInstructions('Deslize para ver seus downloads'),
         ],

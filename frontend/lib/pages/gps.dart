@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../functions/gps_functions.dart';
+import '../functions/common_functions.dart';
 
 class GPSPage extends StatelessWidget {
   const GPSPage({super.key});
@@ -8,7 +9,7 @@ class GPSPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: nobleBlack,
-      appBar: buildGPSAppBar(),
+      appBar: buildCommonAppBar('GPS'),
       body: buildGPSBody(),
     );
   }
