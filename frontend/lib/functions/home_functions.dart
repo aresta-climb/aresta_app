@@ -9,29 +9,50 @@ List<Map<String, dynamic>> getDownloadedPicos() {
       'nome': 'Gruta do Baú',
       'local': 'Pedro Leopoldo, MG',
       'vias': '100+',
-      'color': leatherWork,
     },
     {
       'nome': 'Pedra Grande',
       'local': 'Igarapé, MG',
       'vias': '150+',
-      'color': beastHide,
     },
     {
       'nome': 'Santuário',
       'local': 'Santa Luzia, MG',
       'vias': '40+',
-      'color': sycoraxBronze,
+    },
+    {
+      'nome': 'Lapinha',
+      'local': 'Lagoa Santa, MG',
+      'vias': '80+',
+    },
+    {
+      'nome': 'Serra do Cipó',
+      'local': 'Santana do Riacho, MG',
+      'vias': '1000+',
     },
   ];
 }
 
-const Color sycoraxBronze = Color(0xFFC9B595);
+// Earthy Color Palette for Cards
 const Color leatherWork = Color(0xFF896449);
 const Color obsidianBrown = Color(0xFF543E35);
+const Color slateStone = Color(0xFF4A4E5A);
+const Color mossRock = Color(0xFF5B614D);
+const Color clayEarth = Color(0xFF7D4F43);
+const Color weatheredIron = Color(0xFF3E4247);
+
+final List<Color> cardPalette = [
+  leatherWork,
+  slateStone,
+  mossRock,
+  clayEarth,
+  weatheredIron,
+];
 
 Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
-  // Big main page container
+  // Take only the 4 most recent crags(first 4 in the list)
+  final List<Map<String, dynamic>> recentPicos = downloadedPicos.take(4).toList();
+
   return Container(
     width: double.infinity,
     height: double.infinity,
@@ -47,14 +68,82 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
       ),
     ),
     child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(), // Ensures it always bounces/scrolls
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 20),
           buildSectionHeader('Guias Recentes'),
-          buildPicosCarousel(downloadedPicos),
+          buildPicosCarousel(recentPicos),
           buildFooterInstructions('Deslize para ver seus downloads'),
+          const SizedBox(height: 10),
+          _buildAllGuidesDropdown(downloadedPicos),
+          const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
         ],
       ),
+    ),
+  );
+}
+
+Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
+  return Theme(
+    data: ThemeData(
+      dividerColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+    ),
+    child: ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 24),
+      iconColor: fishBone,
+      collapsedIconColor: fishBone,
+      title: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: fishBone.withValues(alpha: 0.1), width: 1),
+          ),
+        ),
+        child: const Text(
+          'Todos os guias baixados',
+          style: TextStyle(
+            color: fishBone,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+      backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded
+      collapsedBackgroundColor: Colors.transparent,
+      children: [
+        ...picos.map((pico) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+              title: Text(
+                pico['nome'],
+                style: const TextStyle(color: fishBone, fontSize: 15),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
+              onTap: () {
+                // TODO: Implement navigation to the selected pico's guide
+                print('Selected: ${pico['nome']}');
+              },
+            )),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+          leading: const Icon(Icons.add_circle_outline, color: beastHide, size: 20),
+          title: const Text(
+            'Adicionar novo local',
+            style: TextStyle(
+              color: beastHide,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          onTap: () {
+            // Switch to the "Explorar" tab when clicked (index 2)
+            MainNavigationWrapper.switchTab(2);
+          },
+        ),
+      ],
     ),
   );
 }
@@ -74,9 +163,11 @@ Widget buildSectionHeader(String title) {
   );
 }
 
-Widget buildPicosCarousel(List<Map<String, dynamic>> downloadedPicos) {
-  // Total number of items including the "Add New Crag" card
-  final int actualCount = downloadedPicos.length + 1;
+Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
+  if (recentPicos.isEmpty) return const SizedBox();
+  
+  // Total number of items
+  final int actualCount = recentPicos.length;
   // Starting in the middle of a very large number of items to allow infinite looping in both directions
   final int initialPage = actualCount * 100;
 
@@ -92,31 +183,23 @@ Widget buildPicosCarousel(List<Map<String, dynamic>> downloadedPicos) {
       itemBuilder: (context, index) {
         // Calculate the actual index in the list using modulo
         final int actualIndex = index % actualCount;
+        
+        // Randomly pick a color from the palette based on the item index
+        // This also ensures the same "pico container" has a constant color during navigation
+        final Color cardColor = cardPalette[actualIndex % cardPalette.length];
 
-        /* Adding extra right padding only to the last element (Adicionar novo local)
-           to create space before the first element loops back around. */
-        final double rightPadding = (actualIndex == downloadedPicos.length) ? 40.0 : 10.0;
-
-        //----------------------------------------------------------------------
-        /* Check if it's the last item in our sequence,
-           if it is, we'll use this format. */
-        if (actualIndex == downloadedPicos.length) {
-          return buildAddNewCard(rightPadding);
-        }
-
-        /* If it isn't, we'll use this other format */
-        return buildPicoCard(downloadedPicos[actualIndex], rightPadding);
+        return buildPicoCard(recentPicos[actualIndex], 10.0, cardColor);
       },
     ),
   );
 }
 
-Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding) {
+Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor) {
   return Padding(
     padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
     child: Container(
       decoration: BoxDecoration(
-        color: pico['color'] as Color,
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -156,49 +239,6 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding) {
             ),
             const Spacer(),
             buildVerGuiaButton(),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-Widget buildAddNewCard(double rightPadding) {
-  return Padding(
-    padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
-    child: InkWell(
-      onTap: () {
-        // Call helper to switch to the "Explorar" tab when clicked (index 2)
-        MainNavigationWrapper.switchTab(2);
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: fishBone.withValues(alpha: 0.3),
-            width: 2,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_circle_outline,
-              color: fishBone.withValues(alpha: 0.6),
-              size: 80,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Adicionar novo local',
-              style: TextStyle(
-                color: fishBone.withValues(alpha: 0.6),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ],
         ),
       ),
