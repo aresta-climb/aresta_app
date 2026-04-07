@@ -13,15 +13,34 @@ List<Map<String, String>> getAvailableCrags() {
   ];
 }
 
-Widget buildBrowseBody(List<Map<String, String>> availableCrags) {
+Widget buildBrowseBody(BuildContext context, List<Map<String, String>> availableCrags, {required ValueChanged<String> onSearchChanged}) {
+  return Column(
+    children: [
+      const SizedBox(height: 10),
+      buildSearchBar(onChanged: onSearchChanged),
+      Expanded(
+        child: _buildCragList(availableCrags),
+      ),
+    ],
+  );
+}
+
+Widget _buildCragList(List<Map<String, String>> availableCrags) {
+  if (availableCrags.isEmpty) {
+    return const Center(
+      child: Text(
+        'Nenhum pico encontrado.',
+        style: TextStyle(color: fishBone, fontSize: 16),
+      ),
+    );
+  }
+
   return SingleChildScrollView(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildBrowseSectionTitle('Picos Disponíveis'),
-        
-        // Makes boxes until all available crags are displayed
         const SizedBox(height: 20),
         ...availableCrags.map((crag) => buildCragListItem(crag)),
       ],
