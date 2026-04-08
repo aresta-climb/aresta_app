@@ -2,13 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/gps.dart';
+import 'package:frontend/services/dataset_repository.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // Ensure Flutter bindings are ready before doing file I/O
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Instantiate and initialize the repository
+  final datasetRepo = DatasetRepository();
+  await datasetRepo.initialize();
+
+  // Pass it into the app
+  runApp(MyApp(datasetRepo: datasetRepo));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final DatasetRepository datasetRepo;
+
+  const MyApp({super.key, required this.datasetRepo});
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +31,22 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      home: MainNavigationWrapper(key: MainNavigationWrapper.navKey),
+      // Pass the repo down to the navigation wrapper
+      home: MainNavigationWrapper(
+          datasetRepo: datasetRepo,
+          key: MainNavigationWrapper.navKey
+      ),
     );
   }
 }
 
 class MainNavigationWrapper extends StatefulWidget {
-  const MainNavigationWrapper({super.key});
+  final DatasetRepository datasetRepo;
+
+  const MainNavigationWrapper({
+    super.key,
+    required this.datasetRepo
+  });
 
   static final GlobalKey<_MainNavigationWrapperState> navKey = GlobalKey<_MainNavigationWrapperState>();
 
@@ -45,10 +65,10 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   static const Color beastHide = Color(0xFFAE8F68);
   static const Color fishBone = Color(0xFFE4DAC5);
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const GPSPage(),
-    const BrowsePage(),
+  List<Widget> get _pages => [
+    HomePage(datasetRepo: widget.datasetRepo),
+    GPSPage(datasetRepo: widget.datasetRepo),
+    BrowsePage(datasetRepo: widget.datasetRepo),
   ];
 
   void _onItemTapped(int index) {

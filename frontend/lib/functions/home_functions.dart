@@ -2,37 +2,6 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'common_functions.dart';
 
-List<Map<String, dynamic>> getDownloadedPicos() {
-  // A little map with data from the crag options
-  return [
-    {
-      'nome': 'Gruta do Baú',
-      'local': 'Pedro Leopoldo, MG',
-      'vias': '100+',
-    },
-    {
-      'nome': 'Pedra Grande',
-      'local': 'Igarapé, MG',
-      'vias': '150+',
-    },
-    {
-      'nome': 'Santuário',
-      'local': 'Santa Luzia, MG',
-      'vias': '40+',
-    },
-    {
-      'nome': 'Lapinha',
-      'local': 'Lagoa Santa, MG',
-      'vias': '80+',
-    },
-    {
-      'nome': 'Serra do Cipó',
-      'local': 'Santana do Riacho, MG',
-      'vias': '1000+',
-    },
-  ];
-}
-
 // Earthy Color Palette for Cards
 const Color leatherWork = Color(0xFF896449);
 const Color obsidianBrown = Color(0xFF543E35);
@@ -112,21 +81,21 @@ Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
           ),
         ),
       ),
-      backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded
+      backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded for emphasis
       collapsedBackgroundColor: Colors.transparent,
       children: [
         ...picos.map((pico) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-              title: Text(
-                pico['nome'],
-                style: const TextStyle(color: fishBone, fontSize: 15),
-              ),
-              trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
-              onTap: () {
-                // TODO: Implement navigation to the selected pico's guide
-                print('Selected: ${pico['nome']}');
-              },
-            )),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+          title: Text(
+            safeString(pico['nome']),
+            style: const TextStyle(color: fishBone, fontSize: 15),
+          ),
+          trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
+          onTap: () {
+            // TODO: Implement navigation to the selected pico's guide
+            print('Selected: ${safeString(pico['nome'])}');
+          },
+        )),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 32),
           leading: const Icon(Icons.add_circle_outline, color: beastHide, size: 20),
@@ -165,7 +134,7 @@ Widget buildSectionHeader(String title) {
 
 Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
   if (recentPicos.isEmpty) return const SizedBox();
-  
+
   // Total number of items
   final int actualCount = recentPicos.length;
   // Starting in the middle of a very large number of items to allow infinite looping in both directions
@@ -183,7 +152,7 @@ Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
       itemBuilder: (context, index) {
         // Calculate the actual index in the list using modulo
         final int actualIndex = index % actualCount;
-        
+
         // Randomly pick a color from the palette based on the item index
         // This also ensures the same "pico container" has a constant color during navigation
         final Color cardColor = cardPalette[actualIndex % cardPalette.length];
@@ -215,7 +184,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              pico['nome'] as String,
+              safeString(pico['nome'], fallback: 'Sem Nome'),
               style: const TextStyle(
                 color: nobleBlack,
                 fontSize: 28,
@@ -228,7 +197,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
                 const Icon(Icons.location_on, color: nobleBlack, size: 18),
                 const SizedBox(width: 5),
                 Text(
-                  pico['local'] as String,
+                  safeString(pico['local'], fallback: 'Local Desconhecido'),
                   style: TextStyle(
                     color: nobleBlack.withValues(alpha: 0.7),
                     fontSize: 14,

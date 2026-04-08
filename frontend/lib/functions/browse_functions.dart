@@ -1,18 +1,6 @@
 import 'package:flutter/material.dart';
 import 'common_functions.dart';
 
-List<Map<String, String>> getAvailableCrags() {
-  // A little map with data from the crag options
-  return [
-    {'name': 'Gruta do Baú', 'location': 'Pedro Leopoldo, MG'},
-    {'name': 'Santuário', 'location': 'Santa Luzia, MG'},
-    {'name': 'Pedra Grande', 'location': 'Igarapé, MG'},
-    {'name': 'Lapinha', 'location': 'Lagoa Santa, MG'},
-    {'name': 'Serra do Cipó', 'location': 'Santana do Riacho, MG'},
-    {'name': 'Ouro Preto', 'location': 'Ouro Preto, MG'},
-  ];
-}
-
 Widget buildBrowseBody(BuildContext context, List<Map<String, String>> availableCrags, {required ValueChanged<String> onSearchChanged}) {
   return Column(
     children: [
@@ -103,13 +91,13 @@ Widget _buildCragIcon() {
 }
 
 Widget _buildCragDetails(Map<String, String> crag) {
-  // Crag name and details
+  // Crag name and details updated to use safe fallbacks and Portuguese keys via safeString
   return Expanded(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          crag['name']!,
+          safeString(crag['nome'], fallback: 'Sem Nome'),
           style: const TextStyle(
             color: fishBone,
             fontSize: 18,
@@ -118,7 +106,7 @@ Widget _buildCragDetails(Map<String, String> crag) {
         ),
         const SizedBox(height: 4),
         Text(
-          crag['location']!,
+          safeString(crag['local'], fallback: 'Local Desconhecido'),
           style: TextStyle(
             color: fishBone.withValues(alpha: 0.6),
             fontSize: 14,

@@ -49,3 +49,12 @@ Widget buildSearchBar({
     ),
   );
 }
+
+/// Safely converts dynamic data into a string
+/// If the value is null, it returns the provided fallback string (defaults to empty string).
+String safeString(dynamic value, {String fallback = ''}) {
+  if (value == null) {
+    return fallback;
+  }
+  return value.toString();
+}
