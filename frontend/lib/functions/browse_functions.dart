@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'common_functions.dart';
 
-Widget buildBrowseBody(BuildContext context, List<Map<String, String>> availableCrags, {required ValueChanged<String> onSearchChanged}) {
+Widget buildBrowseBody(
+  BuildContext context, 
+  List<Map<String, dynamic>> availableCrags, 
+  {
+    required ValueChanged<String> onSearchChanged,
+    required Function(Map<String, dynamic>) onDownload,
+  }
+) {
   return Column(
     children: [
       const SizedBox(height: 10),
       buildSearchBar(onChanged: onSearchChanged),
       Expanded(
-        child: _buildCragList(availableCrags),
+        child: _buildCragList(availableCrags, onDownload),
       ),
     ],
   );
 }
 
-Widget _buildCragList(List<Map<String, String>> availableCrags) {
+Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<String, dynamic>) onDownload) {
   if (availableCrags.isEmpty) {
     return const Center(
       child: Text(
@@ -30,7 +37,7 @@ Widget _buildCragList(List<Map<String, String>> availableCrags) {
       children: [
         buildBrowseSectionTitle('Picos Disponíveis'),
         const SizedBox(height: 20),
-        ...availableCrags.map((crag) => buildCragListItem(crag)),
+        ...availableCrags.map((crag) => buildCragListItem(crag, () => onDownload(crag))),
       ],
     ),
   );
@@ -47,7 +54,7 @@ Widget buildBrowseSectionTitle(String title) {
   );
 }
 
-Widget buildCragListItem(Map<String, String> crag) {
+Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12.0),
     child: Container(
@@ -66,7 +73,7 @@ Widget buildCragListItem(Map<String, String> crag) {
           _buildCragIcon(),
           const SizedBox(width: 16),
           _buildCragDetails(crag),
-          _buildDownloadButton(),
+          _buildDownloadButton(onDownload),
         ],
       ),
     ),
@@ -90,8 +97,7 @@ Widget _buildCragIcon() {
   );
 }
 
-Widget _buildCragDetails(Map<String, String> crag) {
-  // Crag name and details updated to use safe fallbacks and Portuguese keys via safeString
+Widget _buildCragDetails(Map<String, dynamic> crag) {
   return Expanded(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,12 +123,9 @@ Widget _buildCragDetails(Map<String, String> crag) {
   );
 }
 
-Widget _buildDownloadButton() {
-  // Download icon button
+Widget _buildDownloadButton(VoidCallback onPressed) {
   return IconButton(
-    onPressed: () {
-      // TODO: Implement download functionality
-    },
+    onPressed: onPressed,
     icon: const Icon(
       Icons.download_rounded,
       color: beastHide,

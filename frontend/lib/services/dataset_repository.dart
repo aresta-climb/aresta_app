@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../proto/indice.pb.dart'; // Nanato import
 
 class TopoDataset {
@@ -32,7 +34,6 @@ class DatasetRepository {
             'nome': resumo.nome,
             // Using the descricao field as the location/subtitle for now
             'local': resumo.descricao.isNotEmpty ? resumo.descricao : 'Local Desconhecido',
-            // Saving these extra fields for when you build the offline downloader!
             'id': resumo.id,
             'url': '$_baseUrl/${resumo.url}',
             'checksum': resumo.checksumSha256,
@@ -42,7 +43,7 @@ class DatasetRepository {
         // 4. Update the state manager, which instantly rebuilds Home and Browse pages
         activeDataset.value = TopoDataset(availablePicos: parsedPicos);
 
-        // 5. Kick off the background sync process (Atomic Delta Updates)
+        // 5. Kick off background sync process
         _checkForUpdatesInBackground(indice);
 
       } else {
@@ -53,6 +54,37 @@ class DatasetRepository {
       print('Failed to connect to the server: $e');
       _loadOfflineCache();
     }
+  }
+
+  /// Downloads a crag's binarypb and saves it to local storage
+  Future<bool> downloadCrag(Map<String, dynamic> crag) async {
+    final String? url = crag['url'];
+    final String? id = crag['id'];
+
+    if (url == null || id == null) return false;
+
+    try {
+      print('Downloading crag $id from $url...');
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final directory = await getApplicationDocumentsDirectory();
+        final downloadsDir = Directory('${directory.path}/downloads');
+        
+        if (!await downloadsDir.exists()) {
+          await downloadsDir.create(recursive: true);
+        }
+
+        final file = File('${downloadsDir.path}/$id.binarypb');
+        await file.writeAsBytes(response.bodyBytes);
+        
+        print('Saved to: ${file.path}');
+        return true;
+      }
+    } catch (e) {
+      print('Error downloading crag: $e');
+    }
+    return false;
   }
 
   void _checkForUpdatesInBackground(Indice remoteIndice) {

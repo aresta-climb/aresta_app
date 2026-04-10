@@ -3,10 +3,13 @@ import '../functions/browse_functions.dart';
 import '../functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 
+/// A page that allows users to explore and search for available crags (picos).
+/// 
+/// It displays a list of crags fetched from the [DatasetRepository] and 
+/// provides a search bar for filtering by name or location.
 class BrowsePage extends StatefulWidget {
   final DatasetRepository datasetRepo;
 
-  // Require it in the constructor
   const BrowsePage({super.key, required this.datasetRepo});
 
   @override
@@ -14,7 +17,36 @@ class BrowsePage extends StatefulWidget {
 }
 
 class _BrowsePageState extends State<BrowsePage> {
+  /// The current text entered in the search bar.
   String _searchQuery = '';
+
+  /// Triggers the download of a crag's binary data (.binarypb).
+  /// 
+  /// Shows a SnackBar during the process and another one to indicate 
+  /// success or failure upon completion.
+  void _handleDownload(Map<String, dynamic> crag) async {
+    final name = safeString(crag['nome'], fallback: 'Pico');
+    
+    // Show a SnackBar to provide feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Baixando $name...')),
+    );
+
+    // Perform the actual download via the repository.
+    // The file is saved to the app's local documents directory.
+    final success = await widget.datasetRepo.downloadCrag(crag);
+
+    if (mounted) {
+      // Update the user with the result
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? '$name baixado com sucesso!' : 'Falha ao baixar $name'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +54,12 @@ class _BrowsePageState extends State<BrowsePage> {
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar('Explorar Locais'),
 
-      // Listen to the live dataset from the repository
+      // ValueListenableBuilder automatically rebuilds this part of the UI
+      // whenever the dataset in the repository changes (after the initial fetch).
       body: ValueListenableBuilder<TopoDataset?>(
         valueListenable: widget.datasetRepo.activeDataset,
         builder: (context, dataset, child) {
-
-          // While the app is booting up and reading the local files for the first time, now there's a progress indicator for prettiness
+          // While the repository is still initializing/fetching, show a spinner.
           if (dataset == null) {
             return const Center(
               child: CircularProgressIndicator(color: beastHide),
@@ -36,8 +68,9 @@ class _BrowsePageState extends State<BrowsePage> {
 
           final allCrags = dataset.availablePicos;
 
-          // Filter the list based on the search query
-          // Using safeString to prevent crashes if a field is unexpectedly null
+          /* Filter the list locally based on the user's search query.
+           We check both the name and the location.
+           safeString is used to prevent crashes if a field is unexpectedly null. */
           final filteredCrags = allCrags.where((crag) {
             final name = safeString(crag['nome']).toLowerCase();
             final location = safeString(crag['local']).toLowerCase();
@@ -46,23 +79,16 @@ class _BrowsePageState extends State<BrowsePage> {
             return name.contains(query) || location.contains(query);
           }).toList();
 
-          // Safely map the dynamic Protobuf data to the Map<String, String> format of the UI
-          final List<Map<String, String>> typedFilteredCrags = filteredCrags.map((crag) {
-            return {
-              'nome': safeString(crag['nome']),
-              'local': safeString(crag['local']),
-              'vias': safeString(crag['vias']),
-            };
-          }).toList();
-
+          // We pass the filteredCrags directly to buildBrowseBody.
           return buildBrowseBody(
             context,
-            typedFilteredCrags,
+            filteredCrags,
             onSearchChanged: (value) {
               setState(() {
                 _searchQuery = value;
               });
             },
+            onDownload: _handleDownload,
           );
         },
       ),

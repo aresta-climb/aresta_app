@@ -14,6 +14,7 @@ class GPSPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar('GPS'),
+      /// TODO: An actual GPS functionality
       body: buildGPSBody(),
     );
   }

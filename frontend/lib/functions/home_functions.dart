@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
 import 'common_functions.dart';
 
 // Earthy Color Palette for Cards
@@ -10,6 +9,7 @@ const Color mossRock = Color(0xFF5B614D);
 const Color clayEarth = Color(0xFF7D4F43);
 const Color weatheredIron = Color(0xFF3E4247);
 
+/// A palette of colors used to background the crag cards.
 final List<Color> cardPalette = [
   leatherWork,
   slateStone,
@@ -18,8 +18,12 @@ final List<Color> cardPalette = [
   weatheredIron,
 ];
 
-Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
-  // Take only the 4 most recent crags(first 4 in the list)
+/// Builds the main scrollable body of the Home page.
+/// 
+/// Displays a carousel of recently downloaded crags and a dropdown list 
+/// of all available guides.
+Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos, {required VoidCallback onAddCrag}) {
+  // Take only the 4 most recent crags (first 4 in the list) for the carousel.
   final List<Map<String, dynamic>> recentPicos = downloadedPicos.take(4).toList();
 
   return Container(
@@ -46,7 +50,7 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
           buildPicosCarousel(recentPicos),
           buildFooterInstructions('Deslize para ver seus downloads'),
           const SizedBox(height: 10),
-          _buildAllGuidesDropdown(downloadedPicos),
+          _buildAllGuidesDropdown(downloadedPicos, onAddCrag: onAddCrag),
           const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
         ],
       ),
@@ -54,7 +58,8 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
   );
 }
 
-Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
+/// Builds an expandable list showing all downloaded guides.
+Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos, {required VoidCallback onAddCrag}) {
   return Theme(
     data: ThemeData(
       dividerColor: Colors.transparent,
@@ -107,16 +112,14 @@ Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
               fontSize: 15,
             ),
           ),
-          onTap: () {
-            // Switch to the "Explorar" tab when clicked (index 2)
-            MainNavigationWrapper.switchTab(2);
-          },
+          onTap: onAddCrag,
         ),
       ],
     ),
   );
 }
 
+/// A stylized header for sections.
 Widget buildSectionHeader(String title) {
   return Padding(
     // Padding on the text to give it some space
@@ -132,6 +135,7 @@ Widget buildSectionHeader(String title) {
   );
 }
 
+/// Builds a horizontal, infinitely-looping carousel of crag cards.
 Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
   if (recentPicos.isEmpty) return const SizedBox();
 
@@ -163,6 +167,7 @@ Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
   );
 }
 
+/// Builds an individual card for a crag in the carousel.
 Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor) {
   return Padding(
     padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
@@ -215,6 +220,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
   );
 }
 
+/// A small button on the card to indicate it can be opened.
 Widget buildVerGuiaButton() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -234,8 +240,8 @@ Widget buildVerGuiaButton() {
   );
 }
 
+/// Instructions text at the bottom of the carousel.
 Widget buildFooterInstructions(String text) {
-  // Instructions on how to use the carousel
   return Padding(
     padding: const EdgeInsets.all(20.0),
     child: Center(
