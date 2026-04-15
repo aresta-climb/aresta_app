@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -67,8 +68,39 @@ class DatasetRepository {
     }
   }
 
+  Future<List<String>> _getPriorityList() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/recent_picos.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        return jsonList.cast<String>();
+      }
+    } catch (e) {
+      print('Error reading priority list: $e');
+    }
+    return [];
+  }
+
+  Future<void> _updatePriority(String id) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/recent_picos.json');
+      List<String> priorityList = await _getPriorityList();
+      
+      priorityList.remove(id);
+      priorityList.insert(0, id);
+      
+      await file.writeAsString(jsonEncode(priorityList));
+    } catch (e) {
+      print('Error updating priority list: $e');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _filterDownloaded(List<Map<String, dynamic>> picos) async {
     final directory = await getApplicationDocumentsDirectory();
+    final List<String> priorityList = await _getPriorityList();
     final List<Map<String, dynamic>> downloaded = [];
     
     for (var pico in picos) {
@@ -77,6 +109,18 @@ class DatasetRepository {
         downloaded.add(pico);
       }
     }
+    
+    // Sort based on index in priorityList (lower index = higher priority)
+    // Items not in the list are placed at the end, hence they do not appear in the carousel, only on the dropdown
+    downloaded.sort((a, b) {
+      int indexA = priorityList.indexOf(a['id']);
+      int indexB = priorityList.indexOf(b['id']);
+      // Fallback for items not in the list (put them at the end)
+      if (indexA == -1) indexA = 999999;
+      if (indexB == -1) indexB = 999999;
+      return indexA.compareTo(indexB);
+    });
+    
     return downloaded;
   }
 
@@ -128,6 +172,18 @@ class DatasetRepository {
       final file = File('${directory.path}/downloads/$id.binarypb');
       
       if (await file.exists()) {
+        // Move ID to the front of the priority list
+        await _updatePriority(id);
+
+        // Update dataset to reflect new sorting
+        if (activeDataset.value != null) {
+          final updated = await _filterDownloaded(activeDataset.value!.availablePicos);
+          activeDataset.value = TopoDataset(
+            availablePicos: activeDataset.value!.availablePicos,
+            downloadedPicos: updated,
+          );
+        }
+
         final bytes = await file.readAsBytes();
         return Croqui.fromBuffer(bytes);
       }
@@ -135,6 +191,27 @@ class DatasetRepository {
       print('Error loading croqui $id: $e');
     }
     return null;
+  }
+
+  Future<bool> deleteCrag(String id) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/downloads/$id.binarypb');
+      if (await file.exists()) {
+        await file.delete();
+        if (activeDataset.value != null) {
+          final updatedDownloaded = await _filterDownloaded(activeDataset.value!.availablePicos);
+          activeDataset.value = TopoDataset(
+            availablePicos: activeDataset.value!.availablePicos,
+            downloadedPicos: updatedDownloaded,
+          );
+        }
+        return true;
+      }
+    } catch (e) {
+      print('Error deleting crag: $e');
+    }
+    return false;
   }
 
   void _checkForUpdatesInBackground(Indice remoteIndice) {

@@ -37,6 +37,7 @@ class ViaPage extends StatelessWidget {
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar(nome),
       body: buildViaBody(context, escalada),
+      bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
 }

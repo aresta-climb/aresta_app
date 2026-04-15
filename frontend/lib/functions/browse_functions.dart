@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'common_functions.dart';
 
+/// Builds the main content area for the Browse page.
+///
+/// It displays a search bar and a list of available crags that can be downloaded.
+/// The [onSearchChanged] callback is triggered when the user types in the search bar.
+/// The [onDownload] callback is triggered when the user taps the download button on a crag item.
 Widget buildBrowseBody(
   BuildContext context, 
   List<Map<String, dynamic>> availableCrags, 
@@ -20,6 +25,9 @@ Widget buildBrowseBody(
   );
 }
 
+/// Builds the scrollable list of available crags.
+///
+/// If [availableCrags] is empty, it displays a fallback message indicating no crags were found.
 Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<String, dynamic>) onDownload) {
   if (availableCrags.isEmpty) {
     return const Center(
@@ -43,6 +51,7 @@ Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<St
   );
 }
 
+/// Builds a styled section title for the browse list.
 Widget buildBrowseSectionTitle(String title) {
   return Text(
     title,
@@ -54,6 +63,9 @@ Widget buildBrowseSectionTitle(String title) {
   );
 }
 
+/// Builds an individual list item representing a downloadable crag.
+///
+/// It includes an icon, the crag's name and location, and a download button.
 Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12.0),
@@ -80,6 +92,7 @@ Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   );
 }
 
+/// Builds the visual icon leading the crag list item.
 Widget _buildCragIcon() {
   // Montain icon
   // TODO: Implement cover image instead of mountain icon
@@ -97,6 +110,7 @@ Widget _buildCragIcon() {
   );
 }
 
+/// Builds the textual details column showing the crag's name and location.
 Widget _buildCragDetails(Map<String, dynamic> crag) {
   return Expanded(
     child: Column(
@@ -123,6 +137,7 @@ Widget _buildCragDetails(Map<String, dynamic> crag) {
   );
 }
 
+/// Builds the trailing button that initiates the download of the crag.
 Widget _buildDownloadButton(VoidCallback onPressed) {
   return IconButton(
     onPressed: onPressed,

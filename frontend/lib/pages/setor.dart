@@ -18,6 +18,7 @@ class SetorPage extends StatelessWidget {
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar(setor.nome),
       body: buildSetorBody(context, setor),
+      bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
 }

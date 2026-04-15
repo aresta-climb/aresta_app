@@ -3,14 +3,6 @@ import '../services/dataset_repository.dart';
 import '../pages/pico.dart';
 import 'common_functions.dart';
 
-// Earthy Color Palette for Cards
-const Color leatherWork = Color(0xFF896449);
-const Color obsidianBrown = Color(0xFF543E35);
-const Color slateStone = Color(0xFF4A4E5A);
-const Color mossRock = Color(0xFF5B614D);
-const Color clayEarth = Color(0xFF7D4F43);
-const Color weatheredIron = Color(0xFF3E4247);
-
 /// A palette of colors used to background the crag cards.
 final List<Color> cardPalette = [
   leatherWork,
@@ -43,7 +35,11 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PicoDetailsPage(pico: croqui.picos.first),
+          builder: (context) => PicoDetailsPage(
+            pico: croqui.picos.first,
+            cragId: id,
+            datasetRepo: datasetRepo,
+          ),
         ),
       );
     } else {

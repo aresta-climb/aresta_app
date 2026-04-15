@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/gps.dart';
+import 'package:frontend/functions/common_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
 
 void main() async {
-  // Ensure Flutter bindings are ready before doing file I/O
+  // Ensure Flutter is ready before doing file I/O
   WidgetsFlutterBinding.ensureInitialized();
 
   // Instantiate and initialize the repository
@@ -63,10 +64,6 @@ class MainNavigationWrapper extends StatefulWidget {
 class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   int _selectedIndex = 0;
 
-  static const Color nobleBlack = Color(0xFF1F2128);
-  static const Color beastHide = Color(0xFFAE8F68);
-  static const Color fishBone = Color(0xFFE4DAC5);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,34 +78,7 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
           _BrowsePageWrapper(datasetRepo: widget.datasetRepo),
         ],
       ),
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: nobleBlack,
-        ),
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.location_on_rounded),
-              label: 'GPS',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_rounded),
-              label: 'Explorar',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: beastHide,
-          unselectedItemColor: fishBone.withValues(alpha: 0.5),
-          backgroundColor: nobleBlack,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      bottomNavigationBar: buildPrimaryBottomNav(context, _selectedIndex, _onItemTapped),
     );
   }
 
