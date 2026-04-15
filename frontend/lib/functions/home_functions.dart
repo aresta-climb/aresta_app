@@ -39,11 +39,11 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
   if (context.mounted) {
     Navigator.pop(context); // Remove loading indicator
 
-    if (croqui != null) {
+    if (croqui != null && croqui.picos.isNotEmpty) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PicoDetailsPage(croqui: croqui),
+          builder: (context) => PicoDetailsPage(pico: croqui.picos.first),
         ),
       );
     } else {
