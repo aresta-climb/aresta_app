@@ -2,12 +2,17 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../proto/indice.pb.dart'; // Nanato import
+import '../proto/indice.pb.dart';
+import '../proto/croqui.pb.dart'; // Import Croqui proto
 
 class TopoDataset {
   final List<Map<String, dynamic>> availablePicos;
+  final List<Map<String, dynamic>> downloadedPicos;
 
-  TopoDataset({required this.availablePicos});
+  TopoDataset({
+    required this.availablePicos,
+    required this.downloadedPicos,
+  });
 }
 
 class DatasetRepository {
@@ -40,10 +45,16 @@ class DatasetRepository {
           };
         }).toList();
 
-        // 4. Update the state manager, which instantly rebuilds Home and Browse pages
-        activeDataset.value = TopoDataset(availablePicos: parsedPicos);
+        // 4. Identify which ones are already downloaded
+        final List<Map<String, dynamic>> downloaded = await _filterDownloaded(parsedPicos);
 
-        // 5. Kick off background sync process
+        // 5. Update the state manager, which instantly rebuilds Home and Browse pages
+        activeDataset.value = TopoDataset(
+          availablePicos: parsedPicos,
+          downloadedPicos: downloaded,
+        );
+
+        // 6. Kick off background sync process
         _checkForUpdatesInBackground(indice);
 
       } else {
@@ -54,6 +65,19 @@ class DatasetRepository {
       print('Failed to connect to the server: $e');
       _loadOfflineCache();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _filterDownloaded(List<Map<String, dynamic>> picos) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final List<Map<String, dynamic>> downloaded = [];
+    
+    for (var pico in picos) {
+      final file = File('${directory.path}/downloads/${pico['id']}.binarypb');
+      if (await file.exists()) {
+        downloaded.add(pico);
+      }
+    }
+    return downloaded;
   }
 
   /// Downloads a crag's binarypb and saves it to local storage
@@ -79,12 +103,38 @@ class DatasetRepository {
         await file.writeAsBytes(response.bodyBytes);
         
         print('Saved to: ${file.path}');
+
+        // Refresh the dataset so the UI knows there's a new download
+        if (activeDataset.value != null) {
+          final updatedDownloaded = await _filterDownloaded(activeDataset.value!.availablePicos);
+          activeDataset.value = TopoDataset(
+            availablePicos: activeDataset.value!.availablePicos,
+            downloadedPicos: updatedDownloaded,
+          );
+        }
+
         return true;
       }
     } catch (e) {
       print('Error downloading crag: $e');
     }
     return false;
+  }
+
+  /// Loads the full Croqui data from a local binarypb file
+  Future<Croqui?> getCroqui(String id) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/downloads/$id.binarypb');
+      
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        return Croqui.fromBuffer(bytes);
+      }
+    } catch (e) {
+      print('Error loading croqui $id: $e');
+    }
+    return null;
   }
 
   void _checkForUpdatesInBackground(Indice remoteIndice) {
@@ -94,10 +144,9 @@ class DatasetRepository {
     print('Background update check complete.');
   }
 
-  void _loadOfflineCache() {
-    /* TODO: If the user is offline in the mountains, read from the local device storage.
-        For now, if the network fails, we'll just show an empty list so it doesn't crash.
-    */
-    activeDataset.value = TopoDataset(availablePicos: []);
+  void _loadOfflineCache() async {
+    // In a real offline scenario, we'd need a local index or to scan the downloads directory.
+    // For now, let's just show what's downloaded if we can't reach the server.
+    activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
   }
 }

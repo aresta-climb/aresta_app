@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/dataset_repository.dart';
+import '../pages/pico.dart';
 import 'common_functions.dart';
 
 // Earthy Color Palette for Cards
@@ -18,14 +20,50 @@ final List<Color> cardPalette = [
   weatheredIron,
 ];
 
+/// Navigates to the details page of a selected pico.
+/// 
+/// It first shows a loading indicator while fetching the full Croqui data.
+void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico) async {
+  final id = pico['id'];
+  if (id == null) return;
+
+  // Show loading indicator
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator(color: beastHide)),
+  );
+
+  final croqui = await datasetRepo.getCroqui(id);
+
+  if (context.mounted) {
+    Navigator.pop(context); // Remove loading indicator
+
+    if (croqui != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PicoDetailsPage(croqui: croqui),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao abrir o guia.')),
+      );
+    }
+  }
+}
+
 /// Builds the main scrollable body of the Home page.
 /// 
 /// Displays a carousel of recently downloaded crags and a dropdown list 
 /// of all available guides.
-Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos, {required VoidCallback onAddCrag}) {
-  // Take only the 4 most recent crags (first 4 in the list) for the carousel.
-  final List<Map<String, dynamic>> recentPicos = downloadedPicos.take(4).toList();
-
+Widget buildHomeBody(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  List<Map<String, dynamic>> downloadedPicos, {
+  required VoidCallback onAddCrag,
+}) {
   return Container(
     width: double.infinity,
     height: double.infinity,
@@ -47,10 +85,17 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos, {required VoidC
         children: [
           const SizedBox(height: 20),
           buildSectionHeader('Guias Recentes'),
-          buildPicosCarousel(recentPicos),
-          buildFooterInstructions('Deslize para ver seus downloads'),
+          // The carousel handles the 4-card limit internally now
+          buildPicosCarousel(
+            downloadedPicos, 
+            onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
+          ),
           const SizedBox(height: 10),
-          _buildAllGuidesDropdown(downloadedPicos, onAddCrag: onAddCrag),
+          _buildAllGuidesDropdown(
+            downloadedPicos, 
+            onAddCrag: onAddCrag, 
+            onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
+          ),
           const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
         ],
       ),
@@ -59,7 +104,11 @@ Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos, {required VoidC
 }
 
 /// Builds an expandable list showing all downloaded guides.
-Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos, {required VoidCallback onAddCrag}) {
+Widget _buildAllGuidesDropdown(
+  List<Map<String, dynamic>> picos, {
+  required VoidCallback onAddCrag,
+  required Function(Map<String, dynamic>) onPicoSelect,
+}) {
   return Theme(
     data: ThemeData(
       dividerColor: Colors.transparent,
@@ -96,10 +145,7 @@ Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos, {required VoidC
             style: const TextStyle(color: fishBone, fontSize: 15),
           ),
           trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
-          onTap: () {
-            // TODO: Implement navigation to the selected pico's guide
-            print('Selected: ${safeString(pico['nome'])}');
-          },
+          onTap: () => onPicoSelect(pico),
         )),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 32),
@@ -135,35 +181,58 @@ Widget buildSectionHeader(String title) {
   );
 }
 
-/// Builds a horizontal, infinitely-looping carousel of crag cards.
-Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
-  if (recentPicos.isEmpty) return const SizedBox();
-
-  // Total number of items
-  final int actualCount = recentPicos.length;
-  // Starting in the middle of a very large number of items to allow infinite looping in both directions
-  final int initialPage = actualCount * 100;
-
-  // Carousel with offline crag data
-  return SizedBox(
-    height: 350,
-    child: PageView.builder(
-      controller: PageController(
-        viewportFraction: 0.85,
-        initialPage: initialPage,
+/// Builds a horizontal carousel of crag cards.
+/// Limited to the 4 most recent crags.
+/// Allows infinite looping if there are exactly 4 items.
+Widget buildPicosCarousel(
+  List<Map<String, dynamic>> allPicos, {
+  required Function(Map<String, dynamic>) onPicoSelect,
+}) {
+  if (allPicos.isEmpty) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Text(
+          'Nenhum guia baixado ainda.',
+          style: TextStyle(color: fishBone, fontStyle: FontStyle.italic),
+        ),
       ),
-      // Using initialPage and modulo we can allow infinite looping in both directions
-      itemBuilder: (context, index) {
-        // Calculate the actual index in the list using modulo
-        final int actualIndex = index % actualCount;
+    );
+  }
 
-        // Randomly pick a color from the palette based on the item index
-        // This also ensures the same "pico container" has a constant color during navigation
-        final Color cardColor = cardPalette[actualIndex % cardPalette.length];
+  // LIMITER: Take at most 4 cards for the carousel to avoid info clustering
+  final List<Map<String, dynamic>> picosToShow = allPicos.take(4).toList();
+  final int count = picosToShow.length;
+  final bool shouldLoop = count >= 4;
 
-        return buildPicoCard(recentPicos[actualIndex], 10.0, cardColor);
-      },
-    ),
+  return Column(
+    children: [
+      SizedBox(
+        height: 350,
+        child: PageView.builder(
+          itemCount: shouldLoop ? null : count,
+          controller: PageController(
+            viewportFraction: shouldLoop ? 0.85 : 0.9,
+            initialPage: shouldLoop ? count * 100 : 0,
+          ),
+          physics: count > 1
+              ? const BouncingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            final int actualIndex = shouldLoop ? (index % count) : index;
+            final Color cardColor = cardPalette[actualIndex % cardPalette.length];
+            final double rightPadding = (!shouldLoop && actualIndex == count - 1) ? 0.0 : 10.0;
+
+            return GestureDetector(
+              onTap: () => onPicoSelect(picosToShow[actualIndex]),
+              child: buildPicoCard(picosToShow[actualIndex], rightPadding, cardColor),
+            );
+          },
+        ),
+      ),
+      if (count > 1)
+        buildFooterInstructions('Deslize para ver seus downloads'),
+    ],
   );
 }
 
@@ -190,6 +259,8 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
           children: [
             Text(
               safeString(pico['nome'], fallback: 'Sem Nome'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: nobleBlack,
                 fontSize: 28,
@@ -201,12 +272,16 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
               children: [
                 const Icon(Icons.location_on, color: nobleBlack, size: 18),
                 const SizedBox(width: 5),
-                Text(
-                  safeString(pico['local'], fallback: 'Local Desconhecido'),
-                  style: TextStyle(
-                    color: nobleBlack.withValues(alpha: 0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    safeString(pico['local'], fallback: 'Local Desconhecido'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: nobleBlack.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

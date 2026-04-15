@@ -8,9 +8,10 @@ void main() {
   testWidgets('Home page loads test', (WidgetTester tester) async {
     // Create a repository instance for testing.
     final testRepo = DatasetRepository();
-    
-    // Manually set a mock state so the UI doesn't get stuck on the loading spinner.
-    testRepo.activeDataset.value = TopoDataset(availablePicos: []);
+    testRepo.activeDataset.value = TopoDataset(
+      availablePicos: [],
+      downloadedPicos: [],
+    );
 
     // We test the MainNavigationWrapper directly
     await tester.pumpWidget(MaterialApp(

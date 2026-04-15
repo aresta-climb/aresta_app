@@ -38,9 +38,11 @@ class HomePage extends StatelessWidget {
             );
           }
 
-          // Pass the switch tab callback to the UI builder
+          // Pass the context and repo to the UI builder to handle logic inside home_functions.dart
           return buildHomeBody(
-            dataset.availablePicos, 
+            context,
+            datasetRepo,
+            dataset.downloadedPicos, 
             onAddCrag: () => onSwitchTab(2), // 2 is the Browse/Explorar tab
           );
         },
