@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../proto/indice.pb.dart';
-import '../proto/croqui.pb.dart'; // Import Croqui proto
+import '../kmon_api/proto/indice.pb.dart';
+import '../kmon_api/proto/croqui.pb.dart'; // Import Croqui proto
 
 class TopoDataset {
   final List<Map<String, dynamic>> availablePicos;

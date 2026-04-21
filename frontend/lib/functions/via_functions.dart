@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../proto/croqui.pb.dart';
+import '../kmon_api/proto/croqui.pb.dart';
 import 'common_functions.dart';
 
 /// Builds the main scrollable body of the Route (Via) page.

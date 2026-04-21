@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../proto/croqui.pb.dart';
+import '../kmon_api/proto/croqui.pb.dart';
 import '../pages/setor.dart';
 import 'common_functions.dart';
 
