@@ -50,4 +50,7 @@ message ResumoCroqui {
 
     // Data do último update, no formato YYYY-MM-DD.
     string data_update = 7;
+
+    // Thumbnail do croqui (imagem em miniatura para prever croquis não baixados).
+    bytes thumbnail = 8;
 }

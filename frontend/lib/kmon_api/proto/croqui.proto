@@ -40,6 +40,13 @@ message Croqui {
 
   // Arquivos externos que não estão incluídos no .binarypb.
   repeated ArquivoExterno arquivos_externos = 7;
+
+  // Caminho para a thumbnail do croqui (imagem em miniatura para prever croquis não baixados).
+  // Essa imagem deve ter no máximo 1200x1200.
+  string caminho_thumbnail = 8;
+
+  // Representa se o croqui já foi revisado manualmente para garantir qualidade.
+  bool revisado_manualmente = 9;
 }
 
 // Informações sobre arquivos externos que não estão incluídos no .binarypb.
@@ -93,8 +100,18 @@ message Pico {
   // Patrocinadores atuais do croqui deste local.
   repeated Patrocinador patrocinadores = 9;
   
-  // Lista de setores de escalada contidos neste pico.
-  repeated ArquivoSetor setores = 10;
+  // Elementos de escalada contidos neste pico (setores ou grupos).
+  repeated SetorOuGrupo setores_ou_grupos = 11;
+
+  reserved 10;
+}
+
+// Representa um elemento (Setor ou Grupo) de um Pico.
+message SetorOuGrupo {
+  oneof tipo {
+    ArquivoSetor setor = 1;
+    ArquivoGrupo grupo = 2;
+  }
 }
 
 // Use para referenciar um outro arquivo que contenha informação de setor caso necessário.
@@ -105,7 +122,31 @@ message ArquivoSetor {
   }
 }
 
+// Use para referenciar um outro arquivo que contenha informação de grupo caso necessário.
+message ArquivoGrupo {
+  oneof arquivo {
+    string caminho = 1;
+    Grupo conteudo = 2;
+  }
+}
+
+// Representa um grupo de setores (ex: Vale Oculto na Sinuosa, ou conjuntos de blocos de Boulder).
+message Grupo {
+  // Nome do grupo (ex: Vale Oculto).
+  string nome = 1;
+
+  // Características do grupo, acesso, etc.
+  string descricao = 2;
+  
+  // Mapas do grupo (geralmente mapas de acesso ou visão geral).
+  repeated Mapa mapas = 3;
+  
+  // Setores que compõem este grupo.
+  repeated ArquivoSetor setores = 4;
+}
+
 // Representa uma parede ou setor específico dentro de um Pico.
+// Para boulders, isso costuma ser o bloco.
 message Setor {
   // Nome do setor (ex: Savassinha).
   string nome = 1;
@@ -137,9 +178,9 @@ message Setor {
   // Todas as escaladas deste setor.
   repeated Escalada escaladas = 11;
 
-  // Lista de sub-setores de escalada contidos nesse setor (ex: "Ninhos" em "G3"
-  // na "Serra do Cipó").
-  repeated ArquivoSetor sub_setores = 12;
+  // Reservado. Anteriormente sub_setores. 
+  // Use Grupos no Pico para organizar múltiplos setores.
+  reserved 12;
 }
 
 // Representa um mapa do setor.
@@ -162,19 +203,39 @@ message Mapa {
     string label = 2;
 
     // Bounding box do ponto de interesse na imagem.
-    BoundingBox box = 3;
+    // Prefira usar 'box' se possível, utilize 'box_obliqua' apenas se não for possível
+    // representar a bounding box com um retângulo.
+    oneof tipo_box {
+      // Bounding box retangular.
+      BoundingBox box = 3;
+      // Bounding box oblíqua.
+      BoundingBoxObliqua box_obliqua = 5;
+    }
   }
 
   // Posição de cada ponto de interesse.
   repeated PontoDeInteresse pontos_de_interesse = 4;
 }
 
-// Caixa de enquadramento / bounding box de parte da imagem.
+// Caixa de enquadramento / bounding box retangular de parte da imagem.
 message BoundingBox {
   int32 xmin = 1;
   int32 ymin = 2;
   int32 xmax = 3;
   int32 ymax = 4;
+}
+
+// Caixa de enquadramento / bounding box oblíqua pra parte da imagem.
+// Definido pela posição dos 4 cantos da área da bounding box.
+message BoundingBoxObliqua {
+  int32 x1 = 1;
+  int32 y1 = 2;
+  int32 x2 = 3;
+  int32 y2 = 4;
+  int32 x3 = 5;
+  int32 y3 = 6;
+  int32 x4 = 7;
+  int32 y4 = 8;
 }
 
 // Representa uma escalada de qualquer tipo.
@@ -184,6 +245,7 @@ message Escalada {
     ViaMovel via_movel = 2;
     Boulder boulder = 3;
     ViaMultiplasEnfiadas via_multiplas_enfiadas = 4;
+    Highline highline = 5;
   }
 }
 
@@ -249,6 +311,12 @@ message ViaMovel {
   
   // Grau de dificuldade em livre da via (ex "BR_6sup").
   GrauVia.GrauVia dificuldade = 2;
+
+  // Grau de escalada em artificial, se houver trechos de artificial (ex: "A1", "A2").
+  GrauArtificial.GrauArtificial dificuldade_artificial = 17;
+
+  // Grau do lance em artificial se escalado em livre.
+  GrauVia.GrauVia dificuldade_artificial_em_livre = 18;
 
   // Grau de exposição da via.
   GrauExposicao.GrauExposicao exposicao = 3;
@@ -321,12 +389,16 @@ message Boulder {
 }
 
 // Representa uma via de escalada de múltiplas enfiadas.
+// NEXT_ID: 24
 message ViaMultiplasEnfiadas {
   // Nome da via.
   string nome = 1;
 
   // ID da via no mapa. Provavelmente um número, como 1, ou a, ou 1a, etc.
   string id_no_mapa = 20;
+
+  // Mapas da via de múltiplas enfiadas, se houver.
+  repeated Mapa mapas = 21;
 
   // Grau de dificuldade médio da via (ex: "5sup", "7a").
   GrauVia.GrauVia dificuldade_media = 2;
@@ -354,6 +426,13 @@ message ViaMultiplasEnfiadas {
 
   // Comprimento da maior enfiada da via.
   int32 comprimento_maior_enfiada = 10;
+
+  // Número de costuras a levar para proteções intermediárias por enfiada.
+  int32 quantidade_costuras_intermediarias = 22;
+
+  // Número de equipamentos a levar para proteções nas paradas da via.
+  int32 quantidade_equipamentos_parada = 23;
+  
 
   // Se a via é toda fixa, mista ou toda em móvel.
   enum TipoViaMultiplasEnfiadas {
@@ -387,6 +466,47 @@ message ViaMultiplasEnfiadas {
 
   // Chave Pix do mantenedor ou conquistador específico desta via.
   string chave_pix_manutencao = 19;
+}
+
+// Um highline montado na rocha.
+message Highline {
+  // Nome do highline.
+  string nome = 1;
+
+  string id_no_mapa = 13;
+
+  // Distância do highline.
+  int32 distancia = 2;
+
+  // Altura do highline.
+  int32 altura = 3;
+
+  // Exposição do highline.
+  int32 exposicao = 4;
+
+  // Nome dos conquistadores.
+  repeated string conquistadores = 5;
+
+  // Data de abertura do highline (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 6;
+
+  // Data da última manutenção do highline.
+  string data_manutencao = 7;
+
+  // Descrição do acesso do highline.
+  string descricao_acesso = 8;
+
+  // Descrição da ancoragem do highline.
+  string descricao_ancoragem = 9;
+
+  // Outras descrições do highline.
+  string descricao = 10;
+
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 11;
+
+  // Chave Pix do mantenedor ou conquistador específico deste highline.
+  string chave_pix_manutencao = 12;
 }
 
 // Dados de um patrocinador que apoia financeiramente a manutenção ou os croquis.

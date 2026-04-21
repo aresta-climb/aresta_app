@@ -29,6 +29,8 @@ Widget _buildContentForEscalada(Escalada escalada) {
       return _buildBoulder(escalada.boulder);
     case Escalada_Tipo.viaMultiplasEnfiadas:
       return _buildMultipitch(escalada.viaMultiplasEnfiadas);
+    case Escalada_Tipo.highline:
+      return _buildHighline(escalada.highline);
     default:
       return const Text('Detalhes não disponíveis.', style: TextStyle(color: fishBone));
   }
@@ -98,6 +100,20 @@ Widget _buildMultipitch(ViaMultiplasEnfiadas via) {
     children: [
       _buildHeader('Informações da Multipitch'),
       _buildInfoRow('Dificuldade Máxima', via.dificuldadeMaxima.name.replaceAll('BR_', '').replaceAll('_', ' ')),
+      if (via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        Text(via.descricao, style: const TextStyle(color: fishBone)),
+      ],
+    ],
+  );
+}
+
+Widget _buildHighline(Highline via) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildHeader('Informações do Highline'),
+      _buildInfoRow('Distância', '${via.distancia}m'),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
         Text(via.descricao, style: const TextStyle(color: fishBone)),

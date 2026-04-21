@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 import '../pages/setor.dart';
+import '../pages/grupo.dart';
 import 'common_functions.dart';
 
 /// Builds the main scrollable body of the Pico page.
@@ -18,12 +19,14 @@ Widget buildPicoBody(BuildContext context, Pico pico) {
         if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
         const SizedBox(height: 20),
         _buildHeader('Setores'),
-        if (pico.setores.isEmpty)
-          const Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
+        if (pico.setoresOuGrupos.isEmpty)
+          const Text('Nenhum elemento disponível.', style: TextStyle(color: fishBone))
         else
-          ...pico.setores.map((arquivoSetor) {
-            if (arquivoSetor.hasConteudo()) {
-              return _buildSectorTile(context, arquivoSetor.conteudo);
+          ...pico.setoresOuGrupos.map((setorOuGrupo) {
+            if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor && setorOuGrupo.setor.hasConteudo()) {
+              return buildSectorTile(context, setorOuGrupo.setor.conteudo);
+            } else if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.grupo && setorOuGrupo.grupo.hasConteudo()) {
+              return buildGrupoTile(context, setorOuGrupo.grupo.conteudo);
             }
             return const SizedBox.shrink();
           }),
@@ -67,7 +70,7 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget _buildSectorTile(BuildContext context, Setor setor) {
+Widget buildSectorTile(BuildContext context, Setor setor) {
   return Container(
     margin: const EdgeInsets.only(bottom: 15),
     decoration: BoxDecoration(
@@ -89,6 +92,34 @@ Widget _buildSectorTile(BuildContext context, Setor setor) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => SetorPage(setor: setor)),
+        );
+      },
+    ),
+  );
+}
+
+Widget buildGrupoTile(BuildContext context, Grupo grupo) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 15),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: beastHide.withValues(alpha: 0.3)),
+    ),
+    child: ListTile(
+      title: Text(
+        grupo.nome,
+        style: const TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+      subtitle: grupo.descricao.isNotEmpty
+          ? Text(grupo.descricao, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
+          : null,
+      trailing: const Icon(Icons.folder, color: beastHide),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => GrupoPage(grupo: grupo)),
         );
       },
     ),

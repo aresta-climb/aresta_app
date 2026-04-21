@@ -20,16 +20,10 @@ Widget buildSetorBody(BuildContext context, Setor setor) {
         ],
 
         _buildHeader('Vias'),
-        if (setor.escaladas.isEmpty && setor.subSetores.isEmpty)
+        if (setor.escaladas.isEmpty)
           const Text('Nenhuma via disponível.', style: TextStyle(color: fishBone))
         else ...[
           ...setor.escaladas.map((escalada) => _buildRouteTile(context, escalada)),
-          ...setor.subSetores.map((subSetorRec) {
-             if (subSetorRec.hasConteudo()) {
-               return _buildSubSector(context, subSetorRec.conteudo);
-             }
-             return const SizedBox.shrink();
-          }),
         ],
       ],
     ),
@@ -50,28 +44,7 @@ Widget _buildHeader(String title) {
   );
 }
 
-/// Builds the UI layout for a nested sub-sector, including its name, 
-/// description, and mapping its routes.
-Widget _buildSubSector(BuildContext context, Setor subSetor) {
-  return Padding(
-    padding: const EdgeInsets.only(top: 15, bottom: 5),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          subSetor.nome,
-          style: const TextStyle(color: beastHide, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        if (subSetor.descricao.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 8),
-            child: Text(subSetor.descricao, style: TextStyle(color: fishBone.withValues(alpha: 0.8), fontSize: 13)),
-          ),
-        ...subSetor.escaladas.map((escalada) => _buildRouteTile(context, escalada)),
-      ],
-    ),
-  );
-}
+
 
 /// Builds an interactive tile for a single climbing route.
 ///
@@ -97,6 +70,10 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada) {
     case Escalada_Tipo.viaMultiplasEnfiadas:
       nome = escalada.viaMultiplasEnfiadas.nome;
       info = 'Multipitch | ${escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name.replaceAll('BR_', '').replaceAll('_', ' ')}';
+      break;
+    case Escalada_Tipo.highline:
+      nome = escalada.highline.nome;
+      info = 'Highline | ${escalada.highline.distancia}m';
       break;
     case Escalada_Tipo.notSet:
       nome = 'Sem Nome';

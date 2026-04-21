@@ -29,6 +29,9 @@ class ViaPage extends StatelessWidget {
       case Escalada_Tipo.viaMultiplasEnfiadas:
         nome = escalada.viaMultiplasEnfiadas.nome;
         break;
+      case Escalada_Tipo.highline:
+        nome = escalada.highline.nome;
+        break;
       case Escalada_Tipo.notSet:
         break;
     }
