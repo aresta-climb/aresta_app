@@ -1,0 +1,53 @@
+// Copyright (C) 2026 ACEC-MG
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package acecmg;
+
+// Representa um índice de croquis de escalada, apontando para onde recuperar o
+// croqui inteiro.
+message Indice {
+    // URL base da qual todos os croquis possuem suas URLs relativas a.
+    string url_base = 1;
+
+    // Lista de croquis disponíveis.
+    repeated ResumoCroqui croquis = 2;
+}
+
+// Resumo de um croqui que está disponível para o índice.
+message ResumoCroqui {
+    // Identificador único do croqui.
+    string id = 1;
+
+    // Nome do local do croqui.
+    string nome = 2;
+
+    // Descrição curta e em alto nível do local.
+    string descricao = 3;
+
+    // Nome do arquivo do croqui.
+    string nome_arquivo = 4;
+
+    // URL para recuperar o croqui inteiro, relativo ao website do indice.
+    string url = 5;
+
+    // Checksum SHA256 da última versão do croqui.
+    // Se diferente do checksum da versão baixada, há atualizações.
+    string checksum_sha256 = 6;
+
+    // Data do último update, no formato YYYY-MM-DD.
+    string data_update = 7;
+}
