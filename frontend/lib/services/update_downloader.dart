@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
-// A simple model representing a file entry from your parsed index.binarypb
+/// A model representing a file entry from the master index.
 class IndexEntry {
   final String filename;
   final String expectedSha256;
@@ -15,12 +15,17 @@ class IndexEntry {
   });
 }
 
+/// A utility class for downloading and verifying files.
+/// 
+/// It ensures that downloaded files match their expected checksums 
+/// before they are considered valid and stored in the staging directory.
 class UpdateDownloader {
-  // A reusable HTTP client for downloading files
+  /// A reusable HTTP client for downloading files.
   final http.Client _client = http.Client();
 
   /// Downloads updates, verifies them, and places them in the staging directory.
-  /// Throws an exception if a checksum fails.
+  /// 
+  /// Throws an [Exception] if a download fails or if a checksum mismatch is detected.
   Future<void> downloadAndVerifyUpdates({
     required List<IndexEntry> filesToUpdate,
     required Directory stagingDir,
@@ -68,10 +73,11 @@ class UpdateDownloader {
     // Pass the stream into the crypto library's SHA-256 calculator
     final Digest hashResult = await sha256.bind(stream).first;
 
-    // Compare the resulting hex string to your index
+    // Compare the resulting hex string to the expected hash
     return hashResult.toString() == expectedHexHash;
   }
 
+  /// Closes the HTTP client.
   void dispose() {
     _client.close();
   }

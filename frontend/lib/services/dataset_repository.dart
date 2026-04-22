@@ -4,7 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../kmon_api/proto/indice.pb.dart';
-import '../kmon_api/proto/croqui.pb.dart'; // Import Croqui proto
+import '../kmon_api/proto/croqui.pb.dart';
+
+/// Represents the synchronization state of the application.
+enum SyncStatus {
+  updated,
+  updating,
+  outdated,
+  error 
+}
 
 class TopoDataset {
   final List<Map<String, dynamic>> availablePicos;
@@ -16,58 +24,52 @@ class TopoDataset {
   });
 }
 
+/// A repository that manages the synchronization and storage of climbing data.
+/// 
+/// It acts as the central state manager for crag information, handling 
+/// local storage, downloads, and the guides priority logic.
 class DatasetRepository {
-  // This notifies the UI whenever the data changes
+  /// This notifies the UI whenever the data changes
   final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(null);
+
+  /// Notifies listeners about the current synchronization status.
+  final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(SyncStatus.updating);
 
   // Github pages backend
   final String _baseUrl = 'https://acecmg.github.io/kmon_serving';
 
-  Future<void> initialize() async {
-    try {
-      // 1. Fetch the master index file from the live server
-      print('Fetching live database from $_baseUrl/indice.binarypb...');
-      final response = await http.get(Uri.parse('$_baseUrl/indice.binarypb'));
+  /// Processes a protobuf [Indice] and updates the [activeDataset].
+  /// 
+  /// It maps the protobuf data to a list of maps and identifies which crags
+  /// are already stored locally.
+  Future<void> loadIndiceToMemory(Indice indice) async {
+    final List<Map<String, dynamic>> parsedPicos = indice.croquis.map((resumo) {
+      return {
+        'nome': resumo.nome,
+        // TODO: Using the descricao field as the location/subtitle for now
+        'local': resumo.descricao.isNotEmpty ? resumo.descricao : 'Local Desconhecido',
+        'id': resumo.id,
+        'url': '$_baseUrl/${resumo.url}',
+        'checksum': resumo.checksumSha256,
+      };
+    }).toList();
 
-      if (response.statusCode == 200) {
-        // 2. Decode the raw bytes into Dart objects using Protobuf
-        final indice = Indice.fromBuffer(response.bodyBytes);
-        print('Successfully parsed index! Found ${indice.croquis.length} crags.');
+    // Identify which ones are already downloaded
+    final List<Map<String, dynamic>> downloaded = await _filterDownloaded(parsedPicos);
 
-        // 3. Map the Protobuf ResumoCroqui objects to the Map format of the UI
-        final List<Map<String, dynamic>> parsedPicos = indice.croquis.map((resumo) {
-          return {
-            'nome': resumo.nome,
-            // Using the descricao field as the location/subtitle for now
-            'local': resumo.descricao.isNotEmpty ? resumo.descricao : 'Local Desconhecido',
-            'id': resumo.id,
-            'url': '$_baseUrl/${resumo.url}',
-            'checksum': resumo.checksumSha256,
-          };
-        }).toList();
-
-        // 4. Identify which ones are already downloaded
-        final List<Map<String, dynamic>> downloaded = await _filterDownloaded(parsedPicos);
-
-        // 5. Update the state manager, which instantly rebuilds Home and Browse pages
-        activeDataset.value = TopoDataset(
-          availablePicos: parsedPicos,
-          downloadedPicos: downloaded,
-        );
-
-        // 6. Kick off background sync process
-        _checkForUpdatesInBackground(indice);
-
-      } else {
-        print('Server returned an error: ${response.statusCode}');
-        _loadOfflineCache();
-      }
-    } catch (e) {
-      print('Failed to connect to the server: $e');
-      _loadOfflineCache();
-    }
+    // Update the state manager, which instantly rebuilds Home and Browse pages
+    activeDataset.value = TopoDataset(
+      availablePicos: parsedPicos,
+      downloadedPicos: downloaded,
+    );
   }
 
+  /// Sets the dataset to an empty state.
+  void loadEmpty() {
+    activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
+  }
+
+  /// Retrieves the list of recently accessed crag IDs from local storage.
   Future<List<String>> _getPriorityList() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -78,11 +80,12 @@ class DatasetRepository {
         return jsonList.cast<String>();
       }
     } catch (e) {
-      print('Error reading priority list: $e');
+      debugPrint('Error reading priority list: $e');
     }
     return [];
   }
 
+  /// Updates the "Recent" list by moving the given [id] to the front of priority.
   Future<void> _updatePriority(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -94,10 +97,13 @@ class DatasetRepository {
       
       await file.writeAsString(jsonEncode(priorityList));
     } catch (e) {
-      print('Error updating priority list: $e');
+      debugPrint('Error updating priority list: $e');
     }
   }
 
+  /// Filters and sorts the list of crags based on what is available locally.
+  /// 
+  /// Crags are sorted according to the priority list (most recent first).
   Future<List<Map<String, dynamic>>> _filterDownloaded(List<Map<String, dynamic>> picos) async {
     final directory = await getApplicationDocumentsDirectory();
     final List<String> priorityList = await _getPriorityList();
@@ -124,7 +130,9 @@ class DatasetRepository {
     return downloaded;
   }
 
-  /// Downloads a crag's binarypb and saves it to local storage
+  /// Downloads a crag's binarypb and its associated external files to local storage.
+  /// 
+  /// Returns [true] if the download and save operations were successful.
   Future<bool> downloadCrag(Map<String, dynamic> crag) async {
     final String? url = crag['url'];
     final String? id = crag['id'];
@@ -132,7 +140,7 @@ class DatasetRepository {
     if (url == null || id == null) return false;
 
     try {
-      print('Downloading crag $id from $url...');
+      debugPrint('Downloading crag $id from $url...');
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -146,7 +154,7 @@ class DatasetRepository {
         final file = File('${downloadsDir.path}/$id.binarypb');
         await file.writeAsBytes(response.bodyBytes);
         
-        print('Saved to: ${file.path}');
+        debugPrint('Saved to: ${file.path}');
 
         // Refresh the dataset so the UI knows there's a new download
         if (activeDataset.value != null) {
@@ -157,25 +165,43 @@ class DatasetRepository {
           );
         }
 
+        // --- Download all External Files (Images/Markdowns) ---
+        try {
+          final parsedPico = Croqui.fromBuffer(response.bodyBytes);
+          for (var ext in parsedPico.arquivosExternos) {
+             final imageUrl = '$_baseUrl/${ext.caminho}';
+             final imgResponse = await http.get(Uri.parse(imageUrl));
+             if (imgResponse.statusCode == 200) {
+                final imgFile = File('${downloadsDir.path}/${ext.caminho}');
+                if (!await imgFile.parent.exists()) {
+                   await imgFile.parent.create(recursive: true);
+                }
+                await imgFile.writeAsBytes(imgResponse.bodyBytes);
+             }
+          }
+        } catch (downloadEx) {
+          debugPrint('Error downloading external files for $id: $downloadEx');
+        }
+
         return true;
       }
     } catch (e) {
-      print('Error downloading crag: $e');
+      debugPrint('Error downloading crag: $e');
     }
     return false;
   }
 
-  /// Loads the full Croqui data from a local binarypb file
+  /// Loads the full [Croqui] data from a local file and updates its priority.
   Future<Croqui?> getCroqui(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/downloads/$id.binarypb');
       
       if (await file.exists()) {
-        // Move ID to the front of the priority list
+        // Move ID to the front of the priority list if it's being viewed
         await _updatePriority(id);
 
-        // Update dataset to reflect new sorting
+        // Update dataset to reflect new sorting in the UI
         if (activeDataset.value != null) {
           final updated = await _filterDownloaded(activeDataset.value!.availablePicos);
           activeDataset.value = TopoDataset(
@@ -188,11 +214,12 @@ class DatasetRepository {
         return Croqui.fromBuffer(bytes);
       }
     } catch (e) {
-      print('Error loading croqui $id: $e');
+      debugPrint('Error loading croqui $id: $e');
     }
     return null;
   }
 
+  /// Deletes a crag's binarypb from local storage and refreshes the dataset.
   Future<bool> deleteCrag(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -209,21 +236,8 @@ class DatasetRepository {
         return true;
       }
     } catch (e) {
-      print('Error deleting crag: $e');
+      debugPrint('Error deleting crag: $e');
     }
     return false;
-  }
-
-  void _checkForUpdatesInBackground(Indice remoteIndice) {
-    /* TODO: Compare remoteIndice.croquis[i].checksumSha256
-        with the locally saved files. If they differ, download the new compilado.binarypb
-    */
-    print('Background update check complete.');
-  }
-
-  void _loadOfflineCache() async {
-    // In a real offline scenario, we'd need a local index or to scan the downloads directory.
-    // For now, let's just show what's downloaded if we can't reach the server.
-    activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
   }
 }

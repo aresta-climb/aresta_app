@@ -37,6 +37,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
         MaterialPageRoute(
           builder: (context) => PicoDetailsPage(
             pico: croqui.picos.first,
+            croqui: croqui,
             cragId: id,
             datasetRepo: datasetRepo,
           ),
@@ -80,7 +81,28 @@ Widget buildHomeBody(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          buildSectionHeader('Guias Recentes'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Guias Recentes',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: fishBone,
+                  ),
+                ),
+                ValueListenableBuilder<SyncStatus>(
+                  valueListenable: datasetRepo.syncStatus,
+                  builder: (context, status, _) {
+                    return buildSyncBadge(status);
+                  },
+                ),
+              ],
+            ),
+          ),
           // The carousel handles the 4-card limit internally now
           buildPicosCarousel(
             downloadedPicos, 
@@ -95,6 +117,59 @@ Widget buildHomeBody(
           const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
         ],
       ),
+    ),
+  );
+}
+
+/// Builds a synchronization status badge.
+Widget buildSyncBadge(SyncStatus status) {
+  String text;
+  Color color;
+  IconData icon;
+
+  switch (status) {
+    case SyncStatus.updated:
+      text = 'Atualizados';
+      color = Colors.green.shade800;
+      icon = Icons.check_circle;
+      break;
+    case SyncStatus.updating:
+      text = 'Atualizando...';
+      color = Colors.blue.shade800;
+      icon = Icons.sync;
+      break;
+    case SyncStatus.outdated:
+      text = 'Desatualizado';
+      color = Colors.orange.shade800;
+      icon = Icons.warning;
+      break;
+    case SyncStatus.error:
+      text = 'Sem conexão';
+      color = Colors.brown.shade800;
+      icon = Icons.error;
+      break;
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.white),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     ),
   );
 }

@@ -5,7 +5,8 @@ import 'pico_functions.dart';
 
 /// Builds the main scrollable body of the Grupo page.
 ///
-/// It extracts the description and iterates through all available sectors within the group.
+/// It displays the group's information and a list of all available groups of sectors (setores)
+/// within the crag (pico).
 Widget buildGrupoBody(BuildContext context, Grupo grupo) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
@@ -16,11 +17,12 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo) {
         _buildInfoRow('Nome', grupo.nome),
         if (grupo.descricao.isNotEmpty) _buildInfoRow('Descrição', grupo.descricao),
         const SizedBox(height: 20),
-        _buildHeader('Setores'),
+        _buildHeader('Subsetores'),
         if (grupo.setores.isEmpty)
           const Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
         else
           ...grupo.setores.map((arquivoSetor) {
+            // Only render grupos that have content loaded
             if (arquivoSetor.hasConteudo()) {
               return buildSectorTile(context, arquivoSetor.conteudo);
             }
@@ -31,6 +33,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo) {
   );
 }
 
+/// Builds a styled header for sections within the Grupo page.
 Widget _buildHeader(String title) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -45,6 +48,9 @@ Widget _buildHeader(String title) {
   );
 }
 
+/// Builds a row displaying a label and its corresponding value.
+/// 
+/// Returns an empty space if the value is empty.
 Widget _buildInfoRow(String label, String value) {
   if (value.isEmpty) return const SizedBox.shrink();
   return Padding(

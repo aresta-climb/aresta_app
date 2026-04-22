@@ -3,11 +3,12 @@ import '../kmon_api/proto/croqui.pb.dart';
 import '../pages/setor.dart';
 import '../pages/grupo.dart';
 import 'common_functions.dart';
+import 'offline_markdown.dart';
 
 /// Builds the main scrollable body of the Pico page.
 ///
 /// It extracts the description and iterates through all available sectors to render them.
-Widget buildPicoBody(BuildContext context, Pico pico) {
+Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -15,7 +16,11 @@ Widget buildPicoBody(BuildContext context, Pico pico) {
       children: [
         _buildHeader('Informações do Local'),
         _buildInfoRow('Nome', pico.nome),
-        _buildInfoRow('Descrição', pico.descricao),
+        if (pico.descricao.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          OfflineMarkdown(data: pico.descricao),
+          const SizedBox(height: 10),
+        ],
         if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
         const SizedBox(height: 20),
         _buildHeader('Setores'),
@@ -30,6 +35,16 @@ Widget buildPicoBody(BuildContext context, Pico pico) {
             }
             return const SizedBox.shrink();
           }),
+        if (croqui.arquivosMarkdown.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildHeader('Mais Informações'),
+          ...croqui.arquivosMarkdown.map((md) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: OfflineMarkdown(data: md.conteudo),
+            );
+          }),
+        ],
       ],
     ),
   );

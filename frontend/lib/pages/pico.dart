@@ -9,12 +9,14 @@ import '../services/dataset_repository.dart';
 /// It presents the pico's description and lists all sectors contained within it.
 class PicoDetailsPage extends StatelessWidget {
   final Pico pico;
+  final Croqui croqui;
   final String cragId;
   final DatasetRepository datasetRepo;
 
   const PicoDetailsPage({
     super.key, 
     required this.pico,
+    required this.croqui,
     required this.cragId,
     required this.datasetRepo,
   });
@@ -65,7 +67,7 @@ class PicoDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: buildPicoBody(context, pico),
+      body: buildPicoBody(context, pico, croqui),
       bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
