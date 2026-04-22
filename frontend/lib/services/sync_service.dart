@@ -94,7 +94,7 @@ class SyncService {
 
     bool updatedAnything = false;
     for (var newResumo in newIndice.croquis) {
-      final picoFile = File('${downloadsDir.path}/${newResumo.id}.binarypb');
+      final picoFile = File('${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb');
       if (await picoFile.exists()) {
         final oldResumoList = oldIndice.croquis.where((c) => c.id == newResumo.id).toList();
         if (oldResumoList.isNotEmpty) {
@@ -123,7 +123,8 @@ class SyncService {
     }
 
     final newPicoData = Croqui.fromBuffer(response.bodyBytes);
-    final picoFile = File('${downloadsDir.path}/${newResumo.id}.binarypb');
+    final picoDir = Directory('${downloadsDir.path}/${newResumo.id}');
+    final picoFile = File('${picoDir.path}/${newResumo.id}.binarypb');
     
     Croqui? oldPicoData;
     if (await picoFile.exists()) {
@@ -152,7 +153,7 @@ class SyncService {
         }
 
         if (shouldDelete) {
-          final oldImgFile = File('${downloadsDir.path}/${oldExt.caminho}');
+          final oldImgFile = File('${picoDir.path}/${oldExt.caminho}');
           if (await oldImgFile.exists()) {
             await oldImgFile.delete();
             debugPrint('Deleted old image: ${oldExt.caminho}');
@@ -163,7 +164,7 @@ class SyncService {
       final oldMarkdownImages = _extractMarkdownImages(oldPicoData, baseDir);
       for (var path in oldMarkdownImages) {
         if (!newMarkdownImages.contains(path) && !newImages.containsKey(path)) {
-          final oldImgFile = File('${downloadsDir.path}/$path');
+          final oldImgFile = File('${picoDir.path}/$path');
           if (await oldImgFile.exists()) {
             await oldImgFile.delete();
             debugPrint('Deleted old markdown image: $path');
@@ -174,25 +175,28 @@ class SyncService {
       final oldImages = { for (var ext in oldPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
       for (var newExt in newPicoData.arquivosExternos) {
         if (!oldImages.containsKey(newExt.caminho) || oldImages[newExt.caminho] != newExt.checksumSha256) {
-          await _downloadImage(newExt.caminho, downloadsDir);
+          await _downloadImage(newExt.caminho, picoDir);
         }
       }
 
       for (var path in newMarkdownImages) {
         if (!oldMarkdownImages.contains(path)) {
-          await _downloadImage(path, downloadsDir);
+          await _downloadImage(path, picoDir);
         }
       }
     }
 
+    if (!await picoDir.exists()) {
+      await picoDir.create(recursive: true);
+    }
     await picoFile.writeAsBytes(response.bodyBytes);
     debugPrint('Updated pico ${newResumo.id} successfully.');
   }
 
   /// Downloads all external files associated with a given [Croqui].
-  Future<void> downloadExternalFilesForCroqui(Croqui newPicoData) async {
+  Future<void> downloadExternalFilesForCroqui(Croqui newPicoData, String picoId) async {
     final directory = await getApplicationDocumentsDirectory();
-    final downloadsDir = Directory('${directory.path}/downloads');
+    final downloadsDir = Directory('${directory.path}/downloads/$picoId');
     
     for (var ext in newPicoData.arquivosExternos) {
       await _downloadImage(ext.caminho, downloadsDir);

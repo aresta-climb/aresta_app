@@ -9,8 +9,9 @@ import '../functions/via_functions.dart';
 /// such as difficulty, protections, and descriptions.
 class ViaPage extends StatelessWidget {
   final Escalada escalada;
+  final String cragId;
 
-  const ViaPage({super.key, required this.escalada});
+  const ViaPage({super.key, required this.escalada, required this.cragId});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +40,7 @@ class ViaPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar(nome),
-      body: buildViaBody(context, escalada),
+      body: buildViaBody(context, escalada, cragId),
       bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

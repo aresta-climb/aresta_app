@@ -8,7 +8,7 @@ import 'offline_markdown.dart';
 ///
 /// It displays the group's information and a list of all available groups of sectors (setores)
 /// within the crag (pico).
-Widget buildGrupoBody(BuildContext context, Grupo grupo) {
+Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -18,7 +18,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo) {
         _buildInfoRow('Nome', grupo.nome),
         if (grupo.descricao.isNotEmpty) ...[
           const SizedBox(height: 10),
-          OfflineMarkdown(data: grupo.descricao),
+          OfflineMarkdown(data: grupo.descricao, cragId: cragId),
           const SizedBox(height: 10),
         ],
         const SizedBox(height: 20),
@@ -29,7 +29,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo) {
           ...grupo.setores.map((arquivoSetor) {
             // Only render grupos that have content loaded
             if (arquivoSetor.hasConteudo()) {
-              return buildSectorTile(context, arquivoSetor.conteudo);
+              return buildSectorTile(context, arquivoSetor.conteudo, cragId);
             }
             return const SizedBox.shrink();
           }),

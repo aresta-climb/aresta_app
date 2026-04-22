@@ -67,7 +67,7 @@ class PicoDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: buildPicoBody(context, pico, croqui),
+      body: buildPicoBody(context, pico, croqui, cragId),
       bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

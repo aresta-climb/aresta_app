@@ -83,11 +83,42 @@ class DatasetRepository {
   Future<List<String>> _getPriorityList() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/recent_picos.json');
-      if (await file.exists()) {
-        final content = await file.readAsString();
+      final yamlFile = File('${directory.path}/recent_picos.yaml');
+      final jsonFile = File('${directory.path}/recent_picos.json');
+
+      if (await yamlFile.exists()) {
+        // Cleanup leftover JSON file if it exists alongside the YAML file
+        if (await jsonFile.exists()) {
+          try {
+            await jsonFile.delete();
+          } catch (_) {}
+        }
+        
+        final content = await yamlFile.readAsString();
+        final List<String> list = [];
+        for (var line in content.split('\n')) {
+          line = line.trim();
+          if (line.startsWith('- ')) {
+            String val = line.substring(2).trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+              val = val.substring(1, val.length - 1);
+            }
+            list.add(val);
+          }
+        }
+        return list;
+      } else if (await jsonFile.exists()) {
+        // Migration from JSON to YAML
+        final content = await jsonFile.readAsString();
         final List<dynamic> jsonList = jsonDecode(content);
-        return jsonList.cast<String>();
+        final list = jsonList.cast<String>();
+        
+        // Write the new YAML file and delete the old JSON file
+        String yamlContent = list.map((id) => '- "$id"').join('\n');
+        await yamlFile.writeAsString(yamlContent);
+        await jsonFile.delete();
+        
+        return list;
       }
     } catch (e) {
       debugPrint('Error reading priority list: $e');
@@ -99,15 +130,29 @@ class DatasetRepository {
   Future<void> _updatePriority(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/recent_picos.json');
+      final yamlFile = File('${directory.path}/recent_picos.yaml');
       List<String> priorityList = await _getPriorityList();
       
       priorityList.remove(id);
       priorityList.insert(0, id);
       
-      await file.writeAsString(jsonEncode(priorityList));
+      String yamlContent = priorityList.map((itemId) => '- "$itemId"').join('\n');
+      await yamlFile.writeAsString(yamlContent);
     } catch (e) {
       debugPrint('Error updating priority list: $e');
+    }
+  }
+  
+  /// Updates priority list only (used after navigation to avoid jumping UI)
+  Future<void> updatePriorityAfterNavigation(String id) async {
+    await _updatePriority(id);
+    // Notify dataset listeners that something changed (sorting)
+    if (activeDataset.value != null) {
+      final updated = await _filterDownloaded(activeDataset.value!.availablePicos);
+      activeDataset.value = TopoDataset(
+        availablePicos: activeDataset.value!.availablePicos,
+        downloadedPicos: updated,
+      );
     }
   }
 
@@ -120,7 +165,7 @@ class DatasetRepository {
     final List<Map<String, dynamic>> downloaded = [];
     
     for (var pico in picos) {
-      final file = File('${directory.path}/downloads/${pico['id']}.binarypb');
+      final file = File('${directory.path}/downloads/${pico['id']}/${pico['id']}.binarypb');
       if (await file.exists()) {
         downloaded.add(pico);
       }
@@ -158,7 +203,7 @@ class DatasetRepository {
 
       if (response.statusCode == 200) {
         final directory = await getApplicationDocumentsDirectory();
-        final downloadsDir = Directory('${directory.path}/downloads');
+        final downloadsDir = Directory('${directory.path}/downloads/$id');
         
         if (!await downloadsDir.exists()) {
           await downloadsDir.create(recursive: true);
@@ -268,25 +313,13 @@ class DatasetRepository {
     return false;
   }
 
-  /// Loads the full [Croqui] data from a local file and updates its priority.
+  /// Loads the full [Croqui] data from a local file.
   Future<Croqui?> getCroqui(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/downloads/$id.binarypb');
+      final file = File('${directory.path}/downloads/$id/$id.binarypb');
       
       if (await file.exists()) {
-        // Move ID to the front of the priority list if it's being viewed
-        await _updatePriority(id);
-
-        // Update dataset to reflect new sorting in the UI
-        if (activeDataset.value != null) {
-          final updated = await _filterDownloaded(activeDataset.value!.availablePicos);
-          activeDataset.value = TopoDataset(
-            availablePicos: activeDataset.value!.availablePicos,
-            downloadedPicos: updated,
-          );
-        }
-
         final bytes = await file.readAsBytes();
         return Croqui.fromBuffer(bytes);
       }
@@ -300,9 +333,9 @@ class DatasetRepository {
   Future<bool> deleteCrag(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/downloads/$id.binarypb');
-      if (await file.exists()) {
-        await file.delete();
+      final dir = Directory('${directory.path}/downloads/$id');
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
         if (activeDataset.value != null) {
           final updatedDownloaded = await _filterDownloaded(activeDataset.value!.availablePicos);
           activeDataset.value = TopoDataset(

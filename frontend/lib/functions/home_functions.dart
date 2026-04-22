@@ -28,26 +28,32 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 
   final croqui = await datasetRepo.getCroqui(id);
 
-  if (context.mounted) {
-    Navigator.pop(context); // Remove loading indicator
+  if (!context.mounted) return;
+  
+  Navigator.pop(context); // Remove loading indicator
 
-    if (croqui != null && croqui.picos.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PicoDetailsPage(
-            pico: croqui.picos.first,
-            croqui: croqui,
-            cragId: id,
-            datasetRepo: datasetRepo,
-          ),
+  if (croqui != null && croqui.picos.isNotEmpty) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PicoDetailsPage(
+          pico: croqui.picos.first,
+          croqui: croqui,
+          cragId: id,
+          datasetRepo: datasetRepo,
         ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao abrir o guia.')),
-      );
-    }
+      ),
+    );
+    
+    // Update priority list AFTER the transition completes to avoid the carousel shifting
+    // while the user is still looking at it during the transition.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      datasetRepo.updatePriorityAfterNavigation(id);
+    });
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erro ao abrir o guia.')),
+    );
   }
 }
 

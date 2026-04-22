@@ -8,8 +8,9 @@ import '../functions/grupo_functions.dart';
 /// It presents the group's description, properties, and lists all sectors contained within it.
 class GrupoPage extends StatelessWidget {
   final Grupo grupo;
+  final String cragId;
 
-  const GrupoPage({super.key, required this.grupo});
+  const GrupoPage({super.key, required this.grupo, required this.cragId});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +20,7 @@ class GrupoPage extends StatelessWidget {
         grupo.nome,
         actions: [],
       ),
-      body: buildGrupoBody(context, grupo),
+      body: buildGrupoBody(context, grupo, cragId),
       bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

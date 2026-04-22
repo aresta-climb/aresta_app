@@ -6,13 +6,13 @@ import 'offline_markdown.dart';
 /// Builds the main scrollable body of the Route (Via) page.
 ///
 /// It delegates to specific builder functions depending on the route type.
-Widget buildViaBody(BuildContext context, Escalada escalada) {
+Widget buildViaBody(BuildContext context, Escalada escalada, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildContentForEscalada(escalada),
+        _buildContentForEscalada(escalada, cragId),
       ],
     ),
   );
@@ -20,24 +20,24 @@ Widget buildViaBody(BuildContext context, Escalada escalada) {
 
 /// Builds the detailed content based on the route's specific type 
 /// ([ViaEsportiva], [ViaMovel], [Boulder], or [ViaMultiplasEnfiadas]).
-Widget _buildContentForEscalada(Escalada escalada) {
+Widget _buildContentForEscalada(Escalada escalada, String cragId) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      return _buildViaEsportiva(escalada.viaEsportiva);
+      return _buildViaEsportiva(escalada.viaEsportiva, cragId);
     case Escalada_Tipo.viaMovel:
-      return _buildViaMovel(escalada.viaMovel);
+      return _buildViaMovel(escalada.viaMovel, cragId);
     case Escalada_Tipo.boulder:
-      return _buildBoulder(escalada.boulder);
+      return _buildBoulder(escalada.boulder, cragId);
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return _buildMultipitch(escalada.viaMultiplasEnfiadas);
+      return _buildMultipitch(escalada.viaMultiplasEnfiadas, cragId);
     case Escalada_Tipo.highline:
-      return _buildHighline(escalada.highline);
+      return _buildHighline(escalada.highline, cragId);
     default:
       return const Text('Detalhes não disponíveis.', style: TextStyle(color: fishBone));
   }
 }
 
-Widget _buildViaEsportiva(ViaEsportiva via) {
+Widget _buildViaEsportiva(ViaEsportiva via, String cragId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -50,7 +50,7 @@ Widget _buildViaEsportiva(ViaEsportiva via) {
       _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
       ],
       if (via.urlVideoBeta.isNotEmpty)
         _buildInfoRow('Vídeo Beta', via.urlVideoBeta),
@@ -58,7 +58,7 @@ Widget _buildViaEsportiva(ViaEsportiva via) {
   );
 }
 
-Widget _buildViaMovel(ViaMovel via) {
+Widget _buildViaMovel(ViaMovel via, String cragId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -73,7 +73,7 @@ Widget _buildViaMovel(ViaMovel via) {
         _buildInfoRow('Peças Móveis', via.protecoesMoveis),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
       ],
       if (via.urlVideoBeta.isNotEmpty)
         _buildInfoRow('Vídeo Beta', via.urlVideoBeta),
@@ -81,7 +81,7 @@ Widget _buildViaMovel(ViaMovel via) {
   );
 }
 
-Widget _buildBoulder(Boulder via) {
+Widget _buildBoulder(Boulder via, String cragId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -89,13 +89,13 @@ Widget _buildBoulder(Boulder via) {
       _buildInfoRow('Dificuldade', via.dificuldade.name.replaceAll('BR_', '').replaceAll('_', ' ')),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
       ],
     ],
   );
 }
 
-Widget _buildMultipitch(ViaMultiplasEnfiadas via) {
+Widget _buildMultipitch(ViaMultiplasEnfiadas via, String cragId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -103,13 +103,13 @@ Widget _buildMultipitch(ViaMultiplasEnfiadas via) {
       _buildInfoRow('Dificuldade Máxima', via.dificuldadeMaxima.name.replaceAll('BR_', '').replaceAll('_', ' ')),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
       ],
     ],
   );
 }
 
-Widget _buildHighline(Highline via) {
+Widget _buildHighline(Highline via, String cragId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -117,7 +117,7 @@ Widget _buildHighline(Highline via) {
       _buildInfoRow('Distância', '${via.distancia}m'),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
       ],
     ],
   );

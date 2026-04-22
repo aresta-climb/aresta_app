@@ -8,7 +8,7 @@ import 'offline_markdown.dart';
 /// Builds the main scrollable body of the Pico page.
 ///
 /// It extracts the description and iterates through all available sectors to render them.
-Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui) {
+Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -18,7 +18,7 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui) {
         _buildInfoRow('Nome', pico.nome),
         if (pico.descricao.isNotEmpty) ...[
           const SizedBox(height: 10),
-          OfflineMarkdown(data: pico.descricao),
+          OfflineMarkdown(data: pico.descricao, cragId: cragId),
           const SizedBox(height: 10),
         ],
         if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
@@ -29,9 +29,9 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui) {
         else
           ...pico.setoresOuGrupos.map((setorOuGrupo) {
             if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor && setorOuGrupo.setor.hasConteudo()) {
-              return buildSectorTile(context, setorOuGrupo.setor.conteudo);
+              return buildSectorTile(context, setorOuGrupo.setor.conteudo, cragId);
             } else if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.grupo && setorOuGrupo.grupo.hasConteudo()) {
-              return buildGrupoTile(context, setorOuGrupo.grupo.conteudo);
+              return buildGrupoTile(context, setorOuGrupo.grupo.conteudo, cragId);
             }
             return const SizedBox.shrink();
           }),
@@ -41,7 +41,7 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui) {
           ...croqui.arquivosMarkdown.map((md) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: OfflineMarkdown(data: md.conteudo),
+              child: OfflineMarkdown(data: md.conteudo, cragId: cragId),
             );
           }),
         ],
@@ -85,7 +85,7 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget buildSectorTile(BuildContext context, Setor setor) {
+Widget buildSectorTile(BuildContext context, Setor setor, String cragId) {
   return Container(
     margin: const EdgeInsets.only(bottom: 15),
     decoration: BoxDecoration(
@@ -106,14 +106,14 @@ Widget buildSectorTile(BuildContext context, Setor setor) {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SetorPage(setor: setor)),
+          MaterialPageRoute(builder: (context) => SetorPage(setor: setor, cragId: cragId)),
         );
       },
     ),
   );
 }
 
-Widget buildGrupoTile(BuildContext context, Grupo grupo) {
+Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
   return Container(
     margin: const EdgeInsets.only(bottom: 15),
     decoration: BoxDecoration(
@@ -134,7 +134,7 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo) {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => GrupoPage(grupo: grupo)),
+          MaterialPageRoute(builder: (context) => GrupoPage(grupo: grupo, cragId: cragId)),
         );
       },
     ),

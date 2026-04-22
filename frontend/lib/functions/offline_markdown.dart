@@ -11,8 +11,9 @@ import 'package:markdown/markdown.dart' as md;
 class OfflineMarkdown extends StatelessWidget {
   /// The raw markdown string to be rendered.
   final String data;
+  final String cragId;
 
-  const OfflineMarkdown({super.key, required this.data});
+  const OfflineMarkdown({super.key, required this.data, required this.cragId});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,7 @@ class OfflineMarkdown extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final downloadsPath = '${snapshot.data!.path}/downloads';
+        final downloadsPath = '${snapshot.data!.path}/downloads/$cragId';
         
         return MarkdownBody(
           data: data,

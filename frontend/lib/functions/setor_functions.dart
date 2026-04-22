@@ -8,7 +8,7 @@ import 'offline_markdown.dart';
 ///
 /// It extracts the description and iterates through all available routes 
 /// ([Escalada]) and nested sub-sectors to render them.
-Widget buildSetorBody(BuildContext context, Setor setor) {
+Widget buildSetorBody(BuildContext context, Setor setor, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -16,7 +16,7 @@ Widget buildSetorBody(BuildContext context, Setor setor) {
       children: [
         if (setor.descricao.isNotEmpty) ...[
           _buildHeader('Descrição'),
-          OfflineMarkdown(data: setor.descricao),
+          OfflineMarkdown(data: setor.descricao, cragId: cragId),
           const SizedBox(height: 20),
         ],
 
@@ -41,7 +41,7 @@ Widget buildSetorBody(BuildContext context, Setor setor) {
                 if (setor.escaladas.isEmpty)
                   Text(emptyText, style: const TextStyle(color: fishBone))
                 else ...[
-                  ...setor.escaladas.map((escalada) => _buildRouteTile(context, escalada)),
+                  ...setor.escaladas.map((escalada) => _buildRouteTile(context, escalada, cragId)),
                 ],
               ],
             );
@@ -72,7 +72,7 @@ Widget _buildHeader(String title) {
 ///
 /// It determines the route's type to fetch the appropriate name and grade, 
 /// and configures a tap button to navigate to the [ViaPage].
-Widget _buildRouteTile(BuildContext context, Escalada escalada) {
+Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId) {
   String nome = '';
   String info = '';
 
@@ -117,7 +117,7 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada) {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ViaPage(escalada: escalada)),
+          MaterialPageRoute(builder: (context) => ViaPage(escalada: escalada, cragId: cragId)),
         );
       },
     ),
