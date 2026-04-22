@@ -12,7 +12,6 @@ const Color mossRock = Color(0xFF5B614D);
 const Color clayEarth = Color(0xFF7D4F43);
 const Color weatheredIron = Color(0xFF3E4247);
 
-
 PreferredSizeWidget buildCommonAppBar(String title, {List<Widget>? actions}) {
   return AppBar(
     title: Text(

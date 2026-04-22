@@ -35,6 +35,9 @@ class DatasetRepository {
   /// Notifies listeners about the current synchronization status.
   final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(SyncStatus.updating);
 
+  /// Tracks which crags are currently being downloaded
+  final ValueNotifier<Set<String>> downloadingCrags = ValueNotifier({});
+
   // Github pages backend
   final String _baseUrl = 'https://acecmg.github.io/kmon_serving';
 
@@ -44,10 +47,17 @@ class DatasetRepository {
   /// are already stored locally.
   Future<void> loadIndiceToMemory(Indice indice) async {
     final List<Map<String, dynamic>> parsedPicos = indice.croquis.map((resumo) {
+      // TODO: Using the descricao field as the location/subtitle for now
+      String locationText;
+      if (resumo.descricao.isNotEmpty) {
+        locationText = resumo.descricao;
+      } else {
+        locationText = 'Local Desconhecido';
+      }
+      
       return {
         'nome': resumo.nome,
-        // TODO: Using the descricao field as the location/subtitle for now
-        'local': resumo.descricao.isNotEmpty ? resumo.descricao : 'Local Desconhecido',
+        'local': locationText,
         'id': resumo.id,
         'url': '$_baseUrl/${resumo.url}',
         'checksum': resumo.checksumSha256,
@@ -139,6 +149,9 @@ class DatasetRepository {
 
     if (url == null || id == null) return false;
 
+    // Mark as downloading
+    downloadingCrags.value = {...downloadingCrags.value, id};
+
     try {
       debugPrint('Downloading crag $id from $url...');
       final response = await http.get(Uri.parse(url));
@@ -156,7 +169,7 @@ class DatasetRepository {
         
         debugPrint('Saved to: ${file.path}');
 
-        // Refresh the dataset so the UI knows there's a new download
+        // Refresh the dataset so the UI knows there's a new download (partial)
         if (activeDataset.value != null) {
           final updatedDownloaded = await _filterDownloaded(activeDataset.value!.availablePicos);
           activeDataset.value = TopoDataset(
@@ -168,6 +181,26 @@ class DatasetRepository {
         // --- Download all External Files (Images/Markdowns) ---
         try {
           final parsedPico = Croqui.fromBuffer(response.bodyBytes);
+          
+          String baseDir = '';
+          if (url.startsWith(_baseUrl)) {
+            String relative = url.substring(_baseUrl.length);
+            if (relative.startsWith('/')) relative = relative.substring(1);
+            int lastSlash = relative.lastIndexOf('/');
+            if (lastSlash != -1) {
+              baseDir = relative.substring(0, lastSlash);
+            }
+          } else {
+             // Fallback if URL doesn't start with baseUrl for some reason
+             int lastSlash = url.lastIndexOf('/');
+             if (lastSlash != -1) {
+                baseDir = url.substring(url.indexOf('://') + 3); // strip https://
+                baseDir = baseDir.substring(baseDir.indexOf('/')); // strip domain
+                if (baseDir.startsWith('/')) baseDir = baseDir.substring(1);
+                baseDir = baseDir.substring(0, baseDir.lastIndexOf('/'));
+             }
+          }
+
           for (var ext in parsedPico.arquivosExternos) {
              final imageUrl = '$_baseUrl/${ext.caminho}';
              final imgResponse = await http.get(Uri.parse(imageUrl));
@@ -179,6 +212,47 @@ class DatasetRepository {
                 await imgFile.writeAsBytes(imgResponse.bodyBytes);
              }
           }
+
+          // Extract and download markdown images
+          try {
+            final jsonStr = jsonEncode(parsedPico.toProto3Json());
+            final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
+            final matches = regex.allMatches(jsonStr);
+            for (final match in matches) {
+              if (match.groupCount >= 1) {
+                String path = match.group(1)!;
+                if (!path.startsWith('http://') && !path.startsWith('https://')) {
+                  if (path.startsWith('./')) path = path.substring(2);
+                  if (path.startsWith('/')) path = path.substring(1);
+                  
+                  String fullCaminho;
+                  if (baseDir.isNotEmpty) {
+                    fullCaminho = '$baseDir/$path';
+                  } else {
+                    fullCaminho = path;
+                  }
+                  
+                  final imageUrl = '$_baseUrl/$fullCaminho';
+                  debugPrint('Attempting to download markdown image: $imageUrl');
+                  
+                  final imgResponse = await http.get(Uri.parse(imageUrl));
+                  if (imgResponse.statusCode == 200) {
+                    final imgFile = File('${downloadsDir.path}/$fullCaminho');
+                    if (!await imgFile.parent.exists()) {
+                       await imgFile.parent.create(recursive: true);
+                    }
+                    await imgFile.writeAsBytes(imgResponse.bodyBytes);
+                    debugPrint('Successfully downloaded markdown image to ${imgFile.path}');
+                  } else {
+                    debugPrint('Failed to download markdown image: $imageUrl, status: ${imgResponse.statusCode}');
+                  }
+                }
+              }
+            }
+          } catch (mdEx) {
+            debugPrint('Error downloading markdown images for $id: $mdEx');
+          }
+
         } catch (downloadEx) {
           debugPrint('Error downloading external files for $id: $downloadEx');
         }
@@ -187,6 +261,9 @@ class DatasetRepository {
       }
     } catch (e) {
       debugPrint('Error downloading crag: $e');
+    } finally {
+      // Unmark as downloading regardless of success or failure
+      downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
     return false;
   }

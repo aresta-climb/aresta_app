@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 import 'common_functions.dart';
 import 'pico_functions.dart';
+import 'offline_markdown.dart';
 
 /// Builds the main scrollable body of the Grupo page.
 ///
@@ -15,7 +16,11 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo) {
       children: [
         _buildHeader('Informações do Grupo'),
         _buildInfoRow('Nome', grupo.nome),
-        if (grupo.descricao.isNotEmpty) _buildInfoRow('Descrição', grupo.descricao),
+        if (grupo.descricao.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          OfflineMarkdown(data: grupo.descricao),
+          const SizedBox(height: 10),
+        ],
         const SizedBox(height: 20),
         _buildHeader('Subsetores'),
         if (grupo.setores.isEmpty)

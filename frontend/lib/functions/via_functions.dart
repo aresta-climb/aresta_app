@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 import 'common_functions.dart';
+import 'offline_markdown.dart';
 
 /// Builds the main scrollable body of the Route (Via) page.
 ///
@@ -49,7 +50,7 @@ Widget _buildViaEsportiva(ViaEsportiva via) {
       _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        Text(via.descricao, style: const TextStyle(color: fishBone)),
+        OfflineMarkdown(data: via.descricao),
       ],
       if (via.urlVideoBeta.isNotEmpty)
         _buildInfoRow('Vídeo Beta', via.urlVideoBeta),
@@ -72,7 +73,7 @@ Widget _buildViaMovel(ViaMovel via) {
         _buildInfoRow('Peças Móveis', via.protecoesMoveis),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        Text(via.descricao, style: const TextStyle(color: fishBone)),
+        OfflineMarkdown(data: via.descricao),
       ],
       if (via.urlVideoBeta.isNotEmpty)
         _buildInfoRow('Vídeo Beta', via.urlVideoBeta),
@@ -88,7 +89,7 @@ Widget _buildBoulder(Boulder via) {
       _buildInfoRow('Dificuldade', via.dificuldade.name.replaceAll('BR_', '').replaceAll('_', ' ')),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        Text(via.descricao, style: const TextStyle(color: fishBone)),
+        OfflineMarkdown(data: via.descricao),
       ],
     ],
   );
@@ -102,7 +103,7 @@ Widget _buildMultipitch(ViaMultiplasEnfiadas via) {
       _buildInfoRow('Dificuldade Máxima', via.dificuldadeMaxima.name.replaceAll('BR_', '').replaceAll('_', ' ')),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        Text(via.descricao, style: const TextStyle(color: fishBone)),
+        OfflineMarkdown(data: via.descricao),
       ],
     ],
   );
@@ -116,7 +117,7 @@ Widget _buildHighline(Highline via) {
       _buildInfoRow('Distância', '${via.distancia}m'),
       if (via.descricao.isNotEmpty) ...[
         _buildHeader('Descrição'),
-        Text(via.descricao, style: const TextStyle(color: fishBone)),
+        OfflineMarkdown(data: via.descricao),
       ],
     ],
   );

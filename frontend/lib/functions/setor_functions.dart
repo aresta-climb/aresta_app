@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 import '../pages/via.dart';
 import 'common_functions.dart';
+import 'offline_markdown.dart';
 
 /// Builds the main scrollable body of the Sector page.
 ///
@@ -15,16 +16,37 @@ Widget buildSetorBody(BuildContext context, Setor setor) {
       children: [
         if (setor.descricao.isNotEmpty) ...[
           _buildHeader('Descrição'),
-          Text(setor.descricao, style: const TextStyle(color: fishBone)),
+          OfflineMarkdown(data: setor.descricao),
           const SizedBox(height: 20),
         ],
 
-        _buildHeader('Vias'),
-        if (setor.escaladas.isEmpty)
-          const Text('Nenhuma via disponível.', style: TextStyle(color: fishBone))
-        else ...[
-          ...setor.escaladas.map((escalada) => _buildRouteTile(context, escalada)),
-        ],
+        Builder(
+          builder: (context) {
+            int boulderCount = 0;
+            for (var escalada in setor.escaladas) {
+              if (escalada.whichTipo() == Escalada_Tipo.boulder) {
+                boulderCount++;
+              }
+            }
+            
+            // If more than half of the climbs are boulders, display "Boulders" instead of "Vias"
+            final bool isBoulderArea = setor.escaladas.isNotEmpty && boulderCount >= (setor.escaladas.length / 2);
+            final String headerText = isBoulderArea ? 'Boulders' : 'Vias';
+            final String emptyText = isBoulderArea ? 'Nenhum boulder disponível.' : 'Nenhuma via disponível.';
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(headerText),
+                if (setor.escaladas.isEmpty)
+                  Text(emptyText, style: const TextStyle(color: fishBone))
+                else ...[
+                  ...setor.escaladas.map((escalada) => _buildRouteTile(context, escalada)),
+                ],
+              ],
+            );
+          },
+        ),
       ],
     ),
   );

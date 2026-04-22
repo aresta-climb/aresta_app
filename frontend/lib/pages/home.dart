@@ -46,11 +46,17 @@ class HomePage extends StatelessWidget {
             );
           }
 
-          return buildHomeBody(
-            context,
-            datasetRepo,
-            dataset.downloadedPicos, 
-            onAddCrag: () => onSwitchTab(2),
+          return ValueListenableBuilder<Set<String>>(
+            valueListenable: datasetRepo.downloadingCrags,
+            builder: (context, downloadingCrags, child) {
+              return buildHomeBody(
+                context,
+                datasetRepo,
+                dataset.downloadedPicos,
+                downloadingCrags,
+                onAddCrag: () => onSwitchTab(2),
+              );
+            },
           );
         },
       ),

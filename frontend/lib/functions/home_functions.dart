@@ -58,7 +58,8 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 Widget buildHomeBody(
   BuildContext context,
   DatasetRepository datasetRepo,
-  List<Map<String, dynamic>> downloadedPicos, {
+  List<Map<String, dynamic>> downloadedPicos,
+  Set<String> downloadingCrags, {
   required VoidCallback onAddCrag,
 }) {
   return Container(
@@ -106,11 +107,13 @@ Widget buildHomeBody(
           // The carousel handles the 4-card limit internally now
           buildPicosCarousel(
             downloadedPicos, 
+            downloadingCrags,
             onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
           ),
           const SizedBox(height: 10),
           _buildAllGuidesDropdown(
             downloadedPicos, 
+            downloadingCrags,
             onAddCrag: onAddCrag, 
             onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
           ),
@@ -176,7 +179,8 @@ Widget buildSyncBadge(SyncStatus status) {
 
 /// Builds an expandable list showing all downloaded guides.
 Widget _buildAllGuidesDropdown(
-  List<Map<String, dynamic>> picos, {
+  List<Map<String, dynamic>> picos,
+  Set<String> downloadingCrags, {
   required VoidCallback onAddCrag,
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
@@ -209,15 +213,47 @@ Widget _buildAllGuidesDropdown(
       backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded for emphasis
       collapsedBackgroundColor: Colors.transparent,
       children: [
-        ...picos.map((pico) => ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-          title: Text(
-            safeString(pico['nome']),
-            style: const TextStyle(color: fishBone, fontSize: 15),
-          ),
-          trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
-          onTap: () => onPicoSelect(pico),
-        )),
+        ...picos.map((pico) {
+          final isDownloading = downloadingCrags.contains(pico['id']);
+          
+          Widget trailingIcon;
+          if (isDownloading) {
+            trailingIcon = const SizedBox(
+              width: 16, 
+              height: 16, 
+              child: CircularProgressIndicator(color: fishBone, strokeWidth: 2)
+            );
+          } else {
+            trailingIcon = const Icon(Icons.chevron_right, color: fishBone, size: 18);
+          }
+          
+          Color titleColor;
+          if (isDownloading) {
+            titleColor = fishBone.withValues(alpha: 0.5);
+          } else {
+            titleColor = fishBone;
+          }
+
+          VoidCallback? onTapCallback;
+          if (isDownloading) {
+            onTapCallback = null;
+          } else {
+            onTapCallback = () => onPicoSelect(pico);
+          }
+
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+            title: Text(
+              safeString(pico['nome']),
+              style: TextStyle(
+                color: titleColor, 
+                fontSize: 15
+              ),
+            ),
+            trailing: trailingIcon,
+            onTap: onTapCallback,
+          );
+        }),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 32),
           leading: const Icon(Icons.add_circle_outline, color: beastHide, size: 20),
@@ -256,7 +292,8 @@ Widget buildSectionHeader(String title) {
 /// Limited to the 4 most recent crags.
 /// Allows infinite looping if there are exactly 4 items.
 Widget buildPicosCarousel(
-  List<Map<String, dynamic>> allPicos, {
+  List<Map<String, dynamic>> allPicos,
+  Set<String> downloadingCrags, {
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
   if (allPicos.isEmpty) {
@@ -294,9 +331,29 @@ Widget buildPicosCarousel(
             final Color cardColor = cardPalette[actualIndex % cardPalette.length];
             final double rightPadding = (!shouldLoop && actualIndex == count - 1) ? 0.0 : 10.0;
 
+            final pico = picosToShow[actualIndex];
+            final isDownloading = downloadingCrags.contains(pico['id']);
+
+            VoidCallback? onTapCallback;
+            if (isDownloading) {
+              onTapCallback = null;
+            } else {
+              onTapCallback = () => onPicoSelect(pico);
+            }
+            
+            double cardOpacity;
+            if (isDownloading) {
+              cardOpacity = 0.6;
+            } else {
+              cardOpacity = 1.0;
+            }
+
             return GestureDetector(
-              onTap: () => onPicoSelect(picosToShow[actualIndex]),
-              child: buildPicoCard(picosToShow[actualIndex], rightPadding, cardColor),
+              onTap: onTapCallback,
+              child: Opacity(
+                opacity: cardOpacity,
+                child: buildPicoCard(pico, rightPadding, cardColor, isDownloading),
+              ),
             );
           },
         ),
@@ -308,7 +365,7 @@ Widget buildPicosCarousel(
 }
 
 /// Builds an individual card for a crag in the carousel.
-Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor) {
+Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor, bool isDownloading) {
   return Padding(
     padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
     child: Container(
@@ -358,7 +415,16 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
               ],
             ),
             const Spacer(),
-            buildVerGuiaButton(),
+            if (isDownloading)
+              const Row(
+                children: [
+                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: nobleBlack, strokeWidth: 2)),
+                   SizedBox(width: 8),
+                   Text('BAIXANDO...', style: TextStyle(color: nobleBlack, fontSize: 12, fontWeight: FontWeight.bold)),
+                ]
+              )
+            else
+              buildVerGuiaButton(),
           ],
         ),
       ),
