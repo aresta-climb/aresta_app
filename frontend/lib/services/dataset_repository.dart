@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../kmon_api/proto/indice.pb.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 
-/// Represents the synchronization state of the application.
+/// Representa o estado de sincronização do aplicativo.
 enum SyncStatus {
   updated,
   updating,
@@ -24,30 +24,30 @@ class TopoDataset {
   });
 }
 
-/// A repository that manages the synchronization and storage of climbing data.
+/// Um repositório que gerencia a sincronização e o armazenamento de dados de escalada.
 /// 
-/// It acts as the central state manager for crag information, handling 
-/// local storage, downloads, and the guides priority logic.
+/// Ele atua como o gerenciador de estado central para informações de picos, lidando com
+/// armazenamento local, downloads e a lógica de prioridade de guias.
 class DatasetRepository {
-  /// This notifies the UI whenever the data changes
+  /// Isso notifica a interface do usuário sempre que os dados mudam
   final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(null);
 
-  /// Notifies listeners about the current synchronization status.
+  /// Notifica os ouvintes sobre o status de sincronização atual.
   final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(SyncStatus.updating);
 
-  /// Tracks which crags are currently being downloaded
+  /// Rastreia quais picos estão sendo baixados no momento
   final ValueNotifier<Set<String>> downloadingCrags = ValueNotifier({});
 
-  // Github pages backend
+  // Backend do Github pages
   final String _baseUrl = 'https://acecmg.github.io/kmon_serving';
 
-  /// Processes a protobuf [Indice] and updates the [activeDataset].
+  /// Processa um [Indice] protobuf e atualiza o [activeDataset].
   /// 
-  /// It maps the protobuf data to a list of maps and identifies which crags
-  /// are already stored locally.
+  /// Ele mapeia os dados do protobuf para uma lista de mapas e identifica quais picos
+  /// já estão armazenados localmente.
   Future<void> loadIndiceToMemory(Indice indice) async {
     final List<Map<String, dynamic>> parsedPicos = indice.croquis.map((resumo) {
-      // TODO: Using the descricao field as the location/subtitle for now
+      // TODO: Usando o campo de descrição como localização/subtítulo por enquanto
       String locationText;
       if (resumo.descricao.isNotEmpty) {
         locationText = resumo.descricao;
@@ -64,22 +64,22 @@ class DatasetRepository {
       };
     }).toList();
 
-    // Identify which ones are already downloaded
+    // Identifica quais já foram baixados
     final List<Map<String, dynamic>> downloaded = await _filterDownloaded(parsedPicos);
 
-    // Update the state manager, which instantly rebuilds Home and Browse pages
+    // Atualiza o gerenciador de estado, o que reconstrói instantaneamente as páginas Home e Browse
     activeDataset.value = TopoDataset(
       availablePicos: parsedPicos,
       downloadedPicos: downloaded,
     );
   }
 
-  /// Sets the dataset to an empty state.
+  /// Define o conjunto de dados para um estado vazio.
   void loadEmpty() {
     activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
   }
 
-  /// Retrieves the list of recently accessed crag IDs from local storage.
+  /// Recupera a lista de IDs de picos acessados recentemente do armazenamento local.
   Future<List<String>> _getPriorityList() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -87,7 +87,7 @@ class DatasetRepository {
       final jsonFile = File('${directory.path}/recent_picos.json');
 
       if (await yamlFile.exists()) {
-        // Cleanup leftover JSON file if it exists alongside the YAML file
+        // Limpa o arquivo JSON restante se ele existir junto com o arquivo YAML
         if (await jsonFile.exists()) {
           try {
             await jsonFile.delete();
@@ -108,12 +108,12 @@ class DatasetRepository {
         }
         return list;
       } else if (await jsonFile.exists()) {
-        // Migration from JSON to YAML
+        // Migração de JSON para YAML
         final content = await jsonFile.readAsString();
         final List<dynamic> jsonList = jsonDecode(content);
         final list = jsonList.cast<String>();
         
-        // Write the new YAML file and delete the old JSON file
+        // Escreve o novo arquivo YAML e exclui o antigo arquivo JSON
         String yamlContent = list.map((id) => '- "$id"').join('\n');
         await yamlFile.writeAsString(yamlContent);
         await jsonFile.delete();
@@ -126,7 +126,7 @@ class DatasetRepository {
     return [];
   }
 
-  /// Updates the "Recent" list by moving the given [id] to the front of priority.
+  /// Atualiza a lista "Recentes" movendo o [id] fornecido para o topo da prioridade.
   Future<void> _updatePriority(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -143,10 +143,10 @@ class DatasetRepository {
     }
   }
   
-  /// Updates priority list only (used after navigation to avoid jumping UI)
+  /// Atualiza apenas a lista de prioridades (usado após a navegação para evitar saltos na interface do usuário)
   Future<void> updatePriorityAfterNavigation(String id) async {
     await _updatePriority(id);
-    // Notify dataset listeners that something changed (sorting)
+    // Notifica os ouvintes do conjunto de dados que algo mudou (ordenação)
     if (activeDataset.value != null) {
       final updated = await _filterDownloaded(activeDataset.value!.availablePicos);
       activeDataset.value = TopoDataset(
@@ -156,9 +156,9 @@ class DatasetRepository {
     }
   }
 
-  /// Filters and sorts the list of crags based on what is available locally.
+  /// Filtra e ordena a lista de picos com base no que está disponível localmente.
   /// 
-  /// Crags are sorted according to the priority list (most recent first).
+  /// Os picos são ordenados de acordo com a lista de prioridades (os mais recentes primeiro).
   Future<List<Map<String, dynamic>>> _filterDownloaded(List<Map<String, dynamic>> picos) async {
     final directory = await getApplicationDocumentsDirectory();
     final List<String> priorityList = await _getPriorityList();
@@ -171,8 +171,8 @@ class DatasetRepository {
       }
     }
     
-    // Sort based on index in priorityList (lower index = higher priority)
-    // Items not in the list are placed at the end, hence they do not appear in the carousel, only on the dropdown
+    // Ordena com base no índice em priorityList (índice menor = prioridade maior)
+    // Itens que não estão na lista são colocados no final, portanto não aparecem no carrossel, apenas na lista suspensa
     downloaded.sort((a, b) {
       int indexA = priorityList.indexOf(a['id']);
       int indexB = priorityList.indexOf(b['id']);
@@ -185,16 +185,16 @@ class DatasetRepository {
     return downloaded;
   }
 
-  /// Downloads a crag's binarypb and its associated external files to local storage.
+  /// Baixa o binarypb de um pico e seus arquivos externos associados para o armazenamento local.
   /// 
-  /// Returns [true] if the download and save operations were successful.
+  /// Retorna [true] se as operações de download e salvamento forem bem-sucedidas.
   Future<bool> downloadCrag(Map<String, dynamic> crag) async {
     final String? url = crag['url'];
     final String? id = crag['id'];
 
     if (url == null || id == null) return false;
 
-    // Mark as downloading
+    // Marca como baixando
     downloadingCrags.value = {...downloadingCrags.value, id};
 
     try {
@@ -214,7 +214,7 @@ class DatasetRepository {
         
         debugPrint('Saved to: ${file.path}');
 
-        // Refresh the dataset so the UI knows there's a new download (partial)
+        // Atualiza o conjunto de dados para que a interface saiba que há um novo download (parcial)
         if (activeDataset.value != null) {
           final updatedDownloaded = await _filterDownloaded(activeDataset.value!.availablePicos);
           activeDataset.value = TopoDataset(
@@ -223,7 +223,7 @@ class DatasetRepository {
           );
         }
 
-        // --- Download all External Files (Images/Markdowns) ---
+        // --- Baixa todos os Arquivos Externos (Imagens/Markdowns) ---
         try {
           final parsedPico = Croqui.fromBuffer(response.bodyBytes);
           
@@ -236,7 +236,7 @@ class DatasetRepository {
               baseDir = relative.substring(0, lastSlash);
             }
           } else {
-             // Fallback if URL doesn't start with baseUrl for some reason
+             // Fallback se a URL não começar com baseUrl por algum motivo
              int lastSlash = url.lastIndexOf('/');
              if (lastSlash != -1) {
                 baseDir = url.substring(url.indexOf('://') + 3); // strip https://
@@ -258,7 +258,7 @@ class DatasetRepository {
              }
           }
 
-          // Extract and download markdown images
+          // Extrai e baixa imagens markdown
           try {
             final jsonStr = jsonEncode(parsedPico.toProto3Json());
             final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
@@ -307,13 +307,13 @@ class DatasetRepository {
     } catch (e) {
       debugPrint('Error downloading crag: $e');
     } finally {
-      // Unmark as downloading regardless of success or failure
+      // Desmarca como baixando, independentemente de sucesso ou falha
       downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
     return false;
   }
 
-  /// Loads the full [Croqui] data from a local file.
+  /// Carrega os dados completos do [Croqui] de um arquivo local.
   Future<Croqui?> getCroqui(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -329,7 +329,7 @@ class DatasetRepository {
     return null;
   }
 
-  /// Deletes a crag's binarypb from local storage and refreshes the dataset.
+  /// Exclui o binarypb de um pico do armazenamento local e atualiza o conjunto de dados.
   Future<bool> deleteCrag(String id) async {
     try {
       final directory = await getApplicationDocumentsDirectory();

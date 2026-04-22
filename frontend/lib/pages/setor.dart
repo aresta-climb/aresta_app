@@ -3,10 +3,10 @@ import '../kmon_api/proto/croqui.pb.dart';
 import '../functions/common_functions.dart';
 import '../functions/setor_functions.dart';
 
-/// A page that provides an overview of a specific sector.
+/// Uma página que fornece uma visão geral de um setor específico.
 ///
-/// It displays the sector's description and presents a list of all climbing 
-/// routes ([Escalada]) and any sub-sectors contained within it.
+/// Ela exibe a descrição do setor e apresenta uma lista de todas as vias
+/// de escalada ([Escalada]) e quaisquer subsetores contidos nele.
 class SetorPage extends StatelessWidget {
   final Setor setor;
   final String cragId;

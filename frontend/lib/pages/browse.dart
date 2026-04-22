@@ -3,10 +3,10 @@ import '../functions/browse_functions.dart';
 import '../functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 
-/// A page that allows users to explore and search for available crags (picos).
+/// Uma página que permite aos usuários explorar e pesquisar picos disponíveis.
 /// 
-/// It displays a list of crags fetched from the [DatasetRepository] and 
-/// provides a search bar for filtering by name or location.
+/// Ela exibe uma lista de picos buscada do [DatasetRepository] e
+/// fornece uma barra de pesquisa para filtrar por nome ou localização.
 class BrowsePage extends StatefulWidget {
   final DatasetRepository datasetRepo;
 
@@ -17,27 +17,27 @@ class BrowsePage extends StatefulWidget {
 }
 
 class _BrowsePageState extends State<BrowsePage> {
-  /// The current text entered in the search bar.
+  /// O texto atual inserido na barra de pesquisa.
   String _searchQuery = '';
 
-  /// Triggers the download of a crag's binary data (.binarypb).
+  /// Aciona o download dos dados binários de um pico (.binarypb).
   /// 
-  /// Shows a SnackBar during the process and another one to indicate 
-  /// success or failure upon completion.
+  /// Mostra um SnackBar durante o processo e outro para indicar
+  /// sucesso ou falha após a conclusão.
   void _handleDownload(Map<String, dynamic> crag) async {
     final name = safeString(crag['nome'], fallback: 'Pico');
     
-    // Show a SnackBar to provide feedback to the user
+    // Mostra um SnackBar para fornecer feedback ao usuário
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Baixando $name...')),
     );
 
-    // Perform the actual download via the repository.
-    // The file is saved to the app's local documents directory.
+    // Executa o download real através do repositório.
+    // O arquivo é salvo no diretório de documentos local do aplicativo.
     final success = await widget.datasetRepo.downloadCrag(crag);
 
     if (mounted) {
-      // Update the user with the result
+      // Atualiza o usuário com o resultado
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -54,12 +54,12 @@ class _BrowsePageState extends State<BrowsePage> {
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar('Explorar Locais'),
 
-      // ValueListenableBuilder automatically rebuilds this part of the UI
-      // whenever the dataset in the repository changes (after the initial fetch).
+      // ValueListenableBuilder reconstrói automaticamente esta parte da interface
+      // sempre que o conjunto de dados no repositório muda (após a busca inicial).
       body: ValueListenableBuilder<TopoDataset?>(
         valueListenable: widget.datasetRepo.activeDataset,
         builder: (context, dataset, child) {
-          // While the repository is still initializing/fetching, show a spinner.
+          // Enquanto o repositório ainda está inicializando/buscando, mostra um spinner.
           if (dataset == null) {
             return const Center(
               child: CircularProgressIndicator(color: beastHide),
@@ -68,9 +68,9 @@ class _BrowsePageState extends State<BrowsePage> {
 
           final allCrags = dataset.availablePicos;
 
-          /* Filter the list locally based on the user's search query.
-           We check both the name and the location.
-           safeString is used to prevent crashes if a field is unexpectedly null. */
+          /* Filtra a lista localmente com base na consulta de pesquisa do usuário.
+           Verificamos tanto o nome quanto a localização.
+           safeString é usado para evitar falhas se um campo for inesperadamente nulo. */
           final filteredCrags = allCrags.where((crag) {
             final name = safeString(crag['nome']).toLowerCase();
             final location = safeString(crag['local']).toLowerCase();
@@ -79,7 +79,7 @@ class _BrowsePageState extends State<BrowsePage> {
             return name.contains(query) || location.contains(query);
           }).toList();
 
-          // We pass the filteredCrags directly to buildBrowseBody.
+          // Passamos os filteredCrags diretamente para buildBrowseBody.
           return buildBrowseBody(
             context,
             filteredCrags,

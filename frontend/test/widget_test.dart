@@ -6,8 +6,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/sync_service.dart';
 
 void main() {
-  testWidgets('Home page loads test', (WidgetTester tester) async {
-    // Create repository and sync service instances for testing.
+  testWidgets('Teste de carregamento da Home page', (WidgetTester tester) async {
+    // Cria instâncias do repositório e do serviço de sincronização para testes.
     final testRepo = DatasetRepository();
     final testSync = SyncService(testRepo);
     
@@ -16,7 +16,7 @@ void main() {
       downloadedPicos: [],
     );
 
-    // Provide the required dependencies to MainNavigationWrapper
+    // Fornece as dependências necessárias para o MainNavigationWrapper
     await tester.pumpWidget(MaterialApp(
       home: MainNavigationWrapper(
         datasetRepo: testRepo,
@@ -24,11 +24,11 @@ void main() {
       ),
     ));
 
-    // Verify that the HomePage is present within the navigation wrapper.
+    // Verifica se a HomePage está presente dentro do wrapper de navegação.
     expect(find.byType(HomePage), findsOneWidget);
     
-    // Verify that the navigation bar labels are present.
-    // Use findsWidgets because 'Home' might appear in both the AppBar and BottomNavBar
+    // Verifica se os rótulos da barra de navegação estão presentes.
+    // Usa findsWidgets pois 'Home' pode aparecer tanto na AppBar quanto na BottomNavBar
     expect(find.text('Home'), findsWidgets);
     expect(find.text('GPS'), findsOneWidget);
     expect(find.text('Explorar'), findsOneWidget);

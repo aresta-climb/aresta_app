@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 
-// Shared Color Palette
+// Paleta de Cores Compartilhada
 const Color nobleBlack = Color(0xFF1F2128);
 const Color beastHide = Color(0xFFAE8F68);
 const Color fishBone = Color(0xFFE4DAC5);
@@ -31,7 +31,7 @@ PreferredSizeWidget buildCommonAppBar(String title, {List<Widget>? actions}) {
   );
 }
 
-/// A search bar widget that handles real-time filtering
+/// Um widget de barra de pesquisa que lida com filtragem em tempo real
 Widget buildSearchBar({
   required ValueChanged<String> onChanged,
   String hintText = 'Pesquisar...',
@@ -58,8 +58,8 @@ Widget buildSearchBar({
   );
 }
 
-/// Safely converts dynamic data into a string
-/// If the value is null, it returns the provided fallback string (defaults to empty string).
+/// Converte dados dinâmicos em uma string com segurança
+/// Se o valor for nulo, ele retorna a string de fallback fornecida (o padrão é uma string vazia).
 String safeString(dynamic value, {String fallback = ''}) {
   if (value == null) {
     return fallback;
@@ -67,8 +67,8 @@ String safeString(dynamic value, {String fallback = ''}) {
   return value.toString();
 }
 
-/// The primary bottom navigation bar used in the root MainNavigationWrapper.
-/// It renders the tabs for switching between Home, GPS, and Explorar.
+/// A barra de navegação inferior principal usada no MainNavigationWrapper raiz.
+/// Ela renderiza as abas para alternar entre Início (Home), GPS e Explorar.
 Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(int) onItemTapped) {
   return Theme(
     data: Theme.of(context).copyWith(
@@ -100,8 +100,8 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
   );
 }
 
-/// A secondary bottom navigation bar used in deeper pages (Pico, Setor, Via).
-/// It mimics the design of the MainNavBar but specifically provides shortcuts to pop back only to the Home or GPS tabs.
+/// Uma barra de navegação inferior secundária usada em páginas mais profundas (Pico, Setor, Via).
+/// Ela imita o design da MainNavBar, mas fornece especificamente atalhos para voltar apenas para as abas Home ou GPS.
 Widget buildSecondaryBottomNav(BuildContext context) {
   return Container(
     color: nobleBlack,
@@ -112,7 +112,7 @@ Widget buildSecondaryBottomNav(BuildContext context) {
           height: 60,
           child: Row(
             children: [
-              // Home Shortcut
+              // Atalho para Início
               Expanded(
                 child: InkWell(
                   onTap: () {
@@ -136,7 +136,7 @@ Widget buildSecondaryBottomNav(BuildContext context) {
                   ),
                 ),
               ),
-              // GPS Shortcut
+              // Atalho para GPS
               Expanded(
                 child: InkWell(
                   onTap: () {

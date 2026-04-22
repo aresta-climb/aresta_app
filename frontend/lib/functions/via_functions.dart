@@ -3,9 +3,9 @@ import '../kmon_api/proto/croqui.pb.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
 
-/// Builds the main scrollable body of the Route (Via) page.
+/// Constrói o corpo rolável principal da página da Via.
 ///
-/// It delegates to specific builder functions depending on the route type.
+/// Ele delega para funções de construção específicas dependendo do tipo da via.
 Widget buildViaBody(BuildContext context, Escalada escalada, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
@@ -18,8 +18,8 @@ Widget buildViaBody(BuildContext context, Escalada escalada, String cragId) {
   );
 }
 
-/// Builds the detailed content based on the route's specific type 
-/// ([ViaEsportiva], [ViaMovel], [Boulder], or [ViaMultiplasEnfiadas]).
+/// Constrói o conteúdo detalhado com base no tipo específico da via
+/// ([ViaEsportiva], [ViaMovel], [Boulder] ou [ViaMultiplasEnfiadas]).
 Widget _buildContentForEscalada(Escalada escalada, String cragId) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:

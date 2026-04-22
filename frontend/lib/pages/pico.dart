@@ -4,9 +4,9 @@ import '../functions/common_functions.dart';
 import '../functions/pico_functions.dart';
 import '../services/dataset_repository.dart';
 
-/// A page that displays detailed information about a specific pico.
+/// Uma página que exibe informações detalhadas sobre um pico específico.
 ///
-/// It presents the pico's description and lists all sectors contained within it.
+/// Ela apresenta a descrição do pico e lista todos os setores contidos nele.
 class PicoDetailsPage extends StatelessWidget {
   final Pico pico;
   final Croqui croqui;

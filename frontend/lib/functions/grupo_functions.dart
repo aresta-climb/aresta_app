@@ -4,10 +4,10 @@ import 'common_functions.dart';
 import 'pico_functions.dart';
 import 'offline_markdown.dart';
 
-/// Builds the main scrollable body of the Grupo page.
+/// Constrói o corpo rolável principal da página do Grupo.
 ///
-/// It displays the group's information and a list of all available groups of sectors (setores)
-/// within the crag (pico).
+/// Ele exibe as informações do grupo e uma lista de todos os grupos de setores (setores)
+/// disponíveis dentro do pico.
 Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
@@ -27,7 +27,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId) {
           const Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
         else
           ...grupo.setores.map((arquivoSetor) {
-            // Only render grupos that have content loaded
+            // Renderiza apenas grupos que possuem conteúdo carregado
             if (arquivoSetor.hasConteudo()) {
               return buildSectorTile(context, arquivoSetor.conteudo, cragId);
             }
@@ -38,7 +38,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId) {
   );
 }
 
-/// Builds a styled header for sections within the Grupo page.
+/// Constrói um cabeçalho estilizado para seções dentro da página do Grupo.
 Widget _buildHeader(String title) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -53,9 +53,9 @@ Widget _buildHeader(String title) {
   );
 }
 
-/// Builds a row displaying a label and its corresponding value.
+/// Constrói uma linha exibindo um rótulo e seu valor correspondente.
 /// 
-/// Returns an empty space if the value is empty.
+/// Retorna um espaço vazio se o valor estiver vazio.
 Widget _buildInfoRow(String label, String value) {
   if (value.isEmpty) return const SizedBox.shrink();
   return Padding(

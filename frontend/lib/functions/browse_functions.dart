@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'common_functions.dart';
 
-/// Builds the main content area for the Browse page.
+/// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///
-/// It displays a search bar and a list of available crags that can be downloaded.
-/// The [onSearchChanged] callback is triggered when the user types in the search bar.
-/// The [onDownload] callback is triggered when the user taps the download button on a crag item.
+/// Ela exibe uma barra de pesquisa e uma lista de picos disponíveis que podem ser baixados.
+/// O callback [onSearchChanged] é acionado quando o usuário digita na barra de pesquisa.
+/// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
 Widget buildBrowseBody(
   BuildContext context, 
   List<Map<String, dynamic>> availableCrags, 
@@ -25,9 +25,9 @@ Widget buildBrowseBody(
   );
 }
 
-/// Builds the scrollable list of available crags.
+/// Constrói a lista rolável de picos disponíveis.
 ///
-/// If [availableCrags] is empty, it displays a fallback message indicating no crags were found.
+/// Se [availableCrags] estiver vazio, exibe uma mensagem de fallback indicando que nenhum pico foi encontrado.
 Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<String, dynamic>) onDownload) {
   if (availableCrags.isEmpty) {
     return const Center(
@@ -51,7 +51,7 @@ Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<St
   );
 }
 
-/// Builds a styled section title for the browse list.
+/// Constrói um título de seção estilizado para a lista de exploração.
 Widget buildBrowseSectionTitle(String title) {
   return Text(
     title,
@@ -63,9 +63,9 @@ Widget buildBrowseSectionTitle(String title) {
   );
 }
 
-/// Builds an individual list item representing a downloadable crag.
+/// Constrói um item de lista individual representando um pico que pode ser baixado.
 ///
-/// It includes an icon, the crag's name and location, and a download button.
+/// Inclui um ícone, o nome e localização do pico e um botão de download.
 Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12.0),
@@ -92,10 +92,10 @@ Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   );
 }
 
-/// Builds the visual icon leading the crag list item.
+/// Constrói o ícone visual que lidera o item da lista de picos.
 Widget _buildCragIcon() {
-  // Montain icon
-  // TODO: Implement cover image instead of mountain icon
+  // Ícone de montanha
+  // TODO: Implementar imagem de capa em vez do ícone de montanha
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
@@ -110,7 +110,7 @@ Widget _buildCragIcon() {
   );
 }
 
-/// Builds the textual details column showing the crag's name and location.
+/// Constrói a coluna de detalhes textuais mostrando o nome e a localização do pico.
 Widget _buildCragDetails(Map<String, dynamic> crag) {
   return Expanded(
     child: Column(
@@ -137,7 +137,7 @@ Widget _buildCragDetails(Map<String, dynamic> crag) {
   );
 }
 
-/// Builds the trailing button that initiates the download of the crag.
+/// Constrói o botão final que inicia o download do pico.
 Widget _buildDownloadButton(VoidCallback onPressed) {
   return IconButton(
     onPressed: onPressed,

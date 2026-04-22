@@ -6,7 +6,7 @@ import '../services/dataset_repository.dart';
 class GPSPage extends StatelessWidget {
   final DatasetRepository datasetRepo;
 
-  // Require the repo in the constructor
+  // Exige o repositório no construtor
   const GPSPage({super.key, required this.datasetRepo});
 
   @override
@@ -14,7 +14,7 @@ class GPSPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: nobleBlack,
       appBar: buildCommonAppBar('GPS'),
-      /// TODO: An actual GPS functionality
+      /// TODO: Uma funcionalidade real de GPS
       body: buildGPSBody(),
     );
   }

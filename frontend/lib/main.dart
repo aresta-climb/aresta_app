@@ -7,17 +7,17 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/sync_service.dart';
 
 void main() async {
-  // Ensure Flutter is ready before doing file I/O
+  // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Instantiate and initialize the repository
+  // Instancia e inicializa o repositório
   final datasetRepo = DatasetRepository();
   final syncService = SyncService(datasetRepo);
   
-  // Initial sync on launch
+  // Sincronização inicial na inicialização
   syncService.syncOnLaunch();
 
-  // Pass it into the app
+  // Passa isso para o aplicativo
   runApp(MyApp(datasetRepo: datasetRepo, syncService: syncService));
 }
 
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      // Pass the repo and sync service down to the navigation wrapper
+      // Passa o repositório e o serviço de sincronização para o wrapper de navegação
       home: MainNavigationWrapper(
         datasetRepo: datasetRepo,
         syncService: syncService,
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// The main entry point for the app's navigation.
+/// O ponto de entrada principal para a navegação do aplicativo.
 class MainNavigationWrapper extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -67,7 +67,7 @@ class MainNavigationWrapper extends StatefulWidget {
   @override
   State<MainNavigationWrapper> createState() => _MainNavigationWrapperState();
 
-  /// Switches the active tab of the MainNavigationWrapper.
+  /// Alterna a aba ativa do MainNavigationWrapper.
   static void switchTab(int index) {
     navKey.currentState?._onItemTapped(index);
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 Widget buildGPSBody() {
-  /* TODO: Actual gps functionality
-      *    If your GPS page eventually needs to read coordinates from the offline data,
-      *    you can wrap this body in a ValueListenableBuilder just like we did in home.dart!
+  /* TODO: Implementar funcionalidade de GPS
+      *    Se a sua página de GPS precisar eventualmente ler coordenadas dos dados offline,
+      *    você pode envolver este corpo em um ValueListenableBuilder exatamente como fizemos em home.dart!
   */
   return const Center(
     child: Text(

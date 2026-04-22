@@ -3,7 +3,7 @@ import '../services/dataset_repository.dart';
 import '../pages/pico.dart';
 import 'common_functions.dart';
 
-/// A palette of colors used to background the crag cards.
+/// Uma paleta de cores usada para o fundo dos cartões (cards) de pico.
 final List<Color> cardPalette = [
   leatherWork,
   slateStone,
@@ -12,14 +12,14 @@ final List<Color> cardPalette = [
   weatheredIron,
 ];
 
-/// Navigates to the details page of a selected pico.
+/// Navega para a página de detalhes de um pico selecionado.
 /// 
-/// It first shows a loading indicator while fetching the full Croqui data.
+/// Ele primeiro mostra um indicador de carregamento enquanto busca os dados completos do Croqui.
 void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico) async {
   final id = pico['id'];
   if (id == null) return;
 
-  // Show loading indicator
+  // Mostra indicador de carregamento
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -30,7 +30,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 
   if (!context.mounted) return;
   
-  Navigator.pop(context); // Remove loading indicator
+  Navigator.pop(context); // Remove indicador de carregamento
 
   if (croqui != null && croqui.picos.isNotEmpty) {
     Navigator.push(
@@ -45,8 +45,8 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
       ),
     );
     
-    // Update priority list AFTER the transition completes to avoid the carousel shifting
-    // while the user is still looking at it during the transition.
+    // Atualiza a lista de prioridades APÓS a conclusão da transição para evitar que o carrossel mude
+    // enquanto o usuário ainda está olhando para ele durante a transição.
     Future.delayed(const Duration(milliseconds: 500), () {
       datasetRepo.updatePriorityAfterNavigation(id);
     });
@@ -57,10 +57,10 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
   }
 }
 
-/// Builds the main scrollable body of the Home page.
+/// Constrói o corpo rolável principal da página inicial (Home).
 /// 
-/// Displays a carousel of recently downloaded crags and a dropdown list 
-/// of all available guides.
+/// Exibe um carrossel de picos baixados recentemente e uma lista suspensa
+/// de todos os guias disponíveis.
 Widget buildHomeBody(
   BuildContext context,
   DatasetRepository datasetRepo,
@@ -71,19 +71,19 @@ Widget buildHomeBody(
   return Container(
     width: double.infinity,
     height: double.infinity,
-    // Making the background color a gradient for prettiness
+    // Transformando a cor de fundo em um gradiente para ficar mais bonito
     decoration: const BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          nobleBlack, // Main background color
-          obsidianBrown, // Transitions from dark to a earthy brown
+          nobleBlack, // Cor de fundo principal
+          obsidianBrown, // Transições do escuro para um marrom terra
         ],
       ),
     ),
     child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(), // Ensures it always bounces/scrolls
+      physics: const AlwaysScrollableScrollPhysics(), // Garante que sempre role/tenha o efeito de rebote
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,7 +110,7 @@ Widget buildHomeBody(
               ],
             ),
           ),
-          // The carousel handles the 4-card limit internally now
+          // O carrossel agora lida internamente com o limite de 4 cartões
           buildPicosCarousel(
             downloadedPicos, 
             downloadingCrags,
@@ -123,14 +123,14 @@ Widget buildHomeBody(
             onAddCrag: onAddCrag, 
             onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
           ),
-          const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
+          const SizedBox(height: 100), // Espaço extra na parte inferior para garantir que tudo seja rolável
         ],
       ),
     ),
   );
 }
 
-/// Builds a synchronization status badge.
+/// Constrói um emblema (badge) de status de sincronização.
 Widget buildSyncBadge(SyncStatus status) {
   String text;
   Color color;
@@ -183,7 +183,7 @@ Widget buildSyncBadge(SyncStatus status) {
   );
 }
 
-/// Builds an expandable list showing all downloaded guides.
+/// Constrói uma lista expansível mostrando todos os guias baixados.
 Widget _buildAllGuidesDropdown(
   List<Map<String, dynamic>> picos,
   Set<String> downloadingCrags, {
@@ -216,7 +216,7 @@ Widget _buildAllGuidesDropdown(
           ),
         ),
       ),
-      backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded for emphasis
+      backgroundColor: Colors.black.withValues(alpha: 0.3), // Mais escuro que o fundo quando expandido para dar ênfase
       collapsedBackgroundColor: Colors.transparent,
       children: [
         ...picos.map((pico) {
@@ -278,25 +278,25 @@ Widget _buildAllGuidesDropdown(
   );
 }
 
-/// A stylized header for sections.
+/// Um cabeçalho estilizado para seções.
 Widget buildSectionHeader(String title) {
   return Padding(
-    // Padding on the text to give it some space
+    // Preenchimento (padding) no texto para dar algum espaço
     padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
     child: Text(
       title,
       style: const TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
-        color: fishBone, // Light text for visibility
+        color: fishBone, // Texto claro para visibilidade
       ),
     ),
   );
 }
 
-/// Builds a horizontal carousel of crag cards.
-/// Limited to the 4 most recent crags.
-/// Allows infinite looping if there are exactly 4 items.
+/// Constrói um carrossel horizontal de cartões de picos.
+/// Limitado aos 4 picos mais recentes.
+/// Permite loop infinito se houver exatamente 4 itens.
 Widget buildPicosCarousel(
   List<Map<String, dynamic>> allPicos,
   Set<String> downloadingCrags, {
@@ -314,7 +314,7 @@ Widget buildPicosCarousel(
     );
   }
 
-  // LIMITER: Take at most 4 cards for the carousel to avoid info clustering
+  // LIMITADOR: Pega no máximo 4 cartões para o carrossel para evitar acúmulo de informações
   final List<Map<String, dynamic>> picosToShow = allPicos.take(4).toList();
   final int count = picosToShow.length;
   final bool shouldLoop = count >= 4;
@@ -370,7 +370,7 @@ Widget buildPicosCarousel(
   );
 }
 
-/// Builds an individual card for a crag in the carousel.
+/// Constrói um cartão individual para um pico no carrossel.
 Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor, bool isDownloading) {
   return Padding(
     padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
@@ -438,7 +438,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
   );
 }
 
-/// A small button on the card to indicate it can be opened.
+/// Um pequeno botão no cartão para indicar que pode ser aberto.
 Widget buildVerGuiaButton() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -458,7 +458,7 @@ Widget buildVerGuiaButton() {
   );
 }
 
-/// Instructions text at the bottom of the carousel.
+/// Texto de instruções na parte inferior do carrossel.
 Widget buildFooterInstructions(String text) {
   return Padding(
     padding: const EdgeInsets.all(20.0),

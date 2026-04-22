@@ -4,12 +4,12 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
 
-/// A widget that renders Markdown content with support for local offline images.
+/// Um widget que renderiza conteúdo Markdown com suporte a imagens offline locais.
 /// 
-/// It automatically resolves relative image paths against the application's 
-/// local 'downloads' directory.
+/// Ele resolve automaticamente caminhos de imagem relativos com o diretório
+/// 'downloads' local do aplicativo.
 class OfflineMarkdown extends StatelessWidget {
-  /// The raw markdown string to be rendered.
+  /// A string markdown original a ser renderizada.
   final String data;
   final String cragId;
 
@@ -41,7 +41,7 @@ class OfflineMarkdown extends StatelessWidget {
 
             File? localFile;
             
-            // 1. Try to map the known server URL directly to the downloaded path
+            // 1. Tenta mapear a URL do servidor conhecida diretamente para o caminho baixado
             const baseUrl = 'https://acecmg.github.io/kmon_serving/';
             String cleanUrl = Uri.decodeFull(uri.toString());
             if (cleanUrl.startsWith(baseUrl)) {
@@ -52,7 +52,7 @@ class OfflineMarkdown extends StatelessWidget {
               }
             }
             
-            // 2. Try using the path directly as a relative path
+            // 2. Tenta usar o caminho diretamente como um caminho relativo
             if (localFile == null) {
                String cleanPath;
                if (path.startsWith('/')) {
@@ -67,7 +67,7 @@ class OfflineMarkdown extends StatelessWidget {
                }
             }
 
-            // 3. Fallback: Search for the filename recursively in the downloads directory
+            // 3. Fallback: Procura pelo nome do arquivo recursivamente no diretório de downloads
             if (localFile == null && fileName.isNotEmpty) {
               final searchName = Uri.decodeComponent(fileName).toLowerCase();
               
@@ -88,13 +88,13 @@ class OfflineMarkdown extends StatelessWidget {
                       final String eName = ePath.split('/').last;
                       final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
                       
-                      // Match exactly
+                      // Correspondência exata
                       if (eNameLower == searchName) {
                         localFile = entity;
                         break;
                       }
                       
-                      // Match base name without extension (handles .webp vs .jpg mismatches)
+                      // Corresponde ao nome base sem extensão (lida com incompatibilidades .webp vs .jpg)
                       String eBaseName;
                       if (eNameLower.contains('.')) {
                         eBaseName = eNameLower.substring(0, eNameLower.lastIndexOf('.'));
@@ -110,7 +110,7 @@ class OfflineMarkdown extends StatelessWidget {
                   }
                 }
               } catch (e) {
-                // Ignore traversal errors
+                // Ignora erros de travessia
               }
             }
 
@@ -151,7 +151,7 @@ class OfflineMarkdown extends StatelessWidget {
               );
             }
 
-            // Return the local file if found
+            // Retorna o arquivo local se encontrado
             if (localFile != null && localFile.existsSync()) {
               return buildZoomableImage(Image.file(
                 localFile,
@@ -159,7 +159,7 @@ class OfflineMarkdown extends StatelessWidget {
               ));
             }
             
-            // Fallback to network if it's an absolute URL (just in case it wasn't downloaded)
+            // Fallback para a rede se for uma URL absoluta (apenas caso não tenha sido baixada)
             if (path.startsWith('http://') || path.startsWith('https://')) {
               return buildZoomableImage(Image.network(
                 path,

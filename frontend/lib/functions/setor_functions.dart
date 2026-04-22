@@ -4,10 +4,10 @@ import '../pages/via.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
 
-/// Builds the main scrollable body of the Sector page.
+/// Constrói o corpo rolável principal da página do Setor.
 ///
-/// It extracts the description and iterates through all available routes 
-/// ([Escalada]) and nested sub-sectors to render them.
+/// Ele extrai a descrição e itera por todas as vias disponíveis
+/// ([Escalada]) e subsetores aninhados para renderizá-los.
 Widget buildSetorBody(BuildContext context, Setor setor, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
@@ -29,7 +29,7 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId) {
               }
             }
             
-            // If more than half of the climbs are boulders, display "Boulders" instead of "Vias"
+            // Se mais da metade das escaladas forem boulders, exiba "Boulders" em vez de "Vias"
             final bool isBoulderArea = setor.escaladas.isNotEmpty && boulderCount >= (setor.escaladas.length / 2);
             final String headerText = isBoulderArea ? 'Boulders' : 'Vias';
             final String emptyText = isBoulderArea ? 'Nenhum boulder disponível.' : 'Nenhuma via disponível.';
@@ -68,10 +68,10 @@ Widget _buildHeader(String title) {
 
 
 
-/// Builds an interactive tile for a single climbing route.
+/// Constrói um tile interativo para uma única via de escalada.
 ///
-/// It determines the route's type to fetch the appropriate name and grade, 
-/// and configures a tap button to navigate to the [ViaPage].
+/// Ele determina o tipo da via para buscar o nome e grau apropriados,
+/// e configura um botão de toque para navegar para a [ViaPage].
 Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId) {
   String nome = '';
   String info = '';

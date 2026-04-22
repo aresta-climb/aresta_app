@@ -3,10 +3,10 @@ import '../kmon_api/proto/croqui.pb.dart';
 import '../functions/common_functions.dart';
 import '../functions/via_functions.dart';
 
-/// A page that displays detailed information about a specific climbing route (Via).
+/// Uma página que exibe informações detalhadas sobre uma via de escalada específica.
 ///
-/// It dynamically adjusts its content based on the type of route to show the relevant properties 
-/// such as difficulty, protections, and descriptions.
+/// Ela ajusta dinamicamente seu conteúdo com base no tipo de rota para mostrar as propriedades relevantes,
+/// como dificuldade, proteções e descrições.
 class ViaPage extends StatelessWidget {
   final Escalada escalada;
   final String cragId;
@@ -15,7 +15,7 @@ class ViaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extract name dynamically based on type
+    // Extrai o nome dinamicamente com base no tipo
     String nome = 'Sem Nome';
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:

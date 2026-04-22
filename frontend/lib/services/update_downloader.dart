@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
-/// A model representing a file entry from the master index.
+/// Um modelo representando uma entrada de arquivo do índice mestre.
 class IndexEntry {
   final String filename;
   final String expectedSha256;
@@ -15,17 +15,17 @@ class IndexEntry {
   });
 }
 
-/// A utility class for downloading and verifying files.
+/// Uma classe utilitária para baixar e verificar arquivos.
 /// 
-/// It ensures that downloaded files match their expected checksums 
-/// before they are considered valid and stored in the staging directory.
+/// Ela garante que os arquivos baixados correspondam aos seus checksums esperados 
+/// antes de serem considerados válidos e armazenados no diretório de preparação (staging).
 class UpdateDownloader {
-  /// A reusable HTTP client for downloading files.
+  /// Um cliente HTTP reutilizável para baixar arquivos.
   final http.Client _client = http.Client();
 
-  /// Downloads updates, verifies them, and places them in the staging directory.
+  /// Baixa atualizações, verifica-as e as coloca no diretório de preparação.
   /// 
-  /// Throws an [Exception] if a download fails or if a checksum mismatch is detected.
+  /// Lança uma [Exception] se um download falhar ou se uma incompatibilidade de checksum for detectada.
   Future<void> downloadAndVerifyUpdates({
     required List<IndexEntry> filesToUpdate,
     required Directory stagingDir,
@@ -35,7 +35,7 @@ class UpdateDownloader {
 
       print('Downloading ${fileEntry.filename}...');
 
-      // 1. Download the file directly to the staging directory
+      // 1. Baixa o arquivo diretamente para o diretório de preparação
       final response = await _client.get(Uri.parse(fileEntry.downloadUrl));
 
       if (response.statusCode != 200) {
@@ -44,7 +44,7 @@ class UpdateDownloader {
 
       await targetFile.writeAsBytes(response.bodyBytes);
 
-      // 2. Verify the Checksum via Streaming
+      // 2. Verifica o Checksum via Streaming
       print('Verifying checksum for ${fileEntry.filename}...');
 
       final bool isChecksumValid = await _verifyFileChecksum(
@@ -53,7 +53,7 @@ class UpdateDownloader {
       );
 
       if (!isChecksumValid) {
-        // If it's corrupted or tampered with, delete the bad file
+        // Se estiver corrompido ou adulterado, exclua o arquivo ruim
         await targetFile.delete();
         throw Exception('Checksum mismatch for ${fileEntry.filename}. Download corrupted.');
       }
@@ -62,22 +62,22 @@ class UpdateDownloader {
     }
   }
 
-  /// Calculates the SHA-256 hash by reading the file in chunks (streams).
+  /// Calcula o hash SHA-256 lendo o arquivo em pedaços (streams).
   Future<bool> _verifyFileChecksum({
     required File file,
     required String expectedHexHash,
   }) async {
-    // Open a read stream from the file
+    // Abre um fluxo de leitura (read stream) do arquivo
     final stream = file.openRead();
 
-    // Pass the stream into the crypto library's SHA-256 calculator
+    // Passa o fluxo para a calculadora SHA-256 da biblioteca de criptografia
     final Digest hashResult = await sha256.bind(stream).first;
 
-    // Compare the resulting hex string to the expected hash
+    // Compara a string hexadecimal resultante com o hash esperado
     return hashResult.toString() == expectedHexHash;
   }
 
-  /// Closes the HTTP client.
+  /// Fecha o cliente HTTP.
   void dispose() {
     _client.close();
   }

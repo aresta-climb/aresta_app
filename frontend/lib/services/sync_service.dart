@@ -7,10 +7,10 @@ import '../kmon_api/proto/indice.pb.dart';
 import '../kmon_api/proto/croqui.pb.dart';
 import 'dataset_repository.dart';
 
-/// A service responsible for synchronizing local data with the remote backend.
+/// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 /// 
-/// It handles downloading the master index on launch, checking for updates
-/// to previously downloaded crags, and managing the synchronization of images.
+/// Ele lida com o download do índice mestre na inicialização, verifica atualizações
+/// para picos baixados anteriormente e gerencia a sincronização de imagens.
 class SyncService {
   final DatasetRepository datasetRepository;
   final String _baseUrl = 'https://acecmg.github.io/kmon_serving';
@@ -18,11 +18,11 @@ class SyncService {
 
   SyncService(this.datasetRepository);
 
-  /// Synchronizes the master index with the remote server on application launch.
+  /// Sincroniza o índice mestre com o servidor remoto na inicialização do aplicativo.
   /// 
-  /// If a new index is available, it updates the local cache and triggers
-  /// a background update check for all downloaded crags. If the server is 
-  /// unreachable, it falls back to the local cached index.
+  /// Se um novo índice estiver disponível, ele atualiza o cache local e aciona
+  /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
+  /// inacessível, ele reverte para o índice em cache local.
   Future<void> syncOnLaunch() async {
     datasetRepository.syncStatus.value = SyncStatus.updating;
     try {
@@ -44,13 +44,13 @@ class SyncService {
           oldIndice = Indice.fromBuffer(oldBytes);
         }
 
-        // Overwrite the local index with the new one
+        // Sobrescreve o índice local com o novo
         await localIndiceFile.writeAsBytes(responseBytes);
 
-        // Notify DatasetRepository that there's a new loaded Indice
+        // Notifica o DatasetRepository que há um novo Índice carregado
         await datasetRepository.loadIndiceToMemory(newIndice);
 
-        // Run background update for previously downloaded picos
+        // Executa atualização em segundo plano para picos baixados anteriormente
         if (oldIndice != null) {
           await _checkForUpdates(oldIndice, newIndice);
         } else {
@@ -68,7 +68,7 @@ class SyncService {
     }
   }
 
-  /// Loads the index from local storage and notifies the repository.
+  /// Carrega o índice do armazenamento local e notifica o repositório.
   Future<void> _loadLocalIndiceAndNotify() async {
     final directory = await getApplicationDocumentsDirectory();
     final localIndiceFile = File('${directory.path}/indice.binarypb');
@@ -81,7 +81,7 @@ class SyncService {
     }
   }
 
-  /// Iterates through all downloaded crags and updates those whose checksums have changed.
+  /// Itera por todos os picos baixados e atualiza aqueles cujos checksums mudaram.
   Future<void> _checkForUpdates(Indice oldIndice, Indice newIndice) async {
     debugPrint('Checking for outdated picos...');
     datasetRepository.syncStatus.value = SyncStatus.updating;
@@ -112,7 +112,7 @@ class SyncService {
     debugPrint('Background update check complete.');
   }
 
-  /// Updates a single crag by downloading its new binarypb and syncing its images.
+  /// Atualiza um único pico baixando seu novo binarypb e sincronizando suas imagens.
   Future<void> _updatePico(ResumoCroqui newResumo, Directory downloadsDir) async {
     final url = '$_baseUrl/${newResumo.url}';
     final response = await _client.get(Uri.parse(url));
@@ -141,7 +141,7 @@ class SyncService {
       final newImages = { for (var ext in newPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
       final newMarkdownImages = _extractMarkdownImages(newPicoData, baseDir);
       for (var path in newMarkdownImages) {
-        newImages[path] = 'markdown_image'; // Prevent deletion
+        newImages[path] = 'markdown_image'; // Evita a exclusão
       }
 
       for (var oldExt in oldPicoData.arquivosExternos) {
@@ -193,7 +193,7 @@ class SyncService {
     debugPrint('Updated pico ${newResumo.id} successfully.');
   }
 
-  /// Downloads all external files associated with a given [Croqui].
+  /// Baixa todos os arquivos externos associados a um determinado [Croqui].
   Future<void> downloadExternalFilesForCroqui(Croqui newPicoData, String picoId) async {
     final directory = await getApplicationDocumentsDirectory();
     final downloadsDir = Directory('${directory.path}/downloads/$picoId');
@@ -235,7 +235,7 @@ class SyncService {
     return images;
   }
 
-  /// Downloads an image from the remote server.
+  /// Baixa uma imagem do servidor remoto.
   Future<void> _downloadImage(String caminho, Directory downloadsDir) async {
     try {
       final imageUrl = '$_baseUrl/$caminho';
@@ -255,7 +255,7 @@ class SyncService {
     }
   }
 
-  /// Closes the underlying HTTP client.
+  /// Fecha o cliente HTTP subjacente.
   void dispose() {
     _client.close();
   }

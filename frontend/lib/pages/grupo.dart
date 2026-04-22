@@ -3,9 +3,9 @@ import '../kmon_api/proto/croqui.pb.dart';
 import '../functions/common_functions.dart';
 import '../functions/grupo_functions.dart';
 
-/// A page that displays detailed information about a specific group of sectors.
+/// Uma página que exibe informações detalhadas sobre um grupo específico de setores.
 ///
-/// It presents the group's description, properties, and lists all sectors contained within it.
+/// Ela apresenta a descrição, propriedades do grupo e lista todos os setores contidos nele.
 class GrupoPage extends StatelessWidget {
   final Grupo grupo;
   final String cragId;

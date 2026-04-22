@@ -5,9 +5,9 @@ import '../pages/grupo.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
 
-/// Builds the main scrollable body of the Pico page.
+/// Constrói o corpo rolável principal da página do Pico.
 ///
-/// It extracts the description and iterates through all available sectors to render them.
+/// Ele extrai a descrição e itera por todos os setores disponíveis para renderizá-los.
 Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String cragId) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),

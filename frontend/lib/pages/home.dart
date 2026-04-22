@@ -4,10 +4,10 @@ import '../functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/sync_service.dart';
 
-/// The landing page of the application.
+/// A página inicial do aplicativo.
 /// 
-/// It displays a dashboard of recently downloaded crags and provides 
-/// access to all available guides.
+/// Ela exibe um painel (dashboard) de picos baixados recentemente e fornece
+/// acesso a todos os guias disponíveis.
 class HomePage extends StatelessWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -24,7 +24,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: nobleBlack,
-      // The AppBar now only contains the title and the manual sync button
+      // O AppBar agora contém apenas o título e o botão de sincronização manual
       appBar: buildCommonAppBar(
         'Home', 
         actions: [
@@ -36,7 +36,7 @@ class HomePage extends StatelessWidget {
         ],
       ),
       
-      // ValueListenableBuilder listens to changes in the activeDataset.
+      // ValueListenableBuilder escuta as alterações no activeDataset.
       body: ValueListenableBuilder<TopoDataset?>(
         valueListenable: datasetRepo.activeDataset,
         builder: (context, dataset, child) {
