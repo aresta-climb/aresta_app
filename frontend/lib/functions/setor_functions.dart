@@ -94,27 +94,33 @@ Widget _buildHeader(String title) {
 Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId) {
   String nome = '';
   String info = '';
+  String idNoMapa = '';
 
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       nome = escalada.viaEsportiva.nome;
       info = 'Esportiva | ${escalada.viaEsportiva.dificuldade.name.replaceAll('BR_', '').replaceAll('_', ' ')}';
+      idNoMapa = escalada.viaEsportiva.idNoMapa;
       break;
     case Escalada_Tipo.viaMovel:
       nome = escalada.viaMovel.nome;
       info = 'Móvel | ${escalada.viaMovel.dificuldade.name.replaceAll('BR_', '').replaceAll('_', ' ')}';
+      idNoMapa = escalada.viaMovel.idNoMapa;
       break;
     case Escalada_Tipo.boulder:
       nome = escalada.boulder.nome;
       info = 'Boulder | ${escalada.boulder.dificuldade.name.replaceAll('BR_', '')}';
+      idNoMapa = escalada.boulder.idNoMapa;
       break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
       nome = escalada.viaMultiplasEnfiadas.nome;
       info = 'Multipitch | ${escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name.replaceAll('BR_', '').replaceAll('_', ' ')}';
+      idNoMapa = escalada.viaMultiplasEnfiadas.idNoMapa;
       break;
     case Escalada_Tipo.highline:
       nome = escalada.highline.nome;
       info = 'Highline | ${escalada.highline.distancia}m';
+      idNoMapa = escalada.highline.idNoMapa;
       break;
     case Escalada_Tipo.notSet:
       nome = 'Sem Nome';
@@ -129,7 +135,23 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId) {
       border: Border.all(color: beastHide.withValues(alpha: 0.2)),
     ),
     child: ListTile(
-      leading: const Icon(Icons.terrain_outlined, color: beastHide),
+      leading: idNoMapa.isNotEmpty 
+          ? Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: nobleBlack,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                idNoMapa,
+                style: const TextStyle(color: fishBone, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            )
+          : const Icon(Icons.terrain_outlined, color: beastHide),
       title: Text(nome, style: const TextStyle(color: fishBone, fontSize: 16)),
       subtitle: Text(info, style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 12)),
       trailing: const Icon(Icons.chevron_right, color: beastHide),
