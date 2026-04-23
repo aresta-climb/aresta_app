@@ -1,0 +1,62 @@
+name: Generate Protobuf Bindings
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'proto/*.proto'
+      - 'build.py'
+      - '.github/workflows/generate_protobuf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Python requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        
+      - name: Install Dart Protoc Plugin
+        run: dart pub global activate protoc_plugin
+        
+      - name: Add Dart Pub Cache to PATH
+        run: echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Run build.py
+        run: python build.py
+        
+      - name: Commit and Push changes
+        run: |
+          # Configura o usuário padrão do git para a action
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Adiciona eventuais arquivos gerados/modificados
+          git add proto/generated/
+          
+          # Verifica se algum arquivo de fato mudou em relação ao commit anterior
+          if git diff --staged --quiet; then
+            echo "Nenhuma mudança na geração em relação à atual. O repositório já está sincronizado!"
+          else
+            git commit -m "chore(proto): auto-generate protobuf bindings [skip ci]"
+            git push
+            echo "Arquivos protobuf gerados automaticamente foram commitados enviando para a branch!"
+          fi

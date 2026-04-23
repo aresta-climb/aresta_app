@@ -1,31 +1,34 @@
 import 'package:flutter/material.dart';
 import 'common_functions.dart';
 
-List<Map<String, String>> getAvailableCrags() {
-  // A little map with data from the crag options
-  return [
-    {'name': 'Gruta do Baú', 'location': 'Pedro Leopoldo, MG'},
-    {'name': 'Santuário', 'location': 'Santa Luzia, MG'},
-    {'name': 'Pedra Grande', 'location': 'Igarapé, MG'},
-    {'name': 'Lapinha', 'location': 'Lagoa Santa, MG'},
-    {'name': 'Serra do Cipó', 'location': 'Santana do Riacho, MG'},
-    {'name': 'Ouro Preto', 'location': 'Ouro Preto, MG'},
-  ];
-}
-
-Widget buildBrowseBody(BuildContext context, List<Map<String, String>> availableCrags, {required ValueChanged<String> onSearchChanged}) {
+/// Constrói a área de conteúdo principal para a página de Explorar (Browse).
+///
+/// Ela exibe uma barra de pesquisa e uma lista de picos disponíveis que podem ser baixados.
+/// O callback [onSearchChanged] é acionado quando o usuário digita na barra de pesquisa.
+/// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
+Widget buildBrowseBody(
+  BuildContext context, 
+  List<Map<String, dynamic>> availableCrags, 
+  {
+    required ValueChanged<String> onSearchChanged,
+    required Function(Map<String, dynamic>) onDownload,
+  }
+) {
   return Column(
     children: [
       const SizedBox(height: 10),
       buildSearchBar(onChanged: onSearchChanged),
       Expanded(
-        child: _buildCragList(availableCrags),
+        child: _buildCragList(availableCrags, onDownload),
       ),
     ],
   );
 }
 
-Widget _buildCragList(List<Map<String, String>> availableCrags) {
+/// Constrói a lista rolável de picos disponíveis.
+///
+/// Se [availableCrags] estiver vazio, exibe uma mensagem de fallback indicando que nenhum pico foi encontrado.
+Widget _buildCragList(List<Map<String, dynamic>> availableCrags, Function(Map<String, dynamic>) onDownload) {
   if (availableCrags.isEmpty) {
     return const Center(
       child: Text(
@@ -42,12 +45,13 @@ Widget _buildCragList(List<Map<String, String>> availableCrags) {
       children: [
         buildBrowseSectionTitle('Picos Disponíveis'),
         const SizedBox(height: 20),
-        ...availableCrags.map((crag) => buildCragListItem(crag)),
+        ...availableCrags.map((crag) => buildCragListItem(crag, () => onDownload(crag))),
       ],
     ),
   );
 }
 
+/// Constrói um título de seção estilizado para a lista de exploração.
 Widget buildBrowseSectionTitle(String title) {
   return Text(
     title,
@@ -59,7 +63,10 @@ Widget buildBrowseSectionTitle(String title) {
   );
 }
 
-Widget buildCragListItem(Map<String, String> crag) {
+/// Constrói um item de lista individual representando um pico que pode ser baixado.
+///
+/// Inclui um ícone, o nome e localização do pico e um botão de download.
+Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12.0),
     child: Container(
@@ -78,16 +85,17 @@ Widget buildCragListItem(Map<String, String> crag) {
           _buildCragIcon(),
           const SizedBox(width: 16),
           _buildCragDetails(crag),
-          _buildDownloadButton(),
+          _buildDownloadButton(onDownload),
         ],
       ),
     ),
   );
 }
 
+/// Constrói o ícone visual que lidera o item da lista de picos.
 Widget _buildCragIcon() {
-  // Montain icon
-  // TODO: Implement cover image instead of mountain icon
+  // Ícone de montanha
+  // TODO: Implementar imagem de capa em vez do ícone de montanha
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
@@ -102,14 +110,14 @@ Widget _buildCragIcon() {
   );
 }
 
-Widget _buildCragDetails(Map<String, String> crag) {
-  // Crag name and details
+/// Constrói a coluna de detalhes textuais mostrando o nome e a localização do pico.
+Widget _buildCragDetails(Map<String, dynamic> crag) {
   return Expanded(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          crag['name']!,
+          safeString(crag['nome'], fallback: 'Sem Nome'),
           style: const TextStyle(
             color: fishBone,
             fontSize: 18,
@@ -118,7 +126,7 @@ Widget _buildCragDetails(Map<String, String> crag) {
         ),
         const SizedBox(height: 4),
         Text(
-          crag['location']!,
+          safeString(crag['local'], fallback: 'Local Desconhecido'),
           style: TextStyle(
             color: fishBone.withValues(alpha: 0.6),
             fontSize: 14,
@@ -129,12 +137,10 @@ Widget _buildCragDetails(Map<String, String> crag) {
   );
 }
 
-Widget _buildDownloadButton() {
-  // Download icon button
+/// Constrói o botão final que inicia o download do pico.
+Widget _buildDownloadButton(VoidCallback onPressed) {
   return IconButton(
-    onPressed: () {
-      // TODO: Implement download functionality
-    },
+    onPressed: onPressed,
     icon: const Icon(
       Icons.download_rounded,
       color: beastHide,

@@ -1,0 +1,21 @@
+Analyzing frontend...                                           
+
+   info - Invalid use of a private type in a public API - lib\main.dart:53:26 - library_private_types_in_public_api
+  error - The type 'Escalada_Tipo' isn't exhaustively matched by the switch cases since it doesn't match the pattern 'Escalada_Tipo.highline' - lib\pages\via.dart:19:5 - non_exhaustive_switch_statement
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:29:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:35:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:62:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:66:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:81:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:97:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:135:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:149:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:163:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:191:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:212:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\dataset_repository.dart:221:5 - avoid_print
+   info - The imported package 'crypto' isn't a dependency of the importing package - lib\services\update_downloader.dart:3:8 - depend_on_referenced_packages
+   info - Don't invoke 'print' in production code - lib\services\update_downloader.dart:31:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\update_downloader.dart:43:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\update_downloader.dart:56:7 - avoid_print
+

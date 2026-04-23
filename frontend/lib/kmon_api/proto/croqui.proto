@@ -1,0 +1,854 @@
+// Copyright (C) 2026 ACEC-MG
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package acecmg;
+
+// Representa um croqui de escalada, que pode incluir um ou mais picos.
+message Croqui {
+  // Identificador único do croqui. Ideal formato como "br_mg_igarape_pedra_grande".
+  string id = 1;
+
+  // Nome oficial do croqui.
+  string nome = 2;
+
+  // Descrição curta do pico do croqui, que será exibida na lista de croquis.
+  // Máximo recomendado de 100 palavras.
+  string descricao = 3;
+
+  // Créditos ao criador do croqui.
+  repeated string creditos = 4;
+  
+  // Arquivos markdown para complementar as informações do croqui.
+  repeated ArquivoMarkdown arquivos_markdown = 5;
+
+  // Picos que fazem parte desse croqui.
+  repeated Pico picos = 6;
+
+  // Arquivos externos que não estão incluídos no .binarypb.
+  repeated ArquivoExterno arquivos_externos = 7;
+
+  // Caminho para a thumbnail do croqui (imagem em miniatura para prever croquis não baixados).
+  // Essa imagem deve ter no máximo 1200x1200.
+  string caminho_thumbnail = 8;
+
+  // Representa se o croqui já foi revisado manualmente para garantir qualidade.
+  bool revisado_manualmente = 9;
+}
+
+// Informações sobre arquivos externos que não estão incluídos no .binarypb.
+message ArquivoExterno {
+  // Caminho do arquivo, relativo à localização do .binarypb.
+  string caminho = 1;
+  
+  // Checksum SHA256 do arquivo.
+  string checksum_sha256 = 2;
+}
+
+// Representa um arquivo markdown com informações sobre o croqui.
+message ArquivoMarkdown {
+  // Título do arquivo.
+  string titulo = 1;
+  
+  // Conteúdo do arquivo. Ou um caminho relativo para um arquivo .md existente, ou
+  // uma string com o conteúdo do arquivo.
+  oneof arquivo {
+    string caminho = 2;
+    string conteudo = 3;
+  }
+}
+
+// Representa um pico de escalada completo (ex: Serra do Cipó, Gruta da Lapinha).
+message Pico {
+  // Nome oficial do pico de escalada.
+  string nome = 1;
+  
+  // Visão geral, história e informações gerais de acesso.
+  string descricao = 2;
+
+  // Estado do local de escalada.
+  string estado = 3;
+  
+  // Localização do ponto de referência principal (geralmente o estacionamento).
+  Coordenada localizacao = 4;
+
+  // Link para o ponto de referência principal no Google Maps.
+  string url_google_maps = 5;
+  
+  // Nome da associação local responsável (ex: ACEC-MG).
+  string nome_associacao = 6;
+  
+  // Link para a página onde o escalador pode se afiliar.
+  string url_filiacao_associacao = 7;
+  
+  // Chave Pix para contribuições diretas ao fundo de manutenção local.
+  string chave_pix_manutencao = 8;
+  
+  // Patrocinadores atuais do croqui deste local.
+  repeated Patrocinador patrocinadores = 9;
+  
+  // Elementos de escalada contidos neste pico (setores ou grupos).
+  repeated SetorOuGrupo setores_ou_grupos = 11;
+
+  reserved 10;
+}
+
+// Representa um elemento (Setor ou Grupo) de um Pico.
+message SetorOuGrupo {
+  oneof tipo {
+    ArquivoSetor setor = 1;
+    ArquivoGrupo grupo = 2;
+  }
+}
+
+// Use para referenciar um outro arquivo que contenha informação de setor caso necessário.
+message ArquivoSetor {
+  oneof arquivo {
+    string caminho = 1;
+    Setor conteudo = 2;
+  }
+}
+
+// Use para referenciar um outro arquivo que contenha informação de grupo caso necessário.
+message ArquivoGrupo {
+  oneof arquivo {
+    string caminho = 1;
+    Grupo conteudo = 2;
+  }
+}
+
+// Representa um grupo de setores (ex: Vale Oculto na Sinuosa, ou conjuntos de blocos de Boulder).
+message Grupo {
+  // Nome do grupo (ex: Vale Oculto).
+  string nome = 1;
+
+  // Características do grupo, acesso, etc.
+  string descricao = 2;
+  
+  // Mapas do grupo (geralmente mapas de acesso ou visão geral).
+  repeated Mapa mapas = 3;
+  
+  // Setores que compõem este grupo.
+  repeated ArquivoSetor setores = 4;
+}
+
+// Representa uma parede ou setor específico dentro de um Pico.
+// Para boulders, isso costuma ser o bloco.
+message Setor {
+  // Nome do setor (ex: Savassinha).
+  string nome = 1;
+
+  // Coordenada do estacionamento.
+  Coordenada localizacao_estacionamento = 2;
+
+  // Coordenada da escalada do setor.
+  Coordenada localizacao_escalada = 3;
+  
+  // Trilhas que vão do estacionamento ao setor.
+  repeated Trilha trilhas = 4; 
+
+  // Possível sinal de celular no setor.
+  bool sinal_de_celular = 6;
+
+  // Setor e acesso favorável a crianças.
+  bool amigavel_a_criancas = 7;
+
+  // Setor e acesso favorável a bebês.
+  bool amigavel_a_bebes = 8;
+
+  // Características da escalada no setor, insolação, qualidade da rocha, etc.
+  string descricao = 9;
+  
+  // Mapas do setor.
+  repeated Mapa mapas = 13;
+  
+  // Todas as escaladas deste setor.
+  repeated Escalada escaladas = 11;
+
+  // Reservado. Anteriormente sub_setores. 
+  // Use Grupos no Pico para organizar múltiplos setores.
+  reserved 12;
+}
+
+// Representa um mapa do setor.
+message Mapa {
+  // Caminho do arquivo (geralmente em .webp) contendo a foto desenhada da parede.
+  string caminho_imagem_mapa = 1;
+
+  // Largura do mapa em pixels.
+  int32 largura_mapa = 2;
+
+  // Altura do mapa em pixels.
+  int32 altura_mapa = 3;
+
+  // Representa um ponto de interesse no mapa.
+  message PontoDeInteresse {
+    // ID do ponto de interesse no mapa.
+    string id = 1;
+
+    // Label do ponto de interesse que estava escrita no mapa.
+    string label = 2;
+
+    // Bounding box do ponto de interesse na imagem.
+    // Prefira usar 'box' se possível, utilize 'box_obliqua' apenas se não for possível
+    // representar a bounding box com um retângulo.
+    oneof tipo_box {
+      // Bounding box retangular.
+      BoundingBox box = 3;
+      // Bounding box oblíqua.
+      BoundingBoxObliqua box_obliqua = 5;
+    }
+  }
+
+  // Posição de cada ponto de interesse.
+  repeated PontoDeInteresse pontos_de_interesse = 4;
+}
+
+// Caixa de enquadramento / bounding box retangular de parte da imagem.
+message BoundingBox {
+  int32 xmin = 1;
+  int32 ymin = 2;
+  int32 xmax = 3;
+  int32 ymax = 4;
+}
+
+// Caixa de enquadramento / bounding box oblíqua pra parte da imagem.
+// Definido pela posição dos 4 cantos da área da bounding box.
+message BoundingBoxObliqua {
+  int32 x1 = 1;
+  int32 y1 = 2;
+  int32 x2 = 3;
+  int32 y2 = 4;
+  int32 x3 = 5;
+  int32 y3 = 6;
+  int32 x4 = 7;
+  int32 y4 = 8;
+}
+
+// Representa uma escalada de qualquer tipo.
+message Escalada {
+  oneof tipo {
+    ViaEsportiva via_esportiva = 1;
+    ViaMovel via_movel = 2;
+    Boulder boulder = 3;
+    ViaMultiplasEnfiadas via_multiplas_enfiadas = 4;
+    Highline highline = 5;
+  }
+}
+
+// Representa uma linha de escalada esportiva (via) individual de uma enfiada e somente com proteções fixas.
+message ViaEsportiva {
+  // Nome da via.
+  string nome = 1;
+
+  // ID da via no mapa. Provavelmente um número, como 1, ou a, ou 1a, etc.
+  string id_no_mapa = 16;
+  
+  // Grau de dificuldade em livre da via (ex "BR_6sup").
+  GrauVia.GrauVia dificuldade = 2;
+
+  // Grau de escalada em artificial, se houver trechos de artificial (ex: "A1", "A2").
+  GrauArtificial.GrauArtificial dificuldade_artificial = 3;
+
+  // Grau de exposição da via. Normalmente não preenchido em vias esportivas, que
+  // costumam ser "E1".
+  GrauExposicao.GrauExposicao exposicao = 4;
+
+  // Tipo de parede predominante (negativo, vertical, positivo).
+  TipoParede.TipoParede tipo_parede = 5;
+
+  // Extensão da via, em metros.
+  int32 extensao = 6;
+  
+  // Número de proteções fixas intermediárias (chapeletas) na via (define quantas costuras levar).
+  int32 quantidade_protecoes_intermediarias = 7;
+
+  // Número de proteções fixas na parada da via (define quantas costuras levar).
+  int32 quantidade_protecoes_parada = 8;
+  
+  // TODO: Tipo da parada (ex: "Corrente", "Pinus", "Parabolt Duplo").
+  string tipo_ancoragem = 9;
+  
+  // Nomes dos conquistadores.
+  repeated string conquistadores = 10;
+
+  // Data de abertura da via (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 11;
+
+  // Data da última manutenção da via (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_manutencao = 12;
+  
+  // Dicas de segurança, movimentação chave (beta) e equipamentos recomendados.
+  string descricao = 13;
+  
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 14;
+  
+  // Chave Pix do mantenedor ou conquistador específico desta via.
+  string chave_pix_manutencao = 15;
+}
+
+// Representa uma linha de escalada (via) individual de uma enfiada ou totalmente móvel ou mista com proteções fixas.
+message ViaMovel {
+  // Nome da via.
+  string nome = 1;
+
+  // ID da via no mapa. Provavelmente um número, como 1, ou a, ou 1a, etc.
+  string id_no_mapa = 16;
+  
+  // Grau de dificuldade em livre da via (ex "BR_6sup").
+  GrauVia.GrauVia dificuldade = 2;
+
+  // Grau de escalada em artificial, se houver trechos de artificial (ex: "A1", "A2").
+  GrauArtificial.GrauArtificial dificuldade_artificial = 17;
+
+  // Grau do lance em artificial se escalado em livre.
+  GrauVia.GrauVia dificuldade_artificial_em_livre = 18;
+
+  // Grau de exposição da via.
+  GrauExposicao.GrauExposicao exposicao = 3;
+
+  // Tipo de parede predominante (negativo, vertical, positivo).
+  TipoParede.TipoParede tipo_parede = 4;
+
+  // Extensão da via, em metros.
+  int32 extensao = 5;
+  
+  // Número de proteções fixas intermediárias (chapeletas) na via.
+  int32 quantidade_protecoes_intermediarias = 6;
+
+  // Número de proteções fixas na parada da via.
+  int32 quantidade_protecoes_parada = 7;
+
+  // Tipo de proteções móveis a serem usadas na via. Descrição textual.
+  string protecoes_moveis = 8;
+  
+  // TODO: Tipo da parada (ex: "Corrente", "Pinus", "Parabolt Duplo").
+  string tipo_ancoragem = 9;
+  
+  // Nomes dos conquistadores.
+  repeated string conquistadores = 10;
+
+  // Data de abertura da via (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 11;
+
+  // Data da última manutenção da via (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_manutencao = 12;
+  
+  // Dicas de segurança, movimentação chave (beta) e equipamentos recomendados.
+  string descricao = 13;
+  
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 14;
+  
+  // Chave Pix do mantenedor ou conquistador específico desta via.
+  string chave_pix_manutencao = 15;
+}
+
+// Representa uma linha de boulder individual.
+message Boulder {
+  // Nome do boulder.
+  string nome = 1;
+
+  // ID no mapa. Provavelmente um número, como 1, ou a, ou 1a, etc.
+  string id_no_mapa = 9;
+
+  // Grau de dificuldade (ex: "V3", "V8").
+  GrauBoulder.GrauBoulder dificuldade = 2;
+
+  // Tipo de parede predominante (negativo, vertical, positivo).
+  TipoParede.TipoParede tipo_parede = 3;
+
+  // Nomes dos conquistadores ou primeira ascensão.
+  repeated string conquistadores = 4;
+
+  // Data de abertura do boulder (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 5;
+
+  // Dicas de segurança, movimentação chave (beta) e número/posicionamento de crashpads recomendados.
+  string descricao = 6;
+
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 7;
+
+  // Chave Pix do mantenedor ou conquistador específico deste boulder.
+  string chave_pix_manutencao = 8;
+}
+
+// Representa uma via de escalada de múltiplas enfiadas.
+// NEXT_ID: 24
+message ViaMultiplasEnfiadas {
+  // Nome da via.
+  string nome = 1;
+
+  // ID da via no mapa. Provavelmente um número, como 1, ou a, ou 1a, etc.
+  string id_no_mapa = 20;
+
+  // Mapas da via de múltiplas enfiadas, se houver.
+  repeated Mapa mapas = 21;
+
+  // Grau de dificuldade médio da via (ex: "5sup", "7a").
+  GrauVia.GrauVia dificuldade_media = 2;
+
+  // Grau de dificuldade do lance mais difícil da via (ex: "5sup", "7a").
+  GrauVia.GrauVia dificuldade_maxima = 3;
+
+  // Grau de escalada em artificial, se houver trechos de artificial (ex: "A1", "A2").
+  GrauArtificial.GrauArtificial dificuldade_artificial = 4;
+
+  // Grau do lance em artificial se escalado em livre.
+  GrauVia.GrauVia dificuldade_artificial_em_livre = 5;
+
+  // Grau de exposição da via trad (ex: "E2", "E3"). Determina a qualidade/risco das proteções.
+  GrauExposicao.GrauExposicao exposicao = 6;
+
+  // Duração estimada para escalar a via.
+  GrauDuracao.GrauDuracao duracao = 7;
+
+  // Número de enfiadas.
+  int32 numero_enfiadas = 8;
+
+  // Comprimento total da via.
+  int32 comprimento_total = 9;
+
+  // Comprimento da maior enfiada da via.
+  int32 comprimento_maior_enfiada = 10;
+
+  // Número de costuras a levar para proteções intermediárias por enfiada.
+  int32 quantidade_costuras_intermediarias = 22;
+
+  // Número de equipamentos a levar para proteções nas paradas da via.
+  int32 quantidade_equipamentos_parada = 23;
+  
+
+  // Se a via é toda fixa, mista ou toda em móvel.
+  enum TipoViaMultiplasEnfiadas {
+    INDEFINIDO = 0;
+    TODA_FIXA = 1;
+    MISTA = 2;
+    TODA_MOVEL = 3;
+  }
+  TipoViaMultiplasEnfiadas tipo_via_multiplas_enfiadas = 11;
+
+  // Descrição do rack/equipamentos móveis recomendados (ex: "Camalots duplos #0.3-3, 1 jogo stoppers").
+  string equipamento_recomendado = 12;
+
+  // Detalhamento de cada enfiada da via, se houver.
+  repeated Escalada enfiadas = 13;
+
+  // Relato por escrito do croqui (enfiada por enfiada, orientações, etc).
+  string descricao = 14;
+
+  // Nome dos conquistadores.
+  repeated string conquistadores = 15;
+
+  // Data de abertura da via (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 16;
+
+  // Data da última manutenção da via.
+  string data_manutencao = 17;
+
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 18;
+
+  // Chave Pix do mantenedor ou conquistador específico desta via.
+  string chave_pix_manutencao = 19;
+}
+
+// Um highline montado na rocha.
+message Highline {
+  // Nome do highline.
+  string nome = 1;
+
+  string id_no_mapa = 13;
+
+  // Distância do highline.
+  int32 distancia = 2;
+
+  // Altura do highline.
+  int32 altura = 3;
+
+  // Exposição do highline.
+  int32 exposicao = 4;
+
+  // Nome dos conquistadores.
+  repeated string conquistadores = 5;
+
+  // Data de abertura do highline (ex: "1997" ou "1997-06" ou "1997-06-30").
+  string data_abertura = 6;
+
+  // Data da última manutenção do highline.
+  string data_manutencao = 7;
+
+  // Descrição do acesso do highline.
+  string descricao_acesso = 8;
+
+  // Descrição da ancoragem do highline.
+  string descricao_ancoragem = 9;
+
+  // Outras descrições do highline.
+  string descricao = 10;
+
+  // URL local do arquivo .mp4 para o vídeo demonstrativo do beta (se baixado via Wi-Fi).
+  string url_video_beta = 11;
+
+  // Chave Pix do mantenedor ou conquistador específico deste highline.
+  string chave_pix_manutencao = 12;
+}
+
+// Dados de um patrocinador que apoia financeiramente a manutenção ou os croquis.
+message Patrocinador {
+  // Nome da empresa ou entidade apoiadora.
+  string nome = 1;
+  
+  // Slogan curto ou mensagem de agradecimento.
+  string mensagem = 2;
+  
+  // URL do arquivo de imagem da marca do patrocinador.
+  string url_logo = 3;
+  
+  // Link para o site oficial ou Instagram do patrocinador.
+  string url_link = 4;
+}
+
+// Dados de uma trilha de aproximação.
+message Trilha {
+  // Nome dessa trilha.
+  string nome = 1;
+
+  // Descrição dessa trilha.
+  string descricao = 2;
+
+  // Tempo estimado de caminhada da trilha.
+  string tempo_aproximacao = 3;
+
+  // Cada ponto de interesse da trilha em sequência, do início ao fim.
+  repeated PontoDeInteresse pontos = 4;
+}
+
+// Ponto de interesse de uma trilha.
+message PontoDeInteresse {
+  // Nome do ponto de interesse.
+  string nome = 1;
+
+  // Descrição do ponto de interesse.
+  string descricao = 2;
+
+  // Localização do ponto de interesse.
+  Coordenada localizacao = 3;
+
+}
+
+// Estrutura de geolocalização.
+message Coordenada {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// Tipo de uma parede.
+message TipoParede {
+  enum TipoParede {
+    INDEFINIDO = 0;
+
+    POSITIVO = 1;
+
+    VERTICAL = 2;
+
+    NEGATIVO = 3; 
+  }
+}
+
+// Representa grau de dificuldade de vias de escalada em livre, em vários estilos de graduações
+// diferentes.
+// Referência: https://www.thecrag.com/en/article/grades
+message GrauVia {
+  enum GrauVia {
+    option allow_alias = true;
+    INDEFINIDO = 0;
+    PROJETO = 1;
+
+    BR_1 = 2;
+
+    BR_1SUP = 3;
+    FR_1 = 3;
+    US_5_0 = 3;
+
+    BR_2 = 4;
+    FR_2A = 4;
+    US_5_2 = 4;
+
+    BR_2SUP = 5;
+    FR_2C = 5;
+    US_5_3 = 5;
+
+    BR_3 = 6;
+    FR_3B = 6;
+    US_5_5 = 6;
+
+    BR_3SUP = 7;
+    FR_4A = 7;
+    US_5_6 = 7;
+
+    BR_4 = 8;
+    FR_4B_MAIS = 8;
+    US_5_7 = 8;
+
+    BR_4SUP = 9;
+    FR_5A_MAIS = 9;
+    US_5_9 = 9;
+
+    BR_5 = 10;
+    FR_5C= 10;
+    US_5_10A = 10;
+
+    BR_5SUP = 11;
+    FR_6A_MAIS = 11;
+    US_5_10B = 11;
+
+    BR_6 = 12;
+    FR_6B = 12;
+    US_5_10C = 12;
+
+    BR_6SUP = 13;
+    FR_6B_MAIS = 13;
+    US_5_10D = 13;
+
+    BR_7A = 14;
+    FR_6C = 14;
+    US_5_11A = 14;
+
+    BR_7B = 17;
+    FR_6C_MAIS = 17;
+    US_5_11c = 17;
+
+    BR_7C = 18;
+    FR_7A = 18;
+    US_5_11D = 18;
+
+    BR_8A = 19;
+    FR_7A_MAIS = 19;
+    US_5_12A = 19;
+
+    BR_8B = 20;
+    FR_7B = 20;
+    US_5_12B = 20;
+
+    BR_8C = 21;
+    FR_7B_MAIS = 21;
+    US_5_12C = 21;
+
+    BR_9A = 22;
+    FR_7C = 22;
+    US_5_12D = 22;
+
+    BR_9B = 23;
+    FR_7C_MAIS = 23;
+    US_5_13A = 23;
+
+    BR_9C = 24;
+    FR_8A = 24;
+    US_5_13B = 24;
+
+    BR_10A = 25;
+    FR_8A_MAIS = 25;
+    US_5_13C = 25;
+
+    BR_10B = 26;
+    FR_8B = 26;
+    US_5_13D = 26;
+
+    BR_10C = 27;
+    FR_8B_MAIS = 27;
+    US_5_14A = 27;
+
+    BR_11A = 28;
+    FR_8C = 28;
+    US_5_14B = 28;
+
+    BR_11B = 29;
+    FR_8C_MAIS = 29;
+    US_5_14C = 29;
+
+    BR_11C = 30;
+    FR_9A = 30;
+    US_5_14D = 30;
+
+    BR_12A = 31;
+    FR_9A_MAIS = 31;
+    US_5_15A = 31;
+
+    BR_12B = 32;
+    FR_9B = 32;
+    US_5_15B = 32;
+
+    BR_12C = 33;
+    FR_9B_MAIS = 33;
+    US_5_15C = 33;
+
+    BR_13A = 34;
+    FR_9C = 34;
+    US_5_15D = 34;
+  }
+}
+
+// Representa grau de dificuldade de boulders, em vários estilos de graduações
+// diferentes.
+// Referência: https://www.thecrag.com/en/article/grades
+message GrauBoulder {
+  enum GrauBoulder {
+    INDEFINIDO = 0;
+
+    VB = 1;
+
+    V0 = 2;
+
+    V1 = 3;
+
+    V2 = 4;
+    
+    V3 = 5;
+
+    V4 = 6;
+
+    V5 = 7;
+
+    V6 = 8;
+
+    V7 = 9;
+
+    V8 = 10;
+
+    V9 = 11;
+
+    V10 = 12;
+
+    V11 = 13;
+    
+    V12 = 14;
+
+    V13 = 15;
+
+    V14 = 16;
+
+    V15 = 17;
+
+    V16 = 18;
+
+    V17 = 19;
+  }
+}
+
+// Representa grau de dificuldade de escalada em artificial.
+// Referência: https://agmontanhismo.org/conheca-sobre-graduacao-de-vias/
+message GrauArtificial {
+  enum GrauArtificial {
+    INDEFINIDO = 0;
+
+    // Pontos de apoio sólidos isolados ou em uma curta sequência, com pouca exposição.
+    A0 = 1;
+
+    A0_MAIS = 2;
+
+    // Peças fixas ou colocações sólidas de material móvel, fáceis e seguras, em uma
+    // sequência razoavelmente longa.
+    A1 = 3;
+
+    A1_MAIS = 4;
+
+    // Colocação geralmente sólida das proteções móveis, porém mais difíceis. Algumas
+    // colocações podem não ser sólidas, mas estarão logo acima de uma boa peça. Não
+    // há quedas perigosas.
+    A2 = 5;
+
+    // Como A2, mas com possibilidade de mais colocações ruins acima de uma boa. Potencial
+    // de queda aproximado de 6 a 9 metros, mas sem atingir platôs.
+    A2_MAIS = 6;
+
+    // Artificial difícil. Várias colocações frágeis em sequência, poucas proteções sólidas.
+    // Potencial de queda de até 15 metros, mas geralmente não causa acidentes graves.
+    A3 = 7;
+
+    // Como A3, mas com maior potencial de quedas perigosas.
+    A3_MAIS = 8;
+
+    // Escaladas muito perigosas. Quedas potenciais de 18 a 30 metros, com perigo de atingir
+    // platôs ou lacas de pedra. Peças que aguentam somente o peso do corpo.
+    A4 = 9;
+
+    // Como o A4, mas são necessárias várias horas para cada enfiada de corda.
+    A4_MAIS = 10;
+
+    // Extremo, sob o ponto de vista técnico e psicológico.
+    A5 = 11;
+
+    // Como um A5 em que as paradas não são sólidas.
+    A5_MAIS = 12;
+  }
+}
+
+// Representa grau de duração de uma via tradicional.
+// Referência: https://agmontanhismo.org/conheca-sobre-graduacao-de-vias/
+message GrauDuracao {
+  enum GrauDuracao {
+    INDEFINIDO = 0;
+
+    // Poucas horas de escalada.
+    D1 = 1;
+
+    // Meio dia de escalada.
+    D2 = 2;
+
+    // Um dia quase inteiro de escalada.
+    D3 = 3;
+
+    // Um longo dia de escalada.
+    D4 = 4;
+
+    // Requer uma noite na parede. Cordadas muito velozes podem repeti-la em um dia.
+    D5 = 5;
+
+    // Dois dias inteiros ou mais de escalada. Normalmente inclui longos e complicados
+    // trechos de escalada em artificial.
+    D6 = 6;
+
+    // Expedições a locais de acesso remoto com longa aproximação e muitos dias de escalada.
+    D7 = 7;
+  }
+}
+
+// Representa grau de exposição de uma via tradicional.
+// Referência: https://agmontanhismo.org/conheca-sobre-graduacao-de-vias/
+message GrauExposicao {
+  enum GrauExposicao {
+    INDEFINIDO = 0;
+
+    // Vias bem protegidas, grampeação nível esportiva.
+    E1 = 1;
+
+    // Vias com proteção regular.
+    E2 = 2;
+
+
+    // Vias com proteção regular com trechos perigosos.
+    E3 = 3;
+
+    // Vias perigosas em caso de queda.
+    E4 = 4;
+
+    // Vias muito perigosas em caso de queda.
+    E5 = 5;
+  }
+}

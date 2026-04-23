@@ -2,13 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/gps.dart';
+import 'package:frontend/functions/common_functions.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/sync_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Instancia e inicializa o repositório
+  final datasetRepo = DatasetRepository();
+  final syncService = SyncService(datasetRepo);
+  
+  // Sincronização inicial na inicialização
+  syncService.syncOnLaunch();
+
+  // Passa isso para o aplicativo
+  runApp(MyApp(datasetRepo: datasetRepo, syncService: syncService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final DatasetRepository datasetRepo;
+  final SyncService syncService;
+
+  const MyApp({
+    super.key, 
+    required this.datasetRepo,
+    required this.syncService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,19 +41,33 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      home: MainNavigationWrapper(key: MainNavigationWrapper.navKey),
+      // Passa o repositório e o serviço de sincronização para o wrapper de navegação
+      home: MainNavigationWrapper(
+        datasetRepo: datasetRepo,
+        syncService: syncService,
+        key: MainNavigationWrapper.navKey,
+      ),
     );
   }
 }
 
+/// O ponto de entrada principal para a navegação do aplicativo.
 class MainNavigationWrapper extends StatefulWidget {
-  const MainNavigationWrapper({super.key});
+  final DatasetRepository datasetRepo;
+  final SyncService syncService;
+
+  const MainNavigationWrapper({
+    super.key,
+    required this.datasetRepo,
+    required this.syncService,
+  });
 
   static final GlobalKey<_MainNavigationWrapperState> navKey = GlobalKey<_MainNavigationWrapperState>();
 
   @override
   State<MainNavigationWrapper> createState() => _MainNavigationWrapperState();
 
+  /// Alterna a aba ativa do MainNavigationWrapper.
   static void switchTab(int index) {
     navKey.currentState?._onItemTapped(index);
   }
@@ -41,54 +76,59 @@ class MainNavigationWrapper extends StatefulWidget {
 class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   int _selectedIndex = 0;
 
-  static const Color nobleBlack = Color(0xFF1F2128);
-  static const Color beastHide = Color(0xFFAE8F68);
-  static const Color fishBone = Color(0xFFE4DAC5);
-
-  final List<Widget> _pages = [
-    const HomePage(),
-    const GPSPage(),
-    const BrowsePage(),
-  ];
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _HomePageWrapper(
+            datasetRepo: widget.datasetRepo,
+            syncService: widget.syncService,
+            onSwitchTab: _onItemTapped,
+          ),
+          _GPSPageWrapper(datasetRepo: widget.datasetRepo),
+          _BrowsePageWrapper(datasetRepo: widget.datasetRepo),
+        ],
+      ),
+      bottomNavigationBar: buildPrimaryBottomNav(context, _selectedIndex, _onItemTapped),
+    );
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
+}
+
+class _HomePageWrapper extends StatelessWidget {
+  final DatasetRepository datasetRepo;
+  final SyncService syncService;
+  final Function(int) onSwitchTab;
+  
+  const _HomePageWrapper({
+    required this.datasetRepo,
+    required this.syncService,
+    required this.onSwitchTab
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: nobleBlack,
-        ),
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.location_on_rounded),
-              label: 'GPS',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_rounded),
-              label: 'Explorar',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: beastHide,
-          unselectedItemColor: fishBone.withValues(alpha: 0.5),
-          backgroundColor: nobleBlack,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => HomePage(
+    datasetRepo: datasetRepo,
+    syncService: syncService,
+    onSwitchTab: onSwitchTab,
+  );
+}
+
+class _GPSPageWrapper extends StatelessWidget {
+  final DatasetRepository datasetRepo;
+  const _GPSPageWrapper({required this.datasetRepo});
+  @override Widget build(BuildContext context) => GPSPage(datasetRepo: datasetRepo);
+}
+
+class _BrowsePageWrapper extends StatelessWidget {
+  final DatasetRepository datasetRepo;
+  const _BrowsePageWrapper({required this.datasetRepo});
+  @override Widget build(BuildContext context) => BrowsePage(datasetRepo: datasetRepo);
 }

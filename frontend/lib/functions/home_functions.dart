@@ -1,46 +1,9 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
+import '../services/dataset_repository.dart';
+import '../pages/pico.dart';
 import 'common_functions.dart';
 
-List<Map<String, dynamic>> getDownloadedPicos() {
-  // A little map with data from the crag options
-  return [
-    {
-      'nome': 'Gruta do Baú',
-      'local': 'Pedro Leopoldo, MG',
-      'vias': '100+',
-    },
-    {
-      'nome': 'Pedra Grande',
-      'local': 'Igarapé, MG',
-      'vias': '150+',
-    },
-    {
-      'nome': 'Santuário',
-      'local': 'Santa Luzia, MG',
-      'vias': '40+',
-    },
-    {
-      'nome': 'Lapinha',
-      'local': 'Lagoa Santa, MG',
-      'vias': '80+',
-    },
-    {
-      'nome': 'Serra do Cipó',
-      'local': 'Santana do Riacho, MG',
-      'vias': '1000+',
-    },
-  ];
-}
-
-// Earthy Color Palette for Cards
-const Color leatherWork = Color(0xFF896449);
-const Color obsidianBrown = Color(0xFF543E35);
-const Color slateStone = Color(0xFF4A4E5A);
-const Color mossRock = Color(0xFF5B614D);
-const Color clayEarth = Color(0xFF7D4F43);
-const Color weatheredIron = Color(0xFF3E4247);
-
+/// Uma paleta de cores usada para o fundo dos cartões (cards) de pico.
 final List<Color> cardPalette = [
   leatherWork,
   slateStone,
@@ -49,43 +12,184 @@ final List<Color> cardPalette = [
   weatheredIron,
 ];
 
-Widget buildHomeBody(List<Map<String, dynamic>> downloadedPicos) {
-  // Take only the 4 most recent crags(first 4 in the list)
-  final List<Map<String, dynamic>> recentPicos = downloadedPicos.take(4).toList();
+/// Navega para a página de detalhes de um pico selecionado.
+/// 
+/// Ele primeiro mostra um indicador de carregamento enquanto busca os dados completos do Croqui.
+void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico) async {
+  final id = pico['id'];
+  if (id == null) return;
 
+  // Mostra indicador de carregamento
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator(color: beastHide)),
+  );
+
+  final croqui = await datasetRepo.getCroqui(id);
+
+  if (!context.mounted) return;
+  
+  Navigator.pop(context); // Remove indicador de carregamento
+
+  if (croqui != null && croqui.picos.isNotEmpty) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PicoDetailsPage(
+          pico: croqui.picos.first,
+          croqui: croqui,
+          cragId: id,
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+    
+    // Atualiza a lista de prioridades APÓS a conclusão da transição para evitar que o carrossel mude
+    // enquanto o usuário ainda está olhando para ele durante a transição.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      datasetRepo.updatePriorityAfterNavigation(id);
+    });
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erro ao abrir o guia.')),
+    );
+  }
+}
+
+/// Constrói o corpo rolável principal da página inicial (Home).
+/// 
+/// Exibe um carrossel de picos baixados recentemente e uma lista suspensa
+/// de todos os guias disponíveis.
+Widget buildHomeBody(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  List<Map<String, dynamic>> downloadedPicos,
+  Set<String> downloadingCrags, {
+  required VoidCallback onAddCrag,
+}) {
   return Container(
     width: double.infinity,
     height: double.infinity,
-    // Making the background color a gradient for prettiness
+    // Transformando a cor de fundo em um gradiente para ficar mais bonito
     decoration: const BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          nobleBlack, // Main background color
-          obsidianBrown, // Transitions from dark to a earthy brown
+          nobleBlack, // Cor de fundo principal
+          obsidianBrown, // Transições do escuro para um marrom terra
         ],
       ),
     ),
     child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(), // Ensures it always bounces/scrolls
+      physics: const AlwaysScrollableScrollPhysics(), // Garante que sempre role/tenha o efeito de rebote
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          buildSectionHeader('Guias Recentes'),
-          buildPicosCarousel(recentPicos),
-          buildFooterInstructions('Deslize para ver seus downloads'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Guias Recentes',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: fishBone,
+                  ),
+                ),
+                ValueListenableBuilder<SyncStatus>(
+                  valueListenable: datasetRepo.syncStatus,
+                  builder: (context, status, _) {
+                    return buildSyncBadge(status);
+                  },
+                ),
+              ],
+            ),
+          ),
+          // O carrossel agora lida internamente com o limite de 4 cartões
+          buildPicosCarousel(
+            downloadedPicos, 
+            downloadingCrags,
+            onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
+          ),
           const SizedBox(height: 10),
-          _buildAllGuidesDropdown(downloadedPicos),
-          const SizedBox(height: 100), // Extra space at bottom to ensure everything is scrollable
+          _buildAllGuidesDropdown(
+            downloadedPicos, 
+            downloadingCrags,
+            onAddCrag: onAddCrag, 
+            onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
+          ),
+          const SizedBox(height: 100), // Espaço extra na parte inferior para garantir que tudo seja rolável
         ],
       ),
     ),
   );
 }
 
-Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
+/// Constrói um emblema (badge) de status de sincronização.
+Widget buildSyncBadge(SyncStatus status) {
+  String text;
+  Color color;
+  IconData icon;
+
+  switch (status) {
+    case SyncStatus.updated:
+      text = 'Atualizados';
+      color = Colors.green.shade800;
+      icon = Icons.check_circle;
+      break;
+    case SyncStatus.updating:
+      text = 'Atualizando...';
+      color = Colors.blue.shade800;
+      icon = Icons.sync;
+      break;
+    case SyncStatus.outdated:
+      text = 'Desatualizado';
+      color = Colors.orange.shade800;
+      icon = Icons.warning;
+      break;
+    case SyncStatus.error:
+      text = 'Sem conexão';
+      color = Colors.brown.shade800;
+      icon = Icons.error;
+      break;
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.white),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Constrói uma lista expansível mostrando todos os guias baixados.
+Widget _buildAllGuidesDropdown(
+  List<Map<String, dynamic>> picos,
+  Set<String> downloadingCrags, {
+  required VoidCallback onAddCrag,
+  required Function(Map<String, dynamic>) onPicoSelect,
+}) {
   return Theme(
     data: ThemeData(
       dividerColor: Colors.transparent,
@@ -112,21 +216,50 @@ Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
           ),
         ),
       ),
-      backgroundColor: Colors.black.withValues(alpha: 0.3), // Darker than background when expanded
+      backgroundColor: Colors.black.withValues(alpha: 0.3), // Mais escuro que o fundo quando expandido para dar ênfase
       collapsedBackgroundColor: Colors.transparent,
       children: [
-        ...picos.map((pico) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-              title: Text(
-                pico['nome'],
-                style: const TextStyle(color: fishBone, fontSize: 15),
+        ...picos.map((pico) {
+          final isDownloading = downloadingCrags.contains(pico['id']);
+          
+          Widget trailingIcon;
+          if (isDownloading) {
+            trailingIcon = const SizedBox(
+              width: 16, 
+              height: 16, 
+              child: CircularProgressIndicator(color: fishBone, strokeWidth: 2)
+            );
+          } else {
+            trailingIcon = const Icon(Icons.chevron_right, color: fishBone, size: 18);
+          }
+          
+          Color titleColor;
+          if (isDownloading) {
+            titleColor = fishBone.withValues(alpha: 0.5);
+          } else {
+            titleColor = fishBone;
+          }
+
+          VoidCallback? onTapCallback;
+          if (isDownloading) {
+            onTapCallback = null;
+          } else {
+            onTapCallback = () => onPicoSelect(pico);
+          }
+
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+            title: Text(
+              safeString(pico['nome']),
+              style: TextStyle(
+                color: titleColor, 
+                fontSize: 15
               ),
-              trailing: const Icon(Icons.chevron_right, color: fishBone, size: 18),
-              onTap: () {
-                // TODO: Implement navigation to the selected pico's guide
-                print('Selected: ${pico['nome']}');
-              },
-            )),
+            ),
+            trailing: trailingIcon,
+            onTap: onTapCallback,
+          );
+        }),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 32),
           leading: const Icon(Icons.add_circle_outline, color: beastHide, size: 20),
@@ -138,63 +271,107 @@ Widget _buildAllGuidesDropdown(List<Map<String, dynamic>> picos) {
               fontSize: 15,
             ),
           ),
-          onTap: () {
-            // Switch to the "Explorar" tab when clicked (index 2)
-            MainNavigationWrapper.switchTab(2);
-          },
+          onTap: onAddCrag,
         ),
       ],
     ),
   );
 }
 
+/// Um cabeçalho estilizado para seções.
 Widget buildSectionHeader(String title) {
   return Padding(
-    // Padding on the text to give it some space
+    // Preenchimento (padding) no texto para dar algum espaço
     padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
     child: Text(
       title,
       style: const TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
-        color: fishBone, // Light text for visibility
+        color: fishBone, // Texto claro para visibilidade
       ),
     ),
   );
 }
 
-Widget buildPicosCarousel(List<Map<String, dynamic>> recentPicos) {
-  if (recentPicos.isEmpty) return const SizedBox();
-  
-  // Total number of items
-  final int actualCount = recentPicos.length;
-  // Starting in the middle of a very large number of items to allow infinite looping in both directions
-  final int initialPage = actualCount * 100;
-
-  // Carousel with offline crag data
-  return SizedBox(
-    height: 350,
-    child: PageView.builder(
-      controller: PageController(
-        viewportFraction: 0.85,
-        initialPage: initialPage,
+/// Constrói um carrossel horizontal de cartões de picos.
+/// Limitado aos 4 picos mais recentes.
+/// Permite loop infinito se houver exatamente 4 itens.
+Widget buildPicosCarousel(
+  List<Map<String, dynamic>> allPicos,
+  Set<String> downloadingCrags, {
+  required Function(Map<String, dynamic>) onPicoSelect,
+}) {
+  if (allPicos.isEmpty) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Text(
+          'Nenhum guia baixado ainda.',
+          style: TextStyle(color: fishBone, fontStyle: FontStyle.italic),
+        ),
       ),
-      // Using initialPage and modulo we can allow infinite looping in both directions
-      itemBuilder: (context, index) {
-        // Calculate the actual index in the list using modulo
-        final int actualIndex = index % actualCount;
-        
-        // Randomly pick a color from the palette based on the item index
-        // This also ensures the same "pico container" has a constant color during navigation
-        final Color cardColor = cardPalette[actualIndex % cardPalette.length];
+    );
+  }
 
-        return buildPicoCard(recentPicos[actualIndex], 10.0, cardColor);
-      },
-    ),
+  // LIMITADOR: Pega no máximo 4 cartões para o carrossel para evitar acúmulo de informações
+  final List<Map<String, dynamic>> picosToShow = allPicos.take(4).toList();
+  final int count = picosToShow.length;
+  final bool shouldLoop = count >= 4;
+
+  return Column(
+    children: [
+      SizedBox(
+        height: 350,
+        child: PageView.builder(
+          itemCount: shouldLoop ? null : count,
+          controller: PageController(
+            viewportFraction: shouldLoop ? 0.85 : 0.9,
+            initialPage: shouldLoop ? count * 100 : 0,
+          ),
+          physics: count > 1
+              ? const BouncingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            final int actualIndex = shouldLoop ? (index % count) : index;
+            final Color cardColor = cardPalette[actualIndex % cardPalette.length];
+            final double rightPadding = (!shouldLoop && actualIndex == count - 1) ? 0.0 : 10.0;
+
+            final pico = picosToShow[actualIndex];
+            final isDownloading = downloadingCrags.contains(pico['id']);
+
+            VoidCallback? onTapCallback;
+            if (isDownloading) {
+              onTapCallback = null;
+            } else {
+              onTapCallback = () => onPicoSelect(pico);
+            }
+            
+            double cardOpacity;
+            if (isDownloading) {
+              cardOpacity = 0.6;
+            } else {
+              cardOpacity = 1.0;
+            }
+
+            return GestureDetector(
+              onTap: onTapCallback,
+              child: Opacity(
+                opacity: cardOpacity,
+                child: buildPicoCard(pico, rightPadding, cardColor, isDownloading),
+              ),
+            );
+          },
+        ),
+      ),
+      if (count > 1)
+        buildFooterInstructions('Deslize para ver seus downloads'),
+    ],
   );
 }
 
-Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor) {
+/// Constrói um cartão individual para um pico no carrossel.
+Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardColor, bool isDownloading) {
   return Padding(
     padding: EdgeInsets.only(left: 10, right: rightPadding, top: 20, bottom: 20),
     child: Container(
@@ -215,7 +392,9 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              pico['nome'] as String,
+              safeString(pico['nome'], fallback: 'Sem Nome'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: nobleBlack,
                 fontSize: 28,
@@ -227,18 +406,31 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
               children: [
                 const Icon(Icons.location_on, color: nobleBlack, size: 18),
                 const SizedBox(width: 5),
-                Text(
-                  pico['local'] as String,
-                  style: TextStyle(
-                    color: nobleBlack.withValues(alpha: 0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    safeString(pico['local'], fallback: 'Local Desconhecido'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: nobleBlack.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
             const Spacer(),
-            buildVerGuiaButton(),
+            if (isDownloading)
+              const Row(
+                children: [
+                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: nobleBlack, strokeWidth: 2)),
+                   SizedBox(width: 8),
+                   Text('BAIXANDO...', style: TextStyle(color: nobleBlack, fontSize: 12, fontWeight: FontWeight.bold)),
+                ]
+              )
+            else
+              buildVerGuiaButton(),
           ],
         ),
       ),
@@ -246,6 +438,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
   );
 }
 
+/// Um pequeno botão no cartão para indicar que pode ser aberto.
 Widget buildVerGuiaButton() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -265,8 +458,8 @@ Widget buildVerGuiaButton() {
   );
 }
 
+/// Texto de instruções na parte inferior do carrossel.
 Widget buildFooterInstructions(String text) {
-  // Instructions on how to use the carousel
   return Padding(
     padding: const EdgeInsets.all(20.0),
     child: Center(
