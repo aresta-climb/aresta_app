@@ -20,6 +20,25 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId) {
           const SizedBox(height: 20),
         ],
 
+        if (setor.mapas.isNotEmpty) ...[
+          ...setor.mapas.map((mapa) {
+            if (mapa.caminhoImagemMapa.isNotEmpty) {
+              String cleanPath = mapa.caminhoImagemMapa;
+              if (cleanPath.startsWith('/')) {
+                cleanPath = cleanPath.substring(1);
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: OfflineMarkdown(
+                  data: '![Mapa do Setor](https://acecmg.github.io/kmon_serving/$cleanPath)',
+                  cragId: cragId,
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ],
+
         Builder(
           builder: (context) {
             int boulderCount = 0;

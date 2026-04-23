@@ -258,6 +258,60 @@ class DatasetRepository {
              }
           }
 
+          // Extrai e baixa mapas
+          try {
+            List<String> mapImages = [];
+            for (var pico in parsedPico.picos) {
+              for (var sog in pico.setoresOuGrupos) {
+                if (sog.whichTipo() == SetorOuGrupo_Tipo.setor && sog.setor.hasConteudo()) {
+                  for (var mapa in sog.setor.conteudo.mapas) {
+                    if (mapa.caminhoImagemMapa.isNotEmpty) mapImages.add(mapa.caminhoImagemMapa);
+                  }
+                } else if (sog.whichTipo() == SetorOuGrupo_Tipo.grupo && sog.grupo.hasConteudo()) {
+                  for (var mapa in sog.grupo.conteudo.mapas) {
+                    if (mapa.caminhoImagemMapa.isNotEmpty) mapImages.add(mapa.caminhoImagemMapa);
+                  }
+                  for (var arquivoSetor in sog.grupo.conteudo.setores) {
+                    if (arquivoSetor.hasConteudo()) {
+                      for (var mapa in arquivoSetor.conteudo.mapas) {
+                        if (mapa.caminhoImagemMapa.isNotEmpty) mapImages.add(mapa.caminhoImagemMapa);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            for (var path in mapImages) {
+              String cleanPath = path;
+              if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+              
+              String fullCaminho;
+              if (baseDir.isNotEmpty && !cleanPath.startsWith(baseDir)) {
+                fullCaminho = '$baseDir/$cleanPath';
+              } else {
+                fullCaminho = cleanPath;
+              }
+              
+              final imageUrl = '$_baseUrl/$fullCaminho';
+              debugPrint('Attempting to download map image: $imageUrl');
+              
+              final imgResponse = await http.get(Uri.parse(imageUrl));
+              if (imgResponse.statusCode == 200) {
+                final imgFile = File('${downloadsDir.path}/$fullCaminho');
+                if (!await imgFile.parent.exists()) {
+                   await imgFile.parent.create(recursive: true);
+                }
+                await imgFile.writeAsBytes(imgResponse.bodyBytes);
+                debugPrint('Successfully downloaded map image to ${imgFile.path}');
+              } else {
+                debugPrint('Failed to download map image: $imageUrl, status: ${imgResponse.statusCode}');
+              }
+            }
+          } catch (ex) {
+            debugPrint('Error downloading map images for $id: $ex');
+          }
+
           // Extrai e baixa imagens markdown
           try {
             final jsonStr = jsonEncode(parsedPico.toProto3Json());

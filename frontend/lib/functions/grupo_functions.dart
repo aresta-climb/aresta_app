@@ -21,6 +21,24 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId) {
           OfflineMarkdown(data: grupo.descricao, cragId: cragId),
           const SizedBox(height: 10),
         ],
+        if (grupo.mapas.isNotEmpty) ...[
+          ...grupo.mapas.map((mapa) {
+            if (mapa.caminhoImagemMapa.isNotEmpty) {
+              String cleanPath = mapa.caminhoImagemMapa;
+              if (cleanPath.startsWith('/')) {
+                cleanPath = cleanPath.substring(1);
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: OfflineMarkdown(
+                  data: '![Mapa do Grupo](https://acecmg.github.io/kmon_serving/$cleanPath)',
+                  cragId: cragId,
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ],
         const SizedBox(height: 20),
         _buildHeader('Subsetores'),
         if (grupo.setores.isEmpty)
