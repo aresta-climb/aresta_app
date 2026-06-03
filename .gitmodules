@@ -1,0 +1,3 @@
+[submodule "frontend/lib/aresta_api"]
+	path = frontend/lib/aresta_api
+	url = https://github.com/aresta-climb/aresta_api.git
