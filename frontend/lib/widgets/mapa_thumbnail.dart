@@ -1,0 +1,195 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../view_functions/common_functions.dart';
+import '../services/editor_croqui.dart';
+import '../navigation/navigation_functions.dart';
+
+class MapaThumbnail extends StatefulWidget {
+  final Mapa mapa;
+  final String cragId;
+  final List<Escalada> escaladas;
+  final List<ArquivoSetor> setores;
+  final Setor? setorContext;
+
+  const MapaThumbnail({
+    super.key,
+    required this.mapa,
+    required this.cragId,
+    this.escaladas = const [],
+    this.setores = const [],
+    this.setorContext,
+  });
+
+  @override
+  State<MapaThumbnail> createState() => _MapaThumbnailState();
+}
+
+class _MapaThumbnailState extends State<MapaThumbnail> {
+  Future<ImageProvider?>? _imageProviderFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageProviderFuture = _resolveImageProvider();
+  }
+
+  Future<ImageProvider?> _resolveImageProvider() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final editor = EditorDeCroqui.instance;
+    final downloadsPath = '${editor.downloadsPath(dir.path)}/${widget.cragId}';
+
+    String path = widget.mapa.caminhoImagemMapa;
+    String fileName = path.split('/').last;
+
+    File? localFile;
+    
+    // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
+    const baseUrl = 'https://aresta-climb.github.io/aresta_serving/';
+    if (path.startsWith(baseUrl)) {
+      final relativePath = path.replaceFirst(baseUrl, '');
+      final directFile = File('$downloadsPath/$relativePath');
+      if (directFile.existsSync()) {
+        localFile = directFile;
+      }
+    }
+
+    // 2. Tenta usar o caminho diretamente como um caminho relativo
+    if (localFile == null) {
+      String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      final directFile = File('$downloadsPath/$cleanPath');
+      if (directFile.existsSync()) {
+        localFile = directFile;
+      }
+    }
+
+    if (localFile == null && fileName.isNotEmpty) {
+      final searchName = Uri.decodeComponent(fileName).toLowerCase();
+      String searchBaseName = searchName.contains('.') ? searchName.substring(0, searchName.lastIndexOf('.')) : searchName;
+
+      try {
+        final downloadsDir = Directory(downloadsPath);
+        if (downloadsDir.existsSync()) {
+          final entities = downloadsDir.listSync(recursive: true);
+          for (var entity in entities) {
+            if (entity is File) {
+              final String ePath = entity.path.replaceAll('\\', '/');
+              final String eName = ePath.split('/').last;
+              final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
+              if (eNameLower == searchName) {
+                localFile = entity;
+                break;
+              }
+              String eBaseName = eNameLower.contains('.') ? eNameLower.substring(0, eNameLower.lastIndexOf('.')) : eNameLower;
+              if (eBaseName == searchBaseName) {
+                localFile = entity;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // ignora erros
+      }
+    }
+
+    if (localFile != null && localFile.existsSync()) {
+      return FileImage(localFile);
+    }
+
+    debugPrint('Erro: Imagem do mapa não encontrada localmente: $path');
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<ImageProvider?>(
+      future: _imageProviderFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return AspectRatio(
+            aspectRatio: widget.mapa.larguraMapa / widget.mapa.alturaMapa,
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(color: beastHide),
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+
+        return GestureDetector(
+          onTap: () {
+            AppNav.toMapaInterativo(
+              context,
+              mapa: widget.mapa,
+              cragId: widget.cragId,
+              escaladas: widget.escaladas,
+              setores: widget.setores,
+              setorContext: widget.setorContext,
+            );
+          },
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Imagem de fundo
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: AspectRatio(
+                  aspectRatio: widget.mapa.larguraMapa / widget.mapa.alturaMapa,
+                  child: Image(
+                    image: snapshot.data!,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              // Overlay escuro
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              // Botão Translúcido
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: nobleBlack.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.map, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'Abrir Mapa',
+                      style: TextStyle(
+                        color: fishBone,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
