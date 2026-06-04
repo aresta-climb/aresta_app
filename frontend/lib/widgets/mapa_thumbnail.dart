@@ -14,6 +14,7 @@ class MapaThumbnail extends StatefulWidget {
   final List<ArquivoSetor> setores;
   final Setor? setorContext;
   final String? nomeContexto;
+  final ImageProvider? imageProviderOverride;
 
   const MapaThumbnail({
     super.key,
@@ -23,6 +24,7 @@ class MapaThumbnail extends StatefulWidget {
     this.setores = const [],
     this.setorContext,
     this.nomeContexto,
+    this.imageProviderOverride,
   });
 
   @override
@@ -39,6 +41,10 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   }
 
   Future<ImageProvider?> _resolveImageProvider() async {
+    if (widget.imageProviderOverride != null) {
+      return widget.imageProviderOverride;
+    }
+
     final dir = await getApplicationDocumentsDirectory();
     final editor = EditorDeCroqui.instance;
     final downloadsPath = '${editor.downloadsPath(dir.path)}/${widget.cragId}';
@@ -143,6 +149,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               escaladas: widget.escaladas,
               setores: widget.setores,
               setorContext: widget.setorContext,
+              imageProviderOverride: widget.imageProviderOverride,
             );
           },
           child: Stack(

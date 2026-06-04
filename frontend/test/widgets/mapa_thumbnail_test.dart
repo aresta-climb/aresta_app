@@ -1,14 +1,10 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/services/editor_croqui.dart';
 import '../mocks/mock_telemetry_service.dart';
-import 'package:flutter/material.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49,
@@ -19,32 +15,15 @@ final Uint8List kTransparentImage = Uint8List.fromList([
   0x60, 0x82,
 ]);
 
-class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
-  final String tempPath;
-  MockPathProviderPlatform(this.tempPath);
-  @override
-  Future<String?> getApplicationDocumentsPath() async => tempPath;
-}
-
 void main() {
   testWidgets('MapaThumbnail calls logAbrirMapa on tap', (tester) async {
     final mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
 
-    final tempDir = await Directory.systemTemp.createTemp('mapa_thumbnail_test');
-    PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
-    EditorDeCroqui(); // Instancia singleton
-
     final mapa = Mapa()
       ..caminhoImagemMapa = 'teste.png'
       ..larguraMapa = 100
       ..alturaMapa = 100;
-
-    // Criar o arquivo local falso para que o FutureBuilder encontre
-    final downloadsDir = Directory('${EditorDeCroqui.instance.downloadsPath(tempDir.path)}/crag1');
-    downloadsDir.createSync(recursive: true);
-    final file = File('${downloadsDir.path}/teste.png');
-    file.writeAsBytesSync(kTransparentImage);
 
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -52,17 +31,17 @@ void main() {
           mapa: mapa,
           cragId: 'crag1',
           nomeContexto: 'Contexto Teste',
+          imageProviderOverride: MemoryImage(kTransparentImage),
         ),
       ),
     ));
 
     // Pump to resolve FutureBuilder
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100)); // To let Future complete if synchronous enough
+    await tester.pumpAndSettle();
     
     // Tap on the generated button
     await tester.tap(find.text('Abrir Mapa'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(mockTelemetry.recordedEvents, contains('abrir_mapa'));
     expect(mockTelemetry.recordedParams['abrir_mapa']!['nome_setor_ou_grupo'], 'Contexto Teste');

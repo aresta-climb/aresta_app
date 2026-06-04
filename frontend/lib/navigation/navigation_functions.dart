@@ -105,6 +105,7 @@ class AppNav {
     required List<ArquivoSetor> setores,
     String? initialSelectedId,
     Setor? setorContext,
+    ImageProvider? imageProviderOverride,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
@@ -116,6 +117,7 @@ class AppNav {
       setores: setores,
       initialSelectedId: initialSelectedId,
       setorContext: setorContext,
+      imageProviderOverride: imageProviderOverride,
       parent: ctrl.currentNode,
     ));
   }

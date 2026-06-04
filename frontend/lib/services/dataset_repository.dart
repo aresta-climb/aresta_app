@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
-import 'telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Representa o estado de sincronização do aplicativo.
 enum SyncStatus {
