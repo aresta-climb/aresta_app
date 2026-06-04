@@ -1,4 +1,4 @@
-name: Build Android App Bundle
+name: Android Release Sub-Workflow 
 
 on:
   workflow_call:

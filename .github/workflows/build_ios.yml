@@ -1,4 +1,4 @@
-name: iOS App Store Release
+name: iOS Release Sub-Workflow
 
 on:
   workflow_call:
