@@ -7,6 +7,16 @@ on:
         description: 'New Version Number (e.g. 1.0.0)'
         required: true
         type: string
+      deploy_android:
+        description: 'Deploy para Android?'
+        required: true
+        type: boolean
+        default: true
+      deploy_ios:
+        description: 'Deploy para iOS?'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   prepare_release:
@@ -69,9 +79,20 @@ jobs:
           git config --global user.name "Aresta Climb Bot"
           git config --global user.email "${{ secrets.BOT_APP_ID }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
           
+          DEPLOY_MSG=""
+          if [ "${{ inputs.deploy_android }}" == "true" ] && [ "${{ inputs.deploy_ios }}" == "true" ]; then
+            DEPLOY_MSG="Android e iOS"
+          elif [ "${{ inputs.deploy_android }}" == "true" ]; then
+            DEPLOY_MSG="só Android"
+          elif [ "${{ inputs.deploy_ios }}" == "true" ]; then
+            DEPLOY_MSG="só iOS"
+          else
+            DEPLOY_MSG="nenhuma plataforma"
+          fi
+          
           # Commita as alterações
           git add $PUBSPEC
-          git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo"
+          git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo ($DEPLOY_MSG)"
           
           # Cria a tag apontando para este exato commit
           git tag $TAG_NAME
@@ -97,6 +118,7 @@ jobs:
   build_android:
     name: Build Android
     needs: prepare_release
+    if: ${{ inputs.deploy_android }}
     uses: ./.github/workflows/build_android.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
@@ -105,6 +127,7 @@ jobs:
   build_ios:
     name: Build iOS
     needs: prepare_release
+    if: ${{ inputs.deploy_ios }}
     uses: ./.github/workflows/build_ios.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
