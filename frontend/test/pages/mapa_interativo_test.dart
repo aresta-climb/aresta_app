@@ -294,12 +294,12 @@ void main() {
       expect(find.textContaining('5º'), findsOneWidget); // formatGrade logic
       
       // Verify telemetry
-      final clickEvents = mockTelemetry.recordedEvents.where((e) => e == 'clicar_escalada_mapa').toList();
+      final clickEvents = mockTelemetry.recordedEvents.where((e) => e == 'acao_escalada').toList();
       expect(clickEvents.length, 1, reason: 'Deve logar o clique apenas 1 vez (evitando duplicidade com o auto-zoom)');
-      expect(mockTelemetry.recordedParams['clicar_escalada_mapa']!['nome_escalada'], 'Via Teste');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via Teste');
     });
 
-    testWidgets('Clicking "Mais" on floating card fires logVerDetalhesEscalada telemetry', (WidgetTester tester) async {
+    testWidgets('Clicking "Mais" on floating card fires logAcaoEscalada telemetry', (WidgetTester tester) async {
       final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
       
       await tester.pumpWidget(
@@ -324,9 +324,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify telemetry
-      expect(mockTelemetry.recordedEvents, contains('ver_detalhes_escalada'));
-      expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['nome_escalada'], 'Via Teste');
-      expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['origem'], 'mapa');
+      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via Teste');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'abrir_detalhes');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'mapa');
     });
 
     testWidgets('Tapping background de-selects marker', (WidgetTester tester) async {

@@ -394,7 +394,7 @@ class DatasetRepository {
 
         // Atualiza o conjunto de dados para que a interface saiba que há um novo download (parcial)
         await _updateDatasetAfterDownload(id);
-        TelemetryService.instance.logBaixarCroqui(id);
+        TelemetryService.instance.logAcaoExplorar(id, 'baixar');
 
         // --- Baixa todos os Arquivos Externos (Imagens/Markdowns) em Paralelo ---
         try {

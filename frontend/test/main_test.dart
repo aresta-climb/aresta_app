@@ -33,8 +33,7 @@ void main() {
     expect(find.byType(TreeNavigationWrapper), findsNothing);
     
     // Simulate main() startup logic for test coverage
-    await TelemetryService.instance.logAbrirApp();
-    expect(mockTelemetry.recordedEvents, contains('abrir_app'));
+
   });
 
   testWidgets('MyApp shows TreeNavigationWrapper when acceptedTerms is true', (WidgetTester tester) async {

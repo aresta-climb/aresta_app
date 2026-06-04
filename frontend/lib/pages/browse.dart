@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/common_functions.dart';
@@ -5,6 +6,7 @@ import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import 'package:fuzzy/fuzzy.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Uma página que permite aos usuários explorar e pesquisar picos disponíveis.
 /// 
@@ -22,6 +24,13 @@ class BrowsePage extends StatefulWidget {
 class _BrowsePageState extends State<BrowsePage> {
   /// O texto atual inserido na barra de pesquisa.
   String _searchQuery = '';
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   /// Aciona o download dos dados binários de um pico (.binarypb).
   /// 
@@ -126,6 +135,13 @@ class _BrowsePageState extends State<BrowsePage> {
                     onSearchChanged: (value) {
                       setState(() {
                         _searchQuery = value;
+                      });
+                      
+                      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+                        if (_searchQuery.isNotEmpty) {
+                          TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
+                        }
                       });
                     },
                     onDownload: _handleDownload,

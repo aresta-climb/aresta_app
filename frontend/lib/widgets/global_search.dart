@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/fuzzy.dart';
 import '../services/dataset_repository.dart';
@@ -5,6 +6,7 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 class GlobalSearchResult {
   final String title;
@@ -42,6 +44,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   bool _hasLoadedData = false;
   String _searchQuery = '';
   String _selectedFilter = 'Todos';
+  Timer? _debounceTimer;
 
   List<GlobalSearchResult> _allData = [];
   List<GlobalSearchResult> _filteredResults = [];
@@ -70,6 +73,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
@@ -211,6 +215,13 @@ class _GlobalSearchState extends State<GlobalSearch> {
       _searchQuery = query;
     });
     _applyFilters();
+    
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (_searchQuery.isNotEmpty) {
+        TelemetryService.instance.logBuscaEscaladas(_searchQuery, _filteredResults.length, 'global');
+      }
+    });
   }
 
   void _onFilterChanged(String filter) {
@@ -425,7 +436,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
                       leading: Icon(item.icon, color: beastHide),
                       title: Text(item.title, style: TextStyle(color: fishBone, fontWeight: FontWeight.bold)),
                       subtitle: Text(item.subtitle, style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 12)),
-                      onTap: item.onTap,
+                      onTap: () {
+                        TelemetryService.instance.logAcaoEscalada('global_search', 'global', item.title, 'abrir_detalhes', 'busca_global');
+                        item.onTap();
+                      },
                     );
                   },
                 ),

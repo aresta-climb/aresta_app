@@ -18,91 +18,129 @@ class TelemetryService {
   /// Instância singleton mutável (não const) para facilitar a injeção do mock nos testes.
   static TelemetryService instance = TelemetryService._privateConstructor();
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  @visibleForTesting
+  static void resetForTesting() {
+    instance = TelemetryService._privateConstructor();
+  }
 
   /// Método interno de utilidade para printar no console local e despachar ao Firebase.
   Future<void> _logEvent(String name, [Map<String, Object>? parameters]) async {
     if (kDebugMode) {
       print('📈 [Telemetry] Evento disparado: $name | Parâmetros: $parameters');
     }
-    await _analytics.logEvent(name: name, parameters: parameters);
+    try {
+      await FirebaseAnalytics.instance.logEvent(name: name, parameters: parameters);
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ [Telemetry] Erro ao enviar evento (Firebase pronto?): $e');
+      }
+    }
   }
 
-  /// Registra que o aplicativo foi aberto. Usado para contar usuários ativos.
-  Future<void> logAbrirApp() => _logEvent('abrir_app');
 
-  /// Registra quando o usuário faz download de um croqui novo.
-  Future<void> logBaixarCroqui(String idCroqui) {
-    return _logEvent('baixar_croqui', {'id_croqui': idCroqui});
+  /// Registra ações relacionadas à aba Explorar (ex: expandir detalhes, baixar croqui).
+  Future<void> logAcaoExplorar(String idCroqui, String acao) {
+    return _logEvent('acao_explorar', {
+      'id_croqui': idCroqui,
+      'acao': acao,
+    });
   }
 
   /// Registra quando um croqui já baixado é atualizado com uma nova versão (sha256).
   /// Agora também armazena o timestamp exato do update.
-  Future<void> logAtualizarCroqui(String idCroqui, String versao) {
+  Future<void> logAtualizarCroqui(String idCroqui, String versao, String timestampAtualizacao) {
     return _logEvent('atualizar_croqui', {
       'id_croqui': idCroqui,
       'versao': versao,
-      'timestamp_atualizacao': DateTime.now().toIso8601String(),
+      'timestamp_atualizacao': timestampAtualizacao,
     });
   }
 
-  /// Registra quando o usuário abre a visualização principal de um Pico/Croqui.
-  Future<void> logAbrirCroqui(String idPico, String nomePico) {
-    return _logEvent('abrir_croqui', {
-      'id_pico': idPico,
-      'nome_pico': nomePico,
-    });
-  }
+
 
   /// Registra ações diversas feitas dentro da página do pico (e.g. buscar, deletar).
-  Future<void> logAcaoCroqui(String idPico, String acao) {
+  Future<void> logAcaoCroqui(String idCroqui, String acao) {
     return _logEvent('acao_croqui', {
-      'id_pico': idPico,
+      'id_croqui': idCroqui,
       'acao': acao,
     });
   }
 
   /// Registra quando um setor específico de um pico é aberto.
-  Future<void> logAbrirSetor(String idPico, String nomeSetor) {
+  Future<void> logAbrirSetor(String idCroqui, String nomeSetor) {
     return _logEvent('abrir_setor', {
-      'id_pico': idPico,
+      'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
     });
   }
 
   /// Registra quando um grupo (sub-setores) específico é aberto.
-  Future<void> logAbrirGrupo(String idPico, String nomeGrupo) {
+  Future<void> logAbrirGrupo(String idCroqui, String nomeGrupo) {
     return _logEvent('abrir_grupo', {
-      'id_pico': idPico,
+      'id_croqui': idCroqui,
       'nome_grupo': nomeGrupo,
     });
   }
 
   /// Registra quando o mapa de um setor ou de um grupo é maximizado/visualizado.
-  Future<void> logAbrirMapa(String idPico, String nomeSetorOuGrupo) {
+  Future<void> logAbrirMapa(String idCroqui, String nomeSetor) {
     return _logEvent('abrir_mapa', {
-      'id_pico': idPico,
-      'nome_setor_ou_grupo': nomeSetorOuGrupo,
+      'id_croqui': idCroqui,
+      'nome_setor': nomeSetor,
     });
   }
 
-  /// Registra cliques realizados em cima de pontos no mapa interativo.
-  Future<void> logClicarEscaladaMapa(String idPico, String nomeSetorOuGrupo, String nomeEscalada) {
-    return _logEvent('clicar_escalada_mapa', {
-      'id_pico': idPico,
-      'nome_setor_ou_grupo': nomeSetorOuGrupo,
+  /// Registra ações relacionadas a uma escalada/via (e.g., ver no mapa, abrir detalhes).
+  Future<void> logAcaoEscalada(String idCroqui, String nomeSetor, String nomeEscalada, String acao, String origem) {
+    return _logEvent('acao_escalada', {
+      'id_croqui': idCroqui,
+      'nome_setor': nomeSetor,
       'nome_escalada': nomeEscalada,
-    });
-  }
-
-  /// Registra o fluxo do usuário clicando para ver detalhes da via de escalada (modal).
-  /// Pode vir de diferentes `origem` (lista de setor, busca, mapa, etc).
-  Future<void> logVerDetalhesEscalada(String idPico, String nomeSetorOuGrupo, String nomeEscalada, String origem) {
-    return _logEvent('ver_detalhes_escalada', {
-      'id_pico': idPico,
-      'nome_setor_ou_grupo': nomeSetorOuGrupo,
-      'nome_escalada': nomeEscalada,
+      'acao': acao,
       'origem': origem,
     });
   }
+
+  /// Registra cliques na navegação principal inferior do app.
+  Future<void> logNavegarAba(String aba) {
+    return _logEvent('navegar_aba', {'aba': aba});
+  }
+
+  /// Registra buscas realizadas na aba explorar (croquis inteiros).
+  Future<void> logBuscaCroquis(String query, int numeroResultados) {
+    return _logEvent('busca_croquis', {
+      'query': query,
+      'numero_resultados': numeroResultados,
+    });
+  }
+
+  /// Registra buscas globais dentro de um croqui buscando por vias.
+  Future<void> logBuscaEscaladas(String query, int numeroResultados, String idCroqui) {
+    return _logEvent('busca_escaladas', {
+      'query': query,
+      'numero_resultados': numeroResultados,
+      'id_croqui': idCroqui,
+    });
+  }
+
+  /// Registra os eventos de sincronização de dados local.
+  Future<void> logSincronizarApp({required bool auto}) {
+    return _logEvent('sincronizar_app', {'auto': auto.toString()});
+  }
+
+  /// Registra cliques em links de rotas de GPS e páginas web (ex: Termos de uso).
+  Future<void> logLinkExterno(String url, String contexto) {
+    return _logEvent('link_externo', {'url': url, 'contexto': contexto});
+  }
+
+  /// Registra interações gerais nas telas de configuração.
+  Future<void> logAcaoConfiguracoes(String acao) {
+    return _logEvent('acao_configuracoes', {'acao': acao});
+  }
+
+  /// Registra falhas ao engajar com alguma ação principal.
+  Future<void> logErroInteracao(String contexto, String erro) {
+    return _logEvent('erro_interacao', {'contexto': contexto, 'erro': erro});
+  }
+
 }

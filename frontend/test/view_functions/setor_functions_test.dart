@@ -10,9 +10,9 @@ void main() {
     TelemetryService.instance = mockTelemetry;
     
     // Simulate telemetry that would be triggered inside UI callbacks
-    TelemetryService.instance.logVerDetalhesEscalada('crag1', 'Setor 1', 'Via 1', 'lista_setor');
+    TelemetryService.instance.logAcaoEscalada('crag1', 'Setor 1', 'Via 1', 'abrir_detalhes', 'lista_setor');
     
-    expect(mockTelemetry.recordedEvents, contains('ver_detalhes_escalada'));
-    expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['origem'], 'lista_setor');
+    expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+    expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'lista_setor');
   });
 }

@@ -38,7 +38,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   @override
   void initState() {
     super.initState();
-    TelemetryService.instance.logAbrirCroqui(widget.cragId, widget.pico.nome);
+    TelemetryService.instance.logAcaoCroqui(widget.cragId, 'abrir');
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted && _mapaKey.currentContext != null) {
@@ -80,7 +80,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 if (setor != null) {
                   AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
                 }
-                TelemetryService.instance.logVerDetalhesEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'busca');
+                TelemetryService.instance.logAcaoEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'abrir_detalhes', 'busca');
                 AppNav.toVia(context, escalada: result, setor: setor);
               }
             },

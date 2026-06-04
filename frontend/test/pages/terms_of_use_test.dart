@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
+  setUp(() {
+    TelemetryService.instance = MockTelemetryService();
+  });
+
   testWidgets('TermsOfUsePage displays terms and requires checkbox to enable accept button', (WidgetTester tester) async {
     bool accepted = false;
 

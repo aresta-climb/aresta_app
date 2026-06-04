@@ -25,7 +25,8 @@ class SyncService {
   /// Se um novo índice estiver disponível, ele atualiza o cache local e aciona
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
-  Future<void> syncOnLaunch() async {
+  Future<void> syncOnLaunch({bool auto = true}) async {
+    TelemetryService.instance.logSincronizarApp(auto: auto);
     datasetRepository.syncStatus.value = SyncStatus.updating;
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -280,7 +281,7 @@ class SyncService {
       await datasetRepository.updatePicoMetadata(newResumo.id, pData, directory.path, parsedPico: newPicoData);
     }
 
-    TelemetryService.instance.logAtualizarCroqui(newResumo.id, newResumo.checksumSha256Croqui);
+    TelemetryService.instance.logAtualizarCroqui(newResumo.id, newResumo.checksumSha256Croqui, newResumo.timestampUpdate.toDateTime().toIso8601String());
     debugPrint('Updated pico ${newResumo.id} successfully.');
   }
 

@@ -11,31 +11,24 @@ void main() {
       TelemetryService.instance = mockTelemetry;
     });
 
-    test('logAbrirApp', () async {
-      await TelemetryService.instance.logAbrirApp();
-      expect(mockTelemetry.recordedEvents, contains('abrir_app'));
-    });
 
-    test('logBaixarCroqui', () async {
-      await TelemetryService.instance.logBaixarCroqui('crag1');
-      expect(mockTelemetry.recordedEvents, contains('baixar_croqui'));
-      expect(mockTelemetry.recordedParams['baixar_croqui']!['id_croqui'], 'crag1');
+
+    test('logAcaoExplorar', () async {
+      await TelemetryService.instance.logAcaoExplorar('crag1', 'baixar');
+      expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
+      expect(mockTelemetry.recordedParams['acao_explorar']!['id_croqui'], 'crag1');
+      expect(mockTelemetry.recordedParams['acao_explorar']!['acao'], 'baixar');
     });
 
     test('logAtualizarCroqui', () async {
-      await TelemetryService.instance.logAtualizarCroqui('crag1', 'sha123');
+      await TelemetryService.instance.logAtualizarCroqui('crag1', 'sha123', '2026-06-04T10:00:00.000Z');
       expect(mockTelemetry.recordedEvents, contains('atualizar_croqui'));
       expect(mockTelemetry.recordedParams['atualizar_croqui']!['id_croqui'], 'crag1');
       expect(mockTelemetry.recordedParams['atualizar_croqui']!['versao'], 'sha123');
-      // O mock atualmente não grava timestamp pq o método mockado não adiciona,
-      // mas isso valida que a chamada mockada foi realizada corretamente.
+      expect(mockTelemetry.recordedParams['atualizar_croqui']!['timestamp_atualizacao'], '2026-06-04T10:00:00.000Z');
     });
 
-    test('logAbrirCroqui', () async {
-      await TelemetryService.instance.logAbrirCroqui('crag1', 'Pico Teste');
-      expect(mockTelemetry.recordedEvents, contains('abrir_croqui'));
-      expect(mockTelemetry.recordedParams['abrir_croqui']!['nome_pico'], 'Pico Teste');
-    });
+
 
     test('logAcaoCroqui', () async {
       await TelemetryService.instance.logAcaoCroqui('crag1', 'excluir');
@@ -58,16 +51,28 @@ void main() {
       expect(mockTelemetry.recordedEvents, contains('abrir_mapa'));
     });
 
-    test('logClicarEscaladaMapa', () async {
-      await TelemetryService.instance.logClicarEscaladaMapa('crag1', 'Setor 1', 'Via 1');
-      expect(mockTelemetry.recordedEvents, contains('clicar_escalada_mapa'));
-      expect(mockTelemetry.recordedParams['clicar_escalada_mapa']!['nome_escalada'], 'Via 1');
+    test('logAcaoEscalada', () async {
+      await TelemetryService.instance.logAcaoEscalada('crag1', 'Setor 1', 'Via 1', 'abrir_detalhes', 'mapa');
+      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via 1');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'abrir_detalhes');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'mapa');
     });
+  });
 
-    test('logVerDetalhesEscalada', () async {
-      await TelemetryService.instance.logVerDetalhesEscalada('crag1', 'Setor 1', 'Via 1', 'busca');
-      expect(mockTelemetry.recordedEvents, contains('ver_detalhes_escalada'));
-      expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['origem'], 'busca');
+  group('TelemetryService Real Instance Tests', () {
+    test('Should not throw exception when logging events before Firebase is initialized', () async {
+      // Reseta para a instância real (que chamaria FirebaseAnalytics internamente)
+      TelemetryService.resetForTesting();
+      
+      try {
+        // Isso normalmente quebraria se Firebase.initializeApp() não tiver terminado,
+        // mas o nosso try-catch interno na _logEvent deve absorver graciosamente.
+        await TelemetryService.instance.logSincronizarApp(auto: true);
+        // Passou sem quebrar = sucesso
+      } catch (e) {
+        fail('Should not throw uncaught exception: $e');
+      }
     });
   });
 }

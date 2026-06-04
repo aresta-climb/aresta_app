@@ -44,6 +44,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mockTelemetry.recordedEvents, contains('abrir_mapa'));
-    expect(mockTelemetry.recordedParams['abrir_mapa']!['nome_setor_ou_grupo'], 'Contexto Teste');
+    expect(mockTelemetry.recordedParams['abrir_mapa']!['nome_setor'], 'Contexto Teste');
   });
 }

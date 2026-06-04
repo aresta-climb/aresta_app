@@ -27,8 +27,8 @@ void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicialização do Firebase centralizada (fire-and-forget em background)
-  initFirebase();
+  // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
+  await initFirebase();
 
   await ThemeController().loadTheme();
 
