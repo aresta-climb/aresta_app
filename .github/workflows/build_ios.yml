@@ -24,6 +24,7 @@ jobs:
         with:
           ref: ${{ inputs.tag_name }}
           submodules: 'recursive'
+          ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

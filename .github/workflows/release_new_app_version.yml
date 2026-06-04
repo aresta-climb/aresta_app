@@ -21,6 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+          ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
 
       - name: Bump Version and Create Tag
         id: bump
