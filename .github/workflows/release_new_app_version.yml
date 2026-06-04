@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Bump Version and Create Tag
         id: bump
