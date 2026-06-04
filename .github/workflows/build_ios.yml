@@ -1,0 +1,75 @@
+name: iOS App Store Release
+
+on:
+  workflow_dispatch: # Permite rodar a esteira manualmente clicando em um botão
+
+jobs:
+  build_and_deploy:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Apple Certificate and Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_MOBILE_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: "action_runner_password"
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Get dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build iOS IPA
+        working-directory: frontend
+        run: |
+          # Compila o app e gera o arquivo .ipa usando as configurações locais de ExportOptions.plist
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to App Store Connect
+        env:
+          API_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        working-directory: frontend
+        run: |
+          # A ferramenta da Apple exige que a chave .p8 esteja nesta pasta oculta
+          mkdir -p ~/.appstoreconnect/private_keys/
+          echo -n "$API_KEY" | base64 --decode -o ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          
+          # Localiza o .ipa que foi gerado pelo passo anterior
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa")
+          
+          echo "Fazendo upload do arquivo: $IPA_PATH"
+          
+          # Envia para a App Store Connect
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
