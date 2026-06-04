@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import '../aresta_api/proto/generated/indice.pb.dart';
+import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/app_logger.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/offline_markdown.dart';
@@ -161,7 +164,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       return FileImage(localFile);
     }
 
-    debugPrint('Erro: Imagem do mapa não encontrada localmente: $path');
+    AppLogger.instance.logError('Erro: Imagem do mapa não encontrada localmente: $path');
     return null;
   }
 
@@ -863,7 +866,7 @@ class MapHelper {
       if (duplicates.contains(id)) return;
 
       if (idMap.containsKey(id)) {
-        debugPrint(
+        AppLogger.instance.logError(
           'Erro: Mais de uma escalada/setor com o mesmo idNoMapa ($id). Removendo do mapa...',
         );
         idMap.remove(id);

@@ -8,6 +8,7 @@ import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'dataset_repository.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 /// 
@@ -59,7 +60,7 @@ class SyncService {
           response = await http.Response.fromStream(streamedResponse);
           break; // Sucesso, sai do loop
         } catch (e) {
-          debugPrint('[SyncService] Erro na tentativa de fetch: $e. Tentativas restantes: ${retries - 1}');
+          AppLogger.instance.logError('[SyncService] Erro na tentativa de fetch', error: e);
           retries--;
           if (retries > 0) {
             await Future.delayed(const Duration(seconds: 2));
@@ -123,7 +124,7 @@ class SyncService {
         // será mantido e a verificação ocorrerá novamente na próxima inicialização.
         await localIndiceFile.writeAsBytes(responseBytes);
       } else {
-        debugPrint('Server returned an error or 304: ${response?.statusCode}');
+        AppLogger.instance.logError('Server returned an error or 304: ${response?.statusCode}');
         await _loadLocalIndiceAndNotify();
         setUpdatedStatus();
       }
@@ -328,7 +329,7 @@ class SyncService {
         }
       }
     } catch (e) {
-      debugPrint('Error parsing markdown images: $e');
+      AppLogger.instance.logError('Error parsing markdown images', error: e);
     }
     return images;
   }

@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
 
 /// Serviço responsável por lidar com arquivos .croqui (ZIP ofuscados).
@@ -64,7 +66,7 @@ class ArchiveService {
       }
       return false;
     } catch (e) {
-      debugPrint('[ArchiveService] Erro no processamento: $e');
+      AppLogger.instance.logError('[ArchiveService] Erro no processamento', error: e);
       return false;
     }
   }
@@ -132,7 +134,7 @@ class ArchiveService {
       }
       return picoFolderName;
     } catch (e) {
-      debugPrint('[ArchiveService] Erro ao extrair croqui: $e');
+      AppLogger.instance.logError('[ArchiveService] Erro ao extrair croqui', error: e);
       return null;
     } finally {
       // 2. RE-OFUSCAR CABEÇALHO (XOR INPLACE)

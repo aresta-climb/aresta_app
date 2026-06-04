@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'dataset_repository.dart';
 
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
@@ -156,7 +157,7 @@ class EditorDeCroqui {
         }
       }
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao carregar configuração: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao carregar configuração', error: e);
     }
   }
 
@@ -214,7 +215,7 @@ class EditorDeCroqui {
       isExperimentalMode.value = false;
       editorUrl.value = normalized;
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao conectar: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao conectar', error: e);
     }
   }
 
@@ -252,7 +253,7 @@ class EditorDeCroqui {
       
       await configFile.writeAsString(jsonEncode(currentJson));
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao persistir modo experimental: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao persistir modo experimental', error: e);
     }
   }
 
@@ -268,7 +269,7 @@ class EditorDeCroqui {
       currentJson['isDevMode'] = enabled;
       await configFile.writeAsString(jsonEncode(currentJson));
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao persistir modo dev: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao persistir modo dev', error: e);
     }
   }
 
@@ -289,7 +290,7 @@ class EditorDeCroqui {
       editorUrl.value = null;
       isExperimentalMode.value = false;
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao desconectar: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao desconectar', error: e);
     }
   }
 
@@ -312,7 +313,7 @@ class EditorDeCroqui {
 
       await disconnect();
     } catch (e) {
-      debugPrint('[EditorConfig] Erro ao limpar dados: $e');
+      AppLogger.instance.logError('[EditorConfig] Erro ao limpar dados', error: e);
     }
   }
 
