@@ -81,6 +81,13 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< $(security cms -D -i $PP_PATH))
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          
+          # extract Team ID
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          
+          # export to Github Env
+          echo "PROVISIONING_PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          echo "DEVELOPMENT_TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
       - name: Get dependencies
         working-directory: frontend
@@ -89,8 +96,31 @@ jobs:
       - name: Configure iOS Project for CI Manual Signing
         working-directory: ./frontend/ios
         run: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"iPhone Developer"/"Apple Distribution"/g' Runner.xcodeproj/project.pbxproj
+          echo "CODE_SIGN_STYLE=Manual" >> Flutter/Release.xcconfig
+          echo "CODE_SIGN_IDENTITY=Apple Distribution" >> Flutter/Release.xcconfig
+          echo "DEVELOPMENT_TEAM=${{ env.DEVELOPMENT_TEAM_ID }}" >> Flutter/Release.xcconfig
+          echo "PROVISIONING_PROFILE_SPECIFIER=${{ env.PROVISIONING_PROFILE_UUID }}" >> Flutter/Release.xcconfig
+          
+          # Dynamically create ExportOptions.plist
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>app.escalada.croquis</key>
+              <string>${{ env.PROVISIONING_PROFILE_UUID }}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
 
       - name: Build iOS IPA
         working-directory: frontend
