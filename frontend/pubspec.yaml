@@ -1,6 +1,6 @@
 name: frontend
 description: "Aplicativo de escalada para centralizar informações de picos"
-publish_to: 'aresta'
+publish_to: 'none'
 
 version: 0.0.4+4
 
