@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/pico_functions.dart';
+import '../view_functions/via_functions.dart';
 import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/telemetry_service.dart';
 
 /// Uma página que exibe informações detalhadas sobre um pico específico.
 ///
@@ -36,6 +38,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   @override
   void initState() {
     super.initState();
+    TelemetryService.instance.logAbrirCroqui(widget.cragId, widget.pico.nome);
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted && _mapaKey.currentContext != null) {
@@ -66,6 +69,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             icon: Icon(Icons.search, color: nobleBlack),
             tooltip: searchTooltip,
             onPressed: () async {
+              TelemetryService.instance.logAcaoCroqui(widget.cragId, 'buscar');
               final result = await showSearch<Escalada?>(
                 context: context,
                 delegate: ViaSearchDelegate(widget.pico, widget.cragId),
@@ -76,6 +80,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 if (setor != null) {
                   AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
                 }
+                TelemetryService.instance.logVerDetalhesEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'busca');
                 AppNav.toVia(context, escalada: result, setor: setor);
               }
             },
@@ -84,6 +89,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             icon: Icon(Icons.delete_outline, color: nobleBlack),
             tooltip: 'Excluir guia',
             onPressed: () async {
+              TelemetryService.instance.logAcaoCroqui(widget.cragId, 'excluir');
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -122,6 +128,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       body: buildPicoBody(context, widget.pico, widget.croqui, widget.cragId, _mapaKey),
       floatingActionButton: widget.returnToSetor != null ? FloatingActionButton.extended(
         onPressed: () {
+          TelemetryService.instance.logAcaoCroqui(widget.cragId, 'voltar_mapa_setor');
           AppNav.toSetor(context, setor: widget.returnToSetor!);
           // Then immediately push the map!
           Future.delayed(const Duration(milliseconds: 300), () {

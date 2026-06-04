@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
+import 'telemetry_service.dart';
 
 /// Representa o estado de sincronização do aplicativo.
 enum SyncStatus {
@@ -393,6 +394,7 @@ class DatasetRepository {
 
         // Atualiza o conjunto de dados para que a interface saiba que há um novo download (parcial)
         await _updateDatasetAfterDownload(id);
+        TelemetryService.instance.logBaixarCroqui(id);
 
         // --- Baixa todos os Arquivos Externos (Imagens/Markdowns) em Paralelo ---
         try {

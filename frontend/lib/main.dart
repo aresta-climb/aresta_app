@@ -19,9 +19,30 @@ import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'firebase_options.dart';
+import 'package:frontend/services/telemetry_service.dart';
+import 'package:frontend/services/remote_config_service.dart';
+import 'dart:ui';
+import 'dart:async';
+
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicialização do Firebase e Telemetria
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+  
+  await RemoteConfigService.instance.initialize();
+  TelemetryService.instance.logAbrirApp();
+
   await ThemeController().loadTheme();
 
   final prefs = await SharedPreferences.getInstance();

@@ -13,6 +13,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
   final String tempPath;
@@ -69,9 +71,13 @@ void main() {
   late EditorDeCroqui editor;
   late DatasetRepository repo;
 
+  late MockTelemetryService mockTelemetry;
+
   setUp(() {
     editor = EditorDeCroqui();
     repo = DatasetRepository(editorDeCroqui: editor);
+    mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
   });
 
   // ---------------------------------------------------------------------------
@@ -272,6 +278,9 @@ void main() {
       final finalBytes = indiceFile.readAsBytesSync();
       final finalIndice = Indice.fromBuffer(finalBytes);
       
+      expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
+          reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
+          
       expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
           reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
     });

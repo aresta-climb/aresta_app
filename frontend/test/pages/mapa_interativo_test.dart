@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/services/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49,
@@ -215,12 +217,16 @@ void main() {
   group('MapaInterativoPage Widget Tests', () {
     late Mapa mockMapa;
     late MemoryImage mockImage;
+    late MockTelemetryService mockTelemetry;
 
     setUpAll(() {
       PathProviderPlatform.instance = MockPathProviderPlatform();
     });
 
     setUp(() {
+      mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+      
       mockImage = MemoryImage(kTransparentImage);
       mockMapa = Mapa(
         caminhoImagemMapa: 'mapa.webp',
@@ -286,6 +292,41 @@ void main() {
       // Floating card should be visible with the via name
       expect(find.text('Via Teste'), findsOneWidget);
       expect(find.textContaining('5º'), findsOneWidget); // formatGrade logic
+      
+      // Verify telemetry
+      final clickEvents = mockTelemetry.recordedEvents.where((e) => e == 'clicar_escalada_mapa').toList();
+      expect(clickEvents.length, 1, reason: 'Deve logar o clique apenas 1 vez (evitando duplicidade com o auto-zoom)');
+      expect(mockTelemetry.recordedParams['clicar_escalada_mapa']!['nome_escalada'], 'Via Teste');
+    });
+
+    testWidgets('Clicking "Mais" on floating card fires logVerDetalhesEscalada telemetry', (WidgetTester tester) async {
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
+      
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaInterativoPage(
+            mapa: mockMapa,
+            cragId: 'test_crag',
+            escaladas: [esc1],
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tap on the marker
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+
+      // Tap on the "Mais" button
+      await tester.tap(find.text('Mais'));
+      await tester.pumpAndSettle();
+
+      // Verify telemetry
+      expect(mockTelemetry.recordedEvents, contains('ver_detalhes_escalada'));
+      expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['nome_escalada'], 'Via Teste');
+      expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['origem'], 'mapa');
     });
 
     testWidgets('Tapping background de-selects marker', (WidgetTester tester) async {

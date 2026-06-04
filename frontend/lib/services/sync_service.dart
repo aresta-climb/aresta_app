@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'dataset_repository.dart';
+import 'telemetry_service.dart';
 
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 /// 
@@ -279,6 +280,7 @@ class SyncService {
       await datasetRepository.updatePicoMetadata(newResumo.id, pData, directory.path, parsedPico: newPicoData);
     }
 
+    TelemetryService.instance.logAtualizarCroqui(newResumo.id, newResumo.checksumSha256Croqui);
     debugPrint('Updated pico ${newResumo.id} successfully.');
   }
 

@@ -5,6 +5,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../services/editor_croqui.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/telemetry_service.dart';
 
 class MapaThumbnail extends StatefulWidget {
   final Mapa mapa;
@@ -12,6 +13,7 @@ class MapaThumbnail extends StatefulWidget {
   final List<Escalada> escaladas;
   final List<ArquivoSetor> setores;
   final Setor? setorContext;
+  final String? nomeContexto;
 
   const MapaThumbnail({
     super.key,
@@ -20,6 +22,7 @@ class MapaThumbnail extends StatefulWidget {
     this.escaladas = const [],
     this.setores = const [],
     this.setorContext,
+    this.nomeContexto,
   });
 
   @override
@@ -129,6 +132,10 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
 
         return GestureDetector(
           onTap: () {
+            TelemetryService.instance.logAbrirMapa(
+              widget.cragId, 
+              widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral'
+            );
             AppNav.toMapaInterativo(
               context,
               mapa: widget.mapa,

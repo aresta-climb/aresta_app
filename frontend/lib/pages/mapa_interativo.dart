@@ -5,8 +5,10 @@ import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/offline_markdown.dart';
+import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/telemetry_service.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -173,11 +175,23 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   void _onMarkerTap(
     Mapa_PontoDeInteresse marker,
     BoxConstraints constraints,
-    Size viewportSize,
-  ) {
+    Size viewportSize, {
+    bool isUserInteraction = true,
+  }) {
     setState(() {
       _selectedId = marker.id;
     });
+
+    if (isUserInteraction) {
+      final item = _idMap[marker.id];
+      if (item is Escalada) {
+        TelemetryService.instance.logClicarEscaladaMapa(
+          widget.cragId,
+          widget.setorContext?.nome ?? 'Geral',
+          getEscaladaNome(item)
+        );
+      }
+    }
 
     if (_autoZoomEnabled) {
       final areaInfo = AreaHelper.getAreaInfo(marker);
@@ -470,6 +484,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           // Tap on the source via — go back to it in the tree
           AppNav.back(context);
         } else {
+          TelemetryService.instance.logVerDetalhesEscalada(
+            widget.cragId,
+            widget.setorContext?.nome ?? 'Geral',
+            title,
+            'mapa'
+          );
           AppNav.toVia(context, escalada: item, setor: widget.setorContext);
         }
       };
@@ -639,7 +659,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               if (targetMarker != null) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
                                   if (mounted) {
-                                    _onMarkerTap(targetMarker!, constraints, viewportSize);
+                                    _onMarkerTap(targetMarker!, constraints, viewportSize, isUserInteraction: false);
                                   }
                                 });
                               }
