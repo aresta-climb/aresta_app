@@ -51,7 +51,7 @@ Future<bool> conectarEditor(
            // Se já for uma URL aresta-zip local, usamos diretamente
         }
         
-        final ghostUrl = url.startsWith('aresta-zip') ? url : 'aresta-zip://${savedFile.path}';
+        final ghostUrl = url.startsWith('aresta-zip') ? url : Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
         await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
         
         final syncService = SyncService(datasetRepo);
@@ -111,7 +111,7 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
       final safeName = 'imported_repo.croqui';
       final savedFile = await file.copy('${editedDir.path}/$safeName');
       
-      final ghostUrl = 'aresta-zip://${savedFile.path}';
+      final ghostUrl = Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
       
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
@@ -152,18 +152,21 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
             content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Text(
                   'Insira a URL do repositório experimental para testar novos croquis.',
-                  style: TextStyle(color: fishBone),
+                  style: TextStyle(color: fishBone, fontSize: 13),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextField(
                   controller: urlController,
-                  style: TextStyle(color: fishBone),
+                  style: TextStyle(color: fishBone, fontSize: 14),
                   decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     hintText: 'ex: aresta-climb.github.io/aresta_serving',
                     hintStyle: TextStyle(color: fishBone.withValues(alpha: 0.5), fontSize: 13),
                     enabledBorder: OutlineInputBorder(
@@ -176,7 +179,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -197,7 +200,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                     },
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -215,7 +218,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
               ],
             ),
             actions: [
-              TextButton(
+            TextButton(
                 onPressed: () {
                   if (isLoading) {
                     return;
