@@ -19,9 +19,16 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Checkout Submodules
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          submodules: 'recursive'
-          ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SUBMODULE_SSH_KEY }}
+          
+      - name: Update Submodules
+        run: |
+          git config --global url."git@github.com:aresta-climb/aresta_api.git".insteadOf "https://github.com/aresta-climb/aresta_api.git"
+          git submodule update --init --recursive
 
       - name: Bump Version and Create Tag
         id: bump
