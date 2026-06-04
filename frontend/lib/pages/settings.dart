@@ -356,7 +356,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? beastHide.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? beastHide.withValues(alpha: 0.2) : Colors.transparent,
           border: Border.all(
             color: isSelected ? beastHide : weatheredIron,
             width: 1.5,
@@ -391,7 +391,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Icon(Icons.info_outline, color: fishBone),
             const SizedBox(width: 8),
             Text(
-              'Versão do Aplicativo',
+              'Versão do app',
               style: TextStyle(
                 color: fishBone,
                 fontSize: 18,

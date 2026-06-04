@@ -20,8 +20,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 
 import 'package:frontend/services/firebase/init_firebase.dart';
-import 'dart:ui';
-import 'dart:async';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
@@ -138,7 +136,7 @@ class _MyAppState extends State<MyApp> {
           builder: (context, child) {
             return Stack(
               children: [
-                if (child != null) child,
+                ?child,
                 ValueListenableBuilder<bool>(
                   valueListenable: widget.datasetRepo.editorDeCroqui.isExperimentalMode,
                   builder: (context, isExperimental, _) {

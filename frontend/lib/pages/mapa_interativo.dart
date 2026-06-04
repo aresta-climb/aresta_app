@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
@@ -11,7 +10,6 @@ import '../view_functions/offline_markdown.dart';
 import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/firebase/telemetry_service.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
