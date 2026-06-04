@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "737982062809",
+    "project_id": "app-escalada-croquis",
+    "storage_bucket": "app-escalada-croquis.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:737982062809:android:e168a4e15cd353e1d5dec8",
+        "android_client_info": {
+          "package_name": "app.escalada.croquis"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjd3zB7EP0VR5G5RXb3s6u0GKRXlTs9i8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
