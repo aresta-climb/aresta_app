@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
-import 'package:flutter/foundation.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path/path.dart' as p;
 
 void main() {
   test('Apenas os arquivos dentro da pasta lib/services/firebase podem importar pacotes do Firebase', () {
@@ -15,7 +14,7 @@ void main() {
     final infringingFiles = <String>[];
 
     for (final file in dartFiles) {
-      final normalizedPath = p.normalize(file.path).replaceAll('\\', '/');
+      final normalizedPath = file.path.replaceAll('\\', '/');
 
       // Ignora o firebase_options gerado pelo FlutterFire
       if (normalizedPath.endsWith('firebase_options.dart')) continue;

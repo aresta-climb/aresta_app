@@ -188,6 +188,7 @@ class MapaInterativoNode extends NavNode {
   final List<ArquivoSetor> setores;
   final String? initialSelectedId;
   final Setor? setorContext;
+  final ImageProvider? imageProviderOverride;
 
   const MapaInterativoNode({
     required this.mapa,
@@ -196,6 +197,7 @@ class MapaInterativoNode extends NavNode {
     required this.setores,
     this.initialSelectedId,
     this.setorContext,
+    this.imageProviderOverride,
     required super.parent,
   });
 
@@ -209,6 +211,7 @@ class MapaInterativoNode extends NavNode {
       setores: setores,
       initialSelectedId: hasInitialId ? initialSelectedId : matchingAncestor.initialSelectedId,
       setorContext: setorContext,
+      imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
       parent: matchingAncestor.parent!,
     );
   }
