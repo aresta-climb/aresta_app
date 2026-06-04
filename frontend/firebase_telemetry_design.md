@@ -114,12 +114,3 @@ if (deveUsarMapaNovo) {
 ```
 
 ---
-
-## 5. Próximos Passos (User Review Required)
-
-> [!TIP]
-> ## Open Questions
-> Esse é um design conceitual para você entender como a arquitetura sustentará as necessidades offline.
-> 
-> **Pergunta:** Você gostaria que eu implementasse a Fase 1 (Configuração Básica do Firebase + Crashlytics) agora mesmo no código? 
-> Se sim, me envie o conteúdo do arquivo `google-services.json` gerado pelo seu painel do Firebase para que eu possa iniciar as instalações. Caso contrário, você pode guardar esse design para usar como guia no futuro.
