@@ -5,7 +5,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../services/editor_croqui.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/telemetry_service.dart';
+import '../services/firebase/telemetry_service.dart';
 
 class MapaThumbnail extends StatefulWidget {
   final Mapa mapa;

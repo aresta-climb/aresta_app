@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/services/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
