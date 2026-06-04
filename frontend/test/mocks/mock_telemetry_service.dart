@@ -1,4 +1,4 @@
-import 'package:frontend/services/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 class MockTelemetryService implements TelemetryService {
   final List<String> recordedEvents = [];

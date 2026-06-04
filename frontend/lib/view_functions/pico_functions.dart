@@ -5,7 +5,7 @@ import 'offline_markdown.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/telemetry_service.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {

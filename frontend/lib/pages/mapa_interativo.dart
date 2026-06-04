@@ -8,7 +8,7 @@ import '../view_functions/offline_markdown.dart';
 import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/telemetry_service.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///

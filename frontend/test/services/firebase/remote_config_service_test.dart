@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 
 // Este arquivo necessitaria de mocking profundo do FirebaseRemoteConfig (platform channels),
 // o que foge do escopo de testes de unidade simples. 

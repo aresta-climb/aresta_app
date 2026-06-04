@@ -5,7 +5,7 @@ import '../view_functions/pico_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/telemetry_service.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Uma página que exibe informações detalhadas sobre um pico específico.
 ///

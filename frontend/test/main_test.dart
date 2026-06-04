@@ -4,7 +4,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
-import 'package:frontend/services/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'mocks/mock_telemetry_service.dart';
 
 void main() {

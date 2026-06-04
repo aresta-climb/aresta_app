@@ -5,7 +5,7 @@ import 'offline_markdown.dart';
 import 'via_functions.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/telemetry_service.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
 ///
