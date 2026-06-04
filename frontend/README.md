@@ -7,7 +7,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ## Funcionalidades
 
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
-- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download inline.
+- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo.
 - **GPS / Mapa Interativo**: Visualização de mapas de setores e picos com overlay interativo e navegação hierárquica.
 - **Leitura Offline**: Textos, imagens e betas funcionam sem conexão após o primeiro download.
 - **Ghost Protocol (`aresta-zip://`)**: Arquivos `.croqui` locais são tratados como servidores HTTP internos — o mesmo pipeline de rede serve dados remotos e locais sem ramificações no código.
