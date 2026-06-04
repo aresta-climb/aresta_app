@@ -28,6 +28,11 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           submodules: 'recursive'
 
+      - name: Select Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest-stable'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
