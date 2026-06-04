@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 class TermsOfUsePage extends StatefulWidget {
   final VoidCallback onAccepted;
@@ -48,10 +49,12 @@ Antes de prosseguir, é obrigatório ler e concordar com os termos abaixo:
               data: _termsMarkdown,
               onTapLink: (text, href, title) async {
                 if (href != null) {
+                  TelemetryService.instance.logLinkExterno(href, 'termos_uso');
                   final url = Uri.parse(href);
                   try {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                   } catch (e) {
+                    TelemetryService.instance.logErroInteracao('abrir_link_termos', e.toString());
                     debugPrint('Erro ao abrir link: $e');
                   }
                 }
@@ -87,7 +90,10 @@ Antes de prosseguir, é obrigatório ler e concordar com os termos abaixo:
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isChecked ? widget.onAccepted : null,
+                  onPressed: _isChecked ? () {
+                    TelemetryService.instance.logAcaoConfiguracoes('aceitar_termos_uso');
+                    widget.onAccepted();
+                  } : null,
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),

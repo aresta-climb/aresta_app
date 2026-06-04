@@ -8,6 +8,7 @@ import '../view_functions/common_functions.dart';
 import '../pages/qr_scanner.dart';
 import '../services/sync_service.dart';
 import '../services/zip_interceptor_client.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Tenta conectar ao repositório do editor validando a URL fornecida.
 Future<bool> conectarEditor(
@@ -56,11 +57,13 @@ Future<bool> conectarEditor(
         final syncService = SyncService(datasetRepo);
         await syncService.syncOnLaunch();
         await datasetRepo.init();
+        TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
         return true;
       }
       
       await configService.connect(resolvedUrl);
       await datasetRepo.init();
+      TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
       return true;
     } else {
       if (context.mounted) {
@@ -121,6 +124,7 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Croqui experimental importado!')),
         );
+        TelemetryService.instance.logAcaoConfiguracoes('importar_arquivo_croqui');
       }
     }
   } catch (e) {
@@ -182,6 +186,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                       side: BorderSide(color: beastHide),
                     ),
                     onPressed: () async {
+                      TelemetryService.instance.logAcaoConfiguracoes('abrir_qr_scanner');
                       final scannedUrl = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const QRScannerPage()),

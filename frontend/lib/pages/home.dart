@@ -29,9 +29,9 @@ class HomePage extends StatelessWidget {
         'Home', 
         actions: [
           IconButton(
-            icon: Icon(Icons.sync, color: nobleBlack),
-            onPressed: () => syncService.syncOnLaunch(),
-            tooltip: 'Verificar atualizações',
+            icon: const Icon(Icons.sync),
+            onPressed: () => syncService.syncOnLaunch(auto: false),
+            tooltip: 'Sincronizar Catálogo',
           ),
         ],
       ),

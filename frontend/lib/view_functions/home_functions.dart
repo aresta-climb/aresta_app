@@ -451,7 +451,7 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
   if (capaPath != null && !hasCapa) {
     debugPrint('Cover image path set but file not found: $capaPath');
   } else if (hasCapa) {
-    debugPrint('Rendering card with cover: $capaPath');
+    // debugPrint('Rendering card with cover: $capaPath');
   }
 
   Color containerColor;

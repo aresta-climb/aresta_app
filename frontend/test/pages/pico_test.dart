@@ -24,8 +24,9 @@ void main() {
       ),
     ));
 
-    expect(mockTelemetry.recordedEvents, contains('abrir_croqui'));
-    expect(mockTelemetry.recordedParams['abrir_croqui']!['id_pico'], 'crag1');
+    expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+    expect(mockTelemetry.recordedParams['acao_croqui']!['id_croqui'], 'crag1');
+    expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir');
   });
 
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (tester) async {
@@ -89,7 +90,7 @@ void main() {
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'voltar_mapa_setor');
   });
 
-  testWidgets('PicoDetailsPage triggers logVerDetalhesEscalada via search delegate flow', (tester) async {
+  testWidgets('PicoDetailsPage triggers logAcaoEscalada via search delegate flow', (tester) async {
     // This is hard to test entirely in a widget test without mocking the navigator response,
     // so we can simulate the event being triggered by the search delegate indirectly
     // or just assume the first 4 cover the main UI components. Since the user requested 5 tests,
@@ -97,10 +98,10 @@ void main() {
     final mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
     
-    // Simulate the line: TelemetryService.instance.logVerDetalhesEscalada(...)
-    await TelemetryService.instance.logVerDetalhesEscalada('crag1', 'Geral', 'Via Teste', 'busca');
+    // Simulate the line: TelemetryService.instance.logAcaoEscalada(...)
+    await TelemetryService.instance.logAcaoEscalada('crag1', 'Geral', 'Via Teste', 'abrir_detalhes', 'busca');
     
-    expect(mockTelemetry.recordedEvents, contains('ver_detalhes_escalada'));
-    expect(mockTelemetry.recordedParams['ver_detalhes_escalada']!['origem'], 'busca');
+    expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+    expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'busca');
   });
 }

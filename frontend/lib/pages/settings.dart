@@ -5,6 +5,8 @@ import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../theme/theme_controller.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+
 /// Página de Configurações do aplicativo.
 class SettingsPage extends StatefulWidget {
   final DatasetRepository datasetRepo;
@@ -86,6 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             if (_clickCount >= 7) {
                                               configService.setDevMode(true);
                                               _clickCount = 0;
+                                              TelemetryService.instance.logAcaoConfiguracoes('ativar_modo_desenvolvedor');
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 const SnackBar(content: Text('Modo Desenvolvedor Ativado! 🛠️')),
                                               );
@@ -136,6 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                         ),
                                         onPressed: () async {
                                           if (isEditor) {
+                                            TelemetryService.instance.logAcaoConfiguracoes('desconectar_editor');
                                             await configService.disconnect();
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context).showSnackBar(
@@ -181,6 +185,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                                     ),
                                                   ),
                                                   onPressed: () async {
+                                                    TelemetryService.instance.logAcaoConfiguracoes('reativar_experimental');
                                                     await configService.activateExperimental();
                                                     if (context.mounted) {
                                                       ScaffoldMessenger.of(context).showSnackBar(
@@ -233,6 +238,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             );
 
                                             if (confirm == true) {
+                                              TelemetryService.instance.logAcaoConfiguracoes('limpar_dados_experimentais');
                                               await configService.nukeExperimentalData();
                                               widget.datasetRepo.loadEmpty(); 
                                               if (context.mounted) {
@@ -310,7 +316,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: 'Claro',
                         icon: Icons.light_mode,
                         isSelected: currentMode == ThemeMode.light,
-                        onTap: () => ThemeController().setThemeMode(ThemeMode.light),
+                        onTap: () {
+                          TelemetryService.instance.logAcaoConfiguracoes('tema_claro');
+                          ThemeController().setThemeMode(ThemeMode.light);
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -319,7 +328,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: 'Escuro',
                         icon: Icons.dark_mode,
                         isSelected: currentMode == ThemeMode.dark,
-                        onTap: () => ThemeController().setThemeMode(ThemeMode.dark),
+                        onTap: () {
+                          TelemetryService.instance.logAcaoConfiguracoes('tema_escuro');
+                          ThemeController().setThemeMode(ThemeMode.dark);
+                        },
                       ),
                     ),
                   ],

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/editor_croqui.dart';
 import 'common_functions.dart';
 
@@ -32,6 +34,16 @@ class OfflineMarkdown extends StatelessWidget {
         return MarkdownBody(
           data: data,
           extensionSet: md.ExtensionSet.gitHubFlavored,
+          onTapLink: (text, href, title) async {
+            if (href != null) {
+              TelemetryService.instance.logLinkExterno(href, 'markdown_offline');
+              try {
+                await launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+              } catch (e) {
+                TelemetryService.instance.logErroInteracao('abrir_link_markdown', e.toString());
+              }
+            }
+          },
           imageBuilder: (Uri uri, String? title, String? alt) {
             String path = Uri.decodeFull(uri.toString());
             

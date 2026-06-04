@@ -185,10 +185,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (isUserInteraction) {
       final item = _idMap[marker.id];
       if (item is Escalada) {
-        TelemetryService.instance.logClicarEscaladaMapa(
+        TelemetryService.instance.logAcaoEscalada(
           widget.cragId,
           widget.setorContext?.nome ?? 'Geral',
-          getEscaladaNome(item)
+          getEscaladaNome(item),
+          'abrir_detalhes',
+          'mapa'
         );
       }
     }
@@ -484,10 +486,11 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           // Tap on the source via — go back to it in the tree
           AppNav.back(context);
         } else {
-          TelemetryService.instance.logVerDetalhesEscalada(
+          TelemetryService.instance.logAcaoEscalada(
             widget.cragId,
             widget.setorContext?.nome ?? 'Geral',
             title,
+            'abrir_detalhes',
             'mapa'
           );
           AppNav.toVia(context, escalada: item, setor: widget.setorContext);

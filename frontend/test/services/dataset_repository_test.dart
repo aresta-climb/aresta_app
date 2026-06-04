@@ -141,8 +141,10 @@ void main() {
       // We don't have full archive download mock in this test suite yet,
       // so we simulate a call directly on the telemetry to ensure the 
       // concept is covered here. (In a full test, we'd mock HTTP and Archive)
-      TelemetryService.instance.logBaixarCroqui('crag1');
-      expect(mockTelemetry.recordedEvents, contains('baixar_croqui'));
+      TelemetryService.instance.logAcaoExplorar('crag1', 'baixar');
+      expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
+      expect(mockTelemetry.recordedParams['acao_explorar']?['acao'], 'baixar');
+      expect(mockTelemetry.recordedParams['acao_explorar']?['id_croqui'], 'crag1');
     });
   });
 

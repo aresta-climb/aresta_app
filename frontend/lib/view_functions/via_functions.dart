@@ -4,6 +4,7 @@ import 'common_functions.dart';
 import 'offline_markdown.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../navigation/navigation_functions.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
 String getEscaladaNome(Escalada escalada) {
@@ -537,6 +538,8 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
              if (targetMap != null) break;
           }
           targetMap ??= localSetor.mapas.first;
+          
+          TelemetryService.instance.logAcaoEscalada(cragId, localSetor.nome, getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
 
           if (fromMapaPage) {
             AppNav.back(context);

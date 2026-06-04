@@ -189,10 +189,11 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           subtitle: Text(info, style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 12)),
           trailing: Icon(Icons.chevron_right, color: beastHide),
           onTap: () {
-            TelemetryService.instance.logVerDetalhesEscalada(
+            TelemetryService.instance.logAcaoEscalada(
               cragId,
               setor.nome,
               nome,
+              'abrir_detalhes',
               'lista_setor'
             );
             AppNav.toVia(context, escalada: escalada, setor: setor);

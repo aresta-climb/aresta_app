@@ -20,9 +20,6 @@ Future<void> initFirebase() async {
     return true;
   };
 
-  // Carrega as configurações remotas
-  await RemoteConfigService.instance.initialize();
-
-  // Dispara o evento de inicialização global
-  TelemetryService.instance.logAbrirApp();
+  // Dispara o carregamento de configurações remotas sem bloquear a inicialização principal
+  RemoteConfigService.instance.initialize();
 }

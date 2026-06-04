@@ -3,6 +3,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
@@ -186,7 +187,12 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
       selectedItemColor: beastHide,
       unselectedItemColor: fishBone.withValues(alpha: 0.5),
       backgroundColor: nobleBlack,
-      onTap: onItemTapped,
+      onTap: (index) {
+        final abas = ['home', 'configuracoes', 'explorar'];
+        final aba = index < abas.length ? abas[index] : 'desconhecida';
+        TelemetryService.instance.logNavegarAba(aba);
+        onItemTapped(index);
+      },
       type: BottomNavigationBarType.fixed,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
     ),
@@ -208,7 +214,10 @@ Widget buildSecondaryBottomNav(BuildContext context) {
               // Atalho para Início
               Expanded(
                 child: InkWell(
-              onTap: () => AppNav.home(context),
+                  onTap: () {
+                    TelemetryService.instance.logNavegarAba('home_secondary');
+                    AppNav.home(context);
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -229,7 +238,10 @@ Widget buildSecondaryBottomNav(BuildContext context) {
               // Atalho para GPS
               Expanded(
                 child: InkWell(
-                  onTap: () => AppNav.toGPS(context),
+                  onTap: () {
+                    TelemetryService.instance.logNavegarAba('gps_secondary');
+                    AppNav.toGPS(context);
+                  },
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

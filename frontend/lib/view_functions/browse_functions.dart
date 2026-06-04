@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'common_functions.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
@@ -146,6 +147,7 @@ class _CragListItemState extends State<_CragListItem>
       _expanded = !_expanded;
       if (_expanded) {
         _chevronController.forward();
+        TelemetryService.instance.logAcaoExplorar(safeString(widget.crag['id']), 'ver_detalhes');
       } else {
         _chevronController.reverse();
       }
