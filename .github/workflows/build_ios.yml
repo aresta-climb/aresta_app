@@ -93,7 +93,7 @@ jobs:
         working-directory: ./frontend/ios
         run: |
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/"iPhone Developer"/"Apple Distribution"/g' Runner.xcodeproj/project.pbxproj
 
       - name: Build iOS IPA
         working-directory: frontend
