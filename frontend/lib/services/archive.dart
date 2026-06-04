@@ -1,8 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
-import 'package:flutter/foundation.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../aresta_api/proto/generated/indice.pb.dart';
 
