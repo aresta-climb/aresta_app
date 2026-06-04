@@ -5,6 +5,7 @@ import 'offline_markdown.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/telemetry_service.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {
@@ -143,7 +144,10 @@ Widget buildSectorTile(BuildContext context, Setor setor, String cragId) {
               style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
           : null,
       trailing: Icon(Icons.chevron_right, color: beastHide),
-      onTap: () => AppNav.toSetor(context, setor: setor),
+      onTap: () {
+        TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
+        AppNav.toSetor(context, setor: setor);
+      },
     ),
   ));
 }
@@ -168,7 +172,10 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
               style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
           : null,
       trailing: Icon(Icons.folder, color: beastHide),
-      onTap: () => AppNav.toGrupo(context, grupo: grupo),
+      onTap: () {
+        TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
+        AppNav.toGrupo(context, grupo: grupo);
+      },
     ),
   ));
 }
@@ -373,6 +380,7 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
         ),
         trailing: Icon(Icons.chevron_right, color: beastHide),
         onTap: () {
+          TelemetryService.instance.logAcaoCroqui(cragId, botao.texto);
           if (botao.hasDestino() && botao.destino.hasSecaoTextual()) {
             final md = botao.destino.secaoTextual;
             showModalBottomSheet(

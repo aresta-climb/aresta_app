@@ -5,6 +5,7 @@ import 'offline_markdown.dart';
 import 'via_functions.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/telemetry_service.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
 ///
@@ -188,6 +189,12 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           subtitle: Text(info, style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 12)),
           trailing: Icon(Icons.chevron_right, color: beastHide),
           onTap: () {
+            TelemetryService.instance.logVerDetalhesEscalada(
+              cragId,
+              setor.nome,
+              nome,
+              'lista_setor'
+            );
             AppNav.toVia(context, escalada: escalada, setor: setor);
           },
         ),

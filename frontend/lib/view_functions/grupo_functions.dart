@@ -35,6 +35,7 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<Arq
                       mapa: mapa,
                       cragId: cragId,
                       setores: sortedSetores,
+                      nomeContexto: grupo.nome,
                     ),
                   ),
                 ),

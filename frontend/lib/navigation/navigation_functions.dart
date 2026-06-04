@@ -18,15 +18,21 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 class AppNav {
   AppNav._(); // Não instanciável
 
-  static TreeNavigationController _ctrl(BuildContext context) {
-    return TreeNavigationWrapper.of(context).treeController;
+  static TreeNavigationController? _ctrl(BuildContext context) {
+    try {
+      return TreeNavigationWrapper.of(context).treeController;
+    } catch (e) {
+      // Retorna nulo se chamado fora do TreeNavigationWrapper (ex: testes isolados)
+      return null;
+    }
   }
 
   // ---------------------------------------------------------------------------
   // Auxiliares para extrair pico/croqui/cragId de qualquer nó que os contenha
   // ---------------------------------------------------------------------------
 
-  static _PicoContext? _picoCtx(NavNode node) {
+  static _PicoContext? _picoCtx(NavNode? node) {
+    if (node == null) return null;
     NavNode current = node;
     while (true) {
       if (current is PicoContextNode) {
@@ -55,6 +61,8 @@ class AppNav {
     Setor? returnToSetor,
   }) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
+    
     final ctx = _picoCtx(ctrl.currentNode);
     
     final finalPico = pico ?? (ctx?.pico);
@@ -75,8 +83,9 @@ class AppNav {
 
   static void toMapaGeralPico(BuildContext context, {Setor? returnToSetor}) {
     final ctrl = _ctrl(context);
-    final ctx = _picoCtx(ctrl.currentNode);
+    if (ctrl == null) return;
     
+    final ctx = _picoCtx(ctrl.currentNode);
     if (ctx == null) return;
     
     ctrl.navigateTo(MapaGeralPicoNode(
@@ -98,6 +107,8 @@ class AppNav {
     Setor? setorContext,
   }) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
+    
     ctrl.navigateTo(MapaInterativoNode(
       mapa: mapa,
       cragId: cragId,
@@ -120,6 +131,7 @@ class AppNav {
     String? cragId,
   }) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
     final finalPico = pico ?? (ctx?.pico);
@@ -150,6 +162,7 @@ class AppNav {
     String? cragId,
   }) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
     final finalPico = pico ?? (ctx?.pico);
@@ -180,6 +193,7 @@ class AppNav {
     String? cragId,
   }) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
     final finalPico = pico ?? (ctx?.pico);
@@ -204,6 +218,7 @@ class AppNav {
   /// Herda automaticamente pico/croqui/cragId a partir do nó atual.
   static void toGPS(BuildContext context) {
     final ctrl = _ctrl(context);
+    if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
     assert(ctx != null, 'AppNav.toGPS chamado a partir de um nó sem contexto de pico');
@@ -220,17 +235,23 @@ class AppNav {
 
   /// Volta um nível na árvore de navegação.
   static void back(BuildContext context) {
-    _ctrl(context).goBack();
+    _ctrl(context)?.goBack();
   }
 
   /// Volta todo o caminho de retorno para o nó Home (raiz).
   static void home(BuildContext context) {
-    _ctrl(context).goHome();
+    _ctrl(context)?.goHome();
   }
 
   /// Indica se o nó atual possui um pai (ou seja, se voltar é possível).
   static bool canGoBack(BuildContext context) {
-    return _ctrl(context).currentNode.parent != null;
+    try {
+      final ctrl = _ctrl(context);
+      if (ctrl == null) return Navigator.of(context).canPop();
+      return ctrl.currentNode.parent != null;
+    } catch (e) {
+      return Navigator.of(context).canPop();
+    }
   }
 }
 
