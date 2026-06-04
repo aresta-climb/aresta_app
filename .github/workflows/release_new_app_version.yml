@@ -80,6 +80,17 @@ jobs:
           git push origin HEAD
           git push origin $TAG_NAME
           
+          # Cria a versão de desenvolvimento (-dev) para o próximo ciclo
+          NEXT_DEV_BUILD=$((NEW_BUILD + 1))
+          DEV_VERSION="${NEW_VERSION}-dev+${NEXT_DEV_BUILD}"
+          
+          echo "Setting version to dev mode: $DEV_VERSION"
+          
+          sed -i "s/^version: .*/version: ${DEV_VERSION}/" $PUBSPEC
+          git add $PUBSPEC
+          git commit -m "chore: iniciar ciclo de desenvolvimento ($DEV_VERSION)"
+          git push origin HEAD
+          
           # Exporta a variável tag_name para os outros jobs do GitHub Actions usarem
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
