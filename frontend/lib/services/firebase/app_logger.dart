@@ -51,7 +51,8 @@ class AppLogger {
           );
         }
       } catch (e) {
-        // Ignora silenciosamente se o Firebase não estiver pronto
+        // Se falhar o envio para o Crashlytics (ex: Firebase não inicializado), loga localmente
+        debugPrint('⚠️ [AppLogger] Erro ao enviar log para Crashlytics: $e');
       }
     }
   }
