@@ -39,8 +39,11 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 
 ```
 frontend/
+├── firebase.json              Configuração do FlutterFire CLI
+├── firebase_telemetry_design.md Documentação de design da telemetria
 ├── lib/
 │   ├── main.dart          Ponto de entrada: bindings, serviços e navegação principal
+│   ├── firebase_options.dart Configurações geradas pelo FlutterFire
 │   ├── view_functions/    Builders de UI, callbacks e funções por página
 │   │   ├── common_functions.dart     Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart     Visualizador Markdown com FileImage offline
@@ -64,6 +67,11 @@ frontend/
 │   │   ├── settings.dart          Configurações e ferramentas de editor
 │   │   └── qr_scanner.dart        Scanner de QR code
 │   ├── services/          Serviços centrais
+│   │   ├── firebase/
+│   │   │   ├── init_firebase.dart        Inicialização e captura de Crashlytics
+│   │   │   ├── telemetry_service.dart    Isolamento do Analytics
+│   │   │   ├── remote_config_service.dart Fallbacks e cache local
+│   │   │   └── app_logger.dart           Logger de eventos local (debug)
 │   │   ├── zip_interceptor_client.dart   Ghost Protocol: intercepta aresta-zip://
 │   │   ├── dataset_repository.dart       Estado central: downloads e metadados
 │   │   ├── sync_service.dart             Sync em segundo plano com validação de checksum
@@ -143,5 +151,6 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 | [`lib/README.md`](lib/README.md) | Arquitetura completa: serviços, páginas, funções e widgets |
 | [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore (Tree Navigation) |
 | [`lib/services/README.md`](lib/services/README.md) | Ghost Protocol, Modo Experimental, ciclo de vida de importação e isolamento de dados |
+| [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`test/README.md`](test/README.md) | Estrutura dos testes, como executar e convenções adotadas |
 | [`test/navigation/README.md`](test/navigation/README.md) | Cobertura dos testes da árvore de navegação e validação de loop prevention |

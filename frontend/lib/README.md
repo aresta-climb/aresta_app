@@ -41,7 +41,10 @@ O controlador de contexto e configuração do aplicativo. Rastreia qual modo est
 - **Persistência**: Salva o estado em `editor_config.json` para sobreviver reinicializações parciais.
 
 ### `ArchiveService` (`archive.dart`)
-Utilitário legado de manipulação de arquivos `.croqui`. Ainda é usado para a **importação inicial** do arquivo pelo seletor de arquivos (file picker), extraindo o `indice.binarypb` e copiando o `.croqui` para a pasta de trabalho. Após a importação, o fluxo de leitura é assumido pelo `ZipInterceptorClient`.
+O utilitário legado de manipulação de arquivos `.croqui`. Ainda é usado para a **importação inicial** do arquivo pelo seletor de arquivos (file picker), extraindo o `indice.binarypb` e copiando o `.croqui` para a pasta de trabalho. Após a importação, o fluxo de leitura é assumido pelo `ZipInterceptorClient`.
+
+### Integração Firebase (`firebase/`)
+Subdiretório responsável por isolar o SDK do Firebase do restante da aplicação. Contém serviços para inicialização centralizada, Remote Config e Telemetry (Analytics). Consulte o [`firebase/README.md`](services/firebase/README.md) para detalhes de arquitetura e testes de linter que previnem vazamento de dependências do Firebase para a UI.
 
 ---
 
