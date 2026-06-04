@@ -14,6 +14,7 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
 | `archive.dart` | Utilitário de importação: extração inicial do `.croqui` na importação via file picker |
 | `update_downloader.dart` | Verificação e download de atualizações do APK do aplicativo |
+| `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 
 ---
 
