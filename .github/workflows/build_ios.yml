@@ -1,7 +1,12 @@
 name: iOS App Store Release
 
 on:
-  workflow_dispatch: # Permite rodar a esteira manualmente clicando em um botão
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'A tag do git para construir'
+        required: true
+        type: string
 
 jobs:
   build_and_deploy:
@@ -10,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

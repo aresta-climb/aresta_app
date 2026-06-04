@@ -1,11 +1,12 @@
 name: Build Android App Bundle
 
 on:
-  push:
-    branches:
-      - main
-      - master
-  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'A tag do git para construir'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -15,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -34,16 +37,16 @@ jobs:
       - name: Decode Keystore
         working-directory: ./frontend/android
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo $KEYSTORE_BASE64 | base64 -d > upload-keystore.jks
 
       - name: Build AAB
         working-directory: ./frontend
         env:
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
         run: flutter build appbundle --release
 
@@ -53,3 +56,12 @@ jobs:
           name: app-release
           path: frontend/build/app/outputs/bundle/release/app-release.aab
           retention-days: 7
+
+      - name: Upload to Google Play Console
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_PLAY_STORE_CONFIG_JSON }}
+          packageName: app.escalada.croquis
+          releaseFiles: frontend/build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed

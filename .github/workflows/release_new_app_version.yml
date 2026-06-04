@@ -1,0 +1,89 @@
+name: Unified App Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: 'New Version Number (e.g. 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  prepare_release:
+    name: Prepare Release Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Permissão necessária para fazer commit e criar tags
+    outputs:
+      tag_name: ${{ steps.bump.outputs.tag_name }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Bump Version and Create Tag
+        id: bump
+        run: |
+          NEW_VERSION="${{ inputs.new_version }}"
+          PUBSPEC="frontend/pubspec.yaml"
+          
+          # Obter a versão atual do pubspec.yaml
+          CURRENT_FULL_VERSION=$(grep "^version:" $PUBSPEC | awk '{print $2}')
+          CURRENT_VERSION=$(echo $CURRENT_FULL_VERSION | cut -d'+' -f1)
+          CURRENT_BUILD=$(echo $CURRENT_FULL_VERSION | cut -d'+' -f2)
+          
+          echo "Current version: $CURRENT_VERSION, Current build: $CURRENT_BUILD"
+          echo "Requested new version: $NEW_VERSION"
+          
+          # Validação: A nova versão deve ser estritamente maior que a atual
+          # O sort -V compara versões semânticas (1.0.0) nativamente
+          HIGHEST=$(printf "%s\n%s" "$CURRENT_VERSION" "$NEW_VERSION" | sort -V | tail -n1)
+          
+          if [ "$HIGHEST" != "$NEW_VERSION" ] || [ "$CURRENT_VERSION" == "$NEW_VERSION" ]; then
+            echo "::error::A nova versão ($NEW_VERSION) deve ser estritamente maior que a versão atual ($CURRENT_VERSION)."
+            exit 1
+          fi
+          
+          # Incrementa o número de build
+          NEW_BUILD=$((CURRENT_BUILD + 1))
+          FINAL_VERSION="${NEW_VERSION}+${NEW_BUILD}"
+          TAG_NAME="v${FINAL_VERSION}"
+          
+          echo "Final target version: $FINAL_VERSION"
+          echo "Target tag: $TAG_NAME"
+          
+          # Atualiza o arquivo pubspec.yaml substituindo a linha
+          sed -i "s/^version: .*/version: ${FINAL_VERSION}/" $PUBSPEC
+          
+          # Configura a identidade do robô no git
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Commita as alterações
+          git add $PUBSPEC
+          git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo"
+          
+          # Cria a tag apontando para este exato commit
+          git tag $TAG_NAME
+          
+          # Envia tudo de volta para a branch que chamou a esteira (geralmente main)
+          git push origin HEAD
+          git push origin $TAG_NAME
+          
+          # Exporta a variável tag_name para os outros jobs do GitHub Actions usarem
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+  build_android:
+    name: Build Android
+    needs: prepare_release
+    uses: ./.github/workflows/build_android.yml
+    with:
+      tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+    secrets: inherit
+
+  build_ios:
+    name: Build iOS
+    needs: prepare_release
+    uses: ./.github/workflows/build_ios.yml
+    with:
+      tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+    secrets: inherit
