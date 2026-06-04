@@ -7,6 +7,7 @@ import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 
 /// Representa o estado de sincronização do aplicativo.
 enum SyncStatus {
@@ -84,7 +85,7 @@ class DatasetRepository {
         loadEmpty();
       }
     } catch (e) {
-      debugPrint('[DatasetRepo] Erro na inicialização: $e');
+      AppLogger.instance.logError('[DatasetRepo] Erro na inicialização', error: e);
       loadEmpty();
     }
   }
@@ -155,7 +156,7 @@ class DatasetRepository {
             downloaded.add(picoMap);
           }
         } catch (itemEx) {
-          debugPrint('Error parsing individual crag ${resumo.id}: $itemEx');
+          AppLogger.instance.logError('Error parsing individual crag ${resumo.id}', error: itemEx);
         }
       }
 
@@ -192,7 +193,7 @@ class DatasetRepository {
         try {
           await updatePicoMetadata(picoData['id'], picoData, docsPath);
         } catch (e) {
-          debugPrint('Error updating metadata for ${picoData['id']}: $e');
+          AppLogger.instance.logError('Error updating metadata for ${picoData['id']}', error: e);
         }
       }));
 
@@ -202,7 +203,7 @@ class DatasetRepository {
         downloadedPicos: downloaded,
       );
     } catch (e) {
-      debugPrint('Critical error in loadIndiceToMemory: $e');
+      AppLogger.instance.logError('Critical error in loadIndiceToMemory', error: e);
       // Se falhar tudo, tenta ao menos manter o estado anterior ou limpar se estiver nulo
       if (activeDataset.value == null) {
         loadEmpty();
@@ -272,7 +273,7 @@ class DatasetRepository {
         return list;
       }
     } catch (e) {
-      debugPrint('Error reading priority list: $e');
+      AppLogger.instance.logError('Error reading priority list', error: e);
     }
     return [];
   }
@@ -290,7 +291,7 @@ class DatasetRepository {
       String yamlContent = priorityList.map((itemId) => '- "$itemId"').join('\n');
       await yamlFile.writeAsString(yamlContent);
     } catch (e) {
-      debugPrint('Error updating priority list: $e');
+      AppLogger.instance.logError('Error updating priority list', error: e);
     }
   }
   
@@ -374,7 +375,7 @@ class DatasetRepository {
       if (response.statusCode == 200) {
         bytes = response.bodyBytes;
       } else {
-        debugPrint('Failed to fetch croqui binary from $url (Status: ${response.statusCode})');
+        AppLogger.instance.logError('Failed to fetch croqui binary from $url (Status: ${response.statusCode})');
         return false;
       }
 
@@ -507,10 +508,10 @@ class DatasetRepository {
                 await imgFile.writeAsBytes(imgResponse.bodyBytes);
                 debugPrint('Downloading $caminho');
               } else {
-                debugPrint('Failed to download $caminho, status: ${imgResponse.statusCode}');
+                AppLogger.instance.logError('Failed to download $caminho, status: ${imgResponse.statusCode}');
               }
             } catch (e) {
-              debugPrint('Error downloading $caminho: $e');
+              AppLogger.instance.logError('Error downloading $caminho', error: e);
             }
           }));
 
@@ -522,13 +523,13 @@ class DatasetRepository {
 
         return true;
       } catch (downloadEx) {
-        debugPrint('Error during parallel download for $id: $downloadEx');
+        AppLogger.instance.logError('Error during parallel download for $id', error: downloadEx);
       }
 
       return true;
     }
   } catch (e) {
-      debugPrint('Error downloading crag: $e');
+      AppLogger.instance.logError('Error downloading crag', error: e);
     } finally {
       // Desmarca como baixando, independentemente de sucesso ou falha
       downloadingCrags.value = {...downloadingCrags.value}..remove(id);
@@ -548,7 +549,7 @@ class DatasetRepository {
         return Croqui.fromBuffer(bytes);
       }
     } catch (e) {
-      debugPrint('Error loading croqui $id: $e');
+      AppLogger.instance.logError('Error loading croqui $id', error: e);
     }
     return null;
   }
@@ -573,7 +574,7 @@ class DatasetRepository {
         debugPrint('[DatasetRepo] Pasta não encontrada para deleção: ${dir.path}');
       }
     } catch (e) {
-      debugPrint('[DatasetRepo] Erro ao deletar crag: $e');
+      AppLogger.instance.logError('[DatasetRepo] Erro ao deletar crag', error: e);
     }
     return false;
   }
@@ -732,7 +733,7 @@ class DatasetRepository {
         }
       }
     } catch (e) {
-      debugPrint('Error updating capa path for $id: $e');
+      AppLogger.instance.logError('Error updating capa path for $id', error: e);
     }
   }
 
@@ -768,7 +769,7 @@ class DatasetRepository {
         }
       }
     } catch (e) {
-      debugPrint('Error during recursive image search: $e');
+      AppLogger.instance.logError('Error during recursive image search', error: e);
     }
     return null;
   }
@@ -806,7 +807,7 @@ class DatasetRepository {
         }
       }
     } catch (e) {
-      debugPrint('Error extracting capa from markdown: $e');
+      AppLogger.instance.logError('Error extracting capa from markdown', error: e);
     }
     return null;
   }

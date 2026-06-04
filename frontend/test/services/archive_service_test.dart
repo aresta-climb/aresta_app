@@ -7,6 +7,8 @@ import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:frontend/services/archive.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
 
 /// Cria um arquivo .croqui (ZIP ofuscado) no diretório informado.
 /// O ZIP contém um indice.binarypb e opcionalmente um pico binarypb.
@@ -40,9 +42,12 @@ Future<File> _criarCroquiOfuscado(
 
 void main() {
   late Directory tempDir;
+  late MockAppLogger mockAppLogger;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('archive_test');
+    mockAppLogger = MockAppLogger();
+    AppLogger.instance = mockAppLogger;
   });
 
   tearDown(() async {
@@ -102,6 +107,16 @@ void main() {
 
       final resultado = await ArchiveService.extractCroqui(file, tempDir.path, onlyIndice: true);
       expect(resultado, isNull);
+    });
+
+    test('deve registrar erro no AppLogger caso ocorra exceção (ex: tentando processar diretório)', () async {
+      final file = File(tempDir.path); // Diretório não pode ser lido como arquivo, força exceção
+      
+      final resultado = await ArchiveService.processCroquiImport(file, tempDir.path);
+      expect(resultado, isFalse);
+      
+      expect(mockAppLogger.recordedErrors, isNotEmpty);
+      expect(mockAppLogger.recordedErrors.first['contextMessage'], '[ArchiveService] Erro no processamento');
     });
   });
 
