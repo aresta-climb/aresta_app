@@ -29,6 +29,7 @@ Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), c
 | [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
 | [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: serviços, páginas, funções e widgets |
 | [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Ghost Protocol, Modo Experimental e ciclo de vida de importação |
+| [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
 
 ---
