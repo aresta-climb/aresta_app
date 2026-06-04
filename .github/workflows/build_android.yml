@@ -56,12 +56,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
           
+      - name: Cache Android CMake
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/cmake
+          key: ${{ runner.os }}-android-cmake
+
       - name: Get Flutter Packages
         working-directory: ./frontend
         run: flutter pub get
 
       - name: Decode Keystore
-        working-directory: ./frontend/android
+        working-directory: ./frontend/android/app
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
@@ -72,7 +78,7 @@ jobs:
         env:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
         run: flutter build appbundle --release
 
