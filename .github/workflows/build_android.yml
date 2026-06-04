@@ -7,12 +7,6 @@ on:
         description: 'A tag do git para construir'
         required: true
         type: string
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'A tag do git para construir (ex: v1.0.0+6)'
-        required: true
-        type: string
 
 jobs:
   build:
