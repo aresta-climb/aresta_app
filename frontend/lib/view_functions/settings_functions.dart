@@ -22,56 +22,85 @@ Future<bool> conectarEditor(
   try {
     // Valida se o índice está acessível na subpasta "compilado/" (layout padrão do repo de serving)
     String checkUrl = url;
+    if (!checkUrl.startsWith('http://') && !checkUrl.startsWith('https://')) {
+      checkUrl = 'https://$checkUrl';
+    }
     if (checkUrl.endsWith('/')) {
       checkUrl = checkUrl.substring(0, checkUrl.length - 1);
     }
     
-    final client = ZipInterceptorClient();
-    final resolvedUrl = '$checkUrl/compilado';
-    final response = await client
-        .get(Uri.parse('$resolvedUrl/indice.binarypb'))
-        .timeout(const Duration(seconds: 5));
-    
-    if (response.statusCode == 200) {
-      if (url.toLowerCase().endsWith('.croqui.zip') || url.toLowerCase().endsWith('.croqui')) {
-        final directory = await getApplicationDocumentsDirectory();
-        
-        final editedDir = Directory('${directory.path}/edited');
-        if (!await editedDir.exists()) {
-          await editedDir.create(recursive: true);
-        }
-        final safeName = 'imported_repo.croqui';
-        final savedFile = File('${editedDir.path}/$safeName');
-        
-        // Busca o binário zip real se for uma URL remota
-        if (!url.startsWith('aresta-zip')) {
-           final zipResponse = await client.get(Uri.parse(url));
-           await savedFile.writeAsBytes(zipResponse.bodyBytes);
-        } else {
-           // Se já for uma URL aresta-zip local, usamos diretamente
-        }
-        
-        final ghostUrl = url.startsWith('aresta-zip') ? url : Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
-        await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
-        
-        final syncService = SyncService(datasetRepo);
-        await syncService.syncOnLaunch();
-        await datasetRepo.init();
-        TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
-        return true;
-      }
-      
-      await configService.connect(resolvedUrl);
-      await datasetRepo.init();
-      TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
-      return true;
-    } else {
+    if (checkUrl.toLowerCase().endsWith('.zip')) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: Não foi possível acessar o índice (Status ${response.statusCode})')),
+          const SnackBar(content: Text('Aviso: Arquivos .zip não são mais suportados. Use .croqui')),
         );
       }
       return false;
+    }
+    
+    final client = ZipInterceptorClient();
+    
+    // Se for um arquivo Croqui, precisamos baixar o arquivo inteiro primeiro
+    if (checkUrl.toLowerCase().endsWith('.croqui')) {
+      final directory = await getApplicationDocumentsDirectory();
+      final editedDir = Directory('${directory.path}/edited');
+      if (!await editedDir.exists()) {
+        await editedDir.create(recursive: true);
+      }
+      
+      final safeName = 'imported_repo.croqui';
+      final savedFile = File('${editedDir.path}/$safeName');
+      
+      // Busca o binário zip real se for uma URL remota
+      if (!checkUrl.startsWith('aresta-zip')) {
+         // Opcional: mostrar um SnackBar de "Baixando croqui..." aqui seria bom
+         final zipResponse = await client.get(Uri.parse(checkUrl)).timeout(const Duration(seconds: 30));
+         if (zipResponse.statusCode != 200) {
+           throw Exception('Falha ao baixar arquivo .croqui (Status ${zipResponse.statusCode})');
+         }
+         await savedFile.writeAsBytes(zipResponse.bodyBytes);
+      }
+      
+      final ghostUrl = checkUrl.startsWith('aresta-zip') ? checkUrl : Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
+      
+      // Agora validamos se o zip que baixamos tem um índice válido dentro dele!
+      final zipTestResponse = await client.get(Uri.parse('$ghostUrl/indice.binarypb')).timeout(const Duration(seconds: 5));
+      if (zipTestResponse.statusCode != 200) {
+         throw Exception('O arquivo .croqui baixado é inválido ou está corrompido.');
+      }
+      
+      configService.useCompiladoFolder.value = false;
+      await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
+      
+      final syncService = SyncService(datasetRepo);
+      await syncService.syncOnLaunch();
+      await datasetRepo.init();
+      TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
+      return true;
+    } else {
+      // Se não for ZIP, é um repositório web normal. Validamos o índice remoto.
+      final resolvedUrl = checkUrl;
+      final response = await client
+          .get(Uri.parse('$resolvedUrl/indice.binarypb'))
+          .timeout(const Duration(seconds: 5));
+          
+      if (response.statusCode == 200) {
+        configService.useCompiladoFolder.value = false;
+        
+        await configService.activateExperimental(url: resolvedUrl, forceResetTimer: true);
+        final syncService = SyncService(datasetRepo);
+        await syncService.syncOnLaunch();
+        await datasetRepo.init();
+        TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
+        return true;
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: Não foi possível acessar o índice (Status ${response.statusCode})')),
+          );
+        }
+        return false;
+      }
     }
   } catch (e) {
     if (context.mounted) {
@@ -94,7 +123,16 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
     );
 
     if (result != null && result.files.single.path != null) {
-      final file = File(result.files.single.path!);
+      final path = result.files.single.path!;
+      if (!path.toLowerCase().endsWith('.croqui')) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aviso: O arquivo selecionado não tem a extensão .croqui')),
+          );
+        }
+        return;
+      }
+      final file = File(path);
       final directory = await getApplicationDocumentsDirectory();
       
       // Feedback visual de processamento
@@ -113,6 +151,19 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
       
       final ghostUrl = Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
       
+      // Valida se o croqui que importamos é válido e pode ser lido
+      final client = ZipInterceptorClient();
+      final zipTestResponse = await client.get(Uri.parse('$ghostUrl/indice.binarypb')).timeout(const Duration(seconds: 5));
+      if (zipTestResponse.statusCode != 200) {
+         if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Erro: O arquivo .croqui importado não é válido ou está corrompido.')),
+           );
+         }
+         return;
+      }
+      
+      configService.useCompiladoFolder.value = false;
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
       // Tenta sincronizar o índice usando o interceptor
