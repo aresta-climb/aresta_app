@@ -4,8 +4,16 @@
 	<dict>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>NSCameraUsageDescription</key>
 		<string>Este aplicativo precisa de acesso à câmera para escanear QR codes.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Este aplicativo precisa de acesso à galeria de fotos para selecionar arquivos e imagens.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Este aplicativo precisa de acesso ao microfone (requerido por dependências internas).</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Este aplicativo precisa de acesso à localização para recursos de mapeamento e distâncias.</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
