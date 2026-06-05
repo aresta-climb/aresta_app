@@ -54,9 +54,9 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
-  Future<void> logNavegarAba(String aba) async {
+  Future<void> logNavegarAba(String acao) async {
     recordedEvents.add('navegar_aba');
-    recordedParams['navegar_aba'] = {'aba': aba};
+    recordedParams['navegar_aba'] = {'acao': acao};
   }
 
   @override
@@ -72,27 +72,21 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
-  Future<void> logSincronizarApp({required bool auto}) async {
+  Future<void> logSincronizarApp({required String acao}) async {
     recordedEvents.add('sincronizar_app');
-    recordedParams['sincronizar_app'] = {'auto': auto.toString()};
+    recordedParams['sincronizar_app'] = {'acao': acao};
   }
 
   @override
-  Future<void> logLinkExterno(String url, String contexto) async {
+  Future<void> logLinkExterno(String url, String origem) async {
     recordedEvents.add('link_externo');
-    recordedParams['link_externo'] = {'url': url, 'contexto': contexto};
+    recordedParams['link_externo'] = {'url': url, 'origem': origem};
   }
 
   @override
   Future<void> logAcaoConfiguracoes(String acao) async {
     recordedEvents.add('acao_configuracoes');
     recordedParams['acao_configuracoes'] = {'acao': acao};
-  }
-
-  @override
-  Future<void> logErroInteracao(String contexto, String erro) async {
-    recordedEvents.add('erro_interacao');
-    recordedParams['erro_interacao'] = {'contexto': contexto, 'erro': erro};
   }
 
 }

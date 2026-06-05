@@ -68,7 +68,7 @@ void main() {
       try {
         // Isso normalmente quebraria se Firebase.initializeApp() não tiver terminado,
         // mas o nosso try-catch interno na _logEvent deve absorver graciosamente.
-        await TelemetryService.instance.logSincronizarApp(auto: true);
+        await TelemetryService.instance.logSincronizarApp(acao: 'automatica');
         // Passou sem quebrar = sucesso
       } catch (e) {
         fail('Should not throw uncaught exception: $e');

@@ -27,7 +27,7 @@ class SyncService {
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
   Future<void> syncOnLaunch({bool auto = true}) async {
-    TelemetryService.instance.logSincronizarApp(auto: auto);
+    TelemetryService.instance.logSincronizarApp(acao: auto ? 'automatica' : 'manual');
     datasetRepository.syncStatus.value = SyncStatus.updating;
     try {
       final directory = await getApplicationDocumentsDirectory();
