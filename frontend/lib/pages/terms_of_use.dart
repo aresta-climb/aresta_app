@@ -117,6 +117,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   }
 
   void _showPrivacyPolicy() {
+    TelemetryService.instance.logAcaoConfiguracoes('abrir_politica_privacidade');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
