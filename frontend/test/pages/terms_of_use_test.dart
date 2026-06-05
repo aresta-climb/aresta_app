@@ -39,7 +39,7 @@ void main() {
   }
 
   final defaultFiles = {
-    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Mocked Terms',
+    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': '### TERMOS DE USO E ACEITAÇÃO DE RISCOS\nConteúdo mockado dos termos.',
     'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Mocked Privacy',
   };
 
@@ -51,16 +51,15 @@ void main() {
       );
       await tester.pumpAndSettle(); // Wait for async load
 
-      expect(find.text('Termos e Privacidade'), findsOneWidget);
       expect(
         find.byType(MarkdownBody),
         findsOneWidget,
       ); // Finds the terms markdown
 
-      final acceptButtonFinder = find.widgetWithText(ElevatedButton, 'Aceitar');
+      final acceptButtonFinder = find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar');
       expect(acceptButtonFinder, findsOneWidget);
 
-      final ElevatedButton acceptButton = tester.widget(acceptButtonFinder);
+      final FilledButton acceptButton = tester.widget(acceptButtonFinder);
       expect(acceptButton.enabled, isFalse);
 
       // No banner should be displayed because isUpdatingTerms is false
@@ -74,7 +73,7 @@ void main() {
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pumpAndSettle();
 
-      final ElevatedButton acceptButtonEnabled = tester.widget(
+      final FilledButton acceptButtonEnabled = tester.widget(
         acceptButtonFinder,
       );
       expect(acceptButtonEnabled.enabled, isTrue);
@@ -93,5 +92,25 @@ void main() {
       find.textContaining('Atualizamos nossos documentos legais'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('TermsOfUsePage displays last updated date', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Última atualização:', findRichText: true),
+      findsOneWidget,
+    );
+  });
+
+  test('formatLegalDate correctly formats ISO dates', () {
+    expect(formatLegalDate('2026-06-04'), '04 de Junho de 2026');
+    expect(formatLegalDate('2025-12-31'), '31 de Dezembro de 2025');
+    expect(formatLegalDate('invalid-date'), 'invalid-date'); // fallback
   });
 }
