@@ -51,7 +51,7 @@ Widget _buildCragList(
               onPressed: onAddExperimental,
               icon: Icon(Icons.add_circle_outline, color: beastHide, size: 20),
               label: Text(
-                'ADICIONAR CROQUIS EXPERIMENTAIS', 
+                'TROCAR SERVING', 
                 style: TextStyle(
                   color: beastHide, 
                   fontWeight: FontWeight.bold, 
