@@ -178,6 +178,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       ),
       child: Text(
         '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
+        textAlign: TextAlign.center,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onPrimaryContainer,
           fontWeight: FontWeight.w500,
