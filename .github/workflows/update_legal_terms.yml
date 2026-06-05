@@ -1,4 +1,4 @@
-name: Update Legal Terms Submodule
+name: Update Legal Terms
 
 on:
   repository_dispatch:
