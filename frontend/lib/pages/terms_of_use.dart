@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 
 class TermsOfUsePage extends StatefulWidget {
   final VoidCallback onAccepted;
@@ -54,7 +55,7 @@ Antes de prosseguir, é obrigatório ler e concordar com os termos abaixo:
                   try {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                   } catch (e) {
-                    TelemetryService.instance.logErroInteracao('abrir_link_termos', e.toString());
+                    AppLogger.instance.logError('abrir_link_termos', error: e.toString());
                     debugPrint('Erro ao abrir link: $e');
                   }
                 }

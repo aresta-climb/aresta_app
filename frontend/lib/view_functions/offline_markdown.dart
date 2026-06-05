@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import '../services/editor_croqui.dart';
 import 'common_functions.dart';
 
@@ -40,7 +41,7 @@ class OfflineMarkdown extends StatelessWidget {
               try {
                 await launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
               } catch (e) {
-                TelemetryService.instance.logErroInteracao('abrir_link_markdown', e.toString());
+                AppLogger.instance.logError('abrir_link_markdown', error: e.toString());
               }
             }
           },
