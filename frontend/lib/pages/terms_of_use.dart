@@ -8,6 +8,25 @@ import 'package:frontend/constants/legal_version.g.dart';
 
 import 'dart:convert';
 
+/// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
+String formatLegalDate(String isoDate) {
+  final parts = isoDate.split('-');
+  if (parts.length != 3) return isoDate;
+  
+  final day = parts[2];
+  final year = parts[0];
+  final monthInt = int.tryParse(parts[1]) ?? 1;
+  
+  const months = [
+    '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  
+  final monthName = (monthInt >= 1 && monthInt <= 12) ? months[monthInt] : parts[1];
+  
+  return '$day de $monthName de $year';
+}
+
 class TermsOfUsePage extends StatefulWidget {
   final VoidCallback onAccepted;
   final bool isUpdatingTerms;
@@ -42,11 +61,27 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       final terms = await bundle.loadString(
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md',
       );
+      
+      // Injeta a data automatizada logo abaixo do título
+      final tituloRegex = RegExp(r'(### .*\r?\n)');
+      String termsDynamicDate = terms;
+      if (tituloRegex.hasMatch(terms)) {
+        // Remove qualquer "Última atualização:" estática que já exista no arquivo para evitar duplicidade
+        termsDynamicDate = termsDynamicDate.replaceFirst(RegExp(r'\r?\nÚltima atualização: .*\r?\n'), '\n');
+        
+        // Injeta a data formatada
+        final formattedDate = formatLegalDate(kLegalLastUpdatedDate);
+        termsDynamicDate = termsDynamicDate.replaceFirst(
+          tituloRegex, 
+          '\$1\n**Última atualização: ${formattedDate}**\n\n'
+        );
+      }
+
       final privacy = await bundle.loadString(
         'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
       );
       setState(() {
-        _termsMarkdown = terms;
+        _termsMarkdown = termsDynamicDate;
         _privacyMarkdown = privacy;
       });
     } catch (e) {
@@ -64,6 +99,12 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
 
   Future<void> _onTapLink(String text, String? href, String title) async {
     if (href != null) {
+      if (href == 'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html' || 
+          href.endsWith('POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md')) {
+        _showPrivacyPolicy();
+        return;
+      }
+
       TelemetryService.instance.logLinkExterno(href, 'termos_uso');
       final url = Uri.parse(href);
       try {
@@ -99,11 +140,21 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                     data: _privacyMarkdown!,
                     onTapLink: _onTapLink,
                     styleSheet: MarkdownStyleSheet(
-                      p: const TextStyle(fontSize: 16),
-                      h3: const TextStyle(
+                      p: TextStyle(
+                        fontSize: 16, 
+                        height: 1.6, 
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      h3: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
+                      strong: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      blockSpacing: 16.0,
                     ),
                   )
                 : const Center(child: CircularProgressIndicator()),
@@ -137,111 +188,96 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Termos e Privacidade'),
-        centerTitle: true,
-      ),
-      body: _termsMarkdown == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildUpdateBanner(),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Text(
-                      'Última atualização: $kLegalLastUpdatedDate',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                  MarkdownBody(
-                    data: _termsMarkdown!,
-                    onTapLink: _onTapLink,
-                    styleSheet: MarkdownStyleSheet(
-                      p: const TextStyle(fontSize: 16),
-                      h3: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-
-                  // Botão para Política de Privacidade
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: _showPrivacyPolicy,
-                      icon: const Icon(Icons.privacy_tip_outlined),
-                      label: const Text(
-                        'Ler Política de Privacidade',
-                        style: TextStyle(
-                          fontSize: 16,
+      body: SafeArea(
+        child: _termsMarkdown == null
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildUpdateBanner(),
+                    MarkdownBody(
+                      data: _termsMarkdown!,
+                      onTapLink: _onTapLink,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(
+                          fontSize: 16, 
+                          height: 1.6, 
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        h3: TextStyle(
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
+                        strong: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        blockSpacing: 16.0,
                       ),
                     ),
-                  ),
-
                   const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 0.0,
-                      vertical: 8.0,
+                  Card(
+                    elevation: 0,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: CheckboxListTile(
-                      title: const Text(
-                        'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      value: _isChecked,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _isChecked = value ?? false;
-                        });
-                      },
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0.0, 16.0, 0.0, 24.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isChecked
-                            ? () {
-                                TelemetryService.instance.logAcaoConfiguracoes(
-                                  'aceitar_termos_uso',
-                                );
-                                widget.onAccepted();
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          CheckboxListTile(
+                            title: const Text(
+                              'Li e concordo com os Termos de Uso e a Política de Privacidade.',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                            value: _isChecked,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                _isChecked = value ?? false;
+                              });
+                            },
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
                           ),
-                        ),
-                        child: const Text(
-                          'Aceitar',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: FilledButton(
+                              onPressed: _isChecked
+                                  ? () {
+                                      TelemetryService.instance.logAcaoConfiguracoes(
+                                        'aceitar_termos_uso',
+                                      );
+                                      widget.onAccepted();
+                                    }
+                                  : null,
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Aceitar Termos e Continuar',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+      ),
     );
   }
 }
