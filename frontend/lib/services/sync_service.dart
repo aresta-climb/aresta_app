@@ -122,6 +122,9 @@ class SyncService {
         // Sobrescreve o índice local com o novo APENAS após as atualizações terminarem.
         // Isso garante que se a atualização falhar ou o app for fechado, o índice antigo
         // será mantido e a verificação ocorrerá novamente na próxima inicialização.
+        if (!await localIndiceFile.parent.exists()) {
+          await localIndiceFile.parent.create(recursive: true);
+        }
         await localIndiceFile.writeAsBytes(responseBytes);
       } else {
         AppLogger.instance.logError('Server returned an error or 304: ${response?.statusCode}');

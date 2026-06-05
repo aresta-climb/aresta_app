@@ -123,7 +123,7 @@ class _BrowsePageState extends State<BrowsePage> {
                     addCallback = () => mostrarDialogConexao(
                       context, 
                       widget.datasetRepo, 
-                      titulo: 'Adicionar mais croquis',
+                      titulo: 'Trocar serving',
                     );
                   } else {
                     addCallback = null;
