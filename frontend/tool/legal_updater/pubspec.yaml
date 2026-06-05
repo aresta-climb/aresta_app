@@ -1,0 +1,12 @@
+name: legal_updater
+description: Um script Dart simples para atualizar a versão dos termos de uso.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  crypto: any
+
+dev_dependencies:
+  test: any

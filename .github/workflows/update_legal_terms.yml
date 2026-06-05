@@ -1,0 +1,58 @@
+name: Update Legal Terms Submodule
+
+on:
+  repository_dispatch:
+    types: [update-legal-terms]
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # To commit
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          submodules: 'recursive'
+
+      - name: Update Legal Repo Submodule
+        run: |
+          git submodule update --remote frontend/legal/repo
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('frontend/tool/legal_updater/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Get dependencies
+        run: |
+          cd frontend/tool/legal_updater
+          dart pub get
+
+      - name: Run Bump Script
+        run: |
+          cd frontend/tool/legal_updater
+          dart run bin/update_legal_version.dart ../../legal
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "aresta-climb-bot[bot]"
+          git config --global user.email "281080576+aresta-climb-bot[bot]@users.noreply.github.com"
+          git add frontend/legal/repo frontend/legal/LEGAL_VERSION.json
+          git commit -m "chore: auto-update legal terms and version" || echo "No changes to commit"
+          git push

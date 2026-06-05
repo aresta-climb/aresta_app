@@ -18,20 +18,32 @@ import 'package:frontend/theme/theme_controller.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/pages/terms_of_use.dart';
+import 'package:frontend/constants/legal_version.g.dart';
 
 import 'package:frontend/services/firebase/init_firebase.dart';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
   await initFirebase();
 
   await ThemeController().loadTheme();
 
   final prefs = await SharedPreferences.getInstance();
-  final acceptedTerms = prefs.getBool('accepted_terms') ?? false;
+
+  int? acceptedLegalVersion = prefs.getInt('accepted_legal_version');
+  final bool oldAcceptedTerms = prefs.getBool('accepted_terms') ?? false;
+
+  // Migração silenciosa
+  if (oldAcceptedTerms && acceptedLegalVersion == null) {
+    await prefs.setInt('accepted_legal_version', 1);
+    acceptedLegalVersion = 1;
+    await prefs.remove('accepted_terms'); // Apaga chave antiga após migrar
+  } else if (oldAcceptedTerms) {
+    await prefs.remove('accepted_terms'); // Apaga chave antiga se já migrou antes
+  }
 
   // Instancia e carrega o EditorDeCroqui
   final editorDeCroqui = EditorDeCroqui();
@@ -40,12 +52,13 @@ void main() async {
   // Instancia e inicializa o repositório
   final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
   final syncService = SyncService(datasetRepo);
-  
+
   // Escuta mudanças de modo para re-sincronizar
   void onModeChange() {
     datasetRepo.loadEmpty();
     syncService.syncOnLaunch();
   }
+
   editorDeCroqui.editorUrl.addListener(onModeChange);
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
@@ -53,23 +66,25 @@ void main() async {
   syncService.syncOnLaunch();
 
   // Passa isso para o aplicativo
-  runApp(MyApp(
-    datasetRepo: datasetRepo, 
-    syncService: syncService,
-    acceptedTerms: acceptedTerms,
-  ));
+  runApp(
+    MyApp(
+      datasetRepo: datasetRepo,
+      syncService: syncService,
+      acceptedLegalVersion: acceptedLegalVersion ?? 0,
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
-  final bool acceptedTerms;
+  final int acceptedLegalVersion;
 
   const MyApp({
-    super.key, 
+    super.key,
     required this.datasetRepo,
     required this.syncService,
-    this.acceptedTerms = false,
+    required this.acceptedLegalVersion,
   });
 
   @override
@@ -77,21 +92,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late bool _acceptedTerms;
+  late int _acceptedLegalVersion;
 
   @override
   void initState() {
     super.initState();
-    _acceptedTerms = widget.acceptedTerms;
+    _acceptedLegalVersion = widget.acceptedLegalVersion;
   }
 
   void _onTermsAccepted() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('accepted_terms', true);
+    await prefs.setInt('accepted_legal_version', kLegalVersion);
     setState(() {
-      _acceptedTerms = true;
+      _acceptedLegalVersion = kLegalVersion;
     });
   }
+
+  bool get _hasAcceptedTerms => _acceptedLegalVersion >= kLegalVersion;
+  bool get _isUpdatingTerms => _acceptedLegalVersion > 0 && _acceptedLegalVersion < kLegalVersion;
 
   @override
   Widget build(BuildContext context) {
@@ -138,10 +156,12 @@ class _MyAppState extends State<MyApp> {
               children: [
                 ?child,
                 ValueListenableBuilder<bool>(
-                  valueListenable: widget.datasetRepo.editorDeCroqui.isExperimentalMode,
+                  valueListenable:
+                      widget.datasetRepo.editorDeCroqui.isExperimentalMode,
                   builder: (context, isExperimental, _) {
                     return ValueListenableBuilder<String?>(
-                      valueListenable: widget.datasetRepo.editorDeCroqui.editorUrl,
+                      valueListenable:
+                          widget.datasetRepo.editorDeCroqui.editorUrl,
                       builder: (context, editorUrl, _) {
                         final isEditor = editorUrl != null || isExperimental;
                         if (!isEditor) return const SizedBox.shrink();
@@ -160,12 +180,19 @@ class _MyAppState extends State<MyApp> {
                           child: Material(
                             color: Colors.transparent,
                             child: ValueListenableBuilder<Duration?>(
-                              valueListenable: widget.datasetRepo.editorDeCroqui.timeRemaining,
+                              valueListenable: widget
+                                  .datasetRepo
+                                  .editorDeCroqui
+                                  .timeRemaining,
                               builder: (context, remaining, _) {
                                 String timerText = '';
                                 if (remaining != null) {
-                                  final minutes = remaining.inMinutes.toString().padLeft(2, '0');
-                                  final seconds = (remaining.inSeconds % 60).toString().padLeft(2, '0');
+                                  final minutes = remaining.inMinutes
+                                      .toString()
+                                      .padLeft(2, '0');
+                                  final seconds = (remaining.inSeconds % 60)
+                                      .toString()
+                                      .padLeft(2, '0');
                                   timerText = ' ($minutes:$seconds)';
                                 }
 
@@ -178,7 +205,11 @@ class _MyAppState extends State<MyApp> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 14),
+                                      const Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         '$bannerText$timerText',
@@ -203,13 +234,16 @@ class _MyAppState extends State<MyApp> {
               ],
             );
           },
-          home: _acceptedTerms
-            ? TreeNavigationWrapper(
-                datasetRepo: widget.datasetRepo,
-                syncService: widget.syncService,
-                key: TreeNavigationWrapper.navKey,
-              )
-            : TermsOfUsePage(onAccepted: _onTermsAccepted),
+          home: _hasAcceptedTerms
+              ? TreeNavigationWrapper(
+                  datasetRepo: widget.datasetRepo,
+                  syncService: widget.syncService,
+                  key: TreeNavigationWrapper.navKey,
+                )
+              : TermsOfUsePage(
+                  onAccepted: _onTermsAccepted,
+                  isUpdatingTerms: _isUpdatingTerms,
+                ),
         );
       },
     );
@@ -227,7 +261,8 @@ class TreeNavigationWrapper extends StatefulWidget {
     required this.syncService,
   });
 
-  static final GlobalKey<_TreeNavigationWrapperState> navKey = GlobalKey<_TreeNavigationWrapperState>();
+  static final GlobalKey<_TreeNavigationWrapperState> navKey =
+      GlobalKey<_TreeNavigationWrapperState>();
 
   static _TreeNavigationWrapperState of(BuildContext context) {
     return context.findAncestorStateOfType<_TreeNavigationWrapperState>()!;
@@ -304,7 +339,11 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             BrowsePage(datasetRepo: widget.datasetRepo),
           ],
         ),
-        bottomNavigationBar: buildPrimaryBottomNav(context, tabIndex, _onItemTapped),
+        bottomNavigationBar: buildPrimaryBottomNav(
+          context,
+          tabIndex,
+          _onItemTapped,
+        ),
       );
     }
 
@@ -343,10 +382,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
 
     if (node is GrupoNode) {
-      return GrupoPage(
-        grupo: node.grupo,
-        cragId: node.cragId,
-      );
+      return GrupoPage(grupo: node.grupo, cragId: node.cragId);
     }
 
     if (node is ViaNode) {
@@ -358,9 +394,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
 
     if (node is GPSNode) {
-      return GPSPage(
-        datasetRepo: widget.datasetRepo,
-      );
+      return GPSPage(datasetRepo: widget.datasetRepo);
     }
 
     return const Center(child: Text('Unknown Node'));
@@ -383,7 +417,7 @@ class _HomePageWrapper extends StatelessWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
   final Function(int) onSwitchTab;
-  
+
   const _HomePageWrapper({
     required this.datasetRepo,
     required this.syncService,
@@ -405,4 +439,3 @@ class _HomePageWrapper extends StatelessWidget {
     );
   }
 }
-
