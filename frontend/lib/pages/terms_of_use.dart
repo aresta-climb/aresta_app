@@ -69,11 +69,11 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         // Remove qualquer "Última atualização:" estática que já exista no arquivo para evitar duplicidade
         termsDynamicDate = termsDynamicDate.replaceFirst(RegExp(r'\r?\nÚltima atualização: .*\r?\n'), '\n');
         
-        // Injeta a data formatada
+        // Injeta a data formatada logo após o título
         final formattedDate = formatLegalDate(kLegalLastUpdatedDate);
-        termsDynamicDate = termsDynamicDate.replaceFirst(
+        termsDynamicDate = termsDynamicDate.replaceFirstMapped(
           tituloRegex, 
-          '\$1\n**Última atualização: ${formattedDate}**\n\n'
+          (match) => '${match.group(1)}\n**Última atualização: ${formattedDate}**\n\n'
         );
       }
 
