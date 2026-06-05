@@ -108,6 +108,36 @@ void main() {
     );
   });
 
+  testWidgets('TermsOfUsePage logs telemetry and opens modal on privacy policy link tap', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+    );
+    await tester.pumpAndSettle();
+
+    final telemetry = TelemetryService.instance as MockTelemetryService;
+    telemetry.clear();
+
+    final markdownWidget = tester.widget<MarkdownBody>(find.byType(MarkdownBody).first);
+    
+    // Simula o clique no link da política de privacidade no Markdown
+    markdownWidget.onTapLink!(
+      'Política de Privacidade', 
+      'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html', 
+      'title'
+    );
+    await tester.pumpAndSettle();
+
+    // Verifica se o modal abriu
+    expect(find.text('Política de Privacidade', skipOffstage: false), findsWidgets);
+
+    // Verifica se a telemetria foi logada corretamente
+    expect(telemetry.recordedEvents.contains('acao_configuracoes'), isTrue);
+    expect(
+      telemetry.recordedParams['acao_configuracoes']?['acao'], 
+      'abrir_politica_privacidade'
+    );
+  });
+
   test('formatLegalDate correctly formats ISO dates', () {
     expect(formatLegalDate('2026-06-04'), '04 de Junho de 2026');
     expect(formatLegalDate('2025-12-31'), '31 de Dezembro de 2025');
