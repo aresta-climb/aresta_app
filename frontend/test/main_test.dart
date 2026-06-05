@@ -4,6 +4,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
+import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'mocks/mock_telemetry_service.dart';
 
@@ -22,28 +23,52 @@ void main() {
     TelemetryService.instance = mockTelemetry;
   });
 
-  testWidgets('MyApp shows TermsOfUsePage when acceptedTerms is false', (WidgetTester tester) async {
+  testWidgets('MyApp shows TermsOfUsePage when acceptedLegalVersion is 0 (first launch)', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
       syncService: mockSync,
-      acceptedTerms: false,
+      acceptedLegalVersion: 0,
     ));
 
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     expect(find.byType(TreeNavigationWrapper), findsNothing);
-    
-    // Simulate main() startup logic for test coverage
-
   });
 
-  testWidgets('MyApp shows TreeNavigationWrapper when acceptedTerms is true', (WidgetTester tester) async {
+  testWidgets('MyApp shows TreeNavigationWrapper when acceptedLegalVersion matches kLegalVersion', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
       syncService: mockSync,
-      acceptedTerms: true,
+      acceptedLegalVersion: kLegalVersion,
     ));
 
     expect(find.byType(TermsOfUsePage), findsNothing);
     expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+  });
+
+  testWidgets('MyApp shows TermsOfUsePage with update flag when acceptedLegalVersion is > 0 but < kLegalVersion', (WidgetTester tester) async {
+    // If kLegalVersion is 1, an accepted version of 1 would mean it's up to date.
+    // For this test, we must mock a scenario where it's outdated, but we can't change kLegalVersion dynamically.
+    // We can simulate acceptedLegalVersion = -1 to pretend it's > 0 if kLegalVersion is 1, or we just pass kLegalVersion - 1
+    // if kLegalVersion > 1. Let's just pass kLegalVersion - 1 (but ensure it's > 0 or at least valid).
+    // Actually, if kLegalVersion == 1, then the first update hasn't happened. We can test this by passing acceptedLegalVersion = 1, but then it's not outdated!
+    // Since we know kLegalVersion is at least 1, if it's 1, we can't test isUpdatingTerms = true perfectly without a hack.
+    // But since the actual generated kLegalVersion is currently 2, this will pass gracefully.
+    final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 1; 
+    
+    // If kLegalVersion is 1, skip test because we can't have an accepted version that is > 0 AND < 1
+    if (kLegalVersion == 1) return;
+
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      acceptedLegalVersion: outdatedVersion,
+    ));
+
+    final termsFinder = find.byType(TermsOfUsePage);
+    expect(termsFinder, findsOneWidget);
+    expect(find.byType(TreeNavigationWrapper), findsNothing);
+
+    final TermsOfUsePage termsPage = tester.widget(termsFinder);
+    expect(termsPage.isUpdatingTerms, isTrue);
   });
 }

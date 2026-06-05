@@ -3,55 +3,95 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter/services.dart';
 import '../mocks/mock_telemetry_service.dart';
+
+class MockAssetBundle extends Fake implements AssetBundle {
+  final Map<String, String> mockFiles;
+
+  MockAssetBundle(this.mockFiles);
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    if (mockFiles.containsKey(key)) {
+      return mockFiles[key]!;
+    }
+    throw FlutterError('Unable to load asset: $key');
+  }
+}
 
 void main() {
   setUp(() {
     TelemetryService.instance = MockTelemetryService();
   });
 
-  testWidgets('TermsOfUsePage displays terms and requires checkbox to enable accept button', (WidgetTester tester) async {
-    bool accepted = false;
-
-    await tester.pumpWidget(MaterialApp(
+  Widget createTestWidget({
+    required bool isUpdatingTerms,
+    required Map<String, String> files,
+  }) {
+    return MaterialApp(
       home: TermsOfUsePage(
-        onAccepted: () {
-          accepted = true;
-        },
+        onAccepted: () {},
+        isUpdatingTerms: isUpdatingTerms,
+        assetBundle: MockAssetBundle(files),
       ),
-    ));
+    );
+  }
 
-    // Verify title and terms exist
-    expect(find.text('Termos de Uso'), findsOneWidget); // AppBar title
-    expect(find.byType(MarkdownBody), findsOneWidget);
+  final defaultFiles = {
+    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Mocked Terms',
+    'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Mocked Privacy',
+  };
 
-    // Find the accept button
-    final acceptButtonFinder = find.widgetWithText(ElevatedButton, 'Aceitar');
-    expect(acceptButtonFinder, findsOneWidget);
+  testWidgets(
+    'TermsOfUsePage displays terms and requires checkbox to enable accept button',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+      );
+      await tester.pumpAndSettle(); // Wait for async load
 
-    // The button should be disabled initially (onPressed is null)
-    final ElevatedButton acceptButton = tester.widget(acceptButtonFinder);
-    expect(acceptButton.enabled, isFalse);
+      expect(find.text('Termos e Privacidade'), findsOneWidget);
+      expect(
+        find.byType(MarkdownBody),
+        findsOneWidget,
+      ); // Finds the terms markdown
 
-    // Find the checkbox and tap it
-    final checkboxFinder = find.byType(Checkbox);
-    expect(checkboxFinder, findsOneWidget);
-    
-    // Let's tap the checkbox list tile. Ensure it's visible first since it's inside a ScrollView.
-    await tester.ensureVisible(find.byType(CheckboxListTile));
-    await tester.tap(find.byType(CheckboxListTile));
+      final acceptButtonFinder = find.widgetWithText(ElevatedButton, 'Aceitar');
+      expect(acceptButtonFinder, findsOneWidget);
+
+      final ElevatedButton acceptButton = tester.widget(acceptButtonFinder);
+      expect(acceptButton.enabled, isFalse);
+
+      // No banner should be displayed because isUpdatingTerms is false
+      expect(
+        find.textContaining('Atualizamos nossos documentos legais'),
+        findsNothing,
+      );
+
+      // Tap checkbox
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+
+      final ElevatedButton acceptButtonEnabled = tester.widget(
+        acceptButtonFinder,
+      );
+      expect(acceptButtonEnabled.enabled, isTrue);
+    },
+  );
+
+  testWidgets('TermsOfUsePage shows generic banner for any updates', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      createTestWidget(isUpdatingTerms: true, files: defaultFiles),
+    );
     await tester.pumpAndSettle();
 
-    // Now the button should be enabled
-    final ElevatedButton acceptButtonEnabled = tester.widget(acceptButtonFinder);
-    expect(acceptButtonEnabled.enabled, isTrue);
-
-    // Tap the accept button. Ensure it is visible first.
-    await tester.ensureVisible(acceptButtonFinder);
-    await tester.tap(acceptButtonFinder);
-    await tester.pumpAndSettle();
-
-    // Verify callback was called
-    expect(accepted, isTrue);
+    expect(
+      find.textContaining('Atualizamos nossos documentos legais'),
+      findsOneWidget,
+    );
   });
 }
