@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
-import 'dart:convert';
 
 class LegalVersionUpdater {
   final String repoPath;
