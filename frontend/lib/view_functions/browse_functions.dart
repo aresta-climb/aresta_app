@@ -8,20 +8,24 @@ import 'common_functions.dart';
 /// O callback [onSearchChanged] é acionado quando o usuário digita na barra de pesquisa.
 /// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
 Widget buildBrowseBody(
-  BuildContext context, 
-  List<Map<String, dynamic>> availableCrags, 
-  {
-    required ValueChanged<String> onSearchChanged,
-    required Function(Map<String, dynamic>) onDownload,
-    VoidCallback? onAddExperimental,
-  }
-) {
+  BuildContext context,
+  List<Map<String, dynamic>> availableCrags, {
+  required ValueChanged<String> onSearchChanged,
+  required Function(Map<String, dynamic>) onDownload,
+  Function(Map<String, dynamic>)? onOpen,
+  VoidCallback? onAddExperimental,
+}) {
   return Column(
     children: [
       const SizedBox(height: 10),
       buildSearchBar(onChanged: onSearchChanged),
       Expanded(
-        child: _buildCragList(availableCrags, onDownload, onAddExperimental: onAddExperimental),
+        child: _buildCragList(
+          availableCrags,
+          onDownload,
+          onOpen: onOpen,
+          onAddExperimental: onAddExperimental,
+        ),
       ),
     ],
   );
@@ -31,17 +35,18 @@ Widget buildBrowseBody(
 ///
 /// Se [availableCrags] estiver vazio, exibe uma mensagem de fallback indicando que nenhum pico foi encontrado.
 Widget _buildCragList(
-  List<Map<String, dynamic>> availableCrags, 
-  Function(Map<String, dynamic>) onDownload,
-  {VoidCallback? onAddExperimental}
-) {
+  List<Map<String, dynamic>> availableCrags,
+  Function(Map<String, dynamic>) onDownload, {
+  Function(Map<String, dynamic>)? onOpen,
+  VoidCallback? onAddExperimental,
+}) {
   return SingleChildScrollView(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildBrowseSectionTitle('Picos Disponíveis'),
-        
+
         // Botão Único de Adição Experimental
         if (onAddExperimental != null) ...[
           const SizedBox(height: 12),
@@ -51,26 +56,28 @@ Widget _buildCragList(
               onPressed: onAddExperimental,
               icon: Icon(Icons.add_circle_outline, color: beastHide, size: 20),
               label: Text(
-                'TROCAR SERVING', 
+                'TROCAR SERVING',
                 style: TextStyle(
-                  color: beastHide, 
-                  fontWeight: FontWeight.bold, 
-                  letterSpacing: 1.1, 
-                  fontSize: 12
+                  color: beastHide,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  fontSize: 12,
                 ),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: beastHide, width: 1.5),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
         ],
 
         const SizedBox(height: 20),
-        
-        if (availableCrags.isEmpty) 
+
+        if (availableCrags.isEmpty)
           Center(
             child: Padding(
               padding: EdgeInsets.only(top: 40.0),
@@ -81,7 +88,13 @@ Widget _buildCragList(
             ),
           )
         else
-          ...availableCrags.map((crag) => buildCragListItem(crag, () => onDownload(crag))),
+          ...availableCrags.map(
+            (crag) => buildCragListItem(
+              crag,
+              () => onDownload(crag),
+              onOpen: onOpen != null ? () => onOpen(crag) : null,
+            ),
+          ),
       ],
     ),
   );
@@ -103,16 +116,25 @@ Widget buildBrowseSectionTitle(String title) {
 ///
 /// O card é expansível: no estado colapsado mostra ícone, nome e local.
 /// Ao expandir, também exibe a data do último update e o botão de download.
-Widget buildCragListItem(Map<String, dynamic> crag, VoidCallback onDownload) {
-  return _CragListItem(crag: crag, onDownload: onDownload);
+Widget buildCragListItem(
+  Map<String, dynamic> crag,
+  VoidCallback onDownload, {
+  VoidCallback? onOpen,
+}) {
+  return _CragListItem(crag: crag, onDownload: onDownload, onOpen: onOpen);
 }
 
 /// Widget com estado para o card expansível de cada pico.
 class _CragListItem extends StatefulWidget {
-  const _CragListItem({required this.crag, required this.onDownload});
+  const _CragListItem({
+    required this.crag,
+    required this.onDownload,
+    this.onOpen,
+  });
 
   final Map<String, dynamic> crag;
   final VoidCallback onDownload;
+  final VoidCallback? onOpen;
 
   @override
   State<_CragListItem> createState() => _CragListItemState();
@@ -147,7 +169,10 @@ class _CragListItemState extends State<_CragListItem>
       _expanded = !_expanded;
       if (_expanded) {
         _chevronController.forward();
-        TelemetryService.instance.logAcaoExplorar(safeString(widget.crag['id']), 'ver_detalhes');
+        TelemetryService.instance.logAcaoExplorar(
+          safeString(widget.crag['id']),
+          'ver_detalhes',
+        );
       } else {
         _chevronController.reverse();
       }
@@ -156,8 +181,9 @@ class _CragListItemState extends State<_CragListItem>
 
   @override
   Widget build(BuildContext context) {
-    final String formattedDate =
-        formatDataUpdate(widget.crag['dataUpdate'] as String?);
+    final String formattedDate = formatDataUpdate(
+      widget.crag['dataUpdate'] as String?,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -200,8 +226,10 @@ class _CragListItemState extends State<_CragListItem>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              safeString(widget.crag['nome'],
-                                  fallback: 'Sem Nome'),
+                              safeString(
+                                widget.crag['nome'],
+                                fallback: 'Sem Nome',
+                              ),
                               style: TextStyle(
                                 color: fishBone,
                                 fontSize: 18,
@@ -228,14 +256,17 @@ class _CragListItemState extends State<_CragListItem>
                                   Expanded(
                                     child: Text(
                                       _expanded
-                                          ? formatTimeAgo(widget
-                                              .crag['dataUpdate'] as String?)
-                                          : safeString(widget.crag['local'],
-                                              fallback: 'Local Desconhecido'),
+                                          ? formatTimeAgo(
+                                              widget.crag['dataUpdate']
+                                                  as String?,
+                                            )
+                                          : safeString(
+                                              widget.crag['local'],
+                                              fallback: 'Local Desconhecido',
+                                            ),
                                       style: TextStyle(
                                         color: _expanded
-                                            ? beastHide
-                                                .withValues(alpha: 0.8)
+                                            ? beastHide.withValues(alpha: 0.8)
                                             : fishBone.withValues(alpha: 0.6),
                                         fontSize: 14,
                                       ),
@@ -278,19 +309,27 @@ class _CragListItemState extends State<_CragListItem>
                           _buildDetailRow(
                             Icons.location_on_rounded,
                             'Localização',
-                            safeString(widget.crag['local'],
-                                fallback: 'Local Desconhecido'),
+                            safeString(
+                              widget.crag['local'],
+                              fallback: 'Local Desconhecido',
+                            ),
                           ),
                           const SizedBox(height: 8),
                           _buildDetailRow(
                             Icons.calendar_today_rounded,
                             'Última atualização',
-                            formattedDate.isNotEmpty ? formattedDate : 'Sem data',
+                            formattedDate.isNotEmpty
+                                ? formattedDate
+                                : 'Sem data',
                           ),
                         ],
                         const SizedBox(height: 16),
-                        // Botão de download em largura total
-                        _buildDownloadButton(widget.crag, widget.onDownload),
+                        // Botão de download ou abrir croqui em largura total
+                        _buildDownloadButton(
+                          widget.crag,
+                          widget.onDownload,
+                          onOpen: widget.onOpen,
+                        ),
                       ],
                     ),
                     crossFadeState: _expanded
@@ -327,13 +366,7 @@ class _CragListItemState extends State<_CragListItem>
                   letterSpacing: 0.5,
                 ),
               ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: fishBone,
-                  fontSize: 14,
-                ),
-              ),
+              Text(value, style: TextStyle(color: fishBone, fontSize: 14)),
             ],
           ),
         ),
@@ -343,7 +376,7 @@ class _CragListItemState extends State<_CragListItem>
 }
 
 /// Constrói o ícone visual que lidera o item da lista de picos.
-/// 
+///
 /// Agora utiliza a thumbnail disponível no servidor se [thumbnailUrl] não estiver vazia.
 Widget _buildCragIcon(String thumbnailUrl) {
   Widget content;
@@ -352,13 +385,16 @@ Widget _buildCragIcon(String thumbnailUrl) {
     content = Image.network(
       thumbnailUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _buildPlaceholderIcon(), // Caso tiver um error, ir para o ícone de fallback
+      errorBuilder: (context, error, stackTrace) =>
+          _buildPlaceholderIcon(), // Caso tiver um error, ir para o ícone de fallback
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
 
         double? progressValue;
         if (loadingProgress.expectedTotalBytes != null) {
-          progressValue = loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!;
+          progressValue =
+              loadingProgress.cumulativeBytesLoaded /
+              loadingProgress.expectedTotalBytes!;
         }
 
         return Center(
@@ -392,31 +428,28 @@ Widget _buildCragIcon(String thumbnailUrl) {
 
 /// Ícone de fallback (montanha) usado quando não há thumbnail ou ela falha ao carregar.
 Widget _buildPlaceholderIcon() {
-  return Center(
-    child: Icon(
-      Icons.terrain,
-      color: beastHide,
-      size: 24,
-    ),
-  );
+  return Center(child: Icon(Icons.terrain, color: beastHide, size: 24));
 }
-
 
 /// Constrói o botão de download em largura total mostrado na área expandida do card.
 /// Quando o pico já está baixado, o botão fica desabilitado com estilo acinzentado.
-Widget _buildDownloadButton(Map<String, dynamic> crag, VoidCallback onDownload) {
+Widget _buildDownloadButton(
+  Map<String, dynamic> crag,
+  VoidCallback onDownload, {
+  VoidCallback? onOpen,
+}) {
   final bool isDownloaded = crag['isDownloaded'] == true;
 
   return SizedBox(
     width: double.infinity,
     child: ElevatedButton.icon(
-      onPressed: isDownloaded ? null : onDownload,
+      onPressed: isDownloaded ? onOpen : onDownload,
       icon: Icon(
-        isDownloaded ? Icons.check_rounded : Icons.download_rounded,
+        isDownloaded ? Icons.folder_open_rounded : Icons.download_rounded,
         size: 18,
       ),
       label: Text(
-        isDownloaded ? 'JÁ BAIXADO' : 'BAIXAR',
+        isDownloaded ? 'ABRIR CROQUI' : 'BAIXAR',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
           letterSpacing: 1.1,
@@ -424,11 +457,8 @@ Widget _buildDownloadButton(Map<String, dynamic> crag, VoidCallback onDownload) 
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor:
-            isDownloaded ? Colors.grey.withValues(alpha: 0.2) : Colors.green.shade700,
-        foregroundColor: isDownloaded
-            ? fishBone.withValues(alpha: 0.4)
-            : fishBone,
+        backgroundColor: isDownloaded ? beastHide : mossRock,
+        foregroundColor: isDownloaded ? nobleBlack : fishBone,
         disabledBackgroundColor: Colors.grey.withValues(alpha: 0.15),
         disabledForegroundColor: fishBone.withValues(alpha: 0.35),
         elevation: 0,

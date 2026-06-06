@@ -38,7 +38,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   @override
   void initState() {
     super.initState();
-    TelemetryService.instance.logAcaoCroqui(widget.cragId, 'abrir');
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted && _mapaKey.currentContext != null) {

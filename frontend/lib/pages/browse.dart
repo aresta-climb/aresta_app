@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/common_functions.dart';
+import '../view_functions/home_functions.dart';
 import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
@@ -145,6 +146,7 @@ class _BrowsePageState extends State<BrowsePage> {
                       });
                     },
                     onDownload: _handleDownload,
+                    onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
                     onAddExperimental: addCallback,
                   );
                 },

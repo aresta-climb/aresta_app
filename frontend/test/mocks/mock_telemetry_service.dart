@@ -24,9 +24,13 @@ class MockTelemetryService implements TelemetryService {
 
 
   @override
-  Future<void> logAcaoCroqui(String idCroqui, String acao) async {
+  Future<void> logAcaoCroqui(String idCroqui, String acao, {String? origem}) async {
     recordedEvents.add('acao_croqui');
-    recordedParams['acao_croqui'] = {'id_croqui': idCroqui, 'acao': acao};
+    final params = <String, dynamic>{'id_croqui': idCroqui, 'acao': acao};
+    if (origem != null) {
+      params['origem'] = origem;
+    }
+    recordedParams['acao_croqui'] = params;
   }
 
   @override
