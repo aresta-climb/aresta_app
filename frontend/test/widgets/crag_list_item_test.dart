@@ -101,6 +101,31 @@ void main() {
       expect(find.text('ABRIR CROQUI'), findsOneWidget);
       expect(find.byIcon(Icons.folder_open_rounded), findsOneWidget);
     });
+    testWidgets('Deve chamar o callback onOpen ao clicar no botão ABRIR CROQUI se já baixado', (WidgetTester tester) async {
+      final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
+      downloadedCrag['isDownloaded'] = true;
+
+      bool openChamado = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragListItem(downloadedCrag, () {}, onOpen: () {
+              openChamado = true;
+            }),
+          ),
+        ),
+      );
+
+      // Expandir primeiro
+      await tester.tap(find.text('Pedra do Baú'));
+      await tester.pumpAndSettle();
+
+      // Clicar no botão de abrir
+      await tester.tap(find.text('ABRIR CROQUI'));
+      
+      expect(openChamado, isTrue);
+    });
   });
 }
 

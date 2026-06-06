@@ -11,11 +11,17 @@ class ZipInterceptorClient extends http.BaseClient {
       try {
         final pathStr = request.url.path; // ex: /caminho/para/repo.croqui/compilado/indice.binarypb
         
-        // Encontra onde o .croqui termina para separar o caminho do arquivo do caminho interno
         int splitIndex = pathStr.indexOf('.croqui');
+        int extensionLength = 7;
+        bool isCroqui = true;
+
+        if (splitIndex == -1) {
+          splitIndex = pathStr.indexOf('.zip');
+          extensionLength = 4;
+          isCroqui = false;
+        }
 
         if (splitIndex != -1) {
-          final extensionLength = 7;
           final zipFilePath = Uri.decodeComponent(pathStr.substring(0, splitIndex + extensionLength));
           
           // Correção para caminhos absolutos no Windows se necessário (ex: /C:/...)
@@ -39,8 +45,8 @@ class ZipInterceptorClient extends http.BaseClient {
           final zipFile = File(actualZipPath);
           if (zipFile.existsSync()) {
             final bytes = zipFile.readAsBytesSync();
-            if (bytes.isNotEmpty) {
-              // Desofusca o cabeçalho
+            if (bytes.isNotEmpty && isCroqui) {
+              // Desofusca o cabeçalho apenas se for .croqui
               bytes[0] = bytes[0] ^ 0xFF;
             }
             
