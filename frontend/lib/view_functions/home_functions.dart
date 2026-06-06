@@ -5,6 +5,7 @@ import '../services/dataset_repository.dart';
 import '../widgets/global_search.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Uma paleta de cores usada para o fundo dos cartões (cards) de pico.
 final List<Color> cardPalette = [
@@ -18,9 +19,11 @@ final List<Color> cardPalette = [
 /// Navega para a página de detalhes de um pico selecionado.
 /// 
 /// Ele primeiro mostra um indicador de carregamento enquanto busca os dados completos do Croqui.
-void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico) async {
+void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico, {String source = 'home'}) async {
   final id = pico['id'];
   if (id == null) return;
+  
+  TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
 
   // Mostra indicador de carregamento
   showDialog(

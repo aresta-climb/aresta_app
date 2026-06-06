@@ -60,8 +60,12 @@ class TelemetryService {
   }
 
   /// Registra ações diversas feitas dentro da página do pico (e.g. buscar, deletar).
-  Future<void> logAcaoCroqui(String idCroqui, String acao) {
-    return _logEvent('acao_croqui', {'id_croqui': idCroqui, 'acao': acao});
+  Future<void> logAcaoCroqui(String idCroqui, String acao, {String? origem}) {
+    final params = <String, Object>{'id_croqui': idCroqui, 'acao': acao};
+    if (origem != null) {
+      params['origem'] = origem;
+    }
+    return _logEvent('acao_croqui', params);
   }
 
   /// Registra quando um setor específico de um pico é aberto.

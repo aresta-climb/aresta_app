@@ -81,7 +81,7 @@ void main() {
       expect(downloadChamado, isTrue);
     });
 
-    testWidgets('Deve mostrar estado desabilitado se já estiver baixado', (WidgetTester tester) async {
+    testWidgets('Deve mostrar botão para abrir se já estiver baixado', (WidgetTester tester) async {
       final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
       downloadedCrag['isDownloaded'] = true;
 
@@ -98,8 +98,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verifica se o texto do botão mudou
-      expect(find.text('JÁ BAIXADO'), findsOneWidget);
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.text('ABRIR CROQUI'), findsOneWidget);
+      expect(find.byIcon(Icons.folder_open_rounded), findsOneWidget);
     });
   });
 }

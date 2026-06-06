@@ -123,6 +123,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
             icon: Icons.terrain,
             originalItem: setor,
             onTap: () {
+              TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
               AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
               AppNav.toSetor(context, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
             },
@@ -143,6 +144,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 icon: Icons.terrain,
                 originalItem: setor,
                 onTap: () {
+                  TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
                   AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
                   AppNav.toSetor(context, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
                 },
@@ -203,6 +205,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
       icon: icon,
       originalItem: escalada,
       onTap: () {
+        TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
         AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
         AppNav.toSetor(context, setor: setor, scrollToEscalada: escalada, pico: pico, croqui: croqui, cragId: cragId);
         AppNav.toVia(context, escalada: escalada, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
