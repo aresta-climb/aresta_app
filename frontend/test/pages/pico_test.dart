@@ -8,27 +8,6 @@ import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  testWidgets('PicoDetailsPage should call logAbrirCroqui on init', (tester) async {
-    final mockTelemetry = MockTelemetryService();
-    TelemetryService.instance = mockTelemetry;
-
-    final editor = EditorDeCroqui();
-    final repo = DatasetRepository(editorDeCroqui: editor);
-
-    await tester.pumpWidget(MaterialApp(
-      home: PicoDetailsPage(
-        pico: Pico()..nome = 'Pico Teste',
-        croqui: Croqui(),
-        cragId: 'crag1',
-        datasetRepo: repo,
-      ),
-    ));
-
-    expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-    expect(mockTelemetry.recordedParams['acao_croqui']!['id_croqui'], 'crag1');
-    expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir');
-  });
-
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (tester) async {
     final mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;

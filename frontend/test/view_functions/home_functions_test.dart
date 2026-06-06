@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/home_functions.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   late DatasetRepository mockRepo;
@@ -67,5 +69,27 @@ void main() {
 
     // Deve mostrar o dropdown "Todos os guias baixados"
     expect(find.text('Todos os guias baixados'), findsOneWidget);
+  });
+
+  testWidgets('handlePicoSelection dispara telemetria de abrir_croqui com origem', (WidgetTester tester) async {
+    final mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
+
+    final dummyPico = {
+      'id': 'test-pico-1',
+    };
+
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(builder: (context) {
+      return ElevatedButton(
+        onPressed: () => handlePicoSelection(context, mockRepo, dummyPico),
+        child: const Text('Go'),
+      );
+    }))));
+
+    await tester.tap(find.text('Go'));
+    
+    expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+    expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
+    expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
   });
 }

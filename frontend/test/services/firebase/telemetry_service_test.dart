@@ -30,10 +30,11 @@ void main() {
 
 
 
-    test('logAcaoCroqui', () async {
-      await TelemetryService.instance.logAcaoCroqui('crag1', 'excluir');
+    test('logAcaoCroqui com origem', () async {
+      await TelemetryService.instance.logAcaoCroqui('crag1', 'abrir_croqui', origem: 'explorar');
       expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-      expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'excluir');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'explorar');
     });
 
     test('logAbrirSetor', () async {
