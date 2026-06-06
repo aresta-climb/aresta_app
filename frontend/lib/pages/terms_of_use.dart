@@ -31,12 +31,14 @@ class TermsOfUsePage extends StatefulWidget {
   final VoidCallback onAccepted;
   final bool isUpdatingTerms;
   final AssetBundle? assetBundle;
+  final bool showAcceptButton;
 
   const TermsOfUsePage({
     super.key,
     required this.onAccepted,
     this.isUpdatingTerms = false,
     this.assetBundle,
+    this.showAcceptButton = true,
   });
 
   @override
@@ -190,6 +192,15 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.showAcceptButton 
+        ? null 
+        : AppBar(
+            title: const Text('Termos de Uso', style: TextStyle(fontSize: 16)),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
       body: SafeArea(
         child: _termsMarkdown == null
             ? const Center(child: CircularProgressIndicator())
@@ -221,61 +232,62 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                       ),
                     ),
                   const SizedBox(height: 16),
-                  Card(
-                    elevation: 0,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          CheckboxListTile(
-                            title: const Text(
-                              'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  if (widget.showAcceptButton)
+                    Card(
+                      elevation: 0,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            CheckboxListTile(
+                              title: const Text(
+                                'Li e concordo com os Termos de Uso e a Política de Privacidade.',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                              value: _isChecked,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _isChecked = value ?? false;
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
                             ),
-                            value: _isChecked,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _isChecked = value ?? false;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: FilledButton(
-                              onPressed: _isChecked
-                                  ? () {
-                                      TelemetryService.instance.logAcaoConfiguracoes(
-                                        'aceitar_termos_uso',
-                                      );
-                                      widget.onAccepted();
-                                    }
-                                  : null,
-                              style: FilledButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: FilledButton(
+                                onPressed: _isChecked
+                                    ? () {
+                                        TelemetryService.instance.logAcaoConfiguracoes(
+                                          'aceitar_termos_uso',
+                                        );
+                                        widget.onAccepted();
+                                      }
+                                    : null,
+                                style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Aceitar Termos e Continuar',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                'Aceitar Termos e Continuar',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

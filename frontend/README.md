@@ -41,9 +41,15 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 frontend/
 ├── firebase.json              Configuração do FlutterFire CLI
 ├── firebase_telemetry_design.md Documentação de design da telemetria
+├── legal/
+│   └── repo/                  Submodule Git com os Termos de Uso e Política de Privacidade (.md)
+├── tool/
+│   └── legal_updater/         Ferramenta de linha de comando para atualizar as constantes de data legal
 ├── lib/
 │   ├── main.dart          Ponto de entrada: bindings, serviços e navegação principal
 │   ├── firebase_options.dart Configurações geradas pelo FlutterFire
+│   ├── constants/
+│   │   └── legal_version.g.dart Constante de data autogerada da última atualização legal
 │   ├── view_functions/    Builders de UI, callbacks e funções por página
 │   │   ├── common_functions.dart     Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart     Visualizador Markdown com FileImage offline
@@ -65,6 +71,7 @@ frontend/
 │   │   ├── setor.dart             Subárea com lista de vias ou boulders
 │   │   ├── via.dart               Nó folha: beta, croqui e imagens
 │   │   ├── settings.dart          Configurações e ferramentas de editor
+│   │   ├── terms_of_use.dart      Visualizador dos documentos legais
 │   │   └── qr_scanner.dart        Scanner de QR code
 │   ├── services/          Serviços centrais
 │   │   ├── firebase/

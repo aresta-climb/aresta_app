@@ -50,8 +50,9 @@ Para retornar à página inicial instantaneamente:
 AppNav.home(context);
 ```
 
-> **Nota sobre sobreposições (Overlays):** Mesmo telas de tela cheia que parecem overlays (como os Mapas Interativos) estão perfeitamente integradas na árvore de navegação como `MapaInterativoNode`. O sistema sabe retroceder corretamente (rewind) caso você clique numa Via do mapa para voltar à lista original de Vias, prevenindo ciclos infinitos. Não utilize `Navigator.push` nem para mapas.
+> **Nota sobre sobreposições hierárquicas (Mapas):** Telas de tela cheia que fazem parte da exploração da escalada (como Mapas Interativos) estão perfeitamente integradas na árvore como `MapaInterativoNode` para manter o contexto. Não utilize `Navigator.push` para mapas.
 
+> **Exceção - Popups Utilitários e Dialogs:** O `Navigator.push` e `Navigator.pop` PADRÃO DO FLUTTER DEVEM SER USADOS para overlays utilitários isolados que não fazem parte do fluxo contínuo de navegação ou que precisam retornar dados via `await` (Exemplos: Scanner de QR Code, modais de "Termos de Uso", caixas de diálogo e indicadores de carregamento). A Navegação em Árvore destina-se estritamente à hierarquia principal de conteúdo (Home -> Pico -> Setor -> Via).
 ## Hierarquia Lógica da UI vs Herança de Classes
 
 Ao ler o código (`navigation_tree.dart`), é importante não confundir a **Hierarquia Lógica da Interface (UI)** com a **Hierarquia de Herança de Classes no Código**.

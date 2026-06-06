@@ -9,6 +9,10 @@ import '../pages/qr_scanner.dart';
 import '../services/sync_service.dart';
 import '../services/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../theme/theme_controller.dart';
+import '../theme/app_colors.dart';
+import '../pages/terms_of_use.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Tenta conectar ao repositório do editor validando a URL fornecida.
 Future<bool> conectarEditor(
@@ -330,6 +334,412 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
         },
       );
     },
+  );
+}
+
+
+Widget buildEditorCard({
+  required BuildContext context,
+  required DatasetRepository datasetRepo,
+  required int clickCount,
+  required Function(int) onSetClickCount,
+}) {
+  final configService = datasetRepo.editorDeCroqui;
+
+  return ValueListenableBuilder<bool>(
+    valueListenable: configService.isExperimentalMode,
+    builder: (context, isExperimental, _) {
+      return ValueListenableBuilder<String?>(
+        valueListenable: configService.editorUrl,
+        builder: (context, activeUrl, _) {
+          final isEditor = activeUrl != null || isExperimental;
+
+          return ValueListenableBuilder<bool>(
+            valueListenable: configService.isDevModeEnabled,
+            builder: (context, isDevMode, _) {
+              Color cardColor;
+              IconData statusIcon;
+              String statusLabel;
+              String description;
+              Color buttonBgColor;
+              String buttonText;
+              Color buttonTextColor;
+
+              if (isEditor) {
+                cardColor = AppColors.light.obsidianBrown;
+                statusIcon = Icons.science;
+                statusLabel = 'Modo Experimental Ativo';
+                description = 'O aplicativo está em modo de teste. Os dados são carregados de uma fonte externa ou local e mantidos isolados.';
+                buttonBgColor = Colors.blueGrey.shade700;
+                buttonText = 'Voltar para oficial';
+                buttonTextColor = Colors.white;
+              } else {
+                cardColor = AppColors.light.slateStone;
+                statusIcon = Icons.verified;
+                statusLabel = 'Modo Oficial Ativo';
+                description = 'O aplicativo está conectado ao repositório oficial da Aresta Climb.';
+                buttonBgColor = AppColors.light.beastHide;
+                buttonText = 'Conectar como editor';
+                buttonTextColor = AppColors.light.nobleBlack;
+              }
+
+              return Card(
+                color: cardColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              if (isDevMode || isEditor) return;
+                              onSetClickCount(clickCount + 1);
+                              if (clickCount + 1 >= 7) {
+                                configService.setDevMode(true);
+                                onSetClickCount(0);
+                                TelemetryService.instance.logAcaoConfiguracoes('ativar_modo_desenvolvedor');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Modo Desenvolvedor Ativado! 🛠️')),
+                                );
+                              }
+                            },
+                            child: Icon(statusIcon, color: AppColors.light.fishBone),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              color: AppColors.light.fishBone,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: TextStyle(color: AppColors.light.fishBone),
+                      ),
+                      if (activeUrl != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            activeUrl,
+                            style: TextStyle(color: AppColors.light.beastHide, fontFamily: 'monospace'),
+                          ),
+                        ),
+                      ],
+                      if (isDevMode || isEditor) ...[
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: buttonBgColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () async {
+                              if (isEditor) {
+                                TelemetryService.instance.logAcaoConfiguracoes('desconectar_editor');
+                                await configService.disconnect();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Voltando ao repositório oficial...')),
+                                  );
+                                }
+                              } else {
+                                mostrarDialogConexao(context, datasetRepo);
+                              }
+                            },
+                            child: Text(
+                              buttonText,
+                              style: TextStyle(
+                                color: buttonTextColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!isEditor) 
+                          FutureBuilder<bool>(
+                            future: configService.hasExperimentalData(),
+                            builder: (context, snapshot) {
+                              if (snapshot.data == true) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 12.0),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: AppColors.light.beastHide, width: 1.2),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      icon: Icon(Icons.history_rounded, color: AppColors.light.beastHide, size: 18),
+                                      label: Text(
+                                        'Reativar modo experimental',
+                                        style: TextStyle(
+                                          color: AppColors.light.beastHide, 
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        TelemetryService.instance.logAcaoConfiguracoes('reativar_experimental');
+                                        await configService.activateExperimental();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Reativando dados experimentais locais...')),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        if (isEditor) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              icon: const Icon(Icons.delete_forever, color: Colors.red),
+                              label: const Text(
+                                'LIMPAR DADOS EXPERIMENTAIS',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: AppColors.light.nobleBlack,
+                                    title: const Text('Nuke It?', style: TextStyle(color: Colors.red)),
+                                    content: Text(
+                                      'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
+                                      style: TextStyle(color: AppColors.light.fishBone),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: Text('Cancelar', style: TextStyle(color: AppColors.light.fishBone)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: const Text('APAGAR TUDO', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  TelemetryService.instance.logAcaoConfiguracoes('limpar_dados_experimentais');
+                                  await configService.nukeExperimentalData();
+                                  datasetRepo.loadEmpty(); 
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Ambiente experimental limpo com sucesso.')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget buildThemeSelectionCard(BuildContext context) {
+  return Card(
+    color: AppColors.light.slateStone,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.palette, color: AppColors.light.fishBone),
+              const SizedBox(width: 8),
+              Text(
+                'Aparência (Tema)',
+                style: TextStyle(
+                  color: AppColors.light.fishBone,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeController().themeMode,
+            builder: (context, currentMode, _) {
+              return Row(
+                children: [
+                  Expanded(
+                    child: buildThemeOption(
+                      title: 'Claro',
+                      icon: Icons.light_mode,
+                      isSelected: currentMode == ThemeMode.light,
+                      onTap: () {
+                        TelemetryService.instance.logAcaoConfiguracoes('tema_claro');
+                        ThemeController().setThemeMode(ThemeMode.light);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: buildThemeOption(
+                      title: 'Escuro',
+                      icon: Icons.dark_mode,
+                      isSelected: currentMode == ThemeMode.dark,
+                      onTap: () {
+                        TelemetryService.instance.logAcaoConfiguracoes('tema_escuro');
+                        ThemeController().setThemeMode(ThemeMode.dark);
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget buildThemeOption({
+  required String title,
+  required IconData icon,
+  required bool isSelected,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.light.beastHide.withValues(alpha: 0.2) : Colors.transparent,
+        border: Border.all(
+          color: isSelected ? AppColors.light.beastHide : AppColors.light.weatheredIron,
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: isSelected ? AppColors.light.beastHide : AppColors.light.fishBone),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              color: isSelected ? AppColors.light.beastHide : AppColors.light.fishBone,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget buildAppVersionCard(BuildContext context) {
+  return FutureBuilder<PackageInfo>(
+    future: PackageInfo.fromPlatform(),
+    builder: (context, snapshot) {
+      if (snapshot.hasData) {
+        final version = snapshot.data!.version;
+        return Card(
+          color: AppColors.light.slateStone,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.light.fishBone),
+                const SizedBox(width: 8),
+                Text(
+                  'Versão do app',
+                  style: TextStyle(
+                    color: AppColors.light.fishBone,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  version,
+                  style: TextStyle(
+                    color: AppColors.light.beastHide,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    },
+  );
+}
+
+Widget buildLegalLinks(BuildContext context) {
+  return TextButton(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TermsOfUsePage(
+            onAccepted: () {},
+            showAcceptButton: false,
+          ),
+        ),
+      );
+    },
+    style: TextButton.styleFrom(
+      foregroundColor: AppColors.light.fishBone.withValues(alpha: 0.5),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    child: const Text(
+      'Termos de Uso e Privacidade',
+      style: TextStyle(
+        fontSize: 12, 
+        decoration: TextDecoration.underline,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
   );
 }
 
