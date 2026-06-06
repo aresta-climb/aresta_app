@@ -6,7 +6,6 @@ import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:frontend/constants/legal_version.g.dart';
 
-import 'dart:convert';
 
 /// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
 String formatLegalDate(String isoDate) {
@@ -64,26 +63,11 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md',
       );
       
-      // Injeta a data automatizada logo abaixo do título
-      final tituloRegex = RegExp(r'(### .*\r?\n)');
-      String termsDynamicDate = terms;
-      if (tituloRegex.hasMatch(terms)) {
-        // Remove qualquer "Última atualização:" estática que já exista no arquivo para evitar duplicidade
-        termsDynamicDate = termsDynamicDate.replaceFirst(RegExp(r'\r?\nÚltima atualização: .*\r?\n'), '\n');
-        
-        // Injeta a data formatada logo após o título
-        final formattedDate = formatLegalDate(kLegalLastUpdatedDate);
-        termsDynamicDate = termsDynamicDate.replaceFirstMapped(
-          tituloRegex, 
-          (match) => '${match.group(1)}\n**Última atualização: ${formattedDate}**\n\n'
-        );
-      }
-
       final privacy = await bundle.loadString(
         'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
       );
       setState(() {
-        _termsMarkdown = termsDynamicDate;
+        _termsMarkdown = terms;
         _privacyMarkdown = privacy;
       });
     } catch (e) {
@@ -153,6 +137,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
                       ),
+                      h3Align: WrapAlignment.center,
                       strong: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -178,13 +163,28 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Data da atualização: ${formatLegalDate(kLegalLastUpdatedDate)}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -224,6 +224,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary,
                         ),
+                        h3Align: WrapAlignment.center,
                         strong: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -240,10 +241,10 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            CheckboxListTile(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          CheckboxListTile(
                               title: const Text(
                                 'Li e concordo com os Termos de Uso e a Política de Privacidade.',
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),

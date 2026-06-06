@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:flutter/services.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class MockAssetBundle extends Fake implements AssetBundle {
@@ -94,16 +93,16 @@ void main() {
     );
   });
 
-  testWidgets('TermsOfUsePage displays last updated date', (
+  testWidgets('TermsOfUsePage displays last updated date in the banner', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+      createTestWidget(isUpdatingTerms: true, files: defaultFiles),
     );
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('Última atualização:', findRichText: true),
+      find.textContaining('Data da atualização:'),
       findsOneWidget,
     );
   });
