@@ -59,6 +59,7 @@ Inicializa os bindings do Flutter, cria instâncias do `DatasetRepository` e `Sy
 - **`home.dart`**: Exibe um carrossel dos picos de maior prioridade e uma lista suspensa de todos os picos disponíveis localmente.
 - **`browse.dart`**: Lista todos os guias disponíveis no índice mestre com thumbnails dinâmicos, indicadores de download e ações de download inline.
 - **`settings.dart`**: Gerenciamento do aplicativo, cache e ferramentas de editor experimental.
+- **`terms_of_use.dart`**: Exibe a interface de visualização dos documentos legais do aplicativo (Termos de Uso e Privacidade).
 
 ### Páginas Hierárquicas de Guias
 Representam a estrutura topológica aninhada de um guia de escalada. O estado flui para baixo passando `DatasetRepository` e `cragId` por toda a hierarquia:
