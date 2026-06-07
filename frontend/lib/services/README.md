@@ -101,7 +101,7 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 
 ### `SyncService`
 - Usa `ZipInterceptorClient` como cliente HTTP
-- `syncOnLaunch()`: busca índice e aciona checagem de checksums em segundo plano
+- `syncIndex()`: busca índice e aciona checagem de checksums em segundo plano
 - `_checkForUpdates()`: itera picos baixados e atualiza os desatualizados
 - `_extractMarkdownImages()`: extrai caminhos de imagens embutidos em Markdown via RegExp
 

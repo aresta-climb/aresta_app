@@ -26,10 +26,6 @@ class EditorDeCroqui {
   /// Se as opções de desenvolvedor/experimental estão visíveis na UI.
   final ValueNotifier<bool> isDevModeEnabled = ValueNotifier(false);
 
-  /// Se devemos buscar arquivos dentro da subpasta "compilado/".
-  /// Isso é auto-detectado durante a conexão com repositórios externos.
-  final ValueNotifier<bool> useCompiladoFolder = ValueNotifier(false);
-
   /// Tempo restante para a auto-destruição dos dados experimentais.
   final ValueNotifier<Duration?> timeRemaining = ValueNotifier(null);
   
@@ -50,11 +46,6 @@ class EditorDeCroqui {
     // Garante que tenha scheme
     if (!url.contains('://')) {
        url = 'https://$url';
-    }
-    
-    // Se estivermos usando a subpasta compilado, adicionamos ao baseUrl
-    if (useCompiladoFolder.value && !url.endsWith('/compilado')) {
-       return '$url/compilado';
     }
     
     return url;
@@ -132,9 +123,6 @@ class EditorDeCroqui {
           editorUrl.value = url;
         }
 
-        final compilado = json['useCompilado'] as bool? ?? false;
-        useCompiladoFolder.value = compilado;
-
         if (experimental) {
           isExperimentalMode.value = true;
         }
@@ -185,40 +173,6 @@ class EditorDeCroqui {
     });
   }
 
-  /// Conecta ao repositório editor com a URL fornecida.
-  Future<void> connect(String url) async {
-    String normalized = url.trim();
-    
-    // Se não for aresta-zip e não tiver scheme, assumimos https para normalização
-    if (!normalized.startsWith('aresta-zip') && !normalized.contains('://')) {
-       normalized = 'https://$normalized';
-    }
-
-    if (normalized.endsWith('/')) {
-      normalized = normalized.substring(0, normalized.length - 1);
-    }
-
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final configFile = File('${directory.path}/$_configFileName');
-      Map<String, dynamic> currentJson = {};
-      if (await configFile.exists()) {
-        currentJson = jsonDecode(await configFile.readAsString());
-      }
-      currentJson['editorUrl'] = normalized;
-      currentJson['isExperimental'] = false;
-      currentJson['useCompilado'] = useCompiladoFolder.value;
-      currentJson['expiryTime'] = null;
-      
-      await configFile.writeAsString(jsonEncode(currentJson));
-      
-      isExperimentalMode.value = false;
-      editorUrl.value = normalized;
-    } catch (e) {
-      AppLogger.instance.logError('[EditorConfig] Erro ao conectar', error: e);
-    }
-  }
-
   Future<void> activateExperimental({String? url, bool forceResetTimer = false}) async {
     // Só define um novo tempo de expiração se for um reset forçado ou se não houver um tempo válido ativo
     if (forceResetTimer || _expirationTime == null || _expirationTime!.isBefore(DateTime.now())) {
@@ -248,7 +202,6 @@ class EditorDeCroqui {
         currentJson['editorUrl'] = null;
       }
       currentJson['isExperimental'] = true;
-      currentJson['useCompilado'] = useCompiladoFolder.value;
       currentJson['expiryTime'] = _expirationTime?.toIso8601String();
       
       await configFile.writeAsString(jsonEncode(currentJson));

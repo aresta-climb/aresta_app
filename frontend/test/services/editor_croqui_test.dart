@@ -37,17 +37,6 @@ void main() {
       expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving');
     });
 
-    test('deve adicionar sufixo /compilado quando useCompiladoFolder estiver ativo', () {
-      editor.editorUrl.value = 'https://aresta-climb.github.io/aresta_serving';
-      editor.useCompiladoFolder.value = true;
-      expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving/compilado');
-    });
-
-    test('não deve duplicar o sufixo /compilado se a URL já o tiver', () {
-      editor.editorUrl.value = 'https://aresta-climb.github.io/aresta_serving/compilado';
-      editor.useCompiladoFolder.value = true;
-      expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving/compilado');
-    });
   });
 
   // ---------------------------------------------------------------------------

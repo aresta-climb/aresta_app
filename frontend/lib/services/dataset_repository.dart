@@ -226,15 +226,7 @@ class DatasetRepository {
 
   /// Atualiza o conjunto de dados ativo após um download bem-sucedido.
   Future<void> updateDatasetAfterDownload(String id) async {
-    if (activeDataset.value != null) {
-      final updatedDownloaded = await _filterDownloaded(
-        activeDataset.value!.availablePicos,
-      );
-      activeDataset.value = TopoDataset(
-        availablePicos: activeDataset.value!.availablePicos,
-        downloadedPicos: updatedDownloaded,
-      );
-    }
+    await _refreshActiveDataset();
   }
 
   // ===========================================================================

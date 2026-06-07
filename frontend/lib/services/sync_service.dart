@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'zip_interceptor_client.dart';
@@ -8,7 +9,9 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'dataset_repository.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:crypto/crypto.dart';
+
+import 'sync_storage.dart';
+import 'sync_network.dart';
 
 /// Representa o estado de sincronização do aplicativo.
 enum SyncStatus { updated, updating, outdated, error, justUpdated }
@@ -17,7 +20,8 @@ enum SyncStatus { updated, updating, outdated, error, justUpdated }
 ///
 class SyncService {
   final DatasetRepository datasetRepository;
-  final http.Client _client;
+  final SyncStorage _storage;
+  final SyncNetwork _network;
 
   /// Notifica os ouvintes sobre o status de sincronização atual.
   final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(
@@ -31,8 +35,13 @@ class SyncService {
   /// Indica se a última tentativa de sincronização foi automática (true) ou manual (false).
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier<bool>(true);
 
-  SyncService({required this.datasetRepository, http.Client? client})
-    : _client = client ?? ZipInterceptorClient();
+  SyncService({
+    required this.datasetRepository,
+    http.Client? client,
+    SyncStorage? storage,
+    SyncNetwork? network,
+  }) : _storage = storage ?? SyncStorage(),
+       _network = network ?? SyncNetwork(client ?? ZipInterceptorClient());
 
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
   ///
@@ -52,42 +61,19 @@ class SyncService {
 
     try {
       debugPrint('Baixando pico $id de $url...');
-      final indice = datasetRepository.indiceData.value;
-      if (indice == null) {
-        AppLogger.instance.logError(
-          'Aviso: Indice é nulo durante o download do pico $id. Usando metadados de fallback (modo editor?).',
-        );
-      }
 
-      String relativeUrl = url;
-      if (relativeUrl.startsWith(
-        datasetRepository.editorDeCroqui.activeBaseUrl,
-      )) {
-        relativeUrl = relativeUrl.substring(
-          datasetRepository.editorDeCroqui.activeBaseUrl.length,
-        );
-        if (relativeUrl.startsWith('/')) relativeUrl = relativeUrl.substring(1);
-      }
+      // Garanta que temos o indice local sincronizado com o remoto antes de
+      // baixar o pico pra não ter erros de checksum após os downloads.
+      await syncIndex(auto: false);
 
-      final resumo =
-          indice?.croquis.firstWhere(
-            (r) => r.id == id,
-            orElse: () => ResumoCroqui()
-              ..id = id
-              ..url = relativeUrl
-              ..nome = crag['nome'] ?? '',
-          ) ??
-          (ResumoCroqui()
-            ..id = id
-            ..url = relativeUrl
-            ..nome = crag['nome'] ?? '');
+      final resumo = _resolveResumo(id, url, crag['nome'] ?? '');
 
       final directory = await getApplicationDocumentsDirectory();
       final downloadsDir = Directory(
         datasetRepository.editorDeCroqui.downloadsPath(directory.path),
       );
 
-      final success = await downloadOrUpdatePico(resumo, downloadsDir);
+      final success = await _downloadOrUpdatePico(resumo, downloadsDir);
 
       if (success) {
         await datasetRepository.updateDatasetAfterDownload(id);
@@ -104,13 +90,60 @@ class SyncService {
     return false;
   }
 
-  /// Sincroniza o índice mestre com o servidor remoto na inicialização do aplicativo.
+  /// Resolve o [ResumoCroqui] apropriado para o download.
+  /// Tenta encontrar o resumo correspondente no índice carregado em memória.
+  /// Caso não encontre (ou se o índice for nulo), cria um objeto de fallback dinamicamente.
+  ResumoCroqui _resolveResumo(String id, String url, String nome) {
+    final indice = datasetRepository.indiceData.value;
+    if (indice == null) {
+      AppLogger.instance.logError(
+        'Aviso: Indice é nulo durante o download do pico $id. Usando metadados de fallback (modo editor?).',
+      );
+    }
+
+    String relativeUrl = _buildRelativeUrl(url);
+
+    // [Explicação da Lógica Abaixo]:
+    // 1. indice?.croquis.firstWhere(...): Tenta buscar no índice (se não for nulo)
+    //    um croqui com o mesmo ID solicitado.
+    // 2. orElse: (): Se o firstWhere NÃO encontrar um correspondente no índice,
+    //    retorna um "ResumoCroqui" mockado com os dados recebidos na chamada
+    //    (necessário para continuar o fluxo caso a lista oficial esteja incompleta).
+    // 3. ?? (...): Se o `indice` em si for nulo (ou seja, o lado esquerdo
+    //    inteiro do ?? falhar), o Dart cai aqui e instancia o mock garantindo
+    //    que sempre teremos um ResumoCroqui para seguir pro download.
+    return indice?.croquis.firstWhere(
+          (r) => r.id == id,
+          orElse: () => ResumoCroqui()
+            ..id = id
+            ..url = relativeUrl
+            ..nome = nome,
+        ) ??
+        (ResumoCroqui()
+          ..id = id
+          ..url = relativeUrl
+          ..nome = nome);
+  }
+
+  /// Constrói a URL relativa removendo o prefixo base (se aplicável),
+  /// o que facilita mapear caminhos no sistema de arquivos local.
+  String _buildRelativeUrl(String url) {
+    String relativeUrl = url;
+    final activeBaseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
+    if (relativeUrl.startsWith(activeBaseUrl)) {
+      relativeUrl = relativeUrl.substring(activeBaseUrl.length);
+      if (relativeUrl.startsWith('/')) relativeUrl = relativeUrl.substring(1);
+    }
+    return relativeUrl;
+  }
+
+  /// Sincroniza o índice mestre com o servidor remoto.
   ///
   /// Se um novo índice estiver disponível, ele atualiza o cache local e aciona
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
   /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
-  Future<List<String>> syncOnLaunch({bool auto = true}) async {
+  Future<List<String>> syncIndex({bool auto = true}) async {
     lastSyncWasAuto.value = auto;
     TelemetryService.instance.logSincronizarApp(
       acao: auto ? 'automatica' : 'manual',
@@ -120,207 +153,111 @@ class SyncService {
 
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final localIndiceFile = File(
-        datasetRepository.editorDeCroqui.indicePath(directory.path),
-      );
-      final localEtagFile = File('${localIndiceFile.path}.etag');
-
       final editorDeCroqui = datasetRepository.editorDeCroqui;
+      final localIndicePath = editorDeCroqui.indicePath(directory.path);
+      final localEtagPath = '$localIndicePath.etag';
 
-      // Em modo editor de URL (mas não experimental), não queremos atualizar.
-      // MAS, se for experimental, QUEREMOS buscar o índice para saber o que está disponível no ZIP ou Repo remoto.
-      if (editorDeCroqui.editorUrl.value != null &&
-          !editorDeCroqui.editorUrl.value!.startsWith('aresta-zip') &&
-          !editorDeCroqui.isExperimentalMode.value) {
-        debugPrint(
-          '[SyncService] Modo Editor (não experimental) ativo. Pulando atualizações automáticas.',
-        );
-        await _loadLocalIndiceAndNotify();
-        setUpdatedStatus();
-        return failedPicos;
-      }
-
-      String baseUrl = editorDeCroqui.activeBaseUrl;
+      final baseUrl = editorDeCroqui.activeBaseUrl;
       debugPrint(
         'Buscando banco de dados em tempo real de $baseUrl/indice.binarypb...',
       );
 
-      http.Response? response;
+      final localEtag = await _storage.readETag(localEtagPath);
+      final result = await _network.fetchIndiceWithRetries(baseUrl, localEtag);
 
-      // Tenta buscar o índice com retentativas (para lidar com a falta de internet imediata no boot)
-      int retries = 3;
-      while (retries > 0) {
-        try {
-          final request = http.Request(
-            'GET',
-            Uri.parse('$baseUrl/indice.binarypb'),
-          );
-
-          if (await localEtagFile.exists() && await localIndiceFile.exists()) {
-            final etag = await localEtagFile.readAsString();
-            request.headers['If-None-Match'] = etag;
-          }
-
-          final streamedResponse = await _client.send(request);
-          response = await http.Response.fromStream(streamedResponse);
-          break; // Sucesso, sai do loop
-        } catch (e) {
-          AppLogger.instance.logError(
-            '[SyncService] Erro na tentativa de fetch',
-            error: e,
-          );
-          retries--;
-          if (retries > 0) {
-            await Future.delayed(const Duration(seconds: 2));
-          }
-        }
+      if (result == null) {
+        await _loadLocalIndiceAndNotify(localIndicePath);
+        setUpdatedStatus();
+        return failedPicos;
       }
 
-      // AUTO-DETECÇÃO: Se falhar e estivermos em modo editor/experimental, tentamos a subpasta /compilado
-      if ((response == null || response.statusCode != 200) &&
-          editorDeCroqui.editorUrl.value != null &&
-          !editorDeCroqui.useCompiladoFolder.value) {
-        String altUrl = editorDeCroqui.editorUrl.value!;
-        if (!altUrl.contains('://') && !altUrl.startsWith('aresta-zip')) {
-          altUrl = 'https://$altUrl';
-        }
-        if (altUrl.endsWith('/')) {
-          altUrl = altUrl.substring(0, altUrl.length - 1);
-        }
-        altUrl = '$altUrl/compilado';
+      switch (result) {
+        case IndiceUpdated():
+          final responseBytes = result.rawBytes;
+          final newIndice = result.newIndice;
+          final oldIndice = await _storage.readLocalIndice(localIndicePath);
 
-        debugPrint(
-          '[SyncService] Tentando auto-detecção em $altUrl/indice.binarypb...',
-        );
-        try {
-          final altRequest = http.Request(
-            'GET',
-            Uri.parse('$altUrl/indice.binarypb'),
-          );
+          await datasetRepository.loadIndiceToMemory(newIndice);
 
-          if (await localEtagFile.exists() && await localIndiceFile.exists()) {
-            final etag = await localEtagFile.readAsString();
-            altRequest.headers['If-None-Match'] = etag;
+          if (oldIndice != null && !editorDeCroqui.isExperimentalMode.value) {
+            failedPicos.addAll(await _checkForUpdates(oldIndice, newIndice));
+          } else {
+            setUpdatedStatus();
           }
 
-          final altStreamed = await _client.send(altRequest);
-          final altResponse = await http.Response.fromStream(altStreamed);
-
-          if (altResponse.statusCode == 200 || altResponse.statusCode == 304) {
-            debugPrint(
-              '[SyncService] Subpasta /compilado detectada com sucesso!',
+          if (failedPicos.isEmpty) {
+            await _persistNewIndice(
+              localIndicePath,
+              localEtagPath,
+              responseBytes,
+              result.newEtag,
             );
-            editorDeCroqui.useCompiladoFolder.value = true;
-            response = altResponse;
-            // Persiste a mudança para não precisar detectar de novo
-            if (editorDeCroqui.isExperimentalMode.value) {
-              await editorDeCroqui.activateExperimental(
-                url: editorDeCroqui.editorUrl.value,
-              );
-            } else {
-              await editorDeCroqui.connect(editorDeCroqui.editorUrl.value!);
-            }
+          } else {
+            AppLogger.instance.logError(
+              '[SyncService] Falha na atualização de ${failedPicos.length} picos. O índice não será sobrescrito.',
+            );
           }
-        } catch (e) {
-          AppLogger.instance.logError(
-            'Falha na detecção de subpasta',
-            error: e,
+        case IndiceUnchanged():
+          debugPrint(
+            '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
           );
-        }
-      }
-
-      if (response != null && response.statusCode == 200) {
-        final responseBytes = response.bodyBytes;
-        final newIndice = Indice.fromBuffer(responseBytes);
-
-        Indice? oldIndice;
-        if (await localIndiceFile.exists()) {
-          final oldBytes = await localIndiceFile.readAsBytes();
-          oldIndice = Indice.fromBuffer(oldBytes);
-        }
-
-        // Notifica o DatasetRepository que há um novo Índice carregado
-        // Isso atualiza a UI imediatamente para o usuário ver os picos novos
-        await datasetRepository.loadIndiceToMemory(newIndice);
-
-        // Executa atualização em segundo plano para picos baixados anteriormente
-        // (Pulamos isso se for experimental, pois o zip é estático)
-        if (oldIndice != null &&
-            !datasetRepository.editorDeCroqui.isExperimentalMode.value) {
-          failedPicos.addAll(await _checkForUpdates(oldIndice, newIndice));
-        } else {
+          if (datasetRepository.activeDataset.value == null) {
+            await _loadLocalIndiceAndNotify(localIndicePath);
+          }
           setUpdatedStatus();
-        }
-
-        // Sobrescreve o índice local com o novo APENAS após as atualizações terminarem COM SUCESSO.
-        // Isso garante que se a atualização falhar ou o app for fechado, o índice antigo
-        // será mantido e a verificação ocorrerá novamente na próxima inicialização.
-        if (failedPicos.isEmpty) {
-          if (!await localIndiceFile.parent.exists()) {
-            await localIndiceFile.parent.create(recursive: true);
-          }
-          await localIndiceFile.writeAsBytes(responseBytes);
-
-          final newEtag = response.headers['etag'];
-          if (newEtag != null) {
-            await localEtagFile.writeAsString(newEtag);
-          } else if (await localEtagFile.exists()) {
-            await localEtagFile.delete();
-          }
-        } else {
-          AppLogger.instance.logError(
-            '[SyncService] Falha na atualização de ${failedPicos.length} picos. O índice não será sobrescrito.',
-          );
-        }
-      } else if (response != null && response.statusCode == 304) {
-        debugPrint(
-          '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
-        );
-        await _loadLocalIndiceAndNotify();
-        setUpdatedStatus();
-      } else {
-        AppLogger.instance.logError(
-          'Server returned an error: ${response?.statusCode}',
-        );
-        await _loadLocalIndiceAndNotify();
-        setUpdatedStatus();
       }
     } catch (e) {
       AppLogger.instance.logError('Failed to connect to the server', error: e);
-      await _loadLocalIndiceAndNotify();
+      final directory = await getApplicationDocumentsDirectory();
+      await _loadLocalIndiceAndNotify(
+        datasetRepository.editorDeCroqui.indicePath(directory.path),
+      );
       syncStatus.value = SyncStatus.error;
     }
     return failedPicos;
   }
 
-  /// Define o status como 'justUpdated' temporariamente antes de voltar para 'updated'.
-  void setUpdatedStatus() {
-    syncStatus.value = SyncStatus.justUpdated;
-    Future.delayed(const Duration(seconds: 4), () {
-      // Só volta para 'updated' se o status não tiver mudado para outra coisa nesse meio tempo
-      if (syncStatus.value == SyncStatus.justUpdated) {
-        syncStatus.value = SyncStatus.updated;
-      }
-    });
+  /// Grava o novo índice baixado em disco, garantindo que o arquivo `.etag`
+  /// seja mantido atualizado para habilitar cache HTTP (304 Not Modified).
+  Future<void> _persistNewIndice(
+    String localIndicePath,
+    String localEtagPath,
+    Uint8List responseBytes,
+    String? newEtag,
+  ) async {
+    await _storage.writeLocalIndice(localIndicePath, responseBytes);
+    if (newEtag != null) {
+      await _storage.writeETag(localEtagPath, newEtag);
+    } else {
+      await _storage.deleteETag(localEtagPath);
+    }
   }
 
-  /// Carrega o índice do armazenamento local e notifica o repositório.
-  Future<void> _loadLocalIndiceAndNotify() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final localIndiceFile = File(
-      datasetRepository.editorDeCroqui.indicePath(directory.path),
-    );
-    if (await localIndiceFile.exists()) {
-      final bytes = await localIndiceFile.readAsBytes();
-      final localIndice = Indice.fromBuffer(bytes);
+  /// Carrega o arquivo `indice.binarypb` salvo localmente na memória,
+  /// inicializando a visualização de mapas. Se falhar, limpa o repositório.
+  Future<void> _loadLocalIndiceAndNotify(String localIndicePath) async {
+    final localIndice = await _storage.readLocalIndice(localIndicePath);
+    if (localIndice != null) {
       await datasetRepository.loadIndiceToMemory(localIndice);
     } else {
       datasetRepository.loadEmpty();
     }
   }
 
-  /// Itera por todos os picos baixados e atualiza aqueles cujos checksums mudaram.
-  /// Retorna uma lista de nomes de picos que falharam ao atualizar.
+  /// Troca o status da sincronização para recém-atualizado e agenda a transição
+  /// automática para "concluído/atualizado" após alguns segundos.
+  void setUpdatedStatus() {
+    syncStatus.value = SyncStatus.justUpdated;
+    Future.delayed(const Duration(seconds: 4), () {
+      if (syncStatus.value == SyncStatus.justUpdated) {
+        syncStatus.value = SyncStatus.updated;
+      }
+    });
+  }
+
+  /// Compara o índice baixado (`newIndice`) com o antigo (`oldIndice`) para identificar
+  /// quais Croquis já armazenados localmente sofreram alterações (baseado no sha256).
+  /// Caso alterações sejam detectadas, os baixa novamente de forma transparente.
   Future<List<String>> _checkForUpdates(
     Indice oldIndice,
     Indice newIndice,
@@ -331,6 +268,7 @@ class SyncService {
     final downloadsDir = Directory(
       datasetRepository.editorDeCroqui.downloadsPath(directory.path),
     );
+
     if (!await downloadsDir.exists()) {
       setUpdatedStatus();
       return [];
@@ -340,10 +278,9 @@ class SyncService {
 
     try {
       for (var newResumo in newIndice.croquis) {
-        final picoFile = File(
-          '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb',
-        );
-        if (await picoFile.exists()) {
+        final picoFilePath =
+            '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
+        if (await File(picoFilePath).exists()) {
           final oldResumoList = oldIndice.croquis
               .where((c) => c.id == newResumo.id)
               .toList();
@@ -352,7 +289,7 @@ class SyncService {
             if (oldResumo.checksumSha256Croqui !=
                 newResumo.checksumSha256Croqui) {
               debugPrint('Pico ${newResumo.id} is outdated. Updating...');
-              final success = await downloadOrUpdatePico(
+              final success = await _downloadOrUpdatePico(
                 newResumo,
                 downloadsDir,
               );
@@ -383,256 +320,242 @@ class SyncService {
 
   /// Atualiza ou baixa um pico e sincroniza suas imagens de forma atômica.
   /// Retorna true se o update/download teve sucesso, false caso contrário.
-  Future<bool> downloadOrUpdatePico(
+  /// NOTA: Essa função deve ser chamada após garantir que o índice já está atualizado.
+  Future<bool> _downloadOrUpdatePico(
     ResumoCroqui newResumo,
     Directory downloadsDir,
   ) async {
+    final currentIndice = datasetRepository.indiceData.value;
+    if (currentIndice == null) return false;
+
+    final latestResumoList = currentIndice.croquis
+        .where((c) => c.id == newResumo.id)
+        .toList();
+    if (latestResumoList.isEmpty) {
+      AppLogger.instance.logError(
+        'Croqui ${newResumo.id} não foi encontrado no índice atualizado.',
+      );
+      return false;
+    }
+
+    final latestResumo = latestResumoList.first;
+
     final baseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-    final url = '$baseUrl/${newResumo.url}';
+    final url = '$baseUrl/${latestResumo.url}';
+    final id = latestResumo.id;
 
     try {
-      final picoDir = Directory('${downloadsDir.path}/${newResumo.id}');
-      final picoFile = File('${picoDir.path}/${newResumo.id}.binarypb');
-      final tmpPicoFile = File('${picoDir.path}/${newResumo.id}.binarypb.tmp');
+      final picoDirPath = '${downloadsDir.path}/$id';
+      final picoFilePath = '$picoDirPath/$id.binarypb';
+      final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
 
-      if (!await picoDir.exists()) {
-        await picoDir.create(recursive: true);
-      }
+      // 1. Processar arquivo principal do Pico (.binarypb)
+      final mainFileSuccess = await _downloadFileAtomic(
+        url,
+        tmpPicoFilePath,
+        latestResumo.checksumSha256Croqui,
+      );
+      if (!mainFileSuccess) return false;
 
-      bool isPicoTmpValid = false;
-      if (await tmpPicoFile.exists()) {
-        if (newResumo.checksumSha256Croqui.isNotEmpty) {
-          final stream = tmpPicoFile.openRead();
-          final hashResult = await sha256.bind(stream).first;
-          if (hashResult.toString() == newResumo.checksumSha256Croqui) {
-            isPicoTmpValid = true;
-            debugPrint('Resumed existing .tmp croqui for ${newResumo.id}');
-          } else {
-            await tmpPicoFile.delete();
-          }
-        } else {
-          await tmpPicoFile.delete();
-        }
-      }
+      final newPicoData = await _storage.readLocalCroqui(tmpPicoFilePath);
+      if (newPicoData == null) return false;
 
-      if (!isPicoTmpValid) {
-        final response = await _client.get(Uri.parse(url));
+      final oldPicoData = await _storage.readLocalCroqui(picoFilePath);
 
-        if (response.statusCode != 200) {
-          AppLogger.instance.logError(
-            'Failed to download new pico ${newResumo.id}',
-          );
-          return false;
-        }
+      // 2. Sincronizar arquivos externos (imagens)
+      final syncResult = await _syncExternalFiles(
+        newPicoData: newPicoData,
+        oldPicoData: oldPicoData,
+        newResumo: latestResumo,
+        picoDirPath: picoDirPath,
+        baseUrl: baseUrl,
+      );
 
-        final bytes = response.bodyBytes;
-        final downloadedHash = sha256.convert(bytes).toString();
-        if (newResumo.checksumSha256Croqui.isNotEmpty &&
-            downloadedHash != newResumo.checksumSha256Croqui) {
-          AppLogger.instance.logError(
-            'Hash mismatch for croqui ${newResumo.id}. Expected: ${newResumo.checksumSha256Croqui}, Got: $downloadedHash',
-          );
-          return false;
-        }
+      if (syncResult == null) return false;
 
-        await tmpPicoFile.writeAsBytes(bytes);
-      }
+      // 3. Efetivar alteração do arquivo principal e arquivos externos
+      await _storage.applyAtomicFileUpdates(
+        filesToDelete: syncResult.filesToDelete,
+        filesToRename: {
+          tmpPicoFilePath: picoFilePath,
+          ...syncResult.filesToRename,
+        },
+      );
 
-      final bytes = await tmpPicoFile.readAsBytes();
-      final newPicoData = Croqui.fromBuffer(bytes);
-
-      Croqui? oldPicoData;
-      if (await picoFile.exists()) {
-        oldPicoData = Croqui.fromBuffer(await picoFile.readAsBytes());
-      }
-
-      String baseDir = '';
-      int lastSlash = newResumo.url.lastIndexOf('/');
-      if (lastSlash != -1) {
-        baseDir = newResumo.url.substring(0, lastSlash);
-      }
-
-      final newContent = {
-        for (var ext in newPicoData.arquivosExternos)
-          ext.caminho: ext.checksumSha256,
-      };
-      final oldContent = oldPicoData != null
-          ? {
-              for (var ext in oldPicoData.arquivosExternos)
-                ext.caminho: ext.checksumSha256,
-            }
-          : <String, String>{};
-
-      final List<File> filesToDelete = [];
-      final List<Future<bool>> downloadFutures = [];
-      final List<File> tempFilesToRename = [];
-      final List<File> originalFilesToReplace = [];
-
-      // 1. Identificar arquivos para deletar
-      if (oldPicoData != null) {
-        for (var oldExt in oldPicoData.arquivosExternos) {
-          if (!newContent.containsKey(oldExt.caminho)) {
-            filesToDelete.add(File('${picoDir.path}/${oldExt.caminho}'));
-          }
-        }
-      }
-
-      // 2. Identificar e disparar downloads
-      for (var newExt in newPicoData.arquivosExternos) {
-        if (!oldContent.containsKey(newExt.caminho) ||
-            oldContent[newExt.caminho] != newExt.checksumSha256) {
-          String localPath = newExt.caminho;
-          if (localPath.startsWith('/')) localPath = localPath.substring(1);
-          String remotePath =
-              (baseDir.isNotEmpty && !localPath.startsWith(baseDir))
-              ? '$baseDir/$localPath'
-              : localPath;
-
-          final expectedHash = newExt.checksumSha256;
-          downloadFutures.add(
-            _downloadFileAtomic(localPath, remotePath, picoDir, expectedHash),
-          );
-
-          tempFilesToRename.add(File('${picoDir.path}/$localPath.tmp'));
-          originalFilesToReplace.add(File('${picoDir.path}/$localPath'));
-        }
-      }
-
-      // Aguarda todos os downloads
-      if (downloadFutures.isNotEmpty) {
-        final results = await Future.wait(downloadFutures);
-        if (results.any((success) => !success)) {
-          AppLogger.instance.logError(
-            'Falha em um ou mais downloads do croqui ${newResumo.id}. Abortando update atômico.',
-          );
-          return false;
-        }
-      }
-
-      // 3. Sucesso absoluto: Renomear .tmp para final
-      for (int i = 0; i < tempFilesToRename.length; i++) {
-        final tmpFile = tempFilesToRename[i];
-        final finalFile = originalFilesToReplace[i];
-        if (await finalFile.exists()) {
-          await finalFile.delete();
-        }
-        if (await tmpFile.exists()) {
-          await tmpFile.rename(finalFile.path);
-        }
-      }
-
-      // 4. Executar exclusões pendentes
-      for (var file in filesToDelete) {
-        if (await file.exists()) {
-          await file.delete();
-          debugPrint('Deleted old file: ${file.path}');
-        }
-      }
-
-      // 5. Salvar o master pico.binarypb (movendo o tmp para o final)
-      if (await picoFile.exists()) {
-        await picoFile.delete();
-      }
-      if (await tmpPicoFile.exists()) {
-        await tmpPicoFile.rename(picoFile.path);
-      }
-
-      // Atualiza os metadados (como a imagem de capa) após a sincronização
-      final directory = await getApplicationDocumentsDirectory();
-      final pData = datasetRepository.activeDataset.value?.availablePicos
-          .firstWhere((p) => p['id'] == newResumo.id, orElse: () => {});
-      if (pData != null && pData.isNotEmpty) {
-        await datasetRepository.updatePicoMetadata(
-          newResumo.id,
-          pData,
-          directory.path,
-          parsedPico: newPicoData,
-        );
-      }
+      await _updatePicoMetadata(id, newPicoData);
 
       TelemetryService.instance.logAtualizarCroqui(
-        newResumo.id,
-        newResumo.checksumSha256Croqui,
-        newResumo.timestampUpdate.toDateTime().toIso8601String(),
+        id,
+        latestResumo.checksumSha256Croqui,
+        latestResumo.timestampUpdate.toDateTime().toIso8601String(),
       );
-      debugPrint('Updated pico ${newResumo.id} successfully.');
+      debugPrint('Updated pico $id successfully.');
       return true;
     } catch (e) {
       AppLogger.instance.logError(
-        'Erro crítico durante o download do pico ${newResumo.id}',
+        'Erro crítico durante o download do pico $id',
         error: e,
       );
       return false;
     }
   }
 
-  /// Baixa um arquivo do servidor remoto para um arquivo .tmp e verifica seu hash SHA256.
+  /// Gerencia de maneira concorrente a sincronização das imagens externas
+  /// associadas ao croqui, baixando as que faltam/mudaram e montando a lista
+  /// de quais antigas deverão ser removidas.
+  Future<({List<String> filesToDelete, Map<String, String> filesToRename})?>
+  _syncExternalFiles({
+    required Croqui newPicoData,
+    required Croqui? oldPicoData,
+    required ResumoCroqui newResumo,
+    required String picoDirPath,
+    required String baseUrl,
+  }) async {
+    final newContent = {
+      for (var ext in newPicoData.arquivosExternos)
+        ext.caminho: ext.checksumSha256,
+    };
+    final oldContent = oldPicoData != null
+        ? {
+            for (var ext in oldPicoData.arquivosExternos)
+              ext.caminho: ext.checksumSha256,
+          }
+        : <String, String>{};
+
+    final filesToDelete = _identifyFilesToDelete(
+      oldPicoData,
+      newContent,
+      picoDirPath,
+    );
+    final baseDir = _extractBaseDir(newResumo.url);
+
+    final List<Future<bool>> downloadFutures = [];
+    final Map<String, String> filesToRename = {};
+
+    for (var newExt in newPicoData.arquivosExternos) {
+      if (!oldContent.containsKey(newExt.caminho) ||
+          oldContent[newExt.caminho] != newExt.checksumSha256) {
+        String localPath = newExt.caminho;
+        if (localPath.startsWith('/')) localPath = localPath.substring(1);
+        String remotePath =
+            (baseDir.isNotEmpty && !localPath.startsWith(baseDir))
+            ? '$baseDir/$localPath'
+            : localPath;
+
+        downloadFutures.add(
+          _downloadFileAtomic(
+            '$baseUrl/$remotePath',
+            '$picoDirPath/$localPath.tmp',
+            newExt.checksumSha256,
+          ),
+        );
+
+        filesToRename['$picoDirPath/$localPath.tmp'] =
+            '$picoDirPath/$localPath';
+      }
+    }
+
+    if (downloadFutures.isNotEmpty) {
+      final results = await Future.wait(downloadFutures);
+      if (results.any((success) => !success)) {
+        AppLogger.instance.logError(
+          'Falha em downloads do croqui ${newResumo.id}. Abortando update.',
+        );
+        return null;
+      }
+    }
+
+    return (filesToDelete: filesToDelete, filesToRename: filesToRename);
+  }
+
+  /// Cruza a lista de caminhos do arquivo novo vs o antigo para retornar a lista de
+  /// arquivos descontinuados que precisam ser apagados do cache no fim do processo.
+  List<String> _identifyFilesToDelete(
+    Croqui? oldPicoData,
+    Map<String, String> newContent,
+    String picoDirPath,
+  ) {
+    final List<String> filesToDelete = [];
+    if (oldPicoData != null) {
+      for (var oldExt in oldPicoData.arquivosExternos) {
+        if (!newContent.containsKey(oldExt.caminho)) {
+          filesToDelete.add('$picoDirPath/${oldExt.caminho}');
+        }
+      }
+    }
+    return filesToDelete;
+  }
+
+  /// Pega a URL do arquivo pai (`indice.binarypb` ou do pico) e extrai
+  /// apenas a parte pertencente ao diretório base.
+  String _extractBaseDir(String url) {
+    int lastSlash = url.lastIndexOf('/');
+    return (lastSlash != -1) ? url.substring(0, lastSlash) : '';
+  }
+
+  /// Atualiza os campos de metadados de informações resumidas do Pico
+  /// (como bounding boxes ou pin maps) disponíveis diretamente na listagem do dataset.
+  Future<void> _updatePicoMetadata(String id, Croqui newPicoData) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final pData = datasetRepository.activeDataset.value?.availablePicos
+        .firstWhere((p) => p['id'] == id, orElse: () => <String, dynamic>{});
+    if (pData != null && pData.isNotEmpty) {
+      await datasetRepository.updatePicoMetadata(
+        id,
+        pData,
+        directory.path,
+        parsedPico: newPicoData,
+      );
+    }
+  }
+
+  /// Realiza o download atômico de um arquivo, validando seu hash logo
+  /// após salvar no disco em formato `.tmp`.
   Future<bool> _downloadFileAtomic(
-    String localPath,
-    String remotePath,
-    Directory downloadsDir,
+    String fileUrl,
+    String tmpFilePath,
     String expectedHash,
   ) async {
     try {
-      final tmpFile = File('${downloadsDir.path}/$localPath.tmp');
+      final isTmpValid = await _storage.validateExistingTmpFile(
+        tmpFilePath,
+        expectedHash,
+      );
 
-      // Validação de Resume: se o .tmp já existe, checamos o hash.
-      if (await tmpFile.exists()) {
-        if (expectedHash.isEmpty) {
-          // Se não há hash esperado (ex: modo editor), não podemos assumir que o .tmp está íntegro. Deleta para baixar de novo.
-          await tmpFile.delete();
-        } else {
-          final stream = tmpFile.openRead();
-          final hashResult = await sha256.bind(stream).first;
-          if (hashResult.toString() == expectedHash) {
-            debugPrint('Resumed existing .tmp file $localPath (hash matches).');
-            return true; // Already downloaded and valid
-          }
-          // Hash diferente, deleta o inválido para baixar de novo
-          await tmpFile.delete();
-        }
+      if (isTmpValid) {
+        debugPrint('Resumed existing .tmp file for $fileUrl (hash matches).');
+        return true;
       }
 
-      final baseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-      final fileUrl = '$baseUrl/$remotePath';
       debugPrint('Downloading file: $fileUrl to .tmp');
-      final response = await _client.get(Uri.parse(fileUrl));
+      final bytes = await _network.downloadFile(fileUrl);
 
-      if (response.statusCode == 200) {
-        if (!await tmpFile.parent.exists()) {
-          await tmpFile.parent.create(recursive: true);
-        }
-        await tmpFile.writeAsBytes(response.bodyBytes);
-
-        // Verifica o hash do novo download se houver um hash esperado
-        final stream = tmpFile.openRead();
-        final hashResult = await sha256.bind(stream).first;
-        if (expectedHash.isEmpty || hashResult.toString() == expectedHash) {
-          return true;
-        } else {
-          AppLogger.instance.logError(
-            'Hash mismatch for $localPath. Expected: $expectedHash, Got: $hashResult',
-          );
-          await tmpFile.delete();
-          return false;
-        }
-      } else {
+      if (bytes == null) {
         AppLogger.instance.logError(
-          'Failed to download file $localPath (from $remotePath), status: ${response.statusCode}',
+          'Failed to download $fileUrl (null returned)',
         );
         return false;
       }
+
+      await _storage.saveTmpFile(tmpFilePath, bytes);
+
+      if (!await _storage.validateExistingTmpFile(tmpFilePath, expectedHash)) {
+        AppLogger.instance.logError('Hash mismatch for $fileUrl.');
+        return false;
+      }
+
+      return true;
     } catch (e) {
       AppLogger.instance.logError(
-        'Exception downloading file $localPath',
+        'Exception downloading file $fileUrl',
         error: e,
       );
       return false;
     }
   }
 
-  /// Fecha o cliente HTTP subjacente.
+  /// Fecha o HttpClient da dependência de rede, liberando recursos.
   void dispose() {
-    _client.close();
+    _network.client.close();
   }
 }

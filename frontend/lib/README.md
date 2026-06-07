@@ -26,7 +26,7 @@ O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo 
 ### `SyncService` (`sync_service.dart`)
 Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado com o repositório remoto. Usa o `ZipInterceptorClient`, que funciona tanto para URLs remotas quanto para o protocolo `aresta-zip://` do modo experimental.
 
-- **Sincronização na Inicialização (`syncOnLaunch`)**: Busca o índice mestre (`indice.binarypb`). Em modo experimental, lê o índice diretamente do arquivo `.croqui` importado. Se o servidor estiver inacessível, reverte para o cache local.
+- **Sincronização na Inicialização (`syncIndex`)**: Busca o índice mestre (`indice.binarypb`). Em modo experimental, lê o índice diretamente do arquivo `.croqui` importado. Se o servidor estiver inacessível, reverte para o cache local.
 - **Validação de Checksum em Segundo Plano**: Compara checksums SHA-256 dos picos baixados com o novo índice e atualiza silenciosamente os desatualizados, baixando apenas as imagens modificadas.
 - **Extração de Imagens Markdown**: Usa RegExp (`r'!\[.*?\]\((.*?)\)'`) para extrair caminhos de imagem embutidos em textos Markdown do protobuf, garantindo disponibilidade offline completa.
 

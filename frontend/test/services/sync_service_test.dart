@@ -139,7 +139,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // Sincronização Delta (_updatePico indiretamente via syncOnLaunch)
+  // Sincronização Delta (_updatePico indiretamente via syncIndex)
   // ---------------------------------------------------------------------------
 
   group('Sincronização Delta (_updatePico)', () {
@@ -176,7 +176,7 @@ void main() {
       final fakeClient = FakeClient(newIndice);
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fakeClient.requestedUrls.any((url) => url.contains('picos/')), isFalse);
     });
@@ -205,7 +205,7 @@ void main() {
       });
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'imagem\.webp$')))));
       expect(fileToKeep.existsSync(), isTrue);
@@ -238,7 +238,7 @@ void main() {
       });
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fakeClient.requestedUrls.any((url) => url.endsWith('imagem.webp')), isTrue);
       expect(await fileToUpdate.readAsBytes(), equals([2]));
@@ -269,7 +269,7 @@ void main() {
       });
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fileToDelete.existsSync(), isFalse);
     });
@@ -297,7 +297,7 @@ void main() {
       });
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fakeClient.requestedUrls.any((url) => url.endsWith('nova.webp')), isTrue);
       expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
@@ -343,7 +343,7 @@ void main() {
       });
       final syncService = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       expect(fileToKeep.existsSync(), isTrue);
       expect(fileToDelete.existsSync(), isFalse);
@@ -406,7 +406,7 @@ void main() {
       editor.isExperimentalMode.value = false;
 
       // 3. Run sync
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
 
       // 4. Verify that local indice is STILL the old one because the download failed
       final finalBytes = indiceFile.readAsBytesSync();
@@ -446,7 +446,7 @@ void main() {
       final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
       final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
       
-      await syncServiceFake.syncOnLaunch();
+      await syncServiceFake.syncIndex();
 
       final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
       expect(etagFile.existsSync(), isTrue);
@@ -465,7 +465,7 @@ void main() {
       final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
       etagFile.writeAsStringSync('mock_etag_123');
       
-      await syncServiceFake.syncOnLaunch();
+      await syncServiceFake.syncIndex();
 
       expect(fakeClient.receivedHeaders['If-None-Match'], 'mock_etag_123');
       
@@ -473,6 +473,23 @@ void main() {
       final finalIndice = Indice.fromBuffer(finalBytes);
       expect(finalIndice.croquis, isEmpty, reason: 'Nao deve sobrescrever indice se retornou 304');
       expect(syncServiceFake.syncStatus.value, equals(SyncStatus.justUpdated));
+    });
+
+    test('nao deve recarregar DatasetRepo em memoria se ja estiver carregado e retornar 304', () async {
+      final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
+      etagFile.parent.createSync(recursive: true);
+      etagFile.writeAsStringSync('mock_etag_123');
+      
+      // Força estar carregado
+      repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
+      final resetCountBefore = repo.homeResetTrigger.value;
+      
+      await syncServiceFake.syncIndex();
+
+      expect(repo.homeResetTrigger.value, equals(resetCountBefore), reason: 'Nao deve recarregar no 304 se ja tem activeDataset');
     });
   });
 
@@ -501,7 +518,12 @@ void main() {
       final croqui = Croqui()
         ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagens/capa.webp'..checksumSha256 = sha256.convert([1, 2, 3]).toString());
         
-      final client = FakeClient(Indice(), {
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
+
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
         'picos/imagens/capa.webp': [1, 2, 3],
       });
@@ -511,10 +533,7 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
+      repo.indiceData.value = newIndice;
       
       final result = await syncServiceFake.downloadCrag({
         'id': picoId,
@@ -534,7 +553,12 @@ void main() {
       final picoId = 'pico_telemetria';
       final croqui = Croqui();
         
-      final client = FakeClient(Indice(), {
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
+
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
 
@@ -543,10 +567,7 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
+      repo.indiceData.value = newIndice;
       
       final result = await syncServiceFake.downloadCrag({
         'id': picoId,
@@ -559,20 +580,61 @@ void main() {
       expect(mockTelemetry.recordedParams['acao_explorar']?['id_croqui'], picoId);
     });
 
+    test('deve atualizar o indice se estiver desatualizado e usar o novo hash para o download', () async {
+      final picoId = 'pico_race_condition';
+      final croqui = Croqui();
+      final correctHash = sha256.convert(croqui.writeToBuffer()).toString();
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = 'OLD_OUTDATED_HASH');
+
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = correctHash);
+
+      // O FakeClient possui o novo índice e o arquivo correto (que bate com correctHash)
+      final client = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': croqui.writeToBuffer(),
+      });
+
+      editor.editorUrl.value = 'https://fake.url';
+      repo = DatasetRepository(editorDeCroqui: editor);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+
+      // O app localmente acha que tem o OLD_HASH
+      repo.indiceData.value = oldIndice;
+      
+      final result = await syncServiceFake.downloadCrag({
+        'id': picoId,
+        'url': 'https://fake.url/picos/$picoId.binarypb',
+      });
+
+      // Se a prevenção de race condition funcionar, ele vai:
+      // 1. Chamar syncIndex, que baixa newIndice
+      // 2. Extrair o ResumoCroqui com correctHash
+      // 3. Baixar e validar o arquivo contra correctHash, e não OLD_OUTDATED_HASH!
+      expect(result, isTrue);
+    });
+
     test('deve falhar se o download do croqui tiver sha256 inválido', () async {
       final picoId = 'pico_invalido';
       final croqui = Croqui();
-      final client = FakeClient(Indice(), {
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = 'hash_completamente_errado');
+
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
       editor.editorUrl.value = 'https://fake.url';
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = 'hash_completamente_errado');
+      repo.indiceData.value = newIndice;
       
       final result = await syncServiceFake.downloadCrag({
         'id': picoId,
@@ -593,9 +655,14 @@ void main() {
           ..checksumSha256 = fileHash);
       final croquiBytes = croqui.writeToBuffer();
       
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
+
       // We serve the main croqui, but DO NOT serve capa.webp!
       // If it tries to download capa.webp, it will fail (because FakeClient will return 404/error).
-      final client = FakeClient(Indice(), {
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croquiBytes,
       });
 
@@ -603,10 +670,7 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
+      repo.indiceData.value = newIndice;
       
       final downloadsDir = editor.downloadsPath(tempDir.path);
       final picoDir = Directory('$downloadsDir/$picoId');
@@ -640,8 +704,13 @@ void main() {
           ..checksumSha256 = fileHash);
       final croquiBytes = croqui.writeToBuffer();
       
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
+
       // We serve BOTH the croqui and the capa.webp, because it needs to redownload capa.webp.
-      final client = FakeClient(Indice(), {
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croquiBytes,
         'picos/capa.webp': fileData,
       });
@@ -650,10 +719,7 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
+      repo.indiceData.value = newIndice;
       
       final downloadsDir = editor.downloadsPath(tempDir.path);
       final picoDir = Directory('$downloadsDir/$picoId');
@@ -685,17 +751,19 @@ void main() {
       final croquiBytes = croqui.writeToBuffer();
       final croquiHash = sha256.convert(croquiBytes).toString();
       
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = croquiHash);
+
       // We DO NOT serve the croqui from FakeClient. If it tries to download, it will fail!
-      final client = FakeClient(Indice(), {});
+      final client = FakeClient(newIndice, {});
 
       editor.editorUrl.value = 'https://fake.url';
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = croquiHash);
+      repo.indiceData.value = newIndice;
       
       final downloadsDir = editor.downloadsPath(tempDir.path);
       final picoDir = Directory('$downloadsDir/$picoId');
@@ -721,8 +789,13 @@ void main() {
       final croquiBytes = croqui.writeToBuffer();
       final croquiHash = sha256.convert(croquiBytes).toString();
       
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = croquiHash);
+
       // We SERVE the croqui because it should be redownloaded.
-      final client = FakeClient(Indice(), {
+      final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croquiBytes,
       });
 
@@ -730,10 +803,7 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake = SyncService(datasetRepository: repo, client: client);
 
-      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
-        ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
-        ..checksumSha256Croqui = croquiHash);
+      repo.indiceData.value = newIndice;
       
       final downloadsDir = editor.downloadsPath(tempDir.path);
       final picoDir = Directory('$downloadsDir/$picoId');
