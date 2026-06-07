@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'zip_interceptor_client.dart';
 import 'package:path_provider/path_provider.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:http/http.dart' as http;
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -349,7 +350,7 @@ class DatasetRepository {
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
   /// 
   /// Retorna [true] se as operações de download e salvamento forem bem-sucedidas.
-  Future<bool> downloadCrag(Map<String, dynamic> crag) async {
+  Future<bool> downloadCrag(Map<String, dynamic> crag, {http.Client? clientOverride}) async {
     final String? url = crag['url'];
     final String? id = crag['id'];
 
@@ -362,7 +363,7 @@ class DatasetRepository {
       debugPrint('Baixando pico $id de $url...');
       
       Uint8List bytes;
-      final client = ZipInterceptorClient();
+      final client = ZipInterceptorClient(clientOverride);
       var response = await client.get(Uri.parse(url));
 
       // Fallback para modo experimental: se falhar e a URL tiver 'picos/', tentamos sem o prefixo
@@ -421,97 +422,52 @@ class DatasetRepository {
              }
           }
 
-          // Coleta todos os caminhos de imagem a serem baixados
-          final Set<String> pathsToDownload = {};
+          // Coleta todos os caminhos de arquivo a serem baixados: localPath -> remotePath
+          // O localPath é usado para salvar o arquivo no celular (ex: `imagens/p1.webp`). Não deve conter a pasta do pico 
+          // para não criar pastas duplicadas localmente (pois o downloadsDir já aponta para a pasta específica do pico).
+          // O remotePath é usado na URL para pedir o arquivo (ex: `br_mg_igarape/imagens/p1.webp`). Precisa do prefixo 
+          // da pasta do pico para evitar erro 404 no servidor.
+          final Map<String, String> filesToDownload = {};
+
+          void addDownloadPath(String rawPath) {
+            if (rawPath.isEmpty || rawPath.startsWith('http://') || rawPath.startsWith('https://')) return;
+            String cleanPath = rawPath;
+            if (cleanPath.startsWith('./')) cleanPath = cleanPath.substring(2);
+            if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+            
+            String remotePath = cleanPath;
+            if (baseDir.isNotEmpty && !cleanPath.startsWith(baseDir)) {
+              remotePath = '$baseDir/$cleanPath';
+            }
+            filesToDownload[cleanPath] = remotePath;
+          }
 
           // 1. Arquivos externos explícitos
           for (var ext in parsedPico.arquivosExternos) {
-            pathsToDownload.add(ext.caminho);
+            addDownloadPath(ext.caminho);
           }
 
-          // 2. Extrai caminhos de mapas
-          for (var pico in parsedPico.picos) {
-            for (var sog in pico.setoresOuGrupos) {
-              if (sog.whichTipo() == SetorOuGrupo_Tipo.setor && sog.setor.hasConteudo()) {
-                for (var mapa in sog.setor.conteudo.mapas) {
-                  if (mapa.caminhoImagemMapa.isNotEmpty) {
-                    String cleanPath = mapa.caminhoImagemMapa;
-                    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
-                    if (baseDir.isNotEmpty && !cleanPath.startsWith(baseDir)) {
-                      pathsToDownload.add('$baseDir/$cleanPath');
-                    } else {
-                      pathsToDownload.add(cleanPath);
-                    }
-                  }
-                }
-              } else if (sog.whichTipo() == SetorOuGrupo_Tipo.grupo && sog.grupo.hasConteudo()) {
-                for (var mapa in sog.grupo.conteudo.mapas) {
-                  if (mapa.caminhoImagemMapa.isNotEmpty) {
-                    String cleanPath = mapa.caminhoImagemMapa;
-                    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
-                    if (baseDir.isNotEmpty && !cleanPath.startsWith(baseDir)) {
-                      pathsToDownload.add('$baseDir/$cleanPath');
-                    } else {
-                      pathsToDownload.add(cleanPath);
-                    }
-                  }
-                }
-                for (var arquivoSetor in sog.grupo.conteudo.setores) {
-                  if (arquivoSetor.hasConteudo()) {
-                    for (var mapa in arquivoSetor.conteudo.mapas) {
-                      if (mapa.caminhoImagemMapa.isNotEmpty) {
-                        String cleanPath = mapa.caminhoImagemMapa;
-                        if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
-                        if (baseDir.isNotEmpty && !cleanPath.startsWith(baseDir)) {
-                          pathsToDownload.add('$baseDir/$cleanPath');
-                        } else {
-                          pathsToDownload.add(cleanPath);
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
 
-          // 3. Extrai caminhos de imagens markdown
-          final jsonStr = jsonEncode(parsedPico.toProto3Json());
-          final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
-          final matches = regex.allMatches(jsonStr);
-          for (final match in matches) {
-            if (match.groupCount >= 1) {
-              String path = match.group(1)!;
-              if (!path.startsWith('http://') && !path.startsWith('https://')) {
-                if (path.startsWith('./')) path = path.substring(2);
-                if (path.startsWith('/')) path = path.substring(1);
-                
-                if (baseDir.isNotEmpty && !path.startsWith(baseDir)) {
-                  pathsToDownload.add('$baseDir/$path');
-                } else {
-                  pathsToDownload.add(path);
-                }
-              }
-            }
-          }
 
           // Baixa todos os arquivos em paralelo
-          await Future.wait(pathsToDownload.map((caminho) async {
+          await Future.wait(filesToDownload.entries.map((entry) async {
+            final localPath = entry.key;
+            final remotePath = entry.value;
             try {
-              final imageUrl = '$baseUrl/$caminho';
-              final imgResponse = await client.get(Uri.parse(imageUrl));
-              if (imgResponse.statusCode == 200) {
-                final imgFile = File('${downloadsDir.path}/$caminho');
-                if (!await imgFile.parent.exists()) {
-                  await imgFile.parent.create(recursive: true);
+              final fileUrl = '$baseUrl/$remotePath';
+              final fileResponse = await client.get(Uri.parse(fileUrl));
+              if (fileResponse.statusCode == 200) {
+                final downloadedFile = File('${downloadsDir.path}/$localPath');
+                if (!await downloadedFile.parent.exists()) {
+                  await downloadedFile.parent.create(recursive: true);
                 }
-                await imgFile.writeAsBytes(imgResponse.bodyBytes);
-                debugPrint('Downloading $caminho');
+                await downloadedFile.writeAsBytes(fileResponse.bodyBytes);
+                debugPrint('Downloaded $localPath');
               } else {
-                AppLogger.instance.logError('Failed to download $caminho, status: ${imgResponse.statusCode}');
+                AppLogger.instance.logError('Failed to download $localPath (from $remotePath), status: ${fileResponse.statusCode}');
               }
             } catch (e) {
-              AppLogger.instance.logError('Error downloading $caminho', error: e);
+              AppLogger.instance.logError('Error downloading $localPath', error: e);
             }
           }));
 

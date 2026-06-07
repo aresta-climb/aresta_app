@@ -190,7 +190,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           widget.cragId,
           widget.setorContext?.nome ?? 'Geral',
           getEscaladaNome(item),
-          'abrir_detalhes',
+          'selecionar_no_mapa',
           'mapa'
         );
       }
@@ -750,6 +750,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         child: FloatingActionButton.extended(
                           heroTag: 'btnMapaGeral',
                           onPressed: () {
+                            TelemetryService.instance.logAcaoEscalada(
+                              widget.cragId, 
+                              widget.setorContext!.nome, 
+                              'Geral', 
+                              'abrir_mapa_geral', 
+                              'mapa_setor'
+                            );
                             AppNav.toMapaGeralPico(context, returnToSetor: widget.setorContext);
                           },
                           backgroundColor: beastHide,

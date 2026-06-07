@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'zip_interceptor_client.dart';
@@ -173,7 +172,6 @@ class SyncService {
       return;
     }
 
-    bool updatedAnything = false;
     for (var newResumo in newIndice.croquis) {
       final picoFile = File('${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb');
       if (await picoFile.exists()) {
@@ -183,7 +181,6 @@ class SyncService {
           if (oldResumo.checksumSha256Croqui != newResumo.checksumSha256Croqui) {
             debugPrint('Pico ${newResumo.id} is outdated. Updating...');
             await _updatePico(newResumo, downloadsDir);
-            updatedAnything = true;
           }
         }
       }
@@ -220,51 +217,33 @@ class SyncService {
         baseDir = newResumo.url.substring(0, lastSlash);
       }
 
-      final newImages = { for (var ext in newPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
-      final newMarkdownImages = _extractMarkdownImages(newPicoData, baseDir);
-      for (var path in newMarkdownImages) {
-        newImages[path] = 'markdown_image'; // Evita a exclusão
-      }
+      final newContent = { for (var ext in newPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
 
       for (var oldExt in oldPicoData.arquivosExternos) {
         bool shouldDelete = false;
-        if (!newImages.containsKey(oldExt.caminho)) {
+        if (!newContent.containsKey(oldExt.caminho)) {
           shouldDelete = true;
-        } else if (newImages[oldExt.caminho] != oldExt.checksumSha256 && newImages[oldExt.caminho] != 'markdown_image') {
+        } else if (newContent[oldExt.caminho] != oldExt.checksumSha256) {
           shouldDelete = true;
         }
 
         if (shouldDelete) {
-          final oldImgFile = File('${picoDir.path}/${oldExt.caminho}');
-          if (await oldImgFile.exists()) {
-            await oldImgFile.delete();
-            debugPrint('Deleted old image: ${oldExt.caminho}');
+          final oldFile = File('${picoDir.path}/${oldExt.caminho}');
+          if (await oldFile.exists()) {
+            await oldFile.delete();
+            debugPrint('Deleted old file: ${oldExt.caminho}');
           }
         }
       }
 
-      final oldMarkdownImages = _extractMarkdownImages(oldPicoData, baseDir);
-      for (var path in oldMarkdownImages) {
-        if (!newMarkdownImages.contains(path) && !newImages.containsKey(path)) {
-          final oldImgFile = File('${picoDir.path}/$path');
-          if (await oldImgFile.exists()) {
-            await oldImgFile.delete();
-            debugPrint('Deleted old markdown image: $path');
-          }
-        }
-      }
-
-      final oldImages = { for (var ext in oldPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
+      final oldContent = { for (var ext in oldPicoData.arquivosExternos) ext.caminho : ext.checksumSha256 };
       final List<Future<void>> downloadFutures = [];
       for (var newExt in newPicoData.arquivosExternos) {
-        if (!oldImages.containsKey(newExt.caminho) || oldImages[newExt.caminho] != newExt.checksumSha256) {
-          downloadFutures.add(_downloadImage(newExt.caminho, picoDir));
-        }
-      }
-
-      for (var path in newMarkdownImages) {
-        if (!oldMarkdownImages.contains(path)) {
-          downloadFutures.add(_downloadImage(path, picoDir));
+        if (!oldContent.containsKey(newExt.caminho) || oldContent[newExt.caminho] != newExt.checksumSha256) {
+          String localPath = newExt.caminho;
+          if (localPath.startsWith('/')) localPath = localPath.substring(1);
+          String remotePath = (baseDir.isNotEmpty && !localPath.startsWith(baseDir)) ? '$baseDir/$localPath' : localPath;
+          downloadFutures.add(_downloadFile(localPath, remotePath, picoDir));
         }
       }
 
@@ -289,72 +268,35 @@ class SyncService {
     debugPrint('Updated pico ${newResumo.id} successfully.');
   }
 
-  /// Baixa todos os arquivos externos associados a um determinado [Croqui].
-  Future<void> downloadExternalFilesForCroqui(Croqui newPicoData, String picoId) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final downloadsPath = datasetRepository.editorDeCroqui.downloadsPath(directory.path);
-    final downloadsDir = Directory('$downloadsPath/$picoId');
-    
-    final List<Future<void>> downloadFutures = [];
-    for (var ext in newPicoData.arquivosExternos) {
-      downloadFutures.add(_downloadImage(ext.caminho, downloadsDir));
-    }
 
-    final newMarkdownImages = _extractMarkdownImages(newPicoData, '');
-    for (var path in newMarkdownImages) {
-      downloadFutures.add(_downloadImage(path, downloadsDir));
-    }
 
-    if (downloadFutures.isNotEmpty) {
-      await Future.wait(downloadFutures);
-    }
-  }
 
-  Set<String> _extractMarkdownImages(Croqui croqui, String baseDir) {
-    final Set<String> images = {};
-    try {
-      final jsonStr = jsonEncode(croqui.toProto3Json());
-      final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
-      final matches = regex.allMatches(jsonStr);
-      for (final match in matches) {
-        if (match.groupCount >= 1) {
-          String path = match.group(1)!;
-          if (!path.startsWith('http://') && !path.startsWith('https://')) {
-            if (path.startsWith('./')) path = path.substring(2);
-            if (path.startsWith('/')) path = path.substring(1);
-            
-            if (baseDir.isNotEmpty) {
-              images.add('$baseDir/$path');
-            } else {
-              images.add(path);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      AppLogger.instance.logError('Error parsing markdown images', error: e);
-    }
-    return images;
-  }
 
-  /// Baixa uma imagem do servidor remoto.
-  Future<void> _downloadImage(String caminho, Directory downloadsDir) async {
+  /// Baixa um arquivo do servidor remoto.
+  /// 
+  /// [localPath]: Caminho usado para salvar o arquivo no celular (ex: `imagens/p1.webp`).
+  /// Não deve conter a pasta do pico, pois o [downloadsDir] já aponta para a pasta específica do pico,
+  /// evitando assim a criação de subpastas duplicadas.
+  /// 
+  /// [remotePath]: Caminho usado na URL para pedir o arquivo ao servidor (ex: `br_mg_igarape/imagens/p1.webp`).
+  /// Precisa conter o prefixo da pasta do pico para evitar o Erro 404.
+  Future<void> _downloadFile(String localPath, String remotePath, Directory downloadsDir) async {
     try {
       final baseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-      final imageUrl = '$baseUrl/$caminho';
-      debugPrint('Downloading image: $imageUrl');
-      final response = await _client.get(Uri.parse(imageUrl));
+      final fileUrl = '$baseUrl/$remotePath';
+      debugPrint('Downloading file: $fileUrl');
+      final response = await _client.get(Uri.parse(fileUrl));
       if (response.statusCode == 200) {
-        final imgFile = File('${downloadsDir.path}/$caminho');
-        if (!await imgFile.parent.exists()) {
-          await imgFile.parent.create(recursive: true);
+        final downloadedFile = File('${downloadsDir.path}/$localPath');
+        if (!await downloadedFile.parent.exists()) {
+          await downloadedFile.parent.create(recursive: true);
         }
-        await imgFile.writeAsBytes(response.bodyBytes);
+        await downloadedFile.writeAsBytes(response.bodyBytes);
       } else {
-        debugPrint('Failed to download image $caminho, status: ${response.statusCode}');
+        debugPrint('Failed to download file $localPath (from $remotePath), status: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Exception downloading image $caminho: $e');
+      debugPrint('Exception downloading file $localPath: $e');
     }
   }
 

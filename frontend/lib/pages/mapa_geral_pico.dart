@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/view_functions/mapa_geral_pico_functions.dart';
+import 'package:frontend/navigation/navigation_functions.dart';
 
 /// Página responsável por exibir o Mapa Geral de um Pico.
 ///
@@ -39,6 +40,12 @@ class MapaGeralPicoPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: nobleBlack,
       appBar: AppBar(
+        leading: AppNav.canGoBack(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => AppNav.back(context),
+              )
+            : null,
         title: Text('Mapa Geral do Pico', style: TextStyle(color: beastHide)),
         backgroundColor: nobleBlack,
         iconTheme: IconThemeData(color: beastHide),
