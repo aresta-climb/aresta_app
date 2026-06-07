@@ -17,22 +17,31 @@ class AppLogger {
   bool? debugModeOverride;
 
   @visibleForTesting
-  Future<void> Function(dynamic, StackTrace?, {dynamic reason, bool printDetails})? crashlyticsOverride;
-
+  Future<void> Function(
+    dynamic,
+    StackTrace?, {
+    dynamic reason,
+    bool printDetails,
+  })?
+  crashlyticsOverride;
 
   /// Registra um erro de forma não fatal.
   /// [contextMessage] deve explicar o que falhou (ex: "Falha ao baixar imagem").
   /// [error] é a exceção original, se existir.
   /// [stackTrace] é o rastreamento de pilha associado, se capturado.
-  void logError(String contextMessage, {dynamic error, StackTrace? stackTrace}) {
+  void logError(
+    String contextMessage, {
+    dynamic error,
+    StackTrace? stackTrace,
+  }) {
     final isDebug = debugModeOverride ?? kDebugMode;
 
-    if (isDebug) {
-      // Sempre imprime no console apenas para debug local.
-      debugPrint('🛑 [AppLogger] $contextMessage');
-      if (error != null) debugPrint('Exception: $error');
-      if (stackTrace != null) debugPrint('Stack: $stackTrace');
-    } else {
+    // Sempre imprime no console apenas para debug local.
+    debugPrint('🛑 [AppLogger] $contextMessage');
+    if (error != null) debugPrint('Exception: $error');
+    if (stackTrace != null) debugPrint('Stack: $stackTrace');
+
+    if (!isDebug) {
       // Envia o erro pro Crashlytics (Release/Profile mode)
       try {
         if (crashlyticsOverride != null) {

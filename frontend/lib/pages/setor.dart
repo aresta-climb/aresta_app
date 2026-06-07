@@ -70,7 +70,7 @@ class _SetorPageState extends State<SetorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, widget.setor.nome),
       body: buildSetorBody(
         context, 

@@ -13,7 +13,7 @@ void main() {
       // Setup mock environment
       final editor = EditorDeCroqui();
       final repo = DatasetRepository(editorDeCroqui: editor);
-      final sync = SyncService(repo);
+      final sync = SyncService(datasetRepository: repo);
 
       final Setor testSetor = Setor()
         ..nome = 'Setor de Teste'

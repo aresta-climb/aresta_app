@@ -11,7 +11,7 @@ void main() {
     // Cria instâncias do repositório e do serviço de sincronização para testes.
     final editorDeCroqui = EditorDeCroqui();
     final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
-    final testSync = SyncService(testRepo);
+    final testSync = SyncService(datasetRepository: testRepo);
     
     testRepo.activeDataset.value = TopoDataset(
       availablePicos: [],

@@ -76,7 +76,7 @@ Future<bool> conectarEditor(
       configService.useCompiladoFolder.value = false;
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
-      final syncService = SyncService(datasetRepo);
+      final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncOnLaunch();
       await datasetRepo.init();
       TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
@@ -92,7 +92,7 @@ Future<bool> conectarEditor(
         configService.useCompiladoFolder.value = false;
         
         await configService.activateExperimental(url: resolvedUrl, forceResetTimer: true);
-        final syncService = SyncService(datasetRepo);
+        final syncService = SyncService(datasetRepository: datasetRepo);
         await syncService.syncOnLaunch();
         await datasetRepo.init();
         TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
@@ -171,7 +171,7 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
       // Tenta sincronizar o índice usando o interceptor
-      final syncService = SyncService(datasetRepo);
+      final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncOnLaunch();
       await datasetRepo.init();
 
@@ -200,7 +200,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
       return StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: nobleBlack,
+            backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
             title: Text(
               titulo ?? 'Conectar como editor', 
               style: TextStyle(color: beastHide, fontSize: 18),

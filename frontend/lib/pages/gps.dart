@@ -12,7 +12,7 @@ class GPSPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, 'GPS'),
       /// TODO: Uma funcionalidade real de GPS
       body: buildGPSBody(),

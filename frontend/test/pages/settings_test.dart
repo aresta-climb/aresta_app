@@ -31,7 +31,7 @@ void main() {
     
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
-    mockSync = SyncService(mockRepo);
+    mockSync = SyncService(datasetRepository: mockRepo);
     
     PackageInfo.setMockInitialValues(
       appName: 'Aresta Climb',
