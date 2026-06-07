@@ -7,6 +7,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/theme/app_colors.dart';
 import 'mocks/mock_telemetry_service.dart';
 
 void main() {
@@ -94,5 +95,21 @@ void main() {
     // The SnackBar should appear
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.text('Falha na sincronização em segundo plano. Verifique sua conexão.'), findsOneWidget);
+  });
+
+  testWidgets('MyApp registers AppColors extension in both light and dark themes', (WidgetTester tester) async {
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      acceptedLegalVersion: kLegalVersion,
+    ));
+
+    // Finish building
+    await tester.pump(const Duration(seconds: 1));
+
+    final BuildContext context = tester.element(find.byType(TreeNavigationWrapper));
+
+    final theme = Theme.of(context);
+    expect(theme.extension<AppColors>(), isNotNull);
   });
 }

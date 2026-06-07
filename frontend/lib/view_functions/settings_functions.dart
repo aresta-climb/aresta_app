@@ -363,7 +363,7 @@ Widget buildEditorCard({
               Color buttonTextColor;
 
               if (isEditor) {
-                cardColor = AppColors.light.obsidianBrown;
+                cardColor = context.colors.obsidianBrown;
                 statusIcon = Icons.science;
                 statusLabel = 'Modo Experimental Ativo';
                 description = 'O aplicativo está em modo de teste. Os dados são carregados de uma fonte externa ou local e mantidos isolados.';
@@ -371,13 +371,13 @@ Widget buildEditorCard({
                 buttonText = 'Voltar para oficial';
                 buttonTextColor = Colors.white;
               } else {
-                cardColor = AppColors.light.slateStone;
+                cardColor = context.colors.slateStone;
                 statusIcon = Icons.verified;
                 statusLabel = 'Modo Oficial Ativo';
                 description = 'O aplicativo está conectado ao repositório oficial da Aresta Climb.';
-                buttonBgColor = AppColors.light.beastHide;
+                buttonBgColor = context.colors.beastHide;
                 buttonText = 'Conectar como editor';
-                buttonTextColor = AppColors.light.nobleBlack;
+                buttonTextColor = context.colors.nobleBlack;
               }
 
               return Card(
@@ -403,13 +403,13 @@ Widget buildEditorCard({
                                 );
                               }
                             },
-                            child: Icon(statusIcon, color: AppColors.light.fishBone),
+                            child: Icon(statusIcon, color: context.colors.fishBone),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             statusLabel,
                             style: TextStyle(
-                              color: AppColors.light.fishBone,
+                              color: context.colors.fishBone,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -419,7 +419,7 @@ Widget buildEditorCard({
                       const SizedBox(height: 8),
                       Text(
                         description,
-                        style: TextStyle(color: AppColors.light.fishBone),
+                        style: TextStyle(color: context.colors.fishBone),
                       ),
                       if (activeUrl != null) ...[
                         const SizedBox(height: 16),
@@ -431,7 +431,7 @@ Widget buildEditorCard({
                           ),
                           child: Text(
                             activeUrl,
-                            style: TextStyle(color: AppColors.light.beastHide, fontFamily: 'monospace'),
+                            style: TextStyle(color: context.colors.beastHide, fontFamily: 'monospace'),
                           ),
                         ),
                       ],
@@ -477,15 +477,15 @@ Widget buildEditorCard({
                                     width: double.infinity,
                                     child: OutlinedButton.icon(
                                       style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: AppColors.light.beastHide, width: 1.2),
+                                        side: BorderSide(color: context.colors.beastHide, width: 1.2),
                                         padding: const EdgeInsets.symmetric(vertical: 14),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
-                                      icon: Icon(Icons.history_rounded, color: AppColors.light.beastHide, size: 18),
+                                      icon: Icon(Icons.history_rounded, color: context.colors.beastHide, size: 18),
                                       label: Text(
                                         'Reativar modo experimental',
                                         style: TextStyle(
-                                          color: AppColors.light.beastHide, 
+                                          color: context.colors.beastHide, 
                                           fontWeight: FontWeight.w600,
                                           letterSpacing: 0.5,
                                         ),
@@ -524,16 +524,16 @@ Widget buildEditorCard({
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    backgroundColor: AppColors.light.nobleBlack,
+                                    backgroundColor: context.colors.nobleBlack,
                                     title: const Text('Nuke It?', style: TextStyle(color: Colors.red)),
                                     content: Text(
                                       'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
-                                      style: TextStyle(color: AppColors.light.fishBone),
+                                      style: TextStyle(color: context.colors.fishBone),
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context, false),
-                                        child: Text('Cancelar', style: TextStyle(color: AppColors.light.fishBone)),
+                                        child: Text('Cancelar', style: TextStyle(color: context.colors.fishBone)),
                                       ),
                                       TextButton(
                                         onPressed: () => Navigator.pop(context, true),
@@ -572,7 +572,7 @@ Widget buildEditorCard({
 
 Widget buildThemeSelectionCard(BuildContext context) {
   return Card(
-    color: AppColors.light.slateStone,
+    color: context.colors.slateStone,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -581,12 +581,12 @@ Widget buildThemeSelectionCard(BuildContext context) {
         children: [
           Row(
             children: [
-              Icon(Icons.palette, color: AppColors.light.fishBone),
+              Icon(Icons.palette, color: context.colors.fishBone),
               const SizedBox(width: 8),
               Text(
                 'Aparência (Tema)',
                 style: TextStyle(
-                  color: AppColors.light.fishBone,
+                  color: context.colors.fishBone,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -601,6 +601,7 @@ Widget buildThemeSelectionCard(BuildContext context) {
                 children: [
                   Expanded(
                     child: buildThemeOption(
+                      context: context,
                       title: 'Claro',
                       icon: Icons.light_mode,
                       isSelected: currentMode == ThemeMode.light,
@@ -613,6 +614,7 @@ Widget buildThemeSelectionCard(BuildContext context) {
                   const SizedBox(width: 8),
                   Expanded(
                     child: buildThemeOption(
+                      context: context,
                       title: 'Escuro',
                       icon: Icons.dark_mode,
                       isSelected: currentMode == ThemeMode.dark,
@@ -633,6 +635,7 @@ Widget buildThemeSelectionCard(BuildContext context) {
 }
 
 Widget buildThemeOption({
+  required BuildContext context,
   required String title,
   required IconData icon,
   required bool isSelected,
@@ -644,21 +647,21 @@ Widget buildThemeOption({
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.light.beastHide.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected ? context.colors.beastHide.withValues(alpha: 0.2) : Colors.transparent,
         border: Border.all(
-          color: isSelected ? AppColors.light.beastHide : AppColors.light.weatheredIron,
+          color: isSelected ? context.colors.beastHide : context.colors.weatheredIron,
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          Icon(icon, color: isSelected ? AppColors.light.beastHide : AppColors.light.fishBone),
+          Icon(icon, color: isSelected ? context.colors.beastHide : context.colors.fishBone),
           const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              color: isSelected ? AppColors.light.beastHide : AppColors.light.fishBone,
+              color: isSelected ? context.colors.beastHide : context.colors.fishBone,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -675,18 +678,18 @@ Widget buildAppVersionCard(BuildContext context) {
       if (snapshot.hasData) {
         final version = snapshot.data!.version;
         return Card(
-          color: AppColors.light.slateStone,
+          color: context.colors.slateStone,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: AppColors.light.fishBone),
+                Icon(Icons.info_outline, color: context.colors.fishBone),
                 const SizedBox(width: 8),
                 Text(
                   'Versão do app',
                   style: TextStyle(
-                    color: AppColors.light.fishBone,
+                    color: context.colors.fishBone,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -695,7 +698,7 @@ Widget buildAppVersionCard(BuildContext context) {
                 Text(
                   version,
                   style: TextStyle(
-                    color: AppColors.light.beastHide,
+                    color: context.colors.beastHide,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -711,30 +714,40 @@ Widget buildAppVersionCard(BuildContext context) {
 }
 
 Widget buildLegalLinks(BuildContext context) {
-  return TextButton(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TermsOfUsePage(
-            onAccepted: () {},
-            showAcceptButton: false,
+  return Card(
+    color: context.colors.slateStone,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TermsOfUsePage(
+              onAccepted: () {},
+              showAcceptButton: false,
+            ),
           ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.gavel, color: context.colors.fishBone),
+            const SizedBox(width: 8),
+            Text(
+              'Termos de Uso e Privacidade',
+              style: TextStyle(
+                color: context.colors.fishBone,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right, color: context.colors.beastHide),
+          ],
         ),
-      );
-    },
-    style: TextButton.styleFrom(
-      foregroundColor: AppColors.light.fishBone.withValues(alpha: 0.5),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      minimumSize: Size.zero,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    ),
-    child: const Text(
-      'Termos de Uso e Privacidade',
-      style: TextStyle(
-        fontSize: 12, 
-        decoration: TextDecoration.underline,
-        fontWeight: FontWeight.w500,
       ),
     ),
   );

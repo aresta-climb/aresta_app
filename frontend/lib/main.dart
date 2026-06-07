@@ -138,6 +138,7 @@ class _MyAppState extends State<MyApp> {
               selectionColor: AppColors.light.beastHide.withValues(alpha: 0.3),
               selectionHandleColor: AppColors.light.beastHide,
             ),
+            extensions: const [AppColors.light],
           ),
           darkTheme: ThemeData(
             fontFamily: 'Montserrat',
@@ -154,6 +155,7 @@ class _MyAppState extends State<MyApp> {
               selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),
               selectionHandleColor: AppColors.dark.beastHide,
             ),
+            extensions: const [AppColors.dark],
           ),
           // Banner global para modo experimental/editor que persiste em todas as telas
           builder: (context, child) {
