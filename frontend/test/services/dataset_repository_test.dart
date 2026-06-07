@@ -2,18 +2,19 @@
 /// arquivos (testada via sistema de arquivos), e extração de capa markdown
 /// (testada indiretamente via regex local equivalente).
 library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
-class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
   final String tempPath;
   MockPathProviderPlatform(this.tempPath);
 
@@ -92,15 +93,17 @@ void main() {
   group('Deleção de Crag', () {
     test('deleteCrag remove o diretório do pico corretamente', () async {
       final picoId = 'pico_para_deletar';
-      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId');
+      final picoDir = Directory(
+        '${editor.downloadsPath(tempDir.path)}/$picoId',
+      );
       await picoDir.create(recursive: true);
-      
+
       // Cria arquivo de teste dentro
       final testFile = File('${picoDir.path}/test_file.txt');
       await testFile.writeAsString('conteudo_teste');
 
       expect(picoDir.existsSync(), isTrue);
-      
+
       final result = await repo.deleteCrag(picoId);
 
       expect(result, isTrue);
