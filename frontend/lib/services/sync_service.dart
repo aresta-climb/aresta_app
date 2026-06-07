@@ -123,6 +123,7 @@ class SyncService {
       final localIndiceFile = File(
         datasetRepository.editorDeCroqui.indicePath(directory.path),
       );
+      final localEtagFile = File('${localIndiceFile.path}.etag');
 
       final editorDeCroqui = datasetRepository.editorDeCroqui;
 
@@ -154,6 +155,12 @@ class SyncService {
             'GET',
             Uri.parse('$baseUrl/indice.binarypb'),
           );
+
+          if (await localEtagFile.exists() && await localIndiceFile.exists()) {
+            final etag = await localEtagFile.readAsString();
+            request.headers['If-None-Match'] = etag;
+          }
+
           final streamedResponse = await _client.send(request);
           response = await http.Response.fromStream(streamedResponse);
           break; // Sucesso, sai do loop
@@ -190,10 +197,16 @@ class SyncService {
             'GET',
             Uri.parse('$altUrl/indice.binarypb'),
           );
+
+          if (await localEtagFile.exists() && await localIndiceFile.exists()) {
+            final etag = await localEtagFile.readAsString();
+            altRequest.headers['If-None-Match'] = etag;
+          }
+
           final altStreamed = await _client.send(altRequest);
           final altResponse = await http.Response.fromStream(altStreamed);
 
-          if (altResponse.statusCode == 200) {
+          if (altResponse.statusCode == 200 || altResponse.statusCode == 304) {
             debugPrint(
               '[SyncService] Subpasta /compilado detectada com sucesso!',
             );
@@ -247,14 +260,27 @@ class SyncService {
             await localIndiceFile.parent.create(recursive: true);
           }
           await localIndiceFile.writeAsBytes(responseBytes);
+
+          final newEtag = response.headers['etag'];
+          if (newEtag != null) {
+            await localEtagFile.writeAsString(newEtag);
+          } else if (await localEtagFile.exists()) {
+            await localEtagFile.delete();
+          }
         } else {
           AppLogger.instance.logError(
             '[SyncService] Falha na atualização de ${failedPicos.length} picos. O índice não será sobrescrito.',
           );
         }
+      } else if (response != null && response.statusCode == 304) {
+        debugPrint(
+          '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
+        );
+        await _loadLocalIndiceAndNotify();
+        setUpdatedStatus();
       } else {
         AppLogger.instance.logError(
-          'Server returned an error or 304: ${response?.statusCode}',
+          'Server returned an error: ${response?.statusCode}',
         );
         await _loadLocalIndiceAndNotify();
         setUpdatedStatus();
