@@ -611,5 +611,82 @@ void main() {
       final downloadedBytes = File('${picoDir.path}/capa.webp').readAsBytesSync();
       expect(downloadedBytes, fileData);
     });
+
+    test('deve retomar o croqui principal de um arquivo .tmp válido e pular o download', () async {
+      final picoId = 'pico_principal_resume_valido';
+      final croqui = Croqui(); // empty for simplicity
+      final croquiBytes = croqui.writeToBuffer();
+      final croquiHash = sha256.convert(croquiBytes).toString();
+      
+      // We DO NOT serve the croqui from FakeClient. If it tries to download, it will fail!
+      final client = FakeClient(Indice(), {});
+
+      editor.editorUrl.value = 'https://fake.url';
+      repo = DatasetRepository(editorDeCroqui: editor);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+
+      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = croquiHash);
+      
+      final downloadsDir = editor.downloadsPath(tempDir.path);
+      final picoDir = Directory('$downloadsDir/$picoId');
+      picoDir.createSync(recursive: true);
+      
+      // Create valid .tmp file manually for the main croqui
+      final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
+      tmpFile.writeAsBytesSync(croquiBytes);
+      
+      final result = await syncServiceFake.downloadCrag({
+        'id': picoId,
+        'url': 'https://fake.url/picos/$picoId.binarypb',
+      });
+
+      expect(result, isTrue);
+      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      expect(tmpFile.existsSync(), isFalse); // tmp should be renamed
+    });
+
+    test('deve descartar arquivo .tmp inválido do croqui principal e fazer novo download', () async {
+      final picoId = 'pico_principal_resume_invalido';
+      final croqui = Croqui();
+      final croquiBytes = croqui.writeToBuffer();
+      final croquiHash = sha256.convert(croquiBytes).toString();
+      
+      // We SERVE the croqui because it should be redownloaded.
+      final client = FakeClient(Indice(), {
+        'picos/$picoId.binarypb': croquiBytes,
+      });
+
+      editor.editorUrl.value = 'https://fake.url';
+      repo = DatasetRepository(editorDeCroqui: editor);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+
+      repo.indiceData.value = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..url = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = croquiHash);
+      
+      final downloadsDir = editor.downloadsPath(tempDir.path);
+      final picoDir = Directory('$downloadsDir/$picoId');
+      picoDir.createSync(recursive: true);
+      
+      // Create INVALID .tmp file manually for the main croqui
+      final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
+      tmpFile.writeAsBytesSync([9, 9, 9, 9]); // Junk bytes
+      
+      final result = await syncServiceFake.downloadCrag({
+        'id': picoId,
+        'url': 'https://fake.url/picos/$picoId.binarypb',
+      });
+
+      expect(result, isTrue);
+      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      expect(tmpFile.existsSync(), isFalse); // tmp should be deleted and replaced
+      
+      final downloadedBytes = File('${picoDir.path}/$picoId.binarypb').readAsBytesSync();
+      expect(downloadedBytes, croquiBytes);
+    });
   });
 }
