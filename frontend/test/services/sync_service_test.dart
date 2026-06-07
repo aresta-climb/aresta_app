@@ -2,7 +2,7 @@
 /// Como _extractMarkdownImages é privada da biblioteca, testamos seu comportamento
 /// indiretamente via regex equivalente aplicada a JSONs de Croqui.
 library;
-import 'dart:convert';
+
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_test/flutter_test.dart';
@@ -30,42 +30,31 @@ class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInt
 
 class FakeClient extends http.BaseClient {
   final Indice newIndice;
+  final Map<String, List<int>> mockFiles;
+  final List<String> requestedUrls = [];
   
-  FakeClient(this.newIndice);
+  FakeClient(this.newIndice, [this.mockFiles = const {}]);
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requestedUrls.add(request.url.path);
     if (request.url.path.endsWith('indice.binarypb')) {
       final bytes = newIndice.writeToBuffer();
       return http.StreamedResponse(Stream.value(bytes), 200);
     }
+    
+    for (var entry in mockFiles.entries) {
+      if (request.url.path.endsWith(entry.key)) {
+        return http.StreamedResponse(Stream.value(entry.value), 200);
+      }
+    }
+    
     // Simulate network drop during pico download
     throw const SocketException('Network dropped');
   }
 }
 
-/// Implementação local da lógica de _extractMarkdownImages para testes
-/// (equivalente ao que existe em SyncService).
-Set<String> extractMarkdownImages(Croqui croqui, String baseDir) {
-  final Set<String> images = {};
-  final jsonStr = jsonEncode(croqui.toProto3Json());
-  final regex = RegExp(r'!\[.*?\]\((.*?)\)');
-  for (final match in regex.allMatches(jsonStr)) {
-    if (match.groupCount >= 1) {
-      String path = match.group(1)!;
-      if (!path.startsWith('http://') && !path.startsWith('https://')) {
-        if (path.startsWith('./')) path = path.substring(2);
-        if (path.startsWith('/')) path = path.substring(1);
-        if (baseDir.isNotEmpty) {
-          images.add('$baseDir/$path');
-        } else {
-          images.add(path);
-        }
-      }
-    }
-  }
-  return images;
-}
+
 
 void main() {
   late EditorDeCroqui editor;
@@ -80,92 +69,7 @@ void main() {
     TelemetryService.instance = mockTelemetry;
   });
 
-  // ---------------------------------------------------------------------------
-  // Lógica de extração de imagens markdown (equivalente ao SyncService)
-  // ---------------------------------------------------------------------------
 
-  group('Extração de imagens markdown', () {
-    test('deve retornar conjunto vazio para croqui sem markdown', () {
-      final croqui = Croqui();
-      expect(extractMarkdownImages(croqui, ''), isEmpty);
-    });
-
-    test('deve extrair caminho de imagem relativa de um markdown', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = 'Texto ![foto](imagens/foto1.webp) aqui.')));
-
-      expect(extractMarkdownImages(croqui, ''), contains('imagens/foto1.webp'));
-    });
-
-    test('deve ignorar URLs absolutas http/https', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = '![foto](https://cdn.example.com/foto.webp)')));
-
-      expect(extractMarkdownImages(croqui, ''), isEmpty);
-    });
-
-    test('deve prefixar com baseDir quando fornecido', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = '![foto](thumbnail.webp)')));
-
-      expect(
-        extractMarkdownImages(croqui, 'picos/pedra_bonita'),
-        contains('picos/pedra_bonita/thumbnail.webp'),
-      );
-    });
-
-    test('deve remover prefixo "./" de caminhos de imagem', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = '![foto](./imagens/foto.webp)')));
-
-      expect(extractMarkdownImages(croqui, ''), contains('imagens/foto.webp'));
-    });
-
-    test('deve extrair múltiplas imagens de um mesmo markdown', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = '![a](foto1.webp) e ![b](foto2.webp) e ![c](foto3.jpg)')));
-
-      final resultado = extractMarkdownImages(croqui, '');
-      expect(resultado.length, 3);
-      expect(resultado, containsAll(['foto1.webp', 'foto2.webp', 'foto3.jpg']));
-    });
-
-    test('deve extrair imagens de múltiplos arquivos markdown', () {
-      final croqui = Croqui()
-        ..botoes.addAll([
-          Botao()..texto = 'Beta 1'..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()..conteudo = '![a](img1.webp)')),
-          Botao()..texto = 'Beta 2'..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()..conteudo = '![b](img2.webp)')),
-        ]);
-
-      expect(extractMarkdownImages(croqui, ''), containsAll(['img1.webp', 'img2.webp']));
-    });
-
-    test('não deve duplicar imagens que aparecem mais de uma vez (é um Set)', () {
-      final croqui = Croqui()
-        ..botoes.add(Botao()
-          ..texto = 'Beta'
-          ..destino = (DestinoBotao()..secaoTextual = (ArquivoMarkdown()
-            ..conteudo = '![a](foto.webp) e ![b](foto.webp)')));
-
-      final resultado = extractMarkdownImages(croqui, '');
-      expect(resultado.where((p) => p == 'foto.webp').length, 1);
-    });
-  });
 
   // ---------------------------------------------------------------------------
   // SyncStatus
@@ -217,6 +121,226 @@ void main() {
       final dataset = TopoDataset(availablePicos: [], downloadedPicos: []);
       dataset.availablePicos.add({'id': 'novo'});
       expect(dataset.downloadedPicos, isEmpty);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sincronização Delta (_updatePico indiretamente via syncOnLaunch)
+  // ---------------------------------------------------------------------------
+
+  group('Sincronização Delta (_updatePico)', () {
+    late Directory tempDir;
+    late Directory downloadsDir;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      tempDir = await Directory.systemTemp.createTemp('sync_delta_test');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      
+      // Setup EditorDeCroqui downloadsPath for tempDir
+      downloadsDir = Directory(editor.downloadsPath(tempDir.path));
+    });
+
+    tearDown(() async {
+      try {
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    test('não baixa o croqui de novo se sha256sum é o mesmo', () async {
+      final picoId = 'pico_hash_igual';
+      
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'SAME_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'SAME_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final fakeClient = FakeClient(newIndice);
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fakeClient.requestedUrls.any((url) => url.contains('picos/')), isFalse);
+    });
+
+    test('não baixa arquivo externo de novo se checksum é o mesmo', () async {
+      final picoId = 'pico_ext_igual';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      final fileToKeep = File('${picoDir.path}/imagem.webp');
+      await fileToKeep.writeAsBytes([1]);
+
+      final croqui = Croqui()
+        ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagem.webp'..checksumSha256 = 'abc');
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(croqui.writeToBuffer());
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': croqui.writeToBuffer(),
+      });
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'imagem\.webp$')))));
+      expect(fileToKeep.existsSync(), isTrue);
+    });
+
+    test('baixa arquivo externo de novo se checksum mudou', () async {
+      final picoId = 'pico_ext_mudou';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      final fileToUpdate = File('${picoDir.path}/imagem.webp');
+      await fileToUpdate.writeAsBytes([1]);
+
+      final oldCroqui = Croqui()
+        ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagem.webp'..checksumSha256 = 'OLD_HASH');
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldCroqui.writeToBuffer());
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_CROQUI_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_CROQUI_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final newCroqui = Croqui()
+        ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagem.webp'..checksumSha256 = 'NEW_HASH');
+
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
+        'picos/imagem.webp': [2],
+      });
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fakeClient.requestedUrls.any((url) => url.endsWith('imagem.webp')), isTrue);
+      expect(await fileToUpdate.readAsBytes(), equals([2]));
+    });
+
+    test('deleta arquivos removidos em nova versão', () async {
+      final picoId = 'pico_ext_removido';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      final fileToDelete = File('${picoDir.path}/removida.webp');
+      await fileToDelete.writeAsBytes([1]);
+
+      final oldCroqui = Croqui()
+        ..arquivosExternos.add(ArquivoExterno()..caminho = 'removida.webp'..checksumSha256 = 'abc');
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldCroqui.writeToBuffer());
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_CROQUI_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_CROQUI_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final newCroqui = Croqui(); // Sem arquivos externos
+
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
+      });
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fileToDelete.existsSync(), isFalse);
+    });
+
+    test('baixa novos arquivos que não estavam presentes em versão anterior', () async {
+      final picoId = 'pico_ext_novo';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      final oldCroqui = Croqui(); // Sem arquivos
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldCroqui.writeToBuffer());
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_CROQUI_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_CROQUI_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final newCroqui = Croqui()
+        ..arquivosExternos.add(ArquivoExterno()..caminho = 'nova.webp'..checksumSha256 = 'abc');
+
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
+        'picos/nova.webp': [3],
+      });
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fakeClient.requestedUrls.any((url) => url.endsWith('nova.webp')), isTrue);
+      expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
+    });
+
+    test('tudo ao mesmo tempo (atualiza, deleta, insere e mantem)', () async {
+      final picoId = 'pico_tudo';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      final fileToKeep = File('${picoDir.path}/mantida.webp');
+      final fileToUpdate = File('${picoDir.path}/atualizada.webp');
+      final fileToDelete = File('${picoDir.path}/removida.webp');
+      await fileToKeep.writeAsBytes([1]);
+      await fileToUpdate.writeAsBytes([2]);
+      await fileToDelete.writeAsBytes([3]);
+
+      final oldCroqui = Croqui()
+        ..arquivosExternos.addAll([
+          ArquivoExterno()..caminho = 'mantida.webp'..checksumSha256 = 'A',
+          ArquivoExterno()..caminho = 'atualizada.webp'..checksumSha256 = 'B',
+          ArquivoExterno()..caminho = 'removida.webp'..checksumSha256 = 'C',
+        ]);
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldCroqui.writeToBuffer());
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_CROQUI_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_CROQUI_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final newCroqui = Croqui()
+        ..arquivosExternos.addAll([
+          ArquivoExterno()..caminho = 'mantida.webp'..checksumSha256 = 'A',
+          ArquivoExterno()..caminho = 'atualizada.webp'..checksumSha256 = 'B_NEW',
+          ArquivoExterno()..caminho = 'nova.webp'..checksumSha256 = 'D',
+        ]);
+
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
+        'picos/atualizada.webp': [22],
+        'picos/nova.webp': [44],
+      });
+      final syncService = SyncService(repo, client: fakeClient);
+      
+      await syncService.syncOnLaunch();
+
+      expect(fileToKeep.existsSync(), isTrue);
+      expect(fileToDelete.existsSync(), isFalse);
+      expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
+      expect(await fileToUpdate.readAsBytes(), equals([22]));
+      
+      expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'mantida\.webp$')))));
     });
   });
 

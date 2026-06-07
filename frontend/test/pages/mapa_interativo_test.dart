@@ -297,6 +297,7 @@ void main() {
       final clickEvents = mockTelemetry.recordedEvents.where((e) => e == 'acao_escalada').toList();
       expect(clickEvents.length, 1, reason: 'Deve logar o clique apenas 1 vez (evitando duplicidade com o auto-zoom)');
       expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via Teste');
+      expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'selecionar_no_mapa');
     });
 
     testWidgets('Clicking "Mais" on floating card fires logAcaoEscalada telemetry', (WidgetTester tester) async {
@@ -318,6 +319,8 @@ void main() {
       // Tap on the marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
 
       // Tap on the "Mais" button
       await tester.tap(find.text('Mais'));
@@ -426,6 +429,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(InteractiveViewer), findsNothing);
       expect(find.byType(SizedBox), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('Clicking Mapa Geral triggers telemetry and navigation', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            cragId: 'test_crag',
+            mapa: mockMapa,
+            escaladas: const [],
+            setores: const [],
+            setorContext: Setor()..nome = 'Setor Sul',
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+
+      final btn = find.text('Mapa Geral');
+      expect(btn, findsOneWidget);
+
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      final lastEvent = mockTelemetry.recordedParams['acao_escalada'];
+      expect(lastEvent?['id_croqui'], 'test_crag');
+      expect(lastEvent?['nome_setor'], 'Setor Sul');
+      expect(lastEvent?['nome_escalada'], 'Geral');
+      expect(lastEvent?['acao'], 'abrir_mapa_geral');
+      expect(lastEvent?['origem'], 'mapa_setor');
     });
   });
 }
