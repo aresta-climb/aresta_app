@@ -365,28 +365,55 @@ class SyncService {
     final url = '$baseUrl/${newResumo.url}';
 
     try {
-      final response = await _client.get(Uri.parse(url));
-
-      if (response.statusCode != 200) {
-        AppLogger.instance.logError(
-          'Failed to download new pico ${newResumo.id}',
-        );
-        return false;
-      }
-
-      final bytes = response.bodyBytes;
-      final downloadedHash = sha256.convert(bytes).toString();
-      if (newResumo.checksumSha256Croqui.isNotEmpty &&
-          downloadedHash != newResumo.checksumSha256Croqui) {
-        AppLogger.instance.logError(
-          'Hash mismatch for croqui ${newResumo.id}. Expected: ${newResumo.checksumSha256Croqui}, Got: $downloadedHash',
-        );
-        return false;
-      }
-
-      final newPicoData = Croqui.fromBuffer(bytes);
       final picoDir = Directory('${downloadsDir.path}/${newResumo.id}');
       final picoFile = File('${picoDir.path}/${newResumo.id}.binarypb');
+      final tmpPicoFile = File('${picoDir.path}/${newResumo.id}.binarypb.tmp');
+
+      if (!await picoDir.exists()) {
+        await picoDir.create(recursive: true);
+      }
+
+      bool isPicoTmpValid = false;
+      if (await tmpPicoFile.exists()) {
+        if (newResumo.checksumSha256Croqui.isNotEmpty) {
+          final stream = tmpPicoFile.openRead();
+          final hashResult = await sha256.bind(stream).first;
+          if (hashResult.toString() == newResumo.checksumSha256Croqui) {
+            isPicoTmpValid = true;
+            debugPrint('Resumed existing .tmp croqui for ${newResumo.id}');
+          } else {
+            await tmpPicoFile.delete();
+          }
+        } else {
+          await tmpPicoFile.delete();
+        }
+      }
+
+      if (!isPicoTmpValid) {
+        final response = await _client.get(Uri.parse(url));
+
+        if (response.statusCode != 200) {
+          AppLogger.instance.logError(
+            'Failed to download new pico ${newResumo.id}',
+          );
+          return false;
+        }
+
+        final bytes = response.bodyBytes;
+        final downloadedHash = sha256.convert(bytes).toString();
+        if (newResumo.checksumSha256Croqui.isNotEmpty &&
+            downloadedHash != newResumo.checksumSha256Croqui) {
+          AppLogger.instance.logError(
+            'Hash mismatch for croqui ${newResumo.id}. Expected: ${newResumo.checksumSha256Croqui}, Got: $downloadedHash',
+          );
+          return false;
+        }
+
+        await tmpPicoFile.writeAsBytes(bytes);
+      }
+
+      final bytes = await tmpPicoFile.readAsBytes();
+      final newPicoData = Croqui.fromBuffer(bytes);
 
       Croqui? oldPicoData;
       if (await picoFile.exists()) {
@@ -476,11 +503,13 @@ class SyncService {
         }
       }
 
-      // 5. Salvar o master pico.binarypb
-      if (!await picoDir.exists()) {
-        await picoDir.create(recursive: true);
+      // 5. Salvar o master pico.binarypb (movendo o tmp para o final)
+      if (await picoFile.exists()) {
+        await picoFile.delete();
       }
-      await picoFile.writeAsBytes(response.bodyBytes);
+      if (await tmpPicoFile.exists()) {
+        await tmpPicoFile.rename(picoFile.path);
+      }
 
       // Atualiza os metadados (como a imagem de capa) após a sincronização
       final directory = await getApplicationDocumentsDirectory();
