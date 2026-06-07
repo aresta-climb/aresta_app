@@ -20,7 +20,7 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
           submodules: 'recursive'
@@ -33,7 +33,7 @@ jobs:
         uses: dart-lang/setup-dart@v1
 
       - name: Cache pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('frontend/tool/legal_updater/pubspec.yaml') }}
