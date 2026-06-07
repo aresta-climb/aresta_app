@@ -29,7 +29,7 @@ class ViaPage extends StatelessWidget {
     String nome = getEscaladaNome(escalada);
 
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, nome),
       body: buildViaBody(context, escalada, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage),
       // bottomNavigationBar: buildSecondaryBottomNav(context),

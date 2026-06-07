@@ -44,7 +44,7 @@ class _GrupoPageState extends State<GrupoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, widget.grupo.nome),
       body: buildGrupoBody(
         context, 

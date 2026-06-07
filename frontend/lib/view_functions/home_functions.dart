@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/dataset_repository.dart';
 import '../widgets/global_search.dart';
+import '../services/sync_service.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -66,6 +67,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 Widget buildHomeBody(
   BuildContext context,
   DatasetRepository datasetRepo,
+  SyncService syncService,
   List<Map<String, dynamic>> downloadedPicos,
   Set<String> downloadingCrags, {
   required VoidCallback onAddCrag,
@@ -108,8 +110,15 @@ Widget buildHomeBody(
                   ),
                 ),
                 ValueListenableBuilder<SyncStatus>(
-                  valueListenable: datasetRepo.syncStatus,
-                  builder: (context, status, _) {
+                  valueListenable: syncService.syncStatus,
+                  builder: (context, status, child) {
+                    if (status == SyncStatus.updating) {
+                      return const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    }
                     return buildSyncBadge(status);
                   },
                 ),
@@ -334,16 +343,18 @@ Widget buildPicosCarousel(
               style: TextStyle(color: fishBone, fontStyle: FontStyle.italic),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onAddCrag,
-              icon: const Icon(Icons.search),
-              label: const Text('Explorar guias'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: nobleBlack,
-                foregroundColor: beastHide,
-                side: BorderSide(color: beastHide),
-              ),
-            ),
+            Builder(builder: (context) {
+              return ElevatedButton.icon(
+                onPressed: onAddCrag,
+                icon: const Icon(Icons.search),
+                label: const Text('Explorar guias'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  foregroundColor: beastHide,
+                  side: BorderSide(color: beastHide),
+                ),
+              );
+            }),
           ],
         ),
       ),

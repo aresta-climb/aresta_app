@@ -38,7 +38,7 @@ class MapaGeralPicoPage extends StatelessWidget {
     final mapMd = getMapaGeralMarkdown(croqui);
 
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: AppNav.canGoBack(context)
             ? IconButton(
@@ -47,7 +47,7 @@ class MapaGeralPicoPage extends StatelessWidget {
               )
             : null,
         title: Text('Mapa Geral do Pico', style: TextStyle(color: beastHide)),
-        backgroundColor: nobleBlack,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         iconTheme: IconThemeData(color: beastHide),
       ),
       // Constrói o corpo principal (renderizando o markdown do mapa e controlando o zoom/pan)

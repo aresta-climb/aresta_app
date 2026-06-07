@@ -186,7 +186,7 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
       currentIndex: selectedIndex,
       selectedItemColor: beastHide,
       unselectedItemColor: fishBone.withValues(alpha: 0.5),
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       onTap: (index) {
         final abas = ['home', 'configuracoes', 'explorar'];
         final aba = index < abas.length ? abas[index] : 'desconhecida';

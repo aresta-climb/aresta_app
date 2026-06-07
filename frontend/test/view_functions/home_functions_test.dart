@@ -3,16 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/home_functions.dart';
+import 'package:frontend/services/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   late DatasetRepository mockRepo;
   late EditorDeCroqui mockEditor;
+  late SyncService mockSync;
 
   setUp(() {
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
+    mockSync = SyncService(datasetRepository: mockRepo);
+    mockSync.syncStatus.value = SyncStatus.updated;
   });
 
   Widget buildTestableWidget(List<Map<String, dynamic>> downloadedPicos) {
@@ -23,6 +27,7 @@ void main() {
             return buildHomeBody(
               context,
               mockRepo,
+              mockSync,
               downloadedPicos,
               {}, // downloadingCrags
               onAddCrag: () {},

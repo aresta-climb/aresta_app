@@ -23,14 +23,28 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // O AppBar agora contém apenas o título e o botão de sincronização manual
       appBar: buildCommonAppBar(context, 
         'Home', 
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
-            onPressed: () => syncService.syncOnLaunch(auto: false),
+            onPressed: () async {
+              final failedPicos = await syncService.syncOnLaunch(auto: false);
+              if (failedPicos.isNotEmpty && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Falha ao atualizar: ${failedPicos.join(', ')}. Verifique a conexão.'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: const Text('Catálogo sincronizado com sucesso!'), backgroundColor: mossRock),
+                );
+              }
+            },
             tooltip: 'Sincronizar Catálogo',
           ),
         ],
@@ -47,11 +61,12 @@ class HomePage extends StatelessWidget {
           }
 
           return ValueListenableBuilder<Set<String>>(
-            valueListenable: datasetRepo.downloadingCrags,
+            valueListenable: syncService.downloadingCrags,
             builder: (context, downloadingCrags, child) {
               return buildHomeBody(
                 context,
                 datasetRepo,
+                syncService,
                 dataset.downloadedPicos,
                 downloadingCrags,
                 onAddCrag: () => onSwitchTab(2),

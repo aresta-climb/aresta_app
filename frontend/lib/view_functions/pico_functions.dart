@@ -228,7 +228,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     final theme = Theme.of(context);
     return theme.copyWith(
       appBarTheme: AppBarTheme(
-        backgroundColor: nobleBlack,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         iconTheme: IconThemeData(color: beastHide),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -386,7 +386,7 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              backgroundColor: nobleBlack,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),

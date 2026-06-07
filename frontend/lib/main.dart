@@ -42,7 +42,9 @@ void main() async {
     acceptedLegalVersion = 1;
     await prefs.remove('accepted_terms'); // Apaga chave antiga após migrar
   } else if (oldAcceptedTerms) {
-    await prefs.remove('accepted_terms'); // Apaga chave antiga se já migrou antes
+    await prefs.remove(
+      'accepted_terms',
+    ); // Apaga chave antiga se já migrou antes
   }
 
   // Instancia e carrega o EditorDeCroqui
@@ -51,7 +53,7 @@ void main() async {
 
   // Instancia e inicializa o repositório
   final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
-  final syncService = SyncService(datasetRepo);
+  final syncService = SyncService(datasetRepository: datasetRepo);
 
   // Escuta mudanças de modo para re-sincronizar
   void onModeChange() {
@@ -109,7 +111,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   bool get _hasAcceptedTerms => _acceptedLegalVersion >= kLegalVersion;
-  bool get _isUpdatingTerms => _acceptedLegalVersion > 0 && _acceptedLegalVersion < kLegalVersion;
+  bool get _isUpdatingTerms =>
+      _acceptedLegalVersion > 0 && _acceptedLegalVersion < kLegalVersion;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +132,7 @@ class _MyAppState extends State<MyApp> {
               brightness: Brightness.light,
               primary: AppColors.light.beastHide,
             ),
+            scaffoldBackgroundColor: AppColors.light.nobleBlack,
             textSelectionTheme: TextSelectionThemeData(
               cursorColor: AppColors.light.fishBone,
               selectionColor: AppColors.light.beastHide.withValues(alpha: 0.3),
@@ -144,6 +148,7 @@ class _MyAppState extends State<MyApp> {
               brightness: Brightness.dark,
               primary: AppColors.dark.beastHide,
             ),
+            scaffoldBackgroundColor: AppColors.dark.nobleBlack,
             textSelectionTheme: TextSelectionThemeData(
               cursorColor: AppColors.dark.fishBone,
               selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),
@@ -285,13 +290,32 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     super.initState();
     treeController = TreeNavigationController();
     treeController.addListener(_onNodeChanged);
+    widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
   }
 
   @override
   void dispose() {
+    widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);
     treeController.removeListener(_onNodeChanged);
     treeController.dispose();
     super.dispose();
+  }
+
+  void _onSyncStatusChanged() {
+    if (widget.syncService.syncStatus.value == SyncStatus.error &&
+        widget.syncService.lastSyncWasAuto.value) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Falha na sincronização em segundo plano. Verifique sua conexão.',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   void _onNodeChanged() {
@@ -336,7 +360,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               onSwitchTab: _onItemTapped,
             ),
             SettingsPage(datasetRepo: widget.datasetRepo),
-            BrowsePage(datasetRepo: widget.datasetRepo),
+            BrowsePage(
+              datasetRepo: widget.datasetRepo,
+              syncService: widget.syncService,
+            ),
           ],
         ),
         bottomNavigationBar: buildPrimaryBottomNav(

@@ -6,6 +6,7 @@ import '../view_functions/home_functions.dart';
 import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
+import '../services/sync_service.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
@@ -15,8 +16,9 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 /// fornece uma barra de pesquisa para filtrar por nome ou localização.
 class BrowsePage extends StatefulWidget {
   final DatasetRepository datasetRepo;
+  final SyncService syncService;
 
-  const BrowsePage({super.key, required this.datasetRepo});
+  const BrowsePage({super.key, required this.datasetRepo, required this.syncService});
 
   @override
   State<BrowsePage> createState() => _BrowsePageState();
@@ -45,9 +47,9 @@ class _BrowsePageState extends State<BrowsePage> {
       SnackBar(content: Text('Baixando $name...')),
     );
 
-    // Executa o download real através do repositório.
+    // Executa o download real através do serviço.
     // O arquivo é salvo no diretório de documentos local do aplicativo.
-    final success = await widget.datasetRepo.downloadCrag(crag);
+    final success = await widget.syncService.downloadCrag(crag);
 
     if (mounted) {
       // Atualiza o usuário com o resultado
@@ -66,7 +68,7 @@ class _BrowsePageState extends State<BrowsePage> {
     final EditorDeCroqui configService = widget.datasetRepo.editorDeCroqui;
 
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, 'Explorar Locais'),
 
       // ValueListenableBuilder reconstrói automaticamente esta parte da interface

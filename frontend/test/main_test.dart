@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
@@ -17,7 +18,8 @@ void main() {
   setUp(() {
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
-    mockSync = SyncService(mockRepo);
+    mockSync = SyncService(datasetRepository: mockRepo);
+    mockSync.syncStatus.value = SyncStatus.updated;
     
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
@@ -70,5 +72,27 @@ void main() {
 
     final TermsOfUsePage termsPage = tester.widget(termsFinder);
     expect(termsPage.isUpdatingTerms, isTrue);
+  });
+
+  testWidgets('MyApp shows SnackBar when background sync fails', (WidgetTester tester) async {
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      acceptedLegalVersion: kLegalVersion,
+    ));
+
+    // Finish building the initial frame
+    await tester.pump();
+
+    // Trigger an automatic sync failure
+    mockSync.lastSyncWasAuto.value = true;
+    mockSync.syncStatus.value = SyncStatus.error;
+
+    // Pump to let the listener trigger the SnackBar
+    await tester.pump();
+
+    // The SnackBar should appear
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('Falha na sincronização em segundo plano. Verifique sua conexão.'), findsOneWidget);
   });
 }

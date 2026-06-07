@@ -4,7 +4,6 @@
 library;
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -24,22 +23,6 @@ class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInt
   Future<String?> getApplicationSupportPath() async => tempPath;
   @override
   Future<String?> getLibraryPath() async => tempPath;
-}
-
-class FakeDownloadClient extends http.BaseClient {
-  final Map<String, List<int>> mockFiles;
-  
-  FakeDownloadClient(this.mockFiles);
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    for (var entry in mockFiles.entries) {
-      if (request.url.path.endsWith(entry.key)) {
-        return http.StreamedResponse(Stream.value(entry.value), 200);
-      }
-    }
-    return http.StreamedResponse(Stream.empty(), 404);
-  }
 }
 
 void main() {
@@ -89,14 +72,6 @@ void main() {
       expect(repo.homeResetTrigger.value, before + 3);
     });
 
-    test('downloadingCrags começa vazio', () {
-      expect(repo.downloadingCrags.value, isEmpty);
-    });
-
-    test('syncStatus começa como SyncStatus.updating', () {
-      expect(repo.syncStatus.value, SyncStatus.updating);
-    });
-
     test('activeDataset começa como null', () {
       final freshEditor = EditorDeCroqui();
       final freshRepo = DatasetRepository(editorDeCroqui: freshEditor);
@@ -109,49 +84,32 @@ void main() {
       repo.loadEmpty();
       expect(notified, isTrue);
     });
-
-    test('downloadCrag (simulado) deve acionar a telemetria', () {
-      // We don't have full archive download mock in this test suite yet,
-      // so we simulate a call directly on the telemetry to ensure the 
-      // concept is covered here. (In a full test, we'd mock HTTP and Archive)
-      TelemetryService.instance.logAcaoExplorar('crag1', 'baixar');
-      expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
-      expect(mockTelemetry.recordedParams['acao_explorar']?['acao'], 'baixar');
-      expect(mockTelemetry.recordedParams['acao_explorar']?['id_croqui'], 'crag1');
-    });
   });
 
   // ---------------------------------------------------------------------------
-  // Sincronização e Downloads
+  // Operações de Deleção
   // ---------------------------------------------------------------------------
-
-  group('Download Crag', () {
-    test('deve baixar o croqui e seus arquivos externos com sucesso', () async {
-      final picoId = 'pico_teste';
-      final croqui = Croqui()
-        ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagens/capa.webp');
-        
-      final client = FakeDownloadClient({
-        'picos/$picoId.binarypb': croqui.writeToBuffer(),
-        'picos/imagens/capa.webp': [1, 2, 3],
-      });
-
-      // Configura um activeBaseUrl falso
-      editor.editorUrl.value = 'https://fake.url';
+  group('Deleção de Crag', () {
+    test('deleteCrag remove o diretório do pico corretamente', () async {
+      final picoId = 'pico_para_deletar';
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId');
+      await picoDir.create(recursive: true);
       
-      final result = await repo.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      }, clientOverride: client);
+      // Cria arquivo de teste dentro
+      final testFile = File('${picoDir.path}/test_file.txt');
+      await testFile.writeAsString('conteudo_teste');
+
+      expect(picoDir.existsSync(), isTrue);
+      
+      final result = await repo.deleteCrag(picoId);
 
       expect(result, isTrue);
+      expect(picoDir.existsSync(), isFalse);
+    });
 
-      final downloadsDir = editor.downloadsPath(tempDir.path);
-      final picoDir = Directory('$downloadsDir/$picoId');
-      
-      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
-      expect(File('${picoDir.path}/imagens/capa.webp').existsSync(), isTrue);
+    test('deleteCrag retorna falso se ocorrer erro na deleção', () async {
+      final result = await repo.deleteCrag('pico_inexistente');
+      expect(result, isFalse);
     });
   });
-
 }

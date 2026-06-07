@@ -60,7 +60,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     }
 
     return Scaffold(
-      backgroundColor: nobleBlack,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, 
         widget.pico.nome,
         actions: [
@@ -92,7 +92,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  backgroundColor: nobleBlack,
+                  backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
                   title: Text('Excluir?', style: TextStyle(color: beastHide)),
                   content: Text('Deseja excluir o guia de ${widget.pico.nome}?', style: TextStyle(color: fishBone)),
                   actions: [
@@ -115,7 +115,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(success ? 'Guia excluído com sucesso.' : 'Erro ao excluir guia.'),
-                      backgroundColor: success ? Colors.green : Colors.red,
+                      backgroundColor: success ? mossRock : Theme.of(context).colorScheme.error,
                     ),
                   );
                 }
