@@ -85,6 +85,23 @@ void main() {
       repo.loadEmpty();
       expect(notified, isTrue);
     });
+
+    test('updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos', () async {
+      repo.activeDataset.value = TopoDataset(
+        availablePicos: [{'id': 'pico_1', 'isDownloaded': false}],
+        downloadedPicos: [],
+      );
+
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/pico_1');
+      await picoDir.create(recursive: true);
+      final picoFile = File('${picoDir.path}/pico_1.binarypb');
+      await picoFile.writeAsString('dados_simulados');
+
+      await repo.updateDatasetAfterDownload('pico_1');
+
+      final updatedAvailable = repo.activeDataset.value!.availablePicos;
+      expect(updatedAvailable.first['isDownloaded'], isTrue);
+    });
   });
 
   // ---------------------------------------------------------------------------

@@ -31,17 +31,13 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.sync),
             onPressed: () async {
-              final failedPicos = await syncService.syncOnLaunch(auto: false);
+              final failedPicos = await syncService.syncIndex(auto: false);
               if (failedPicos.isNotEmpty && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Falha ao atualizar: ${failedPicos.join(', ')}. Verifique a conexão.'),
                     backgroundColor: Theme.of(context).colorScheme.error,
                   ),
-                );
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: const Text('Catálogo sincronizado com sucesso!'), backgroundColor: mossRock),
                 );
               }
             },

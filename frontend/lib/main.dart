@@ -58,14 +58,14 @@ void main() async {
   // Escuta mudanças de modo para re-sincronizar
   void onModeChange() {
     datasetRepo.loadEmpty();
-    syncService.syncOnLaunch();
+    syncService.syncIndex();
   }
 
   editorDeCroqui.editorUrl.addListener(onModeChange);
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
   // Sincronização inicial na inicialização
-  syncService.syncOnLaunch();
+  syncService.syncIndex();
 
   // Passa isso para o aplicativo
   runApp(

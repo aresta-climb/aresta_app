@@ -24,7 +24,7 @@ Future<bool> conectarEditor(
   if (url.isEmpty) return false;
 
   try {
-    // Valida se o índice está acessível na subpasta "compilado/" (layout padrão do repo de serving)
+    // Valida se o índice está acessível na URL fornecida
     String checkUrl = url;
     if (!checkUrl.startsWith('http://') && !checkUrl.startsWith('https://')) {
       checkUrl = 'https://$checkUrl';
@@ -73,11 +73,10 @@ Future<bool> conectarEditor(
          throw Exception('O arquivo .croqui baixado é inválido ou está corrompido.');
       }
       
-      configService.useCompiladoFolder.value = false;
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
       final syncService = SyncService(datasetRepository: datasetRepo);
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
       await datasetRepo.init();
       TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
       return true;
@@ -89,11 +88,10 @@ Future<bool> conectarEditor(
           .timeout(const Duration(seconds: 5));
           
       if (response.statusCode == 200) {
-        configService.useCompiladoFolder.value = false;
         
         await configService.activateExperimental(url: resolvedUrl, forceResetTimer: true);
         final syncService = SyncService(datasetRepository: datasetRepo);
-        await syncService.syncOnLaunch();
+        await syncService.syncIndex();
         await datasetRepo.init();
         TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
         return true;
@@ -167,12 +165,11 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
          return;
       }
       
-      configService.useCompiladoFolder.value = false;
       await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
       
       // Tenta sincronizar o índice usando o interceptor
       final syncService = SyncService(datasetRepository: datasetRepo);
-      await syncService.syncOnLaunch();
+      await syncService.syncIndex();
       await datasetRepo.init();
 
       if (context.mounted) {
