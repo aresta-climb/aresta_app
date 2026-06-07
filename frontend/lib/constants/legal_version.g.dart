@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE. NÃO EDITE.
 // Atualizado pelo script update_legal_version.dart
 
-const int kLegalVersion = 3;
+const int kLegalVersion = 4;
 const String kLegalLastUpdatedDate = '2026-06-05';
 
 const Map<String, String> kLegalHashes = {

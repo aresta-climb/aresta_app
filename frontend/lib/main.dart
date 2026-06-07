@@ -81,12 +81,14 @@ class MyApp extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
   final int acceptedLegalVersion;
+  final AssetBundle? assetBundle;
 
   const MyApp({
     super.key,
     required this.datasetRepo,
     required this.syncService,
     required this.acceptedLegalVersion,
+    this.assetBundle,
   });
 
   @override
@@ -105,6 +107,7 @@ class _MyAppState extends State<MyApp> {
   void _onTermsAccepted() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('accepted_legal_version', kLegalVersion);
+    await prefs.setString('accepted_legal_timestamp', DateTime.now().toIso8601String());
     setState(() {
       _acceptedLegalVersion = kLegalVersion;
     });
@@ -250,6 +253,7 @@ class _MyAppState extends State<MyApp> {
               : TermsOfUsePage(
                   onAccepted: _onTermsAccepted,
                   isUpdatingTerms: _isUpdatingTerms,
+                  assetBundle: widget.assetBundle,
                 ),
         );
       },

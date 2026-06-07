@@ -3,8 +3,9 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:flutter/services.dart' show AssetBundle, rootBundle;
+import 'package:flutter/services.dart' show AssetBundle;
 import 'package:frontend/constants/legal_version.g.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 /// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
@@ -48,6 +49,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   bool _isChecked = false;
   String? _termsMarkdown;
   String? _privacyMarkdown;
+  String? _acceptedTimestamp;
 
   @override
   void initState() {
@@ -57,7 +59,12 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
 
   Future<void> _loadDocuments() async {
     try {
-      final bundle = widget.assetBundle ?? rootBundle;
+      final bundle = widget.assetBundle ?? DefaultAssetBundle.of(context);
+
+      if (!widget.showAcceptButton) {
+        final prefs = await SharedPreferences.getInstance();
+        _acceptedTimestamp = prefs.getString('accepted_legal_timestamp');
+      }
 
       final terms = await bundle.loadString(
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md',
@@ -189,6 +196,45 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
     );
   }
 
+  Widget _buildAcceptedBanner() {
+    if (widget.showAcceptButton || _acceptedTimestamp == null) return const SizedBox.shrink();
+
+    final dateTime = DateTime.tryParse(_acceptedTimestamp!);
+    if (dateTime == null) return const SizedBox.shrink();
+
+    final dateStr = formatLegalDate(_acceptedTimestamp!.substring(0, 10));
+    final timeStr = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Aceito em $dateStr às $timeStr',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,6 +256,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildUpdateBanner(),
+                    _buildAcceptedBanner(),
                     MarkdownBody(
                       data: _termsMarkdown!,
                       onTapLink: _onTapLink,
