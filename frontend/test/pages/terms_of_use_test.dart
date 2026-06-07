@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class MockAssetBundle extends Fake implements AssetBundle {
@@ -141,5 +142,29 @@ void main() {
     expect(formatLegalDate('2026-06-04'), '04 de Junho de 2026');
     expect(formatLegalDate('2025-12-31'), '31 de Dezembro de 2025');
     expect(formatLegalDate('invalid-date'), 'invalid-date'); // fallback
+  });
+
+  testWidgets('TermsOfUsePage displays accepted timestamp banner when in read-only mode', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'accepted_legal_timestamp': '2026-06-07T21:50:00.000',
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TermsOfUsePage(
+          onAccepted: () {},
+          showAcceptButton: false, // Read-only mode
+          assetBundle: MockAssetBundle(defaultFiles),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Aceito em 07 de Junho de 2026 às 21:50'),
+      findsOneWidget,
+    );
   });
 }

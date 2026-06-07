@@ -8,7 +8,24 @@ import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
+import 'package:flutter/services.dart' show AssetBundle;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'mocks/mock_telemetry_service.dart';
+
+class MockAssetBundle extends Fake implements AssetBundle {
+  final Map<String, String> mockFiles;
+
+  MockAssetBundle(this.mockFiles);
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    if (mockFiles.containsKey(key)) {
+      return mockFiles[key]!;
+    }
+    throw FlutterError('Unable to load asset: $key');
+  }
+}
 
 void main() {
   late DatasetRepository mockRepo;
@@ -111,5 +128,89 @@ void main() {
 
     final theme = Theme.of(context);
     expect(theme.extension<AppColors>(), isNotNull);
+  });
+
+  testWidgets('MyApp saves timestamp and version when terms are accepted', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({}); // Initialize empty mock
+    
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      acceptedLegalVersion: 0,
+      assetBundle: MockAssetBundle({
+        'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
+        'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+      }),
+    ));
+
+    await tester.pumpAndSettle();
+
+    final termsFinder = find.byType(TermsOfUsePage);
+    expect(termsFinder, findsOneWidget);
+
+    // Tap checkbox
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+
+    // Tap accept button
+    await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Verify SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('accepted_legal_version'), kLegalVersion);
+    expect(prefs.getString('accepted_legal_timestamp'), isNotNull);
+
+    // Verify TreeNavigationWrapper is now shown
+    expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+  });
+
+  testWidgets('MyApp updates timestamp and version when terms are updated and accepted again', (WidgetTester tester) async {
+    final oldTimestamp = DateTime(2025, 1, 1).toIso8601String();
+    final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 0;
+    SharedPreferences.setMockInitialValues({
+      'accepted_legal_version': outdatedVersion,
+      'accepted_legal_timestamp': oldTimestamp,
+    });
+    
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      acceptedLegalVersion: outdatedVersion,
+      assetBundle: MockAssetBundle({
+        'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
+        'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+      }),
+    ));
+
+    await tester.pumpAndSettle();
+
+    final termsFinder = find.byType(TermsOfUsePage);
+    expect(termsFinder, findsOneWidget);
+
+    // Verify update banner is visible
+    expect(find.textContaining('Atualizamos nossos documentos legais'), findsOneWidget);
+
+    // Tap checkbox
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+
+    // Tap accept button
+    await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Verify SharedPreferences updated
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('accepted_legal_version'), kLegalVersion);
+    final newTimestamp = prefs.getString('accepted_legal_timestamp');
+    expect(newTimestamp, isNotNull);
+    expect(newTimestamp, isNot(equals(oldTimestamp)));
+
+    // Verify TreeNavigationWrapper is now shown
+    expect(find.byType(TreeNavigationWrapper), findsOneWidget);
   });
 }
