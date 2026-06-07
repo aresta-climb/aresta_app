@@ -174,10 +174,12 @@ class SyncService {
           editorDeCroqui.editorUrl.value != null &&
           !editorDeCroqui.useCompiladoFolder.value) {
         String altUrl = editorDeCroqui.editorUrl.value!;
-        if (!altUrl.contains('://') && !altUrl.startsWith('aresta-zip'))
+        if (!altUrl.contains('://') && !altUrl.startsWith('aresta-zip')) {
           altUrl = 'https://$altUrl';
-        if (altUrl.endsWith('/'))
+        }
+        if (altUrl.endsWith('/')) {
           altUrl = altUrl.substring(0, altUrl.length - 1);
+        }
         altUrl = '$altUrl/compilado';
 
         debugPrint(
