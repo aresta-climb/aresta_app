@@ -32,16 +32,27 @@ class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInt
 class FakeClient extends http.BaseClient {
   final Indice newIndice;
   final Map<String, List<int>> mockFiles;
+  final String? etagToReturn;
   final List<String> requestedUrls = [];
+  final Map<String, String> receivedHeaders = {};
   
-  FakeClient(this.newIndice, [this.mockFiles = const {}]);
+  FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn]);
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     requestedUrls.add(request.url.path);
+    receivedHeaders.addAll(request.headers);
+
     if (request.url.path.endsWith('indice.binarypb')) {
+      if (etagToReturn != null && request.headers['If-None-Match'] == etagToReturn) {
+        return http.StreamedResponse(const Stream.empty(), 304);
+      }
       final bytes = newIndice.writeToBuffer();
-      return http.StreamedResponse(Stream.value(bytes), 200);
+      return http.StreamedResponse(
+        Stream.value(bytes), 
+        200,
+        headers: etagToReturn != null ? {'etag': etagToReturn!} : {},
+      );
     }
     
     for (var entry in mockFiles.entries) {
@@ -406,6 +417,62 @@ void main() {
           
       expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
           reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // SyncOnLaunch ETag e Caching
+  // ---------------------------------------------------------------------------
+
+  group('SyncOnLaunch ETag e Caching', () {
+    late Directory tempDir;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      tempDir = Directory.systemTemp.createTempSync('sync_etag_test');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    });
+
+    tearDown(() {
+      try {
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    test('deve salvar etag ao baixar indice.binarypb com sucesso', () async {
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = 'pico1');
+      final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      await syncServiceFake.syncOnLaunch();
+
+      final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
+      expect(etagFile.existsSync(), isTrue);
+      expect(etagFile.readAsStringSync(), 'mock_etag_123');
+    });
+
+    test('deve enviar If-None-Match e processar 304 Not Modified corretamente', () async {
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = 'pico_fake_nao_deve_baixar');
+      final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      indiceFile.parent.createSync(recursive: true);
+      indiceFile.writeAsBytesSync(Indice().writeToBuffer());
+      
+      final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
+      etagFile.writeAsStringSync('mock_etag_123');
+      
+      await syncServiceFake.syncOnLaunch();
+
+      expect(fakeClient.receivedHeaders['If-None-Match'], 'mock_etag_123');
+      
+      final finalBytes = indiceFile.readAsBytesSync();
+      final finalIndice = Indice.fromBuffer(finalBytes);
+      expect(finalIndice.croquis, isEmpty, reason: 'Nao deve sobrescrever indice se retornou 304');
+      expect(syncServiceFake.syncStatus.value, equals(SyncStatus.justUpdated));
     });
   });
 
