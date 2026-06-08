@@ -6,11 +6,13 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 
 | Arquivo | Serviço testado | Descrição |
 |---|---|---|
-| `zip_interceptor_test.dart` | `ZipInterceptorClient` | Testa o interceptor HTTP que serve arquivos de dentro de um `.croqui` ou `.zip` local usando o protocolo `aresta-zip://` |
-| `archive_service_test.dart` | `ArchiveService` | Testa extração de arquivos `.croqui` (ZIP ofuscado com XOR), re-ofuscação do cabeçalho e geração de índice temporário |
+| `zip_interceptor_test.dart` | `ZipInterceptorClient` | Testa o interceptor HTTP que serve arquivos de dentro de um `.croqui` local usando o protocolo `aresta-zip://` em memória |
 | `editor_croqui_test.dart` | `EditorDeCroqui` | Testa lógica de modos (oficial, editor, experimental), cálculo de caminhos (`downloadsPath`, `indicePath`) e notificadores de estado |
-| `dataset_repository_test.dart` | `DatasetRepository` | Testa estado público do repositório, extração de caminho de capa markdown e busca recursiva de imagens no sistema de arquivos |
-| `sync_service_test.dart` | `SyncService` / lógica markdown | Testa extração de caminhos de imagens em strings markdown, o enum `SyncStatus` e a classe `TopoDataset` |
+| `dataset_repository_test.dart` | `DatasetRepository` | Testa estado público do repositório e inicializações tipadas |
+| `sync_network_test.dart` | `SyncNetwork` | Testa a leitura HTTP pura com retentativas, ETags (304 Not Modified) e timeouts |
+| `sync_storage_test.dart` | `SyncStorage` | Testa a persistência atômica usando arquivos `.tmp` e a extração do `indice.binarypb` |
+| `sync_status_timer_test.dart`| `SyncStatusTimer` | Testa a debouncer do status de sync que previne *flickering* rápido na UI |
+| `sync_service_test.dart` | `SyncService` | Testes complexos de sincronização atômica, checagem de hashes SHA-256 e extração de imagens Markdown |
 
 ## Como executar
 
@@ -24,6 +26,6 @@ flutter test test/services/zip_interceptor_test.dart
 
 ## Notas
 
-- Os testes do `ZipInterceptorClient` e do `ArchiveService` criam arquivos temporários em `Directory.systemTemp` e os removem após cada teste.
-- Testes que dependem de `getApplicationDocumentsDirectory()` (como `connect`, `disconnect` e `activateExperimental`) **não são testados aqui** pois requerem o binding do Flutter; esses cenários são cobertos pelos testes de integração.
+- Os testes criam arquivos temporários em `Directory.systemTemp` e os removem após cada teste.
+- Testes que dependem de `getApplicationDocumentsDirectory()` **não são testados aqui** pois requerem o binding do Flutter.
 - O protocolo `aresta-zip://` usa hífen (não sublinhado) por ser compatível com o padrão RFC 3986 exigido pela classe `Uri` do Dart.

@@ -79,12 +79,14 @@ frontend/
 │   │   │   ├── telemetry_service.dart    Isolamento do Analytics
 │   │   │   ├── remote_config_service.dart Fallbacks e cache local
 │   │   │   └── app_logger.dart           Logger de eventos local (debug)
-│   │   ├── zip_interceptor_client.dart   Ghost Protocol: intercepta aresta-zip://
+│   │   ├── http/
+│   │   │   ├── sync_service.dart             Orquestra download e validação
+│   │   │   ├── sync_network.dart             Faz o download HTTP bruto
+│   │   │   ├── sync_storage.dart             Trata arquivos `.tmp` e salva modo atômico
+│   │   │   ├── zip_interceptor_client.dart   Ghost Protocol: intercepta aresta-zip://
+│   │   │   └── update_downloader.dart        Verificação e download de atualizações do APK
 │   │   ├── dataset_repository.dart       Estado central: downloads e metadados
-│   │   ├── sync_service.dart             Sync em segundo plano com validação de checksum
-│   │   ├── editor_croqui.dart            Contexto de modo e temporizador experimental
-│   │   ├── archive.dart                  Importação inicial via file picker
-│   │   └── update_downloader.dart        Verificação e download de atualizações do APK
+│   │   └── editor_croqui.dart            Contexto de modo e temporizador experimental
 │   └── widgets/
 │       ├── global_search.dart Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart    Preview interativo de mapa com resolução offline

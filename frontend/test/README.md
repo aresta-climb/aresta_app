@@ -6,7 +6,7 @@ Esta pasta contém todos os testes automatizados do frontend do aplicativo Arest
 
 ```
 test/
-├── services/        Testes unitários dos serviços principais (ZipInterceptor, Archive, EditorDeCroqui, DatasetRepository, SyncService)
+├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
 ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
 ├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar

@@ -4,31 +4,24 @@ Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em
 
 ## 1. Camada de Serviços (`lib/services/`)
 
-A camada de serviços é responsável por toda a comunicação externa (requisições HTTP), gerenciamento de armazenamento local, análise de dados (Protobuf) e estado do aplicativo.
-
-### `ZipInterceptorClient` (`zip_interceptor_client.dart`)
-Um cliente HTTP customizado que estende `http.BaseClient` e implementa o **Ghost Protocol** (`aresta-zip://`). Quando o app realiza uma requisição para uma URL com esse esquema, o cliente intercepta a chamada e lê o arquivo solicitado diretamente de dentro de um arquivo `.croqui` local no disco — sem nenhuma conexão de rede real.
-
-Isso unifica o fluxo de dados do app: tanto o modo oficial (GitHub Pages) quanto o modo experimental (arquivo local importado) passam pelo mesmo pipeline HTTP, diferenciando-se apenas pelo esquema da URL base.
-
-- **Desofuscação XOR**: Arquivos `.croqui` têm o primeiro byte invertido (XOR `0xFF`) para dificultar abertura direta. O interceptor aplica a inversão antes de decodificar o ZIP.
-- **Resolução de caminho interno**: Extrai automaticamente o arquivo correto de dentro do ZIP com base no path da URI, adicionando o prefixo `compilado/` quando necessário.
-- **Pass-through**: Requisições com esquema `http` ou `https` são simplesmente repassadas ao cliente HTTP interno sem interceptação.
+A camada de serviços é responsável pelo gerenciamento de estado do aplicativo e da arquitetura baseada em **MVVM**. Classes geradas via **Protobuf** (`ResumoCroqui`, `Indice`, `Croqui`) atuam como nossos **Models** fortemente tipados. O `DatasetRepository` atua como a **ViewModel** principal.
 
 ### `DatasetRepository` (`dataset_repository.dart`)
 O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local até as camadas reativas da interface. Expõe `ValueNotifier`s reativos (`activeDataset`, `syncStatus`, `downloadingCrags`) que a árvore de widgets escuta para atualizações instantâneas.
 
 - **Gerenciamento de Armazenamento Local**: Cria diretórios dedicados para cada pico baixado em `<app_docs>/downloads/<pico_id>/`, evitando colisões de nomes e tornando atualizações e exclusões eficientes.
-- **Download via Interceptor**: Usa o `ZipInterceptorClient` para buscar binarypbs de picos — seja do servidor remoto (URL `https://`) ou de um arquivo local importado (URL `aresta-zip://`). O mesmo código trata os dois casos.
-- **Extração de Metadados**: Converte modelos Protobuf complexos em `Map<String, dynamic>` simples para consumo pela interface, calculando dinamicamente thumbnails e caminhos de capa.
+- **Tipagem Forte**: Ao invés de trafegar mapas fracamente tipados para a camada de negócios, o repositório consome e despacha objetos do tipo `ResumoCroqui` nativamente, garantindo integridade das requisições e downloads.
+- **Agrupamento de Metadados**: Converte metadados complexos do protobuf em agrupamentos simples (`Map<String, dynamic>`) apenas para o consumo otimizado pelas *Views* de renderização rápida (`home.dart`, `browse.dart`).
 - **Rastreamento de Prioridade e Migração**: Gerencia `recent_picos.yaml` para ordenar os guias mais acessados recentemente no carrossel da Home. Contém lógica de migração automática do formato antigo `.json` para YAML.
 
-### `SyncService` (`sync_service.dart`)
-Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado com o repositório remoto. Usa o `ZipInterceptorClient`, que funciona tanto para URLs remotas quanto para o protocolo `aresta-zip://` do modo experimental.
+### Módulo HTTP e Conectividade (`http/`)
+Diretório isolado que retém todas as responsabilidades que interagem com tráfego de rede, conexões externas e simulações do *Ghost Protocol*. A arquitetura geral do aplicativo é completamente agnóstica à internet (offline-first) fora desse módulo.
 
-- **Sincronização na Inicialização (`syncIndex`)**: Busca o índice mestre (`indice.binarypb`). Em modo experimental, lê o índice diretamente do arquivo `.croqui` importado. Se o servidor estiver inacessível, reverte para o cache local.
-- **Validação de Checksum em Segundo Plano**: Compara checksums SHA-256 dos picos baixados com o novo índice e atualiza silenciosamente os desatualizados, baixando apenas as imagens modificadas.
-- **Extração de Imagens Markdown**: Usa RegExp (`r'!\[.*?\]\((.*?)\)'`) para extrair caminhos de imagem embutidos em textos Markdown do protobuf, garantindo disponibilidade offline completa.
+- **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Valida checksums SHA-256 e aciona os downloads atômicos apenas de arquivos alterados.
+- **`SyncNetwork` (`sync_network.dart`)**: Responsável pela comunicação HTTP pura, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
+- **`SyncStorage` (`sync_storage.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
+- **`ZipInterceptorClient` (`zip_interceptor_client.dart`)**: Implementa o **Ghost Protocol** (`aresta-zip://`). Lê arquivos transparentemente do interior de ZIPs `.croqui` criptografados (XOR) servindo os bytes decodificados como se fosse uma resposta HTTP normal.
+- **`UpdateDownloader` (`update_downloader.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
 
 ### `EditorDeCroqui` (`editor_croqui.dart`)
 O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.
