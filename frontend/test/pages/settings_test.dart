@@ -4,7 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';

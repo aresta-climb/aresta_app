@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../view_functions/home_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
-import '../services/sync_service.dart';
+import '../services/http/sync_service.dart';
 
 /// A página inicial do aplicativo.
 /// 

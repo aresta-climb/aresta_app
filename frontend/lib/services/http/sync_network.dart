@@ -1,9 +1,8 @@
 import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/app_logger.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
+import '../../aresta_api/proto/generated/indice.pb.dart';
 
 /// Resultado base para a busca do índice de croquis.
 sealed class FetchIndiceResult {}

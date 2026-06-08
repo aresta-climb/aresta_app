@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/dataset_repository.dart';
 import '../widgets/global_search.dart';
-import '../services/sync_service.dart';
+import '../services/http/sync_service.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';

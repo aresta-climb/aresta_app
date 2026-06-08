@@ -6,7 +6,7 @@ class ThemeController {
   factory ThemeController() => _instance;
   ThemeController._internal();
 
-  final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.dark);
+  final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.system);
 
   Future<void> loadTheme() async {
     final prefs = await SharedPreferences.getInstance();

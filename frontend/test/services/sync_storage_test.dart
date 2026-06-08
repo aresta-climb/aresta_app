@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:crypto/crypto.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/sync_storage.dart';
+import 'package:frontend/services/http/sync_storage.dart';
 
 void main() {
   late SyncStorage storage;

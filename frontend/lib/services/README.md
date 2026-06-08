@@ -6,14 +6,12 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 
 ## Arquivos
 
-| Arquivo | Responsabilidade |
+| Arquivo / Pasta | Responsabilidade |
 |---|---|
-| `zip_interceptor_client.dart` | Intercepta requisições `aresta-zip://` e serve arquivos de dentro de `.croqui`/`.zip` locais |
 | `dataset_repository.dart` | Gerenciador de estado central: downloads, índice, metadados e prioridade |
-| `sync_service.dart` | Sincronização em segundo plano: índice, checksums e imagens |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
 | `archive.dart` | Utilitário de importação: extração inicial do `.croqui` na importação via file picker |
-| `update_downloader.dart` | Verificação e download de atualizações do APK do aplicativo |
+| `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA) |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 
 ---

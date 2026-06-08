@@ -4,12 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'zip_interceptor_client.dart';
 import 'package:path_provider/path_provider.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
-import 'dataset_repository.dart';
+import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../dataset_repository.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-
 import 'sync_storage.dart';
 import 'sync_network.dart';
 
@@ -46,13 +45,13 @@ class SyncService {
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
   ///
   /// Retorna [true] se as operações de download e salvamento forem bem-sucedidas.
-  Future<bool> downloadCrag(Map<String, dynamic> crag) async {
-    final String? url = crag['url'];
-    final String? id = crag['id'];
+  Future<bool> downloadCrag(ResumoCroqui resumo) async {
+    final String id = resumo.id;
+    final String url = resumo.url;
 
-    if (url == null || id == null) {
+    if (url.isEmpty || id.isEmpty) {
       AppLogger.instance.logError(
-        'Tentativa de download do pico falhou: ID ou URL nulos. crag=$crag',
+        'Tentativa de download do pico falhou: ID ou URL vazios. id=$id',
       );
       return false;
     }
@@ -65,8 +64,6 @@ class SyncService {
       // Garanta que temos o indice local sincronizado com o remoto antes de
       // baixar o pico pra não ter erros de checksum após os downloads.
       await syncIndex(auto: false);
-
-      final resumo = _resolveResumo(id, url, crag['nome'] ?? '');
 
       final directory = await getApplicationDocumentsDirectory();
       final downloadsDir = Directory(
@@ -88,53 +85,6 @@ class SyncService {
       downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
     return false;
-  }
-
-  /// Resolve o [ResumoCroqui] apropriado para o download.
-  /// Tenta encontrar o resumo correspondente no índice carregado em memória.
-  /// Caso não encontre (ou se o índice for nulo), cria um objeto de fallback dinamicamente.
-  ResumoCroqui _resolveResumo(String id, String url, String nome) {
-    final indice = datasetRepository.indiceData.value;
-    if (indice == null) {
-      AppLogger.instance.logError(
-        'Aviso: Indice é nulo durante o download do pico $id. Usando metadados de fallback (modo editor?).',
-      );
-    }
-
-    String relativeUrl = _buildRelativeUrl(url);
-
-    // [Explicação da Lógica Abaixo]:
-    // 1. indice?.croquis.firstWhere(...): Tenta buscar no índice (se não for nulo)
-    //    um croqui com o mesmo ID solicitado.
-    // 2. orElse: (): Se o firstWhere NÃO encontrar um correspondente no índice,
-    //    retorna um "ResumoCroqui" mockado com os dados recebidos na chamada
-    //    (necessário para continuar o fluxo caso a lista oficial esteja incompleta).
-    // 3. ?? (...): Se o `indice` em si for nulo (ou seja, o lado esquerdo
-    //    inteiro do ?? falhar), o Dart cai aqui e instancia o mock garantindo
-    //    que sempre teremos um ResumoCroqui para seguir pro download.
-    return indice?.croquis.firstWhere(
-          (r) => r.id == id,
-          orElse: () => ResumoCroqui()
-            ..id = id
-            ..url = relativeUrl
-            ..nome = nome,
-        ) ??
-        (ResumoCroqui()
-          ..id = id
-          ..url = relativeUrl
-          ..nome = nome);
-  }
-
-  /// Constrói a URL relativa removendo o prefixo base (se aplicável),
-  /// o que facilita mapear caminhos no sistema de arquivos local.
-  String _buildRelativeUrl(String url) {
-    String relativeUrl = url;
-    final activeBaseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-    if (relativeUrl.startsWith(activeBaseUrl)) {
-      relativeUrl = relativeUrl.substring(activeBaseUrl.length);
-      if (relativeUrl.startsWith('/')) relativeUrl = relativeUrl.substring(1);
-    }
-    return relativeUrl;
   }
 
   /// Sincroniza o índice mestre com o servidor remoto.
@@ -497,15 +447,19 @@ class SyncService {
   /// (como bounding boxes ou pin maps) disponíveis diretamente na listagem do dataset.
   Future<void> _updatePicoMetadata(String id, Croqui newPicoData) async {
     final directory = await getApplicationDocumentsDirectory();
-    final pData = datasetRepository.activeDataset.value?.availablePicos
-        .firstWhere((p) => p['id'] == id, orElse: () => <String, dynamic>{});
-    if (pData != null && pData.isNotEmpty) {
-      await datasetRepository.updatePicoMetadata(
-        id,
-        pData,
-        directory.path,
-        parsedPico: newPicoData,
-      );
+    final picos = datasetRepository.activeDataset.value?.availablePicos;
+    if (picos == null) return;
+
+    for (var p in picos) {
+      if (p['id'] == id) {
+        await datasetRepository.updatePicoMetadata(
+          id,
+          p,
+          directory.path,
+          parsedPico: newPicoData,
+        );
+        break;
+      }
     }
   }
 

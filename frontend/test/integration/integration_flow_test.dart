@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:archive/archive.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/zip_interceptor_client.dart';
+import 'package:frontend/services/http/zip_interceptor_client.dart';
 
 /// Cria um .croqui com múltiplos arquivos internos e retorna o arquivo.
 Future<File> _criarCroquiCompleto(Directory tempDir) async {

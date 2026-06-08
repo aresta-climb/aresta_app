@@ -13,7 +13,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:crypto/crypto.dart';
-import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
@@ -535,10 +535,7 @@ void main() {
 
       repo.indiceData.value = newIndice;
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
 
@@ -569,10 +566,7 @@ void main() {
 
       repo.indiceData.value = newIndice;
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
       expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
@@ -607,10 +601,7 @@ void main() {
       // O app localmente acha que tem o OLD_HASH
       repo.indiceData.value = oldIndice;
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       // Se a prevenção de race condition funcionar, ele vai:
       // 1. Chamar syncIndex, que baixa newIndice
@@ -636,10 +627,7 @@ void main() {
 
       repo.indiceData.value = newIndice;
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isFalse);
     });
@@ -680,10 +668,7 @@ void main() {
       final tmpFile = File('${picoDir.path}/capa.webp.tmp');
       tmpFile.writeAsBytesSync(fileData);
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
       // Main croqui should be downloaded
@@ -729,10 +714,7 @@ void main() {
       final tmpFile = File('${picoDir.path}/capa.webp.tmp');
       tmpFile.writeAsBytesSync([9, 9, 9, 9]); // Junk bytes
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
       // Main croqui should be downloaded
@@ -773,10 +755,7 @@ void main() {
       final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
       tmpFile.writeAsBytesSync(croquiBytes);
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
       expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
@@ -813,10 +792,7 @@ void main() {
       final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
       tmpFile.writeAsBytesSync([9, 9, 9, 9]); // Junk bytes
       
-      final result = await syncServiceFake.downloadCrag({
-        'id': picoId,
-        'url': 'https://fake.url/picos/$picoId.binarypb',
-      });
+      final result = await syncServiceFake.downloadCrag(newIndice.croquis.first);
 
       expect(result, isTrue);
       expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
