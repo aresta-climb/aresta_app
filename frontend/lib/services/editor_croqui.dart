@@ -1,15 +1,14 @@
 import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'dataset_repository.dart';
+import 'package:yaml/yaml.dart';
 
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
 class EditorDeCroqui {
   static const String _officialBaseUrl = 'https://aresta-climb.github.io/aresta_serving';
-  static const String _configFileName = 'editor_config.json';
+  static const String _configFileName = 'editor_config.yaml';
 
   static EditorDeCroqui? _instance;
   static EditorDeCroqui get instance {
@@ -37,8 +36,10 @@ class EditorDeCroqui {
   }
 
   String get activeBaseUrl {
+    if (!isExperimentalMode.value) return _officialBaseUrl;
+    
     String? url = editorUrl.value;
-    if (url == null || url.isEmpty) return _officialBaseUrl;
+    if (url == null || url.isEmpty) return '';
     
     // Se for um link local ou aresta-zip, retornamos como está
     if (url.startsWith('aresta-zip')) return url;
@@ -51,7 +52,7 @@ class EditorDeCroqui {
     return url;
   }
 
-  bool get isEditorActive => editorUrl.value != null || isExperimentalMode.value;
+  bool get isEditorActive => isExperimentalMode.value;
 
   Future<bool> hasExperimentalData() async {
     try {
@@ -64,23 +65,17 @@ class EditorDeCroqui {
   }
 
   String downloadsPath(String docsPath) {
-    if (editorUrl.value == null && !isExperimentalMode.value) {
+    if (!isExperimentalMode.value) {
       return '$docsPath/downloads';
     }
-    if (isExperimentalMode.value) {
-      return '$docsPath/editor/experimental/downloads';
-    }
-    return '$docsPath/editor/${_urlToSlug(editorUrl.value!)}/downloads';
+    return '$docsPath/editor/experimental/downloads';
   }
 
   String indicePath(String docsPath) {
-    if (editorUrl.value == null && !isExperimentalMode.value) {
+    if (!isExperimentalMode.value) {
       return '$docsPath/indice.binarypb';
     }
-    if (isExperimentalMode.value) {
-      return '$docsPath/editor/experimental/indice.binarypb';
-    }
-    return '$docsPath/editor/${_urlToSlug(editorUrl.value!)}/indice.binarypb';
+    return '$docsPath/editor/experimental/indice.binarypb';
   }
 
   Future<String> getEditedPath() async {
@@ -92,17 +87,58 @@ class EditorDeCroqui {
     return editedDir.path;
   }
 
-  Future<void> loadFromDisk() async {
+  Future<Map<String, dynamic>> _readConfig() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final configFile = File('${directory.path}/$_configFileName');
-      if (await configFile.exists()) {
-        final content = await configFile.readAsString();
-        final json = jsonDecode(content) as Map<String, dynamic>;
-        
-        final url = json['editorUrl'] as String?;
-        final experimental = json['isExperimental'] as bool? ?? false;
-        final devMode = json['isDevMode'] as bool? ?? false;
+      if (!await configFile.exists()) return {};
+      final content = await configFile.readAsString();
+      if (content.trim().isEmpty) return {};
+      final yamlDoc = loadYaml(content);
+      if (yamlDoc is YamlMap) {
+        return Map<String, dynamic>.from(yamlDoc);
+      }
+    } catch (e) {
+      AppLogger.instance.logError('[EditorConfig] Erro ao ler yaml', error: e);
+    }
+    return {};
+  }
+
+  Future<void> _writeConfig(Map<String, dynamic> config) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final configFile = File('${directory.path}/$_configFileName');
+      
+      final lines = <String>[];
+      for (final entry in config.entries) {
+        if (entry.value == null) continue;
+        if (entry.value is String) {
+          lines.add('${entry.key}: "${entry.value}"');
+        } else {
+          lines.add('${entry.key}: ${entry.value}');
+        }
+      }
+      await configFile.writeAsString(lines.join('\n'));
+    } catch (e) {
+      AppLogger.instance.logError('[EditorConfig] Erro ao gravar yaml', error: e);
+    }
+  }
+
+  Future<void> loadFromDisk() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      
+      // Migração: se existir o JSON antigo, tentamos excluir para limpar
+      final oldJsonFile = File('${directory.path}/editor_config.json');
+      if (await oldJsonFile.exists()) {
+        try { await oldJsonFile.delete(); } catch (_) {}
+      }
+
+      final config = await _readConfig();
+      if (config.isNotEmpty) {
+        final url = config['editorUrl'] as String?;
+        final experimental = config['isExperimental'] as bool? ?? false;
+        final devMode = config['isDevMode'] as bool? ?? false;
 
         // Dev Mode sempre persiste
         if (devMode) {
@@ -110,7 +146,7 @@ class EditorDeCroqui {
           debugPrint('[EditorConfig] Modo Desenvolvedor ativado via disco.');
         }
 
-        final expiryStr = json['expiryTime'] as String?;
+        final expiryStr = config['expiryTime'] as String?;
 
         // Se o app foi fechado em modo experimental, limpamos tudo ao abrir
         if (experimental) {
@@ -151,9 +187,10 @@ class EditorDeCroqui {
 
   void _startCountdown() {
     _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+
+    void tick() {
       if (_expirationTime == null) {
-        timer.cancel();
+        _countdownTimer?.cancel();
         timeRemaining.value = null;
         return;
       }
@@ -162,15 +199,17 @@ class EditorDeCroqui {
       final difference = _expirationTime!.difference(now);
 
       if (difference.isNegative || difference.inSeconds <= 0) {
-        timer.cancel();
+        _countdownTimer?.cancel();
         timeRemaining.value = Duration.zero;
         debugPrint('[EditorConfig] Tempo esgotado! Iniciando Nuke...');
         nukeExperimentalData();
-        DatasetRepository.instance?.loadEmpty();
       } else {
         timeRemaining.value = difference;
       }
-    });
+    }
+
+    tick(); // Chama imediatamente para não ter delay de 1 segundo na UI
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
   }
 
   Future<void> activateExperimental({String? url, bool forceResetTimer = false}) async {
@@ -190,21 +229,16 @@ class EditorDeCroqui {
     }
 
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final configFile = File('${directory.path}/$_configFileName');
-      Map<String, dynamic> currentJson = {};
-      if (await configFile.exists()) {
-        currentJson = jsonDecode(await configFile.readAsString());
-      }
+      final config = await _readConfig();
       if (url != null) {
-        currentJson['editorUrl'] = url;
+        config['editorUrl'] = url;
       } else {
-        currentJson['editorUrl'] = null;
+        config['editorUrl'] = null;
       }
-      currentJson['isExperimental'] = true;
-      currentJson['expiryTime'] = _expirationTime?.toIso8601String();
+      config['isExperimental'] = true;
+      config['expiryTime'] = _expirationTime?.toIso8601String();
       
-      await configFile.writeAsString(jsonEncode(currentJson));
+      await _writeConfig(config);
     } catch (e) {
       AppLogger.instance.logError('[EditorConfig] Erro ao persistir modo experimental', error: e);
     }
@@ -213,14 +247,9 @@ class EditorDeCroqui {
   Future<void> setDevMode(bool enabled) async {
     isDevModeEnabled.value = enabled;
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final configFile = File('${directory.path}/$_configFileName');
-      Map<String, dynamic> currentJson = {};
-      if (await configFile.exists()) {
-        currentJson = jsonDecode(await configFile.readAsString());
-      }
-      currentJson['isDevMode'] = enabled;
-      await configFile.writeAsString(jsonEncode(currentJson));
+      final config = await _readConfig();
+      config['isDevMode'] = enabled;
+      await _writeConfig(config);
     } catch (e) {
       AppLogger.instance.logError('[EditorConfig] Erro ao persistir modo dev', error: e);
     }
@@ -228,19 +257,13 @@ class EditorDeCroqui {
 
   Future<void> disconnect() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final configFile = File('${directory.path}/$_configFileName');
-      Map<String, dynamic> currentJson = {};
-      if (await configFile.exists()) {
-        currentJson = jsonDecode(await configFile.readAsString());
-      }
-      currentJson['editorUrl'] = null;
-      currentJson['isExperimental'] = false;
+      final config = await _readConfig();
+      // Mantemos a URL no yaml para poder reativá-la depois
+      config['isExperimental'] = false;
       // Mantemos o expiryTime no config para que o tempo continue contando
       
-      await configFile.writeAsString(jsonEncode(currentJson));
+      await _writeConfig(config);
       
-      editorUrl.value = null;
       isExperimentalMode.value = false;
     } catch (e) {
       AppLogger.instance.logError('[EditorConfig] Erro ao desconectar', error: e);
@@ -264,13 +287,16 @@ class EditorDeCroqui {
         await editedDir.delete(recursive: true);
       }
 
+      final config = await _readConfig();
+      config['editorUrl'] = null;
+      await _writeConfig(config);
+      
+      editorUrl.value = null;
+
       await disconnect();
     } catch (e) {
       AppLogger.instance.logError('[EditorConfig] Erro ao limpar dados', error: e);
     }
   }
 
-  String _urlToSlug(String url) {
-    return url.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-  }
 }
