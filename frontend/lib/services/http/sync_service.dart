@@ -107,6 +107,14 @@ class SyncService {
       final localEtagPath = '$localIndicePath.etag';
 
       final baseUrl = editorDeCroqui.activeBaseUrl;
+      
+      if (baseUrl.isEmpty) {
+        debugPrint('[SyncService] URL base vazia. Sincronização ignorada, carregando local...');
+        await _loadLocalIndiceAndNotify(localIndicePath);
+        setUpdatedStatus();
+        return failedPicos;
+      }
+
       debugPrint(
         'Buscando banco de dados em tempo real de $baseUrl/indice.binarypb...',
       );

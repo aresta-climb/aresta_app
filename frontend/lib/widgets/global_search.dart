@@ -72,6 +72,22 @@ class _GlobalSearchState extends State<GlobalSearch> {
   }
 
   @override
+  void didUpdateWidget(GlobalSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _repoChangeWatcher(oldWidget);
+  }
+
+  /// Observa se a lista de picos mudou (ex: mudança de modo ou fim de download) e invalida o cache.
+  void _repoChangeWatcher(GlobalSearch oldWidget) {
+    if (widget.downloadedPicos != oldWidget.downloadedPicos) {
+      _hasLoadedData = false;
+      if (_isExpanded && !_isLoading) {
+        _loadAllData();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _debounceTimer?.cancel();
     _searchFocusNode.dispose();

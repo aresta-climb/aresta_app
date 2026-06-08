@@ -13,12 +13,12 @@ class ZipInterceptorClient extends http.BaseClient {
       try {
         final pathStr = request.url.path; // ex: /caminho/para/repo.croqui/compilado/indice.binarypb
         
-        int splitIndex = pathStr.indexOf('.croqui');
+        int splitIndex = pathStr.lastIndexOf('.croqui');
         int extensionLength = 7;
         bool isCroqui = true;
 
         if (splitIndex == -1) {
-          splitIndex = pathStr.indexOf('.zip');
+          splitIndex = pathStr.lastIndexOf('.zip');
           extensionLength = 4;
           isCroqui = false;
         }

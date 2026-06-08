@@ -85,7 +85,7 @@ Future<bool> conectarEditor(
          throw Exception('O arquivo .croqui baixado é inválido ou está corrompido.');
       }
       
-      await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
+      await configService.activateExperimental(url: ghostUrl, forceResetTimer: false);
       
       final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncIndex();
@@ -101,7 +101,7 @@ Future<bool> conectarEditor(
           
       if (response.statusCode == 200) {
         
-        await configService.activateExperimental(url: resolvedUrl, forceResetTimer: true);
+        await configService.activateExperimental(url: resolvedUrl, forceResetTimer: false);
         final syncService = SyncService(datasetRepository: datasetRepo);
         await syncService.syncIndex();
         await datasetRepo.init();
@@ -132,8 +132,7 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
   
   try {
     final fp.FilePickerResult? result = await fp.FilePicker.pickFiles(
-      type: fp.FileType.custom,
-      allowedExtensions: ['croqui'],
+      type: fp.FileType.any,
     );
 
     if (result != null && result.files.single.path != null) {
@@ -177,7 +176,7 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
          return;
       }
       
-      await configService.activateExperimental(url: ghostUrl, forceResetTimer: true);
+      await configService.activateExperimental(url: ghostUrl, forceResetTimer: false);
       
       // Tenta sincronizar o índice usando o interceptor
       final syncService = SyncService(datasetRepository: datasetRepo);
@@ -361,7 +360,7 @@ Widget buildEditorCard({
       return ValueListenableBuilder<String?>(
         valueListenable: configService.editorUrl,
         builder: (context, activeUrl, _) {
-          final isEditor = activeUrl != null || isExperimental;
+          final isEditor = isExperimental;
 
           return ValueListenableBuilder<bool>(
             valueListenable: configService.isDevModeEnabled,
@@ -433,7 +432,7 @@ Widget buildEditorCard({
                         description,
                         style: TextStyle(color: context.colors.fishBone),
                       ),
-                      if (activeUrl != null) ...[
+                      if (isExperimental && activeUrl != null) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(8),

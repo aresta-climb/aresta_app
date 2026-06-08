@@ -23,16 +23,19 @@ void main() {
     });
 
     test('deve retornar a URL do editor quando configurada', () {
+      editor.isExperimentalMode.value = true;
       editor.editorUrl.value = 'http://meuservidor.local:8080';
       expect(editor.activeBaseUrl, 'http://meuservidor.local:8080');
     });
 
     test('deve retornar a URL ghost aresta-zip no modo experimental com URL', () {
+      editor.isExperimentalMode.value = true;
       editor.editorUrl.value = 'aresta-zip:///data/repo.croqui';
       expect(editor.activeBaseUrl, 'aresta-zip:///data/repo.croqui');
     });
 
     test('deve normalizar URLs sem scheme adicionando https://', () {
+      editor.isExperimentalMode.value = true;
       editor.editorUrl.value = 'aresta-climb.github.io/aresta_serving';
       expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving');
     });
@@ -46,11 +49,6 @@ void main() {
   group('isEditorActive', () {
     test('deve ser falso no estado inicial', () {
       expect(editor.isEditorActive, isFalse);
-    });
-
-    test('deve ser verdadeiro quando editorUrl está definida', () {
-      editor.editorUrl.value = 'http://editor.local';
-      expect(editor.isEditorActive, isTrue);
     });
 
     test('deve ser verdadeiro quando modo experimental está ativo', () {
@@ -84,15 +82,6 @@ void main() {
       );
     });
 
-    test('modo editor URL: deve retornar caminho com slug da URL', () {
-      editor.editorUrl.value = 'http://editor.local:9000';
-      // A URL é transformada em slug substituindo [^a-zA-Z0-9] por '_'
-      expect(
-        editor.downloadsPath(docsPath),
-        '$docsPath/editor/http___editor_local_9000/downloads',
-      );
-    });
-
     test('deve priorizar experimental sobre editorUrl quando ambos ativos', () {
       editor.editorUrl.value = 'http://editor.local';
       editor.isExperimentalMode.value = true;
@@ -120,14 +109,6 @@ void main() {
       expect(
         editor.indicePath(docsPath),
         '$docsPath/editor/experimental/indice.binarypb',
-      );
-    });
-
-    test('modo editor URL: deve retornar caminho com slug da URL', () {
-      editor.editorUrl.value = 'http://editor.local';
-      expect(
-        editor.indicePath(docsPath),
-        '$docsPath/editor/http___editor_local/indice.binarypb',
       );
     });
   });

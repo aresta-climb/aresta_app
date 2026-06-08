@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../services/http/zip_interceptor_client.dart';
 import 'common_functions.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
@@ -377,39 +379,68 @@ class _CragListItemState extends State<_CragListItem>
 
 /// Constrói o ícone visual que lidera o item da lista de picos.
 ///
-/// Agora utiliza a thumbnail disponível no servidor se [thumbnailUrl] não estiver vazia.
+/// Agora utiliza a thumbnail disponível no servidor se [thumbnailUrl] não estiver vazia,
+/// e lida com URLs 'aresta-zip://' baixando os bytes em memória.
 Widget _buildCragIcon(String thumbnailUrl) {
   Widget content;
 
   if (thumbnailUrl.isNotEmpty) {
-    content = Image.network(
-      thumbnailUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) =>
-          _buildPlaceholderIcon(), // Caso tiver um error, ir para o ícone de fallback
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
+    if (thumbnailUrl.startsWith('aresta-zip://')) {
+      content = FutureBuilder<http.Response>(
+        future: ZipInterceptorClient().get(Uri.parse(thumbnailUrl)),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: beastHide.withValues(alpha: 0.5),
+                ),
+              ),
+            );
+          }
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) {
+            return _buildPlaceholderIcon();
+          }
+          return Image.memory(
+            snapshot.data!.bodyBytes,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholderIcon(),
+          );
+        },
+      );
+    } else {
+      content = Image.network(
+        thumbnailUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderIcon(), // Caso tiver um error, ir para o ícone de fallback
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
 
-        double? progressValue;
-        if (loadingProgress.expectedTotalBytes != null) {
-          progressValue =
-              loadingProgress.cumulativeBytesLoaded /
-              loadingProgress.expectedTotalBytes!;
-        }
+          double? progressValue;
+          if (loadingProgress.expectedTotalBytes != null) {
+            progressValue =
+                loadingProgress.cumulativeBytesLoaded /
+                loadingProgress.expectedTotalBytes!;
+          }
 
-        return Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: beastHide.withValues(alpha: 0.5),
-              value: progressValue,
+          return Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: beastHide.withValues(alpha: 0.5),
+                value: progressValue,
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   } else {
     content = _buildPlaceholderIcon();
   }

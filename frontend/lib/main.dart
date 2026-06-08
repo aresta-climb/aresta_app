@@ -173,15 +173,10 @@ class _MyAppState extends State<MyApp> {
                       valueListenable:
                           widget.datasetRepo.editorDeCroqui.editorUrl,
                       builder: (context, editorUrl, _) {
-                        final isEditor = editorUrl != null || isExperimental;
+                        final isEditor = isExperimental;
                         if (!isEditor) return const SizedBox.shrink();
 
-                        String bannerText;
-                        if (isExperimental) {
-                          bannerText = 'MODO EXPERIMENTAL ATIVO (LOCAL)';
-                        } else {
-                          bannerText = 'MODO EDITOR ATIVO (URL)';
-                        }
+                        String bannerText = 'MODO EXPERIMENTAL ATIVO (LOCAL)';
 
                         return Positioned(
                           top: 0,
