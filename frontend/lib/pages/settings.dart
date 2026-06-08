@@ -34,12 +34,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 16),
               buildAppVersionCard(context),
-              const SizedBox(height: 24),
-              buildLegalLinks(context),
-              const SizedBox(height: 16),
             ],
           ),
         ),
+        buildLegalLinks(context),
+        const SizedBox(height: 16),
       ],
     );
   }

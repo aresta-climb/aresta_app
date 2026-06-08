@@ -11,7 +11,7 @@ import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapa_geral_pico.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/theme/theme_controller.dart';

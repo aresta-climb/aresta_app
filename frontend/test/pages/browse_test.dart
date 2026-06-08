@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
   FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);
@@ -26,7 +27,7 @@ class FakeSyncService extends SyncService {
   bool mockResult = true;
 
   @override
-  Future<bool> downloadCrag(Map<String, dynamic> crag) async {
+  Future<bool> downloadCrag(ResumoCroqui resumo) async {
     return mockResult;
   }
 }
@@ -53,6 +54,7 @@ void main() {
       ],
       downloadedPicos: [],
     );
+    mockRepo.indiceData.value = Indice()..croquis.add(ResumoCroqui()..id = 'pico_1'..nome = 'Pico Teste');
 
     mockSync.mockResult = true;
 
@@ -85,6 +87,7 @@ void main() {
       ],
       downloadedPicos: [],
     );
+    mockRepo.indiceData.value = Indice()..croquis.add(ResumoCroqui()..id = 'pico_1'..nome = 'Pico Teste');
 
     mockSync.mockResult = false;
 

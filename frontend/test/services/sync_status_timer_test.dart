@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/sync_service.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 
 void main() {

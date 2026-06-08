@@ -6,8 +6,8 @@ import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../view_functions/common_functions.dart';
 import '../pages/qr_scanner.dart';
-import '../services/sync_service.dart';
-import '../services/zip_interceptor_client.dart';
+import '../services/http/sync_service.dart';
+import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
@@ -597,33 +597,66 @@ Widget buildThemeSelectionCard(BuildContext context) {
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeController().themeMode,
             builder: (context, currentMode, _) {
-              return Row(
+              final isManual = currentMode != ThemeMode.system;
+              return Column(
                 children: [
-                  Expanded(
-                    child: buildThemeOption(
-                      context: context,
-                      title: 'Claro',
-                      icon: Icons.light_mode,
-                      isSelected: currentMode == ThemeMode.light,
-                      onTap: () {
-                        TelemetryService.instance.logAcaoConfiguracoes('tema_claro');
-                        ThemeController().setThemeMode(ThemeMode.light);
-                      },
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Escolher tema manualmente',
+                          style: TextStyle(
+                            color: context.colors.fishBone,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: isManual,
+                        onChanged: (value) {
+                          if (value) {
+                            ThemeController().setThemeMode(ThemeMode.dark);
+                          } else {
+                            ThemeController().setThemeMode(ThemeMode.system);
+                          }
+                        },
+                        activeColor: context.colors.beastHide,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: buildThemeOption(
-                      context: context,
-                      title: 'Escuro',
-                      icon: Icons.dark_mode,
-                      isSelected: currentMode == ThemeMode.dark,
-                      onTap: () {
-                        TelemetryService.instance.logAcaoConfiguracoes('tema_escuro');
-                        ThemeController().setThemeMode(ThemeMode.dark);
-                      },
+                  if (isManual) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: buildThemeOption(
+                            context: context,
+                            title: 'Claro',
+                            icon: Icons.light_mode,
+                            isSelected: currentMode == ThemeMode.light,
+                            onTap: () {
+                              TelemetryService.instance.logAcaoConfiguracoes('tema_claro');
+                              ThemeController().setThemeMode(ThemeMode.light);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: buildThemeOption(
+                            context: context,
+                            title: 'Escuro',
+                            icon: Icons.dark_mode,
+                            isSelected: currentMode == ThemeMode.dark,
+                            onTap: () {
+                              TelemetryService.instance.logAcaoConfiguracoes('tema_escuro');
+                              ThemeController().setThemeMode(ThemeMode.dark);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ],
               );
             },
@@ -714,12 +747,14 @@ Widget buildAppVersionCard(BuildContext context) {
 }
 
 Widget buildLegalLinks(BuildContext context) {
-  return Card(
-    color: context.colors.slateStone,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
+  return Center(
+    child: TextButton(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -730,23 +765,12 @@ Widget buildLegalLinks(BuildContext context) {
           ),
         );
       },
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.gavel, color: context.colors.fishBone),
-            const SizedBox(width: 8),
-            Text(
-              'Termos de Uso e Privacidade',
-              style: TextStyle(
-                color: context.colors.fishBone,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            Icon(Icons.chevron_right, color: context.colors.beastHide),
-          ],
+      child: Text(
+        'Termos de Uso e Privacidade',
+        style: TextStyle(
+          color: context.colors.beastHide,
+          fontSize: 14,
+          decoration: TextDecoration.underline,
         ),
       ),
     ),

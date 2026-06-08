@@ -6,7 +6,7 @@ import '../view_functions/home_functions.dart';
 import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
-import '../services/sync_service.dart';
+import '../services/http/sync_service.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
@@ -41,6 +41,28 @@ class _BrowsePageState extends State<BrowsePage> {
   /// sucesso ou falha após a conclusão.
   void _handleDownload(Map<String, dynamic> crag) async {
     final name = safeString(crag['nome'], fallback: 'Pico');
+    final String id = crag['id'];
+
+    final indice = widget.datasetRepo.indiceData.value;
+    if (indice == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro: Índice não carregado. Tente novamente.')),
+        );
+      }
+      return;
+    }
+
+    final resumos = indice.croquis.where((r) => r.id == id).toList();
+    if (resumos.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pico inédito ou não encontrado no índice local.')),
+        );
+      }
+      return;
+    }
+    final resumo = resumos.first;
     
     // Mostra um SnackBar para fornecer feedback ao usuário
     ScaffoldMessenger.of(context).showSnackBar(
@@ -49,7 +71,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
     // Executa o download real através do serviço.
     // O arquivo é salvo no diretório de documentos local do aplicativo.
-    final success = await widget.syncService.downloadCrag(crag);
+    final success = await widget.syncService.downloadCrag(resumo);
 
     if (mounted) {
       // Atualiza o usuário com o resultado
