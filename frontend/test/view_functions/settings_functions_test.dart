@@ -14,6 +14,32 @@ void main() {
     TelemetryService.instance = MockTelemetryService();
   });
 
+  group('normalizeEditorUrl', () {
+    test('deve manter a url vazia', () {
+      expect(normalizeEditorUrl(''), '');
+      expect(normalizeEditorUrl('   '), '');
+    });
+
+    test('deve adicionar https se não tiver scheme', () {
+      expect(normalizeEditorUrl('example.com'), 'https://example.com');
+      expect(normalizeEditorUrl('aresta-climb.github.io/aresta_serving'), 'https://aresta-climb.github.io/aresta_serving');
+    });
+
+    test('não deve duplicar prefixo mesmo se o scheme estiver em MAIÚSCULO (QR Code bug)', () {
+      expect(normalizeEditorUrl('HTTPS://example.com'), 'HTTPS://example.com');
+      expect(normalizeEditorUrl('HTTP://192.168.0.1:8000'), 'HTTP://192.168.0.1:8000');
+    });
+
+    test('deve remover a barra final', () {
+      expect(normalizeEditorUrl('https://example.com/'), 'https://example.com');
+      expect(normalizeEditorUrl('example.com/'), 'https://example.com');
+    });
+
+    test('deve preservar aresta-zip://', () {
+      expect(normalizeEditorUrl('aresta-zip:///caminho/do/arquivo.croqui'), 'aresta-zip:///caminho/do/arquivo.croqui');
+    });
+  });
+
   group('conectarEditor', () {
     late DatasetRepository datasetRepo;
     late EditorDeCroqui configService;
