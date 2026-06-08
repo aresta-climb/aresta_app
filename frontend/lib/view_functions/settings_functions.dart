@@ -198,8 +198,8 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
 /// Exibe o diálogo para inserir a URL do repositório do editor.
 void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {String? titulo}) {
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
-  // Pré-preenche com a URL atual se existir, caso contrário começa vazio
-  final TextEditingController urlController = TextEditingController(text: configService.editorUrl.value ?? '');
+  // Inicia vazio, pois a URL atual já é exibida na interface de configurações
+  final TextEditingController urlController = TextEditingController();
   bool isLoading = false;
 
   showDialog(
