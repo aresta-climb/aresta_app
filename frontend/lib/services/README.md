@@ -10,7 +10,6 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 |---|---|
 | `dataset_repository.dart` | Gerenciador de estado central: downloads, índice, metadados e prioridade |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
-| `archive.dart` | Utilitário de importação: extração inicial do `.croqui` na importação via file picker |
 | `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA) |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 
@@ -32,7 +31,7 @@ aresta-zip:///caminho/absoluto/para/arquivo.croqui/compilado/indice.binarypb
 3. Se for `aresta-zip://`, lê o arquivo do disco, aplica de-ofuscação XOR se for `.croqui`, e retorna os bytes como uma resposta HTTP 200.
 4. Se for `http://` ou `https://`, repassa ao cliente HTTP padrão sem modificação.
 
-**Vantagem:** O mesmo código que busca dados do servidor remoto funciona identicamente para arquivos locais. Não há mais `if (isExperimentalMode)` espalhados pelo código.
+**Vantagem:** O mesmo código que busca dados do servidor remoto funciona identicamente para arquivos locais.
 
 ---
 
@@ -59,11 +58,11 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 ### Fluxo de Importação via File Picker
 
 1. O usuário seleciona um `.croqui` via "Importar Repositório".
-2. O `ArchiveService` extrai apenas o `indice.binarypb` para `experimental/`.
-3. O arquivo `.croqui` original é copiado para a pasta de trabalho.
-4. O `EditorDeCroqui` salva a URL `aresta-zip://` como `activeBaseUrl`.
-5. O `SyncService` sincroniza o índice lendo-o via `ZipInterceptorClient`.
-6. Os picos aparecem na aba "Explorar". Ao baixar um, o DatasetRepository usa a mesma URL `aresta-zip://` para extrair o binarypb do ZIP local.
+2. O arquivo `.croqui` original é copiado para a pasta de trabalho (edited).
+3. Uma URL base `aresta-zip://` é construída apontando para o arquivo copiado.
+4. O `ZipInterceptorClient` valida ativamente o `.croqui` tentando ler o `indice.binarypb` de dentro dele.
+5. O `EditorDeCroqui` salva essa URL como `activeBaseUrl` e entra no modo Experimental.
+6. O `SyncService` sincroniza o índice lendo-o via interceptor como se fosse uma rede externa.
 
 ### Fluxo de Importação via QR Code / URL
 
@@ -103,13 +102,7 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - `_checkForUpdates()`: itera picos baixados e atualiza os desatualizados
 - `_extractMarkdownImages()`: extrai caminhos de imagens embutidos em Markdown via RegExp
 
-### `ArchiveService`
-- Funções estáticas: não precisa de instância
-- `extractCroqui()`: extrai arquivos do ZIP com desofuscação e re-ofuscação automáticas
-- `processCroquiImport()`: fluxo completo de importação inicial
-- `createTemporaryIndice()`: gera um `indice.binarypb` mínimo para repositórios simples
 
----
 
 ## Manutenção e Debug
 

@@ -20,6 +20,12 @@ O Aresta Climb é um guia de escalada digital. O app permite que alpinistas baix
 
 Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), consumido tanto do servidor remoto quanto de repositórios locais de editores via o **Ghost Protocol** (`aresta-zip://`).
 
+## Arquitetura e Padrões
+
+O aplicativo é desenvolvido com uma arquitetura **MVVM (Model-View-ViewModel)** robusta e utiliza classes **Protobuf** geradas automaticamente (`ResumoCroqui`, `Indice`, `Croqui`) como seus **Models** centrais, fortemente tipados de ponta a ponta.
+
+Isso previne o uso excessivo de *Mapas* genéricos (mock data) e garante uma comunicação transparente entre a lógica de serviços (como downloads atômicos do `SyncService`) e as interfaces (Views). As funcionalidades de rede, persistência no disco e tratamento HTTP foram unificadas no módulo isolado `services/http`.
+
 ---
 
 ## Documentação
@@ -27,8 +33,9 @@ Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), c
 | Documento | Conteúdo |
 |---|---|
 | [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
-| [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: serviços, páginas, funções e widgets |
-| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Ghost Protocol, Modo Experimental e ciclo de vida de importação |
+| [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: MVVM, serviços, páginas, funções e widgets |
+| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, Modo Experimental e ciclo de importação |
+| [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e Ghost Protocol |
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
 
