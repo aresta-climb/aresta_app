@@ -154,24 +154,30 @@ class _BrowsePageState extends State<BrowsePage> {
                     addCallback = null;
                   }
 
-                  return buildBrowseBody(
-                    context,
-                    filteredCrags,
-                    onSearchChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                      
-                      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-                      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-                        if (_searchQuery.isNotEmpty) {
-                          TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
-                        }
-                      });
+                  return ValueListenableBuilder<Set<String>>(
+                    valueListenable: widget.syncService.downloadingCrags,
+                    builder: (context, downloadingCrags, child) {
+                      return buildBrowseBody(
+                        context,
+                        filteredCrags,
+                        downloadingCrags,
+                        onSearchChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                          
+                          if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                          _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+                            if (_searchQuery.isNotEmpty) {
+                              TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
+                            }
+                          });
+                        },
+                        onDownload: _handleDownload,
+                        onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
+                        onAddExperimental: addCallback,
+                      );
                     },
-                    onDownload: _handleDownload,
-                    onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
-                    onAddExperimental: addCallback,
                   );
                 },
               );

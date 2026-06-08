@@ -11,6 +11,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
@@ -101,6 +102,26 @@ void main() {
 
       final updatedAvailable = repo.activeDataset.value!.availablePicos;
       expect(updatedAvailable.first['isDownloaded'], isTrue);
+    });
+
+    test('loadIndiceToMemory mapeia o campo descricao do ResumoCroqui', () async {
+      final indice = Indice(
+        urlBase: 'http://base',
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_desc',
+            nome: 'Nome',
+            descricao: 'Uma descrição curta muito legal',
+            url: 'pico_desc.zip',
+          )
+        ]
+      );
+      repo.indiceData.value = indice;
+      await repo.loadIndiceToMemory(indice);
+      
+      final available = repo.activeDataset.value!.availablePicos;
+      expect(available.length, 1);
+      expect(available.first['descricao'], 'Uma descrição curta muito legal');
     });
   });
 

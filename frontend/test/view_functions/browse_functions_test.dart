@@ -25,6 +25,7 @@ void main() {
             return buildBrowseBody(
               context,
               availableCrags,
+              {},
               onSearchChanged: (_) {},
               onDownload: (_) {},
               onOpen: (crag) {
@@ -50,5 +51,83 @@ void main() {
     expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
     expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'explorar');
+  });
+
+  testWidgets('buildBrowseBody exibe animação de download quando o pico está em downloadingCrags', (WidgetTester tester) async {
+    final List<Map<String, dynamic>> availableCrags = [
+      {
+        'id': 'crag_dl',
+        'nome': 'Pico Baixando',
+        'local': 'Local DL',
+        'isDownloaded': false,
+      }
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) {
+            return buildBrowseBody(
+              context,
+              availableCrags,
+              {'crag_dl'}, // Simula que está baixando
+              onSearchChanged: (_) {},
+              onDownload: (_) {},
+            );
+          }
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Pico Baixando'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
+    // Como trocamos o conteúdo do botão, vamos procurar o CircularProgressIndicator.
+    // Existem vários, então vamos focar no ElevatedButton.
+    final loadingIndicator = find.descendant(
+      of: find.byType(ElevatedButton),
+      matching: find.byType(CircularProgressIndicator),
+    );
+
+    expect(loadingIndicator, findsOneWidget);
+  });
+
+  testWidgets('buildBrowseBody exibe a descrição curta do pico caso exista', (WidgetTester tester) async {
+    final List<Map<String, dynamic>> availableCrags = [
+      {
+        'id': 'crag_desc',
+        'nome': 'Pico Descrição',
+        'local': 'Local Desc',
+        'descricao': 'Esta é a descrição curta e bacana do pico.',
+        'isDownloaded': false,
+      }
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) {
+            return buildBrowseBody(
+              context,
+              availableCrags,
+              {},
+              onSearchChanged: (_) {},
+              onDownload: (_) {},
+            );
+          }
+        ),
+      ),
+    ));
+
+    // A descrição fica dentro do expanded (segundo filho do AnimatedCrossFade)
+    // Logo, o texto já existe na árvore.
+    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
+
+    await tester.tap(find.text('Pico Descrição'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Ainda deve existir após a expansão
+    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
   });
 }

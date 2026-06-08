@@ -11,7 +11,8 @@ import 'common_functions.dart';
 /// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
 Widget buildBrowseBody(
   BuildContext context,
-  List<Map<String, dynamic>> availableCrags, {
+  List<Map<String, dynamic>> availableCrags,
+  Set<String> downloadingCrags, {
   required ValueChanged<String> onSearchChanged,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
@@ -24,6 +25,7 @@ Widget buildBrowseBody(
       Expanded(
         child: _buildCragList(
           availableCrags,
+          downloadingCrags,
           onDownload,
           onOpen: onOpen,
           onAddExperimental: onAddExperimental,
@@ -38,6 +40,7 @@ Widget buildBrowseBody(
 /// Se [availableCrags] estiver vazio, exibe uma mensagem de fallback indicando que nenhum pico foi encontrado.
 Widget _buildCragList(
   List<Map<String, dynamic>> availableCrags,
+  Set<String> downloadingCrags,
   Function(Map<String, dynamic>) onDownload, {
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
@@ -93,6 +96,7 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => buildCragListItem(
               crag,
+              downloadingCrags.contains(crag['id']),
               () => onDownload(crag),
               onOpen: onOpen != null ? () => onOpen(crag) : null,
             ),
@@ -120,21 +124,24 @@ Widget buildBrowseSectionTitle(String title) {
 /// Ao expandir, também exibe a data do último update e o botão de download.
 Widget buildCragListItem(
   Map<String, dynamic> crag,
+  bool isDownloading,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
 }) {
-  return _CragListItem(crag: crag, onDownload: onDownload, onOpen: onOpen);
+  return _CragListItem(crag: crag, isDownloading: isDownloading, onDownload: onDownload, onOpen: onOpen);
 }
 
 /// Widget com estado para o card expansível de cada pico.
 class _CragListItem extends StatefulWidget {
   const _CragListItem({
     required this.crag,
+    required this.isDownloading,
     required this.onDownload,
     this.onOpen,
   });
 
   final Map<String, dynamic> crag;
+  final bool isDownloading;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
 
@@ -300,6 +307,17 @@ class _CragListItemState extends State<_CragListItem>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 12),
+                        // Descrição Curta
+                        if (widget.crag['descricao'] != null && widget.crag['descricao'].toString().isNotEmpty) ...[
+                          Text(
+                            widget.crag['descricao'],
+                            style: TextStyle(
+                              color: fishBone.withValues(alpha: 0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         Divider(
                           color: fishBone.withValues(alpha: 0.1),
                           thickness: 1,
@@ -330,6 +348,7 @@ class _CragListItemState extends State<_CragListItem>
                         _buildDownloadButton(
                           widget.crag,
                           widget.onDownload,
+                          widget.isDownloading,
                           onOpen: widget.onOpen,
                         ),
                       ],
@@ -466,10 +485,29 @@ Widget _buildPlaceholderIcon() {
 /// Quando o pico já está baixado, o botão fica desabilitado com estilo acinzentado.
 Widget _buildDownloadButton(
   Map<String, dynamic> crag,
-  VoidCallback onDownload, {
+  VoidCallback onDownload,
+  bool isDownloading, {
   VoidCallback? onOpen,
 }) {
   final bool isDownloaded = crag['isDownloaded'] == true;
+
+  if (isDownloading) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          disabledBackgroundColor: mossRock.withValues(alpha: 0.5),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: fishBone),
+        ),
+      ),
+    );
+  }
 
   return SizedBox(
     width: double.infinity,
