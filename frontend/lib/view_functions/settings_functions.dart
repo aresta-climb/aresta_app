@@ -14,6 +14,24 @@ import '../theme/app_colors.dart';
 import '../pages/terms_of_use.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+/// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
+@visibleForTesting
+String normalizeEditorUrl(String rawUrl) {
+  String checkUrl = rawUrl.trim();
+  if (checkUrl.isEmpty) return checkUrl;
+  
+  final lowerUrl = checkUrl.toLowerCase();
+  if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://') && !lowerUrl.startsWith('aresta-zip://')) {
+    checkUrl = 'https://$checkUrl';
+  }
+  
+  if (checkUrl.endsWith('/')) {
+    checkUrl = checkUrl.substring(0, checkUrl.length - 1);
+  }
+  
+  return checkUrl;
+}
+
 /// Tenta conectar ao repositório do editor validando a URL fornecida.
 Future<bool> conectarEditor(
   BuildContext context, 
@@ -25,13 +43,7 @@ Future<bool> conectarEditor(
 
   try {
     // Valida se o índice está acessível na URL fornecida
-    String checkUrl = url;
-    if (!checkUrl.startsWith('http://') && !checkUrl.startsWith('https://')) {
-      checkUrl = 'https://$checkUrl';
-    }
-    if (checkUrl.endsWith('/')) {
-      checkUrl = checkUrl.substring(0, checkUrl.length - 1);
-    }
+    String checkUrl = normalizeEditorUrl(url);
     
     if (checkUrl.toLowerCase().endsWith('.zip')) {
       if (context.mounted) {
