@@ -9,7 +9,7 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 | `zip_interceptor_test.dart` | `ZipInterceptorClient` | Testa o interceptor HTTP que serve arquivos de dentro de um `.croqui` local usando o protocolo `aresta-zip://` em memória |
 | `editor_croqui_test.dart` | `EditorDeCroqui` | Testa lógica de modos (oficial, editor, experimental), cálculo de caminhos (`downloadsPath`, `indicePath`) e notificadores de estado |
 | `experimental_mode_test.dart`| `EditorDeCroqui` | Testa o comportamento do Modo Experimental: timer em background, persistência de URL na desconexão e limpeza total (Nuke) |
-| `dataset_repository_test.dart` | `DatasetRepository` | Testa estado público do repositório e inicializações tipadas |
+| `dataset_repository_test.dart` | `DatasetRepository` | Testa estado público do repositório, mapeamento de propriedades (ex: descrição) e inicializações tipadas |
 | `sync_network_test.dart` | `SyncNetwork` | Testa a leitura HTTP pura com retentativas, ETags (304 Not Modified) e timeouts |
 | `sync_storage_test.dart` | `SyncStorage` | Testa a persistência atômica usando arquivos `.tmp` e a extração do `indice.binarypb` |
 | `sync_status_timer_test.dart`| `SyncStatusTimer` | Testa a debouncer do status de sync que previne *flickering* rápido na UI |

@@ -9,6 +9,7 @@ Esta pasta contém testes unitários das funções utilitárias compartilhadas e
 | `common_functions_test.dart` | `safeString`, `isBoulderArea`, `normalizeSearchString` | Testa a conversão segura de valores para string, a detecção de área predominantemente boulder e a normalização de strings de busca. |
 | `fuzzy_search_test.dart` | Busca Global | Testa a lógica do Fuzzy Search integrada com a normalização para ignorar acentos e pontuação em pesquisas. |
 | `via_functions_test.dart` | `getGrauString`, `getGrauValue` | Testa a extração e formatação do grau de vias em strings e valores numéricos utilizados para ordenação e busca por dificuldade. |
+| `browse_functions_test.dart` | `buildBrowseBody`, Interface de Exploração | Testa as funcionalidades da tela de exploração, como a exibição da animação de download (`CircularProgressIndicator`), a renderização da descrição curta do pico e acionamento de telemetria de visualização do pico. |
 
 ## Como executar
 

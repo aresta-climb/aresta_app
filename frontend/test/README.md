@@ -40,8 +40,8 @@ flutter test test/services/zip_interceptor_test.dart
 
 | Pasta | Arquivos | Testes |
 |---|---|---|
-| `services/` | 8 | ~75 |
-| `view_functions/` | 4 | ~30 |
+| `services/` | 8 | ~76 |
+| `view_functions/` | 4 | ~32 |
 | `navigation/` | 1 | ~7 |
 | `theme/` | 1 | ~3 |
 | `protobuf/` | 1 | ~18 |

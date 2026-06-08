@@ -138,6 +138,7 @@ class DatasetRepository {
           final Map<String, dynamic> picoMap = {
             'nome': resumo.nome,
             'local': locationText,
+            'descricao': resumo.descricao,
             'id': picoId,
             'url': '${editorDeCroqui.activeBaseUrl}/${resumo.url}',
             'checksum': resumo.checksumSha256Croqui,
