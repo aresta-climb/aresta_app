@@ -8,8 +8,6 @@ import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
-import 'package:flutter/services.dart' show AssetBundle;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mocks/mock_telemetry_service.dart';
 

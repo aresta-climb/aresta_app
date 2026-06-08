@@ -621,7 +621,7 @@ Widget buildThemeSelectionCard(BuildContext context) {
                             ThemeController().setThemeMode(ThemeMode.system);
                           }
                         },
-                        activeColor: context.colors.beastHide,
+                        activeThumbColor: context.colors.beastHide,
                       ),
                     ],
                   ),
