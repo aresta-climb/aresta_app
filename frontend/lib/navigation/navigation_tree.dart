@@ -64,6 +64,33 @@ class BrowseNode extends NavNode {
   }
 }
 
+/// Nó que representa o mapa global (Mapão Global) acessado a partir da Busca.
+class MapaoGlobalNode extends NavNode {
+  final List<Map<String, dynamic>> crags;
+  final Set<String> downloadingCrags;
+  final Function(Map<String, dynamic>) onDownload;
+  final Function(Map<String, dynamic>)? onOpen;
+
+  const MapaoGlobalNode({
+    required this.crags,
+    required this.downloadingCrags,
+    required this.onDownload,
+    this.onOpen,
+    required super.parent,
+  });
+
+  @override
+  NavNode copyWithMergedAncestor(covariant MapaoGlobalNode matchingAncestor) {
+    return MapaoGlobalNode(
+      crags: crags,
+      downloadingCrags: downloadingCrags,
+      onDownload: onDownload,
+      onOpen: onOpen,
+      parent: matchingAncestor.parent,
+    );
+  }
+}
+
 /// Nó que representa a tela de configurações do aplicativo (SettingsView).
 class SettingsNode extends NavNode {
   const SettingsNode(NavNode parent) : super(parent: parent);
@@ -273,6 +300,7 @@ class TreeNavigationController extends ChangeNotifier {
     if (a.runtimeType != b.runtimeType) return false;
     if (a is HomeNode && b is HomeNode) return true;
     if (a is BrowseNode && b is BrowseNode) return true;
+    if (a is MapaoGlobalNode && b is MapaoGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
     if (a is MapaInterativoNode && b is MapaInterativoNode) {
       return a.cragId == b.cragId && a.mapa == b.mapa && a.setorContext == b.setorContext;

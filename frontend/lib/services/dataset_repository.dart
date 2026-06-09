@@ -147,6 +147,8 @@ class DatasetRepository {
             'dataUpdate': resumo.hasTimestampUpdate()
                 ? resumo.timestampUpdate.toDateTime().toIso8601String()
                 : null,
+            if (resumo.hasLocalizacao()) 'latitude': resumo.localizacao.latitude / 10000000.0,
+            if (resumo.hasLocalizacao()) 'longitude': resumo.localizacao.longitude / 10000000.0,
           };
 
           parsedPicos.add(picoMap);
