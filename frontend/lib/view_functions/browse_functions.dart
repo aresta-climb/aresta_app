@@ -59,16 +59,11 @@ Widget _buildCragList(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             buildBrowseSectionTitle('Picos Disponíveis'),
-            IconButton(
-              icon: const Icon(Icons.map, color: Color(0xFFC0A080)), // beastHide color approximate
-              tooltip: 'Mapa Mundi',
+            _AnimatedMapButton(
               onPressed: () {
                 AppNav.toMapaoGlobal(
                   context,
                   crags: availableCrags,
-                  downloadingCrags: downloadingCrags,
-                  onDownload: onDownload,
-                  onOpen: onOpen,
                 );
               },
             ),
@@ -127,6 +122,72 @@ Widget _buildCragList(
       ],
     ),
   );
+}
+
+class _AnimatedMapButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  const _AnimatedMapButton({required this.onPressed});
+
+  @override
+  State<_AnimatedMapButton> createState() => _AnimatedMapButtonState();
+}
+
+class _AnimatedMapButtonState extends State<_AnimatedMapButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => _controller.forward(),
+      onPointerUp: (_) => _controller.reverse(),
+      onPointerCancel: (_) => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.map, color: Colors.black, size: 18),
+          label: const Text(
+            'Mapa',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+              fontSize: 13,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFC0A080), // beastHide
+            foregroundColor: Colors.black,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: widget.onPressed,
+        ),
+      ),
+    );
+  }
 }
 
 /// Constrói um título de seção estilizado para a lista de exploração.

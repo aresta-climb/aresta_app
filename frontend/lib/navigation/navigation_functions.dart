@@ -126,18 +126,12 @@ class AppNav {
   static void toMapaoGlobal(
     BuildContext context, {
     required List<Map<String, dynamic>> crags,
-    required Set<String> downloadingCrags,
-    required Function(Map<String, dynamic>) onDownload,
-    Function(Map<String, dynamic>)? onOpen,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     
     ctrl.navigateTo(MapaoGlobalNode(
       crags: crags,
-      downloadingCrags: downloadingCrags,
-      onDownload: onDownload,
-      onOpen: onOpen,
       parent: ctrl.currentNode,
     ));
   }

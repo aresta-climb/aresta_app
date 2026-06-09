@@ -41,8 +41,8 @@ void showCragModal({
                 },
                 onOpen: onOpen != null
                     ? () {
-                        onOpen();
                         Navigator.of(context).pop();
+                        onOpen();
                       }
                     : null,
               ),
@@ -61,6 +61,7 @@ Set<Marker> buildMapMarkers({
   required Set<String> downloadingCrags,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
+  BitmapDescriptor? customIcon,
 }) {
   final markers = <Marker>{};
 
@@ -73,6 +74,7 @@ Set<Marker> buildMapMarkers({
         Marker(
           markerId: MarkerId(crag['id']),
           position: LatLng(lat, lng),
+          icon: customIcon ?? BitmapDescriptor.defaultMarker,
           infoWindow: InfoWindow(
             title: crag['nome'],
             snippet: crag['local'],

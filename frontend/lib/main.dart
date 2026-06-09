@@ -411,9 +411,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     } else if (node is MapaoGlobalNode) {
       return MapaoGlobalPage(
         crags: node.crags,
-        downloadingCrags: node.downloadingCrags,
-        onDownload: node.onDownload,
-        onOpen: node.onOpen,
+        datasetRepo: widget.datasetRepo,
+        syncService: widget.syncService,
       );
     }
 

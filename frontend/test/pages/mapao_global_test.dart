@@ -7,9 +7,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapao_global.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+
+class FakeDatasetRepository extends DatasetRepository {
+  FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);
+}
+
+class FakeSyncService extends SyncService {
+  FakeSyncService(DatasetRepository repo) : super(datasetRepository: repo);
+}
 
 void main() {
   testWidgets('MapaoGlobalPage renders correctly with crags', (WidgetTester tester) async {
+    final mockEditor = EditorDeCroqui();
+    final mockRepo = FakeDatasetRepository(mockEditor);
+    final mockSync = FakeSyncService(mockRepo);
+
     final crags = [
       {
         'id': 'crag1',
@@ -23,8 +40,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: MapaoGlobalPage(
         crags: crags,
-        downloadingCrags: {},
-        onDownload: (_) {},
+        datasetRepo: mockRepo,
+        syncService: mockSync,
       ),
     ));
 

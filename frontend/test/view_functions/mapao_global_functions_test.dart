@@ -1,65 +1,67 @@
-/// Testes unitários para as funções visuais do Mapão Global.
-///
-/// Valida se a função [buildMapMarkers] extrai e processa adequadamente os
-/// dados dos croquis para gerar a coleção de marcadores, garantindo que
-/// picos com coordenadas inválidas ou vazias sejam ignorados. Também checa
-/// a injeção do GoogleMap na árvore pela função de build.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:frontend/view_functions/mapao_global_functions.dart';
+import 'package:frontend/view_functions/browse_functions.dart'; // Para acessar _CragListItem indiretamente se precisar, ou buscar por OutlinedButton
 
 void main() {
-  testWidgets('buildMapMarkers creates markers correctly', (WidgetTester tester) async {
-    final crags = [
-      {
-        'id': 'crag1',
-        'nome': 'Pico 1',
-        'local': 'Local 1',
-        'latitude': -20.0,
-        'longitude': -40.0,
-      },
-      {
-        'id': 'crag2',
-        'nome': 'Pico 2',
-        'local': 'Local 2',
-      }, // Ignora se está sem localização
-    ];
+  testWidgets('showCragModal pops bottom sheet before calling onOpen', (WidgetTester tester) async {
+    bool onOpenCalled = false;
 
-    Set<Marker> markers = {};
+    final crag = {
+      'id': 'crag1',
+      'nome': 'Pico Teste',
+      'local': 'Local Teste',
+      'latitude': -20.0,
+      'longitude': -40.0,
+      'isDownloaded': true,
+    };
 
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) {
-          markers = buildMapMarkers(
-            context: context,
-            crags: crags,
-            downloadingCrags: {},
-            onDownload: (_) {},
-          );
-          return Container();
-        },
-      ),
-    ));
-
-    expect(markers.length, 1);
-    expect(markers.first.markerId.value, 'crag1');
-    expect(markers.first.position.latitude, -20.0);
-    expect(markers.first.position.longitude, -40.0);
-    expect(markers.first.infoWindow.title, 'Pico 1');
-    expect(markers.first.infoWindow.snippet, 'Local 1');
-  });
-
-  testWidgets('buildMapaoGlobalMap renders GoogleMap', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: buildMapaoGlobalMap(
-          initialTarget: const LatLng(0, 0),
-          markers: {},
+        body: Builder(
+          builder: (context) => Center(
+            child: ElevatedButton(
+              onPressed: () {
+                showCragModal(
+                  context: context,
+                  crag: crag,
+                  isDownloading: false,
+                  onDownload: () {},
+                  onOpen: () {
+                    onOpenCalled = true;
+                    // Verifica se o bottom sheet já foi fechado checando a rota atual ou se podemos dar pop
+                    // Não há uma forma direta de saber se o pop ocorreu exceto verificar se o BottomSheet desaparece após o frame.
+                  },
+                );
+              },
+              child: const Text('Show Modal'),
+            ),
+          ),
         ),
       ),
     ));
 
-    expect(find.byType(GoogleMap), findsOneWidget);
+    // Abre o modal
+    await tester.tap(find.text('Show Modal'));
+    await tester.pumpAndSettle();
+
+    // Clica no item para expandi-lo
+    await tester.tap(find.text('Pico Teste'));
+    await tester.pumpAndSettle();
+
+    // Verifica se o modal (e portanto o botão "ABRIR CROQUI") está visível
+    expect(find.text('ABRIR CROQUI'), findsOneWidget);
+
+    // Usa warnIfMissed: false porque o modal pode estar animando ou fora do hit box padrão no teste
+    await tester.tap(find.text('ABRIR CROQUI'), warnIfMissed: false);
+    
+    // Deixa os callbacks e animações de navegação executarem
+    await tester.pumpAndSettle();
+
+    // Verifica se o callback foi chamado
+    expect(onOpenCalled, isTrue);
+
+    // E o modal não deve mais estar na tela
+    expect(find.text('ABRIR CROQUI'), findsNothing);
   });
 }

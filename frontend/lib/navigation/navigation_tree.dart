@@ -67,15 +67,9 @@ class BrowseNode extends NavNode {
 /// Nó que representa o mapa global (Mapão Global) acessado a partir da Busca.
 class MapaoGlobalNode extends NavNode {
   final List<Map<String, dynamic>> crags;
-  final Set<String> downloadingCrags;
-  final Function(Map<String, dynamic>) onDownload;
-  final Function(Map<String, dynamic>)? onOpen;
 
   const MapaoGlobalNode({
     required this.crags,
-    required this.downloadingCrags,
-    required this.onDownload,
-    this.onOpen,
     required super.parent,
   });
 
@@ -83,9 +77,6 @@ class MapaoGlobalNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant MapaoGlobalNode matchingAncestor) {
     return MapaoGlobalNode(
       crags: crags,
-      downloadingCrags: downloadingCrags,
-      onDownload: onDownload,
-      onOpen: onOpen,
       parent: matchingAncestor.parent,
     );
   }
