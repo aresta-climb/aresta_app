@@ -59,8 +59,6 @@ void main() {
       // Navigate to MapaoGlobal
       final mapaoGlobalNode = MapaoGlobalNode(
         crags: [],
-        downloadingCrags: {},
-        onDownload: (_) {},
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaoGlobalNode);

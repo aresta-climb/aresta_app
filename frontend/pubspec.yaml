@@ -46,6 +46,7 @@ flutter:
   assets:
     - legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md
     - legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md
+    - assets/logo_app.png
 
   fonts:
     - family: Montserrat
