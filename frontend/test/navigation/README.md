@@ -4,7 +4,7 @@ Este diretório contém os testes de unidade dedicados a validar o comportamento
 
 ## O que está sendo testado?
 
-Os testes estão concentrados nos arquivos [navigation_test.dart](file:///c:/Users/utsch/flutter_stuff/repositories/aresta/dev/aresta_app/frontend/test/navigation/navigation_test.dart) e [navigation_tree_test.dart](file:///c:/Users/utsch/flutter_stuff/repositories/aresta/dev/aresta_app/frontend/test/navigation/navigation_tree_test.dart) e validam as seguintes capacidades e comportamentos do `TreeNavigationController`:
+Os testes estão concentrados nos arquivos `navigation_test.dart` e `navigation_tree_test.dart` e validam as seguintes capacidades e comportamentos do `TreeNavigationController`:
 
 ### 1. Inicialização e Estado Inicial
 * Garante que a navegação sempre inicie de forma íntegra a partir do nó raiz `HomeNode`.

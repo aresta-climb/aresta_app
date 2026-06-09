@@ -87,6 +87,7 @@ Expõe a API pública estática **`AppNav`**, que simplifica a navegação no ap
 Para evitar arquivos de página monolíticos, todos os construtores de UI complexos, estilização e callbacks são extraídos para o diretório `view_functions/`.
 
 - **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, `mapao_global_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`.
+- **`marker_generator.dart`**: Renderiza programaticamente, usando `Canvas` e `Path`, o `BitmapDescriptor` personalizado em formato de gota (teardrop) contendo a logotipo do app para os marcadores do Mapão Global.
 - **`common_functions.dart`**: Sistema de design. Define paletas de cores (`beastHide`, `nobleBlack`), estilos de texto, componentes genéricos como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária (`buildSecondaryBottomNav`).
 - **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
 - **`settings_functions.dart`**: Gerencia a importação de arquivos `.croqui` (via file picker ou URL), a conexão com servidores de editor e a leitura de QR codes. Após a importação, constrói a URL `aresta-zip://` e aciona a sincronização via `SyncService`.
