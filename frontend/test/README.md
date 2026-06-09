@@ -4,15 +4,17 @@ Esta pasta contém todos os testes automatizados do frontend do aplicativo Arest
 
 ## Estrutura
 
-```
+```text
 test/
-├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
-├── view_functions/  Testes unitários de funções utilitárias compartilhadas
-├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
-├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
-├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
+├── architecture/    Testes arquiteturais e de convenção de código
 ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
+├── legal/           Testes para validação e extração de datas de documentos legais
+├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
 ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
+├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
+├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
+├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
+├── view_functions/  Testes unitários de funções utilitárias compartilhadas
 └── widgets/         Testes de widget da interface do usuário
 ```
 
@@ -41,14 +43,17 @@ flutter test test/services/zip_interceptor_test.dart
 
 | Pasta | Arquivos | Testes |
 |---|---|---|
-| `services/` | 8 | ~76 |
-| `view_functions/` | 4 | ~32 |
-| `navigation/` | 1 | ~7 |
+| `services/` | 12 | ~110 |
+| `view_functions/` | 12 | ~40 |
+| `navigation/` | 2 | ~15 |
 | `theme/` | 1 | ~3 |
-| `protobuf/` | 1 | ~18 |
+| `protobuf/` | 1 | ~20 |
 | `integration/` | 2 | ~10 |
-| `pages/` | 1 | ~1 |
-| `widgets/` | 4 | ~25 |
+| `pages/` | 8 | ~50 |
+| `widgets/` | 4 | ~35 |
+| `architecture/` | 1 | ~10 |
+| `legal/` | 1 | ~10 |
+| **Total** | **44** | **~305** |
 
 ## Convenções
 

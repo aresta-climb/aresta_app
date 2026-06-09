@@ -94,12 +94,16 @@ frontend/
 │       ├── global_search.dart Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart    Preview interativo de mapa com resolução offline
 └── test/
-    ├── services/      Testes unitários: ZipInterceptor, DatasetRepository, EditorDeCroqui, …
-    ├── view_functions/ Testes de funções utilitárias (common_functions)
-    ├── navigation/    Testes de unidade da navegação em árvore (com testes de prevenção de loops)
-    ├── protobuf/      Testes de serialização/desserialização dos objetos Protobuf
-    ├── integration/   Testes de fluxo completo: aresta-zip → parse → disco
-    └── widgets/       Testes de widget da interface (mapa interativo, navegação)
+    ├── architecture/    Testes arquiteturais e de convenção de código
+    ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
+    ├── legal/           Testes para validação e extração de datas de documentos legais
+    ├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
+    ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
+    ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
+    ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
+    ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
+    ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
+    └── widgets/         Testes de widget da interface do usuário
 ```
 
 ---
