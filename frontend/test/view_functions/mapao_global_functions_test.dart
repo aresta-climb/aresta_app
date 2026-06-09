@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/mapao_global_functions.dart';
-import 'package:frontend/view_functions/browse_functions.dart'; // Para acessar _CragListItem indiretamente se precisar, ou buscar por OutlinedButton
+// Para acessar _CragListItem indiretamente se precisar, ou buscar por OutlinedButton
 
 void main() {
   testWidgets('showCragModal pops bottom sheet before calling onOpen', (WidgetTester tester) async {

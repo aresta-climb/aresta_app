@@ -43,7 +43,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(String imagePath, {int size = 
   canvas.drawPath(
     pinPath.shift(const Offset(0, 4)),
     Paint()
-      ..color = Colors.black.withOpacity(0.3)
+      ..color = Colors.black.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
   );
 
@@ -103,7 +103,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(String imagePath, {int size = 
     Offset(centerPoint, circleY),
     innerRadius,
     Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5,
   );
