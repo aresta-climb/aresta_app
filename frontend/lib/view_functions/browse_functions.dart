@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/http/zip_interceptor_client.dart';
 import 'common_functions.dart';
+import '../pages/mapao_global.dart';
+
+import '../navigation/navigation_functions.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///
@@ -24,6 +27,7 @@ Widget buildBrowseBody(
       buildSearchBar(onChanged: onSearchChanged),
       Expanded(
         child: _buildCragList(
+          context,
           availableCrags,
           downloadingCrags,
           onDownload,
@@ -39,6 +43,7 @@ Widget buildBrowseBody(
 ///
 /// Se [availableCrags] estiver vazio, exibe uma mensagem de fallback indicando que nenhum pico foi encontrado.
 Widget _buildCragList(
+  BuildContext context,
   List<Map<String, dynamic>> availableCrags,
   Set<String> downloadingCrags,
   Function(Map<String, dynamic>) onDownload, {
@@ -50,7 +55,25 @@ Widget _buildCragList(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildBrowseSectionTitle('Picos Disponíveis'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            buildBrowseSectionTitle('Picos Disponíveis'),
+            IconButton(
+              icon: const Icon(Icons.map, color: Color(0xFFC0A080)), // beastHide color approximate
+              tooltip: 'Mapa Mundi',
+              onPressed: () {
+                AppNav.toMapaoGlobal(
+                  context,
+                  crags: availableCrags,
+                  downloadingCrags: downloadingCrags,
+                  onDownload: onDownload,
+                  onOpen: onOpen,
+                );
+              },
+            ),
+          ],
+        ),
 
         // Botão Único de Adição Experimental
         if (onAddExperimental != null) ...[

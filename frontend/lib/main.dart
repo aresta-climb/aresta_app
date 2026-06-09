@@ -9,6 +9,7 @@ import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapa_geral_pico.dart';
+import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -164,7 +165,7 @@ class _MyAppState extends State<MyApp> {
           builder: (context, child) {
             return Stack(
               children: [
-                ?child,
+                child!,
                 ValueListenableBuilder<bool>(
                   valueListenable:
                       widget.datasetRepo.editorDeCroqui.isExperimentalMode,
@@ -406,6 +407,13 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         setor: node.setor,
         cragId: node.cragId,
         scrollToEscalada: node.scrollToEscalada,
+      );
+    } else if (node is MapaoGlobalNode) {
+      return MapaoGlobalPage(
+        crags: node.crags,
+        downloadingCrags: node.downloadingCrags,
+        onDownload: node.onDownload,
+        onOpen: node.onOpen,
       );
     }
 

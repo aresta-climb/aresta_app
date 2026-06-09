@@ -44,5 +44,30 @@ void main() {
       // If it hadn't truncated, the parent would have been MapaInterativoNode.
       // This confirms the infinite loop is prevented.
     });
+
+    test('Navigating to MapaoGlobal should set BrowseNode as parent', () {
+      final controller = TreeNavigationController();
+      
+      // Navigate to Home
+      expect(controller.currentNode, isA<HomeNode>());
+      
+      // Navigate to Browse
+      final browseNode = BrowseNode(controller.currentNode);
+      controller.navigateTo(browseNode);
+      expect(controller.currentNode, isA<BrowseNode>());
+      
+      // Navigate to MapaoGlobal
+      final mapaoGlobalNode = MapaoGlobalNode(
+        crags: [],
+        downloadingCrags: {},
+        onDownload: (_) {},
+        parent: controller.currentNode,
+      );
+      controller.navigateTo(mapaoGlobalNode);
+      
+      expect(controller.currentNode, isA<MapaoGlobalNode>());
+      expect(controller.currentNode.parent, isA<BrowseNode>());
+      expect(controller.currentNode.parent?.parent, isA<HomeNode>());
+    });
   });
 }
