@@ -3,6 +3,7 @@
 /// Assegura que a página [MapaoGlobalPage] seja capaz de instanciar o mapa
 /// e renderizar a barra de navegação corretamente sem quebrar a árvore
 /// de widgets, utilizando uma carga simulada de picos.
+library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapao_global.dart';
@@ -10,8 +11,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
   FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);

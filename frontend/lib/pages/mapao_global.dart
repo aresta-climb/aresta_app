@@ -4,7 +4,6 @@ import '../view_functions/mapao_global_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
-import '../navigation/navigation_functions.dart';
 import '../view_functions/marker_generator.dart';
 import '../view_functions/home_functions.dart';
 

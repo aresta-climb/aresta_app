@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/http/zip_interceptor_client.dart';
 import 'common_functions.dart';
-import '../pages/mapao_global.dart';
 
 import '../navigation/navigation_functions.dart';
 
