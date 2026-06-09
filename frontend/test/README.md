@@ -12,6 +12,7 @@ test/
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
 ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
+├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
 └── widgets/         Testes de widget da interface do usuário
 ```
 
@@ -46,6 +47,7 @@ flutter test test/services/zip_interceptor_test.dart
 | `theme/` | 1 | ~3 |
 | `protobuf/` | 1 | ~18 |
 | `integration/` | 2 | ~10 |
+| `pages/` | 1 | ~1 |
 | `widgets/` | 4 | ~25 |
 
 ## Convenções

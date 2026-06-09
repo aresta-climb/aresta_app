@@ -4,7 +4,7 @@ Este diretório contém os testes de unidade dedicados a validar o comportamento
 
 ## O que está sendo testado?
 
-Os testes estão concentrados no arquivo [navigation_test.dart](file:///c:/Users/utsch/flutter_stuff/repositories/aresta/dev/aresta_app/frontend/test/navigation/navigation_test.dart) e validam as seguintes capacidades e comportamentos do `TreeNavigationController`:
+Os testes estão concentrados nos arquivos [navigation_test.dart](file:///c:/Users/utsch/flutter_stuff/repositories/aresta/dev/aresta_app/frontend/test/navigation/navigation_test.dart) e [navigation_tree_test.dart](file:///c:/Users/utsch/flutter_stuff/repositories/aresta/dev/aresta_app/frontend/test/navigation/navigation_tree_test.dart) e validam as seguintes capacidades e comportamentos do `TreeNavigationController`:
 
 ### 1. Inicialização e Estado Inicial
 * Garante que a navegação sempre inicie de forma íntegra a partir do nó raiz `HomeNode`.
@@ -31,6 +31,10 @@ Esta é a funcionalidade crítica do sistema baseada em árvore, projetada para 
 * O sistema não apenas impede loops ao voltar para um nó ancestral, mas também **mescla propriedades mutáveis** (estado da UI) no processo.
 * Se um retrocesso (rewind) for feito para um `PicoNode`, atributos de intenção da tela destino como `scrollToMapaGeral` ou `returnToSetor` são herdados na volta, atualizando a visualização sem que a página perca seu histórico raiz original. Isso vale para `MapaInterativoNode` preservando `initialSelectedId`, e afins.
 
+### 7. Hierarquia Específica de Contexto
+* Certifica que sub-nós específicos injetem corretamente a herança lógica de navegação. 
+* Por exemplo, garante que o `MapaoGlobalNode` (o mapa-múndi) atue estritamente como um nó folha descendente do `BrowseNode` quando acionado a partir da aba Explorar, preservando a linha do tempo do usuário ao recuar.
+
 ---
 
 ## Como executar os testes?
@@ -38,7 +42,7 @@ Esta é a funcionalidade crítica do sistema baseada em árvore, projetada para 
 Para rodar especificamente a suíte de testes de navegação, execute o seguinte comando no terminal na raiz do projeto `frontend`:
 
 ```bash
-flutter test test/navigation/navigation_test.dart
+flutter test test/navigation/
 ```
 
 Para rodar todos os testes do projeto e certificar que não há nenhuma regressão geral:

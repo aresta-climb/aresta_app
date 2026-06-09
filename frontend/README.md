@@ -7,7 +7,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ## Funcionalidades
 
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
-- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo.
+- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo, além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
 - **GPS / Mapa Interativo**: Visualização de mapas de setores e picos com overlay interativo e navegação hierárquica.
 - **Leitura Offline**: Textos, imagens e betas funcionam sem conexão após o primeiro download.
 - **Ghost Protocol (`aresta-zip://`)**: Arquivos `.croqui` locais são tratados como servidores HTTP internos — o mesmo pipeline de rede serve dados remotos e locais sem ramificações no código.
@@ -28,6 +28,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 | **`path_provider`** | `^2.1.2` | Resolução de diretórios de armazenamento local |
 | **`shared_preferences`** | `^2.2.2` | Persistência leve de configurações |
 | **`fuzzy`** | `^0.5.1` | Busca textual aproximada (Fuzzy Search) para a pesquisa global |
+| **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
 | **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
 | **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para importação de repositórios |
 | **`file_picker`** | `^11.0.2` | Seleção de arquivos `.croqui` no dispositivo |
@@ -54,6 +55,7 @@ frontend/
 │   │   ├── common_functions.dart     Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart     Visualizador Markdown com FileImage offline
 │   │   ├── settings_functions.dart   Importação de .croqui, QR code, conexão com editor
+│   │   ├── mapao_global_functions.dart Funções e visual builders específicos para o mapa mundial
 │   │   └── *_functions.dart          Funções específicas por página (home, browse, pico, …)
 │   ├── aresta_api/          Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/        Estrutura de navegação baseada em árvore (Tree Navigation)
@@ -63,6 +65,7 @@ frontend/
 │   ├── pages/             Páginas do app
 │   │   ├── home.dart              Carrossel e lista de guias locais
 │   │   ├── browse.dart            Índice remoto com download inline
+│   │   ├── mapao_global.dart      Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart               Entrada do mapa
 │   │   ├── mapa_interativo.dart   Mapa interativo com overlay de setores/vias
 │   │   ├── mapa_geral_pico.dart   Mapa contendo o overview de todos os setores do pico
