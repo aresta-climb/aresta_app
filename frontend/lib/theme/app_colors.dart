@@ -67,7 +67,7 @@ class AppColors extends ThemeExtension<AppColors> {
     );
   }
 
-  // Current Dark Palette
+  // Paleta Escura Atual
   static const AppColors dark = AppColors(
     nobleBlack: Color(0xFF1F2128),
     beastHide: Color(0xFFAE8F68),
@@ -80,21 +80,24 @@ class AppColors extends ThemeExtension<AppColors> {
     weatheredIron: Color(0xFF3E4247),
   );
 
-  // New Light Palette
+  // Nova Paleta Clara
   static const AppColors light = AppColors(
-    nobleBlack: Color(0xFFEBE8E0), // Background: Soft warm beige, slightly darker
-    beastHide: Color(0xFFD68C3E), // Primary accent: Natural amber
-    fishBone: Color(0xFF2A2E33), // Text: Elegant dark slate
-    leatherWork: Color(0xFF996642), // Secondary brown: Muted saddle
-    obsidianBrown: Color(0xFFFFFFFF), // Cards/Panels: Pure white for elevation
-    slateStone: Color(0xFFE8E3DA), // Secondary panels: Slightly darker beige
-    mossRock: Color(0xFF6D854C), // Green accent: Natural moss
-    clayEarth: Color(0xFFA85542), // Red accent: Muted terracotta
-    weatheredIron: Color(0xFF999999), // Muted grey
+    nobleBlack: Color(0xFFEBE8E0), // Fundo: Bege quente, ligeiramente mais escuro
+    beastHide: Color(0xFFD68C3E), // Destaque principal: Âmbar
+    fishBone: Color(0xFF2A2E33), // Texto: Ardósia escura
+    leatherWork: Color(0xFF996642), // Marrom secundário: Sela suave
+    obsidianBrown: Color(0xFFFFFFFF), // Cartões/Painéis: Branco puro para elevação
+    slateStone: Color(0xFFE8E3DA), // Painéis secundários: Bege ligeiramente mais escuro
+    mossRock: Color(0xFF6D854C), // Destaque verde: Musgo
+    clayEarth: Color(0xFFA85542), // Destaque vermelho: Terracota
+    weatheredIron: Color(0xFF999999), // Cinza
   );
+
+  // Cor fixa da logomarca (Laranja/Coral Vibrante)
+  static const Color brandColor = Color(0xFFE25844);
 }
 
-// Helper extension on BuildContext to quickly access colors
+// Extensão auxiliar no BuildContext para acessar as cores rapidamente
 extension AppColorsExtension on BuildContext {
   AppColors get colors => Theme.of(this).extension<AppColors>() ?? AppColors.dark;
 }

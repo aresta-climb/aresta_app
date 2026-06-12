@@ -25,7 +25,6 @@ Color get slateStone => _currentColors.slateStone;
 Color get mossRock => _currentColors.mossRock;
 Color get clayEarth => _currentColors.clayEarth;
 Color get weatheredIron => _currentColors.weatheredIron;
-
 PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions}) {
   return AppBar(
     leading: AppNav.canGoBack(context)
