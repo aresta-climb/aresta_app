@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../theme/app_colors.dart';
 
 /// Gera um BitmapDescriptor customizado com o formato de um pino de mapa (teardrop)
 /// contendo a imagem do logo do app dentro dele.
@@ -47,11 +48,11 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(String imagePath, {int size = 
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
   );
 
-  // Desenhar o pino principal (cor Beast Hide claro / Laranja)
+  // Desenhar o pino principal (Cor da Logomarca)
   canvas.drawPath(
     pinPath,
     Paint()
-      ..color = const Color(0xFFD68C3E)
+      ..color = AppColors.brandColor
       ..style = PaintingStyle.fill,
   );
 
