@@ -109,5 +109,21 @@ void main() {
       expect(editor.editorUrl.value, isNull);
       expect(editor.timeRemaining.value, isNull);
     });
+
+    test('activateExperimental adiciona http:// se a URL não tiver esquema', () async {
+      final editor = EditorDeCroqui();
+      
+      // Sem esquema
+      await editor.activateExperimental(url: '10.0.2.2:8156');
+      expect(editor.editorUrl.value, 'http://10.0.2.2:8156');
+      
+      // Com http://
+      await editor.activateExperimental(url: 'http://192.168.1.5:8000');
+      expect(editor.editorUrl.value, 'http://192.168.1.5:8000');
+      
+      // Com https://
+      await editor.activateExperimental(url: 'https://meuserver.com');
+      expect(editor.editorUrl.value, 'https://meuserver.com');
+    });
   });
 }

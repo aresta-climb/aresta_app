@@ -95,7 +95,13 @@ class SyncNetwork {
   /// ou `null` caso ocorram erros ou falhas definitivas de rede.
   Future<Uint8List?> downloadFile(String url, {int retries = 3}) async {
     final response = await _executeWithRetries(() async {
-      return await client.get(Uri.parse(url));
+      return await client.get(
+        Uri.parse(url),
+        headers: {
+          'Connection': 'Keep-Alive',
+          'Keep-Alive': 'timeout=5, max=1000',
+        },
+      );
     }, retries: retries);
 
     if (response != null && response.statusCode == 200) {
