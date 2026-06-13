@@ -38,75 +38,75 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 
 ## Estrutura do Projeto
 
-```
+```text
 frontend/
-├── firebase.json              Configuração do FlutterFire CLI
-├── firebase_telemetry_design.md Documentação de design da telemetria
+├── firebase.json                        - Configuração do FlutterFire CLI
+├── firebase_telemetry_design.md         - Documentação de design da telemetria
 ├── legal/
-│   └── repo/                  Submodule Git com os Termos de Uso e Política de Privacidade (.md)
+│   └── repo/                            - Submodule Git com os Termos de Uso e Política de Privacidade (.md)
 ├── tool/
-│   └── legal_updater/         Ferramenta de linha de comando para atualizar as constantes de data legal
+│   └── legal_updater/                   - Ferramenta de linha de comando para atualizar as constantes legais
 ├── lib/
-│   ├── main.dart          Ponto de entrada: bindings, serviços e navegação principal
-│   ├── firebase_options.dart Configurações geradas pelo FlutterFire
+│   ├── main.dart                        - Ponto de entrada: bindings, serviços e navegação principal
+│   ├── firebase_options.dart            - Configurações geradas pelo FlutterFire
 │   ├── constants/
-│   │   └── legal_version.g.dart Constante de data autogerada da última atualização legal
-│   ├── view_functions/    Builders de UI, callbacks e funções por página
-│   │   ├── common_functions.dart     Sistema de design (paletas, tipografia, componentes base)
-│   │   ├── offline_markdown.dart     Visualizador Markdown com FileImage offline
-│   │   ├── settings_functions.dart   Importação de .croqui, QR code, conexão com editor
+│   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
+│   ├── view_functions/                  - Builders de UI, callbacks e funções por página
+│   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
+│   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
+│   │   ├── settings_functions.dart      - Importação de .croqui, QR code, conexão com editor
 │   │   ├── mapao/
-│   │   │   ├── mapao_global_functions.dart Funções e visual builders específicos para o mapa mundial
-│   │   │   └── mapao_marker.dart           Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
-│   │   └── *_functions.dart          Funções específicas por página (home, browse, pico, …)
-│   ├── aresta_api/          Submodule: arquivos .proto e código Protobuf gerado
-│   ├── navigation/        Estrutura de navegação baseada em árvore (Tree Navigation) e Hot-Reload
-│   │   ├── README.md                 Detalhamento da arquitetura de navegação reativa sem pilha
-│   │   ├── navigation_functions.dart API estática AppNav com herança de contexto
-│   │   ├── navigation_tree.dart      Classes dos nós baseados em ID (NavNode) e controlador central
-│   │   └── page_listenable_builder.dart O coração do Hot-Reload Reativo (injetor de UI passivo)
-│   ├── pages/             Páginas do app
-│   │   ├── home.dart              Carrossel e lista de guias locais
-│   │   ├── browse.dart            Índice remoto com download inline
-│   │   ├── mapao_global.dart      Visão de mapa global interativa a partir do Explorar
-│   │   ├── gps.dart               Entrada do mapa
-│   │   ├── mapa_interativo.dart   Mapa interativo com overlay de setores/vias
-│   │   ├── mapa_geral_pico.dart   Mapa contendo o overview de todos os setores do pico
-│   │   ├── pico.dart              Nó raiz de um guia
-│   │   ├── grupo.dart             Agrupamento de setores
-│   │   ├── setor.dart             Subárea com lista de vias ou boulders
-│   │   ├── via.dart               Nó folha: beta, croqui e imagens
-│   │   ├── settings.dart          Configurações e ferramentas de editor
-│   │   ├── terms_of_use.dart      Visualizador dos documentos legais
-│   │   └── qr_scanner.dart        Scanner de QR code
-│   ├── services/          Serviços centrais
+│   │   │   ├── mapao_global_functions.dart - Funções e visual builders específicos para o mapa mundial
+│   │   │   └── mapao_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
+│   │   └── *_functions.dart             - Funções específicas por página (home, browse, pico, …)
+│   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
+│   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
+│   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
+│   │   ├── navigation_functions.dart    - API estática AppNav com herança de contexto
+│   │   ├── navigation_tree.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
+│   │   └── page_listenable_builder.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
+│   ├── pages/                           - Páginas do app
+│   │   ├── home.dart                    - Carrossel e lista de guias locais
+│   │   ├── browse.dart                  - Índice remoto com download inline
+│   │   ├── mapao_global.dart            - Visão de mapa global interativa a partir do Explorar
+│   │   ├── gps.dart                     - Entrada do mapa
+│   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
+│   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
+│   │   ├── pico.dart                    - Nó raiz de um guia
+│   │   ├── grupo.dart                   - Agrupamento de setores
+│   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
+│   │   ├── via.dart                     - Nó folha: beta, croqui e imagens
+│   │   ├── settings.dart                - Configurações e ferramentas de editor
+│   │   ├── terms_of_use.dart            - Visualizador dos documentos legais
+│   │   └── qr_scanner.dart              - Scanner de QR code
+│   ├── services/                        - Serviços centrais
 │   │   ├── firebase/
-│   │   │   ├── init_firebase.dart        Inicialização e captura de Crashlytics
-│   │   │   ├── telemetry_service.dart    Isolamento do Analytics
-│   │   │   ├── remote_config_service.dart Fallbacks e cache local
-│   │   │   └── app_logger.dart           Logger de eventos local (debug)
+│   │   │   ├── init_firebase.dart       - Inicialização e captura de Crashlytics
+│   │   │   ├── telemetry_service.dart   - Isolamento do Analytics
+│   │   │   ├── remote_config_service.dart - Fallbacks e cache local
+│   │   │   └── app_logger.dart          - Logger de eventos local (debug)
 │   │   ├── http/
-│   │   │   ├── sync_service.dart             Orquestra download e validação
-│   │   │   ├── sync_network.dart             Faz o download HTTP bruto
-│   │   │   ├── sync_storage.dart             Trata arquivos `.tmp` e salva modo atômico
-│   │   │   ├── zip_interceptor_client.dart   Ghost Protocol: intercepta aresta-zip://
-│   │   │   └── update_downloader.dart        Verificação e download de atualizações do APK
-│   │   ├── dataset_repository.dart       Estado central: downloads e metadados
-│   │   └── editor_croqui.dart            Contexto de modo e temporizador experimental
+│   │   │   ├── sync_service.dart        - Orquestra download e validação
+│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto
+│   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
+│   │   │   ├── zip_interceptor_client.dart - Ghost Protocol: intercepta aresta-zip://
+│   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   ├── dataset_repository.dart      - Estado central: downloads e metadados
+│   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
 │   └── widgets/
-│       ├── global_search.dart Busca global agregada de todos os croquis baixados
-│       └── mapa_thumbnail.dart    Preview interativo de mapa com resolução offline
+│       ├── global_search.dart           - Busca global agregada de todos os croquis baixados
+│       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/
-    ├── architecture/    Testes arquiteturais e de convenção de código
-    ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
-    ├── legal/           Testes para validação e extração de datas de documentos legais
-    ├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder
-    ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
-    ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
-    ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
-    ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
-    ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
-    └── widgets/         Testes de widget da interface do usuário
+    ├── architecture/                    - Testes arquiteturais e de convenção de código
+    ├── integration/                     - Testes de integração de fluxos completos (download, leitura, etc)
+    ├── legal/                           - Testes para validação e extração de datas de documentos legais
+    ├── navigation/                      - Testes unitários da árvore de navegação, loops e reatividade
+    ├── pages/                           - Testes de widget das páginas de roteamento superior
+    ├── protobuf/                        - Testes de serialização/desserialização dos objetos Protobuf
+    ├── services/                        - Testes unitários dos serviços principais (SyncService, etc)
+    ├── theme/                           - Testes unitários do gerenciamento de temas e persistência
+    ├── view_functions/                  - Testes unitários de funções utilitárias compartilhadas
+    └── widgets/                         - Testes de widget da interface do usuário
 ```
 
 ---
