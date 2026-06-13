@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
 
 /// Definições dos nós de navegação e o controlador do estado de navegação.
 ///
