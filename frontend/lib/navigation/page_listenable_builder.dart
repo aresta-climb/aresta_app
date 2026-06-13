@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../aresta_api/proto/generated/croqui.pbenum.dart';
 import '../services/dataset_repository.dart';
 import 'navigation_functions.dart';
 
