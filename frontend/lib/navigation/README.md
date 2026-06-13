@@ -13,12 +13,16 @@ Com a navegação em árvore, nós declaramos um **estado atual** na hierarquia 
 
 ### `navigation_tree.dart`
 Contém a definição dos nós (`NavNode`) e o controlador central de estado da navegação (`TreeNavigationController`).
-- **NavNode**: A classe base de todos os nós de navegação. Cada nó guarda uma referência para o seu `parent` (pai).
+- **NavNode**: A classe base de todos os nós de navegação. Cada nó guarda uma referência para o seu `parent` (pai) e, o mais importante, **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`), nunca os objetos complexos do Protobuf instanciados na memória.
 - Nós implementados: `HomeNode`, `SettingsNode`, `BrowseNode`, `PicoNode`, `SetorNode`, `GrupoNode`, `ViaNode`, `GPSNode`, `MapaInterativoNode` e `MapaGeralPicoNode`.
+
+### `page_listenable_builder.dart`
+É o elo de **Hot-Reload** da UI. 
+A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Escadaria"), mas é o `PageListenableBuilder` quem consome esse ID e busca o dado atualizado diretamente da memória (`DatasetRepository.activeDataset`). Se um croqui for atualizado em background, o builder notará a alteração e redesenhará a página perfeitamente injetando os objetos novinhos, mantendo a tela do aplicativo em sincronia com arquivos locais.
 
 ### `navigation_functions.dart`
 Contém a classe estática `AppNav`, que funciona como uma interface limpa (API) para acessar e modificar a árvore de navegação sem precisar lidar diretamente com o `BuildContext` complexo do controlador.
-Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`.
+Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. A API aceita objetos complexos por comodidade (ex: `AppNav.toSetor(context, setor: meuSetor)`), mas descarta os objetos nos bastidores e salva apenas o `nome` do setor na árvore.
 
 ## Como usar (A API `AppNav`)
 
@@ -70,6 +74,4 @@ No código físico em Dart, a classe `SetorNode` **não herda** da classe `PicoN
 PicoNode       SetorNode       ViaNode
 ```
 
-O `PicoContextNode` não representa uma tela do app; ele é apenas um molde que obriga as classes filhas a carregarem sempre o contexto atual: `pico`, `croqui` e `cragId`.
-
-Portanto, quando o `SetorNode` utiliza "Super Parameters" (como `super.pico`) no seu construtor, ele não está devolvendo dados para a tela do Pico. Ele está apenas preenchendo as exigências declaradas na sua própria classe pai (`PicoContextNode`).
+O `PicoContextNode` não representa uma tela do app; ele é apenas um molde que obriga as classes filhas a carregarem sempre o ID do contexto atual: o `cragId`. Os nós **não armazenam os dados instanciados** (o objeto `Setor` ou `Pico`), apenas seus identificadores em string. Isso garante que a árvore não trave a memória retendo versões velhas e dessincronizadas de informações caso o usuário edite o croqui ativamente. O `PageListenableBuilder` cuida de traduzir o identificador salvo no nó (como `setorNome`) para a versão em memória correta no instante do frame visual.

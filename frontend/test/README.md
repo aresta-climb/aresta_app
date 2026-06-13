@@ -9,7 +9,7 @@ test/
 ├── architecture/    Testes arquiteturais e de convenção de código
 ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
 ├── legal/           Testes para validação e extração de datas de documentos legais
-├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
+├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder (Hot-Reload)
 ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
 ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
@@ -45,7 +45,7 @@ flutter test test/services/zip_interceptor_test.dart
 |---|---|---|
 | `services/` | 12 | ~110 |
 | `view_functions/` | 12 | ~40 |
-| `navigation/` | 2 | ~15 |
+| `navigation/` | 3 | ~17 |
 | `theme/` | 1 | ~3 |
 | `protobuf/` | 1 | ~20 |
 | `integration/` | 2 | ~10 |
@@ -53,7 +53,7 @@ flutter test test/services/zip_interceptor_test.dart
 | `widgets/` | 4 | ~35 |
 | `architecture/` | 1 | ~10 |
 | `legal/` | 1 | ~10 |
-| **Total** | **44** | **~305** |
+| **Total** | **45** | **~307** |
 
 ## Convenções
 

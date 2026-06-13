@@ -26,6 +26,8 @@ O aplicativo é desenvolvido com uma arquitetura **MVVM (Model-View-ViewModel)**
 
 Isso previne o uso excessivo de *Mapas* genéricos (mock data) e garante uma comunicação transparente entre a lógica de serviços (como downloads atômicos do `SyncService`) e as interfaces (Views). As funcionalidades de rede, persistência no disco e tratamento HTTP foram unificadas no módulo isolado `services/http`.
 
+Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Em conjunto com o `PageListenableBuilder`, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI sempre que os dados sofrerem um update invisível no background (garantindo um **Hot-Reload de dados em tempo real** sem piscar a tela).
+
 ---
 
 ## Documentação

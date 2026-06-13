@@ -35,6 +35,11 @@ Esta é a funcionalidade crítica do sistema baseada em árvore, projetada para 
 * Certifica que sub-nós específicos injetem corretamente a herança lógica de navegação. 
 * Por exemplo, garante que o `MapaoGlobalNode` (o mapa-múndi) atue estritamente como um nó folha descendente do `BrowseNode` quando acionado a partir da aba Explorar, preservando a linha do tempo do usuário ao recuar.
 
+### 8. Hot-Reload Reativo (PageListenableBuilder)
+* **`page_listenable_builder_test.dart`**: Garante o core da funcionalidade de atualizações em tempo real do modo de edição de croquis.
+* Valida a inserção dinâmica de novos dados injetados via `DatasetRepository.activeDataset`, verificando se a UI acorda passivamente e se redesenha de forma silenciosa e instantânea com os novos dados sem piscar.
+* Confirma o comportamento de segurança perante exclusões de dados (Resiliência): se um croqui for atualizado em background e o subnível em que o usuário está atualmente (ex: um setor) não existir mais na nova versão baixada, a view reage de forma segura chamando `AppNav.back()` automaticamente, evitando vazamentos e erros de renderização.
+
 ---
 
 ## Como executar os testes?
