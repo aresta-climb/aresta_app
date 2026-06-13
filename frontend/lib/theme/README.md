@@ -13,6 +13,7 @@ Em vez de depender de instâncias hardcoded de `Color` que não podem mudar com 
 - **`AppColors`**: Uma extensão do `ThemeData` que armazena todas as cores semânticas (ex: `nobleBlack`, `beastHide`, `fishBone`).
 - Duas instâncias estáticas são fornecidas: `AppColors.light` e `AppColors.dark`.
 - **Acesso fácil**: Uma extensão no `BuildContext` (`AppColorsExtension`) permite acessar as cores em qualquer widget com a sintaxe enxuta: `context.colors.nomeDaCor`.
+- **Cor da Logomarca**: Além das cores reativas aos modos de tela, a extensão abriga a `AppColors.brandColor`, que centraliza a cor oficial e vibrante do aplicativo usada em marcadores de mapas e ícones de identidade visual.
 
 ### `theme_controller.dart`
 Controlador Singleton que gerencia o estado global do tema selecionado pelo usuário.

@@ -220,7 +220,12 @@ class AppNav {
 
   /// Volta um nível na árvore de navegação.
   static void back(BuildContext context) {
-    _ctrl(context)?.goBack();
+    final ctrl = _ctrl(context);
+    if (ctrl != null) {
+      ctrl.goBack();
+    } else {
+      Navigator.of(context).maybePop();
+    }
   }
 
   /// Volta todo o caminho de retorno para o nó Home (raiz).
