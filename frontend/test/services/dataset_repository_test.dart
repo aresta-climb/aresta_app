@@ -12,6 +12,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
@@ -87,7 +88,7 @@ void main() {
       expect(notified, isTrue);
     });
 
-    test('updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos', () async {
+    test('updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos e preencher data', () async {
       repo.activeDataset.value = TopoDataset(
         availablePicos: [{'id': 'pico_1', 'isDownloaded': false}],
         downloadedPicos: [],
@@ -96,12 +97,21 @@ void main() {
       final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/pico_1');
       await picoDir.create(recursive: true);
       final picoFile = File('${picoDir.path}/pico_1.binarypb');
-      await picoFile.writeAsString('dados_simulados');
+      
+      final dummyPico = Pico()..nome = 'Pico Teste';
+      final dummyCroqui = Croqui()..picos.add(dummyPico);
+      await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
 
       await repo.updateDatasetAfterDownload('pico_1');
 
       final updatedAvailable = repo.activeDataset.value!.availablePicos;
       expect(updatedAvailable.first['isDownloaded'], isTrue);
+      
+      final downloaded = repo.activeDataset.value!.downloadedPicos;
+      expect(downloaded.length, 1);
+      expect(downloaded.first['data'], isNotNull);
+      expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
+      expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
     });
 
     test('loadIndiceToMemory mapeia o campo descricao do ResumoCroqui', () async {

@@ -463,7 +463,12 @@ class DatasetRepository {
       return indexA.compareTo(indexB);
     });
 
-    // 3. Emite novo estado
+    // 3. Atualiza metadados para todo mundo novamente para garantir
+    await Future.wait(
+      updatedDownloaded.map((p) => updatePicoMetadata(p['id'], p, docsPath)),
+    );
+
+    // 4. Emite novo estado
     activeDataset.value = TopoDataset(
       availablePicos: currentAvailable,
       downloadedPicos: updatedDownloaded,
@@ -488,8 +493,17 @@ class DatasetRepository {
       } else {
         final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
         final picoFile = File('$downloadsPath/$id/$id.binarypb');
-        if (!picoFile.existsSync()) return;
+        if (!picoFile.existsSync()) {
+          return;
+        }
         croqui = Croqui.fromBuffer(await picoFile.readAsBytes());
+      }
+
+      if (croqui.picos.isNotEmpty) {
+        picoData['data'] = {
+          'pico': croqui.picos.first,
+          'croqui': croqui,
+        };
       }
 
       String baseDir = '';
