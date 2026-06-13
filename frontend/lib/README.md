@@ -70,14 +70,19 @@ A camada de navegação gerencia o fluxo de telas do aplicativo utilizando uma a
 
 ### `navigation_tree.dart`
 Contém as definições da estrutura lógica dos nós e o controlador central de estado da navegação.
-* **`NavNode`**: Classe base abstrata. Cada nó na árvore mantém uma referência opcional para o seu nó pai (`parent`). Nós da raiz (como `HomeNode`) possuem `parent` nulo. Os nós implementados incluem: `HomeNode`, `BrowseNode`, `MapaoGlobalNode`, `SettingsNode`, `PicoNode`, `SetorNode`, `GrupoNode`, `ViaNode`, `GPSNode`, `MapaInterativoNode` e `MapaGeralPicoNode`.
+* **`NavNode`**: Classe base abstrata. Cada nó na árvore mantém uma referência opcional para o seu pai (`parent`) e armazena **apenas identificadores em texto** (como `cragId`, `setorNome`, etc.), nunca objetos do banco de dados, para garantir a resiliência a hot-reloads de dados. Os nós implementados incluem: `HomeNode`, `BrowseNode`, `MapaoGlobalNode`, `PicoNode`, `SetorNode`, `ViaNode`, `MapaInterativoNode`, entre outros.
 * **`TreeNavigationController`**: Um `ChangeNotifier` que rastreia o nó ativo (`currentNode`).
-  * **Prevenção de Loops (Ancestor Rewinding)**: Ao navegar para um nó que já existe no histórico (cadeia de ancestrais), o controlador realiza um retrocesso (*rewind*) para o nó original em vez de empilhar uma nova página redundante.
-  * **Botão de Voltar**: Gerencia a navegação física para o pai correspondente através do método `goBack()`.
-  * **Retorno à Raiz**: O método `goHome()` reseta instantaneamente a navegação para o `HomeNode`.
+  * **Prevenção de Loops**: Realiza um retrocesso (*rewind*) para o nó original em vez de empilhar uma nova página redundante se o nó já existir no histórico.
+  * **Botão de Voltar / Home**: Gerencia o retorno de telas (`goBack`) e reset para a tela inicial (`goHome`).
+
+### `page_listenable_builder.dart`
+O coração do **Hot-Reload Reativo**. Atua como o elo entre a Árvore de Navegação e a UI.
+* Fica escutando as mudanças no `activeDataset` do `DatasetRepository` (acionadas em background pelo `SyncService`).
+* Em vez de injetar objetos engessados na inicialização da página, este Builder intercepta as transições, lê os identificadores (IDs) do `NavNode` atual e busca em tempo real os dados mais recentes do modelo `TopoDataset` para injetar nas views (`PicoView`, `SetorView`, etc.).
+* É o que permite que as telas do Aresta se atualizem instantaneamente quando um croqui sofre um hot-reload pelo Editor.
 
 ### `navigation_functions.dart`
-Expõe a API pública estática **`AppNav`**, que simplifica a navegação no aplicativo fornecendo métodos limpos com resolução automática de dependências (como herança de contexto do Pico, Croqui e Crag ID do nó atual).
+Expõe a API pública estática **`AppNav`**, que simplifica a navegação no aplicativo.
 * **Métodos Principais**: `AppNav.toPico`, `AppNav.toMapaoGlobal`, `AppNav.toSetor`, `AppNav.toGrupo`, `AppNav.toVia`, `AppNav.toGPS`, `AppNav.back`, `AppNav.home`, e `AppNav.canGoBack`.
 
 ---
@@ -86,9 +91,9 @@ Expõe a API pública estática **`AppNav`**, que simplifica a navegação no ap
 
 Para evitar arquivos de página monolíticos, todos os construtores de UI complexos, estilização e callbacks são extraídos para o diretório `view_functions/`.
 
-- **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, `mapao_global_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`.
-- **`mapao_marker.dart`**: Renderiza programaticamente, usando `Canvas` e `Path`, o `BitmapDescriptor` personalizado em formato de gota (teardrop) contendo a logotipo do app para os marcadores do Mapão Global.
-- **`common_functions.dart`**: Sistema de design. Define paletas de cores (`beastHide`, `nobleBlack`), estilos de texto, componentes genéricos como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária (`buildSecondaryBottomNav`).
+- **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`.
+- **`mapao/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapao_global_functions.dart` e o `mapao_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
+- **`common_functions.dart`**: Sistema de design genérico. Define componentes como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária. Obs: O controle mestre de cores passou para o diretório `theme/app_colors.dart`.
 - **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
 - **`settings_functions.dart`**: Gerencia a importação de arquivos `.croqui` (via file picker ou URL), a conexão com servidores de editor e a leitura de QR codes. Após a importação, constrói a URL `aresta-zip://` e aciona a sincronização via `SyncService`.
 
