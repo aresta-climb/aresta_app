@@ -22,7 +22,11 @@ String normalizeEditorUrl(String rawUrl) {
   
   final lowerUrl = checkUrl.toLowerCase();
   if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://') && !lowerUrl.startsWith('aresta-zip://')) {
-    checkUrl = 'https://$checkUrl';
+    if (lowerUrl.startsWith('192.168.') || lowerUrl.startsWith('10.') || lowerUrl.startsWith('127.') || lowerUrl.startsWith('localhost')) {
+      checkUrl = 'http://$checkUrl';
+    } else {
+      checkUrl = 'https://$checkUrl';
+    }
   }
   
   if (checkUrl.endsWith('/')) {

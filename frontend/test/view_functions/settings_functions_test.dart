@@ -23,6 +23,12 @@ void main() {
     test('deve adicionar https se não tiver scheme', () {
       expect(normalizeEditorUrl('example.com'), 'https://example.com');
       expect(normalizeEditorUrl('aresta-climb.github.io/aresta_serving'), 'https://aresta-climb.github.io/aresta_serving');
+      
+      // Deve adicionar http:// se for IP ou localhost
+      expect(normalizeEditorUrl('10.0.2.2:8156'), 'http://10.0.2.2:8156');
+      expect(normalizeEditorUrl('192.168.1.100'), 'http://192.168.1.100');
+      expect(normalizeEditorUrl('localhost:8080'), 'http://localhost:8080');
+      expect(normalizeEditorUrl('127.0.0.1'), 'http://127.0.0.1');
     });
 
     test('não deve duplicar prefixo mesmo se o scheme estiver em MAIÚSCULO (QR Code bug)', () {
