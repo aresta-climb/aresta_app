@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'browse_functions.dart';
+import '../browse_functions.dart';
 
 /// Coleção de funções de UI puras (view_functions) para o Mapão Global.
 ///

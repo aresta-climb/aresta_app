@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../theme/app_colors.dart';
+import '../../theme/app_colors.dart';
 
 /// Gera um BitmapDescriptor customizado com o formato de um pino de mapa (teardrop)
 /// contendo a imagem do logo do app dentro dele.

@@ -11,10 +11,14 @@ import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapa_geral_pico.dart';
 import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
+import 'package:frontend/view_functions/pico_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/theme/theme_controller.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -376,55 +380,177 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       );
     }
 
-    if (node is PicoNode) {
-      final picoNode = node;
-      return PicoDetailsPage(
-        pico: picoNode.pico,
-        croqui: picoNode.croqui,
-        cragId: picoNode.cragId,
+    if (node is PicoNode ||
+        node is SetorNode ||
+        node is GrupoNode ||
+        node is ViaNode ||
+        node is MapaGeralPicoNode ||
+        node is MapaInterativoNode) {
+      String cragId = '';
+      String? setorNome;
+      String? grupoNome;
+      String? escaladaNome;
+
+      if (node is PicoContextNode) cragId = node.cragId;
+      if (node is MapaInterativoNode) cragId = node.cragId;
+
+      if (node is SetorNode) setorNome = node.setorNome;
+      if (node is ViaNode) {
+        escaladaNome = node.escaladaNome;
+        setorNome = node.setorNome;
+      }
+      if (node is GrupoNode) grupoNome = node.grupoNome;
+      if (node is MapaInterativoNode) setorNome = node.setorContextNome;
+
+      return PageListenableBuilder(
+        cragId: cragId,
         datasetRepo: widget.datasetRepo,
-        scrollToMapaGeral: picoNode.scrollToMapaGeral,
-        returnToSetor: picoNode.returnToSetor,
+        setorNome: setorNome,
+        grupoNome: grupoNome,
+        escaladaNome: escaladaNome,
+        builder: (context, pico, croqui, setor, grupo, escalada) {
+          if (node is PicoNode) {
+            Setor? returnToSetor;
+            if (node.returnToSetorNome != null) {
+              try {
+                returnToSetor = pico.setoresOuGrupos
+                    .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
+                    .map((sg) => sg.setor.conteudo)
+                    .firstWhere((s) => s.nome == node.returnToSetorNome);
+              } catch (_) {}
+            }
+            return PicoDetailsPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: cragId,
+              datasetRepo: widget.datasetRepo,
+              scrollToMapaGeral: node.scrollToMapaGeral,
+              returnToSetor: returnToSetor,
+            );
+          } else if (node is MapaInterativoNode) {
+            Mapa? mapa;
+            for (var sg in pico.setoresOuGrupos) {
+              if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+                for (var m in sg.setor.conteudo.mapas) {
+                  if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
+                    mapa = m;
+                    break;
+                  }
+                }
+              } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+                for (var m in sg.grupo.conteudo.mapas) {
+                  if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
+                    mapa = m;
+                    break;
+                  }
+                }
+              }
+              if (mapa != null) break;
+            }
+            if (mapa == null) {
+              // Map might be in a via (Multipitch etc)
+              for (var esc in getAllEscaladasFromPico(pico)) {
+                if (esc.hasViaMultiplasEnfiadas()) {
+                  for (var m in esc.viaMultiplasEnfiadas.mapas) {
+                    if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
+                      mapa = m;
+                      break;
+                    }
+                  }
+                }
+                if (mapa != null) break;
+              }
+            }
+            // Coleta todas as escaladas do pico ou setor dependendo do contexto
+            List<Escalada> escaladas = [];
+            if (setor != null) {
+              escaladas = setor.escaladas;
+            } else {
+              for (var sg in pico.setoresOuGrupos) {
+                if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+                  escaladas.addAll(sg.setor.conteudo.escaladas);
+                } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+                  for (var s in sg.grupo.conteudo.setores) {
+                    if (s.hasConteudo()) escaladas.addAll(s.conteudo.escaladas);
+                  }
+                }
+              }
+            }
+            return MapaInterativoPage(
+              mapa: mapa ?? Mapa(),
+              cragId: cragId,
+              escaladas: escaladas,
+              setores: pico.setoresOuGrupos
+                  .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor)
+                  .map((sg) => sg.setor)
+                  .toList(),
+              initialSelectedId: node.initialSelectedId,
+              setorContext: setor,
+            );
+          } else if (node is MapaGeralPicoNode) {
+            Setor? returnToSetor;
+            if (node.returnToSetorNome != null) {
+              try {
+                returnToSetor = pico.setoresOuGrupos
+                    .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
+                    .map((sg) => sg.setor.conteudo)
+                    .firstWhere((s) => s.nome == node.returnToSetorNome);
+              } catch (_) {}
+            }
+            return MapaGeralPicoPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: cragId,
+              returnToSetor: returnToSetor,
+            );
+          } else if (node is SetorNode) {
+            Escalada? scrollToEscalada;
+            if (node.scrollToEscaladaNome != null && setor != null) {
+              try {
+                scrollToEscalada = setor.escaladas.firstWhere((e) {
+                  if (e.hasViaEsportiva()) {
+                    return e.viaEsportiva.nome == node.scrollToEscaladaNome;
+                  }
+                  if (e.hasViaMovel()) {
+                    return e.viaMovel.nome == node.scrollToEscaladaNome;
+                  }
+                  if (e.hasBoulder()) {
+                    return e.boulder.nome == node.scrollToEscaladaNome;
+                  }
+                  if (e.hasViaMultiplasEnfiadas()) {
+                    return e.viaMultiplasEnfiadas.nome == node.scrollToEscaladaNome;
+                  }
+                  if (e.hasHighline()) {
+                    return e.highline.nome == node.scrollToEscaladaNome;
+                  }
+                  return false;
+                });
+              } catch (_) {}
+            }
+            return SetorPage(
+              setor: setor!,
+              cragId: cragId,
+              scrollToEscalada: scrollToEscalada,
+            );
+          } else if (node is GrupoNode) {
+            return GrupoPage(grupo: grupo!, cragId: cragId);
+          } else if (node is ViaNode) {
+            return ViaPage(
+              escalada: escalada!,
+              setor: setor,
+              cragId: cragId,
+            );
+          }
+          return const Scaffold();
+        },
       );
-    } else if (node is MapaInterativoNode) {
-      return MapaInterativoPage(
-        mapa: node.mapa,
-        cragId: node.cragId,
-        escaladas: node.escaladas,
-        setores: node.setores,
-        initialSelectedId: node.initialSelectedId,
-        setorContext: node.setorContext,
-      );
-    } else if (node is MapaGeralPicoNode) {
-      return MapaGeralPicoPage(
-        pico: node.pico,
-        croqui: node.croqui,
-        cragId: node.cragId,
-        returnToSetor: node.returnToSetor,
-      );
-    } else if (node is SetorNode) {
-      return SetorPage(
-        setor: node.setor,
-        cragId: node.cragId,
-        scrollToEscalada: node.scrollToEscalada,
-      );
-    } else if (node is MapaoGlobalNode) {
+    }
+
+    if (node is MapaoGlobalNode) {
       return MapaoGlobalPage(
         crags: node.crags,
         datasetRepo: widget.datasetRepo,
         syncService: widget.syncService,
-      );
-    }
-
-    if (node is GrupoNode) {
-      return GrupoPage(grupo: node.grupo, cragId: node.cragId);
-    }
-
-    if (node is ViaNode) {
-      return ViaPage(
-        escalada: node.escalada,
-        setor: node.setor,
-        cragId: node.cragId,
       );
     }
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../view_functions/mapao_global_functions.dart';
+import '../view_functions/mapao/mapao_global_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
-import '../view_functions/marker_generator.dart';
+import '../view_functions/mapao/mapao_marker.dart';
 import '../view_functions/home_functions.dart';
 
 /// Arquivo principal da tela do "Mapão Global" (Mapa de Picos).

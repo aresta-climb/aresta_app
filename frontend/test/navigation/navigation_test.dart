@@ -35,8 +35,6 @@ void main() {
     test('Deve navegar e avançar na hierarquia normalmente', () {
       // Home -> Pico
       final picoNode = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         parent: controller.currentNode,
       );
@@ -46,9 +44,7 @@ void main() {
 
       // Pico -> Setor
       final setorNode = SetorNode(
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: controller.currentNode,
       );
@@ -61,17 +57,13 @@ void main() {
       final home = controller.currentNode;
       
       final picoNode = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         parent: home,
       );
       controller.navigateTo(picoNode);
 
       final setorNode = SetorNode(
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: picoNode,
       );
@@ -94,27 +86,21 @@ void main() {
       final home = controller.currentNode;
 
       final picoNode = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         parent: home,
       );
       controller.navigateTo(picoNode);
 
       final setorNode = SetorNode(
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: picoNode,
       );
       controller.navigateTo(setorNode);
 
       final viaNode = ViaNode(
-        escalada: escalada,
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        escaladaNome: escalada.viaEsportiva.nome,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: setorNode,
       );
@@ -126,9 +112,7 @@ void main() {
       // Simula o usuário abrindo o Mapa/Setor novamente a partir da página da Via.
       // O parent do novo SetorNode seria o viaNode se continuássemos empilhando.
       final setorNodeRepetido = SetorNode(
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: viaNode,
       );
@@ -142,10 +126,8 @@ void main() {
 
       // Simula o usuário abrindo a mesma Via novamente a partir do Mapa/Setor.
       final viaNodeRepetido = ViaNode(
-        escalada: escalada,
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        escaladaNome: escalada.viaEsportiva.nome,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: setorNode,
       );
@@ -154,7 +136,7 @@ void main() {
       // VERIFICAÇÃO 2: O nó atual deve representar a mesma Via original.
       expect(controller.currentNode, isA<ViaNode>());
       final currentVia = controller.currentNode as ViaNode;
-      expect(currentVia.escalada.viaEsportiva.nome, 'Via Lactea');
+      expect(currentVia.escaladaNome, 'Via Lactea');
       expect(currentVia.cragId, cragId);
 
       // VERIFICAÇÃO 3: O botão de "Voltar" (goBack) deve percorrer linearmente
@@ -180,17 +162,13 @@ void main() {
       final home = controller.currentNode;
 
       final picoNode = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         parent: home,
       );
       controller.navigateTo(picoNode);
 
       final setorNode = SetorNode(
-        setor: setor,
-        pico: pico,
-        croqui: croqui,
+        setorNome: setor.nome,
         cragId: cragId,
         parent: picoNode,
       );
@@ -202,19 +180,15 @@ void main() {
     });
     test('Deve preservar propriedades de estado (scrollToMapaGeral e returnToSetor) no rewind do PicoNode', () {
       final picoNode = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         parent: controller.currentNode,
       );
       controller.navigateTo(picoNode);
 
       final picoNodeRepetido = PicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
         scrollToMapaGeral: true,
-        returnToSetor: setor,
+        returnToSetorNome: setor.nome,
         parent: controller.currentNode,
       );
       controller.navigateTo(picoNodeRepetido);
@@ -222,28 +196,21 @@ void main() {
       expect(controller.currentNode, isA<PicoNode>());
       final currentPico = controller.currentNode as PicoNode;
       expect(currentPico.scrollToMapaGeral, isTrue);
-      expect(currentPico.returnToSetor, isNotNull);
-      expect(currentPico.returnToSetor!.nome, 'Setor Principal');
+      expect(currentPico.returnToSetorNome, isNotNull);
+      expect(currentPico.returnToSetorNome, 'Setor Principal');
     });
 
     test('Deve realizar rewind suave entre MapaInterativoNode e MapaGeralPicoNode', () {
-      final mapa = Mapa(caminhoImagemMapa: 'mapa1.jpg', larguraMapa: 100, alturaMapa: 100);
-      
       final mapaInterativoNode = MapaInterativoNode(
-        mapa: mapa,
-        cragId: cragId,
-        escaladas: const [],
-        setores: const [],
-        setorContext: setor,
+        cragId: '123',
+        mapaCaminhoImagem: 'teste.png',
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaInterativoNode);
 
       final mapaGeralNode = MapaGeralPicoNode(
-        pico: pico,
-        croqui: croqui,
         cragId: cragId,
-        returnToSetor: setor,
+        returnToSetorNome: setor.nome,
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaGeralNode);
@@ -252,11 +219,8 @@ void main() {
 
       // Navegar de volta (rewind)
       final mapaInterativoNodeRepetido = MapaInterativoNode(
-        mapa: mapa,
-        cragId: cragId,
-        escaladas: const [],
-        setores: const [],
-        setorContext: setor,
+        cragId: '123',
+        mapaCaminhoImagem: 'teste.png',
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaInterativoNodeRepetido);

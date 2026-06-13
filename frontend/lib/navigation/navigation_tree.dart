@@ -27,18 +27,14 @@ abstract class NavNode {
   /// Subclasses devem sobrescrever isso para mesclar estado da interface (como alvos de rolagem).
   NavNode copyWithMergedAncestor(covariant NavNode matchingAncestor) {
     return this; 
-  }
+}
 }
 
 /// Classe base abstrata para nós que dependem do contexto de um Pico.
 abstract class PicoContextNode extends NavNode {
-  final Pico pico;
-  final Croqui croqui;
   final String cragId;
 
   const PicoContextNode({
-    required this.pico,
-    required this.croqui,
     required this.cragId,
     super.parent,
   });
@@ -95,25 +91,21 @@ class SettingsNode extends NavNode {
 /// Nó que representa a tela de detalhes de um Pico específico (PicoView).
 class PicoNode extends PicoContextNode {
   final bool scrollToMapaGeral;
-  final Setor? returnToSetor;
+  final String? returnToSetorNome;
 
   const PicoNode({
-    required super.pico,
-    required super.croqui,
     required super.cragId,
     this.scrollToMapaGeral = false,
-    this.returnToSetor,
+    this.returnToSetorNome,
     required super.parent,
   });
 
   @override
   NavNode copyWithMergedAncestor(covariant PicoNode matchingAncestor) {
     return PicoNode(
-      pico: pico,
-      croqui: croqui,
       cragId: cragId,
       scrollToMapaGeral: scrollToMapaGeral,
-      returnToSetor: returnToSetor,
+      returnToSetorNome: returnToSetorNome,
       parent: matchingAncestor.parent,
     );
   }
@@ -121,26 +113,22 @@ class PicoNode extends PicoContextNode {
 
 /// Nó que representa a tela de detalhes de um Setor específico dentro de um Pico (SetorView).
 class SetorNode extends PicoContextNode {
-  final Setor setor;
-  final Escalada? scrollToEscalada;
+  final String setorNome;
+  final String? scrollToEscaladaNome;
 
   const SetorNode({
-    required this.setor,
-    this.scrollToEscalada,
-    required super.pico,
-    required super.croqui,
+    required this.setorNome,
+    this.scrollToEscaladaNome,
     required super.cragId,
     required NavNode parent,
   }) : super(parent: parent);
 
   @override
   NavNode copyWithMergedAncestor(covariant SetorNode matchingAncestor) {
-    final hasScroll = scrollToEscalada != null;
+    final hasScroll = scrollToEscaladaNome != null;
     return SetorNode(
-      setor: setor,
-      scrollToEscalada: hasScroll ? scrollToEscalada : matchingAncestor.scrollToEscalada,
-      pico: pico,
-      croqui: croqui,
+      setorNome: setorNome,
+      scrollToEscaladaNome: hasScroll ? scrollToEscaladaNome : matchingAncestor.scrollToEscaladaNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
@@ -149,12 +137,10 @@ class SetorNode extends PicoContextNode {
 
 /// Nó que representa a visualização de um Grupo.
 class GrupoNode extends PicoContextNode {
-  final Grupo grupo;
+  final String grupoNome;
 
   const GrupoNode({
-    required this.grupo,
-    required super.pico,
-    required super.croqui,
+    required this.grupoNome,
     required super.cragId,
     required NavNode parent,
   }) : super(parent: parent);
@@ -162,9 +148,7 @@ class GrupoNode extends PicoContextNode {
   @override
   NavNode copyWithMergedAncestor(covariant GrupoNode matchingAncestor) {
     return GrupoNode(
-      grupo: grupo,
-      pico: pico,
-      croqui: croqui,
+      grupoNome: grupoNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
@@ -173,14 +157,12 @@ class GrupoNode extends PicoContextNode {
 
 /// Nó que representa a tela de visualização de uma Via específica de escalada (ViaView).
 class ViaNode extends PicoContextNode {
-  final Escalada escalada;
-  final Setor? setor;
+  final String escaladaNome;
+  final String? setorNome;
 
   const ViaNode({
-    required this.escalada,
-    this.setor,
-    required super.pico,
-    required super.croqui,
+    required this.escaladaNome,
+    this.setorNome,
     required super.cragId,
     required NavNode parent,
   }) : super(parent: parent);
@@ -188,10 +170,8 @@ class ViaNode extends PicoContextNode {
   @override
   NavNode copyWithMergedAncestor(covariant ViaNode matchingAncestor) {
     return ViaNode(
-      escalada: escalada,
-      setor: setor,
-      pico: pico,
-      croqui: croqui,
+      escaladaNome: escaladaNome,
+      setorNome: setorNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
@@ -200,21 +180,17 @@ class ViaNode extends PicoContextNode {
 
 /// Nó que representa o mapa interativo de um setor.
 class MapaInterativoNode extends NavNode {
-  final Mapa mapa;
   final String cragId;
-  final List<Escalada> escaladas;
-  final List<ArquivoSetor> setores;
+  final String mapaCaminhoImagem;
+  final String? setorContextNome;
   final String? initialSelectedId;
-  final Setor? setorContext;
   final ImageProvider? imageProviderOverride;
 
   const MapaInterativoNode({
-    required this.mapa,
     required this.cragId,
-    required this.escaladas,
-    required this.setores,
+    required this.mapaCaminhoImagem,
+    this.setorContextNome,
     this.initialSelectedId,
-    this.setorContext,
     this.imageProviderOverride,
     required super.parent,
   });
@@ -223,12 +199,10 @@ class MapaInterativoNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant MapaInterativoNode matchingAncestor) {
     final hasInitialId = initialSelectedId != null;
     return MapaInterativoNode(
-      mapa: mapa,
       cragId: cragId,
-      escaladas: escaladas,
-      setores: setores,
+      mapaCaminhoImagem: mapaCaminhoImagem,
+      setorContextNome: setorContextNome,
       initialSelectedId: hasInitialId ? initialSelectedId : matchingAncestor.initialSelectedId,
-      setorContext: setorContext,
       imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
       parent: matchingAncestor.parent!,
     );
@@ -237,23 +211,19 @@ class MapaInterativoNode extends NavNode {
 
 /// Nó que representa o mapa geral do pico.
 class MapaGeralPicoNode extends PicoContextNode {
-  final Setor? returnToSetor;
+  final String? returnToSetorNome;
 
   const MapaGeralPicoNode({
-    required super.pico,
-    required super.croqui,
     required super.cragId,
-    this.returnToSetor,
+    this.returnToSetorNome,
     required super.parent,
   });
 
   @override
   NavNode copyWithMergedAncestor(covariant MapaGeralPicoNode matchingAncestor) {
     return MapaGeralPicoNode(
-      pico: pico,
-      croqui: croqui,
       cragId: cragId,
-      returnToSetor: returnToSetor,
+      returnToSetorNome: returnToSetorNome,
       parent: matchingAncestor.parent!,
     );
   }
@@ -262,8 +232,6 @@ class MapaGeralPicoNode extends PicoContextNode {
 /// Nó que representa a tela de rotas de GPS/localização.
 class GPSNode extends PicoContextNode {
   const GPSNode({
-    required super.pico,
-    required super.croqui,
     required super.cragId,
     required NavNode parent,
   }) : super(parent: parent);
@@ -271,8 +239,6 @@ class GPSNode extends PicoContextNode {
   @override
   NavNode copyWithMergedAncestor(covariant GPSNode matchingAncestor) {
     return GPSNode(
-      pico: pico,
-      croqui: croqui,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
@@ -294,25 +260,25 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is MapaoGlobalNode && b is MapaoGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
     if (a is MapaInterativoNode && b is MapaInterativoNode) {
-      return a.cragId == b.cragId && a.mapa == b.mapa && a.setorContext == b.setorContext;
+      return a.cragId == b.cragId && a.setorContextNome == b.setorContextNome;
     }
     if (a is MapaGeralPicoNode && b is MapaGeralPicoNode) {
-      return a.cragId == b.cragId && a.pico == b.pico;
+      return a.cragId == b.cragId;
     }
     if (a is PicoNode && b is PicoNode) {
-      return a.cragId == b.cragId && a.pico == b.pico;
+      return a.cragId == b.cragId;
     }
     if (a is SetorNode && b is SetorNode) {
-      return a.cragId == b.cragId && a.setor == b.setor;
+      return a.cragId == b.cragId && a.setorNome == b.setorNome;
     }
     if (a is GrupoNode && b is GrupoNode) {
-      return a.cragId == b.cragId && a.grupo == b.grupo;
+      return a.cragId == b.cragId && a.grupoNome == b.grupoNome;
     }
     if (a is ViaNode && b is ViaNode) {
-      return a.cragId == b.cragId && a.escalada == b.escalada;
+      return a.cragId == b.cragId && a.escaladaNome == b.escaladaNome;
     }
     if (a is GPSNode && b is GPSNode) {
-      return a.cragId == b.cragId && a.pico == b.pico;
+      return a.cragId == b.cragId;
     }
     return false;
   }
