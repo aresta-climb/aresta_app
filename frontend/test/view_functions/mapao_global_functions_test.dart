@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/view_functions/mapao_global_functions.dart';
+import 'package:frontend/view_functions/mapao/mapao_global_functions.dart';
 // Para acessar _CragListItem indiretamente se precisar, ou buscar por OutlinedButton
 
 void main() {

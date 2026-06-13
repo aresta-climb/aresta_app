@@ -55,7 +55,9 @@ frontend/
 │   │   ├── common_functions.dart     Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart     Visualizador Markdown com FileImage offline
 │   │   ├── settings_functions.dart   Importação de .croqui, QR code, conexão com editor
-│   │   ├── mapao_global_functions.dart Funções e visual builders específicos para o mapa mundial
+│   │   ├── mapao/
+│   │   │   ├── mapao_global_functions.dart Funções e visual builders específicos para o mapa mundial
+│   │   │   └── mapao_marker.dart           Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
 │   │   └── *_functions.dart          Funções específicas por página (home, browse, pico, …)
 │   ├── aresta_api/          Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/        Estrutura de navegação baseada em árvore (Tree Navigation)

@@ -14,25 +14,24 @@ void main() {
       expect(controller.currentNode, isA<HomeNode>());
       
       // Navigate to Pico
-      final croqui = Croqui();
-      final picoNode = PicoNode(cragId: '123', pico: pico, croqui: croqui, parent: controller.currentNode);
+      final picoNode = PicoNode(cragId: '123', parent: controller.currentNode);
       controller.navigateTo(picoNode);
       expect(controller.currentNode, isA<PicoNode>());
       
       // Navigate to MapaGeral
-      final mapaGeralNode = MapaGeralPicoNode(cragId: '123', pico: pico, croqui: croqui, parent: controller.currentNode);
+      final mapaGeralNode = MapaGeralPicoNode(cragId: '123', parent: controller.currentNode);
       controller.navigateTo(mapaGeralNode);
       expect(controller.currentNode, isA<MapaGeralPicoNode>());
       
       // Navigate to MapaInterativo
-      final mapaInterativoNode = MapaInterativoNode(cragId: '123', mapa: mapa, escaladas: [], setores: [], parent: controller.currentNode);
+      final mapaInterativoNode = MapaInterativoNode(cragId: '123', mapaCaminhoImagem: 'test.png', parent: controller.currentNode);
       controller.navigateTo(mapaInterativoNode);
       expect(controller.currentNode, isA<MapaInterativoNode>());
       
       // Simulate clicking back to MapaGeral.
       // Instead of the tree growing (Home -> Pico -> MapaGeral -> MapaInterativo -> MapaGeral),
       // the controller should recognize MapaGeral is an ancestor and truncate the tree.
-      final newMapaGeralNode = MapaGeralPicoNode(cragId: '123', pico: pico, croqui: croqui, parent: controller.currentNode);
+      final newMapaGeralNode = MapaGeralPicoNode(cragId: '123', parent: controller.currentNode);
       controller.navigateTo(newMapaGeralNode);
       
       // The current node should be MapaGeralPicoNode

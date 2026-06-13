@@ -20,8 +20,21 @@ void main() {
         ..mapas.add(Mapa(caminhoImagemMapa: 'test.jpg'));
 
       final Pico testPico = Pico()..nome = 'Pico de Teste';
-      final Croqui testCroqui = Croqui();
+      final arquivoSetor = ArquivoSetor()..conteudo = testSetor;
+      testPico.setoresOuGrupos.add(SetorOuGrupo()..setor = arquivoSetor);
       
+      final Croqui testCroqui = Croqui();
+      final testCragId = 'crag_test';
+      
+      repo.activeDataset.value = TopoDataset(
+        downloadedPicos: [
+          {
+            'id': testCragId,
+            'data': {'pico': testPico, 'croqui': testCroqui},
+          }
+        ],
+        availablePicos: [],
+      );
       // Criamos botões para a seção "Mapa Geral" para evitar exceptions no parser de markdown
       final markdownMap = ArquivoMarkdown()..conteudo = 'Este é o mapa geral';
       final botaoCapa = Botao()
@@ -51,21 +64,17 @@ void main() {
 
       // Simulate navigation: Home -> MapaInterativo -> MapaGeralPico
       final mapaInterativoNode = MapaInterativoNode(
-        mapa: testSetor.mapas.first,
-        cragId: 'crag_test',
-        escaladas: const [],
-        setores: const [],
-        setorContext: testSetor,
+        cragId: testCragId,
+        mapaCaminhoImagem: testSetor.mapas.first.caminhoImagemMapa,
+        setorContextNome: testSetor.nome,
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaInterativoNode);
       await tester.pump(const Duration(seconds: 1));
 
       final mapaGeralNode = MapaGeralPicoNode(
-        pico: testPico,
-        croqui: testCroqui,
-        cragId: 'crag_test',
-        returnToSetor: testSetor,
+        cragId: testCragId,
+        returnToSetorNome: testSetor.nome,
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaGeralNode);

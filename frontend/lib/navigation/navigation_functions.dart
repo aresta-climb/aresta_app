@@ -36,7 +36,7 @@ class AppNav {
     NavNode current = node;
     while (true) {
       if (current is PicoContextNode) {
-        return _PicoContext(current.pico, current.croqui, current.cragId);
+        return _PicoContext(current.cragId);
       }
       final parentNode = current.parent;
       if (parentNode == null) break;
@@ -64,19 +64,13 @@ class AppNav {
     if (ctrl == null) return;
     
     final ctx = _picoCtx(ctrl.currentNode);
-    
-    final finalPico = pico ?? (ctx?.pico);
-    final finalCroqui = croqui ?? (ctx?.croqui);
     final finalCragId = cragId ?? (ctx?.cragId);
-
-    if (finalPico == null || finalCroqui == null || finalCragId == null) return;
+    if (finalCragId == null) return;
     
     ctrl.navigateTo(PicoNode(
-      pico: finalPico,
-      croqui: finalCroqui,
       cragId: finalCragId,
       scrollToMapaGeral: scrollToMapaGeral,
-      returnToSetor: returnToSetor,
+      returnToSetorNome: returnToSetor?.nome,
       parent: ctrl.currentNode,
     ));
   }
@@ -89,10 +83,8 @@ class AppNav {
     if (ctx == null) return;
     
     ctrl.navigateTo(MapaGeralPicoNode(
-      pico: ctx.pico,
-      croqui: ctx.croqui,
       cragId: ctx.cragId,
-      returnToSetor: returnToSetor,
+      returnToSetorNome: returnToSetor?.nome,
       parent: ctrl.currentNode,
     ));
   }
@@ -111,12 +103,10 @@ class AppNav {
     if (ctrl == null) return;
     
     ctrl.navigateTo(MapaInterativoNode(
-      mapa: mapa,
       cragId: cragId,
-      escaladas: escaladas,
-      setores: setores,
+      mapaCaminhoImagem: mapa.caminhoImagemMapa,
+      setorContextNome: setorContext?.nome,
       initialSelectedId: initialSelectedId,
-      setorContext: setorContext,
       imageProviderOverride: imageProviderOverride,
       parent: ctrl.currentNode,
     ));
@@ -150,19 +140,13 @@ class AppNav {
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
-    final finalPico = pico ?? (ctx?.pico);
-    final finalCroqui = croqui ?? (ctx?.croqui);
     final finalCragId = cragId ?? (ctx?.cragId);
 
-    assert(finalPico != null && finalCroqui != null && finalCragId != null, 
-      'AppNav.toSetor requer contexto de pico explícito ou herdado');
-    if (finalPico == null || finalCroqui == null || finalCragId == null) return;
+    if (finalCragId == null) return;
     
     ctrl.navigateTo(SetorNode(
-      setor: setor,
-      scrollToEscalada: scrollToEscalada,
-      pico: finalPico,
-      croqui: finalCroqui,
+      setorNome: setor.nome,
+      scrollToEscaladaNome: scrollToEscalada != null ? _getNomeEscalada(scrollToEscalada) : null,
       cragId: finalCragId,
       parent: ctrl.currentNode,
     ));
@@ -181,18 +165,12 @@ class AppNav {
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
-    final finalPico = pico ?? (ctx?.pico);
-    final finalCroqui = croqui ?? (ctx?.croqui);
     final finalCragId = cragId ?? (ctx?.cragId);
 
-    assert(finalPico != null && finalCroqui != null && finalCragId != null, 
-      'AppNav.toGrupo requer contexto de pico explícito ou herdado');
-    if (finalPico == null || finalCroqui == null || finalCragId == null) return;
+    if (finalCragId == null) return;
 
     ctrl.navigateTo(GrupoNode(
-      grupo: grupo,
-      pico: finalPico,
-      croqui: finalCroqui,
+      grupoNome: grupo.nome,
       cragId: finalCragId,
       parent: ctrl.currentNode,
     ));
@@ -212,19 +190,13 @@ class AppNav {
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
-    final finalPico = pico ?? (ctx?.pico);
-    final finalCroqui = croqui ?? (ctx?.croqui);
     final finalCragId = cragId ?? (ctx?.cragId);
 
-    assert(finalPico != null && finalCroqui != null && finalCragId != null, 
-      'AppNav.toVia requer contexto de pico explícito ou herdado');
-    if (finalPico == null || finalCroqui == null || finalCragId == null) return;
+    if (finalCragId == null) return;
 
     ctrl.navigateTo(ViaNode(
-      escalada: escalada,
-      setor: setor,
-      pico: finalPico,
-      croqui: finalCroqui,
+      escaladaNome: _getNomeEscalada(escalada),
+      setorNome: setor?.nome,
       cragId: finalCragId,
       parent: ctrl.currentNode,
     ));
@@ -237,13 +209,10 @@ class AppNav {
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
     
-    assert(ctx != null, 'AppNav.toGPS chamado a partir de um nó sem contexto de pico');
     if (ctx == null) return;
     if (ctrl.currentNode is GPSNode) return; // Já está aqui
     
     ctrl.navigateTo(GPSNode(
-      pico: ctx.pico,
-      croqui: ctx.croqui,
       cragId: ctx.cragId,
       parent: ctrl.currentNode,
     ));
@@ -269,12 +238,19 @@ class AppNav {
       return Navigator.of(context).canPop();
     }
   }
+
+  static String _getNomeEscalada(Escalada e) {
+    if (e.hasViaEsportiva()) return e.viaEsportiva.nome;
+    if (e.hasViaMovel()) return e.viaMovel.nome;
+    if (e.hasBoulder()) return e.boulder.nome;
+    if (e.hasViaMultiplasEnfiadas()) return e.viaMultiplasEnfiadas.nome;
+    if (e.hasHighline()) return e.highline.nome;
+    return '';
+  }
 }
 
 // Auxiliar interno para empacotar os campos de contexto de um pico
 class _PicoContext {
-  final Pico pico;
-  final Croqui croqui;
   final String cragId;
-  _PicoContext(this.pico, this.croqui, this.cragId);
+  _PicoContext(this.cragId);
 }
