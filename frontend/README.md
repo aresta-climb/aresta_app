@@ -60,10 +60,11 @@ frontend/
 │   │   │   └── mapao_marker.dart           Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
 │   │   └── *_functions.dart          Funções específicas por página (home, browse, pico, …)
 │   ├── aresta_api/          Submodule: arquivos .proto e código Protobuf gerado
-│   ├── navigation/        Estrutura de navegação baseada em árvore (Tree Navigation)
-│   │   ├── README.md                 Detalhamento da arquitetura de navegação sem pilha
+│   ├── navigation/        Estrutura de navegação baseada em árvore (Tree Navigation) e Hot-Reload
+│   │   ├── README.md                 Detalhamento da arquitetura de navegação reativa sem pilha
 │   │   ├── navigation_functions.dart API estática AppNav com herança de contexto
-│   │   └── navigation_tree.dart      Classes dos nós (NavNode) e controlador central
+│   │   ├── navigation_tree.dart      Classes dos nós baseados em ID (NavNode) e controlador central
+│   │   └── page_listenable_builder.dart O coração do Hot-Reload Reativo (injetor de UI passivo)
 │   ├── pages/             Páginas do app
 │   │   ├── home.dart              Carrossel e lista de guias locais
 │   │   ├── browse.dart            Índice remoto com download inline
@@ -99,7 +100,7 @@ frontend/
     ├── architecture/    Testes arquiteturais e de convenção de código
     ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
     ├── legal/           Testes para validação e extração de datas de documentos legais
-    ├── navigation/      Testes unitários da árvore de navegação e prevenção de loops (rewinding)
+    ├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder
     ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
     ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
     ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
@@ -167,7 +168,7 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 | Documento | Conteúdo |
 |---|---|
 | [`lib/README.md`](lib/README.md) | Arquitetura completa: serviços, páginas, funções e widgets |
-| [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore (Tree Navigation) |
+| [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore com Hot-Reload (Tree Navigation) |
 | [`lib/services/README.md`](lib/services/README.md) | Ghost Protocol, Modo Experimental, ciclo de vida de importação e isolamento de dados |
 | [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`test/README.md`](test/README.md) | Estrutura dos testes, como executar e convenções adotadas |
