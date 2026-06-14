@@ -133,6 +133,37 @@ void main() {
       expect(available.length, 1);
       expect(available.first['descricao'], 'Uma descrição curta muito legal');
     });
+
+    test('loadIndiceToMemory deve preencher a chave [data] na inicializacao se o pico ja estiver baixado', () async {
+      // Simula um pico já baixado no disco antes de carregar o índice
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/pico_boot');
+      await picoDir.create(recursive: true);
+      final picoFile = File('${picoDir.path}/pico_boot.binarypb');
+      
+      final dummyPico = Pico()..nome = 'Pico de Boot Teste';
+      final dummyCroqui = Croqui()..picos.add(dummyPico);
+      await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
+
+      final indice = Indice(
+        urlBase: 'http://base',
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_boot',
+            nome: 'Nome',
+            url: 'pico_boot.zip',
+          )
+        ]
+      );
+      
+      await repo.loadIndiceToMemory(indice);
+      
+      final downloaded = repo.activeDataset.value!.downloadedPicos;
+      expect(downloaded.length, 1);
+      expect(downloaded.first['isDownloaded'], isTrue);
+      expect(downloaded.first['data'], isNotNull);
+      expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
+      expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
+    });
   });
 
   // ---------------------------------------------------------------------------
