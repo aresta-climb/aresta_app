@@ -377,8 +377,10 @@ Widget buildEditorCard({
               String buttonText;
               Color buttonTextColor;
 
+              final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
               if (isEditor) {
-                cardColor = context.colors.obsidianBrown;
+                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.science;
                 statusLabel = 'Modo Experimental Ativo';
                 description = 'O aplicativo está em modo de teste. Os dados são carregados de uma fonte externa ou local e mantidos isolados.';
@@ -386,7 +388,7 @@ Widget buildEditorCard({
                 buttonText = 'Voltar para oficial';
                 buttonTextColor = Colors.white;
               } else {
-                cardColor = context.colors.slateStone;
+                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.verified;
                 statusLabel = 'Modo Oficial Ativo';
                 description = 'O aplicativo está conectado ao repositório oficial da Aresta Climb.';
@@ -441,12 +443,12 @@ Widget buildEditorCard({
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.black26,
+                            color: context.colors.nobleBlack, // Inset background (Beige in light, Black in dark)
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             activeUrl,
-                            style: TextStyle(color: context.colors.beastHide, fontFamily: 'monospace'),
+                            style: TextStyle(color: context.colors.fishBone, fontFamily: 'monospace'), // High contrast text
                           ),
                         ),
                       ],
@@ -586,8 +588,9 @@ Widget buildEditorCard({
 }
 
 Widget buildThemeSelectionCard(BuildContext context) {
+  final bool isDark = Theme.of(context).brightness == Brightness.dark;
   return Card(
-    color: context.colors.slateStone,
+    color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -725,8 +728,9 @@ Widget buildAppVersionCard(BuildContext context) {
     builder: (context, snapshot) {
       if (snapshot.hasData) {
         final version = snapshot.data!.version;
+        final bool isDark = Theme.of(context).brightness == Brightness.dark;
         return Card(
-          color: context.colors.slateStone,
+          color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
