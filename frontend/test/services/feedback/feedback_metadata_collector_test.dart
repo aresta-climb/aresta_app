@@ -80,7 +80,7 @@ void main() {
       );
 
       final metadata = await collector.collect();
-      expect(metadata['navigationTree'], 'NodeSubstituto'); // Como o node tree é uma string fixa, o nosso mock é simples
+      expect(metadata['navigationTree'], 'HomeNode -> NodeSubstituto'); // Como o node tree é uma string fixa, o nosso mock é simples
       
       FeedbackMetadataCollector.globalActiveNodeOverride = null;
     });

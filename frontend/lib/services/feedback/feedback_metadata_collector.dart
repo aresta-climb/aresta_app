@@ -111,11 +111,20 @@ class FeedbackMetadataCollector {
     try {
       if (getNavigationTreeOverride != null) {
         navigationTree = getNavigationTreeOverride!();
+        if (globalActiveNodeOverride != null) {
+          final parts = navigationTree.split(' -> ');
+          if (parts.isNotEmpty) {
+            parts[parts.length - 1] = globalActiveNodeOverride!;
+            navigationTree = parts.join(' -> ');
+          }
+        }
       } else {
         final treeController = TreeNavigationWrapper.currentTreeController;
         if (treeController != null) {
           final node = treeController.currentNode;
           navigationTree = _getNodePath(node);
+        } else if (globalActiveNodeOverride != null) {
+          navigationTree = globalActiveNodeOverride!;
         }
       }
     } catch (_) {}
