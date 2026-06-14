@@ -4,6 +4,10 @@ import '../navigation/navigation_functions.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:feedback/feedback.dart';
+import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
+import 'package:frontend/services/feedback/feedback_queue_service.dart';
+import 'package:frontend/services/feedback/background_worker.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
@@ -25,7 +29,47 @@ Color get slateStone => _currentColors.slateStone;
 Color get mossRock => _currentColors.mossRock;
 Color get clayEarth => _currentColors.clayEarth;
 Color get weatheredIron => _currentColors.weatheredIron;
+
+Widget buildFeedbackButton(BuildContext context, {Color? color}) {
+  return IconButton(
+    icon: Icon(Icons.bug_report, color: color ?? nobleBlack),
+    tooltip: 'Enviar Feedback/Bug',
+    onPressed: () {
+      if (!BackgroundWorker.isConfigured) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Envio de feedback indisponível neste ambiente de desenvolvimento.'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+        return;
+      }
+
+      BetterFeedback.of(context).show((UserFeedback feedback) async {
+        final metadata = await FeedbackMetadataCollector().collect(context: context);
+        await FeedbackQueueService().enqueueFeedback(
+          description: feedback.text,
+          screenshot: feedback.screenshot,
+          metadata: metadata,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Feedback recebido! Muito obrigado por ajudar a melhorar o app.'),
+              backgroundColor: beastHide,
+            ),
+          );
+        }
+      });
+    },
+  );
+}
+
 PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions}) {
+  final feedbackButton = buildFeedbackButton(context);
+
+  final updatedActions = actions != null ? [...actions, feedbackButton] : [feedbackButton];
+
   return AppBar(
     leading: AppNav.canGoBack(context)
         ? IconButton(
@@ -46,7 +90,7 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
     centerTitle: true,
     elevation: 4,
     shadowColor: Colors.black.withValues(alpha: 0.5),
-    actions: actions,
+    actions: updatedActions,
   );
 }
 

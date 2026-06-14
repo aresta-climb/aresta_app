@@ -25,10 +25,19 @@ import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 
 import 'package:frontend/services/firebase/init_firebase.dart';
+import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:feedback/feedback.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa o Workmanager para processamento de feedback em background
+  Workmanager().initialize(
+    callbackDispatcher,
+  );
 
   // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
   await initFirebase();
@@ -126,9 +135,32 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController().themeMode,
       builder: (context, currentMode, _) {
-        return MaterialApp(
-          title: 'Aresta Climb',
-          debugShowCheckedModeBanner: false,
+        final isDark = currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                    Brightness.dark);
+        final appColors = isDark ? AppColors.dark : AppColors.light;
+
+        return BetterFeedback(
+          theme: FeedbackThemeData(
+            background: appColors.nobleBlack,
+            feedbackSheetColor: appColors.obsidianBrown,
+            activeFeedbackModeColor: appColors.beastHide,
+            drawColors: [
+              appColors.beastHide,
+              Colors.red,
+              Colors.green,
+              Colors.blue,
+              Colors.yellow,
+            ],
+          ),
+          localizationsDelegates: [
+            GlobalFeedbackLocalizationsDelegate(),
+          ],
+          localeOverride: const Locale('pt', 'BR'),
+          child: MaterialApp(
+            title: 'Aresta Climb',
+            debugShowCheckedModeBanner: false,
           themeMode: currentMode,
           theme: ThemeData(
             fontFamily: 'Montserrat',
@@ -254,6 +286,7 @@ class _MyAppState extends State<MyApp> {
                   isUpdatingTerms: _isUpdatingTerms,
                   assetBundle: widget.assetBundle,
                 ),
+          ),
         );
       },
     );
@@ -285,6 +318,10 @@ class TreeNavigationWrapper extends StatefulWidget {
   static void switchTab(int index) {
     navKey.currentState?._onItemTapped(index);
   }
+
+  /// Retorna o controlador de navegação atual (útil para extrair a árvore de navegação globalmente)
+  static TreeNavigationController? get currentTreeController =>
+      navKey.currentState?.treeController;
 }
 
 class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
@@ -347,7 +384,15 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   }
 
   Widget _buildCurrentNode() {
-    final node = treeController.currentNode;
+    NavNode rawNode = treeController.currentNode;
+
+    // Desce a árvore ignorando nós estritamente modais para a renderização de telas
+    while (rawNode is TextNode) {
+      if (rawNode.parent == null) break;
+      rawNode = rawNode.parent!;
+    }
+    
+    final node = rawNode;
 
     // Use IndexedStack for top-level tabs to preserve their state
     if (node is HomeNode || node is SettingsNode || node is BrowseNode) {
@@ -479,10 +524,12 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               mapa: mapa ?? Mapa(),
               cragId: cragId,
               escaladas: escaladas,
-              setores: pico.setoresOuGrupos
-                  .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor)
-                  .map((sg) => sg.setor)
-                  .toList(),
+              setores: setor != null 
+                  ? [] 
+                  : pico.setoresOuGrupos
+                      .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor)
+                      .map((sg) => sg.setor)
+                      .toList(),
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
             );

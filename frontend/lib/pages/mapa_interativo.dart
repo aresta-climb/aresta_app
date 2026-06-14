@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../main.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/offline_markdown.dart';
@@ -86,10 +88,22 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (widget.initialSelectedId != null) {
       _selectedId = widget.initialSelectedId;
     }
+    _updateFeedbackNode();
 
     _imageProviderFuture = widget.imageProviderOverride != null
         ? Future.value(widget.imageProviderOverride)
         : _resolveImageProvider();
+  }
+
+  void _updateFeedbackNode() {
+    if (_selectedId == null) {
+      FeedbackMetadataCollector.globalActiveNodeOverride = null;
+    } else {
+      final item = _idMap[_selectedId];
+      final viaName = item != null ? getEscaladaNome(item) : _selectedId;
+      final fileName = widget.mapa.caminhoImagemMapa.split('/').last;
+      FeedbackMetadataCollector.globalActiveNodeOverride = 'MapaInterativoNode($fileName, Via: $viaName)';
+    }
   }
 
   Future<ImageProvider?> _resolveImageProvider() async {
@@ -168,8 +182,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
   @override
   void dispose() {
-    _transformationController.dispose();
+    FeedbackMetadataCollector.globalActiveNodeOverride = null;
     _animationController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -181,6 +196,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }) {
     setState(() {
       _selectedId = marker.id;
+      _updateFeedbackNode();
     });
 
     if (isUserInteraction) {
@@ -547,7 +563,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                     ),
                     IconButton(
                       icon: Icon(Icons.close, color: fishBone),
-                      onPressed: () => setState(() => _selectedId = null),
+                      onPressed: () {
+                        setState(() {
+                          _selectedId = null;
+                          _updateFeedbackNode();
+                        });
+                      },
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -608,11 +629,15 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           icon: const Icon(Icons.arrow_back),
           onPressed: () => AppNav.back(context),
         ),
-        title: Text(
+        title: const Text(
           'Croqui Interativo',
-          style: TextStyle(color: fishBone),
+          style: TextStyle(color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: fishBone),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          buildFeedbackButton(context, color: Colors.white),
+          const SizedBox(width: 12),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, viewportConstraints) {
@@ -672,7 +697,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             return GestureDetector(
                               onTap: () {
                                 if (_selectedId != null) {
-                                  setState(() => _selectedId = null);
+                                  setState(() {
+                                    _selectedId = null;
+                                    _updateFeedbackNode();
+                                  });
                                 }
                               },
                               child: Stack(
@@ -871,11 +899,18 @@ class MapHelper {
       if (duplicates.contains(id)) return;
 
       if (idMap.containsKey(id)) {
+        // Usa identical primeiro. Se for instância diferente, usa toString() 
+        // para comparar o JSON do protobuf e ver se o conteúdo é o mesmo
+        if (identical(idMap[id], item) || idMap[id].toString() == item.toString()) {
+          return;
+        }
+        
         AppLogger.instance.logError(
-          'Erro: Mais de uma escalada/setor com o mesmo idNoMapa ($id). Removendo do mapa...',
+          'Aviso: Mais de uma escalada/setor diferente com o mesmo idNoMapa ($id). Mantendo a primeira no mapa.',
         );
-        idMap.remove(id);
-        duplicates.add(id);
+        // Em vez de remover do mapa e quebrar o clique naquele ID, 
+        // vamos manter a primeira escalada/setor que foi mapeada.
+        return;
       } else {
         idMap[id] = item;
       }

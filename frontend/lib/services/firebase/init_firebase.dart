@@ -12,13 +12,27 @@ Future<void> initFirebase() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Crashlytics global handlers
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+  await initCrashlytics();
 
   // Dispara o carregamento de configurações remotas sem bloquear a inicialização principal
   RemoteConfigService.instance.initialize();
+}
+
+/// Inicializa e configura o Crashlytics. Extraído para permitir injeção de dependências nos testes.
+Future<void> initCrashlytics({
+  bool? isDebugMode,
+  FirebaseCrashlytics? crashlyticsInstance,
+}) async {
+  final isDebug = isDebugMode ?? kDebugMode;
+  final crashlytics = crashlyticsInstance ?? FirebaseCrashlytics.instance;
+
+  // Crashlytics global handlers
+  if (isDebug) {
+    await crashlytics.setCrashlyticsCollectionEnabled(false);
+  }
+  FlutterError.onError = crashlytics.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    crashlytics.recordError(error, stack, fatal: true);
+    return true;
+  };
 }

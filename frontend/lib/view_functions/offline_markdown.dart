@@ -153,9 +153,16 @@ class OfflineMarkdown extends StatelessWidget {
                           Positioned(
                             top: MediaQuery.of(context).padding.top + 10,
                             right: 10,
-                            child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                              onPressed: () => Navigator.of(context).pop(),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                buildFeedbackButton(context, color: Colors.white),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ],
                             ),
                           ),
                         ],

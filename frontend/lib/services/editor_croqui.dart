@@ -225,6 +225,9 @@ class EditorDeCroqui {
 
     isExperimentalMode.value = true;
     if (url != null) {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://$url';
+      }
       editorUrl.value = url;
     }
 

@@ -131,7 +131,7 @@ jobs:
         working-directory: frontend
         run: |
           # Compila o app e gera o arquivo .ipa usando as configurações locais de ExportOptions.plist
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist --dart-define=FEEDBACK_EDGE_FUNCTION_URL=${{ secrets.FEEDBACK_EDGE_FUNCTION_URL }} --dart-define=FEEDBACK_EDGE_FUNCTION_API_KEY=${{ secrets.FEEDBACK_EDGE_FUNCTION_API_KEY }}
 
       - name: Upload to App Store Connect
         env:
