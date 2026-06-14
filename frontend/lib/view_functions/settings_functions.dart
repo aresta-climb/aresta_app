@@ -443,7 +443,7 @@ Widget buildEditorCard({
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: context.colors.slateStone, // Lighter beige/grey background
+                            color: context.colors.nobleBlack, // Inset background (Beige in light, Black in dark)
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
