@@ -277,6 +277,8 @@ class _CragListItemState extends State<_CragListItem>
       widget.crag['dataUpdate'] as String?,
     );
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: AnimatedContainer(
@@ -284,9 +286,11 @@ class _CragListItemState extends State<_CragListItem>
         curve: Curves.easeInOut,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: _expanded
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.05),
+          color: isDark 
+              ? (_expanded
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.05))
+              : obsidianBrown,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _expanded
