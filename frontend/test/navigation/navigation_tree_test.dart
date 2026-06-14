@@ -67,4 +67,88 @@ void main() {
       expect(controller.currentNode.parent?.parent, isA<HomeNode>());
     });
   });
+
+  group('NavNode toString() overrides', () {
+    test('HomeNode toString()', () {
+      const node = HomeNode();
+      expect(node.toString(), 'HomeNode');
+    });
+
+    test('BrowseNode toString()', () {
+      const node = BrowseNode(HomeNode());
+      expect(node.toString(), 'BrowseNode');
+    });
+
+    test('MapaoGlobalNode toString()', () {
+      const node = MapaoGlobalNode(
+        crags: [{'id': 'pico1'}, {'id': 'pico2'}],
+        parent: HomeNode(),
+      );
+      expect(node.toString(), 'MapaoGlobalNode(2 picos)');
+    });
+
+    test('SettingsNode toString()', () {
+      const node = SettingsNode(HomeNode());
+      expect(node.toString(), 'SettingsNode');
+    });
+
+    test('PicoNode toString()', () {
+      const node = PicoNode(cragId: 'pico_santuario', parent: HomeNode());
+      expect(node.toString(), 'PicoNode(pico_santuario)');
+    });
+
+    test('SetorNode toString()', () {
+      const node = SetorNode(
+        cragId: 'pico_santuario',
+        setorNome: 'Clube da Luta',
+        parent: HomeNode(),
+      );
+      expect(node.toString(), 'SetorNode(Clube da Luta)');
+    });
+
+    test('GrupoNode toString()', () {
+      const node = GrupoNode(
+        cragId: 'pico_santuario',
+        grupoNome: 'Pedra Principal',
+        parent: HomeNode(),
+      );
+      expect(node.toString(), 'GrupoNode(Pedra Principal)');
+    });
+
+    test('ViaNode toString()', () {
+      const node = ViaNode(
+        cragId: 'pico_santuario',
+        escaladaNome: 'Via Láctea',
+        parent: HomeNode(),
+      );
+      expect(node.toString(), 'ViaNode(Via Láctea)');
+    });
+
+    test('MapaInterativoNode toString()', () {
+      const nodeComSetor = MapaInterativoNode(
+        cragId: 'pico_santuario',
+        mapaCaminhoImagem: 'assets/map.png',
+        setorContextNome: 'Clube da Luta',
+        parent: HomeNode(),
+      );
+      expect(nodeComSetor.toString(), 'MapaInterativoNode(map.png)');
+
+      const nodeSemSetor = MapaInterativoNode(
+        cragId: 'pico_santuario',
+        mapaCaminhoImagem: 'assets/map.png',
+        parent: HomeNode(),
+      );
+      expect(nodeSemSetor.toString(), 'MapaInterativoNode(map.png)');
+    });
+
+    test('MapaGeralPicoNode toString()', () {
+      const node = MapaGeralPicoNode(cragId: 'pico_santuario', parent: HomeNode());
+      expect(node.toString(), 'MapaGeralPicoNode(pico_santuario)');
+    });
+
+    test('GPSNode toString()', () {
+      const node = GPSNode(cragId: 'pico_santuario', parent: HomeNode());
+      expect(node.toString(), 'GPSNode(pico_santuario)');
+    });
+  });
 }

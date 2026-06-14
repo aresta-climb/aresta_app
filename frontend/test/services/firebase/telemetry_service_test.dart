@@ -20,6 +20,11 @@ void main() {
       expect(mockTelemetry.recordedParams['acao_explorar']!['acao'], 'baixar');
     });
 
+    test('getAppInstanceId retorna valor mockado', () async {
+      final appInstanceId = await TelemetryService.instance.getAppInstanceId();
+      expect(appInstanceId, 'mock_app_instance_id');
+    });
+
     test('logAtualizarCroqui', () async {
       await TelemetryService.instance.logAtualizarCroqui('crag1', 'sha123', '2026-06-04T10:00:00.000Z');
       expect(mockTelemetry.recordedEvents, contains('atualizar_croqui'));

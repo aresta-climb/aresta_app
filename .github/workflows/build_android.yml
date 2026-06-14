@@ -74,7 +74,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=FEEDBACK_EDGE_FUNCTION_URL=${{ secrets.FEEDBACK_EDGE_FUNCTION_URL }} --dart-define=FEEDBACK_EDGE_FUNCTION_API_KEY=${{ secrets.FEEDBACK_EDGE_FUNCTION_API_KEY }}
 
 
       - name: Upload to Google Play Console

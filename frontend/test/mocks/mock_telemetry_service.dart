@@ -17,6 +17,11 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
+  Future<String?> getAppInstanceId() async {
+    return 'mock_app_instance_id';
+  }
+
+  @override
   Future<void> logAtualizarCroqui(String idCroqui, String versao, String timestampAtualizacao) async {
     recordedEvents.add('atualizar_croqui');
     recordedParams['atualizar_croqui'] = {'id_croqui': idCroqui, 'versao': versao, 'timestamp_atualizacao': timestampAtualizacao};

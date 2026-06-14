@@ -45,6 +45,18 @@ class TelemetryService {
     return _logEvent('acao_explorar', {'id_croqui': idCroqui, 'acao': acao});
   }
 
+  /// Retorna o appInstanceId do Firebase Analytics (útil para associar feedbacks à sessão).
+  Future<String?> getAppInstanceId() async {
+    try {
+      return await FirebaseAnalytics.instance.appInstanceId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ [Telemetry] Erro ao obter appInstanceId: $e');
+      }
+      return null;
+    }
+  }
+
   /// Registra quando um croqui já baixado é atualizado com uma nova versão (sha256).
   /// Agora também armazena o timestamp exato do update.
   Future<void> logAtualizarCroqui(

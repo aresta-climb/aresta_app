@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../utils/markdown_utils.dart';
+import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/main.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
 import 'package:fuzzy/fuzzy.dart';
@@ -380,9 +384,12 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
         ),
         trailing: Icon(Icons.chevron_right, color: beastHide),
         onTap: () {
-          TelemetryService.instance.logAcaoCroqui(cragId, botao.texto);
           if (botao.hasDestino() && botao.destino.hasSecaoTextual()) {
             final md = botao.destino.secaoTextual;
+            final treeNav = TreeNavigationWrapper.currentTreeController;
+            if (treeNav != null) {
+              treeNav.navigateTo(TextNode(title: botao.texto, parent: treeNav.currentNode));
+            }
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -398,7 +405,7 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
                   expand: false,
                   builder: (context, scrollController) {
                     final bottomPadding = MediaQuery.of(context).padding.bottom;
-                    return SingleChildScrollView(
+                    return ListView(
                       controller: scrollController,
                       padding: EdgeInsets.only(
                         top: 20,
@@ -406,12 +413,38 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
                         right: 20,
                         bottom: 20 + bottomPadding,
                       ),
-                      child: OfflineMarkdown(data: md.conteudo, cragId: cragId),
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                botao.texto,
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: beastHide),
+                              ),
+                            ),
+                            buildFeedbackButton(context, color: beastHide),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Builder(
+                          builder: (context) {
+                            final content = MarkdownUtils.cleanModalContent(md.conteudo, botao.texto);
+                            return OfflineMarkdown(data: content, cragId: cragId);
+                          }
+                        ),
+                      ],
                     );
                   },
                 );
               },
-            );
+            ).whenComplete(() {
+              final treeNav = TreeNavigationWrapper.currentTreeController;
+              if (treeNav != null && treeNav.currentNode is TextNode) {
+                treeNav.goBack();
+              }
+            });
           }
         },
       ),

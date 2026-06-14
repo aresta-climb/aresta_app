@@ -47,6 +47,9 @@ class HomeNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant HomeNode matchingAncestor) {
     return const HomeNode();
   }
+
+  @override
+  String toString() => 'HomeNode';
 }
 
 /// Nó que representa a tela de busca de picos novos (BrowseView).
@@ -57,6 +60,9 @@ class BrowseNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant BrowseNode matchingAncestor) {
     return BrowseNode(matchingAncestor.parent!);
   }
+
+  @override
+  String toString() => 'BrowseNode';
 }
 
 /// Nó que representa o mapa global (Mapão Global) acessado a partir da Busca.
@@ -75,6 +81,9 @@ class MapaoGlobalNode extends NavNode {
       parent: matchingAncestor.parent,
     );
   }
+
+  @override
+  String toString() => 'MapaoGlobalNode(${crags.length} picos)';
 }
 
 /// Nó que representa a tela de configurações do aplicativo (SettingsView).
@@ -85,6 +94,9 @@ class SettingsNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant SettingsNode matchingAncestor) {
     return SettingsNode(matchingAncestor.parent!);
   }
+
+  @override
+  String toString() => 'SettingsNode';
 }
 
 /// Nó que representa a tela de detalhes de um Pico específico (PicoView).
@@ -108,6 +120,9 @@ class PicoNode extends PicoContextNode {
       parent: matchingAncestor.parent,
     );
   }
+
+  @override
+  String toString() => 'PicoNode($cragId)';
 }
 
 /// Nó que representa a tela de detalhes de um Setor específico dentro de um Pico (SetorView).
@@ -132,6 +147,9 @@ class SetorNode extends PicoContextNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'SetorNode($setorNome)';
 }
 
 /// Nó que representa a visualização de um Grupo.
@@ -152,6 +170,9 @@ class GrupoNode extends PicoContextNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'GrupoNode($grupoNome)';
 }
 
 /// Nó que representa a tela de visualização de uma Via específica de escalada (ViaView).
@@ -175,6 +196,9 @@ class ViaNode extends PicoContextNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'ViaNode($escaladaNome)';
 }
 
 /// Nó que representa o mapa interativo de um setor.
@@ -206,6 +230,9 @@ class MapaInterativoNode extends NavNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'MapaInterativoNode(${mapaCaminhoImagem.split('/').last})';
 }
 
 /// Nó que representa o mapa geral do pico.
@@ -226,6 +253,9 @@ class MapaGeralPicoNode extends PicoContextNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'MapaGeralPicoNode($cragId)';
 }
 
 /// Nó que representa a tela de rotas de GPS/localização.
@@ -242,6 +272,33 @@ class GPSNode extends PicoContextNode {
       parent: matchingAncestor.parent!,
     );
   }
+
+  @override
+  String toString() => 'GPSNode($cragId)';
+}
+
+// --- NÓS MODAIS ---
+
+/// Nó que representa um modal textual aberto sobre a página atual.
+/// A página renderizada será a do nó pai.
+class TextNode extends NavNode {
+  final String title;
+
+  const TextNode({
+    required this.title,
+    required NavNode parent,
+  }) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant TextNode matchingAncestor) {
+    return TextNode(
+      title: title,
+      parent: matchingAncestor.parent!,
+    );
+  }
+
+  @override
+  String toString() => 'TextNode($title)';
 }
 
 // --- CONTROLADOR ---
@@ -278,6 +335,9 @@ class TreeNavigationController extends ChangeNotifier {
     }
     if (a is GPSNode && b is GPSNode) {
       return a.cragId == b.cragId;
+    }
+    if (a is TextNode && b is TextNode) {
+      return a.title == b.title;
     }
     return false;
   }

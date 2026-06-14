@@ -201,7 +201,7 @@ void main() {
       expect(idMap['esc2'], setor1.conteudo.escaladas[0]);
     });
 
-    test('buildIdMap handles duplicates by removing them', () {
+    test('buildIdMap keeps the first item when different items share the same idNoMapa', () {
       final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 1'));
       final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 2'));
 
@@ -210,7 +210,34 @@ void main() {
         setores: [],
       );
 
-      expect(idMap.containsKey('dup'), isFalse);
+      // It should keep the first one instead of removing both
+      expect(idMap.containsKey('dup'), isTrue);
+      expect(idMap['dup'], esc1);
+    });
+
+    test('buildIdMap ignores duplicate if it is the exact same item', () {
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1'));
+      final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1')); // Same content
+
+      final setor1 = ArquivoSetor(
+        conteudo: Setor(
+          idNoMapa: 'set1',
+          nome: 'Setor 1',
+          escaladas: [
+            esc1, 
+          ],
+        ),
+      );
+
+      final idMap = MapHelper.buildIdMap(
+        // Passes esc1 and an identical object esc2 or even esc1 again
+        escaladas: [esc1, esc2], 
+        setores: [setor1],
+      );
+
+      // It should not remove 'esc1' since it's the exact same item
+      expect(idMap.containsKey('esc1'), isTrue);
+      expect(idMap['esc1'], esc1);
     });
   });
 
@@ -460,6 +487,24 @@ void main() {
       expect(lastEvent?['nome_escalada'], 'Geral');
       expect(lastEvent?['acao'], 'abrir_mapa_geral');
       expect(lastEvent?['origem'], 'mapa_setor');
+    });
+
+    testWidgets('MapaInterativoPage deve renderizar o botão de feedback (bug_report)', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            cragId: 'test_crag',
+            mapa: mockMapa,
+            escaladas: const [],
+            setores: const [],
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.bug_report), findsOneWidget);
     });
   });
 }
