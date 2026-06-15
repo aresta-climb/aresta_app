@@ -28,6 +28,7 @@ import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
+import 'package:frontend/services/feedback/custom_feedback_builder.dart';
 import 'package:flutter/foundation.dart';
 
 void main() async {
@@ -135,19 +136,29 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController().themeMode,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark ||
-            (currentMode == ThemeMode.system &&
-                WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-                    Brightness.dark);
-        final appColors = isDark ? AppColors.dark : AppColors.light;
+
 
         return BetterFeedback(
+          feedbackBuilder: customFeedbackBuilder,
+          themeMode: currentMode,
           theme: FeedbackThemeData(
-            background: appColors.nobleBlack,
-            feedbackSheetColor: appColors.obsidianBrown,
-            activeFeedbackModeColor: appColors.beastHide,
-            drawColors: [
-              appColors.beastHide,
+            background: AppColors.light.nobleBlack,
+            feedbackSheetColor: AppColors.light.obsidianBrown,
+            activeFeedbackModeColor: AppColors.light.beastHide,
+            drawColors: const [
+              AppColors.brandColor,
+              Colors.red,
+              Colors.green,
+              Colors.blue,
+              Colors.yellow,
+            ],
+          ),
+          darkTheme: FeedbackThemeData(
+            background: AppColors.dark.nobleBlack,
+            feedbackSheetColor: AppColors.dark.obsidianBrown,
+            activeFeedbackModeColor: AppColors.dark.beastHide,
+            drawColors: const [
+              AppColors.brandColor,
               Colors.red,
               Colors.green,
               Colors.blue,
