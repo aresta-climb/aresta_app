@@ -227,7 +227,7 @@ void main() {
     });
 
 
-      // Teste de telemetria
+    // Teste de telemetria
     testWidgets('deve registrar telemetria ao clicar no botão de feedback', (WidgetTester tester) async {
       BackgroundWorker.debugIsConfiguredOverride = true;
       final mockTelemetry = MockTelemetryService();
