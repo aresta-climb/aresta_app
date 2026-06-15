@@ -70,7 +70,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
     final borderColor = isDark ? appColors.weatheredIron.withValues(alpha: 0.5) : Colors.transparent;
     final buttonColor = appColors.beastHide;
 
-    // viewPaddingOf extracts the physical screen padding (OS buttons) even inside an Overlay where SafeArea fails.
+    // TODO: ajeitar o viewPaddingOf [the physical screen padding (OS buttons)]. O widget ainda está embaixo do SO.
     final bottomViewPadding = MediaQuery.viewPaddingOf(context).bottom;
 
     return SingleChildScrollView(
