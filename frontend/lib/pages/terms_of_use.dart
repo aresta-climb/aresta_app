@@ -3,6 +3,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -125,9 +126,17 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              buildFeedbackButton(context),
+            ],
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.fromLTRB(
+              16.0,
+              16.0,
+              16.0,
+              MediaQuery.paddingOf(context).bottom > 0 ? MediaQuery.paddingOf(context).bottom + 16.0 : 32.0,
+            ),
             child: _privacyMarkdown != null
                 ? MarkdownBody(
                     data: _privacyMarkdown!,
@@ -245,6 +254,9 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              buildFeedbackButton(context),
+            ],
           ),
       body: SafeArea(
         child: _termsMarkdown == null
