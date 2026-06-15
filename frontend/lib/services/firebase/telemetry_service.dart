@@ -161,4 +161,9 @@ class TelemetryService {
   Future<void> logAcaoConfiguracoes(String acao) {
     return _logEvent('acao_configuracoes', {'acao': acao});
   }
+
+  /// Registra interações do sistema de In-App Feedback (abrir, enviar).
+  Future<void> logAcaoFeedback(String acao) {
+    return _logEvent('acao_feedback', {'acao': acao});
+  }
 }
