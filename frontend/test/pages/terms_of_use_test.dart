@@ -167,4 +167,41 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('TermsOfUsePage displays feedback button in the AppBar when in read-only mode', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TermsOfUsePage(
+          onAccepted: () {},
+          showAcceptButton: false, // AppBar só aparece no modo read-only
+          assetBundle: MockAssetBundle(defaultFiles),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verifica se o ícone do botão de feedback existe na tela
+    expect(find.byIcon(Icons.bug_report), findsOneWidget);
+  });
+
+  testWidgets('TermsOfUsePage displays feedback button in the Privacy Policy bottom sheet', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+    );
+    await tester.pumpAndSettle();
+
+    final markdownWidget = tester.widget<MarkdownBody>(find.byType(MarkdownBody).first);
+    markdownWidget.onTapLink!(
+      'Política de Privacidade', 
+      'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html', 
+      'title'
+    );
+    await tester.pumpAndSettle();
+
+    // Verifica se o modal abriu
+    expect(find.text('Política de Privacidade', skipOffstage: false), findsWidgets);
+    
+    // Verifica se o ícone do botão de feedback existe na AppBar do modal
+    expect(find.byIcon(Icons.bug_report), findsOneWidget);
+  });
 }
