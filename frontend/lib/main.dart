@@ -23,7 +23,8 @@ import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
-
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:workmanager/workmanager.dart';
@@ -110,11 +111,29 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late int _acceptedLegalVersion;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _acceptedLegalVersion = widget.acceptedLegalVersion;
+
+    // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
+    BackgroundWorker.processFeedbackQueue();
+
+    // Escuta transições de rede (ex: tirar do modo avião) para enviar feedbacks presos na fila,
+    // sem depender da lentidão do agendamento do SO para o Workmanager.
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      if (!results.contains(ConnectivityResult.none)) {
+        BackgroundWorker.processFeedbackQueue();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   void _onTermsAccepted() async {
