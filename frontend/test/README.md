@@ -14,6 +14,7 @@ test/
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
 ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
+├── utils/           Testes de funções utilitárias isoladas (ex: parsers de Markdown)
 ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
 └── widgets/         Testes de widget da interface do usuário
 ```
@@ -34,6 +35,7 @@ flutter test test/theme/
 flutter test test/protobuf/
 flutter test test/integration/
 flutter test test/widgets/
+flutter test test/utils/
 
 # Rodar um arquivo específico
 flutter test test/services/zip_interceptor_test.dart
@@ -53,7 +55,8 @@ flutter test test/services/zip_interceptor_test.dart
 | `widgets/` | 4 | ~35 |
 | `architecture/` | 1 | ~10 |
 | `legal/` | 1 | ~10 |
-| **Total** | **45** | **~307** |
+| `utils/` | 1 | ~10 |
+| **Total** | **46** | **~317** |
 
 ## Convenções
 

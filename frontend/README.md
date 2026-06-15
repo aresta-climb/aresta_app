@@ -51,6 +51,11 @@ frontend/
 │   ├── firebase_options.dart            - Configurações geradas pelo FlutterFire
 │   ├── constants/
 │   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
+│   ├── theme/
+│   │   ├── app_colors.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
+│   │   └── theme_controller.dart        - Gerenciamento de estado do tema
+│   ├── utils/
+│   │   └── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
 │   ├── view_functions/                  - Builders de UI, callbacks e funções por página
 │   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
@@ -91,9 +96,15 @@ frontend/
 │   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   ├── zip_interceptor_client.dart - Ghost Protocol: intercepta aresta-zip://
 │   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   ├── feedback/
+│   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
+│   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
+│   │   │   └── feedback_queue_service.dart - Fila local persistente (SharedPreferences)
 │   │   ├── dataset_repository.dart      - Estado central: downloads e metadados
 │   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
 │   └── widgets/
+│       ├── feedback/
+│       │   └── custom_feedback_builder.dart - Construtor de interface customizada para formulário de in-app feedback
 │       ├── global_search.dart           - Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/
