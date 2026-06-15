@@ -49,6 +49,9 @@ class MapaGeralPicoPage extends StatelessWidget {
         title: Text('Mapa Geral do Pico', style: TextStyle(color: beastHide)),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         iconTheme: IconThemeData(color: beastHide),
+        actions: [
+          buildFeedbackButton(context, color: beastHide),
+        ],
       ),
       // Constrói o corpo principal (renderizando o markdown do mapa e controlando o zoom/pan)
       body: buildMapaGeralPicoBody(context, cragId, mapMd),
