@@ -8,6 +8,7 @@ Esta pasta contém testes de widget da interface do usuário. Os testes aqui ver
 |---|---|---|
 | `widget_test.dart` | `HomePage` | Teste básico de carregamento da página principal da aplicação |
 | `mapa_interativo_test.dart` | `MapaInterativoPage` | Testa a renderização de marcadores no mapa interativo (posição, labels, overlapping) |
+| `feedback/custom_feedback_builder_test.dart` | `CustomStringFeedback` | Testa o layout e comportamento visual (Light/Dark mode) do formulário de In-App Feedback |
 
 ## Como executar
 

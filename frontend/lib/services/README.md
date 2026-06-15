@@ -12,6 +12,7 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
 | `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA) |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
+| `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
 
 ---
 
@@ -101,6 +102,11 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - `syncIndex()`: busca índice e aciona checagem de checksums em segundo plano
 - `_checkForUpdates()`: itera picos baixados e atualiza os desatualizados
 - `_extractMarkdownImages()`: extrai caminhos de imagens embutidos em Markdown via RegExp
+
+### Módulo de In-App Feedback (`feedback/`)
+- **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
+- **`BackgroundWorker`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions).
+- **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) para facilitar a depuração.
 
 
 

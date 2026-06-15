@@ -28,8 +28,7 @@ import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
-import 'package:frontend/services/feedback/custom_feedback_builder.dart';
-import 'package:flutter/foundation.dart';
+import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo

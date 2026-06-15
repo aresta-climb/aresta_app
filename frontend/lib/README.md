@@ -103,5 +103,6 @@ Para evitar arquivos de página monolíticos, todos os construtores de UI comple
 
 Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e comportamento específico.
 
+- **`feedback/`**: Contém o `custom_feedback_builder.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
 - **`global_search.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.

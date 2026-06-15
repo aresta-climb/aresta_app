@@ -2,9 +2,7 @@ import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/main.dart'; // Para acessar TreeNavigationWrapper
-
 import 'package:device_info_plus/device_info_plus.dart';
-
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
