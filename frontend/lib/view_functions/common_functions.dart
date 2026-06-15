@@ -45,7 +45,10 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
         return;
       }
 
+      TelemetryService.instance.logAcaoFeedback('abrir_feedback');
+
       BetterFeedback.of(context).show((UserFeedback feedback) async {
+        TelemetryService.instance.logAcaoFeedback('enviar_feedback');
         final metadata = await FeedbackMetadataCollector().collect(context: context);
         await FeedbackQueueService().enqueueFeedback(
           description: feedback.text,

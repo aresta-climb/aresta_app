@@ -98,4 +98,9 @@ class MockTelemetryService implements TelemetryService {
     recordedParams['acao_configuracoes'] = {'acao': acao};
   }
 
+  @override
+  Future<void> logAcaoFeedback(String acao) async {
+    recordedEvents.add('acao_feedback');
+    recordedParams['acao_feedback'] = {'acao': acao};
+  }
 }
