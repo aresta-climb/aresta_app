@@ -70,88 +70,94 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
     final borderColor = isDark ? appColors.weatheredIron.withValues(alpha: 0.5) : Colors.transparent;
     final buttonColor = appColors.beastHide;
 
-    // TODO: ajeitar o viewPaddingOf [the physical screen padding (OS buttons)]. O widget ainda está embaixo do SO.
-    final bottomViewPadding = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
+    final safeBottomMargin = bottomPadding > 0 ? bottomPadding : 34.0;
+
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    
+    // Resize textual experience dynamically
+    final minLines = isKeyboardVisible ? 2 : 1;
+    final maxLines = isKeyboardVisible ? 3 : 2;
+
+    // When keyboard is open, it already covers the nav bar, so we don't need the safe bottom margin!
+    final extraBottomPadding = isKeyboardVisible ? 0.0 : safeBottomMargin;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        16, 
-        20, 
-        16, 
-        bottomViewPadding > 0 ? bottomViewPadding + 16 : 24
-      ),
+      controller: widget.scrollController,
+      physics: const ClampingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, extraBottomPadding + 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-              Text(
-                'Qual o problema?',
-                maxLines: 2,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: TextSelectionThemeData(
-                    cursorColor: buttonColor,
-                    selectionColor: buttonColor.withValues(alpha: 0.4),
-                    selectionHandleColor: buttonColor,
-                  ),
-                ),
-                child: TextField(
-                  key: const Key('text_input_field'),
-                  maxLines: 4,
-                  minLines: 2,
-                  controller: controller,
-                  textInputAction: TextInputAction.done,
-                  style: TextStyle(color: textColor),
-                  cursorColor: buttonColor,
-                  decoration: InputDecoration(
-                    hintText: 'Descreva o problema ou sugestão...',
-                    hintStyle: TextStyle(color: hintColor),
-                    filled: true,
-                    fillColor: fillColor,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: buttonColor, width: 2),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                key: const Key('submit_feedback_button'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonColor,
-                  foregroundColor: appColors.nobleBlack,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Enviar',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                onPressed: () => widget.onSubmit(controller.text),
-              ),
-            ],
+          Text(
+            'Qual o problema?',
+            maxLines: 2,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          const SizedBox(height: 8),
+        Theme(
+          data: Theme.of(context).copyWith(
+            textSelectionTheme: TextSelectionThemeData(
+              cursorColor: buttonColor,
+              selectionColor: buttonColor.withValues(alpha: 0.4),
+              selectionHandleColor: buttonColor,
+            ),
+          ),
+          child: TextField(
+            key: const Key('text_input_field'),
+            maxLines: maxLines,
+            minLines: minLines,
+            controller: controller,
+            textInputAction: TextInputAction.done,
+            style: TextStyle(color: textColor),
+            cursorColor: buttonColor,
+            decoration: InputDecoration(
+              hintText: 'Descreva o problema ou sugestão...',
+              hintStyle: TextStyle(color: hintColor),
+              filled: true,
+              fillColor: fillColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: buttonColor, width: 2),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          key: const Key('submit_feedback_button'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: buttonColor,
+            foregroundColor: appColors.nobleBlack,
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text(
+            'Enviar',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          onPressed: () => widget.onSubmit(controller.text),
+        ),
+      ],
+      ),
     );
   }
 }
