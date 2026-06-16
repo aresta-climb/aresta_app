@@ -165,6 +165,7 @@ class _MyAppState extends State<MyApp> {
             background: AppColors.light.nobleBlack,
             feedbackSheetColor: AppColors.light.obsidianBrown,
             activeFeedbackModeColor: AppColors.light.beastHide,
+            sheetIsDraggable: false,
             drawColors: const [
               AppColors.brandColor,
               Colors.red,
@@ -177,6 +178,7 @@ class _MyAppState extends State<MyApp> {
             background: AppColors.dark.nobleBlack,
             feedbackSheetColor: AppColors.dark.obsidianBrown,
             activeFeedbackModeColor: AppColors.dark.beastHide,
+            sheetIsDraggable: false,
             drawColors: const [
               AppColors.brandColor,
               Colors.red,
