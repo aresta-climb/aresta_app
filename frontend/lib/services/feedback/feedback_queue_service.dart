@@ -3,91 +3,116 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks
-/// antes deles serem despachados pelo [BackgroundWorker].
+/// antes deles serem despachados pelo `BackgroundWorker`.
+///
+/// **Arquitetura (File-System Queue):**
+/// Ao invés de usar `SharedPreferences` que é propenso a falhas de concorrência e
+/// corrupção, este serviço grava cada feedback como um conjunto de arquivos individuais
+/// (`.json` e `.png`) num diretório isolado gerado via `getApplicationSupportDirectory()`.
+/// O Sistema Operacional garante que este diretório não seja apagado aleatoriamente para
+/// liberar cache.
 class FeedbackQueueService {
-  /// Override opcional para injeção de dependência em testes do diretório temporário.
-  final Future<Directory> Function()? getTemporaryDirectoryOverride;
-  /// Override opcional para injeção de dependência do agendamento do Workmanager.
-  final Future<void> Function(String taskName, {String? uniqueName, Map<String, dynamic>? inputData})? registerOneOffTaskOverride;
+  /// Override opcional para injeção de dependência do diretório base em testes unitários.
+  final Future<Directory> Function()? getSupportDirectoryOverride;
 
-  /// Chave utilizada para salvar a lista de feedbacks no SharedPreferences.
-  static const String queueKey = 'feedback_queue';
+  /// Override opcional para injeção de dependência do agendamento nativo do Workmanager.
+  final Future<void> Function(
+    String taskName, {
+    String? uniqueName,
+    Duration? initialDelay,
+    Constraints? constraints,
+    BackoffPolicy? backoffPolicy,
+    Duration? backoffPolicyDelay,
+    Map<String, dynamic>? inputData,
+  })?
+  registerOneOffTaskOverride;
+
+  /// Nome da pasta dedicada exclusivamente para a fila de feedbacks.
+  static const String queueDirectoryName = 'feedback_queue';
+
   /// Nome da tarefa registrada no Workmanager para despachar o feedback.
   static const String sendTaskName = 'send_feedback_task';
 
-  /// Cria uma instância do serviço de fila.
-  /// 
-  /// Permite injetar [getTemporaryDirectoryOverride] e [registerOneOffTaskOverride]
-  /// para testes unitários isolados.
+  /// Construtor que aceita overrides para facilitar testes (Injeção de Dependências).
   FeedbackQueueService({
-    this.getTemporaryDirectoryOverride,
+    this.getSupportDirectoryOverride,
     this.registerOneOffTaskOverride,
   });
 
+  /// Retorna o diretório base da fila, criando-o se não existir.
+  Future<Directory> _getQueueDirectory() async {
+    final Directory baseDir = getSupportDirectoryOverride != null
+        ? await getSupportDirectoryOverride!()
+        : await getApplicationSupportDirectory();
+
+    final queueDir = Directory(p.join(baseDir.path, queueDirectoryName));
+    if (!queueDir.existsSync()) {
+      await queueDir.create(recursive: true);
+    }
+    return queueDir;
+  }
+
   /// Salva um novo feedback localmente e agenda o seu envio no background.
-  /// 
-  /// 1. Salva a imagem ([screenshot]) fisicamente na pasta temporária.
-  /// 2. Associa a imagem aos dados de [description] e [metadata], criando um JSON.
-  /// 3. Grava o JSON na fila local persistente (SharedPreferences).
-  /// 4. Dispara/Agenda uma task `send_feedback_task` no Workmanager que exigirá
-  ///    acesso à internet para rodar.
+  ///
+  /// 1. Gera um UUID único para esta ocorrência de feedback.
+  /// 2. Salva a imagem ([screenshot]) como `UUID.png` no diretório de suporte.
+  /// 3. Salva os metadados como `UUID.json` no mesmo diretório.
+  /// 4. Dispara/Agenda uma task `send_feedback_task` no Workmanager.
+  ///
+  /// O Workmanager é agendado com a política nativa de **Backoff Exponencial**.
+  /// Caso haja falhas de rede no envio, o sistema tentará novamente em 10s, 20s, 40s
+  /// até atingir o limite do SO (aprox. 5 horas), e continuará indefinidamente.
   Future<void> enqueueFeedback({
     required String description,
     required Uint8List screenshot,
     required Map<String, dynamic> metadata,
   }) async {
     final uuid = const Uuid().v4();
-    
-    // 1. Salvar a imagem no diretório temporário
-    final Directory tempDir = getTemporaryDirectoryOverride != null
-        ? await getTemporaryDirectoryOverride!()
-        : await getTemporaryDirectory();
-        
-    final File imageFile = File(p.join(tempDir.path, 'feedback_$uuid.png'));
+    final queueDir = await _getQueueDirectory();
+
+    // 1. Salvar a imagem .png
+    final File imageFile = File(p.join(queueDir.path, '$uuid.png'));
     await imageFile.writeAsBytes(screenshot);
 
-    // 2. Criar o objeto de feedback
+    // 2. Criar e salvar o arquivo .json atômico correspondente
     final Map<String, dynamic> feedbackData = {
       'id': uuid,
       'description': description,
-      'screenshotPath': imageFile.path,
       'metadata': metadata,
       'timestamp': DateTime.now().toIso8601String(),
     };
 
-    // 3. Salvar na fila do SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Força a recarga do disco para garantir que a isolate da UI
-    // não sobrescreva um arquivo que acabou de ser limpo pelo background worker
-    await prefs.reload();
-    
-    final String? queueStr = prefs.getString(queueKey);
-    List<dynamic> queue = [];
-    if (queueStr != null) {
-      try {
-        queue = jsonDecode(queueStr) as List<dynamic>;
-      } catch (_) {}
-    }
-    
-    queue.add(feedbackData);
-    await prefs.setString(queueKey, jsonEncode(queue));
+    final File jsonFile = File(p.join(queueDir.path, '$uuid.json'));
+    await jsonFile.writeAsString(jsonEncode(feedbackData));
 
-    // 4. Agendar envio em background via Workmanager
+    // 3. Agendar o envio via Workmanager com Backoff Exponencial
     if (registerOneOffTaskOverride != null) {
-      await registerOneOffTaskOverride!(sendTaskName, uniqueName: 'feedback_$uuid');
+      await registerOneOffTaskOverride!(
+        sendTaskName,
+        uniqueName: 'feedback_$uuid',
+        initialDelay: const Duration(seconds: 10),
+        constraints: Constraints(networkType: NetworkType.connected),
+        backoffPolicy: BackoffPolicy.exponential,
+        backoffPolicyDelay: const Duration(seconds: 10),
+      );
     } else {
       await Workmanager().registerOneOffTask(
-        'feedback_$uuid', // uniqueName
-        sendTaskName,     // taskName
+        'feedback_$uuid', // uniqueName para garantir rastreabilidade
+        sendTaskName, // taskName capturada no `main.dart`
+        initialDelay: const Duration(
+          seconds: 10,
+        ), // Espera leve para o O.S. respirar
         constraints: Constraints(
-          networkType: NetworkType.connected, // Exige internet
+          networkType:
+              NetworkType.connected, // Só executa se houver conexão atestada
         ),
+        backoffPolicy: BackoffPolicy
+            .exponential, // Recuperação de falhas (10s, 20s, 40s...)
+        backoffPolicyDelay: const Duration(seconds: 10),
       );
     }
   }

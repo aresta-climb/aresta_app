@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class MockHttpClient extends Mock implements http.Client {}
 
@@ -17,42 +16,16 @@ void main() {
     registerFallbackValue(FakeBaseRequest());
   });
 
-  group('BackgroundWorker', () {
+  group('BackgroundWorker (Atomic File System Queue)', () {
     late MockHttpClient mockClient;
     late Directory tempDir;
-    late File imageFile1;
-    late File imageFile2;
+    late Directory queueDir;
 
     setUp(() async {
       mockClient = MockHttpClient();
       tempDir = await Directory.systemTemp.createTemp('worker_test');
-      
-      imageFile1 = File('${tempDir.path}/img1.png');
-      await imageFile1.writeAsBytes([1]);
-      
-      imageFile2 = File('${tempDir.path}/img2.png');
-      await imageFile2.writeAsBytes([2]);
-
-      final queue = [
-        {
-          'id': 'uuid-1',
-          'description': 'bug 1',
-          'screenshotPath': imageFile1.path,
-          'metadata': {'os': 'ios'},
-          'timestamp': '2026-06-14T12:00:00Z',
-        },
-        {
-          'id': 'uuid-2',
-          'description': 'bug 2',
-          'screenshotPath': imageFile2.path,
-          'metadata': {'os': 'android'},
-          'timestamp': '2026-06-14T12:01:00Z',
-        }
-      ];
-
-      SharedPreferences.setMockInitialValues({
-        'feedback_queue': jsonEncode(queue),
-      });
+      queueDir = Directory('${tempDir.path}/feedback_queue');
+      await queueDir.create();
     });
 
     tearDown(() async {
@@ -61,64 +34,126 @@ void main() {
       }
     });
 
-    test('processa fila com sucesso e remove itens', () async {
+    File createFeedbackFiles(String id, {bool isProcessing = false}) {
+      final pngFile = File('${queueDir.path}/$id.png');
+      pngFile.writeAsBytesSync([1, 2, 3]);
+
+      final ext = isProcessing ? '.json.processing' : '.json';
+      final jsonFile = File('${queueDir.path}/$id$ext');
+      jsonFile.writeAsStringSync(jsonEncode({
+        'id': id,
+        'description': 'bug $id',
+        'metadata': {'os': 'ios'},
+        'timestamp': DateTime.now().toIso8601String(),
+      }));
+
+      return jsonFile;
+    }
+
+    test('processa fila com sucesso e deleta arquivos injetando o dispatcher', () async {
       when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
 
-      final result = await BackgroundWorker.processFeedbackQueue(client: mockClient);
+      createFeedbackFiles('uuid-1');
+
+      final result = await BackgroundWorker.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+        dispatcher: 'connectivity_plus',
+      );
 
       expect(result, isTrue);
 
       // Verify files deleted
-      expect(imageFile1.existsSync(), isFalse);
-      expect(imageFile2.existsSync(), isFalse);
-
-      // Verify queue is empty
-      final prefs = await SharedPreferences.getInstance();
-      final queueStr = prefs.getString('feedback_queue');
-      expect(queueStr, '[]');
+      final files = queueDir.listSync();
+      expect(files.isEmpty, isTrue);
       
-      verify(() => mockClient.send(any())).called(2);
+      // Verify metadata injection
+      final captured = verify(() => mockClient.send(captureAny())).captured;
+      final request = captured.first as http.MultipartRequest;
+      
+      final metadataStr = request.fields['metadata'];
+      expect(metadataStr, isNotNull);
+      final metadata = jsonDecode(metadataStr!);
+      expect(metadata['dispatcher'], 'connectivity_plus');
+      expect(metadata['os'], 'ios'); // Mantém o metadata original
     });
 
-    test('recarrega os shared preferences antes de processar para evitar condição de corrida', () async {
-      when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
-      
-      // Simula a adição de um novo item em outra isolate antes do worker rodar
-      SharedPreferences.setMockInitialValues({
-        'feedback_queue': jsonEncode([
-          {
-            'id': 'uuid-3',
-            'description': 'bug concorrente',
-            'screenshotPath': imageFile1.path,
-            'metadata': {},
-            'timestamp': '2026-06-14T12:05:00Z',
-          }
-        ]),
-      });
-
-      await BackgroundWorker.processFeedbackQueue(client: mockClient);
-
-      // O worker DEVE limpar a fila após enviar, caso contrário o reload não funcionou no código de produção
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('feedback_queue'), '[]');
-    });
-
-    test('interrompe processamento em caso de falha', () async {
-      // Primeira request falha (500)
+    test('renomeia de volta para .json em caso de falha HTTP (500)', () async {
       when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 500));
+
+      createFeedbackFiles('uuid-3');
 
       // Deve dar throw de exceção para o Workmanager tentar de novo
       expect(
-        () => BackgroundWorker.processFeedbackQueue(client: mockClient),
+        () => BackgroundWorker.processFeedbackQueue(
+          client: mockClient,
+          getSupportDirectoryOverride: () async => tempDir,
+          dispatcher: 'work_manager',
+        ),
         throwsException,
       );
 
-      // Arquivo e fila não devem ter sido alterados
-      expect(imageFile1.existsSync(), isTrue);
+      // Os arquivos devem voltar a ser .json
+      final jsonFile = File('${queueDir.path}/uuid-3.json');
+      final pngFile = File('${queueDir.path}/uuid-3.png');
       
-      final prefs = await SharedPreferences.getInstance();
-      final queue = jsonDecode(prefs.getString('feedback_queue')!) as List;
-      expect(queue.length, 2);
+      expect(jsonFile.existsSync(), isTrue);
+      expect(pngFile.existsSync(), isTrue);
+    });
+
+    test('recupera arquivos .processing travados há mais de 15 minutos (Crash Recovery)', () async {
+      // Simula sucesso quando finalmente enviar
+      when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+      final oldProcessingFile = createFeedbackFiles('uuid-stuck', isProcessing: true);
+      
+      // Muda a data de modificação para 20 minutos atrás
+      final pastTime = DateTime.now().subtract(const Duration(minutes: 20));
+      oldProcessingFile.setLastModifiedSync(pastTime);
+
+      await BackgroundWorker.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+      );
+
+      expect(queueDir.listSync().isEmpty, isTrue);
+      verify(() => mockClient.send(any())).called(1);
+    });
+
+    test('ignora arquivos .processing recentes (outro isolate trabalhando)', () async {
+      when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+      final recentProcessingFile = createFeedbackFiles('uuid-busy', isProcessing: true);
+      
+      final pastTime = DateTime.now().subtract(const Duration(minutes: 2));
+      recentProcessingFile.setLastModifiedSync(pastTime);
+
+      await BackgroundWorker.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+      );
+
+      verifyNever(() => mockClient.send(any()));
+      expect(recentProcessingFile.existsSync(), isTrue);
+    });
+
+    test('deleta silenciosamente arquivos com mais de 30 dias (Garbage Collection)', () async {
+      when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+      final veryOldJson = createFeedbackFiles('uuid-trash');
+      final veryOldPng = File('${queueDir.path}/uuid-trash.png');
+      
+      final pastTime = DateTime.now().subtract(const Duration(days: 35));
+      veryOldJson.setLastModifiedSync(pastTime);
+      veryOldPng.setLastModifiedSync(pastTime);
+
+      await BackgroundWorker.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+      );
+
+      verifyNever(() => mockClient.send(any()));
+      expect(queueDir.listSync().isEmpty, isTrue);
     });
   });
 }

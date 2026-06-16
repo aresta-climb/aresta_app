@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
 
 void main() {
   group('FeedbackQueueService', () {
@@ -11,23 +11,25 @@ void main() {
     late List<Map<String, dynamic>> registeredTasks;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('feedback_test');
-      SharedPreferences.setMockInitialValues({});
+      tempDir = await Directory.systemTemp.createTemp('feedback_test_support_dir');
       registeredTasks = [];
     });
 
     tearDown(() async {
-      await tempDir.delete(recursive: true);
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
-    test('adiciona feedback na fila, salva imagem e registra task', () async {
+    test('adiciona feedback criando arquivos json e png individualmente e agenda backoff', () async {
       final service = FeedbackQueueService(
-        getTemporaryDirectoryOverride: () async => tempDir,
-        registerOneOffTaskOverride: (taskName, {uniqueName, inputData}) async {
+        getSupportDirectoryOverride: () async => tempDir,
+        registerOneOffTaskOverride: (taskName, {uniqueName, initialDelay, constraints, backoffPolicy, backoffPolicyDelay, inputData}) async {
           registeredTasks.add({
             'taskName': taskName,
             'uniqueName': uniqueName,
-            'inputData': inputData,
+            'backoffPolicy': backoffPolicy,
+            'backoffPolicyDelay': backoffPolicyDelay,
           });
         },
       );
@@ -41,28 +43,45 @@ void main() {
         metadata: metadata,
       );
 
-      // Verify file is saved
-      final files = tempDir.listSync();
-      expect(files.length, 1);
-      final file = files.first as File;
-      expect(file.readAsBytesSync(), [1, 2, 3, 4, 5]);
+      // Verifica se a pasta feedback_queue foi criada
+      final queueDir = Directory('${tempDir.path}/feedback_queue');
+      expect(queueDir.existsSync(), isTrue);
 
-      // Verify SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final queueStr = prefs.getString('feedback_queue');
-      expect(queueStr, isNotNull);
-      final queue = jsonDecode(queueStr!) as List;
-      expect(queue.length, 1);
-      
-      final queuedItem = queue.first as Map<String, dynamic>;
-      expect(queuedItem['description'], 'Test bug');
-      expect(queuedItem['metadata']['os'], 'ios');
-      expect(queuedItem['screenshotPath'], file.path);
-      expect(queuedItem['id'], isNotNull);
+      final files = queueDir.listSync();
+      expect(files.length, 2, reason: 'Deve haver um arquivo JSON e um PNG');
 
-      // Verify Workmanager task registration
+      // Localiza o JSON e o PNG
+      File? jsonFile;
+      File? pngFile;
+      for (var file in files) {
+        if (file.path.endsWith('.json')) jsonFile = file as File;
+        if (file.path.endsWith('.png')) pngFile = file as File;
+      }
+
+      expect(jsonFile, isNotNull);
+      expect(pngFile, isNotNull);
+
+      // O UUID (nome base) deve ser o mesmo
+      final basenameJson = jsonFile!.path.split(Platform.pathSeparator).last.replaceAll('.json', '');
+      final basenamePng = pngFile!.path.split(Platform.pathSeparator).last.replaceAll('.png', '');
+      expect(basenameJson, basenamePng);
+
+      // Verifica conteúdo do PNG
+      expect(pngFile.readAsBytesSync(), [1, 2, 3, 4, 5]);
+
+      // Verifica conteúdo do JSON
+      final jsonContent = jsonDecode(jsonFile.readAsStringSync());
+      expect(jsonContent['id'], basenameJson);
+      expect(jsonContent['description'], 'Test bug');
+      expect(jsonContent['metadata']['os'], 'ios');
+      expect(jsonContent['timestamp'], isNotNull);
+
+      // Verifica registro do Workmanager
       expect(registeredTasks.length, 1);
-      expect(registeredTasks.first['taskName'], 'send_feedback_task');
+      final task = registeredTasks.first;
+      expect(task['taskName'], 'send_feedback_task');
+      expect(task['backoffPolicy'], BackoffPolicy.exponential);
+      expect(task['backoffPolicyDelay'], const Duration(seconds: 10));
     });
   });
 }
