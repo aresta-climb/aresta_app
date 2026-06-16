@@ -27,6 +27,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
@@ -111,7 +112,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late int _acceptedLegalVersion;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  NetworkFeedbackTrigger? _networkFeedbackTrigger;
 
   @override
   void initState() {
@@ -119,20 +120,21 @@ class _MyAppState extends State<MyApp> {
     _acceptedLegalVersion = widget.acceptedLegalVersion;
 
     // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
-    BackgroundWorker.processFeedbackQueue();
+    BackgroundWorker.processFeedbackQueue(dispatcher: 'app_startup');
 
     // Escuta transições de rede (ex: tirar do modo avião) para enviar feedbacks presos na fila,
     // sem depender da lentidão do agendamento do SO para o Workmanager.
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
-      if (!results.contains(ConnectivityResult.none)) {
-        BackgroundWorker.processFeedbackQueue();
-      }
-    });
+    _networkFeedbackTrigger = NetworkFeedbackTrigger(
+      connectivityStream: Connectivity().onConnectivityChanged,
+      onNetworkRestored: () async {
+        await BackgroundWorker.processFeedbackQueue(dispatcher: 'connectivity_plus');
+      },
+    );
   }
 
   @override
   void dispose() {
-    _connectivitySubscription?.cancel();
+    _networkFeedbackTrigger?.dispose();
     super.dispose();
   }
 
