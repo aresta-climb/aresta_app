@@ -70,22 +70,16 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
     final borderColor = isDark ? appColors.weatheredIron.withValues(alpha: 0.5) : Colors.transparent;
     final buttonColor = appColors.beastHide;
 
-    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
-    final safeBottomMargin = bottomPadding > 0 ? bottomPadding : 34.0;
-
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     
     // Resize textual experience dynamically
     final minLines = isKeyboardVisible ? 2 : 1;
     final maxLines = isKeyboardVisible ? 3 : 2;
 
-    // When keyboard is open, it already covers the nav bar, so we don't need the safe bottom margin!
-    final extraBottomPadding = isKeyboardVisible ? 0.0 : safeBottomMargin;
-
     return SingleChildScrollView(
       controller: widget.scrollController,
       physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, extraBottomPadding + 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
