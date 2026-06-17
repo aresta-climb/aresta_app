@@ -35,7 +35,7 @@ void main() {
       );
 
       final screenshot = Uint8List.fromList([1, 2, 3, 4, 5]);
-      final metadata = {'os': 'ios', 'appVersion': '1.0.0'};
+      final metadata = {'os': 'ios', 'appVersion': '1.0.0', 'feedbackId': 'test-uuid', 'submittedAt': '16 de junho de 2026 às 21:00:00 (GMT-3)', 'submittedAtTimestamp': '2026-06-16T21:00:00.000-03:00'};
 
       await service.enqueueFeedback(
         description: 'Test bug',
@@ -71,17 +71,17 @@ void main() {
 
       // Verifica conteúdo do JSON
       final jsonContent = jsonDecode(jsonFile.readAsStringSync());
-      expect(jsonContent['id'], basenameJson);
+      expect(jsonContent['metadata']['feedbackId'], basenameJson);
       expect(jsonContent['description'], 'Test bug');
       expect(jsonContent['metadata']['os'], 'ios');
-      expect(jsonContent['timestamp'], isNotNull);
+      expect(jsonContent['timestamp'], '2026-06-16T21:00:00.000-03:00');
 
       // Verifica registro do Workmanager
       expect(registeredTasks.length, 1);
       final task = registeredTasks.first;
       expect(task['taskName'], 'send_feedback_task');
       expect(task['backoffPolicy'], BackoffPolicy.exponential);
-      expect(task['backoffPolicyDelay'], const Duration(seconds: 10));
+      expect(task['backoffPolicyDelay'], const Duration(minutes: 1));
     });
   });
 }

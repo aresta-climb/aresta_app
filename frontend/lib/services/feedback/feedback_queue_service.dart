@@ -71,7 +71,7 @@ class FeedbackQueueService {
     required Uint8List screenshot,
     required Map<String, dynamic> metadata,
   }) async {
-    final uuid = const Uuid().v4();
+    final uuid = metadata['feedbackId'] as String;
     final queueDir = await _getQueueDirectory();
 
     // 1. Salvar a imagem .png
@@ -80,10 +80,9 @@ class FeedbackQueueService {
 
     // 2. Criar e salvar o arquivo .json atômico correspondente
     final Map<String, dynamic> feedbackData = {
-      'id': uuid,
       'description': description,
       'metadata': metadata,
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': metadata['submittedAtTimestamp'],
     };
 
     final File jsonFile = File(p.join(queueDir.path, '$uuid.json'));
@@ -97,7 +96,7 @@ class FeedbackQueueService {
         initialDelay: const Duration(seconds: 10),
         constraints: Constraints(networkType: NetworkType.connected),
         backoffPolicy: BackoffPolicy.exponential,
-        backoffPolicyDelay: const Duration(seconds: 10),
+        backoffPolicyDelay: const Duration(minutes: 1),
       );
     } else {
       await Workmanager().registerOneOffTask(
@@ -111,8 +110,8 @@ class FeedbackQueueService {
               NetworkType.connected, // Só executa se houver conexão atestada
         ),
         backoffPolicy: BackoffPolicy
-            .exponential, // Recuperação de falhas (10s, 20s, 40s...)
-        backoffPolicyDelay: const Duration(seconds: 10),
+            .exponential, // Recuperação de falhas (1min, 2min, 4min...)
+        backoffPolicyDelay: const Duration(minutes: 1),
       );
     }
   }

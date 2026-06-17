@@ -5,6 +5,7 @@ import 'package:frontend/main.dart'; // Para acessar TreeNavigationWrapper
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:uuid/uuid.dart';
 
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
 /// em que o usuário decide enviar um feedback ou relatar um bug.
@@ -33,6 +34,10 @@ class FeedbackMetadataCollector {
   final Future<BaseDeviceInfo> Function()? getDeviceInfoOverride;
   /// Função opcional para sobrescrever a obtenção de status de conectividade.
   final Future<List<ConnectivityResult>> Function()? getConnectivityOverride;
+  /// Função opcional para sobrescrever a data/hora do feedback.
+  final DateTime Function()? getTimestampOverride;
+  /// Função opcional para sobrescrever o UUID (útil para testes).
+  final String Function()? getUuidOverride;
 
   /// Cria um coletor de metadados de feedback.
   /// 
@@ -44,6 +49,8 @@ class FeedbackMetadataCollector {
     this.getNavigationTreeOverride,
     this.getDeviceInfoOverride,
     this.getConnectivityOverride,
+    this.getTimestampOverride,
+    this.getUuidOverride,
   });
 
   /// Executa a coleta de todas as informações de metadados.
@@ -155,8 +162,39 @@ class FeedbackMetadataCollector {
       }
     } catch (_) {}
 
+    String submittedAt = 'unknown';
+    String submittedAtTimestamp = 'unknown';
+    try {
+      DateTime utcTime;
+      if (getTimestampOverride != null) {
+        utcTime = getTimestampOverride!();
+      } else {
+        utcTime = DateTime.now().toUtc();
+      }
+      final gmt3Time = utcTime.subtract(const Duration(hours: 3));
+      
+      final day = gmt3Time.day.toString().padLeft(2, '0');
+      
+      final monthNames = [
+        '', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+      ];
+      final monthName = monthNames[gmt3Time.month];
+      
+      final year = gmt3Time.year.toString();
+      final hour = gmt3Time.hour.toString().padLeft(2, '0');
+      final minute = gmt3Time.minute.toString().padLeft(2, '0');
+      final second = gmt3Time.second.toString().padLeft(2, '0');
+
+      submittedAtTimestamp = '${gmt3Time.toIso8601String().split('Z').first}-03:00';
+      submittedAt = '$day de $monthName de $year às $hour:$minute:$second (GMT-3)';
+    } catch (_) {}
+
     return {
       'navigationTree': navigationTree.isEmpty ? 'unknown' : navigationTree,
+      'submittedAt': submittedAt,
+      'submittedAtTimestamp': submittedAtTimestamp,
+      'feedbackId': getUuidOverride != null ? getUuidOverride!() : const Uuid().v4(),
       'appInstanceId': appInstanceId ?? 'unknown',
       'os': os,
       'osVersion': osVersion,

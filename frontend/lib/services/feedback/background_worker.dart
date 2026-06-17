@@ -133,7 +133,7 @@ class BackgroundWorker {
         bool success = false;
         try {
           final jsonContent = jsonDecode(processingFile.readAsStringSync());
-          final id = jsonContent['id'];
+          final id = jsonContent['metadata']['feedbackId'];
           final pngPath = p.join(queueDir.path, '$id.png');
           final pngFile = File(pngPath);
 
@@ -150,8 +150,9 @@ class BackgroundWorker {
             request.files.add(await http.MultipartFile.fromPath('screenshot', pngPath));
           }
 
-          // Envia a requisição com Timeout para não travar a fila
-          final response = await httpClient.send(request).timeout(const Duration(seconds: 30));
+          // Envia a requisição com Timeout longo (120s) para não gerar falsos-positivos
+          // (timeouts) em conexões muito lentas, o que causaria reenvio duplicado.
+          final response = await httpClient.send(request).timeout(const Duration(seconds: 120));
 
           if (response.statusCode >= 200 && response.statusCode < 300) {
             success = true;
