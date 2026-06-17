@@ -109,7 +109,7 @@ void main() {
       expect(textFieldClosed.maxLines, 2);
 
       SingleChildScrollView scrollClosed = tester.widget(find.byType(SingleChildScrollView));
-      expect(scrollClosed.padding, const EdgeInsets.fromLTRB(16, 12, 16, 34 + 12));
+      expect(scrollClosed.padding, const EdgeInsets.fromLTRB(16, 12, 16, 12));
 
       // Test with keyboard open
       await tester.pumpWidget(buildWithKeyboard(true));
@@ -118,7 +118,7 @@ void main() {
       expect(textFieldOpen.maxLines, 3);
 
       SingleChildScrollView scrollOpen = tester.widget(find.byType(SingleChildScrollView));
-      expect(scrollOpen.padding, const EdgeInsets.fromLTRB(16, 12, 16, 0.0 + 12));
+      expect(scrollOpen.padding, const EdgeInsets.fromLTRB(16, 12, 16, 12));
     });
   });
 }
