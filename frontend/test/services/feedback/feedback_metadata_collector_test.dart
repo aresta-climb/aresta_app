@@ -31,6 +31,7 @@ void main() {
         getNavigationTreeOverride: () => 'HomeNode -> SettingsNode',
         getDeviceInfoOverride: () async => mockDevice,
         getConnectivityOverride: () async => [ConnectivityResult.wifi],
+        getTimestampOverride: () => DateTime.utc(2026, 6, 16, 12, 0, 0),
       );
 
       final metadata = await collector.collect();
@@ -45,6 +46,8 @@ void main() {
       expect(metadata['deviceOrientation'], 'unknown'); // O teste não passa context
       expect(metadata['isDarkMode'], 'unknown'); // O teste não passa context
       expect(metadata['connectivity'], 'wifi');
+      expect(metadata['submittedAt'], '16 de junho de 2026 às 09:00:00 (GMT-3)');
+      expect(metadata['submittedAtTimestamp'], '2026-06-16T09:00:00.000-03:00');
     });
 
     test('usa valores padrão caso haja falha ou nulos na coleta', () async {
@@ -55,6 +58,7 @@ void main() {
         getNavigationTreeOverride: () => '',
         getDeviceInfoOverride: () async => throw Exception('error'),
         getConnectivityOverride: () async => throw Exception('error'),
+        getTimestampOverride: () => throw Exception('error'),
       );
 
       final metadata = await collector.collect();
@@ -69,6 +73,8 @@ void main() {
       expect(metadata['deviceOrientation'], 'unknown');
       expect(metadata['isDarkMode'], 'unknown');
       expect(metadata['connectivity'], 'unknown');
+      expect(metadata['submittedAt'], 'unknown');
+      expect(metadata['submittedAtTimestamp'], 'unknown');
     });
 
     test('aplica globalActiveNodeOverride corretamente', () async {

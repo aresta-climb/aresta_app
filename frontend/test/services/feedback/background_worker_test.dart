@@ -43,7 +43,7 @@ void main() {
       jsonFile.writeAsStringSync(jsonEncode({
         'id': id,
         'description': 'bug $id',
-        'metadata': {'os': 'ios'},
+        'metadata': {'os': 'ios', 'feedbackId': id},
         'timestamp': DateTime.now().toIso8601String(),
       }));
 
@@ -75,6 +75,7 @@ void main() {
       expect(metadataStr, isNotNull);
       final metadata = jsonDecode(metadataStr!);
       expect(metadata['dispatcher'], 'connectivity_plus');
+      expect(metadata['feedbackId'], 'uuid-1');
       expect(metadata['os'], 'ios'); // Mantém o metadata original
     });
 
