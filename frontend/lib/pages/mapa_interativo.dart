@@ -879,9 +879,19 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                 return const SizedBox.shrink();
               }
 
-              return Stack(
-                children: [
-                  // Camada 1: Mapa e Marcadores
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (_selectedId != null) {
+                    setState(() {
+                      _selectedId = null;
+                      _updateFeedbackNode();
+                    });
+                  }
+                },
+                child: Stack(
+                  children: [
+                    // Camada 1: Mapa e Marcadores
                   InteractiveViewer(
                     transformationController: _transformationController,
                     boundaryMargin: EdgeInsets.symmetric(
@@ -916,17 +926,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               }
                             }
 
-                            return GestureDetector(
-                              onTap: () {
-                                if (_selectedId != null) {
-                                  setState(() {
-                                    _selectedId = null;
-                                    _updateFeedbackNode();
-                                  });
-                                }
-                              },
-                              child: Stack(
-                                children: [
+                            return Stack(
+                                  children: [
                                   Image(
                                     image: snapshot.data!,
                                     fit: BoxFit.contain,
@@ -944,9 +945,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                   ),
                                   ..._buildMarkers(constraints, viewportSize),
                                 ],
-                              ),
-                            );
-                          },
+                              );
+                            },
                         ),
                       ),
                     ),
@@ -1016,7 +1016,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       ),
                     ),
                 ],
-              );
+              ),
+            );
             },
           );
         },

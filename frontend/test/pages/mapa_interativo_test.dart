@@ -396,7 +396,7 @@ void main() {
       expect(find.text('Via Teste'), findsOneWidget);
 
       // Tap background far away from marker
-      await tester.tapAt(const Offset(400, 400));
+      await tester.tap(find.byType(InteractiveViewer));
       await tester.pumpAndSettle();
 
       // Card should disappear
