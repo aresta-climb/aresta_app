@@ -108,6 +108,66 @@ Widget _buildHeader(String title) {
 
 
 
+/// Resolve the map indicator and concatenated labels for a given Escalada.
+/// Returns a Map with 'mapIndicator' (e.g. 'M1') and 'resolvedLabel' (e.g. '1-X').
+Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
+  List<String> rawIds = [];
+
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      rawIds = [escalada.viaEsportiva.idNoMapa, escalada.viaEsportiva.idNoMapaMeio, escalada.viaEsportiva.idNoMapaFim];
+      break;
+    case Escalada_Tipo.viaMovel:
+      rawIds = [escalada.viaMovel.idNoMapa, escalada.viaMovel.idNoMapaMeio, escalada.viaMovel.idNoMapaFim];
+      break;
+    case Escalada_Tipo.boulder:
+      rawIds = [escalada.boulder.idNoMapa, escalada.boulder.idNoMapaMeio, escalada.boulder.idNoMapaFim];
+      break;
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      rawIds = [escalada.viaMultiplasEnfiadas.idNoMapa, escalada.viaMultiplasEnfiadas.idNoMapaMeio, escalada.viaMultiplasEnfiadas.idNoMapaFim];
+      break;
+    case Escalada_Tipo.highline:
+      rawIds = [escalada.highline.idNoMapa, escalada.highline.idNoMapaMeio, escalada.highline.idNoMapaFim];
+      break;
+    case Escalada_Tipo.notSet:
+      break;
+  }
+
+  rawIds.removeWhere((id) => id.isEmpty);
+
+  String resolvedLabel = rawIds.isNotEmpty ? rawIds.first : '';
+  String mapIndicator = '';
+
+  if (rawIds.isNotEmpty && setor.mapas.isNotEmpty) {
+    for (int i = 0; i < setor.mapas.length; i++) {
+      final mapa = setor.mapas[i];
+      final pointsMap = {for (var p in mapa.pontosDeInteresse) p.id: p.label};
+      
+      bool found = false;
+      List<String> labels = [];
+      for (var id in rawIds) {
+        if (pointsMap.containsKey(id)) {
+          found = true;
+          labels.add(pointsMap[id]!.isNotEmpty ? pointsMap[id]! : id);
+        }
+      }
+      
+      if (found) {
+        resolvedLabel = labels.join('-');
+        if (setor.mapas.length > 1) {
+          mapIndicator = 'M${i + 1}'; 
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    'mapIndicator': mapIndicator,
+    'resolvedLabel': resolvedLabel,
+  };
+}
+
 /// Constrói um tile interativo para uma única via de escalada.
 ///
 /// Ele determina o tipo da via para buscar o nome e grau apropriados,
@@ -115,45 +175,42 @@ Widget _buildHeader(String title) {
 Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, Setor setor, {bool isTarget = false}) {
   String nome = '';
   String info = '';
-  String idNoMapa = '';
-
   bool destaque = false;
 
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       nome = escalada.viaEsportiva.nome;
       info = 'Esportiva | ${getGrauString(escalada)}';
-      idNoMapa = escalada.viaEsportiva.idNoMapa;
       destaque = escalada.viaEsportiva.destaque;
       break;
     case Escalada_Tipo.viaMovel:
       nome = escalada.viaMovel.nome;
       info = 'Móvel | ${getGrauString(escalada)}';
-      idNoMapa = escalada.viaMovel.idNoMapa;
       destaque = escalada.viaMovel.destaque;
       break;
     case Escalada_Tipo.boulder:
       nome = escalada.boulder.nome;
       info = 'Boulder | ${getGrauString(escalada)}';
-      idNoMapa = escalada.boulder.idNoMapa;
       destaque = escalada.boulder.destaque;
       break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
       nome = escalada.viaMultiplasEnfiadas.nome;
       info = 'Multipitch | ${getGrauString(escalada)}';
-      idNoMapa = escalada.viaMultiplasEnfiadas.idNoMapa;
       destaque = escalada.viaMultiplasEnfiadas.destaque;
       break;
     case Escalada_Tipo.highline:
       nome = escalada.highline.nome;
       info = 'Highline | ${escalada.highline.distancia}m';
-      idNoMapa = escalada.highline.idNoMapa;
       destaque = escalada.highline.destaque;
       break;
     case Escalada_Tipo.notSet:
       nome = 'Sem Nome';
       break;
   }
+
+  final labels = resolveRouteLabels(escalada, setor);
+  final mapIndicator = labels['mapIndicator']!;
+  final resolvedLabel = labels['resolvedLabel']!;
 
   Widget card = Stack(
     clipBehavior: Clip.none,
@@ -168,9 +225,10 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           ),
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-          leading: idNoMapa.isNotEmpty 
+          leading: resolvedLabel.isNotEmpty 
               ? Container(
-                  width: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  constraints: const BoxConstraints(minWidth: 40, maxWidth: 60),
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
@@ -178,10 +236,31 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: beastHide.withValues(alpha: 0.5)),
                   ),
-                  child: Text(
-                    idNoMapa,
-                    style: TextStyle(color: fishBone, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (mapIndicator.isNotEmpty)
+                          Text(
+                            mapIndicator,
+                            style: TextStyle(
+                              color: fishBone.withValues(alpha: 0.8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        Text(
+                          resolvedLabel,
+                          style: TextStyle(
+                            color: fishBone, 
+                            fontWeight: FontWeight.bold,
+                            fontSize: resolvedLabel.length > 3 ? 12 : 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : Icon(Icons.terrain_outlined, color: beastHide),

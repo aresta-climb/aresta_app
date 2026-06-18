@@ -46,7 +46,7 @@ class _GrupoPageState extends State<GrupoPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, widget.grupo.nome),
-      body: buildGrupoBody(
+      body: SafeArea(bottom: true, child: buildGrupoBody(
         context, 
         widget.grupo, 
         widget.cragId, 
@@ -64,7 +64,7 @@ class _GrupoPageState extends State<GrupoPage> {
             GrupoSortMode.alphaDesc: 'Alfabético (Z-A)',
           },
         )
-      ),
+      )),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

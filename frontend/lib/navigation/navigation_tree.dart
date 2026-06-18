@@ -206,6 +206,7 @@ class MapaInterativoNode extends NavNode {
   final String cragId;
   final String mapaCaminhoImagem;
   final String? setorContextNome;
+  final String? grupoContextNome;
   final String? initialSelectedId;
   final ImageProvider? imageProviderOverride;
 
@@ -213,6 +214,7 @@ class MapaInterativoNode extends NavNode {
     required this.cragId,
     required this.mapaCaminhoImagem,
     this.setorContextNome,
+    this.grupoContextNome,
     this.initialSelectedId,
     this.imageProviderOverride,
     required super.parent,
@@ -225,6 +227,7 @@ class MapaInterativoNode extends NavNode {
       cragId: cragId,
       mapaCaminhoImagem: mapaCaminhoImagem,
       setorContextNome: setorContextNome,
+      grupoContextNome: grupoContextNome,
       initialSelectedId: hasInitialId ? initialSelectedId : matchingAncestor.initialSelectedId,
       imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
       parent: matchingAncestor.parent!,

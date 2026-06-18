@@ -31,9 +31,8 @@ class ViaPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, nome),
-      body: buildViaBody(context, escalada, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage),
+      body: SafeArea(bottom: true, child: buildViaBody(context, escalada, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
 }
-

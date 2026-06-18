@@ -72,7 +72,7 @@ class _SetorPageState extends State<SetorPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, widget.setor.nome),
-      body: buildSetorBody(
+      body: SafeArea(bottom: true, child: buildSetorBody(
         context, 
         widget.setor, 
         widget.cragId, 
@@ -94,9 +94,8 @@ class _SetorPageState extends State<SetorPage> {
             EscaladaSortMode.gradeDesc: 'Dificuldade (Difícil primeiro)',
           },
         )
-      ),
+      )),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
 }
-

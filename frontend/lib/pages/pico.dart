@@ -124,7 +124,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           ),
         ],
       ),
-      body: buildPicoBody(context, widget.pico, widget.croqui, widget.cragId, _mapaKey),
+      body: SafeArea(bottom: true, child: buildPicoBody(context, widget.pico, widget.croqui, widget.cragId, _mapaKey)),
       floatingActionButton: widget.returnToSetor != null ? FloatingActionButton.extended(
         onPressed: () {
           TelemetryService.instance.logAcaoCroqui(widget.cragId, 'voltar_mapa_setor');
