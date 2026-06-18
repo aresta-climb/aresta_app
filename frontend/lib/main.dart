@@ -505,64 +505,18 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               returnToSetor: returnToSetor,
             );
           } else if (node is MapaInterativoNode) {
-            Mapa? mapa;
-            for (var sg in pico.setoresOuGrupos) {
-              if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-                for (var m in sg.setor.conteudo.mapas) {
-                  if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
-                    mapa = m;
-                    break;
-                  }
-                }
-              } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-                for (var m in sg.grupo.conteudo.mapas) {
-                  if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
-                    mapa = m;
-                    break;
-                  }
-                }
-              }
-              if (mapa != null) break;
-            }
-            if (mapa == null) {
-              // Map might be in a via (Multipitch etc)
-              for (var esc in getAllEscaladasFromPico(pico)) {
-                if (esc.hasViaMultiplasEnfiadas()) {
-                  for (var m in esc.viaMultiplasEnfiadas.mapas) {
-                    if (m.caminhoImagemMapa == node.mapaCaminhoImagem) {
-                      mapa = m;
-                      break;
-                    }
-                  }
-                }
-                if (mapa != null) break;
-              }
-            }
-            // Coleta todas as escaladas do pico ou setor dependendo do contexto
-            List<Escalada> escaladas = [];
-            if (setor != null) {
-              escaladas = setor.escaladas;
-            } else {
-              for (var sg in pico.setoresOuGrupos) {
-                if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-                  escaladas.addAll(sg.setor.conteudo.escaladas);
-                } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-                  for (var s in sg.grupo.conteudo.setores) {
-                    if (s.hasConteudo()) escaladas.addAll(s.conteudo.escaladas);
-                  }
-                }
-              }
-            }
+            final result = MapHelper.resolveMapaAndContext(
+              pico: pico,
+              mapaCaminhoImagem: node.mapaCaminhoImagem,
+              setorContextNome: node.setorContextNome,
+              grupoContextNome: node.grupoContextNome,
+            );
+
             return MapaInterativoPage(
-              mapa: mapa ?? Mapa(),
+              mapa: result.mapa,
               cragId: cragId,
-              escaladas: escaladas,
-              setores: setor != null 
-                  ? [] 
-                  : pico.setoresOuGrupos
-                      .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor)
-                      .map((sg) => sg.setor)
-                      .toList(),
+              escaladas: result.escaladas,
+              setores: result.setores,
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
             );

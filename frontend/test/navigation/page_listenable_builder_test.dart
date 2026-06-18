@@ -4,6 +4,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/pages/mapa_interativo.dart';
 
 // Mock observer para testar se AppNav.back() foi chamado
 class MockNavigatorObserver extends NavigatorObserver {
@@ -145,6 +147,68 @@ void main() {
       // Verifica se ele fez pop de volta para a primeira tela
       expect(mockObserver.hasPopped, isTrue);
       expect(find.text('Go'), findsOneWidget);
+    });
+
+    testWidgets('Deve encontrar Setor aninhado dentro de um Grupo', (WidgetTester tester) async {
+      final mockObserver = MockNavigatorObserver();
+
+      final subSetor = Setor()..nome = 'Sub-setor Teste';
+      final arquivoSubSetor = ArquivoSetor()..conteudo = subSetor;
+
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      grupo.setores.add(arquivoSubSetor);
+      
+      final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
+
+      final pico = Pico()..nome = 'Pico Teste';
+      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = arquivoGrupo);
+
+      final croqui = Croqui();
+
+      repo.activeDataset.value = TopoDataset(
+        downloadedPicos: [
+          {'id': 'pico_1', 'data': {'pico': pico, 'croqui': croqui}}
+        ],
+        availablePicos: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [mockObserver],
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PageListenableBuilder(
+                          datasetRepo: repo,
+                          cragId: 'pico_1',
+                          setorNome: 'Sub-setor Teste',
+                          builder: (context, pico, croqui, setor, grupo, escalada) {
+                            return Scaffold(body: Text('View do ${setor?.nome}'));
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Go'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Entra na tela
+      await tester.tap(find.text('Go'));
+      await tester.pumpAndSettle();
+
+      // Verifica que o Sub-setor de Teste carregou e não fez pop
+      expect(find.text('View do Sub-setor Teste'), findsOneWidget);
+      expect(mockObserver.hasPopped, isFalse);
     });
   });
 }

@@ -13,6 +13,7 @@ class MapaThumbnail extends StatefulWidget {
   final List<Escalada> escaladas;
   final List<ArquivoSetor> setores;
   final Setor? setorContext;
+  final Grupo? grupoContext;
   final String? nomeContexto;
   final ImageProvider? imageProviderOverride;
 
@@ -23,6 +24,7 @@ class MapaThumbnail extends StatefulWidget {
     this.escaladas = const [],
     this.setores = const [],
     this.setorContext,
+    this.grupoContext,
     this.nomeContexto,
     this.imageProviderOverride,
   });
@@ -149,6 +151,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               escaladas: widget.escaladas,
               setores: widget.setores,
               setorContext: widget.setorContext,
+              grupoContext: widget.grupoContext,
               imageProviderOverride: widget.imageProviderOverride,
             );
           },

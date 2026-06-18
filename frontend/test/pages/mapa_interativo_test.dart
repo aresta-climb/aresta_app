@@ -180,6 +180,10 @@ void main() {
     });
 
     test('buildIdMap correctly maps escaladas and setores', () {
+      final mockMapa = Mapa()..pontosDeInteresse.addAll([
+        Mapa_PontoDeInteresse(id: 'esc1'),
+        Mapa_PontoDeInteresse(id: 'set1'),
+      ]);
       final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1'));
       final setor1 = ArquivoSetor(
         conteudo: Setor(
@@ -192,30 +196,39 @@ void main() {
       );
 
       final idMap = MapHelper.buildIdMap(
+        mapa: mockMapa,
         escaladas: [esc1],
         setores: [setor1],
       );
 
-      expect(idMap['esc1'], esc1);
-      expect(idMap['set1'], setor1.conteudo);
-      expect(idMap['esc2'], setor1.conteudo.escaladas[0]);
+      expect(idMap['esc1'], [esc1]);
+      expect(idMap['set1'], [setor1.conteudo]);
+      expect(idMap.containsKey('esc2'), isFalse);
     });
 
-    test('buildIdMap keeps the first item when different items share the same idNoMapa', () {
+    test('buildIdMap groups items when different items share the same idNoMapa', () {
+      final mockMapa = Mapa()..pontosDeInteresse.addAll([
+        Mapa_PontoDeInteresse(id: 'dup'),
+      ]);
       final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 1'));
       final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 2'));
 
       final idMap = MapHelper.buildIdMap(
+        mapa: mockMapa,
         escaladas: [esc1, esc2],
         setores: [],
       );
 
-      // It should keep the first one instead of removing both
+      // It should keep both in a list
       expect(idMap.containsKey('dup'), isTrue);
-      expect(idMap['dup'], esc1);
+      expect(idMap['dup'], [esc1, esc2]);
     });
 
     test('buildIdMap ignores duplicate if it is the exact same item', () {
+      final mockMapa = Mapa()..pontosDeInteresse.addAll([
+        Mapa_PontoDeInteresse(id: 'esc1'),
+        Mapa_PontoDeInteresse(id: 'set1'),
+      ]);
       final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1'));
       final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1')); // Same content
 
@@ -230,14 +243,15 @@ void main() {
       );
 
       final idMap = MapHelper.buildIdMap(
+        mapa: mockMapa,
         // Passes esc1 and an identical object esc2 or even esc1 again
         escaladas: [esc1, esc2], 
         setores: [setor1],
       );
 
-      // It should not remove 'esc1' since it's the exact same item
+      // It should not add the exact same item twice
       expect(idMap.containsKey('esc1'), isTrue);
-      expect(idMap['esc1'], esc1);
+      expect(idMap['esc1'], [esc1]);
     });
   });
 
@@ -505,6 +519,114 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.bug_report), findsOneWidget);
+    });
+    testWidgets('Tapping a grouped marker shows carousel with arrows and swiping/clicking fires telemetry', (WidgetTester tester) async {
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via 1'));
+      final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via 2'));
+      
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaInterativoPage(
+            mapa: mockMapa,
+            cragId: 'test_crag',
+            escaladas: [esc1, esc2],
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Select marker
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+
+      // The first via should be visible
+      expect(find.text('Via 1'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+      // Tap the right arrow
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+
+      // The second via should be visible
+      expect(find.text('Via 2'), findsOneWidget);
+    });
+    testWidgets('Single point marker with duplicate ids should zoom to 2.5 instead of 5.0', (WidgetTester tester) async {
+      final pontoDuplicado = Mapa_PontoDeInteresse(
+        id: 'dup_id',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapaUnico = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [pontoDuplicado],
+      );
+
+      final escDuplicada = Escalada(
+        boulder: Boulder(idNoMapa: 'dup_id', idNoMapaFim: 'dup_id'), // Fake duplicate ID
+      );
+      
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaInterativoPage(
+            mapa: mapaUnico,
+            cragId: 'test_crag',
+            escaladas: [escDuplicada],
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tap the marker
+      await tester.tap(find.byKey(const Key('marker_dup_id')));
+      await tester.pumpAndSettle(); // Allow animation to finish
+
+      // Get InteractiveViewer state
+      final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final matrix = interactiveViewer.transformationController!.value;
+      
+      // The scale should be 2.5, not 5.0
+      // Scale is the [0,0] element of Matrix4
+      expect(matrix.storage[0], closeTo(2.5, 0.01));
+    });
+  });
+
+  group('MapHelper.resolveMapaAndContext Tests', () {
+    test('Deve localizar o Mapa dentro de um Sub-setor e retornar escaladas restritas ao grupo se grupoContextNome for passado', () {
+      final mapa = Mapa()..caminhoImagemMapa = 'mapa_do_subsetor.jpg';
+      final escalada1 = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via 1'..idNoMapa = '01');
+      
+      final subSetor = Setor()
+        ..nome = 'Sub-setor Teste'
+        ..mapas.add(mapa)
+        ..escaladas.add(escalada1);
+        
+      final arquivoSubSetor = ArquivoSetor()..conteudo = subSetor;
+
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      grupo.setores.add(arquivoSubSetor);
+      final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
+
+      final pico = Pico()..nome = 'Pico Teste';
+      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = arquivoGrupo);
+
+      final result = MapHelper.resolveMapaAndContext(
+        pico: pico,
+        mapaCaminhoImagem: 'mapa_do_subsetor.jpg',
+        setorContextNome: null,
+        grupoContextNome: 'Grupo Teste',
+      );
+
+      expect(result.mapa.caminhoImagemMapa, 'mapa_do_subsetor.jpg');
+      expect(result.setores.length, 1);
+      expect(result.setores.first.conteudo.nome, 'Sub-setor Teste');
+      
+      // O sub-setor possui mapa próprio, portanto suas escaladas não devem 
+      // aparecer no contexto do grupo para evitar colisão de IDs no Mapa do Grupo.
+      expect(result.escaladas.length, 0);
     });
   });
 }

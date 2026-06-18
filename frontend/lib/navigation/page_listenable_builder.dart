@@ -66,10 +66,23 @@ class PageListenableBuilder extends StatelessWidget {
         Setor? matchedSetor;
         if (setorNome != null) {
           try {
-            matchedSetor = pico.setoresOuGrupos
-                .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
-                .map((sg) => sg.setor.conteudo)
-                .firstWhere((s) => s.nome == setorNome);
+            for (var sg in pico.setoresOuGrupos) {
+              if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+                if (sg.setor.conteudo.nome == setorNome) {
+                  matchedSetor = sg.setor.conteudo;
+                  break;
+                }
+              } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+                for (var s in sg.grupo.conteudo.setores) {
+                  if (s.hasConteudo() && s.conteudo.nome == setorNome) {
+                    matchedSetor = s.conteudo;
+                    break;
+                  }
+                }
+                if (matchedSetor != null) break;
+              }
+            }
+            if (matchedSetor == null) throw Exception('Setor not found');
           } catch (_) {
             // Setor apagado ou renomeado
             WidgetsBinding.instance.addPostFrameCallback((_) {

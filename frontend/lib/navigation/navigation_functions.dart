@@ -97,6 +97,7 @@ class AppNav {
     required List<ArquivoSetor> setores,
     String? initialSelectedId,
     Setor? setorContext,
+    Grupo? grupoContext,
     ImageProvider? imageProviderOverride,
   }) {
     final ctrl = _ctrl(context);
@@ -106,6 +107,7 @@ class AppNav {
       cragId: cragId,
       mapaCaminhoImagem: mapa.caminhoImagemMapa,
       setorContextNome: setorContext?.nome,
+      grupoContextNome: grupoContext?.nome,
       initialSelectedId: initialSelectedId,
       imageProviderOverride: imageProviderOverride,
       parent: ctrl.currentNode,
