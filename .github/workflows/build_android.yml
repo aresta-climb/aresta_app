@@ -18,7 +18,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.BOT_APP_ID }}
+          client-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
@@ -70,9 +70,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
-          FEEDBACK_URL: ${{ secrets.FEEDBACK_EDGE_FUNCTION_URL }}
           FEEDBACK_API_KEY: ${{ secrets.FEEDBACK_EDGE_FUNCTION_API_KEY }}
-        run: flutter build appbundle --release --dart-define="FEEDBACK_EDGE_FUNCTION_URL=$FEEDBACK_URL" --dart-define="FEEDBACK_EDGE_FUNCTION_API_KEY=$FEEDBACK_API_KEY"
+        run: flutter build appbundle --release --dart-define="FEEDBACK_EDGE_FUNCTION_API_KEY=$FEEDBACK_API_KEY"
 
 
       - name: Upload to Google Play Console

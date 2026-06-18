@@ -37,6 +37,11 @@ dependencies:
   path: ^1.9.1
   device_info_plus: ^13.1.0
   connectivity_plus: ^7.1.1
+  supabase_flutter: ^2.15.0
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^8.1.0
+  flutter_dotenv: ^6.0.1
+  smooth_page_indicator: ^2.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

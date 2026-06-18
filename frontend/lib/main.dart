@@ -23,9 +23,8 @@ import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/theme/theme_controller.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/constants/legal_version.g.dart';
-import 'dart:async';
+import 'package:frontend/navigation/auth_wrapper.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
@@ -36,6 +35,8 @@ import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
@@ -48,6 +49,17 @@ void main() async {
 
   // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
   await initFirebase();
+
+  // Inicialização do Supabase lendo variáveis de ambiente via --dart-define
+  await Supabase.initialize(
+    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),
+    publishableKey: const String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: ''),
+  );
+
+  await GoogleSignIn.instance.initialize(
+    serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+    clientId: const String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
+  );
 
   await ThemeController().loadTheme();
 
@@ -347,17 +359,13 @@ class _MyAppState extends State<MyApp> {
               ],
             ));
           },
-          home: _hasAcceptedTerms
-              ? TreeNavigationWrapper(
-                  datasetRepo: widget.datasetRepo,
-                  syncService: widget.syncService,
-                  key: TreeNavigationWrapper.navKey,
-                )
-              : TermsOfUsePage(
-                  onAccepted: _onTermsAccepted,
-                  isUpdatingTerms: _isUpdatingTerms,
-                  assetBundle: widget.assetBundle,
-                ),
+          home: AuthWrapper(
+            child: TreeNavigationWrapper(
+              datasetRepo: widget.datasetRepo,
+              syncService: widget.syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
           ),
         );
       },

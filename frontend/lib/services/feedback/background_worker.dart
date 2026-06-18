@@ -7,10 +7,12 @@ import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
 // Constantes do Backend injetadas em tempo de compilação (CI/CD)
-const String _edgeFunctionUrl = String.fromEnvironment(
-  'FEEDBACK_EDGE_FUNCTION_URL',
-  defaultValue: 'https://sua-url-do-supabase.supabase.co/functions/v1/discord-feedback',
+const String _supabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: 'https://sua-url-do-supabase.supabase.co',
 );
+
+final String _edgeFunctionUrl = '$_supabaseUrl/functions/v1/discord-feedback';
 
 const String _edgeFunctionApiKey = String.fromEnvironment(
   'FEEDBACK_EDGE_FUNCTION_API_KEY',
