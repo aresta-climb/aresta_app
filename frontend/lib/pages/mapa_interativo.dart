@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:frontend/constants/network_constants.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
@@ -123,7 +124,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     File? localFile;
     
     // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
-    const baseUrl = 'https://aresta-climb.github.io/aresta_serving/';
+    final baseUrl = '${NetworkConstants.officialServerUrl}/';
     if (path.startsWith(baseUrl)) {
       final relativePath = path.replaceFirst(baseUrl, '');
       final directFile = File('$downloadsPath/$relativePath');

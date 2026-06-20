@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
-import '../services/editor_croqui.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/constants/network_constants.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 
@@ -57,7 +58,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
     File? localFile;
     
     // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
-    const baseUrl = 'https://aresta-climb.github.io/aresta_serving/';
+    final baseUrl = '${NetworkConstants.officialServerUrl}/';
     if (path.startsWith(baseUrl)) {
       final relativePath = path.replaceFirst(baseUrl, '');
       final directFile = File('$downloadsPath/$relativePath');

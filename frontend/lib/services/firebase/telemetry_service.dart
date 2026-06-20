@@ -40,11 +40,6 @@ class TelemetryService {
     }
   }
 
-  /// Registra ações relacionadas à aba Explorar (ex: expandir detalhes, baixar croqui).
-  Future<void> logAcaoExplorar(String idCroqui, String acao) {
-    return _logEvent('acao_explorar', {'id_croqui': idCroqui, 'acao': acao});
-  }
-
   /// Retorna o appInstanceId do Firebase Analytics (útil para associar feedbacks à sessão).
   Future<String?> getAppInstanceId() async {
     try {
@@ -55,6 +50,11 @@ class TelemetryService {
       }
       return null;
     }
+  }
+
+  /// Registra ações relacionadas à aba Explorar (ex: expandir detalhes, baixar croqui).
+  Future<void> logAcaoExplorar(String idCroqui, String acao) {
+    return _logEvent('acao_explorar', {'id_croqui': idCroqui, 'acao': acao});
   }
 
   /// Registra quando um croqui já baixado é atualizado com uma nova versão (sha256).
@@ -165,5 +165,30 @@ class TelemetryService {
   /// Registra interações do sistema de In-App Feedback (abrir, enviar).
   Future<void> logAcaoFeedback(String acao) {
     return _logEvent('acao_feedback', {'acao': acao});
+  }
+
+  /// Registra a visualização da tela de atualização de banco de dados
+  Future<void> logDatabaseMigrationScreenOpened() {
+    return _logEvent('migracao_db', {'acao': 'aberta_tela_migracao'});
+  }
+
+  /// Registra cliques no botão de tentar novamente durante falhas de update
+  Future<void> logDatabaseMigrationTryAgain() {
+    return _logEvent('migracao_db', {'acao': 'tentar_novamente_clicado_tela_migracao'});
+  }
+
+  /// Registra quando o aplicativo é bloqueado devido à hardMinVersion
+  Future<void> logAppVersionHardBlock() {
+    return _logEvent('migracao_db', {'acao': 'tela_hard_block_mostrada'});
+  }
+
+  /// Registra quando o banner de atualização obrigatória é exibido (softMinVersion)
+  Future<void> logAppVersionSoftBlock() {
+    return _logEvent('migracao_db', {'acao': 'banner_soft_block_mostrado'});
+  }
+
+  /// Registra quando o banner de atualização recomendada é exibido
+  Future<void> logAppVersionRecommendedUpdate() {
+    return _logEvent('migracao_db', {'acao': 'banner_versao_recomendada_mostrado'});
   }
 }

@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:yaml/yaml.dart';
+import 'package:frontend/constants/network_constants.dart';
 
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
 class EditorDeCroqui {
-  static const String _officialBaseUrl =
-      'https://aresta-climb.github.io/aresta_serving';
+  static String get _officialBaseUrl => NetworkConstants.officialServerUrl;
   static const String _configFileName = 'editor_config.yaml';
 
   static EditorDeCroqui? _instance;

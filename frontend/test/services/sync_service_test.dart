@@ -34,6 +34,7 @@ class FakeClient extends http.BaseClient {
   final Map<String, List<int>> mockFiles;
   final String? etagToReturn;
   final List<String> requestedUrls = [];
+  final List<String> requestedFullUrls = [];
   final Map<String, String> receivedHeaders = {};
   
   FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn]);
@@ -41,6 +42,7 @@ class FakeClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     requestedUrls.add(request.url.path);
+    requestedFullUrls.add(request.url.toString());
     receivedHeaders.addAll(request.headers);
 
     if (request.url.path.endsWith('indice.binarypb')) {
@@ -167,7 +169,7 @@ void main() {
       final picoId = 'pico_hash_igual';
       
       final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'SAME_HASH');
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'SAME_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'SAME_HASH');
       
       final indiceFile = File(editor.indicePath(tempDir.path));
       await indiceFile.parent.create(recursive: true);
@@ -194,7 +196,7 @@ void main() {
       await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(croqui.writeToBuffer());
 
       final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_HASH');
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_HASH');
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_HASH');
       
       final indiceFile = File(editor.indicePath(tempDir.path));
       await indiceFile.parent.create(recursive: true);
@@ -230,7 +232,7 @@ void main() {
       final newCroqui = Croqui()
         ..arquivosExternos.add(ArquivoExterno()..caminho = 'imagem.webp'..checksumSha256 = sha256.convert([2]).toString());
 
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
 
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
@@ -262,7 +264,7 @@ void main() {
       await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
       final newCroqui = Croqui(); // Sem arquivos externos
 
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
 
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
@@ -289,7 +291,7 @@ void main() {
       final newCroqui = Croqui()
         ..arquivosExternos.add(ArquivoExterno()..caminho = 'nova.webp'..checksumSha256 = sha256.convert([3]).toString());
 
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
 
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
@@ -299,6 +301,13 @@ void main() {
       
       await syncService.syncIndex();
 
+      // Cache-Busting Verification
+      final expectedHash = sha256.convert(newCroqui.writeToBuffer()).toString();
+      final fullUrl = fakeClient.requestedFullUrls.firstWhere((u) => u.contains('$picoId.binarypb'));
+      expect(fullUrl, contains('?sha256sum='), reason: 'A URL do arquivo deve ter o furador de cache ?sha256sum=');
+      expect(fullUrl, contains(expectedHash), reason: 'A URL deve ter o hash real do croqui para furar o cache da CDN');
+
+      // Sync External Files Verification
       expect(fakeClient.requestedUrls.any((url) => url.endsWith('nova.webp')), isTrue);
       expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
     });
@@ -334,7 +343,7 @@ void main() {
           ArquivoExterno()..caminho = 'nova.webp'..checksumSha256 = sha256.convert([44]).toString(),
         ]);
 
-      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..url = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
 
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
@@ -396,7 +405,7 @@ void main() {
       final newIndice = Indice()
         ..croquis.add(ResumoCroqui()
           ..id = 'pico1'
-          ..url = 'picos/pico1.binarypb'
+          ..caminhoRelativo = 'picos/pico1.binarypb'
           ..checksumSha256Croqui = 'NEW_CHECKSUM');
           
       final fakeClient = FakeClient(newIndice);
@@ -520,7 +529,7 @@ void main() {
         
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
 
       final client = FakeClient(newIndice, {
@@ -552,7 +561,7 @@ void main() {
         
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = sha256.convert(croqui.writeToBuffer()).toString());
 
       final client = FakeClient(newIndice, {
@@ -581,12 +590,12 @@ void main() {
 
       final oldIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = 'OLD_OUTDATED_HASH');
 
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = correctHash);
 
       // O FakeClient possui o novo índice e o arquivo correto (que bate com correctHash)
@@ -615,7 +624,7 @@ void main() {
       final croqui = Croqui();
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = 'hash_completamente_errado');
 
       final client = FakeClient(newIndice, {
@@ -645,7 +654,7 @@ void main() {
       
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
 
       // We serve the main croqui, but DO NOT serve capa.webp!
@@ -691,7 +700,7 @@ void main() {
       
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = sha256.convert(croquiBytes).toString());
 
       // We serve BOTH the croqui and the capa.webp, because it needs to redownload capa.webp.
@@ -735,7 +744,7 @@ void main() {
       
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = croquiHash);
 
       // We DO NOT serve the croqui from FakeClient. If it tries to download, it will fail!
@@ -770,7 +779,7 @@ void main() {
       
       final newIndice = Indice()..croquis.add(ResumoCroqui()
         ..id = picoId
-        ..url = 'picos/$picoId.binarypb'
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
         ..checksumSha256Croqui = croquiHash);
 
       // We SERVE the croqui because it should be redownloaded.

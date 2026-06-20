@@ -31,6 +31,12 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.sync),
             onPressed: () async {
+              if (await syncService.isNetworkDisabled()) {
+                if (context.mounted) {
+                  showDeprecatedAppVersionSnackBar(context);
+                }
+                return;
+              }
               final failedPicos = await syncService.syncIndex(auto: false);
               if (failedPicos.isNotEmpty && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

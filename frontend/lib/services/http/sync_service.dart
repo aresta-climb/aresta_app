@@ -8,9 +8,13 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../dataset_repository.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/constants/network_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'sync_storage.dart';
 import 'sync_network.dart';
 
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 /// Representa o estado de sincronização do aplicativo.
 enum SyncStatus { updated, updating, outdated, error, justUpdated }
 
@@ -33,20 +37,73 @@ class SyncService {
   /// Indica se a última tentativa de sincronização foi automática (true) ou manual (false).
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier<bool>(true);
 
+  final RemoteConfigService? remoteConfigService;
+
   SyncService({
     required this.datasetRepository,
     http.Client? client,
     SyncStorage? storage,
     SyncNetwork? network,
+    this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
        _network = network ?? SyncNetwork(client ?? ZipInterceptorClient());
+
+  int? _cachedBuildNumber;
+
+  /// Verifica se a versão atual do app está abaixo da `softMinVersion`.
+  /// Quando isso acontece, as rotinas de rede do SyncService são bloqueadas.
+  Future<bool> isNetworkDisabled() async {
+    final remoteConfig = remoteConfigService ?? RemoteConfigService.instance;
+    final softMinVersion = remoteConfig.softMinVersion;
+    if (softMinVersion <= 0) return false;
+
+    if (_cachedBuildNumber == null) {
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        _cachedBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
+      } catch (_) {
+        _cachedBuildNumber = 0;
+      }
+    }
+
+    return _cachedBuildNumber! < softMinVersion;
+  }
+
+  /// Verifica se houve mudança na versão da base de dados.
+  /// Retorna [true] se o cache local estiver numa versão antiga e o app
+  /// precisar entrar no modo de Migração (baixar novo índice).
+  Future<bool> checkNeedsMigration() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedVersion = prefs.getInt('cached_data_version') ?? 0;
+      return NetworkConstants.kDataVersion > cachedVersion;
+    } catch (e) {
+      AppLogger.instance.logError('[SyncService] Falha ao verificar versão da base de dados', error: e);
+      return false;
+    }
+  }
+
+  /// Confirma que a migração foi bem sucedida, gravando a nova versão em cache
+  /// para não bloquear o app nos próximos inícios.
+  Future<void> confirmMigrationComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
+    debugPrint('[SyncService] Nova versão de dados registrada com sucesso: ${NetworkConstants.kDataVersion}');
+  }
 
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
   ///
   /// Retorna [true] se as operações de download e salvamento forem bem-sucedidas.
   Future<bool> downloadCrag(ResumoCroqui resumo) async {
     final String id = resumo.id;
-    final String url = resumo.url;
+    final String url = resumo.caminhoRelativo;
+
+    if (await isNetworkDisabled()) {
+      AppLogger.instance.logError(
+        'Download abortado: O aplicativo está em uma versão descontinuada.',
+      );
+      return false;
+    }
 
     if (url.isEmpty || id.isEmpty) {
       AppLogger.instance.logError(
@@ -93,6 +150,13 @@ class SyncService {
   /// inacessível, ele reverte para o índice em cache local.
   /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
   Future<List<String>> syncIndex({bool auto = true}) async {
+    if (await isNetworkDisabled()) {
+      debugPrint('[SyncService] Sincronização em background abortada: App descontinuado.');
+      await _loadLocalIndiceAndNotify(datasetRepository.editorDeCroqui.indicePath((await getApplicationDocumentsDirectory()).path));
+      syncStatus.value = SyncStatus.outdated;
+      return [];
+    }
+
     lastSyncWasAuto.value = auto;
     TelemetryService.instance.logSincronizarApp(
       acao: auto ? 'automatica' : 'manual',
@@ -298,7 +362,7 @@ class SyncService {
     final latestResumo = latestResumoList.first;
 
     final baseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-    final url = '$baseUrl/${latestResumo.url}';
+    final url = '$baseUrl/${latestResumo.caminhoRelativo}';
     final id = latestResumo.id;
 
     try {
@@ -384,7 +448,7 @@ class SyncService {
       newContent,
       picoDirPath,
     );
-    final baseDir = _extractBaseDir(newResumo.url);
+    final baseDir = _extractBaseDir(newResumo.caminhoRelativo);
 
     final List<Future<bool>> downloadFutures = [];
     final Map<String, String> filesToRename = {};
@@ -488,8 +552,15 @@ class SyncService {
         return true;
       }
 
-      debugPrint('Downloading file: $fileUrl to .tmp');
-      final bytes = await _network.downloadFile(fileUrl);
+      // Furador de cache (Cache-Busting) para CDNs (Cloudflare/GitHub Pages)
+      // Como os arquivos mantêm o mesmo nome ao serem atualizados, a CDN pode servir cache velho.
+      // Adicionando `?sha256sum=hash`, forçamos a CDN a buscar a versão mais recente.
+      final cacheBustingUrl = fileUrl.contains('?') 
+          ? '$fileUrl&sha256sum=$expectedHash' 
+          : '$fileUrl?sha256sum=$expectedHash';
+
+      debugPrint('Downloading file: $cacheBustingUrl to .tmp');
+      final bytes = await _network.downloadFile(cacheBustingUrl);
 
       if (bytes == null) {
         AppLogger.instance.logError(

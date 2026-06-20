@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import '../constants/network_constants.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
@@ -58,7 +59,7 @@ class OfflineMarkdown extends StatelessWidget {
             File? localFile;
             
             // 1. Tenta mapear a URL do servidor conhecida diretamente para o caminho baixado
-            const baseUrl = 'https://aresta-climb.github.io/aresta_serving/';
+            final baseUrl = '${NetworkConstants.officialServerUrl}/';
             String cleanUrl = Uri.decodeFull(uri.toString());
             if (cleanUrl.startsWith(baseUrl)) {
               final relativePath = cleanUrl.replaceFirst(baseUrl, '');

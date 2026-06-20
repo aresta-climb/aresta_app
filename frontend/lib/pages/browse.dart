@@ -43,6 +43,13 @@ class _BrowsePageState extends State<BrowsePage> {
     final name = safeString(crag['nome'], fallback: 'Pico');
     final String id = crag['id'];
 
+    if (await widget.syncService.isNetworkDisabled()) {
+      if (mounted) {
+        showDeprecatedAppVersionSnackBar(context);
+      }
+      return;
+    }
+
     final indice = widget.datasetRepo.indiceData.value;
     if (indice == null) {
       if (mounted) {

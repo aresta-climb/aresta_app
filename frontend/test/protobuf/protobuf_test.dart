@@ -15,7 +15,7 @@ void main() {
       final resumo = ResumoCroqui()
         ..id = 'pedra_bonita'
         ..nome = 'Pedra Bonita'
-        ..url = 'downloads/pedra_bonita/pedra_bonita.binarypb'
+        ..caminhoRelativo = 'downloads/pedra_bonita/pedra_bonita.binarypb'
         ..checksumSha256Croqui = 'abc123checksum';
 
       final indice = Indice()..croquis.add(resumo);
@@ -26,7 +26,7 @@ void main() {
       expect(restored.croquis.length, 1);
       expect(restored.croquis.first.id, 'pedra_bonita');
       expect(restored.croquis.first.nome, 'Pedra Bonita');
-      expect(restored.croquis.first.url, 'downloads/pedra_bonita/pedra_bonita.binarypb');
+      expect(restored.croquis.first.caminhoRelativo, 'downloads/pedra_bonita/pedra_bonita.binarypb');
       expect(restored.croquis.first.checksumSha256Croqui, 'abc123checksum');
     });
 
@@ -180,14 +180,14 @@ void main() {
       final resumo = ResumoCroqui()
         ..id = 'meu_pico'
         ..nome = 'Meu Pico'
-        ..url = 'picos/meu_pico/meu_pico.binarypb'
+        ..caminhoRelativo = 'picos/meu_pico/meu_pico.binarypb'
         ..checksumSha256Croqui = 'checksum123';
 
       final restored = ResumoCroqui.fromBuffer(resumo.writeToBuffer());
 
       expect(restored.id, 'meu_pico');
       expect(restored.nome, 'Meu Pico');
-      expect(restored.url, 'picos/meu_pico/meu_pico.binarypb');
+      expect(restored.caminhoRelativo, 'picos/meu_pico/meu_pico.binarypb');
       expect(restored.checksumSha256Croqui, 'checksum123');
     });
 

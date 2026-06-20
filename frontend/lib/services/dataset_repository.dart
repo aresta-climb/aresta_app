@@ -96,7 +96,7 @@ class DatasetRepository {
         try {
           // Extração segura de localização
           String locationText = 'Local Desconhecido';
-          final List<String> urlParts = resumo.url.split('/');
+          final List<String> urlParts = resumo.caminhoRelativo.split('/');
           if (urlParts.length >= 2) {
             String folderName = urlParts[urlParts.length - 2];
             locationText = folderName
@@ -112,7 +112,7 @@ class DatasetRepository {
 
           // Cálculo de URL de thumbnail
           String thumbnailUrl = '';
-          final url = resumo.url;
+          final url = resumo.caminhoRelativo;
           final lastSlash = url.lastIndexOf('/');
           final baseUrl = editorDeCroqui.activeBaseUrl;
           if (lastSlash != -1) {
@@ -140,7 +140,7 @@ class DatasetRepository {
             'local': locationText,
             'descricao': resumo.descricao,
             'id': picoId,
-            'url': '${editorDeCroqui.activeBaseUrl}/${resumo.url}',
+            'url': '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}',
             'checksum': resumo.checksumSha256Croqui,
             'thumbnailUrl': thumbnailUrl,
             'isDownloaded': isStored,

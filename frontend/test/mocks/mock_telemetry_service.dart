@@ -103,4 +103,34 @@ class MockTelemetryService implements TelemetryService {
     recordedEvents.add('acao_feedback');
     recordedParams['acao_feedback'] = {'acao': acao};
   }
+
+  @override
+  Future<void> logDatabaseMigrationScreenOpened() async {
+    recordedEvents.add('migracao_db');
+    recordedParams['migracao_db'] = {'acao': 'aberta_tela_migracao'};
+  }
+
+  @override
+  Future<void> logDatabaseMigrationTryAgain() async {
+    recordedEvents.add('migracao_db');
+    recordedParams['migracao_db'] = {'acao': 'tentar_novamente_clicado_tela_migracao'};
+  }
+
+  @override
+  Future<void> logAppVersionHardBlock() async {
+    recordedEvents.add('migracao_db');
+    recordedParams['migracao_db'] = {'acao': 'tela_hard_block_mostrada'};
+  }
+
+  @override
+  Future<void> logAppVersionSoftBlock() async {
+    recordedEvents.add('migracao_db');
+    recordedParams['migracao_db'] = {'acao': 'banner_soft_block_mostrado'};
+  }
+
+  @override
+  Future<void> logAppVersionRecommendedUpdate() async {
+    recordedEvents.add('migracao_db');
+    recordedParams['migracao_db'] = {'acao': 'banner_versao_recomendada_mostrado'};
+  }
 }

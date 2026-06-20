@@ -257,5 +257,35 @@ void main() {
       BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
     });
   });
-}
 
+  // ---------------------------------------------------------------------------
+  // showDeprecatedAppVersionSnackBar
+  // ---------------------------------------------------------------------------
+
+  group('showDeprecatedAppVersionSnackBar', () {
+    testWidgets('deve exibir SnackBar com a mensagem de versão descontinuada', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () => showDeprecatedAppVersionSnackBar(context),
+                child: const Text('Show'),
+              );
+            },
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'),
+        findsOneWidget,
+      );
+    });
+  });
+}

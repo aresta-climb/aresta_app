@@ -26,6 +26,10 @@ import 'package:frontend/constants/legal_version.g.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:flutter/services.dart';
+import 'package:frontend/pages/database_migration_screen.dart';
+import 'package:frontend/widgets/app_version_checker.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
@@ -80,13 +84,17 @@ void main() async {
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
   // Sincronização inicial na inicialização
-  syncService.syncIndex();
+  final needsMigration = await syncService.checkNeedsMigration();
+  if (!needsMigration) {
+    syncService.syncIndex();
+  }
 
   // Passa isso para o aplicativo
   runApp(
     MyApp(
       datasetRepo: datasetRepo,
       syncService: syncService,
+      needsMigration: needsMigration,
       acceptedLegalVersion: acceptedLegalVersion ?? 0,
     ),
   );
@@ -95,15 +103,19 @@ void main() async {
 class MyApp extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
+  final bool needsMigration;
   final int acceptedLegalVersion;
   final AssetBundle? assetBundle;
+  final RemoteConfigService? remoteConfigService;
 
   const MyApp({
     super.key,
     required this.datasetRepo,
     required this.syncService,
+    required this.needsMigration,
     required this.acceptedLegalVersion,
     this.assetBundle,
+    this.remoteConfigService,
   });
 
   @override
@@ -112,12 +124,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late int _acceptedLegalVersion;
+  late bool _needsMigration;
   NetworkFeedbackTrigger? _networkFeedbackTrigger;
 
   @override
   void initState() {
     super.initState();
     _acceptedLegalVersion = widget.acceptedLegalVersion;
+    _needsMigration = widget.needsMigration;
 
     // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
     BackgroundWorker.processFeedbackQueue(dispatcher: 'app_startup');
@@ -231,10 +245,25 @@ class _MyAppState extends State<MyApp> {
           ),
           // Banner global para modo experimental/editor que persiste em todas as telas
           builder: (context, child) {
-            return Stack(
-              children: [
-                child!,
-                ValueListenableBuilder<bool>(
+            Widget effectiveChild = child!;
+
+            if (_needsMigration && _hasAcceptedTerms) {
+              effectiveChild = DatabaseMigrationScreen(
+                syncService: widget.syncService,
+                onMigrationComplete: () {
+                  setState(() {
+                    _needsMigration = false;
+                  });
+                },
+              );
+            }
+
+            return AppVersionChecker(
+              remoteConfigService: widget.remoteConfigService,
+              child: Stack(
+                children: [
+                  effectiveChild,
+                  ValueListenableBuilder<bool>(
                   valueListenable:
                       widget.datasetRepo.editorDeCroqui.isExperimentalMode,
                   builder: (context, isExperimental, _) {
@@ -306,7 +335,7 @@ class _MyAppState extends State<MyApp> {
                   },
                 ),
               ],
-            );
+            ));
           },
           home: _hasAcceptedTerms
               ? TreeNavigationWrapper(
