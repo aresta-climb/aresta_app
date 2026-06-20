@@ -1,3 +1,6 @@
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
@@ -5,6 +8,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
+import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
@@ -25,6 +29,39 @@ class MockAssetBundle extends Fake implements AssetBundle {
   }
 }
 
+
+
+
+class FakeRemoteConfigService implements RemoteConfigService {
+  @override
+  int get hardMinVersion => 0;
+
+  @override
+  int get recommendedVersion => 0;
+
+  @override
+  int get softMinVersion => 0;
+
+  @override
+  int getInt(String key) => 0;
+  @override
+  bool getBool(String key) => false;
+  @override
+  String getString(String key) => "";
+  
+  String _iosUrl = "";
+  @override String get storeUrlIos => _iosUrl;
+
+  @override
+  void clearInitFuture() {}
+
+  @override
+  var debugRemoteConfig;
+
+  @override
+  Future<void> initialize() async {}
+}
+
 void main() {
   late DatasetRepository mockRepo;
   late SyncService mockSync;
@@ -39,15 +76,24 @@ void main() {
     
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
+
+    PackageInfo.setMockInitialValues(
+      appName: 'Aresta',
+      packageName: 'com.aresta.climb',
+      version: '1.0.0',
+      buildNumber: '10',
+      buildSignature: '',
+    );
   });
 
   testWidgets('MyApp shows TermsOfUsePage when acceptedLegalVersion is 0 (first launch)', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: 0,
     ));
-
+    await tester.pump();
+    debugDumpApp();
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     expect(find.byType(TreeNavigationWrapper), findsNothing);
   });
@@ -55,9 +101,10 @@ void main() {
   testWidgets('MyApp shows TreeNavigationWrapper when acceptedLegalVersion matches kLegalVersion', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: kLegalVersion,
     ));
+    await tester.pump();
 
     expect(find.byType(TermsOfUsePage), findsNothing);
     expect(find.byType(TreeNavigationWrapper), findsOneWidget);
@@ -78,9 +125,10 @@ void main() {
 
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: outdatedVersion,
     ));
+    await tester.pump();
 
     final termsFinder = find.byType(TermsOfUsePage);
     expect(termsFinder, findsOneWidget);
@@ -93,9 +141,10 @@ void main() {
   testWidgets('MyApp shows SnackBar when background sync fails', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: kLegalVersion,
     ));
+    await tester.pump();
 
     // Finish building the initial frame
     await tester.pump();
@@ -115,9 +164,10 @@ void main() {
   testWidgets('MyApp registers AppColors extension in both light and dark themes', (WidgetTester tester) async {
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: kLegalVersion,
     ));
+    await tester.pump();
 
     // Finish building
     await tester.pump(const Duration(seconds: 1));
@@ -133,15 +183,16 @@ void main() {
     
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: 0,
       assetBundle: MockAssetBundle({
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
         'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
       }),
     ));
+    await tester.pump();
 
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     final termsFinder = find.byType(TermsOfUsePage);
     expect(termsFinder, findsOneWidget);
@@ -149,7 +200,7 @@ void main() {
     // Tap checkbox
     await tester.ensureVisible(find.byType(CheckboxListTile));
     await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     // Tap accept button
     await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
@@ -175,15 +226,16 @@ void main() {
     
     await tester.pumpWidget(MyApp(
       datasetRepo: mockRepo,
-      syncService: mockSync,
+      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
       acceptedLegalVersion: outdatedVersion,
       assetBundle: MockAssetBundle({
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
         'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
       }),
     ));
+    await tester.pump();
 
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     final termsFinder = find.byType(TermsOfUsePage);
     expect(termsFinder, findsOneWidget);
@@ -194,7 +246,7 @@ void main() {
     // Tap checkbox
     await tester.ensureVisible(find.byType(CheckboxListTile));
     await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     // Tap accept button
     await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
@@ -210,5 +262,37 @@ void main() {
 
     // Verify TreeNavigationWrapper is now shown
     expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+  });
+
+  testWidgets('MyApp shows DatabaseMigrationScreen when needsMigration is true AND terms are accepted', (WidgetTester tester) async {
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      needsMigration: true,
+      remoteConfigService: FakeRemoteConfigService(),
+      acceptedLegalVersion: kLegalVersion,
+    ));
+    await tester.pump();
+
+    // Since terms are accepted (kLegalVersion matches) and needsMigration is true,
+    // DatabaseMigrationScreen should be shown instead of TreeNavigationWrapper.
+    expect(find.byType(DatabaseMigrationScreen), findsOneWidget); 
+    expect(find.byType(TermsOfUsePage), findsNothing);
+  });
+
+  testWidgets('MyApp shows TermsOfUsePage even if needsMigration is true BUT terms are NOT accepted', (WidgetTester tester) async {
+    await tester.pumpWidget(MyApp(
+      datasetRepo: mockRepo,
+      syncService: mockSync,
+      needsMigration: true,
+      remoteConfigService: FakeRemoteConfigService(),
+      acceptedLegalVersion: 0, // Not accepted yet
+    ));
+    await tester.pump();
+
+    // terms are NOT accepted, so TermsOfUsePage must show up first
+    expect(find.byType(TermsOfUsePage), findsOneWidget);
+    // DatabaseMigrationScreen should NOT be shown yet
+    expect(find.byType(DatabaseMigrationScreen), findsNothing);
   });
 }

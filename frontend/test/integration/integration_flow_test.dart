@@ -17,7 +17,7 @@ Future<File> _criarCroquiCompleto(Directory tempDir) async {
   final resumo = ResumoCroqui()
     ..id = picoId
     ..nome = 'Pedra da Gávea'
-    ..url = 'downloads/$picoId/$picoId.binarypb'
+    ..caminhoRelativo = 'downloads/$picoId/$picoId.binarypb'
     ..checksumSha256Croqui = 'xyz789';
 
   final indice = Indice()..croquis.add(resumo);
@@ -97,7 +97,7 @@ void main() {
       expect(picoId, 'pedra_da_gavea');
 
       // 2. Usa a URL do índice para buscar o pico
-      final picoBinaryUrl = indice.croquis.first.url; // downloads/pedra_da_gavea/pedra_da_gavea.binarypb
+      final picoBinaryUrl = indice.croquis.first.caminhoRelativo; // downloads/pedra_da_gavea/pedra_da_gavea.binarypb
       final picoRelPath = picoBinaryUrl.replaceFirst('downloads/', '');
 
       final uriPico = Uri(
@@ -168,7 +168,7 @@ void main() {
         indice.croquis.add(ResumoCroqui()
           ..id = 'pico_$i'
           ..nome = 'Pico $i'
-          ..url = 'downloads/pico_$i/pico_$i.binarypb'
+          ..caminhoRelativo = 'downloads/pico_$i/pico_$i.binarypb'
           ..checksumSha256Croqui = 'check_$i');
       }
 

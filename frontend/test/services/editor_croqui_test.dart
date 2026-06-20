@@ -5,6 +5,7 @@
 library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/constants/network_constants.dart';
 
 void main() {
   late EditorDeCroqui editor;
@@ -19,7 +20,7 @@ void main() {
 
   group('activeBaseUrl', () {
     test('deve retornar URL oficial quando sem editor ou experimental', () {
-      expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving');
+      expect(editor.activeBaseUrl, NetworkConstants.officialServerUrl);
     });
 
     test('deve retornar a URL do editor quando configurada', () {

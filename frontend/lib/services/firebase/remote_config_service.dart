@@ -31,31 +31,50 @@ class RemoteConfigService {
   static RemoteConfigService instance =
       RemoteConfigService._privateConstructor();
 
-  late final FirebaseRemoteConfig _remoteConfig = FirebaseRemoteConfig.instance;
+  @visibleForTesting
+  FirebaseRemoteConfig? debugRemoteConfig;
+
+  FirebaseRemoteConfig get _remoteConfig => debugRemoteConfig ?? FirebaseRemoteConfig.instance;
+
+  Future<void>? _initFuture;
+
+  @visibleForTesting
+  void clearInitFuture() => _initFuture = null;
 
   /// Inicializa o serviço definindo os padrões (defaults) e tentando buscar configurações do servidor.
-  Future<void> initialize() async {
+  Future<void> initialize() {
+    _initFuture ??= _initializeInternal();
+    return _initFuture!;
+  }
+
+  Future<void> _initializeInternal() async {
     try {
       // 1. Definimos os defaults inquebráveis locais (fallback para offline)
       await _remoteConfig.setDefaults(const {
-        "flag_de_demonstracao1": false,
-        "flag_de_demonstracao2": false,
+        "recommended_version": 0,
+        "soft_min_version": 0,
+        "hard_min_version": 0,
+        "store_url_ios": "",
       });
 
-      // 2. Configurações de timeout e TTL (cache)
+      // 2. Configurações iniciais com cache ZERO para forçar o download na abertura do app
       await _remoteConfig.setConfigSettings(
         RemoteConfigSettings(
-          fetchTimeout: const Duration(
-            seconds: 10,
-          ), // Desiste rápido se internet ruim
-          minimumFetchInterval: const Duration(
-            hours: 12,
-          ), // Usa cache por 12 horas
+          fetchTimeout: const Duration(seconds: 10),
+          minimumFetchInterval: Duration.zero, // Força a buscar da rede
         ),
       );
 
       // 3. Tenta buscar no fundo sem travar a interface
       await _remoteConfig.fetchAndActivate();
+
+      // 4. Volta o cache para 12 horas para proteger a cota do Firebase caso haja fetches subsequentes
+      await _remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(seconds: 10),
+          minimumFetchInterval: const Duration(hours: 12),
+        ),
+      );
 
       if (kDebugMode) {
         print('🔧 [RemoteConfig] Configuração atualizada com sucesso.');
@@ -71,7 +90,29 @@ class RemoteConfigService {
 
   /// Retorna um valor booleano do Remote Config.
   bool getBool(String key) {
-    return _remoteConfig.getBool(key);
+    try {
+      return _remoteConfig.getBool(key);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Retorna um valor inteiro do Remote Config.
+  int getInt(String key) {
+    try {
+      return _remoteConfig.getInt(key);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Retorna uma string do Remote Config.
+  String getString(String key) {
+    try {
+      return _remoteConfig.getString(key);
+    } catch (_) {
+      return "";
+    }
   }
 
   // ===========================================================================
@@ -79,9 +120,15 @@ class RemoteConfigService {
   // Adicione novas flags aqui seguindo o padrão abaixo.
   // ===========================================================================
 
-  /// Indica se a flag de demonstração 1 deve ser ativada.
-  bool get flagDeDemonstracao1 => getBool('flag_de_demonstracao1');
+  /// Versão recomendada para apresentar banner leve.
+  int get recommendedVersion => getInt('recommended_version');
 
-  /// Indica se a flag de demonstração 2 deve ser ativada.
-  bool get flagDeDemonstracao2 => getBool('flag_de_demonstracao2');
+  /// Versão mínima para apresentar banner fixo e bloquear navegação (soft block).
+  int get softMinVersion => getInt('soft_min_version');
+
+  /// Versão mínima absoluta para o app funcionar (bloqueia o app inteiro).
+  int get hardMinVersion => getInt('hard_min_version');
+
+  /// URL personalizada para a loja de aplicativos no iOS (útil para beta fechado).
+  String get storeUrlIos => getString('store_url_ios');
 }

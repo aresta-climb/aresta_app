@@ -29,6 +29,13 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
     final name = crag['nome'] ?? 'Pico';
     final String id = crag['id'];
 
+    if (await widget.syncService.isNetworkDisabled()) {
+      if (mounted) {
+        showDeprecatedAppVersionSnackBar(context);
+      }
+      return;
+    }
+
     final indice = widget.datasetRepo.indiceData.value;
     if (indice == null) return;
 

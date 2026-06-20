@@ -116,13 +116,12 @@ void main() {
 
     test('loadIndiceToMemory mapeia o campo descricao do ResumoCroqui', () async {
       final indice = Indice(
-        urlBase: 'http://base',
         croquis: [
           ResumoCroqui(
             id: 'pico_desc',
             nome: 'Nome',
             descricao: 'Uma descrição curta muito legal',
-            url: 'pico_desc.zip',
+            caminhoRelativo: 'pico_desc.zip',
           )
         ]
       );
@@ -145,12 +144,11 @@ void main() {
       await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
 
       final indice = Indice(
-        urlBase: 'http://base',
         croquis: [
           ResumoCroqui(
             id: 'pico_boot',
             nome: 'Nome',
-            url: 'pico_boot.zip',
+            caminhoRelativo: 'pico_boot.zip',
           )
         ]
       );

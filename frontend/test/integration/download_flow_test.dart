@@ -14,7 +14,7 @@ Future<File> _criarCroquiComDados(Directory tempDir, String picoId) async {
   final resumo = ResumoCroqui()
     ..id = picoId
     ..nome = 'Pedra Teste'
-    ..url = 'downloads/$picoId/$picoId.binarypb'
+    ..caminhoRelativo = 'downloads/$picoId/$picoId.binarypb'
     ..checksumSha256Croqui = 'abc123';
 
   final indice = Indice()..croquis.add(resumo);

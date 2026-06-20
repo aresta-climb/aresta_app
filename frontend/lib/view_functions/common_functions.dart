@@ -346,3 +346,12 @@ Widget buildSortMenu<T>({
         .toList(),
   );
 }
+void showDeprecatedAppVersionSnackBar(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'),
+      backgroundColor: Colors.red,
+      duration: Duration(seconds: 4),
+    ),
+  );
+}
