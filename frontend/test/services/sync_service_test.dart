@@ -361,6 +361,56 @@ void main() {
       
       expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'mantida\.webp$')))));
     });
+
+    test('sobrevive a breaking changes (oldPicoData corrompido) varrendo a pasta para deletar orfaos e validando hash local', () async {
+      final picoId = 'pico_breaking_change';
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+
+      // Simula uma foto órfã que DEVE ser deletada (pois não está no novo croqui)
+      final orfanFile = File('${picoDir.path}/orfan.webp');
+      await orfanFile.writeAsBytes([9, 9]);
+
+      // Simula uma foto válida que JÁ ESTÁ no disco e o hash bate
+      final validFile = File('${picoDir.path}/valida.webp');
+      await validFile.writeAsBytes([7, 7]);
+
+      // Escreve um arquivo binário corrompido (simulando um protobuf incompatível antigo)
+      await File('${picoDir.path}/$picoId.binarypb').writeAsBytes([255, 255, 255, 255]);
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_CROQUI_HASH');
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+      
+      final newCroqui = Croqui()
+        ..arquivosExternos.addAll([
+          ArquivoExterno()..caminho = 'valida.webp'..checksumSha256 = sha256.convert([7, 7]).toString(),
+          ArquivoExterno()..caminho = 'nova.webp'..checksumSha256 = sha256.convert([44]).toString(),
+        ]);
+
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = sha256.convert(newCroqui.writeToBuffer()).toString());
+
+      // Note que a "valida.webp" NÃO está no FakeClient, para garantir que não vamos tentar baixá-la!
+      // Se tentarmos baixar e der erro, o sync vai falhar, provando que o hash check local não funcionou.
+      final fakeClient = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
+        'picos/nova.webp': [44],
+      });
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      await syncServiceFake.syncIndex();
+
+      // Arquivo órfão não está na nova estrutura e o oldPicoData não foi lido, então a rotina nova deve ter feito o scan.
+      expect(orfanFile.existsSync(), isFalse, reason: 'Arquivo orfao deveria ter sido deletado via directory scan');
+      
+      // Arquivo válido deve ter sido mantido sem download.
+      expect(validFile.existsSync(), isTrue, reason: 'Arquivo valido deveria ter sido mantido');
+      expect(fakeClient.requestedUrls.any((url) => url.endsWith('valida.webp')), isFalse, reason: 'O arquivo valido NAO deve ter sido baixado');
+      
+      // Novo arquivo deve ser baixado
+      expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue, reason: 'Arquivo novo deve ter sido baixado');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -382,6 +432,44 @@ void main() {
       } catch (e) {
         // Ignora erros de deleção no Windows (arquivos em uso, etc)
       }
+    });
+
+    test('deve forcar o update de picos armazenados localmente se o indice antigo estiver corrompido (breaking change)', () async {
+      // 1. Setup local files: um indice corrompido
+      final indicePath = editor.indicePath(tempDir.path);
+      final indiceFile = File(indicePath);
+      indiceFile.parent.createSync(recursive: true);
+      // Escreve bytes corrompidos
+      indiceFile.writeAsBytesSync([255, 255, 255]);
+
+      // 2. Simula que o usuário JÁ TEM o pico baixado no celular
+      final picoFile = File('${editor.downloadsPath(tempDir.path)}/pico_orfao/pico_orfao.binarypb');
+      picoFile.parent.createSync(recursive: true);
+      picoFile.writeAsBytesSync([1, 2, 3]); // dummy content, só pra existir no disco
+
+      // 3. Setup mock client returning NEW index com o tal pico
+      final newCroqui = Croqui(); // vazio
+      final newIndice = Indice()
+        ..croquis.add(ResumoCroqui()
+          ..id = 'pico_orfao'
+          ..caminhoRelativo = 'picos/pico_orfao.binarypb'
+          ..checksumSha256Croqui = 'NEW_CHECKSUM');
+          
+      final fakeClient = FakeClient(newIndice, {
+        'picos/pico_orfao.binarypb': newCroqui.writeToBuffer(),
+      });
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+
+      // We must not be in experimental mode for _checkForUpdates to run
+      editor.isExperimentalMode.value = false;
+
+      // 4. Run sync
+      await syncService.syncIndex();
+
+      // 5. Verifica se o FakeClient foi acionado para tentar baixar o `pico_orfao.binarypb`
+      // Isso prova que mesmo com o Indice antigo sendo ilegível, ele forçou a atualização do pico local!
+      expect(fakeClient.requestedUrls.any((url) => url.contains('pico_orfao.binarypb')), isTrue,
+          reason: 'O pico deve ser atualizado compulsoriamente se o indice local for ilegível/ausente');
     });
 
     test('deve manter o indice antigo se o download do pico falhar (não atualiza o indice cedo demais)', () async {

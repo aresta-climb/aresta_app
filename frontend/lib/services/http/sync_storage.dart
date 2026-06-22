@@ -14,8 +14,13 @@ class SyncStorage {
   Future<Indice?> readLocalIndice(String filePath) async {
     final file = File(filePath);
     if (await file.exists()) {
-      final bytes = await file.readAsBytes();
-      return Indice.fromBuffer(bytes);
+      try {
+        final bytes = await file.readAsBytes();
+        return Indice.fromBuffer(bytes);
+      } catch (e) {
+        debugPrint('[SyncStorage] Erro ao ler indice local (possível breaking change): $e');
+        return null;
+      }
     }
     return null;
   }
@@ -61,7 +66,12 @@ class SyncStorage {
   Future<Croqui?> readLocalCroqui(String croquiPath) async {
     final file = File(croquiPath);
     if (await file.exists()) {
-      return Croqui.fromBuffer(await file.readAsBytes());
+      try {
+        return Croqui.fromBuffer(await file.readAsBytes());
+      } catch (e) {
+        debugPrint('[SyncStorage] Erro ao ler croqui local (possível breaking change): $e');
+        return null;
+      }
     }
     return null;
   }

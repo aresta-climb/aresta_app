@@ -39,6 +39,15 @@ void main() {
       expect(result!.croquis.first.id, '123');
     });
 
+    test('readLocalIndice retorna null ao tentar ler protobuf invalido (breaking change)', () async {
+      final path = '${tempDir.path}/indice_invalido.binarypb';
+      // Escreve lixo que nao eh um protobuf valido
+      await File(path).writeAsBytes([255, 255, 255, 255, 255]);
+
+      final result = await storage.readLocalIndice(path);
+      expect(result, isNull); // Deve retornar null em vez de dar throw
+    });
+
     test('writeLocalIndice cria o diretorio pai caso nao exista e escreve o arquivo', () async {
       final path = '${tempDir.path}/subdir/novo_indice.binarypb';
       final indice = Indice()..croquis.add(ResumoCroqui()..id = '321');
@@ -104,6 +113,15 @@ void main() {
       final result = await storage.readLocalCroqui(path);
       expect(result, isNotNull);
       expect(result!.arquivosExternos.first.caminho, 'test');
+    });
+
+    test('readLocalCroqui retorna null ao tentar ler protobuf invalido (breaking change)', () async {
+      final path = '${tempDir.path}/croqui_invalido.binarypb';
+      // Escreve lixo que nao eh um protobuf valido
+      await File(path).writeAsBytes([255, 255, 255, 255, 255]);
+
+      final result = await storage.readLocalCroqui(path);
+      expect(result, isNull); // Deve retornar null em vez de dar throw
     });
   });
 
