@@ -16,11 +16,9 @@ void main() {
       pico = Pico()
         ..nome = 'Pico do Corcovado';
       setor = Setor()
-        ..idNoMapa = 's1'
         ..nome = 'Setor Principal';
       escalada = Escalada(
         viaEsportiva: ViaEsportiva(
-          idNoMapa: 'v1',
           nome: 'Via Lactea',
         ),
       );

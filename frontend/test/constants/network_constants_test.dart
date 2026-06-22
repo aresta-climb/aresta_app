@@ -16,7 +16,7 @@ void main() {
     test('officialServerUrl returns combined URL', () {
       expect(
         NetworkConstants.officialServerUrl,
-        'https://serving.arestaclimb.com/v1',
+        'https://serving.arestaclimb.com/v${NetworkConstants.kDataVersion}',
       );
     });
   });

@@ -35,7 +35,6 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Esc
                     child: MapaThumbnail(
                       mapa: mapa,
                       cragId: cragId,
-                      escaladas: sortedEscaladas,
                       setorContext: setor,
                     ),
                   ),
@@ -111,48 +110,73 @@ Widget _buildHeader(String title) {
 /// Resolve the map indicator and concatenated labels for a given Escalada.
 /// Returns a Map with 'mapIndicator' (e.g. 'M1') and 'resolvedLabel' (e.g. '1-X').
 Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
-  List<String> rawIds = [];
+  String resolvedLabel = '';
+  String mapIndicator = '';
+
+  String escaladaNome = '';
+  int indiceMapaPadrao = 0;
 
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      rawIds = [escalada.viaEsportiva.idNoMapa, escalada.viaEsportiva.idNoMapaMeio, escalada.viaEsportiva.idNoMapaFim];
+      escaladaNome = escalada.viaEsportiva.nome;
+      indiceMapaPadrao = escalada.viaEsportiva.indiceMapaPadrao;
       break;
     case Escalada_Tipo.viaMovel:
-      rawIds = [escalada.viaMovel.idNoMapa, escalada.viaMovel.idNoMapaMeio, escalada.viaMovel.idNoMapaFim];
+      escaladaNome = escalada.viaMovel.nome;
+      indiceMapaPadrao = escalada.viaMovel.indiceMapaPadrao;
       break;
     case Escalada_Tipo.boulder:
-      rawIds = [escalada.boulder.idNoMapa, escalada.boulder.idNoMapaMeio, escalada.boulder.idNoMapaFim];
+      escaladaNome = escalada.boulder.nome;
+      indiceMapaPadrao = escalada.boulder.indiceMapaPadrao;
       break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      rawIds = [escalada.viaMultiplasEnfiadas.idNoMapa, escalada.viaMultiplasEnfiadas.idNoMapaMeio, escalada.viaMultiplasEnfiadas.idNoMapaFim];
+      escaladaNome = escalada.viaMultiplasEnfiadas.nome;
+      indiceMapaPadrao = escalada.viaMultiplasEnfiadas.indiceMapaPadrao;
       break;
     case Escalada_Tipo.highline:
-      rawIds = [escalada.highline.idNoMapa, escalada.highline.idNoMapaMeio, escalada.highline.idNoMapaFim];
+      escaladaNome = escalada.highline.nome;
+      indiceMapaPadrao = escalada.highline.indiceMapaPadrao;
       break;
-    case Escalada_Tipo.notSet:
+    default:
       break;
   }
 
-  rawIds.removeWhere((id) => id.isEmpty);
-
-  String resolvedLabel = rawIds.isNotEmpty ? rawIds.first : '';
-  String mapIndicator = '';
-
-  if (rawIds.isNotEmpty && setor.mapas.isNotEmpty) {
+  if (setor.mapas.isNotEmpty) {
+    List<int> searchOrder = [];
+    if (indiceMapaPadrao >= 0 && indiceMapaPadrao < setor.mapas.length) {
+      searchOrder.add(indiceMapaPadrao);
+    }
     for (int i = 0; i < setor.mapas.length; i++) {
+      if (!searchOrder.contains(i)) {
+        searchOrder.add(i);
+      }
+    }
+
+    for (int i in searchOrder) {
       final mapa = setor.mapas[i];
-      final pointsMap = {for (var p in mapa.pontosDeInteresse) p.id: p.label};
       
-      bool found = false;
-      List<String> labels = [];
-      for (var id in rawIds) {
-        if (pointsMap.containsKey(id)) {
-          found = true;
-          labels.add(pointsMap[id]!.isNotEmpty ? pointsMap[id]! : id);
+      Mapa_Referencia? matchingRef;
+      for (final ref in mapa.referencias) {
+        if (ref.escalada == escaladaNome) {
+          matchingRef = ref;
+          break;
         }
       }
-      
-      if (found) {
+
+      if (matchingRef != null && matchingRef.ids.isNotEmpty) {
+        List<String> labels = [];
+        for (var id in matchingRef.ids) {
+          for (var p in mapa.pontosDeInteresse) {
+            if (p.id == id) {
+              if (p.label.isNotEmpty) {
+                labels.add(p.label);
+              } else {
+                labels.add(id); // Fallback to id if label is empty but requested
+              }
+              break;
+            }
+          }
+        }
         resolvedLabel = labels.join('-');
         if (setor.mapas.length > 1) {
           mapIndicator = 'M${i + 1}'; 

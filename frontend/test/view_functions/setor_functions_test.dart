@@ -1,78 +1,108 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/view_functions/setor_functions.dart';
-import '../mocks/mock_telemetry_service.dart';
 
 void main() {
-  test('Setor functions should dispatch telemetry', () {
-    final mockTelemetry = MockTelemetryService();
-    TelemetryService.instance = mockTelemetry;
-    
-    // Simulate telemetry that would be triggered inside UI callbacks
-    TelemetryService.instance.logAcaoEscalada('crag1', 'Setor 1', 'Via 1', 'abrir_detalhes', 'lista_setor');
-    
-    expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
-    expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'lista_setor');
-  });
+  group('Setor Functions Tests', () {
+    test('resolveRouteLabels joins point labels correctly and finds map indicators', () {
+      final mapa = Mapa(
+        referencias: [
+          Mapa_Referencia(escalada: 'Via 1', ids: ['p1', 'p2']),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'p1', label: '1'),
+          Mapa_PontoDeInteresse(id: 'p2', label: 'X'),
+        ]
+      );
+      
+      final setor = Setor(
+        nome: 'Setor A',
+        mapas: [mapa],
+      );
+      
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via 1');
+      
+      final result = resolveRouteLabels(escalada, setor);
+      expect(result['resolvedLabel'], '1-X');
+      expect(result['mapIndicator'], ''); // Only 1 map
+    });
 
-  test('resolveRouteLabels joins point labels correctly and finds map indicators', () {
-    final p1 = Mapa_PontoDeInteresse(id: '01', label: '1');
-    final px = Mapa_PontoDeInteresse(id: 'x', label: 'X');
-    final py = Mapa_PontoDeInteresse(id: 'y', label: 'Y');
+    test('resolveRouteLabels handles map indicator for multiple maps', () {
+      final mapa1 = Mapa(pontosDeInteresse: []);
+      final mapa2 = Mapa(
+        referencias: [
+          Mapa_Referencia(escalada: 'Via 2', ids: ['p1']),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'p1', label: '2'),
+        ]
+      );
+      
+      final setor = Setor(
+        nome: 'Setor B',
+        mapas: [mapa1, mapa2],
+      );
+      
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via 2');
+      
+      final result = resolveRouteLabels(escalada, setor);
+      expect(result['resolvedLabel'], '2');
+      expect(result['mapIndicator'], 'M2'); // Second map
+    });
 
-    final mapa1 = Mapa(
-      caminhoImagemMapa: 'test_map1.png',
-      pontosDeInteresse: [p1, px, py],
-    );
+    test('resolveRouteLabels fallbacks to ID if label is empty', () {
+      final mapa = Mapa(
+        referencias: [
+          Mapa_Referencia(escalada: 'Via 3', ids: ['p1']),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'p1', label: ''), // Empty label
+        ]
+      );
+      
+      final setor = Setor(
+        nome: 'Setor C',
+        mapas: [mapa],
+      );
+      
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via 3');
+      
+      final result = resolveRouteLabels(escalada, setor);
+      expect(result['resolvedLabel'], 'p1');
+    });
 
-    final mapa2 = Mapa(
-      caminhoImagemMapa: 'test_map2.png',
-      pontosDeInteresse: [],
-    );
-
-    final esc = Escalada()
-      ..boulder = (Boulder()..nome = 'Odisséia'..idNoMapa = '01'..idNoMapaFim = 'x');
-
-    final setor = Setor(
-      nome: 'Setor Teste',
-      mapas: [mapa2, mapa1], // Mapa 1 será o M2 (índice 1)
-      escaladas: [esc],
-    );
-
-    final labels = resolveRouteLabels(esc, setor);
-
-    expect(labels['resolvedLabel'], '1-X');
-    expect(labels['mapIndicator'], 'M2');
-  });
-
-  test('resolveRouteLabels handles empty labels and missing points by falling back to ID or omitting', () {
-    final p1 = Mapa_PontoDeInteresse(id: '01', label: ''); // empty label
-    final px = Mapa_PontoDeInteresse(id: 'x', label: 'X');
-
-    final mapa1 = Mapa(
-      caminhoImagemMapa: 'test_map1.png',
-      pontosDeInteresse: [p1, px],
-    );
-
-    final esc = Escalada()
-      ..boulder = (Boulder()..nome = 'Odisséia'..idNoMapa = '01'..idNoMapaMeio = 'z'..idNoMapaFim = 'x');
-
-    final setor = Setor(
-      nome: 'Setor Teste',
-      mapas: [mapa1], 
-      escaladas: [esc],
-    );
-
-    final labels = resolveRouteLabels(esc, setor);
-
-    // '01' is in pointsMap but label is empty -> falls back to '01'.
-    // 'z' is not in pointsMap -> omitted.
-    // 'x' is in pointsMap -> 'X'.
-    expect(labels['resolvedLabel'], '01-X');
-    
-    // mapIndicator is empty because there is only 1 map
-    expect(labels['mapIndicator'], '');
+    test('resolveRouteLabels usa o indiceMapaPadrao para escolher a label correta quando a via esta em multiplos mapas', () {
+      final mapa1 = Mapa(
+        referencias: [
+          Mapa_Referencia(escalada: 'Via 4', ids: ['p1']),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'p1', label: '1'),
+        ]
+      );
+      final mapa2 = Mapa(
+        referencias: [
+          Mapa_Referencia(escalada: 'Via 4', ids: ['pA']),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'pA', label: 'A'),
+        ]
+      );
+      
+      final setor = Setor(
+        nome: 'Setor D',
+        mapas: [mapa1, mapa2],
+      );
+      
+      // Via 4 com indiceMapaPadrao apontando pro mapa 1 (segundo mapa)
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()
+        ..nome = 'Via 4'
+        ..indiceMapaPadrao = 1
+      );
+      
+      final result = resolveRouteLabels(escalada, setor);
+      expect(result['resolvedLabel'], 'A'); // Deve preferir o label 'A' do mapa 2
+      expect(result['mapIndicator'], 'M2');
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
+import '../utils/dataset_resolver.dart';
 import 'navigation_functions.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
@@ -63,84 +64,30 @@ class PageListenableBuilder extends StatelessWidget {
         final pico = cragData['pico'] as Pico;
         final croqui = cragData['croqui'] as Croqui;
 
-        Setor? matchedSetor;
-        if (setorNome != null) {
-          try {
-            for (var sg in pico.setoresOuGrupos) {
-              if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-                if (sg.setor.conteudo.nome == setorNome) {
-                  matchedSetor = sg.setor.conteudo;
-                  break;
-                }
-              } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-                for (var s in sg.grupo.conteudo.setores) {
-                  if (s.hasConteudo() && s.conteudo.nome == setorNome) {
-                    matchedSetor = s.conteudo;
-                    break;
-                  }
-                }
-                if (matchedSetor != null) break;
-              }
+        try {
+          final res = DatasetResolver.resolve(
+            pico: pico,
+            grupoNome: grupoNome,
+            setorNome: setorNome,
+            escaladaNome: escaladaNome,
+          );
+
+          return builder(
+            context,
+            pico,
+            croqui,
+            res.setor,
+            res.grupo,
+            res.escalada,
+          );
+        } catch (_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted && AppNav.canGoBack(context)) {
+              AppNav.back(context);
             }
-            if (matchedSetor == null) throw Exception('Setor not found');
-          } catch (_) {
-            // Setor apagado ou renomeado
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted && AppNav.canGoBack(context)) {
-                AppNav.back(context);
-              }
-            });
-            return const Scaffold();
-          }
+          });
+          return const Scaffold();
         }
-
-        Grupo? matchedGrupo;
-        if (grupoNome != null) {
-          try {
-            matchedGrupo = pico.setoresOuGrupos
-                .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo())
-                .map((sg) => sg.grupo.conteudo)
-                .firstWhere((g) => g.nome == grupoNome);
-          } catch (_) {
-            // Grupo apagado ou renomeado
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted && AppNav.canGoBack(context)) {
-                AppNav.back(context);
-              }
-            });
-            return const Scaffold();
-          }
-        }
-
-        Escalada? matchedEscalada;
-        if (escaladaNome != null) {
-          try {
-            if (matchedSetor != null) {
-              matchedEscalada = matchedSetor.escaladas.firstWhere((e) {
-                if (e.hasViaEsportiva()) return e.viaEsportiva.nome == escaladaNome;
-                if (e.hasViaMovel()) return e.viaMovel.nome == escaladaNome;
-                if (e.hasBoulder()) return e.boulder.nome == escaladaNome;
-                if (e.hasViaMultiplasEnfiadas()) return e.viaMultiplasEnfiadas.nome == escaladaNome;
-                if (e.hasHighline()) return e.highline.nome == escaladaNome;
-                return false;
-              });
-            } else if (matchedGrupo != null) {
-              // Escaladas podem estar em grupos? Não, escaladas estão em setores, mas para garantir,
-              // normalmente iteramos se for o caso. Pela estrutura, Escalada fica em Setor.
-              // Vamos assumir que escalada requer setorNome.
-            }
-          } catch (_) {
-            // Via apagada ou renomeada
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted && AppNav.canGoBack(context)) {
-                AppNav.back(context);
-              }
-            });
-            return const Scaffold();
-          }
-        }
-
-        return builder(context, pico, croqui, matchedSetor, matchedGrupo, matchedEscalada);
       },
     );
   }
