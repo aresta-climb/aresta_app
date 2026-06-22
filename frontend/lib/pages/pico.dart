@@ -136,8 +136,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 context,
                 mapa: widget.returnToSetor!.mapas.first,
                 cragId: widget.cragId,
-                escaladas: widget.returnToSetor!.escaladas,
-                setores: const [],
                 setorContext: widget.returnToSetor,
               );
             }

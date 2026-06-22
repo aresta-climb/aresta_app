@@ -11,8 +11,6 @@ import '../services/firebase/telemetry_service.dart';
 class MapaThumbnail extends StatefulWidget {
   final Mapa mapa;
   final String cragId;
-  final List<Escalada> escaladas;
-  final List<ArquivoSetor> setores;
   final Setor? setorContext;
   final Grupo? grupoContext;
   final String? nomeContexto;
@@ -22,8 +20,6 @@ class MapaThumbnail extends StatefulWidget {
     super.key,
     required this.mapa,
     required this.cragId,
-    this.escaladas = const [],
-    this.setores = const [],
     this.setorContext,
     this.grupoContext,
     this.nomeContexto,
@@ -149,8 +145,6 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               context,
               mapa: widget.mapa,
               cragId: widget.cragId,
-              escaladas: widget.escaladas,
-              setores: widget.setores,
               setorContext: widget.setorContext,
               grupoContext: widget.grupoContext,
               imageProviderOverride: widget.imageProviderOverride,

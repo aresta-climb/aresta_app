@@ -1,6 +1,6 @@
 class NetworkConstants {
   /// Versão atual dos dados embutidos. Alterar isso forçará um hard update em aparelhos atualizados.
-  static const int kDataVersion = 1;
+  static const int kDataVersion = 2;
 
   /// URL base oficial onde os dados estão hospedados.
   static const String kBaseUrl = 'https://serving.arestaclimb.com';

@@ -121,7 +121,7 @@ Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, via.idNoMapa, via.idNoMapaMeio, via.idNoMapaFim),
+      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
       _buildHeader('Informações da Via Esportiva'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -173,7 +173,7 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, via.idNoMapa, via.idNoMapaMeio, via.idNoMapaFim),
+      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
       _buildHeader('Informações da Via Móvel'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -225,7 +225,7 @@ Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, Strin
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, via.idNoMapa, via.idNoMapaMeio, via.idNoMapaFim),
+      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
       _buildHeader('Informações do Boulder'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -273,7 +273,7 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, via.idNoMapa, via.idNoMapaMeio, via.idNoMapaFim),
+      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
       if (via.mapas.isNotEmpty) ...[
         _buildHeader('Mapas'),
         _buildMapas(via.mapas, cragId, via.enfiadas, setor),
@@ -366,7 +366,7 @@ Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, Str
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, via.idNoMapa, via.idNoMapaMeio, via.idNoMapaFim),
+      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
       _buildHeader('Informações do Highline'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -450,7 +450,7 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage, bool destaque, String idInicio, String idMeio, String idFim) {
+Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage, bool destaque) {
   List<Widget> badges = [];
 
   if (setor != null && setor.nome.isNotEmpty) {
@@ -460,58 +460,71 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
           if (fromSetorPage) {
             AppNav.back(context);
           } else {
-            AppNav.toSetor(context, setor: setor, scrollToEscalada: escalada);
+            TelemetryService.instance.logAcaoEscalada(cragId, setor.nome, getEscaladaNome(escalada), 'abrir_setor', 'detalhes_via');
+            AppNav.toSetor(context, setor: setor);
           }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: beastHide.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: beastHide.withValues(alpha: 0.3)),
+            color: fishBone.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: fishBone.withValues(alpha: 0.2)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_on_outlined, color: beastHide, size: 14),
+              Icon(Icons.location_on, size: 14, color: fishBone),
               const SizedBox(width: 4),
-              Text(setor.nome, style: TextStyle(color: fishBone, fontWeight: FontWeight.w600, fontSize: 12)),
+              Text(
+                setor.nome,
+                style: TextStyle(
+                  color: fishBone,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
-      )
+      ),
     );
   }
 
   if (destaque) {
     badges.add(
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.amber.withValues(alpha: 0.2),
+          color: Colors.amber.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.amber),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.star, color: Colors.amber, size: 16),
-            SizedBox(width: 4),
-            Text('Destaque Clássico', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+            Icon(Icons.star, size: 14, color: Colors.amber),
+            const SizedBox(width: 4),
+            Text(
+              'Destaque',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
-      )
+      ),
     );
   }
 
-  Widget buildIdChip(String label, String id, IconData icon) {
-    if (id.isEmpty) return const SizedBox.shrink();
-    
-    final localSetor = setor;
-    bool isClickable = localSetor != null && localSetor.mapas.isNotEmpty;
-    
+  // Verificar se há referência em algum mapa
+  bool hasMapInfo = setor?.mapas.isNotEmpty ?? false;
+
+  Widget buildMapChip(String label, Mapa targetMap, String id) {
     Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: nobleBlack,
         borderRadius: BorderRadius.circular(8),
@@ -520,49 +533,59 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: beastHide, size: 14),
+          Icon(Icons.play_arrow_rounded, color: beastHide, size: 14),
           const SizedBox(width: 4),
           Text(label, style: TextStyle(color: fishBone, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
     
-    if (isClickable) {
-      return GestureDetector(
-        onTap: () async {
-          Mapa? targetMap;
-          for (var m in localSetor.mapas) {
-             for (var p in m.pontosDeInteresse) {
-                if (p.id == id) { targetMap = m; break; }
-             }
-             if (targetMap != null) break;
-          }
-          targetMap ??= localSetor.mapas.first;
-          
-          TelemetryService.instance.logAcaoEscalada(cragId, localSetor.nome, getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
+    return GestureDetector(
+      onTap: () async {
+        TelemetryService.instance.logAcaoEscalada(cragId, setor!.nome, getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
 
-          if (fromMapaPage) {
-            AppNav.back(context);
-          } else {
-            AppNav.toMapaInterativo(
-              context,
-              mapa: targetMap,
-              cragId: cragId,
-              escaladas: localSetor.escaladas,
-              setores: const [],
-              initialSelectedId: id,
-              setorContext: localSetor,
-            );
-          }
-        },
-        child: chip,
-      );
-    }
-    
-    return chip;
+        if (fromMapaPage) {
+          AppNav.back(context);
+        } else {
+          AppNav.toMapaInterativo(
+            context,
+            mapa: targetMap,
+            cragId: cragId,
+            initialSelectedId: id.isNotEmpty ? id : null,
+            setorContext: setor,
+          );
+        }
+      },
+      child: chip,
+    );
   }
 
-  if (idInicio.isNotEmpty) badges.add(buildIdChip('Ver no mapa', idInicio, Icons.play_arrow_rounded));
+  if (hasMapInfo) {
+    String nomeVia = getEscaladaNome(escalada);
+    List<Map<String, dynamic>> foundMaps = [];
+    
+    for (int i = 0; i < setor!.mapas.length; i++) {
+       final mapa = setor!.mapas[i];
+       for (final ref in mapa.referencias) {
+          if (ref.escalada == nomeVia) {
+             foundMaps.add({
+                'mapa': mapa,
+                'index': i,
+                'id': ref.ids.isNotEmpty ? ref.ids.first : ''
+             });
+             break;
+          }
+       }
+    }
+
+    if (foundMaps.length == 1) {
+      badges.add(buildMapChip('Ver no mapa', foundMaps.first['mapa'], foundMaps.first['id']));
+    } else if (foundMaps.length > 1) {
+      for (final fm in foundMaps) {
+        badges.add(buildMapChip('Ver no mapa ${fm['index'] + 1}', fm['mapa'], fm['id']));
+      }
+    }
+  }
 
   if (badges.isEmpty) return const SizedBox.shrink();
 
@@ -592,7 +615,7 @@ Widget _buildMapas(List<Mapa> mapas, String cragId, List<Escalada> escaladasDaVi
               child: MapaThumbnail(
                 mapa: mapa,
                 cragId: cragId,
-                escaladas: escaladasDaVia,
+                
                 setorContext: setorContext,
               ),
             ),

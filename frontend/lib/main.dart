@@ -542,10 +542,9 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             );
 
             return MapaInterativoPage(
+              pico: pico,
               mapa: result.mapa,
               cragId: cragId,
-              escaladas: result.escaladas,
-              setores: result.setores,
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
             );

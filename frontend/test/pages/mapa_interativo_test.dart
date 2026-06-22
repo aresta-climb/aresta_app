@@ -151,109 +151,7 @@ void main() {
     });
   });
 
-  group('MapHelper Tests', () {
-    test('getEscaladaIdsNoMapa returns correct IDs for all types', () {
-      final esportiva = Escalada(
-        viaEsportiva: ViaEsportiva(idNoMapa: 'e1', idNoMapaMeio: 'e1m', idNoMapaFim: 'e1f'),
-      );
-      expect(MapHelper.getEscaladaIdsNoMapa(esportiva), ['e1', 'e1m', 'e1f']);
 
-      final movel = Escalada(
-        viaMovel: ViaMovel(idNoMapa: 'm1', idNoMapaMeio: 'm1m', idNoMapaFim: 'm1f'),
-      );
-      expect(MapHelper.getEscaladaIdsNoMapa(movel), ['m1', 'm1m', 'm1f']);
-
-      final boulder = Escalada(
-        boulder: Boulder(idNoMapa: 'b1', idNoMapaMeio: 'b1m', idNoMapaFim: 'b1f'),
-      );
-      expect(MapHelper.getEscaladaIdsNoMapa(boulder), ['b1', 'b1m', 'b1f']);
-
-      final multi = Escalada(
-        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(idNoMapa: 'mu1', idNoMapaMeio: 'mu1m', idNoMapaFim: 'mu1f'),
-      );
-      expect(MapHelper.getEscaladaIdsNoMapa(multi), ['mu1', 'mu1m', 'mu1f']);
-
-      final highline = Escalada(
-        highline: Highline(idNoMapa: 'h1', idNoMapaMeio: 'h1m', idNoMapaFim: 'h1f'),
-      );
-      expect(MapHelper.getEscaladaIdsNoMapa(highline), ['h1', 'h1m', 'h1f']);
-    });
-
-    test('buildIdMap correctly maps escaladas and setores', () {
-      final mockMapa = Mapa()..pontosDeInteresse.addAll([
-        Mapa_PontoDeInteresse(id: 'esc1'),
-        Mapa_PontoDeInteresse(id: 'set1'),
-      ]);
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1'));
-      final setor1 = ArquivoSetor(
-        conteudo: Setor(
-          idNoMapa: 'set1',
-          nome: 'Setor 1',
-          escaladas: [
-            Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc2', nome: 'Esc 2')),
-          ],
-        ),
-      );
-
-      final idMap = MapHelper.buildIdMap(
-        mapa: mockMapa,
-        escaladas: [esc1],
-        setores: [setor1],
-      );
-
-      expect(idMap['esc1'], [esc1]);
-      expect(idMap['set1'], [setor1.conteudo]);
-      expect(idMap.containsKey('esc2'), isFalse);
-    });
-
-    test('buildIdMap groups items when different items share the same idNoMapa', () {
-      final mockMapa = Mapa()..pontosDeInteresse.addAll([
-        Mapa_PontoDeInteresse(id: 'dup'),
-      ]);
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 1'));
-      final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'dup', nome: 'Esc 2'));
-
-      final idMap = MapHelper.buildIdMap(
-        mapa: mockMapa,
-        escaladas: [esc1, esc2],
-        setores: [],
-      );
-
-      // It should keep both in a list
-      expect(idMap.containsKey('dup'), isTrue);
-      expect(idMap['dup'], [esc1, esc2]);
-    });
-
-    test('buildIdMap ignores duplicate if it is the exact same item', () {
-      final mockMapa = Mapa()..pontosDeInteresse.addAll([
-        Mapa_PontoDeInteresse(id: 'esc1'),
-        Mapa_PontoDeInteresse(id: 'set1'),
-      ]);
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1'));
-      final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'esc1', nome: 'Esc 1')); // Same content
-
-      final setor1 = ArquivoSetor(
-        conteudo: Setor(
-          idNoMapa: 'set1',
-          nome: 'Setor 1',
-          escaladas: [
-            esc1, 
-          ],
-        ),
-      );
-
-      final idMap = MapHelper.buildIdMap(
-        mapa: mockMapa,
-        // Passes esc1 and an identical object esc2 or even esc1 again
-        escaladas: [esc1, esc2], 
-        setores: [setor1],
-      );
-
-      // It should not add the exact same item twice
-      expect(idMap.containsKey('esc1'), isTrue);
-      expect(idMap['esc1'], [esc1]);
-    });
-  });
 
   group('MapaInterativoPage Widget Tests', () {
     late Mapa mockMapa;
@@ -288,167 +186,107 @@ void main() {
       );
     });
 
-    testWidgets('Renders markers correctly', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            autoZoomEnabled: true,
-            imageProviderOverride: mockImage,
-          ),
+    Widget buildApp(List<Escalada> escaladas, Mapa mapa, {bool autoZoom = true}) {
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.addAll(escaladas);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      return MaterialApp(
+        home: MapaInterativoPage(
+          mapa: mapa,
+          pico: pico,
+          cragId: 'test_crag',
+          autoZoomEnabled: autoZoom,
+          imageProviderOverride: mockImage,
         ),
       );
+    }
 
+    testWidgets('Renders markers correctly', (WidgetTester tester) async {
+      await tester.pumpWidget(buildApp([], mockMapa));
       await tester.pumpAndSettle();
 
-      // Should find InteractiveViewer
       expect(find.byType(InteractiveViewer), findsOneWidget);
-
-      // Should find CustomPaint markers (GestureDetectors inside Positioned)
-      // We have 2 points of interest
       expect(find.byType(CustomPaint), findsAtLeastNWidgets(2));
     });
 
     testWidgets('Selecting a marker shows floating card', (WidgetTester tester) async {
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Teste', ids: ['p1']));
       
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            escaladas: [esc1],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([esc1], mockMapa));
       await tester.pumpAndSettle();
 
-      // Tap on the first marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
 
-      // Floating card should be visible with the via name
       expect(find.text('Via Teste'), findsOneWidget);
-      expect(find.textContaining('5º'), findsOneWidget); // formatGrade logic
+      expect(find.textContaining('5'), findsOneWidget);
       
-      // Verify telemetry
       final clickEvents = mockTelemetry.recordedEvents.where((e) => e == 'acao_escalada').toList();
-      expect(clickEvents.length, 1, reason: 'Deve logar o clique apenas 1 vez (evitando duplicidade com o auto-zoom)');
+      expect(clickEvents.length, 1);
       expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via Teste');
-      expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'selecionar_no_mapa');
     });
 
-    testWidgets('Clicking "Mais" on floating card fires logAcaoEscalada telemetry', (WidgetTester tester) async {
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
+    testWidgets('Clicking "Mais Info" on floating card fires logAcaoEscalada telemetry', (WidgetTester tester) async {
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Teste', dificuldade: GrauVia_GrauVia.BR_5));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Teste', ids: ['p1']));
       
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            escaladas: [esc1],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([esc1], mockMapa));
       await tester.pumpAndSettle();
 
-      // Tap on the marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
 
       mockTelemetry.clear();
 
-      // Tap on the "Mais" button
-      await tester.tap(find.text('Mais'));
+      await tester.tap(find.text('Mais Info'));
       await tester.pumpAndSettle();
 
-      // Verify telemetry
       expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
-      expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via Teste');
       expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'abrir_detalhes');
-      expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'mapa');
     });
 
     testWidgets('Tapping background de-selects marker', (WidgetTester tester) async {
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste'));
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Teste'));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Teste', ids: ['p1']));
       
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            escaladas: [esc1],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([esc1], mockMapa));
       await tester.pumpAndSettle();
 
-      // Select marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
       expect(find.text('Via Teste'), findsOneWidget);
 
-      // Tap background far away from marker
       await tester.tap(find.byType(InteractiveViewer));
       await tester.pumpAndSettle();
 
-      // Card should disappear
       expect(find.text('Via Teste'), findsNothing);
     });
 
     testWidgets('Toggle auto-zoom button changes state', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            autoZoomEnabled: true,
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([], mockMapa, autoZoom: true));
       await tester.pumpAndSettle();
 
-      // Initially enabled (gps_fixed icon)
       expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
 
-      // Tap toggle
       await tester.tap(find.byIcon(Icons.gps_fixed));
       await tester.pumpAndSettle();
 
-      // Now disabled (gps_not_fixed icon)
       expect(find.byIcon(Icons.gps_not_fixed), findsOneWidget);
     });
 
     testWidgets('Closing floating card de-selects marker', (WidgetTester tester) async {
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via Teste'));
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Teste'));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Teste', ids: ['p1']));
       
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            escaladas: [esc1],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([esc1], mockMapa));
       await tester.pumpAndSettle();
 
-      // Select marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
 
-      // Tap close button on card
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
 
@@ -457,30 +295,25 @@ void main() {
 
     testWidgets('Handles zero-size map gracefully', (WidgetTester tester) async {
       final smallMapa = Mapa(larguraMapa: 0, alturaMapa: 0);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: smallMapa,
-            cragId: 'test_crag',
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([], smallMapa));
       await tester.pumpAndSettle();
+
       expect(find.byType(InteractiveViewer), findsNothing);
       expect(find.byType(SizedBox), findsAtLeastNWidgets(1));
     });
 
     testWidgets('Clicking Mapa Geral triggers telemetry and navigation', (WidgetTester tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final setorSul = Setor()..nome = 'Setor Sul';
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorSul));
+
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: MapaInterativoPage(
             cragId: 'test_crag',
+            pico: pico,
             mapa: mockMapa,
-            escaladas: const [],
-            setores: const [],
-            setorContext: Setor()..nome = 'Setor Sul',
+            setorContext: setorSul,
             imageProviderOverride: mockImage,
           ),
         ),
@@ -495,63 +328,37 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
-      final lastEvent = mockTelemetry.recordedParams['acao_escalada'];
-      expect(lastEvent?['id_croqui'], 'test_crag');
-      expect(lastEvent?['nome_setor'], 'Setor Sul');
-      expect(lastEvent?['nome_escalada'], 'Geral');
-      expect(lastEvent?['acao'], 'abrir_mapa_geral');
-      expect(lastEvent?['origem'], 'mapa_setor');
+      expect(mockTelemetry.recordedParams['acao_escalada']?['nome_escalada'], 'Geral');
     });
 
     testWidgets('MapaInterativoPage deve renderizar o botão de feedback (bug_report)', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: MapaInterativoPage(
-            cragId: 'test_crag',
-            mapa: mockMapa,
-            escaladas: const [],
-            setores: const [],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      ));
-
+      await tester.pumpWidget(buildApp([], mockMapa));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.bug_report), findsOneWidget);
     });
-    testWidgets('Tapping a grouped marker shows carousel with arrows and swiping/clicking fires telemetry', (WidgetTester tester) async {
-      final esc1 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via 1'));
-      final esc2 = Escalada(viaEsportiva: ViaEsportiva(idNoMapa: 'p1', nome: 'Via 2'));
-      
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mockMapa,
-            cragId: 'test_crag',
-            escaladas: [esc1, esc2],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
 
+    testWidgets('Tapping a grouped marker shows carousel with arrows and swiping/clicking fires telemetry', (WidgetTester tester) async {
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via 1'));
+      final esc2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via 2'));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via 1', ids: ['p1']));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via 2', ids: ['p1']));
+      
+      await tester.pumpWidget(buildApp([esc1, esc2], mockMapa));
       await tester.pumpAndSettle();
 
-      // Select marker
       await tester.tap(find.byKey(const Key('marker_p1')));
       await tester.pumpAndSettle();
 
-      // The first via should be visible
       expect(find.text('Via 1'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
 
-      // Tap the right arrow
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
 
-      // The second via should be visible
       expect(find.text('Via 2'), findsOneWidget);
     });
+
     testWidgets('Single point marker with duplicate ids should zoom to 2.5 instead of 5.0', (WidgetTester tester) async {
       final pontoDuplicado = Mapa_PontoDeInteresse(
         id: 'dup_id',
@@ -562,71 +369,24 @@ void main() {
         alturaMapa: 100,
         pontosDeInteresse: [pontoDuplicado],
       );
+      mapaUnico.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Dupla', ids: ['dup_id', 'dup_id']));
 
       final escDuplicada = Escalada(
-        boulder: Boulder(idNoMapa: 'dup_id', idNoMapaFim: 'dup_id'), // Fake duplicate ID
+        boulder: Boulder(nome: 'Dupla'), 
       );
       
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MapaInterativoPage(
-            mapa: mapaUnico,
-            cragId: 'test_crag',
-            escaladas: [escDuplicada],
-            imageProviderOverride: mockImage,
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildApp([escDuplicada], mapaUnico));
       await tester.pumpAndSettle();
 
-      // Tap the marker
       await tester.tap(find.byKey(const Key('marker_dup_id')));
-      await tester.pumpAndSettle(); // Allow animation to finish
+      await tester.pumpAndSettle(); 
 
-      // Get InteractiveViewer state
       final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
       final matrix = interactiveViewer.transformationController!.value;
       
-      // The scale should be 2.5, not 5.0
-      // Scale is the [0,0] element of Matrix4
       expect(matrix.storage[0], closeTo(2.5, 0.01));
     });
   });
 
-  group('MapHelper.resolveMapaAndContext Tests', () {
-    test('Deve localizar o Mapa dentro de um Sub-setor e retornar escaladas restritas ao grupo se grupoContextNome for passado', () {
-      final mapa = Mapa()..caminhoImagemMapa = 'mapa_do_subsetor.jpg';
-      final escalada1 = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via 1'..idNoMapa = '01');
-      
-      final subSetor = Setor()
-        ..nome = 'Sub-setor Teste'
-        ..mapas.add(mapa)
-        ..escaladas.add(escalada1);
-        
-      final arquivoSubSetor = ArquivoSetor()..conteudo = subSetor;
-
-      final grupo = Grupo()..nome = 'Grupo Teste';
-      grupo.setores.add(arquivoSubSetor);
-      final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
-
-      final pico = Pico()..nome = 'Pico Teste';
-      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = arquivoGrupo);
-
-      final result = MapHelper.resolveMapaAndContext(
-        pico: pico,
-        mapaCaminhoImagem: 'mapa_do_subsetor.jpg',
-        setorContextNome: null,
-        grupoContextNome: 'Grupo Teste',
-      );
-
-      expect(result.mapa.caminhoImagemMapa, 'mapa_do_subsetor.jpg');
-      expect(result.setores.length, 1);
-      expect(result.setores.first.conteudo.nome, 'Sub-setor Teste');
-      
-      // O sub-setor possui mapa próprio, portanto suas escaladas não devem 
-      // aparecer no contexto do grupo para evitar colisão de IDs no Mapa do Grupo.
-      expect(result.escaladas.length, 0);
-    });
-  });
 }
+

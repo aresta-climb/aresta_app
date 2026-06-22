@@ -74,9 +74,7 @@ void main() {
     // 5. Verify the injected properties
     final MapaInterativoPage page = tester.widget(mapaInterativoFinder);
     
-    // As it was navigated WITH a setorContextNome, `setores` MUST be empty
-    // to prevent cross-sector id collisions.
-    expect(page.setores, isEmpty);
+    // As it was navigated WITH a setorContextNome, `setorContext` MUST be injected.
     expect(page.setorContext?.nome, 'Setor 1');
   });
 
@@ -142,10 +140,7 @@ void main() {
     final MapaInterativoPage page = tester.widget(mapaInterativoFinder);
     
     // As it was navigated WITHOUT a setorContextNome (i.e. Mapa Geral), 
-    // `setores` MUST contain all sectors of the Pico.
-    expect(page.setores.length, 2);
-    expect(page.setores[0].conteudo.nome, 'Setor 1');
-    expect(page.setores[1].conteudo.nome, 'Setor 2');
+    // `setorContext` MUST be null.
     expect(page.setorContext, isNull);
   });
 }

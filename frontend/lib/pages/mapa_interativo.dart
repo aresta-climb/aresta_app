@@ -11,6 +11,7 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/offline_markdown.dart';
 import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
+import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
@@ -29,10 +30,9 @@ import '../navigation/navigation_functions.dart';
 ///   "Ver no mapa" continue funcionando e inteligentemente executa um `Navigator.pop` caso a via clicada
 ///   seja a mesma que abriu o mapa, prevenindo um loop infinito na pilha de telas.
 class MapaInterativoPage extends StatefulWidget {
+  final Pico pico;
   final Mapa mapa;
   final String cragId;
-  final List<Escalada> escaladas;
-  final List<ArquivoSetor> setores;
   final bool autoZoomEnabled;
   final ImageProvider? imageProviderOverride;
   final String? initialSelectedId;
@@ -40,10 +40,9 @@ class MapaInterativoPage extends StatefulWidget {
 
   const MapaInterativoPage({
     super.key,
+    required this.pico,
     required this.mapa,
     required this.cragId,
-    this.escaladas = const [],
-    this.setores = const [],
     this.autoZoomEnabled = true,
     this.imageProviderOverride,
     this.initialSelectedId,
@@ -61,7 +60,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   late AnimationController _animationController;
   Animation<Matrix4>? _zoomAnimation;
 
-  final Map<String, List<dynamic>> _idMap = {};
+  final Map<String, List<Mapa_Referencia>> _poiToRefs = {};
+  final Map<Mapa_Referencia, ResolvedDataset> _refToResolved = {};
   Future<ImageProvider?>? _imageProviderFuture;
   late bool _autoZoomEnabled;
   bool _initialZoom = false;
@@ -83,13 +83,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       }
     });
 
-    _idMap.addAll(
-      MapHelper.buildIdMap(
-        mapa: widget.mapa,
-        escaladas: widget.escaladas,
-        setores: widget.setores,
-      ),
-    );
+    _buildReferenceMaps();
     
     if (widget.initialSelectedId != null) {
       _selectedId = widget.initialSelectedId;
@@ -101,15 +95,56 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         : _resolveImageProvider();
   }
 
+  void _buildReferenceMaps() {
+    _poiToRefs.clear();
+    _refToResolved.clear();
+
+    String? defaultSetorNome = widget.setorContext?.nome;
+    String? defaultGrupoNome;
+    
+    if (defaultSetorNome != null) {
+      for (var sg in widget.pico.setoresOuGrupos) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+          bool hasSetor = sg.grupo.conteudo.setores.any((s) => s.hasConteudo() && s.conteudo.nome == defaultSetorNome);
+          if (hasSetor) {
+            defaultGrupoNome = sg.grupo.conteudo.nome;
+            break;
+          }
+        }
+      }
+    }
+
+    for (var ref in widget.mapa.referencias) {
+      try {
+        final resolved = DatasetResolver.resolveReferencia(
+          pico: widget.pico,
+          referencia: ref,
+          defaultGrupoNome: defaultGrupoNome,
+          defaultSetorNome: defaultSetorNome,
+        );
+        
+        _refToResolved[ref] = resolved;
+        
+        for (var id in ref.ids) {
+          if (id.isNotEmpty) {
+            _poiToRefs.putIfAbsent(id, () => []).add(ref);
+          }
+        }
+      } catch (e) {
+        AppLogger.instance.logError('Unresolved reference in map: $e');
+      }
+    }
+  }
+
   void _updateFeedbackNode() {
     if (_selectedId == null) {
       FeedbackMetadataCollector.globalActiveNodeOverride = null;
     } else {
-      final items = _idMap[_selectedId];
-      final item = items != null && items.isNotEmpty ? items.first : null;
-      final viaName = item != null ? getEscaladaNome(item) : _selectedId;
+      final refs = _poiToRefs[_selectedId];
+      final ref = refs != null && refs.isNotEmpty ? refs.first : null;
+      final viaName = ref?.nome ?? _selectedId;
       final fileName = widget.mapa.caminhoImagemMapa.split('/').last;
-      FeedbackMetadataCollector.globalActiveNodeOverride = 'MapaInterativoNode($fileName, Via: $viaName)';
+      FeedbackMetadataCollector.globalActiveNodeOverride = 'MapaInterativoNode($fileName, Ref: $viaName)';
     }
   }
 
@@ -195,16 +230,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     super.dispose();
   }
 
-  List<Mapa_PontoDeInteresse> _getPontosForItem(dynamic item) {
-    if (item == null) return [];
-    
-    List<String> ids = [];
-    if (item is Escalada) {
-      ids = MapHelper.getEscaladaIdsNoMapa(item);
-    } else if (item is Setor) {
-      ids = [item.idNoMapa];
-    }
-    
+  List<Mapa_PontoDeInteresse> _getPontosForRef(Mapa_Referencia? ref) {
+    if (ref == null) return [];
+    final ids = ref.ids.where((id) => id.isNotEmpty).toList();
     return widget.mapa.pontosDeInteresse.where((p) => ids.contains(p.id)).toList();
   }
 
@@ -220,22 +248,23 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       _updateFeedbackNode();
     });
 
-    final items = _idMap[marker.id];
-    if (items != null && items.isNotEmpty) {
-      final item = items.first;
-      if (isUserInteraction && item is Escalada) {
+    final refs = _poiToRefs[marker.id];
+    if (refs != null && refs.isNotEmpty) {
+      final ref = refs.first;
+      final resolved = _refToResolved[ref];
+      if (isUserInteraction && resolved?.escalada != null) {
         TelemetryService.instance.logAcaoEscalada(
           widget.cragId,
           widget.setorContext?.nome ?? 'Geral',
-          getEscaladaNome(item),
+          getEscaladaNome(resolved!.escalada!),
           'selecionar_no_mapa',
           'mapa'
         );
       }
 
       if (_autoZoomEnabled) {
-        final pontos = _getPontosForItem(item);
-        _zoomToPoints(pontos, Size(constraints.maxWidth, constraints.maxHeight), viewportSize, contextItem: item);
+        final pontos = _getPontosForRef(ref);
+        _zoomToPoints(pontos, Size(constraints.maxWidth, constraints.maxHeight), viewportSize, ref: ref);
       }
     }
   }
@@ -244,7 +273,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     List<Mapa_PontoDeInteresse> pontos,
     Size childSize,
     Size viewportSize, {
-    dynamic contextItem,
+    Mapa_Referencia? ref,
   }) {
     if (pontos.isEmpty) return;
 
@@ -280,8 +309,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     bool hasInicioEFim = false;
     if (pontos.length > 1) {
-      if (contextItem is Escalada) {
-        final ids = MapHelper.getEscaladaIdsNoMapa(contextItem);
+      if (ref != null) {
+        final ids = ref.ids;
         bool hasInicio = ids.isNotEmpty && ids[0].isNotEmpty;
         bool hasFim = ids.length > 2 && ids[2].isNotEmpty;
         hasInicioEFim = hasInicio && hasFim;
@@ -316,8 +345,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     // Centro visual do mapa padrão é 35% do topo (área livre acima do card)
     double visualCenterY = viewportSize.height * 0.35;
 
-    if (pontos.length == 1 && contextItem is Escalada) {
-      final ids = MapHelper.getEscaladaIdsNoMapa(contextItem);
+    if (pontos.length == 1 && ref != null && _refToResolved[ref]?.escalada != null) {
+      final ids = ref.ids;
       bool hasInicio = ids.isNotEmpty && ids[0].isNotEmpty;
       bool hasMeio = ids.length > 1 && ids[1].isNotEmpty;
       bool hasFim = ids.length > 2 && ids[2].isNotEmpty;
@@ -375,17 +404,17 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       final relWidth = (maxX - minX) / widget.mapa.larguraMapa;
       final relHeight = (maxY - minY) / widget.mapa.alturaMapa;
 
+      // POIs that don't have references shouldn't be drawn at all, per phase 4.5.
+      if (!_poiToRefs.containsKey(ponto.id)) {
+        return const SizedBox.shrink();
+      }
+
       bool isSelected = false;
       if (_selectedId != null) {
-        final items = _idMap[_selectedId!];
-        if (items != null && items.isNotEmpty && _focusedItemIndex < items.length) {
-          final focusedItem = items[_focusedItemIndex];
-          if (focusedItem is Escalada) {
-            final ids = MapHelper.getEscaladaIdsNoMapa(focusedItem);
-            isSelected = ids.contains(ponto.id);
-          } else if (focusedItem is Setor) {
-            isSelected = focusedItem.idNoMapa == ponto.id;
-          }
+        final refs = _poiToRefs[_selectedId!];
+        if (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length) {
+          final focusedRef = refs[_focusedItemIndex];
+          isSelected = focusedRef.ids.contains(ponto.id);
         }
       }
 
@@ -417,37 +446,23 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }).toList();
   }
 
-  Widget _buildCardContentForItem(dynamic item) {
-    String title = '';
-    Widget? subtitleWidget;
-    VoidCallback? onTap;
-    List<Widget> extraInfo = [];
 
-    Widget buildCardInfo(String label, String value) {
-      if (value.isEmpty) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: '$label: ',
-                style: TextStyle(
-                  color: beastHide,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-              TextSpan(
-                text: value,
-                style: TextStyle(color: fishBone, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      );
+  Widget _buildCardContentForResolved(Mapa_Referencia ref, ResolvedDataset resolved) {
+    if (resolved.escalada != null) {
+      return _buildEscaladaCard(ref, resolved.escalada!);
+    } else if (resolved.setor != null) {
+      return _buildSetorCard(ref, resolved.setor!);
+    } else if (resolved.grupo != null) {
+      return _buildGrupoCard(ref, resolved.grupo!);
+    } else {
+      return const SizedBox.shrink();
     }
+  }
 
+  Widget _buildEscaladaCard(Mapa_Referencia ref, Escalada escalada) {
+    String title = '';
+    String subtitle = '';
+    
     String formatGrade(dynamic dificuldade) {
       String g = dificuldade.name
           .replaceAll('BR_', '')
@@ -455,7 +470,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           .replaceAll('_', ' ')
           .toLowerCase();
 
-      return g.replaceAllMapped(RegExp(r'\b([1-6])(sup)?\b'), (match) {
+      return g.replaceAllMapped(RegExp(r'([1-6])(sup)?'), (match) {
         if (match.group(2) == 'sup') {
           return '${match.group(1)}ºsup';
         } else {
@@ -464,129 +479,64 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       });
     }
 
-    if (item is Escalada) {
-      switch (item.whichTipo()) {
-        case Escalada_Tipo.viaEsportiva:
-          final v = item.viaEsportiva;
-          title = v.nome;
-          String sub = 'Esportiva | ${formatGrade(v.dificuldade)}';
-          if (v.quantidadeProtecoesIntermediarias > 0 ||
-              v.quantidadeProtecoesParada > 0) {
-            String protecoes = '${v.quantidadeProtecoesIntermediarias}';
-            if (v.quantidadeProtecoesParada > 0) {
-              protecoes += '+${v.quantidadeProtecoesParada}';
-            }
-            sub += ' | $protecoes';
-          }
-          subtitleWidget = Text(
-            sub,
-            style: TextStyle(
-              color: fishBone.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          );
-          extraInfo.add(buildCardInfo('Ancoragem', v.tipoAncoragem));
-          if (v.descricao.isNotEmpty) {
-            extraInfo.add(const SizedBox(height: 8));
-            extraInfo.add(
-              OfflineMarkdown(data: v.descricao, cragId: widget.cragId),
-            );
-          }
-          break;
-        case Escalada_Tipo.viaMovel:
-          final v = item.viaMovel;
-          title = v.nome;
-          subtitleWidget = RichText(
-            text: TextSpan(
-              style: TextStyle(
-                color: fishBone.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-              children: [
-                const TextSpan(text: 'Móvel | '),
-                TextSpan(text: formatGrade(v.dificuldade)),
-                const TextSpan(text: ' | '),
-                const TextSpan(
-                  text: 'Móvel',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          );
-          extraInfo.add(buildCardInfo('Ancoragem', v.tipoAncoragem));
-          extraInfo.add(buildCardInfo('Peças', v.protecoesMoveis));
-          if (v.descricao.isNotEmpty) {
-            extraInfo.add(const SizedBox(height: 8));
-            extraInfo.add(
-              OfflineMarkdown(data: v.descricao, cragId: widget.cragId),
-            );
-          }
-          break;
-        case Escalada_Tipo.boulder:
-          final v = item.boulder;
-          title = v.nome;
-          subtitleWidget = Text(
-            'Boulder | ${formatGrade(v.dificuldade)}',
-            style: TextStyle(
-              color: fishBone.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          );
-          if (v.descricao.isNotEmpty) {
-            extraInfo.add(const SizedBox(height: 8));
-            extraInfo.add(
-              OfflineMarkdown(data: v.descricao, cragId: widget.cragId),
-            );
-          }
-          break;
-        case Escalada_Tipo.viaMultiplasEnfiadas:
-          final v = item.viaMultiplasEnfiadas;
-          title = v.nome;
-          subtitleWidget = Text(
-            'Múltiplas Enfiadas | ${v.numeroEnfiadas} enfiadas | ${v.comprimentoTotal}m',
-            style: TextStyle(
-              color: fishBone.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          );
-          if (v.descricao.isNotEmpty) {
-            extraInfo.add(const SizedBox(height: 8));
-            extraInfo.add(
-              OfflineMarkdown(data: v.descricao, cragId: widget.cragId),
-            );
-          }
-          break;
-        case Escalada_Tipo.highline:
-          final v = item.highline;
-          title = v.nome;
-          subtitleWidget = Text(
-            'Highline | ${v.distancia}m',
-            style: TextStyle(
-              color: fishBone.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          );
-          if (v.descricao.isNotEmpty) {
-            extraInfo.add(const SizedBox(height: 8));
-            extraInfo.add(
-              OfflineMarkdown(data: v.descricao, cragId: widget.cragId),
-            );
-          }
-          break;
-        case Escalada_Tipo.notSet:
-          break;
-      }
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        title = escalada.viaEsportiva.nome;
+        subtitle = 'Esportiva | ${formatGrade(escalada.viaEsportiva.dificuldade)}';
+        break;
+      case Escalada_Tipo.viaMovel:
+        title = escalada.viaMovel.nome;
+        subtitle = 'Móvel | ${formatGrade(escalada.viaMovel.dificuldade)}';
+        break;
+      case Escalada_Tipo.boulder:
+        title = escalada.boulder.nome;
+        subtitle = 'Boulder | ${formatGrade(escalada.boulder.dificuldade)}';
+        break;
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        title = escalada.viaMultiplasEnfiadas.nome;
+        subtitle = 'Múltiplas Enfiadas | ${escalada.viaMultiplasEnfiadas.numeroEnfiadas} enfiadas';
+        break;
+      case Escalada_Tipo.highline:
+        title = escalada.highline.nome;
+        subtitle = 'Highline | ${escalada.highline.distancia}m';
+        break;
+      default:
+        break;
+    }
 
-      onTap = () {
-        bool isOriginal = false;
-        if (widget.initialSelectedId != null) {
-          final ids = MapHelper.getEscaladaIdsNoMapa(item);
-          if (ids.contains(widget.initialSelectedId)) {
-            isOriginal = true;
+    String getLabelsForRef(Mapa_Referencia ref) {
+      if (ref.ids.isEmpty) return ref.nome;
+      List<String> labels = [];
+      for (var id in ref.ids) {
+        for (var p in widget.mapa.pontosDeInteresse) {
+          if (p.id == id) {
+            if (p.label.isNotEmpty) {
+              labels.add(p.label);
+            } else {
+              labels.add(id);
+            }
+            break;
           }
+        }
+      }
+      return labels.isNotEmpty ? labels.join('-') : ref.nome;
+    }
+
+    return _buildBaseCard(
+      title: title,
+      subtitle: subtitle,
+      resolvedLabel: getLabelsForRef(ref),
+      onClose: () {
+        setState(() {
+          _selectedId = null;
+          _updateFeedbackNode();
+        });
+      },
+      actionLabel: 'Mais Info',
+      onAction: () {
+        bool isOriginal = false;
+        if (widget.initialSelectedId != null && ref.ids.contains(widget.initialSelectedId)) {
+          isOriginal = true;
         }
 
         if (isOriginal) {
@@ -599,37 +549,90 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             'abrir_detalhes',
             'mapa'
           );
-          AppNav.toVia(context, escalada: item, setor: widget.setorContext);
+          AppNav.toVia(context, escalada: escalada, setor: widget.setorContext);
         }
-      };
-    } else if (item is Setor) {
-      title = item.nome;
-      subtitleWidget = Text(
-        'Setor',
-        style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 14),
-      );
-      onTap = () => AppNav.toSetor(context, setor: item);
-    }
+      },
+    );
+  }
 
-    String resolvedLabel = '';
-    if (item is Escalada) {
-      List<String> rawIds = MapHelper.getEscaladaIdsNoMapa(item);
-      rawIds.removeWhere((id) => id.isEmpty);
-      
-      if (rawIds.isNotEmpty) {
-        final pointsMap = {for (var p in widget.mapa.pontosDeInteresse) p.id: p.label};
-        List<String> labels = [];
-        for (var id in rawIds) {
-          if (pointsMap.containsKey(id)) {
-            labels.add(pointsMap[id]!.isNotEmpty ? pointsMap[id]! : id);
-          }
+  Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
+    return _buildBaseCard(
+      title: setor.nome,
+      subtitle: 'Setor',
+      resolvedLabel: ref.nome,
+      onClose: () {
+        setState(() {
+          _selectedId = null;
+          _updateFeedbackNode();
+        });
+      },
+      actionLabel: 'Ir para Setor',
+      onAction: () => AppNav.toSetor(context, setor: setor),
+      secondaryActionLabel: setor.mapas.isNotEmpty ? 'Ver Mapa do Setor' : null,
+      onSecondaryAction: setor.mapas.isNotEmpty ? () {
+        int indiceMapa = 0;
+        if (ref.hasIndiceMapaAlvo()) {
+          indiceMapa = ref.indiceMapaAlvo;
+        } else if (setor.hasIndiceMapaPadrao()) {
+          indiceMapa = setor.indiceMapaPadrao;
         }
-        if (labels.isNotEmpty) {
-          resolvedLabel = labels.join('-');
-        }
-      }
-    }
+        if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) indiceMapa = 0;
+        
+        AppNav.toMapaInterativo(
+          context,
+          mapa: setor.mapas[indiceMapa],
+          cragId: widget.cragId,
+          setorContext: setor,
+        );
+      } : null,
+    );
+  }
 
+  Widget _buildGrupoCard(Mapa_Referencia ref, Grupo grupo) {
+    return _buildBaseCard(
+      title: grupo.nome,
+      subtitle: 'Grupo',
+      resolvedLabel: ref.nome,
+      onClose: () {
+        setState(() {
+          _selectedId = null;
+          _updateFeedbackNode();
+        });
+      },
+      actionLabel: 'Ir para Grupo',
+      onAction: () {
+        // AppNav to group not fully supported yet in standard UI, just pop back
+        AppNav.back(context); 
+      },
+      secondaryActionLabel: grupo.mapas.isNotEmpty ? 'Ver Mapa do Grupo' : null,
+      onSecondaryAction: grupo.mapas.isNotEmpty ? () {
+        int indiceMapa = 0;
+        if (ref.hasIndiceMapaAlvo()) {
+          indiceMapa = ref.indiceMapaAlvo;
+        } else if (grupo.hasIndiceMapaPadrao()) {
+          indiceMapa = grupo.indiceMapaPadrao;
+        }
+        if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) indiceMapa = 0;
+        
+        AppNav.toMapaInterativo(
+          context,
+          mapa: grupo.mapas[indiceMapa],
+          cragId: widget.cragId,
+        );
+      } : null,
+    );
+  }
+
+  Widget _buildBaseCard({
+    required String title,
+    required String subtitle,
+    required String resolvedLabel,
+    required VoidCallback onClose,
+    required String actionLabel,
+    required VoidCallback onAction,
+    String? secondaryActionLabel,
+    VoidCallback? onSecondaryAction,
+  }) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -677,57 +680,50 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                           ),
                         ],
                       ),
-                      if (subtitleWidget != null) ...[
+                      if (subtitle.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        subtitleWidget,
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: fishBone.withValues(alpha: 0.7),
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ],
                   ),
                 ),
                 IconButton(
                   icon: Icon(Icons.close, color: fishBone),
-                  onPressed: () {
-                    setState(() {
-                      _selectedId = null;
-                      _updateFeedbackNode();
-                    });
-                  },
+                  onPressed: onClose,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
               ],
             ),
-            if (extraInfo.isNotEmpty) ...[
-              Divider(color: beastHide, height: 24),
-              ...extraInfo,
-            ],
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onTap,
-                icon: Icon(
-                  Icons.open_in_new,
-                  color: beastHide,
-                  size: 16,
-                ),
-                label: Text(
-                  'Mais',
-                  style: TextStyle(
-                    color: beastHide,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (secondaryActionLabel != null && onSecondaryAction != null)
+                  TextButton.icon(
+                    onPressed: onSecondaryAction,
+                    icon: Icon(Icons.map, color: fishBone, size: 16),
+                    label: Text(
+                      secondaryActionLabel,
+                      style: TextStyle(color: fishBone, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: onAction,
+                  icon: Icon(Icons.open_in_new, color: beastHide, size: 16),
+                  label: Text(
+                    actionLabel,
+                    style: TextStyle(color: beastHide, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
+              ],
             ),
           ],
         ),
@@ -738,30 +734,31 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   Widget _buildFloatingCard(BoxConstraints constraints, Size viewportSize) {
     if (_selectedId == null) return const SizedBox.shrink();
 
-    final items = _idMap[_selectedId!];
-    if (items == null || items.isEmpty) return const SizedBox.shrink();
+    final refs = _poiToRefs[_selectedId!];
+    if (refs == null || refs.isEmpty) return const SizedBox.shrink();
 
     Widget content;
-    if (items.length > 1) {
+    if (refs.length > 1) {
       void changeItem(int newIndex) {
         setState(() {
           _focusedItemIndex = newIndex;
         });
         
-        final newItem = items[newIndex];
-        if (newItem is Escalada) {
+        final newRef = refs[newIndex];
+        final newResolved = _refToResolved[newRef];
+        if (newResolved?.escalada != null) {
           TelemetryService.instance.logAcaoEscalada(
             widget.cragId,
             widget.setorContext?.nome ?? 'Geral',
-            getEscaladaNome(newItem),
+            getEscaladaNome(newResolved!.escalada!),
             'selecionar_no_mapa',
             'mapa_swipe'
           );
         }
 
         if (_autoZoomEnabled && _imageSize != null) {
-          final pontos = _getPontosForItem(newItem);
-          _zoomToPoints(pontos, _imageSize!, viewportSize, contextItem: newItem);
+          final pontos = _getPontosForRef(newRef);
+          _zoomToPoints(pontos, _imageSize!, viewportSize, ref: newRef);
         }
       }
 
@@ -770,7 +767,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           if (details.primaryVelocity! > 0) {
             if (_focusedItemIndex > 0) changeItem(_focusedItemIndex - 1);
           } else if (details.primaryVelocity! < 0) {
-            if (_focusedItemIndex < items.length - 1) changeItem(_focusedItemIndex + 1);
+            if (_focusedItemIndex < refs.length - 1) changeItem(_focusedItemIndex + 1);
           }
         },
         child: Column(
@@ -786,7 +783,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                     color: _focusedItemIndex > 0 ? beastHide : fishBone.withValues(alpha: 0.3),
                     onPressed: _focusedItemIndex > 0 ? () => changeItem(_focusedItemIndex - 1) : null,
                   ),
-                  ...List.generate(items.length, (index) {
+                  ...List.generate(refs.length, (index) {
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       width: 8,
@@ -799,8 +796,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   }),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
-                    color: _focusedItemIndex < items.length - 1 ? beastHide : fishBone.withValues(alpha: 0.3),
-                    onPressed: _focusedItemIndex < items.length - 1 ? () => changeItem(_focusedItemIndex + 1) : null,
+                    color: _focusedItemIndex < refs.length - 1 ? beastHide : fishBone.withValues(alpha: 0.3),
+                    onPressed: _focusedItemIndex < refs.length - 1 ? () => changeItem(_focusedItemIndex + 1) : null,
                   ),
                 ],
               ),
@@ -809,14 +806,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               duration: const Duration(milliseconds: 300),
               child: KeyedSubtree(
                 key: ValueKey(_focusedItemIndex),
-                child: _buildCardContentForItem(items[_focusedItemIndex]),
+                child: _buildCardContentForResolved(refs[_focusedItemIndex], _refToResolved[refs[_focusedItemIndex]]!),
               ),
             ),
           ],
         ),
       );
     } else {
-      content = _buildCardContentForItem(items.first);
+      content = _buildCardContentForResolved(refs.first, _refToResolved[refs.first]!);
     }
 
     return Card(
@@ -1277,90 +1274,7 @@ class MapHelper {
     );
   }
 
-  static Map<String, List<dynamic>> buildIdMap({
-    required Mapa mapa,
-    required List<Escalada> escaladas,
-    required List<ArquivoSetor> setores,
-  }) {
-    final Map<String, List<dynamic>> idMap = {};
-    final Set<String> duplicates = {};
 
-    final Set<String> validIds = mapa.pontosDeInteresse.map((p) => p.id).toSet();
-
-    void addId(String id, dynamic item) {
-      if (id.isEmpty) return;
-      if (!validIds.contains(id)) return;
-      if (duplicates.contains(id)) return;
-
-      if (idMap.containsKey(id)) {
-        // Verifica se o mesmo item exato já está na lista
-        final existingList = idMap[id]!;
-        for (var existingItem in existingList) {
-          if (identical(existingItem, item) || existingItem.toString() == item.toString()) {
-            return; // Já adicionado exato
-          }
-        }
-        
-        // Se for um item novo, adiciona à lista para o mesmo marcador
-        existingList.add(item);
-      } else {
-        idMap[id] = [item];
-      }
-    }
-
-    // Priorizar os setores (sub-setores) primeiro, pois na visão de grupo
-    // os IDs 01, 02 geralmente se referem aos setores e não as vias neles
-    for (var set in setores) {
-      if (set.hasConteudo()) {
-        addId(set.conteudo.idNoMapa, set.conteudo);
-      }
-    }
-
-    for (var esc in escaladas) {
-      final ids = getEscaladaIdsNoMapa(esc);
-      for (var id in ids) {
-        addId(id, esc);
-      }
-    }
-    return idMap;
-  }
-
-  static List<String> getEscaladaIdsNoMapa(Escalada escalada) {
-    switch (escalada.whichTipo()) {
-      case Escalada_Tipo.viaEsportiva:
-        return [
-          escalada.viaEsportiva.idNoMapa,
-          escalada.viaEsportiva.idNoMapaMeio,
-          escalada.viaEsportiva.idNoMapaFim,
-        ];
-      case Escalada_Tipo.viaMovel:
-        return [
-          escalada.viaMovel.idNoMapa,
-          escalada.viaMovel.idNoMapaMeio,
-          escalada.viaMovel.idNoMapaFim,
-        ];
-      case Escalada_Tipo.boulder:
-        return [
-          escalada.boulder.idNoMapa,
-          escalada.boulder.idNoMapaMeio,
-          escalada.boulder.idNoMapaFim,
-        ];
-      case Escalada_Tipo.viaMultiplasEnfiadas:
-        return [
-          escalada.viaMultiplasEnfiadas.idNoMapa,
-          escalada.viaMultiplasEnfiadas.idNoMapaMeio,
-          escalada.viaMultiplasEnfiadas.idNoMapaFim,
-        ];
-      case Escalada_Tipo.highline:
-        return [
-          escalada.highline.idNoMapa,
-          escalada.highline.idNoMapaMeio,
-          escalada.highline.idNoMapaFim,
-        ];
-      default:
-        return [];
-    }
-  }
 }
 
 class MarkerPainter extends CustomPainter {

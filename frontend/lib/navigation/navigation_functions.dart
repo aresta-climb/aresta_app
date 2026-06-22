@@ -93,8 +93,7 @@ class AppNav {
     BuildContext context, {
     required Mapa mapa,
     required String cragId,
-    required List<Escalada> escaladas,
-    required List<ArquivoSetor> setores,
+
     String? initialSelectedId,
     Setor? setorContext,
     Grupo? grupoContext,
