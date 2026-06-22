@@ -200,7 +200,7 @@ class SyncService {
 
           await datasetRepository.loadIndiceToMemory(newIndice);
 
-          if (oldIndice != null && !editorDeCroqui.isExperimentalMode.value) {
+          if (!editorDeCroqui.isExperimentalMode.value) {
             failedPicos.addAll(await _checkForUpdates(oldIndice, newIndice));
           } else {
             setUpdatedStatus();
@@ -280,7 +280,7 @@ class SyncService {
   /// quais Croquis já armazenados localmente sofreram alterações (baseado no sha256).
   /// Caso alterações sejam detectadas, os baixa novamente de forma transparente.
   Future<List<String>> _checkForUpdates(
-    Indice oldIndice,
+    Indice? oldIndice,
     Indice newIndice,
   ) async {
     debugPrint('Checking for outdated picos...');
@@ -302,21 +302,35 @@ class SyncService {
         final picoFilePath =
             '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
         if (await File(picoFilePath).exists()) {
-          final oldResumoList = oldIndice.croquis
-              .where((c) => c.id == newResumo.id)
-              .toList();
-          if (oldResumoList.isNotEmpty) {
-            final oldResumo = oldResumoList.first;
-            if (oldResumo.checksumSha256Croqui !=
-                newResumo.checksumSha256Croqui) {
-              debugPrint('Pico ${newResumo.id} is outdated. Updating...');
-              final success = await _downloadOrUpdatePico(
-                newResumo,
-                downloadsDir,
-              );
-              if (!success) {
-                failedPicos.add(newResumo.nome);
-              }
+          bool needsUpdate = false;
+
+          if (oldIndice == null) {
+            // Fallback de Breaking Change: o indice local antigo estava corrompido ou era ilegível.
+            // Para garantir que o usuário não fique com picos velhos "presos" sem o novo formato,
+            // forçamos o update de todos os picos que estiverem presentes no armazenamento local.
+            needsUpdate = true;
+          } else {
+            final oldResumoList = oldIndice.croquis
+                .where((c) => c.id == newResumo.id)
+                .toList();
+            
+            if (oldResumoList.isNotEmpty) {
+              final oldResumo = oldResumoList.first;
+              needsUpdate = oldResumo.checksumSha256Croqui != newResumo.checksumSha256Croqui;
+            } else {
+              // Pico existe no disco mas não estava no índice antigo. Pode ter sido um download incompleto.
+              needsUpdate = true;
+            }
+          }
+
+          if (needsUpdate) {
+            debugPrint('Pico ${newResumo.id} requires update (outdated or fallback). Updating...');
+            final success = await _downloadOrUpdatePico(
+              newResumo,
+              downloadsDir,
+            );
+            if (!success) {
+              failedPicos.add(newResumo.nome);
             }
           }
         }
@@ -443,7 +457,7 @@ class SyncService {
           }
         : <String, String>{};
 
-    final filesToDelete = _identifyFilesToDelete(
+    final filesToDelete = await _identifyFilesToDelete(
       oldPicoData,
       newContent,
       picoDirPath,
@@ -454,10 +468,26 @@ class SyncService {
     final Map<String, String> filesToRename = {};
 
     for (var newExt in newPicoData.arquivosExternos) {
-      if (!oldContent.containsKey(newExt.caminho) ||
-          oldContent[newExt.caminho] != newExt.checksumSha256) {
-        String localPath = newExt.caminho;
-        if (localPath.startsWith('/')) localPath = localPath.substring(1);
+      String localPath = newExt.caminho;
+      if (localPath.startsWith('/')) localPath = localPath.substring(1);
+        
+      bool needsDownload = false;
+      if (oldContent.containsKey(newExt.caminho)) {
+        // Caminho feliz: sabemos o hash antigo e comparamos direto com o novo.
+        needsDownload = oldContent[newExt.caminho] != newExt.checksumSha256;
+      } else {
+        // Fallback de Breaking Change: o oldPicoData não foi lido (retornou null), 
+        // então não sabemos se a imagem no disco é a versão velha ou a nova.
+        // Para economizar banda e não rebaixar tudo, validamos o hash do arquivo 
+        // que já está no disco. validateExistingTmpFile já deleta o arquivo se o hash não bater.
+        final existingFileValid = await _storage.validateExistingTmpFile(
+          '$picoDirPath/$localPath',
+          newExt.checksumSha256,
+        );
+        needsDownload = !existingFileValid;
+      }
+
+      if (needsDownload) {
         String remotePath =
             (baseDir.isNotEmpty && !localPath.startsWith(baseDir))
             ? '$baseDir/$localPath'
@@ -491,16 +521,47 @@ class SyncService {
 
   /// Cruza a lista de caminhos do arquivo novo vs o antigo para retornar a lista de
   /// arquivos descontinuados que precisam ser apagados do cache no fim do processo.
-  List<String> _identifyFilesToDelete(
+  /// 
+  /// Caso o `oldPicoData` seja nulo (ex: devido a um breaking change no schema do Protobuf 
+  /// que tornou o arquivo antigo ilegível), a rotina entra num fallback que varre ativamente
+  /// a pasta do pico, apagando qualquer arquivo que não esteja declarado no `newContent`.
+  Future<List<String>> _identifyFilesToDelete(
     Croqui? oldPicoData,
     Map<String, String> newContent,
     String picoDirPath,
-  ) {
+  ) async {
     final List<String> filesToDelete = [];
     if (oldPicoData != null) {
+      // Caminho feliz: temos a lista exata do que existia antes.
       for (var oldExt in oldPicoData.arquivosExternos) {
         if (!newContent.containsKey(oldExt.caminho)) {
           filesToDelete.add('$picoDirPath/${oldExt.caminho}');
+        }
+      }
+    } else {
+      // Fallback de Breaking Change: não sabemos o que existia, então vasculhamos a pasta
+      // em busca de arquivos órfãos (arquivos que não fazem mais parte do novo croqui).
+      final dir = Directory(picoDirPath);
+      if (await dir.exists()) {
+        await for (var entity in dir.list(recursive: true)) {
+          if (entity is File) {
+            final filePath = entity.path;
+            if (filePath.endsWith('.binarypb') || filePath.endsWith('.binarypb.tmp')) {
+              continue;
+            }
+            
+            bool isNeeded = false;
+            for (var key in newContent.keys) {
+              // Ensure we match the relative path accurately
+              if (filePath.replaceAll('\\', '/').endsWith(key.replaceAll('\\', '/'))) {
+                isNeeded = true;
+                break;
+              }
+            }
+            if (!isNeeded) {
+              filesToDelete.add(filePath);
+            }
+          }
         }
       }
     }
