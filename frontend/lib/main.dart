@@ -588,11 +588,16 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                 });
               } catch (_) {}
             }
-            return SetorPage(
-              setor: setor!,
-              cragId: cragId,
-              scrollToEscalada: scrollToEscalada,
-            );
+            if (setor != null) {
+              return SetorPage(
+                setor: setor,
+                grupoContext: grupo,
+                cragId: cragId,
+                scrollToEscalada: scrollToEscalada,
+              );
+            } else {
+              return const Scaffold();
+            }
           } else if (node is GrupoNode) {
             return GrupoPage(grupo: grupo!, cragId: cragId);
           } else if (node is ViaNode) {

@@ -11,7 +11,7 @@ import '../services/firebase/telemetry_service.dart';
 ///
 /// Ele extrai a descrição e itera por todas as vias disponíveis
 /// ([Escalada]) e subsetores aninhados para renderizá-los.
-Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Escalada> sortedEscaladas, [Escalada? scrollToEscalada, GlobalKey? targetKey, Widget? sortButton]) {
+Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Escalada> sortedEscaladas, [Escalada? scrollToEscalada, GlobalKey? targetKey, Widget? sortButton, Grupo? grupoContext]) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -36,6 +36,7 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Esc
                       mapa: mapa,
                       cragId: cragId,
                       setorContext: setor,
+                      grupoContext: grupoContext,
                     ),
                   ),
                 ),
