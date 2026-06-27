@@ -37,6 +37,7 @@ class MapaInterativoPage extends StatefulWidget {
   final ImageProvider? imageProviderOverride;
   final String? initialSelectedId;
   final Setor? setorContext;
+  final Grupo? grupoContext;
 
   const MapaInterativoPage({
     super.key,
@@ -47,6 +48,7 @@ class MapaInterativoPage extends StatefulWidget {
     this.imageProviderOverride,
     this.initialSelectedId,
     this.setorContext,
+    this.grupoContext,
   });
 
   @override
@@ -100,19 +102,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     _refToResolved.clear();
 
     String? defaultSetorNome = widget.setorContext?.nome;
-    String? defaultGrupoNome;
-    
-    if (defaultSetorNome != null) {
-      for (var sg in widget.pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-          bool hasSetor = sg.grupo.conteudo.setores.any((s) => s.hasConteudo() && s.conteudo.nome == defaultSetorNome);
-          if (hasSetor) {
-            defaultGrupoNome = sg.grupo.conteudo.nome;
-            break;
-          }
-        }
-      }
-    }
+    String? defaultGrupoNome = widget.grupoContext?.nome;
 
     for (var ref in widget.mapa.referencias) {
       try {

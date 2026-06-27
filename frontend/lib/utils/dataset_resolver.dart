@@ -29,65 +29,71 @@ class DatasetResolver {
     Escalada? matchedEscalada;
 
     if (grupoNome != null) {
-      try {
-        matchedGrupo = pico.setoresOuGrupos
-            .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo())
-            .map((sg) => sg.grupo.conteudo)
-            .firstWhere((g) => g.nome == grupoNome);
-      } catch (_) {}
+      matchedGrupo = pico.setoresOuGrupos
+          .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo())
+          .map<Grupo?>((sg) => sg.grupo.conteudo)
+          .firstWhere((g) => g?.nome == grupoNome, orElse: () => null);
     }
 
     if (setorNome != null) {
       if (matchedGrupo != null) {
-        try {
-          matchedSetor = matchedGrupo.setores
-              .where((s) => s.hasConteudo())
-              .map((s) => s.conteudo)
-              .firstWhere((s) => s.nome == setorNome);
-        } catch (_) {}
+        matchedSetor = matchedGrupo.setores
+            .where((s) => s.hasConteudo())
+            .map<Setor?>((s) => s.conteudo)
+            .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
       } else {
-        try {
-          matchedSetor = pico.setoresOuGrupos
-              .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
-              .map((sg) => sg.setor.conteudo)
-              .firstWhere((s) => s.nome == setorNome);
-        } catch (_) {
-          // Fallback: search in all groups if no group was specified
+        matchedSetor = pico.setoresOuGrupos
+            .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
+            .map<Setor?>((sg) => sg.setor.conteudo)
+            .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
+
+        // Fallback: search in all groups if no group was specified and setor was not found globally
+        if (matchedSetor == null && grupoNome == null) {
           for (var sg in pico.setoresOuGrupos) {
             if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-              try {
-                matchedSetor = sg.grupo.conteudo.setores
-                    .where((s) => s.hasConteudo())
-                    .map((s) => s.conteudo)
-                    .firstWhere((s) => s.nome == setorNome);
-                if (matchedSetor != null) break;
-              } catch (_) {}
+              matchedSetor = sg.grupo.conteudo.setores
+                  .where((s) => s.hasConteudo())
+                  .map<Setor?>((s) => s.conteudo)
+                  .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
+              
+              if (matchedSetor != null) {
+                matchedGrupo = sg.grupo.conteudo;
+                break;
+              }
             }
           }
         }
       }
     }
 
-    if (escaladaNome != null && matchedSetor != null) {
-      try {
-        matchedEscalada = matchedSetor.escaladas.firstWhere((e) {
-          if (e.hasViaEsportiva()) return e.viaEsportiva.nome == escaladaNome;
-          if (e.hasViaMovel()) return e.viaMovel.nome == escaladaNome;
-          if (e.hasBoulder()) return e.boulder.nome == escaladaNome;
-          if (e.hasViaMultiplasEnfiadas()) return e.viaMultiplasEnfiadas.nome == escaladaNome;
-          if (e.hasHighline()) return e.highline.nome == escaladaNome;
-          return false;
-        });
-      } catch (_) {}
-    }
-
-    // If a target was requested but not found, we throw to signal an invalid reference
     if (grupoNome != null && matchedGrupo == null) {
       throw Exception('Grupo not found');
     }
+
     if (setorNome != null && matchedSetor == null) {
       throw Exception('Setor not found');
     }
+
+    if (escaladaNome != null && matchedSetor != null) {
+      matchedEscalada = matchedSetor.escaladas.map<Escalada?>((e) => e).firstWhere((e) {
+        if (e == null) return false;
+        switch (e.whichTipo()) {
+          case Escalada_Tipo.viaEsportiva:
+            return e.viaEsportiva.nome == escaladaNome;
+          case Escalada_Tipo.viaMovel:
+            return e.viaMovel.nome == escaladaNome;
+          case Escalada_Tipo.boulder:
+            return e.boulder.nome == escaladaNome;
+          case Escalada_Tipo.viaMultiplasEnfiadas:
+            return e.viaMultiplasEnfiadas.nome == escaladaNome;
+          case Escalada_Tipo.highline:
+            return e.highline.nome == escaladaNome;
+          default:
+            return false;
+        }
+      }, orElse: () => null);
+    }
+
     if (escaladaNome != null && matchedEscalada == null) {
       throw Exception('Escalada not found');
     }

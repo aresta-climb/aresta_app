@@ -10,12 +10,14 @@ import '../view_functions/via_functions.dart';
 /// de escalada ([Escalada]) e quaisquer subsetores contidos nele.
 class SetorPage extends StatefulWidget {
   final Setor setor;
+  final Grupo? grupoContext;
   final String cragId;
   final Escalada? scrollToEscalada;
 
   const SetorPage({
     super.key, 
     required this.setor, 
+    this.grupoContext,
     required this.cragId,
     this.scrollToEscalada,
   });
