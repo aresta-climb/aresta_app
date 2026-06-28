@@ -143,4 +143,90 @@ void main() {
     // `setorContext` MUST be null.
     expect(page.setorContext, isNull);
   });
+
+  group('Declarative Navigator TDD', () {
+    testWidgets('AppRouter renders Navigator with multiple pages based on tree history', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final pico = Pico()..nome = 'Pico Teste';
+      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
+        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
+      ], availablePicos: []);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+
+      // Navigate to a deeper node
+      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
+      await tester.pump(const Duration(seconds: 1));
+
+      treeController.navigateTo(SetorNode(cragId: '123', setorNome: 'S1', parent: treeController.currentNode));
+      await tester.pump(const Duration(seconds: 1));
+
+      // Find Navigator directly rendered by TreeNavigationWrapper
+      final navigatorFinder = find.descendant(
+        of: find.byType(TreeNavigationWrapper),
+        matching: find.byType(Navigator),
+      );
+
+      expect(navigatorFinder, findsOneWidget);
+      final navigator = tester.widget<Navigator>(navigatorFinder);
+      
+      // Should have 3 pages: Home, Pico, Setor
+      expect(navigator.pages.length, 3);
+      expect(navigator.pages[0].key, const ValueKey('TabsPage'));
+      expect(navigator.pages[1].key, const ValueKey('PicoNode(123)'));
+      expect(navigator.pages[2].key, const ValueKey('SetorNode(S1)'));
+    });
+
+    testWidgets('System back button or Navigator pop triggers treeController.goBack()', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final pico = Pico()..nome = 'Pico Teste';
+      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
+        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
+      ], availablePicos: []);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+
+      // Navigate deeper
+      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
+      await tester.pump(const Duration(seconds: 1));
+      
+      expect(treeController.currentNode, isA<PicoNode>());
+
+      // Simulate a Navigator pop (e.g., from an AppBar back button)
+      final BuildContext navContext = tester.element(find.descendant(
+        of: find.byType(TreeNavigationWrapper),
+        matching: find.byType(Navigator),
+      ));
+      
+      Navigator.maybePop(navContext);
+      await tester.pump(const Duration(seconds: 1));
+
+      // The treeController should have gone back to HomeNode
+      expect(treeController.currentNode, isA<HomeNode>());
+    });
+  });
 }

@@ -37,7 +37,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 
   if (!context.mounted) return;
   
-  Navigator.pop(context); // Remove indicador de carregamento
+  Navigator.of(context, rootNavigator: true).pop(); // Remove indicador de carregamento
 
   if (croqui != null && croqui.picos.isNotEmpty) {
     // Navega para a página do pico através da árvore de navegação
