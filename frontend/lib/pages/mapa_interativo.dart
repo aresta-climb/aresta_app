@@ -581,8 +581,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Grupo',
       onAction: () {
-        // AppNav to group not fully supported yet in standard UI, just pop back
-        AppNav.back(context); 
+        AppNav.toGrupo(context, grupo: grupo);
       },
       secondaryActionLabel: grupo.mapas.isNotEmpty ? 'Ver Mapa do Grupo' : null,
       onSecondaryAction: grupo.mapas.isNotEmpty ? () {
@@ -985,7 +984,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               'abrir_mapa_geral', 
                               'mapa_setor'
                             );
-                            AppNav.toMapaGeralPico(context, returnToSetor: widget.setorContext);
+                            AppNav.toPico(context, cragId: widget.cragId, scrollToMapaGeral: true, returnToSetor: widget.setorContext);
                           },
                           backgroundColor: beastHide,
                           icon: Icon(Icons.map, color: nobleBlack),
@@ -1109,7 +1108,17 @@ class MapHelper {
     Mapa? mapa;
 
     // Busca o mapa nas diferentes estruturas do Pico
-    for (var sg in pico.setoresOuGrupos) {
+    if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo()) {
+      for (var m in pico.mapasGerais.conteudo.mapas) {
+        if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+          mapa = m;
+          break;
+        }
+      }
+    }
+
+    if (mapa == null) {
+      for (var sg in pico.setoresOuGrupos) {
       if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
         for (var m in sg.setor.conteudo.mapas) {
           if (m.caminhoImagemMapa == mapaCaminhoImagem) {
@@ -1140,6 +1149,7 @@ class MapHelper {
         }
       }
       if (mapa != null) break;
+    }
     }
 
     if (mapa == null) {

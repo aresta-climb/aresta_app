@@ -9,6 +9,7 @@ import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../widgets/mapa_thumbnail.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {
@@ -35,8 +36,6 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String crag
   final capaBotoes = getCapaBotoes(secaoBotoes);
   final otherBotoes = getOtherBotoes(secaoBotoes);
 
-  bool mapaKeyAssigned = false;
-
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -51,29 +50,42 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String crag
         ],
         if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
         const SizedBox(height: 20),
+        
         if (capaBotoes.isNotEmpty) ...[
           ...capaBotoes.map((b) {
             final md = b.destino.secaoTextual;
-            final isMap = b.texto.toLowerCase().contains('mapa') || md.conteudo.toLowerCase().contains('mapa');
-            final useKey = !mapaKeyAssigned && isMap && mapaKey != null;
-            if (useKey) mapaKeyAssigned = true;
-
-            Widget child = Padding(
+            return Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: OfflineMarkdown(data: md.conteudo, cragId: cragId),
             );
-
-            if (useKey) {
-              return KeyedSubtree(key: mapaKey, child: child);
-            }
-            return child;
           }),
           const SizedBox(height: 10),
         ],
+
         if (otherBotoes.isNotEmpty) ...[
-          const SizedBox(height: 20),
           _buildHeader('Mais Informações'),
           ...otherBotoes.map((b) => buildBotaoTile(context, b, cragId)),
+          const SizedBox(height: 20),
+        ],
+        
+        if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo() && pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
+          KeyedSubtree(
+            key: mapaKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader('Mapas Gerais'),
+                ...pico.mapasGerais.conteudo.mapas.map((mapa) => Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: MapaThumbnail(
+                    mapa: mapa,
+                    cragId: cragId,
+                  ),
+                )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
         ],
         _buildHeader('Setores'),
         if (pico.setoresOuGrupos.isEmpty)

@@ -249,28 +249,6 @@ class MapaInterativoNode extends NavNode {
   String toString() => 'MapaInterativoNode(${mapaCaminhoImagem.split('/').last})';
 }
 
-/// Nó que representa o mapa geral do pico.
-class MapaGeralPicoNode extends PicoContextNode {
-  final String? returnToSetorNome;
-
-  const MapaGeralPicoNode({
-    required super.cragId,
-    this.returnToSetorNome,
-    required super.parent,
-  });
-
-  @override
-  NavNode copyWithMergedAncestor(covariant MapaGeralPicoNode matchingAncestor) {
-    return MapaGeralPicoNode(
-      cragId: cragId,
-      returnToSetorNome: returnToSetorNome,
-      parent: matchingAncestor.parent!,
-    );
-  }
-
-  @override
-  String toString() => 'MapaGeralPicoNode($cragId)';
-}
 
 /// Nó que representa a tela de rotas de GPS/localização.
 class GPSNode extends PicoContextNode {
@@ -338,9 +316,7 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is MapaInterativoNode && b is MapaInterativoNode) {
       return a.cragId == b.cragId && a.setorContextNome == b.setorContextNome;
     }
-    if (a is MapaGeralPicoNode && b is MapaGeralPicoNode) {
-      return a.cragId == b.cragId;
-    }
+
     if (a is PicoNode && b is PicoNode) {
       return a.cragId == b.cragId;
     }

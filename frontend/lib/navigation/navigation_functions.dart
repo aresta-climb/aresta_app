@@ -75,20 +75,6 @@ class AppNav {
     ));
   }
 
-  static void toMapaGeralPico(BuildContext context, {Setor? returnToSetor}) {
-    final ctrl = _ctrl(context);
-    if (ctrl == null) return;
-    
-    final ctx = _picoCtx(ctrl.currentNode);
-    if (ctx == null) return;
-    
-    ctrl.navigateTo(MapaGeralPicoNode(
-      cragId: ctx.cragId,
-      returnToSetorNome: returnToSetor?.nome,
-      parent: ctrl.currentNode,
-    ));
-  }
-
   static void toMapaInterativo(
     BuildContext context, {
     required Mapa mapa,

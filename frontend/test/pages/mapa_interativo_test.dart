@@ -38,6 +38,24 @@ class MockPathProviderPlatform extends PathProviderPlatform
 }
 
 void main() {
+  group('MapHelper', () {
+    test('resolveMapaAndContext should find map in pico.mapasGerais', () {
+      final mapa = Mapa()
+        ..caminhoImagemMapa = 'mapas_gerais/mapa.png';
+
+      final pico = Pico()
+        ..mapasGerais = (ArquivoMapas()
+          ..conteudo = (ColecaoDeMapas()..mapas.add(mapa)));
+
+      final result = MapHelper.resolveMapaAndContext(
+        pico: pico,
+        mapaCaminhoImagem: 'mapas_gerais/mapa.png',
+      );
+
+      expect(result.mapa.caminhoImagemMapa, 'mapas_gerais/mapa.png');
+    });
+  });
+
   group('AreaHelper Tests', () {
     test('Circular Area', () {
       final ponto = Mapa_PontoDeInteresse(
