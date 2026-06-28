@@ -222,7 +222,33 @@ Isso garante:
 - **Gestão Financeira:** Viabiliza automação de estorno/chargeback vinculando o
   ID do Gateway ao Ticket.
 
-### 5.8. Auditoria de Fim de Dia e Alertas de Resgate (Admin Sync)
+### 5.8. Botão SOS e Telemetria de Resgate (Background Queue)
+
+Para maximizar a utilidade do sistema em ambientes de risco e reforçar a base
+legal de Proteção à Vida (LGPD), o frontend contará com um módulo de SOS
+otimizado para conectividade intermitente (redes 2G/EDGE ou sombra de
+cobertura).
+
+- **Coleta de Dados:** Uma interface simples (um botão de pânico + campo de
+  texto curto) aciona o pacote `geolocator` do Flutter para capturar a Latitude
+  e Longitude (High Accuracy) do dispositivo.
+- **Payload Minimalista:** O alerta é estruturado em um JSON extremamente leve
+  (< 2 KB), contendo apenas `TicketID`, `Timestamp`, `Lat/Lon` e a `Mensagem` do
+  usuário, maximizando a chance de transmissão em conexões com alta perda de
+  pacotes (Packet Loss).
+- **Retry Pattern e Fila de Background:** A requisição não falha silenciosamente
+  caso o dispositivo esteja offline. O Flutter salva o payload localmente
+  (utilizando banco local como SQFlite ou Hive) e inicia um _Background Worker_.
+  O sistema entra em um _loop_ agressivo de retentativas (Retry Queue) e
+  despacha o POST HTTP no exato instante em que o sistema operacional reportar
+  qualquer alteração no _Network State_ (recuperação momentânea de sinal).
+- **Integração com o Dashboard:** Ao atingir o Supabase (via Edge Function ou
+  RPC), o banco de dados insere o registro em uma tabela de `emergencies`. O
+  Supabase Realtime escuta essa tabela e emite um alerta sonoro e visual
+  imediato no Dashboard do fiscal da Associação, fornecendo as coordenadas
+  exatas para a equipe de busca e salvamento.
+
+### 5.9. Auditoria de Fim de Dia e Alertas de Resgate (Admin Sync)
 
 Para mitigar falhas de conexão prolongadas ou perdas de sinal que impeçam a
 telemetria em tempo real, o sistema de segurança do parque conta com uma rotina
