@@ -17,6 +17,10 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/modal_bottom_sheet_page.dart';
+import 'package:frontend/view_functions/offline_markdown.dart';
+import 'package:frontend/utils/markdown_utils.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/theme/theme_controller.dart';
 import 'package:frontend/theme/app_colors.dart';
@@ -478,15 +482,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   }
 
   /// Resolve e constrói a página (Widget) correspondente a um nó (NavNode) da árvore de roteamento.
-  Widget _buildNodeAsWidget(NavNode rawNode) {
-    // Desce a árvore ignorando nós estritamente modais para a renderização de telas
-    while (rawNode is TextNode) {
-      if (rawNode.parent == null) break;
-      rawNode = rawNode.parent!;
-    }
-    
-    final node = rawNode;
-
+  Widget _buildNodeAsWidget(NavNode node) {
     if (node is PicoNode ||
         node is SetorNode ||
         node is GrupoNode ||
@@ -621,6 +617,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       );
     }
 
+
+
     if (node is GPSNode) {
       return GPSPage(datasetRepo: widget.datasetRepo);
     }
@@ -640,7 +638,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       orElse: () => const HomeNode()
     );
 
-    // 3. Todo o resto dos nós (croquis, setores, mapas) que vêm após a aba principal são separados...
+    // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
+    // Agora INCLUÍMOS o TextNode, pois ele mapeia para um ModalBottomSheetPage!
     final pushedNodes = fullPath.where((n) => !(n is HomeNode || n is SettingsNode || n is BrowseNode)).toList();
 
     // 4. ... e magicamente empilhados por cima da aba base de forma declarativa!
@@ -649,10 +648,60 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         key: const ValueKey('TabsPage'), // Chave constante: Impede que o Flutter reconstrua a base desnecessariamente!
         child: _buildTabsWidget(baseNode),
       ),
-      ...pushedNodes.map((node) => MaterialPage(
-        key: ValueKey(node.toString()), // Identificação estrita dos nós
-        child: _buildNodeAsWidget(node),
-      ))
+      ...pushedNodes.map((node) {
+        if (node is TextNode) {
+          return ModalBottomSheetPage(
+            key: ValueKey(node.toString()),
+            isScrollControlled: true,
+            builder: (context) {
+              return DraggableScrollableSheet(
+                initialChildSize: 0.6,
+                minChildSize: 0.4,
+                maxChildSize: 0.9,
+                expand: false,
+                builder: (context, scrollController) {
+                  final bottomPadding = MediaQuery.of(context).padding.bottom;
+                  return ListView(
+                    controller: scrollController,
+                    padding: EdgeInsets.only(
+                      top: 20,
+                      left: 20,
+                      right: 20,
+                      bottom: 20 + bottomPadding,
+                    ),
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              node.title,
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: beastHide),
+                            ),
+                          ),
+                          buildFeedbackButton(context, color: beastHide),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final content = MarkdownUtils.cleanModalContent(node.content, node.title);
+                          return OfflineMarkdown(data: content, cragId: node.cragId);
+                        }
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        }
+        return MaterialPage(
+          key: ValueKey(node.toString()), // Identificação estrita dos nós
+          child: _buildNodeAsWidget(node),
+        );
+      })
     ];
 
     return PopScope(

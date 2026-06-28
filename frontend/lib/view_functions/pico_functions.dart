@@ -387,63 +387,13 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
             final md = botao.destino.secaoTextual;
             final treeNav = TreeNavigationWrapper.currentTreeController;
             if (treeNav != null) {
-              treeNav.navigateTo(TextNode(title: botao.texto, parent: treeNav.currentNode));
+              treeNav.navigateTo(TextNode(
+                title: botao.texto,
+                content: md.conteudo,
+                cragId: cragId,
+                parent: treeNav.currentNode,
+              ));
             }
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              builder: (context) {
-                return DraggableScrollableSheet(
-                  initialChildSize: 0.6,
-                  minChildSize: 0.4,
-                  maxChildSize: 0.9,
-                  expand: false,
-                  builder: (context, scrollController) {
-                    final bottomPadding = MediaQuery.of(context).padding.bottom;
-                    return ListView(
-                      controller: scrollController,
-                      padding: EdgeInsets.only(
-                        top: 20,
-                        left: 20,
-                        right: 20,
-                        bottom: 20 + bottomPadding,
-                      ),
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                botao.texto,
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: beastHide),
-                              ),
-                            ),
-                            buildFeedbackButton(context, color: beastHide),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Builder(
-                          builder: (context) {
-                            final content = MarkdownUtils.cleanModalContent(md.conteudo, botao.texto);
-                            return OfflineMarkdown(data: content, cragId: cragId);
-                          }
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ).whenComplete(() {
-              final treeNav = TreeNavigationWrapper.currentTreeController;
-              if (treeNav != null && treeNav.currentNode is TextNode) {
-                treeNav.goBack();
-              }
-            });
           }
         },
       ),

@@ -297,9 +297,13 @@ class GPSNode extends PicoContextNode {
 /// A página renderizada será a do nó pai.
 class TextNode extends NavNode {
   final String title;
+  final String content;
+  final String cragId;
 
   const TextNode({
     required this.title,
+    required this.content,
+    required this.cragId,
     required NavNode parent,
   }) : super(parent: parent);
 
@@ -307,6 +311,8 @@ class TextNode extends NavNode {
   NavNode copyWithMergedAncestor(covariant TextNode matchingAncestor) {
     return TextNode(
       title: title,
+      content: content,
+      cragId: cragId,
       parent: matchingAncestor.parent!,
     );
   }
