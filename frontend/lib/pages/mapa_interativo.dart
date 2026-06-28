@@ -297,20 +297,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     final boxWidthRel = relMaxX - relMinX;
     final boxHeightRel = relMaxY - relMinY;
 
-    bool hasInicioEFim = false;
-    if (pontos.length > 1) {
-      if (ref != null) {
-        final ids = ref.ids;
-        bool hasInicio = ids.isNotEmpty && ids[0].isNotEmpty;
-        bool hasFim = ids.length > 2 && ids[2].isNotEmpty;
-        hasInicioEFim = hasInicio && hasFim;
-      } else {
-        hasInicioEFim = true;
-      }
-    }
+    bool hasMultiplePoints = pontos.length > 1;
 
-    if (hasInicioEFim && (boxWidthRel > 0 || boxHeightRel > 0)) {
-      // Usa lógica de Bounding Box apenas para vias grandes (início e fim)
+    if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
+      // Usa lógica de Bounding Box para qualquer rota com múltiplos pontos (início/fim, meio, boulders, etc)
       final double availableHeight = viewportSize.height * 0.55;
       final double availableWidth = viewportSize.width * 0.85;
       

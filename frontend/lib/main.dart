@@ -445,9 +445,40 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     // index == 3 (GPS) is handled via AppNav.toGPS from the secondary bottom nav
   }
 
-  Widget _buildCurrentNode() {
-    NavNode rawNode = treeController.currentNode;
+  /// Constrói o alicerce principal do aplicativo (Tabs).
+  /// Esta tela fica perpetuamente na base do Navigator para preservar o estado de rolagem 
+  /// (scroll) e navegação entre abas usando um `IndexedStack`.
+  Widget _buildTabsWidget(NavNode node) {
+    int tabIndex = 0;
+    if (node is SettingsNode) tabIndex = 1;
+    if (node is BrowseNode) tabIndex = 2;
 
+    return Scaffold(
+      body: IndexedStack(
+        index: tabIndex,
+        children: [
+          _HomePageWrapper(
+            datasetRepo: widget.datasetRepo,
+            syncService: widget.syncService,
+            onSwitchTab: _onItemTapped,
+          ),
+          SettingsPage(datasetRepo: widget.datasetRepo),
+          BrowsePage(
+            datasetRepo: widget.datasetRepo,
+            syncService: widget.syncService,
+          ),
+        ],
+      ),
+      bottomNavigationBar: buildPrimaryBottomNav(
+        context,
+        tabIndex,
+        _onItemTapped,
+      ),
+    );
+  }
+
+  /// Resolve e constrói a página (Widget) correspondente a um nó (NavNode) da árvore de roteamento.
+  Widget _buildNodeAsWidget(NavNode rawNode) {
     // Desce a árvore ignorando nós estritamente modais para a renderização de telas
     while (rawNode is TextNode) {
       if (rawNode.parent == null) break;
@@ -455,36 +486,6 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
     
     final node = rawNode;
-
-    // Use IndexedStack for top-level tabs to preserve their state
-    if (node is HomeNode || node is SettingsNode || node is BrowseNode) {
-      int tabIndex = 0;
-      if (node is SettingsNode) tabIndex = 1;
-      if (node is BrowseNode) tabIndex = 2;
-
-      return Scaffold(
-        body: IndexedStack(
-          index: tabIndex,
-          children: [
-            _HomePageWrapper(
-              datasetRepo: widget.datasetRepo,
-              syncService: widget.syncService,
-              onSwitchTab: _onItemTapped,
-            ),
-            SettingsPage(datasetRepo: widget.datasetRepo),
-            BrowsePage(
-              datasetRepo: widget.datasetRepo,
-              syncService: widget.syncService,
-            ),
-          ],
-        ),
-        bottomNavigationBar: buildPrimaryBottomNav(
-          context,
-          tabIndex,
-          _onItemTapped,
-        ),
-      );
-    }
 
     if (node is PicoNode ||
         node is SetorNode ||
@@ -629,13 +630,51 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Extraímos o caminho completo da raiz até o nó atual
+    final fullPath = treeController.currentNode.path;
+    
+    // 2. A página base é estritamente a nossa aba (Home, Settings, Browse). 
+    // Como ela contém um IndexedStack, evitamos desmontá-la para preservar scrolls infinitos e abas de usuário.
+    final baseNode = fullPath.lastWhere(
+      (n) => n is HomeNode || n is SettingsNode || n is BrowseNode, 
+      orElse: () => const HomeNode()
+    );
+
+    // 3. Todo o resto dos nós (croquis, setores, mapas) que vêm após a aba principal são separados...
+    final pushedNodes = fullPath.where((n) => !(n is HomeNode || n is SettingsNode || n is BrowseNode)).toList();
+
+    // 4. ... e magicamente empilhados por cima da aba base de forma declarativa!
+    final pages = <Page>[
+      MaterialPage(
+        key: const ValueKey('TabsPage'), // Chave constante: Impede que o Flutter reconstrua a base desnecessariamente!
+        child: _buildTabsWidget(baseNode),
+      ),
+      ...pushedNodes.map((node) => MaterialPage(
+        key: ValueKey(node.toString()), // Identificação estrita dos nós
+        child: _buildNodeAsWidget(node),
+      ))
+    ];
+
     return PopScope(
+      // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o
       canPop: treeController.currentNode.parent == null,
       onPopInvoked: (didPop) {
         if (didPop) return;
+        // Intercepta botões nativos de "Voltar" do Android/Gesto iOS, refletindo isso na nossa árvore de estados
         treeController.goBack();
       },
-      child: _buildCurrentNode(),
+      child: Navigator(
+        pages: pages,
+        // Define o comportamento de quando um comando imperativo como `Navigator.pop(context)` for chamado diretamente neste Navigator.
+        onPopPage: (route, result) {
+          if (!route.didPop(result)) {
+            return false; // Rejeitado
+          }
+          // Garante sincronia: a rota saiu da UI, devemos retirá-la da nossa Tree Controller
+          treeController.goBack();
+          return true; // Sucesso, de acordo com as especificações do Flutter Navigator 2.0
+        },
+      ),
     );
   }
 }

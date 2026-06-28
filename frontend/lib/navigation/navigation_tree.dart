@@ -26,7 +26,18 @@ abstract class NavNode {
   /// Subclasses devem sobrescrever isso para mesclar estado da interface (como alvos de rolagem).
   NavNode copyWithMergedAncestor(covariant NavNode matchingAncestor) {
     return this; 
-}
+  }
+
+  /// Retorna a lista de nós desde a raiz até este nó.
+  List<NavNode> get path {
+    final List<NavNode> p = [];
+    NavNode? current = this;
+    while (current != null) {
+      p.add(current);
+      current = current.parent;
+    }
+    return p.reversed.toList();
+  }
 }
 
 /// Classe base abstrata para nós que dependem do contexto de um Pico.

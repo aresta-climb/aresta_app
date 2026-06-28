@@ -386,6 +386,41 @@ void main() {
       
       expect(matrix.storage[0], closeTo(2.5, 0.01));
     });
+
+    testWidgets('Multiple points without inicio and fim should use bounding box zoom', (WidgetTester tester) async {
+      final ponto1 = Mapa_PontoDeInteresse(
+        id: 'start_id',
+        circular: BoundingCircular(x: 10, y: 10, raio: 5),
+      );
+      final ponto2 = Mapa_PontoDeInteresse(
+        id: 'middle_id',
+        circular: BoundingCircular(x: 90, y: 90, raio: 5), // Far apart
+      );
+      final mapaMulti = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto1, ponto2],
+      );
+      // ref has inicio and meio, but NO fim (ids[2] is empty/missing)
+      mapaMulti.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Boulder Longe', ids: ['start_id', 'middle_id']));
+
+      final escBoulder = Escalada(
+        boulder: Boulder(nome: 'Boulder Longe'), 
+      );
+      
+      await tester.pumpWidget(buildApp([escBoulder], mapaMulti));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_start_id')));
+      await tester.pumpAndSettle(); 
+
+      final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final matrix = interactiveViewer.transformationController!.value;
+      
+      // Because they are far apart (from 10 to 90 out of 100), boxWidthRel = 0.8
+      // The bounding box logic will compute a scale based on available space, which is typically around 1.0 - 1.5, not 2.5
+      expect(matrix.storage[0], lessThan(2.5));
+    });
   });
 
 }

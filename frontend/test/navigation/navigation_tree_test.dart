@@ -3,6 +3,31 @@ import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 void main() {
+  group('NavNode path', () {
+    test('path returns list of nodes from root to current', () {
+      final root = HomeNode();
+      final node1 = PicoNode(cragId: '123', parent: root);
+      final node2 = SetorNode(cragId: '123', setorNome: 'Setor', parent: node1);
+      final node3 = ViaNode(cragId: '123', escaladaNome: 'Via', parent: node2);
+
+      final path = node3.path;
+
+      expect(path.length, 4);
+      expect(path[0], isA<HomeNode>());
+      expect(path[1], isA<PicoNode>());
+      expect(path[2], isA<SetorNode>());
+      expect(path[3], isA<ViaNode>());
+    });
+
+    test('path returns single node if it has no parent', () {
+      final root = HomeNode();
+      final path = root.path;
+
+      expect(path.length, 1);
+      expect(path[0], isA<HomeNode>());
+    });
+  });
+
   group('TreeNavigationController - Infinite Loop Prevention', () {
     test('Navigating between MapaGeral and MapaInterativo should not create an infinite loop', () {
       final controller = TreeNavigationController();
