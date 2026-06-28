@@ -4,7 +4,19 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 void main() {
   group('NavNode path', () {
-    test('path returns list of nodes from root to current', () {
+    test('copyWithMergedAncestor copies TextNode', () {
+      final baseNode = HomeNode();
+      final textNode = TextNode(title: 'T', content: 'C', cragId: '1', parent: baseNode);
+      final newBase = HomeNode();
+      final newTextNode = TextNode(title: 'T_old', content: 'C_old', cragId: '1', parent: newBase);
+
+      final copied = textNode.copyWithMergedAncestor(newTextNode) as TextNode;
+      expect(copied.title, 'T');
+      expect(copied.content, 'C');
+      expect(copied.parent, newBase);
+    });
+
+    test('copyWithMergedAncestor works for PicoContextNode', () {
       final root = HomeNode();
       final node1 = PicoNode(cragId: '123', parent: root);
       final node2 = SetorNode(cragId: '123', setorNome: 'Setor', parent: node1);

@@ -228,5 +228,48 @@ void main() {
       // The treeController should have gone back to HomeNode
       expect(treeController.currentNode, isA<HomeNode>());
     });
+
+    testWidgets('TextNode generates a ModalBottomSheetPage in the Navigator declaratively', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final pico = Pico()..nome = 'Pico Teste';
+      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
+        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
+      ], availablePicos: []);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+
+      // Navigate deeper
+      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
+      await tester.pump(const Duration(seconds: 1));
+      
+      final navigatorFinder = find.descendant(
+        of: find.byType(TreeNavigationWrapper),
+        matching: find.byType(Navigator),
+      );
+      var navigator = tester.widget<Navigator>(navigatorFinder);
+      expect(navigator.pages.length, 2);
+
+      // Navigate to TextNode (Modal)
+      treeController.navigateTo(TextNode(title: 'Modal', content: 'Markdown', cragId: '123', parent: treeController.currentNode));
+      await tester.pump(const Duration(seconds: 1));
+
+      navigator = tester.widget<Navigator>(navigatorFinder);
+      
+      // Should now have pushed a new page (TabsPage, PicoNode, ModalBottomSheetPage for TextNode)
+      expect(navigator.pages.length, 3);
+      expect(navigator.pages[2].key, const ValueKey('TextNode(Modal)'));
+    });
   });
 }
