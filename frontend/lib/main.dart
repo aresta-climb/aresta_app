@@ -8,7 +8,6 @@ import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
-import 'package:frontend/pages/mapa_geral_pico.dart';
 import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/view_functions/pico_functions.dart';
@@ -487,8 +486,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         node is SetorNode ||
         node is GrupoNode ||
         node is ViaNode ||
-        node is MapaGeralPicoNode ||
-        node is MapaInterativoNode) {
+        node is MapaInterativoNode ||
+        node is MapaoGlobalNode) {
       String cragId = '';
       String? setorNome;
       String? grupoNome;
@@ -544,22 +543,6 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               cragId: cragId,
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
-            );
-          } else if (node is MapaGeralPicoNode) {
-            Setor? returnToSetor;
-            if (node.returnToSetorNome != null) {
-              try {
-                returnToSetor = pico.setoresOuGrupos
-                    .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
-                    .map((sg) => sg.setor.conteudo)
-                    .firstWhere((s) => s.nome == node.returnToSetorNome);
-              } catch (_) {}
-            }
-            return MapaGeralPicoPage(
-              pico: pico,
-              croqui: croqui,
-              cragId: cragId,
-              returnToSetor: returnToSetor,
             );
           } else if (node is SetorNode) {
             Escalada? scrollToEscalada;

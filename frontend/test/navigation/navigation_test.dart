@@ -197,34 +197,5 @@ void main() {
       expect(currentPico.returnToSetorNome, isNotNull);
       expect(currentPico.returnToSetorNome, 'Setor Principal');
     });
-
-    test('Deve realizar rewind suave entre MapaInterativoNode e MapaGeralPicoNode', () {
-      final mapaInterativoNode = MapaInterativoNode(
-        cragId: '123',
-        mapaCaminhoImagem: 'teste.png',
-        parent: controller.currentNode,
-      );
-      controller.navigateTo(mapaInterativoNode);
-
-      final mapaGeralNode = MapaGeralPicoNode(
-        cragId: cragId,
-        returnToSetorNome: setor.nome,
-        parent: controller.currentNode,
-      );
-      controller.navigateTo(mapaGeralNode);
-
-      expect(controller.currentNode, isA<MapaGeralPicoNode>());
-
-      // Navegar de volta (rewind)
-      final mapaInterativoNodeRepetido = MapaInterativoNode(
-        cragId: '123',
-        mapaCaminhoImagem: 'teste.png',
-        parent: controller.currentNode,
-      );
-      controller.navigateTo(mapaInterativoNodeRepetido);
-
-      expect(controller.currentNode, isA<MapaInterativoNode>());
-      expect(controller.currentNode.parent, isA<HomeNode>());
-    });
   });
 }
