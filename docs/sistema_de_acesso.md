@@ -211,7 +211,114 @@ passou).
   CFTV) terá seu lacre rompido e será calibrada manualmente para o modo **Macro
   (foco a 10-15 cm)**.
 
-### 5.7. Resiliência e Conciliação (O Paradoxo Offline)
+### 5.7. Engenharia de Confiabilidade de Leitura Ótica e Eficiência Energética
+
+O microcontrolador ESP32-CAM com o sensor OV2640 apresenta, por padrão de
+fábrica, um alto índice de falha na leitura de códigos de barras bidimensionais
+em telas de smartphone. Isso ocorre devido à distância focal inadequada e à
+superexposição à luz solar. Para transformar esse hardware de baixo custo em um
+leitor de padrão industrial confiável, adotamos uma abordagem de quatro pilares:
+Calibração Ótica, Isolamento Ambiental, Compressão de Matriz e Gestão de Energia
+via Interrupção.
+
+#### 5.7.1. Calibração Focal Mecânica (Hardware Hack)
+
+A lente padrão do sensor OV2640 é projetada para CFTV (foco no infinito), o que
+torna objetos a menos de 50 cm completamente desfocados para o algoritmo de
+Visão Computacional.
+
+- **Quebra de Lacre e Foco Macro:** A gota de resina/trava-roscas aplicada pela
+  fábrica na base da lente será mecanicamente removida. A lente será rotacionada
+  (desrosqueada em aproximadamente 1/4 a 1/2 volta) durante uma sessão de
+  transmissão de vídeo ao vivo (tuning), até que o foco ideal seja travado
+  exatos **10 a 15 centímetros** do sensor.
+- **Refixação:** Após o ajuste da distância focal perfeita para leitura de
+  telas, a lente é selada permanentemente com um composto fixador anaeróbico ou
+  esmalte industrial para suportar as vibrações mecânicas da catraca.
+
+#### 5.7.2. Isolamento Ambiental e Iluminação Ativa ("Câmara Escura")
+
+Telas de smartphone refletem intensamente a luz solar, "cegando" a câmera do
+ESP32 com clarões brancos. O sensor nunca operará exposto diretamente à luz
+ambiente.
+
+- **Geometria do Nicho:** A câmera será encapsulada no fundo de um tubo curto de
+  PVC preto fosco ou nicho profundo (a "Câmara Escura"). O escalador deve
+  inserir o topo do celular nesse nicho. Isso cria um ambiente de iluminação
+  perfeitamente controlável e anula o reflexo do sol.
+- **Iluminação Constante Ativa:** Para ler o ingresso dentro dessa câmara
+  escura, o ESP32 utilizará o LED Flash onboard (ou array auxiliar) operando com
+  um sinal PWM baixo (ex: 5% a 10% de _duty cycle_). Isso garante que o
+  algoritmo processe a imagem sob a mesma temperatura de cor e luminosidade,
+  seja às 12h00 sob sol escaldante ou às 22h00 na escuridão total.
+
+#### 5.7.3. Compressão Base62 e Otimização de Tela (Densidade da Matriz)
+
+Poeira na lente e telas trincadas de celulares são inevitáveis no montanhismo.
+Se o QR Code possuir uma matriz densa (milhares de quadradinhos minúsculos
+gerados por um JSON longo), qualquer grão de areia anula a leitura.
+
+- **Matriz de Baixa Densidade ("Quadradões"):** Graças à nossa arquitetura de
+  compressão de payload (Base62 + Sqids + Assinatura Ed25519 em Base64), o
+  ingresso inteiro contém cerca de 100 caracteres. Isso gera um QR Code de Baixa
+  Densidade (versões 4 a 6). Os módulos (quadrados pretos) ficam fisicamente
+  maiores e mais grossos na tela do usuário, permitindo que o algoritmo de
+  correção de erro (Reed-Solomon nível M ou Q) recupere a leitura mesmo que a
+  tela esteja muito suja ou rachada.
+- **Forçamento de Display (Software):** O pacote Flutter do Aresta Climb forçará
+  programaticamente o brilho do aparelho a 100% e renderizará o QR Code
+  estritamente no formato _High-Contrast Light Mode_ (fundo branco absoluto,
+  módulos pretos), ignorando as configurações de sistema (_Dark Mode_) do
+  aparelho do usuário.
+
+#### 5.7.4. Gatilho Infravermelho e Interrupção de Hardware (Gestão de Energia)
+
+Processar _frames_ de vídeo ininterruptamente e manter o LED aceso consumiria
+mais de 200mA continuamente, esgotando o banco de baterias 12V em poucas horas
+durante um blecaute prolongado no parque.
+
+- **Standby Profundo:** O sistema passará mais de 95% do tempo ocioso. A câmera
+  do OV2640 permanecerá em estado _Power Down_ e o LED apagado.
+- **Sensor de Obstáculo (TCRT5000):** A boca do nicho de leitura será equipada
+  com um sensor óptico-reflexivo infravermelho de baixíssimo consumo (<2mA
+  contínuos).
+- **Hardware Interrupt (ISR):** Quando o usuário insere o celular no nicho, a
+  reflexão do feixe infravermelho altera o estado do pino lógico do TCRT5000.
+  Isso dispara uma Interrupção de Hardware (ISR) no ESP32, que instantaneamente
+  "acorda" o barramento da câmera e liga o LED via PWM.
+- **Timeout Lógico:** Após uma leitura bem-sucedida, ou após um _timeout_
+  programado de 10 segundos sem detecção de códigos válidos, a máquina de
+  estados desliga o LED, corta a alimentação primária do sensor de imagem e
+  retorna o sistema ao estado de dormência profunda (Deep Sleep/Light Sleep do
+  periférico). Isso permite que a catraca opere de forma autônoma por longos
+  períodos apenas com a carga das baterias estacionárias.
+
+### 5.9. Arquitetura de Leitura Ótica Dedicada (Offloading e Confiabilidade)
+
+Para garantir uma taxa de sucesso de leitura próxima a 100% em ambientes hostis
+(reflexo solar, telas trincadas e poeira) e eliminar o trabalho manual de
+calibração de lentes, o sistema abandona microcontroladores com câmeras
+acopladas (como o ESP32-CAM) em favor de uma arquitetura baseada em **Módulos
+Leitores 2D Dedicados (ex: Série GM65, GM73 ou EP3000)** comunicando-se com um
+ESP32 padrão via Serial (UART).
+
+- **Ótica e Foco de Fábrica (Macro):** Os módulos são fabricados com lentes de
+  foco curto (otimizados para 5cm - 20cm) e sensores calibrados nativamente para
+  alto contraste, ignorando reflexos gerados pelo vidro dos smartphones.
+- **Offloading de Processamento:** O ESP32 fica livre do processamento pesado de
+  visão computacional. O módulo dedicado captura a imagem, lida com a
+  decodificação da matriz bidimensional, corrige erros e simplesmente envia o
+  _payload_ final (texto Base62) para o ESP32 via pinos TX/RX, tornando a
+  resposta do sistema instantânea (< 0.2 segundos).
+- **Standby Dinâmico (Sem Sensores Extras):** A necessidade de sensores
+  infravermelhos externos para poupar bateria é eliminada. Os módulos 2D
+  industriais possuem detecção de variação de luminosidade nativa. Eles
+  permanecem em _Deep Sleep_ e ativam automaticamente a iluminação branca de
+  leitura e o laser de mira (LED vermelho) apenas quando detectam a aproximação
+  física do dispositivo do usuário, maximizando a autonomia da bateria
+  estacionária em caso de blecautes.
+
+### 5.10. Resiliência e Conciliação (O Paradoxo Offline)
 
 Embora a catraca valide os ingressos independentemente de internet, o sistema
 exige a persistência dos **metadados transacionais** no Supabase (seção 2.2).
@@ -222,7 +329,7 @@ Isso garante:
 - **Gestão Financeira:** Viabiliza automação de estorno/chargeback vinculando o
   ID do Gateway ao Ticket.
 
-### 5.8. Botão SOS e Telemetria de Resgate (Background Queue)
+### 5.11. Botão SOS e Telemetria de Resgate (Background Queue)
 
 Para maximizar a utilidade do sistema em ambientes de risco e reforçar a base
 legal de Proteção à Vida (LGPD), o frontend contará com um módulo de SOS
@@ -248,7 +355,7 @@ cobertura).
   imediato no Dashboard do fiscal da Associação, fornecendo as coordenadas
   exatas para a equipe de busca e salvamento.
 
-### 5.9. Auditoria de Fim de Dia e Alertas de Resgate (Admin Sync)
+### 5.11. Auditoria de Fim de Dia e Alertas de Resgate (Admin Sync)
 
 Para mitigar falhas de conexão prolongadas ou perdas de sinal que impeçam a
 telemetria em tempo real, o sistema de segurança do parque conta com uma rotina
