@@ -24,6 +24,18 @@ void main() {
       expect(updated.rawBytes.isEmpty, true);
     });
 
+    test('fetchIndiceWithRetries adiciona parametro ?t= quando forceBypassCache é true', () async {
+      final client = MockClient((request) async {
+        expect(request.url.toString(), contains('?t='));
+        return http.Response.bytes(Uint8List(0), 200, headers: {'etag': 'new_etag_321'});
+      });
+
+      final network = SyncNetwork(client);
+      final response = await network.fetchIndiceWithRetries('https://base.com', 'etag_123', forceBypassCache: true);
+      
+      expect(response, isA<IndiceUpdated>());
+    });
+
     test('fetchIndiceWithRetries retorna IndiceUnchanged (304)', () async {
       final client = MockClient((request) async {
         return http.Response('', 304);

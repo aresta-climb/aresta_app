@@ -126,7 +126,23 @@ class SyncService {
         datasetRepository.editorDeCroqui.downloadsPath(directory.path),
       );
 
-      final success = await _downloadOrUpdatePico(resumo, downloadsDir);
+      bool success = await _downloadOrUpdatePico(resumo, downloadsDir);
+
+      if (!success) {
+        // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto 
+        // e a CDN buscou um arquivo novo). Vamos forçar uma atualização do índice e tentar de novo.
+        debugPrint('Download falhou. Forçando atualização do índice ignorando o cache...');
+        await syncIndex(auto: false, forceBypassCache: true);
+        
+        final currentIndice = datasetRepository.indiceData.value;
+        if (currentIndice != null) {
+          final updatedResumoList = currentIndice.croquis.where((c) => c.id == id).toList();
+          if (updatedResumoList.isNotEmpty) {
+             debugPrint('Tentando download novamente com o índice atualizado...');
+             success = await _downloadOrUpdatePico(updatedResumoList.first, downloadsDir);
+          }
+        }
+      }
 
       if (success) {
         await datasetRepository.updateDatasetAfterDownload(id);
@@ -149,7 +165,7 @@ class SyncService {
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
   /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
-  Future<List<String>> syncIndex({bool auto = true}) async {
+  Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
     if (await isNetworkDisabled()) {
       debugPrint('[SyncService] Sincronização em background abortada: App descontinuado.');
       await _loadLocalIndiceAndNotify(datasetRepository.editorDeCroqui.indicePath((await getApplicationDocumentsDirectory()).path));
@@ -184,7 +200,8 @@ class SyncService {
       );
 
       final localEtag = await _storage.readETag(localEtagPath);
-      final result = await _network.fetchIndiceWithRetries(baseUrl, localEtag);
+      debugPrint('[SyncService] 🔍 ETag Local sendo enviado na requisição: $localEtag');
+      final result = await _network.fetchIndiceWithRetries(baseUrl, localEtag, forceBypassCache: forceBypassCache);
 
       if (result == null) {
         await _loadLocalIndiceAndNotify(localIndicePath);
@@ -217,6 +234,12 @@ class SyncService {
             AppLogger.instance.logError(
               '[SyncService] Falha na atualização de ${failedPicos.length} picos. O índice não será sobrescrito.',
             );
+            if (!forceBypassCache) {
+              debugPrint('[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...');
+              final fallbackFailedPicos = await syncIndex(auto: auto, forceBypassCache: true);
+              failedPicos.clear();
+              failedPicos.addAll(fallbackFailedPicos);
+            }
           }
         case IndiceUnchanged():
           debugPrint(

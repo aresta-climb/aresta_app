@@ -31,13 +31,14 @@ class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInt
 
 class FakeClient extends http.BaseClient {
   final Indice newIndice;
+  final Indice? freshIndiceForBypass;
   final Map<String, List<int>> mockFiles;
   final String? etagToReturn;
   final List<String> requestedUrls = [];
   final List<String> requestedFullUrls = [];
   final Map<String, String> receivedHeaders = {};
   
-  FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn]);
+  FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn, this.freshIndiceForBypass]);
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -46,10 +47,15 @@ class FakeClient extends http.BaseClient {
     receivedHeaders.addAll(request.headers);
 
     if (request.url.path.endsWith('indice.binarypb')) {
-      if (etagToReturn != null && request.headers['If-None-Match'] == etagToReturn) {
+      if (etagToReturn != null && request.headers['If-None-Match'] == etagToReturn && !request.url.query.contains('t=')) {
         return http.StreamedResponse(const Stream.empty(), 304);
       }
-      final bytes = newIndice.writeToBuffer();
+      
+      final indiceToReturn = (freshIndiceForBypass != null && request.url.query.contains('t=')) 
+          ? freshIndiceForBypass! 
+          : newIndice;
+          
+      final bytes = indiceToReturn.writeToBuffer();
       return http.StreamedResponse(
         Stream.value(bytes), 
         200,
@@ -515,6 +521,63 @@ void main() {
       expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
           reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
     });
+
+    test('deve tentar bypass de cache se a atualizacao de picos falhar (failedPicos.isNotEmpty) e forceBypassCache for falso', () async {
+      // 1. Setup local files: um indice velho
+      final picoId = 'pico_stale';
+      final croqui = Croqui(); 
+      final croquiBytes = croqui.writeToBuffer();
+      final correctHash = sha256.convert(croquiBytes).toString();
+      final staleHash = 'STALE_OUTDATED_HASH';
+      
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..checksumSha256Croqui = 'OLD_LOCAL_HASH');
+          
+      final indicePath = editor.indicePath(tempDir.path);
+      final indiceFile = File(indicePath);
+      indiceFile.parent.createSync(recursive: true);
+      indiceFile.writeAsBytesSync(oldIndice.writeToBuffer());
+
+      final picoFile = File('${editor.downloadsPath(tempDir.path)}/$picoId/$picoId.binarypb');
+      picoFile.parent.createSync(recursive: true);
+      picoFile.writeAsBytesSync([1, 2, 3]);
+
+      // 2. Setup mock client:
+      // - Sem ?t=, ele retorna o staleIndice (onde o pico tem staleHash). O download vai falhar pois servimos correctHash.
+      // - Com ?t=, ele retorna o freshIndice (onde o pico tem correctHash). O download vai ter sucesso.
+      final staleIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = staleHash);
+        
+      final freshIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = correctHash);
+          
+      final fakeClient = FakeClient(staleIndice, {
+        'picos/$picoId.binarypb': croquiBytes,
+      }, null, freshIndice);
+      
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+
+      // We must not be in experimental mode for _checkForUpdates to run
+      editor.isExperimentalMode.value = false;
+
+      // 3. Run sync
+      final failed = await syncServiceFake.syncIndex();
+
+      // 4. Verify that failedPicos is ultimately empty because the bypass succeeded!
+      expect(failed, isEmpty, reason: 'O fallback com bypass de cache deve resolver a falha e retornar lista vazia.');
+      
+      // Verify that local indice is NOW the fresh one
+      final finalBytes = indiceFile.readAsBytesSync();
+      final finalIndice = Indice.fromBuffer(finalBytes);
+      
+      expect(finalIndice.croquis.first.checksumSha256Croqui, correctHash, 
+          reason: 'O índice deve ser sobrescrito pelo freshIndice após o sucesso do fallback.');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -897,6 +960,61 @@ void main() {
       
       final downloadedBytes = File('${picoDir.path}/$picoId.binarypb').readAsBytesSync();
       expect(downloadedBytes, croquiBytes);
+    });
+
+    test('deve recuperar descompasso forçando atualização do índice se download falhar (hash mismatch)', () async {
+      final picoId = 'pico_descompasso';
+      final croqui = Croqui(); // empty for simplicity
+      final croquiBytes = croqui.writeToBuffer();
+      final correctHash = sha256.convert(croquiBytes).toString();
+      final oldHash = 'OLD_OUTDATED_HASH';
+      
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = oldHash);
+
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..caminhoRelativo = 'picos/$picoId.binarypb'
+        ..checksumSha256Croqui = correctHash);
+
+      // O FakeClient possui o novo índice e o arquivo correto (que bate com correctHash)
+      // Definimos etagToReturn = 'old_etag' para simular que a CDN tem um cache preso e retornará 304 
+      // se não houver o bypass '?t='.
+      final client = FakeClient(newIndice, {
+        'picos/$picoId.binarypb': croquiBytes,
+      }, 'old_etag');
+
+      editor.editorUrl.value = 'https://fake.url';
+      repo = DatasetRepository(editorDeCroqui: editor);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+
+      // Preparamos o ambiente local como se o app tivesse o índice velho e a etag velha salvos
+      final indicePath = editor.indicePath(tempDir.path);
+      final indiceFile = File(indicePath);
+      indiceFile.parent.createSync(recursive: true);
+      indiceFile.writeAsBytesSync(oldIndice.writeToBuffer());
+      
+      final etagFile = File('${indicePath}.etag');
+      etagFile.writeAsStringSync('old_etag');
+
+      repo.indiceData.value = oldIndice; // Carregado em memória
+      
+      final result = await syncServiceFake.downloadCrag(oldIndice.croquis.first);
+
+      // 1. O primeiro syncIndex retornará 304 Not Modified.
+      // 2. O app tentará baixar o pico com OLD_OUTDATED_HASH, o FakeClient retornará o pico correto, mas o hash mismatch falhará.
+      // 3. O app disparará o syncIndex com forceBypassCache: true (o FakeClient vai ignorar o if-none-match e retornar 200 OK com o newIndice).
+      // 4. O app tentará baixar de novo, agora com o correctHash, e terá sucesso.
+      expect(result, isTrue);
+      
+      final downloadsDir = editor.downloadsPath(tempDir.path);
+      final picoDir = Directory('$downloadsDir/$picoId');
+      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      
+      // O índice em memória também deve ter sido atualizado com o hash correto
+      expect(repo.indiceData.value?.croquis.first.checksumSha256Croqui, correctHash);
     });
   });
 }
