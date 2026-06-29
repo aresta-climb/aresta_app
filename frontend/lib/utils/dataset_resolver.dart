@@ -67,11 +67,11 @@ class DatasetResolver {
     }
 
     if (grupoNome != null && matchedGrupo == null) {
-      throw Exception('Grupo not found');
+      throw Exception('Grupo not found: "$grupoNome"');
     }
 
     if (setorNome != null && matchedSetor == null) {
-      throw Exception('Setor not found');
+      throw Exception('Setor not found: "$setorNome" (in grupo: "${grupoNome ?? 'global/all'}")');
     }
 
     if (escaladaNome != null && matchedSetor != null) {

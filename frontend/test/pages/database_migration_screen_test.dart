@@ -15,7 +15,7 @@ class FakeSyncService extends Fake implements SyncService {
   ValueNotifier<SyncStatus> get syncStatus => status;
 
   @override
-  Future<List<String>> syncIndex({bool auto = true}) async {
+  Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
     didSync = true;
     if (shouldFail) {
       status.value = SyncStatus.error;

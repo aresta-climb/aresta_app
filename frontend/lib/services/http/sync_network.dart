@@ -54,9 +54,15 @@ class SyncNetwork {
     String baseUrl,
     String? localEtag, {
     int retries = 3,
+    bool forceBypassCache = false,
   }) async {
     final response = await _executeWithRetries(() async {
-      final request = http.Request('GET', Uri.parse('$baseUrl/indice.binarypb'));
+      String urlStr = '$baseUrl/indice.binarypb';
+      if (forceBypassCache) {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        urlStr += '?t=$timestamp';
+      }
+      final request = http.Request('GET', Uri.parse(urlStr));
       if (localEtag != null && localEtag.isNotEmpty) {
         request.headers['If-None-Match'] = localEtag;
       }
