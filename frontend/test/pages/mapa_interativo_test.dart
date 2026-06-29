@@ -439,6 +439,21 @@ void main() {
       // The bounding box logic will compute a scale based on available space, which is typically around 1.0 - 1.5, not 2.5
       expect(matrix.storage[0], lessThan(2.5));
     });
+    testWidgets('Base card layout uses Wrap to prevent overflow with long titles', (WidgetTester tester) async {
+      final escLong = Escalada(viaEsportiva: ViaEsportiva(nome: 'A very very very very very very very very very long via name', dificuldade: GrauVia_GrauVia.BR_5));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'A very very very very very very very very very long via name', ids: ['p1']));
+      
+      await tester.pumpWidget(buildApp([escLong], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+
+      // Ensure that the card rendered and contains a Wrap widget (which replaced the Row)
+      // to handle the overflow gracefully.
+      expect(find.textContaining('A very very very'), findsOneWidget);
+      expect(find.byType(Wrap), findsWidgets);
+    });
   });
 
 }
