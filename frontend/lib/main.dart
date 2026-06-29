@@ -486,8 +486,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         node is SetorNode ||
         node is GrupoNode ||
         node is ViaNode ||
-        node is MapaInterativoNode ||
-        node is MapaoGlobalNode) {
+        node is MapaInterativoNode) {
       String cragId = '';
       String? setorNome;
       String? grupoNome;

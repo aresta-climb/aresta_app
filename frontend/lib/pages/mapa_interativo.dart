@@ -626,9 +626,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
-                          if (resolvedLabel.isNotEmpty) ...[
+                          if (resolvedLabel.isNotEmpty)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -645,16 +648,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                color: beastHide,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: beastHide,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],

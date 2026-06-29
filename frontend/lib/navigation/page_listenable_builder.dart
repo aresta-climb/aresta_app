@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
 import '../utils/dataset_resolver.dart';
+import '../services/firebase/app_logger.dart';
 import 'navigation_functions.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
@@ -80,7 +81,8 @@ class PageListenableBuilder extends StatelessWidget {
             res.grupo,
             res.escalada,
           );
-        } catch (_) {
+        } catch (e, st) {
+          AppLogger.instance.logError('Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted && AppNav.canGoBack(context)) {
               AppNav.back(context);

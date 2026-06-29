@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/pages/home.dart';
+import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
@@ -270,6 +272,33 @@ void main() {
       // Should now have pushed a new page (TabsPage, PicoNode, ModalBottomSheetPage for TextNode)
       expect(navigator.pages.length, 3);
       expect(navigator.pages[2].key, const ValueKey('TextNode(Modal)'));
+    });
+
+    testWidgets('MapaoGlobalNode generates MapaoGlobalPage directly', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      
+      treeController.navigateTo(MapaoGlobalNode(
+        crags: [],
+        parent: treeController.currentNode,
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(treeController.currentNode, isA<MapaoGlobalNode>());
+      expect(find.byType(MapaoGlobalPage), findsOneWidget);
     });
   });
 }
