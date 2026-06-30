@@ -565,7 +565,7 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
     List<Map<String, dynamic>> foundMaps = [];
     
     for (int i = 0; i < setor!.mapas.length; i++) {
-       final mapa = setor!.mapas[i];
+       final mapa = setor.mapas[i];
        for (final ref in mapa.referencias) {
           if (ref.escalada == nomeVia) {
              foundMaps.add({
