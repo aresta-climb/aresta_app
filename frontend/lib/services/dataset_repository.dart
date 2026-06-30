@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
@@ -21,11 +22,12 @@ class TopoDataset {
 /// armazenamento local, downloads e a lógica de prioridade de guias.
 class DatasetRepository {
   final EditorDeCroqui editorDeCroqui;
+  AssetBundle? assetBundle;
 
   static DatasetRepository? _instance;
   static DatasetRepository? get instance => _instance;
 
-  DatasetRepository({required this.editorDeCroqui}) {
+  DatasetRepository({required this.editorDeCroqui, this.assetBundle}) {
     _instance = this;
     // Ouve mudanças no modo experimental/editor para recarregar o índice
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);
@@ -60,6 +62,10 @@ class DatasetRepository {
       final directory = await getApplicationDocumentsDirectory();
       final localIndiceFile = File(editorDeCroqui.indicePath(directory.path));
 
+      if (!await localIndiceFile.exists()) {
+        await _unpackPreloadedAssets(directory.path);
+      }
+
       if (await localIndiceFile.exists()) {
         final bytes = await localIndiceFile.readAsBytes();
         final localIndice = Indice.fromBuffer(bytes);
@@ -74,6 +80,61 @@ class DatasetRepository {
         error: e,
       );
       loadEmpty();
+    }
+  }
+
+  /// Extrai os assets pré-baixados (pre-bundled) do pacote do aplicativo (bundle)
+  /// e os copia para o diretório de documentos do dispositivo.
+  /// 
+  /// Isso é feito apenas na primeira vez que o app é inicializado sem cache local,
+  /// garantindo que o usuário tenha um 'indice.binarypb' e as thumbnails iniciais
+  /// sem precisar de internet para o primeiro acesso.
+  /// Se houver qualquer falha durante a extração de um item específico, o erro será logado.
+  Future<void> _unpackPreloadedAssets(String docsPath) async {
+    try {
+      final bundle = assetBundle ?? rootBundle;
+      
+      ByteData? indiceData;
+      try {
+        // Tenta carregar o índice principal pré-empacotado.
+        indiceData = await bundle.load('assets/preload/indice.binarypb');
+      } catch (e) {
+        // Se falhar (por exemplo, pasta preload não existe no build), loga o erro e aborta o unpack
+        AppLogger.instance.logError('[DatasetRepo] Preload de indice.binarypb não encontrado ou erro ao carregar', error: e);
+        return;
+      }
+      
+      // Escreve o índice localmente para uso imediato pelo app
+      final indiceFile = File(editorDeCroqui.indicePath(docsPath));
+      await indiceFile.writeAsBytes(indiceData.buffer.asUint8List(indiceData.offsetInBytes, indiceData.lengthInBytes));
+      
+      final indice = Indice.fromBuffer(indiceData.buffer.asUint8List(indiceData.offsetInBytes, indiceData.lengthInBytes));
+      final thumbnailsDir = Directory('$docsPath/thumbnails');
+      if (!thumbnailsDir.existsSync()) {
+        thumbnailsDir.createSync(recursive: true);
+      }
+
+      // Itera sobre todos os croquis do índice para tentar extrair suas respectivas thumbnails pré-baixadas
+      for (var resumo in indice.croquis) {
+        final urlRelativa = resumo.caminhoRelativo;
+        final lastSlash = urlRelativa.lastIndexOf('/');
+        if (lastSlash != -1) {
+          final baseDir = urlRelativa.substring(0, lastSlash);
+          final String cragId = resumo.id.isNotEmpty ? resumo.id : baseDir.replaceAll('/', '_');
+          
+          try {
+            // Extrai a thumbnail do bundle e salva na pasta local de thumbnails do aplicativo
+            final thumbData = await bundle.load('assets/preload/thumbnails/$cragId.webp');
+            final thumbFile = File('${thumbnailsDir.path}/$cragId.webp');
+            await thumbFile.writeAsBytes(thumbData.buffer.asUint8List(thumbData.offsetInBytes, thumbData.lengthInBytes));
+          } catch (e) {
+            // Em vez de ignorar silenciosamente as falhas de thumbnail, registramos o erro no log
+            AppLogger.instance.logError('[DatasetRepo] Erro ao carregar thumbnail $cragId do preload', error: e);
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.instance.logError('[DatasetRepo] Erro geral ao descompactar assets', error: e);
     }
   }
 

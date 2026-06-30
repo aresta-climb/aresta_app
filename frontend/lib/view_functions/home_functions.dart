@@ -170,9 +170,14 @@ Widget buildSyncBadge(SyncStatus status) {
       color = Colors.orange.shade800;
       icon = Icons.warning;
       break;
-    case SyncStatus.error:
+    case SyncStatus.offline:
       text = 'Sem conexão';
       color = Colors.brown.shade800;
+      icon = Icons.cloud_off;
+      break;
+    case SyncStatus.error:
+      text = 'Erro ao atualizar';
+      color = Colors.red.shade800;
       icon = Icons.error;
       break;
     case SyncStatus.justUpdated:

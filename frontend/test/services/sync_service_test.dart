@@ -29,6 +29,13 @@ class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInt
   Future<String?> getLibraryPath() async => tempPath;
 }
 
+class _ErrorClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    throw const SocketException('Failed host lookup');
+  }
+}
+
 class FakeClient extends http.BaseClient {
   final Indice newIndice;
   final Indice? freshIndiceForBypass;
@@ -116,6 +123,8 @@ void main() {
         SyncStatus.updating,
         SyncStatus.outdated,
         SyncStatus.error,
+        SyncStatus.offline,
+        SyncStatus.justUpdated,
       ]));
     });
   });
@@ -420,6 +429,158 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // Sincronização de Thumbnails Globais (Explorar)
+  // ---------------------------------------------------------------------------
+
+  group('Sincronização de Thumbnails Globais', () {
+    late Directory tempDir;
+    late Directory thumbnailsDir;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      tempDir = await Directory.systemTemp.createTemp('sync_thumbnails_test');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      thumbnailsDir = Directory('${tempDir.path}/thumbnails');
+    });
+
+    tearDown(() async {
+      try {
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    test('deve baixar thumbnails novas para picos listados no indice, mesmo se o pico nao estiver baixado', () async {
+      final oldIndice = Indice(); // Indice vazio antigo
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = 'pico_thumb'
+        ..checksumSha256Thumbnail = sha256.convert([10]).toString());
+
+      final fakeClient = FakeClient(newIndice, {
+        'thumbnails/pico_thumb.webp': [10],
+      });
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+
+      await syncService.syncIndex();
+
+      // Verifica que a URL da thumbnail foi requisitada com ?sha256sum=
+      final expectedHash = sha256.convert([10]).toString();
+      final thumbUrl = fakeClient.requestedFullUrls.firstWhere((u) => u.contains('pico_thumb.webp'), orElse: () => '');
+      expect(thumbUrl, isNotEmpty, reason: 'A thumbnail deveria ter sido baixada');
+      expect(thumbUrl, contains('?sha256sum=$expectedHash'));
+
+      // Verifica que o arquivo foi salvo no disco
+      final thumbFile = File('${thumbnailsDir.path}/pico_thumb.webp');
+      expect(thumbFile.existsSync(), isTrue, reason: 'O arquivo da thumbnail deve existir no cache local');
+      expect(await thumbFile.readAsBytes(), equals([10]));
+    });
+
+    test('deve ignorar thumbnails que não mudaram de hash', () async {
+      final picoId = 'pico_thumb_same';
+      final fileHash = sha256.convert([11]).toString();
+      
+      // Cria a thumbnail antiga
+      await thumbnailsDir.create(recursive: true);
+      await File('${thumbnailsDir.path}/$picoId.webp').writeAsBytes([11]);
+
+      final oldIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..checksumSha256Thumbnail = fileHash);
+
+      final newIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = picoId
+        ..checksumSha256Thumbnail = fileHash);
+
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final fakeClient = FakeClient(newIndice, {
+        'thumbnails/$picoId.webp': [11], // Mock pra caso tente baixar
+      });
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+
+      await syncService.syncIndex();
+
+      // Nenhuma thumbnail deveria ser requisitada
+      expect(fakeClient.requestedUrls.any((url) => url.contains('.webp')), isFalse);
+    });
+
+    test('deve deletar thumbnails órfãs que estavam no índice antigo mas não no novo', () async {
+      final picoIdRemovido = 'pico_removido';
+      final picoIdMantido = 'pico_mantido';
+      
+      // Cria thumbnails locais para simular cache existente
+      await thumbnailsDir.create(recursive: true);
+      final thumbRemovida = File('${thumbnailsDir.path}/$picoIdRemovido.webp');
+      final thumbMantida = File('${thumbnailsDir.path}/$picoIdMantido.webp');
+      
+      await thumbRemovida.writeAsBytes([1]);
+      await thumbMantida.writeAsBytes([2]);
+
+      // Índice antigo possuía os dois picos
+      final oldIndice = Indice(croquis: [
+        ResumoCroqui(id: picoIdRemovido, checksumSha256Thumbnail: 'hash1'),
+        ResumoCroqui(id: picoIdMantido, checksumSha256Thumbnail: 'hash2'),
+      ]);
+
+      // Novo índice não possui o pico removido
+      final newIndice = Indice(croquis: [
+        ResumoCroqui(id: picoIdMantido, checksumSha256Thumbnail: 'hash2'),
+      ]);
+
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final fakeClient = FakeClient(newIndice, {});
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+
+      await syncService.syncIndex();
+
+      // Thumbnail removida deve ter sido apagada do disco
+      expect(thumbRemovida.existsSync(), isFalse, reason: 'Thumbnail do pico removido deveria ser apagada');
+      // Thumbnail mantida deve continuar no disco
+      expect(thumbMantida.existsSync(), isTrue, reason: 'Thumbnail do pico mantido deve permanecer no disco');
+    });
+
+    test('não deve deletar thumbnails órfãs nem efetivar updates atômicos se houver falha parcial no download', () async {
+      final picoIdRemovido = 'pico_removido';
+      final picoIdComErro = 'pico_com_erro';
+      
+      // Cria thumbnail local para simular arquivo que DEVERIA ser apagado
+      await thumbnailsDir.create(recursive: true);
+      final thumbRemovida = File('${thumbnailsDir.path}/$picoIdRemovido.webp');
+      await thumbRemovida.writeAsBytes([1]);
+
+      // Índice antigo possuía o pico a ser removido
+      final oldIndice = Indice(croquis: [
+        ResumoCroqui(id: picoIdRemovido, checksumSha256Thumbnail: 'hash1'),
+      ]);
+
+      // Novo índice não possui o pico removido, mas adiciona um que dará erro no download
+      final newIndice = Indice(croquis: [
+        ResumoCroqui(id: picoIdComErro, checksumSha256Thumbnail: 'hash2_erro'),
+      ]);
+
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+      final mockClient = FakeClient(newIndice, {});
+
+      final syncService = SyncService(datasetRepository: repo, client: mockClient);
+
+      await syncService.syncIndex();
+
+      // Thumbnail removida NÃO deve ter sido apagada do disco, pois o SyncIndex falhou e abortou as alterações atômicas
+      expect(thumbRemovida.existsSync(), isTrue, reason: 'Thumbnail órfã NÃO deve ser apagada devido à falha de download no SyncUpdates');
+      expect(syncService.syncStatus.value, SyncStatus.error, reason: 'Status deve refletir o erro do syncIndex');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // SyncOnLaunch Order of Operations
   // ---------------------------------------------------------------------------
 
@@ -517,9 +678,17 @@ void main() {
       
       expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
           reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
-          
-      expect(finalIndice.croquis.first.checksumSha256Croqui, 'OLD_CHECKSUM', 
-          reason: 'O índice não deve ser sobrescrito se houver erro ou interrupção no download do pico.');
+    });
+
+    test('deve definir syncStatus para offline se falhar ao buscar o indice.binarypb na nuvem', () async {
+      // Simula uma falha de rede completa para fetchIndiceWithRetries retornar null
+      final errorClient = _ErrorClient();
+      final syncService = SyncService(datasetRepository: repo, client: errorClient);
+
+      await syncService.syncIndex();
+
+      expect(syncService.syncStatus.value, SyncStatus.offline,
+          reason: 'Se o fetch falhar, o status final deve ser offline, em vez de erro.');
     });
 
     test('deve tentar bypass de cache se a atualizacao de picos falhar (failedPicos.isNotEmpty) e forceBypassCache for falso', () async {
@@ -669,7 +838,9 @@ void main() {
 
     tearDown(() {
       if (tempDir.existsSync()) {
-        tempDir.deleteSync(recursive: true);
+        try {
+          tempDir.deleteSync(recursive: true);
+        } catch (_) {}
       }
     });
 

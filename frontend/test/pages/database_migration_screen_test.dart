@@ -9,6 +9,7 @@ import '../mocks/mock_telemetry_service.dart';
 class FakeSyncService extends Fake implements SyncService {
   bool didSync = false;
   bool shouldFail = false;
+  bool shouldBeOffline = false;
   ValueNotifier<SyncStatus> status = ValueNotifier(SyncStatus.updating);
 
   @override
@@ -17,7 +18,10 @@ class FakeSyncService extends Fake implements SyncService {
   @override
   Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
     didSync = true;
-    if (shouldFail) {
+    if (shouldBeOffline) {
+      status.value = SyncStatus.offline;
+      return [];
+    } else if (shouldFail) {
       status.value = SyncStatus.error;
       return ['fake_error'];
     } else {
@@ -94,6 +98,26 @@ void main() {
       final mockTelemetry = TelemetryService.instance as MockTelemetryService;
       expect(mockTelemetry.recordedEvents.contains('migracao_db'), isTrue);
       expect(mockTelemetry.recordedParams['migracao_db']?['acao'], 'tentar_novamente_clicado_tela_migracao');
+    });
+
+    testWidgets('Deve mostrar erro se syncIndex retornar SyncStatus.offline (falta de internet)', (WidgetTester tester) async {
+      final fakeSyncService = FakeSyncService();
+      fakeSyncService.shouldBeOffline = true;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DatabaseMigrationScreen(
+            syncService: fakeSyncService,
+            onMigrationComplete: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.'), findsOneWidget);
+      expect(find.text('Tentar Novamente'), findsOneWidget);
     });
   });
 }

@@ -87,10 +87,7 @@ void main() async {
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
   // Sincronização inicial na inicialização
-  final needsMigration = await syncService.checkNeedsMigration();
-  if (!needsMigration) {
-    syncService.syncIndex();
-  }
+  final needsMigration = await setupAppServices(datasetRepo, syncService);
 
   // Passa isso para o aplicativo
   runApp(
@@ -101,6 +98,18 @@ void main() async {
       acceptedLegalVersion: acceptedLegalVersion ?? 0,
     ),
   );
+}
+
+@visibleForTesting
+Future<bool> setupAppServices(DatasetRepository datasetRepo, SyncService syncService) async {
+  await datasetRepo.init();
+  
+  final needsMigration = await syncService.checkNeedsMigration();
+  if (!needsMigration) {
+    // Roda em background sem dar await
+    syncService.syncIndex();
+  }
+  return needsMigration;
 }
 
 class MyApp extends StatefulWidget {
@@ -415,7 +424,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              'Falha na sincronização em segundo plano. Verifique sua conexão.',
+              'Erro ao sincronizar os dados. Tente novamente mais tarde.',
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 4),
