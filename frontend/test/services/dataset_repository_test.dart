@@ -14,6 +14,12 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_app_logger.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:flutter/services.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+
+class MockAssetBundle extends Mock implements AssetBundle {}
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -86,6 +92,40 @@ void main() {
       repo.activeDataset.addListener(() => notified = true);
       repo.loadEmpty();
       expect(notified, isTrue);
+    });
+
+    test('init deve descompactar indice.binarypb e thumbnails do preload quando o indice local nao existe', () async {
+      final mockBundle = MockAssetBundle();
+      
+      final fakeIndice = Indice(
+        croquis: [
+          ResumoCroqui(id: 'crag1', caminhoRelativo: 'crag1/compilado.binarypb'),
+        ]
+      );
+      final indiceBytes = fakeIndice.writeToBuffer();
+      
+      // Mock para indice.binarypb
+      when(() => mockBundle.load('assets/preload/indice.binarypb'))
+          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
+          
+      // Mock para thumbnail
+      when(() => mockBundle.load('assets/preload/thumbnails/crag1.webp'))
+          .thenAnswer((_) async => ByteData.view(Uint8List.fromList([1,2,3]).buffer));
+          
+      // Injeta o mockBundle (adicionaremos no DatasetRepository depois)
+      repo.assetBundle = mockBundle;
+
+      await repo.init();
+
+      final docsPath = tempDir.path;
+      final localIndiceFile = File(editor.indicePath(docsPath));
+      expect(localIndiceFile.existsSync(), isTrue);
+      
+      final thumbFile = File('$docsPath/thumbnails/crag1.webp');
+      expect(thumbFile.existsSync(), isTrue);
+      
+      // Deve ter carregado na memoria
+      expect(repo.activeDataset.value!.availablePicos.length, 1);
     });
 
     test('updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos e preencher data', () async {
@@ -190,6 +230,62 @@ void main() {
     test('deleteCrag retorna falso se ocorrer erro na deleção', () async {
       final result = await repo.deleteCrag('pico_inexistente');
       expect(result, isFalse);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pré-bundling (Unpack Assets)
+  // ---------------------------------------------------------------------------
+  group('_unpackPreloadedAssets', () {
+    late MockAppLogger mockLogger;
+
+    setUp(() {
+      mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+    });
+
+    test('deve logar erro se falhar ao carregar o indice do bundle (ex: pasta não existe)', () async {
+      final mockBundle = MockAssetBundle();
+      when(() => mockBundle.load('assets/preload/indice.binarypb'))
+          .thenThrow(Exception('Bundle não encontrado'));
+      
+      repo.assetBundle = mockBundle;
+      
+      // Chamamos init que por sua vez chama _unpackPreloadedAssets na ausência de diretórios
+      await repo.init();
+
+      expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
+      expect(
+        mockLogger.recordedErrors.any((e) => e['contextMessage'].contains('Preload de indice.binarypb')),
+        isTrue,
+      );
+    });
+
+    test('deve logar erro se falhar ao carregar uma thumbnail específica', () async {
+      final mockBundle = MockAssetBundle();
+      
+      final mockIndice = Indice()..croquis.add(ResumoCroqui()
+        ..id = 'pico_sem_thumb'
+        ..caminhoRelativo = 'picos/pico_sem_thumb.binarypb'
+      );
+      final indiceBytes = mockIndice.writeToBuffer();
+      
+      when(() => mockBundle.load('assets/preload/indice.binarypb'))
+          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
+          
+      when(() => mockBundle.load('assets/preload/thumbnails/pico_sem_thumb.webp'))
+          .thenThrow(Exception('Thumbnail missing in bundle'));
+      
+      repo.assetBundle = mockBundle;
+      
+      await repo.init();
+
+      // O índice foi carregado com sucesso, mas a thumbnail falhou
+      expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
+      expect(
+        mockLogger.recordedErrors.any((e) => e['contextMessage'].contains('Erro ao carregar thumbnail pico_sem_thumb')),
+        isTrue,
+      );
     });
   });
 }

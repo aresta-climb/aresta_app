@@ -14,6 +14,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mocks/mock_telemetry_service.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockAssetBundle extends Fake implements AssetBundle {
   final Map<String, String> mockFiles;
@@ -62,6 +63,9 @@ class FakeRemoteConfigService implements RemoteConfigService {
   Future<void> initialize() async {}
 }
 
+class MockDatasetRepository extends Mock implements DatasetRepository {}
+class MockSyncService extends Mock implements SyncService {}
+
 void main() {
   late DatasetRepository mockRepo;
   late SyncService mockSync;
@@ -96,6 +100,33 @@ void main() {
     debugDumpApp();
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     expect(find.byType(TreeNavigationWrapper), findsNothing);
+  });
+
+
+
+  test('setupAppServices awaits datasetRepo.init() before calling syncIndex', () async {
+    final mockRepo = MockDatasetRepository();
+    final mockSync = MockSyncService();
+
+    // The order of calls is important
+    bool initCalled = false;
+    
+    when(() => mockRepo.init()).thenAnswer((_) async {
+      await Future.delayed(const Duration(milliseconds: 100));
+      initCalled = true;
+    });
+
+    when(() => mockSync.checkNeedsMigration()).thenAnswer((_) async => false);
+    when(() => mockSync.syncIndex()).thenAnswer((_) async {
+      expect(initCalled, isTrue, reason: 'init() should be awaited before syncIndex()');
+      return [];
+    });
+
+    final result = await setupAppServices(mockRepo, mockSync);
+    
+    expect(result, isFalse);
+    verify(() => mockRepo.init()).called(1);
+    verify(() => mockSync.syncIndex()).called(1);
   });
 
   testWidgets('MyApp shows TreeNavigationWrapper when acceptedLegalVersion matches kLegalVersion', (WidgetTester tester) async {

@@ -48,7 +48,9 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
     
     try {
       final failed = await syncService.syncIndex(auto: false);
-      if (syncService.syncStatus.value == SyncStatus.error || failed.isNotEmpty) {
+      if (syncService.syncStatus.value == SyncStatus.error || 
+          syncService.syncStatus.value == SyncStatus.offline || 
+          failed.isNotEmpty) {
         if (mounted) {
           setState(() {
             _isLoading = false;

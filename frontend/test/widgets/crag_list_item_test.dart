@@ -1,6 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+}
 
 void main() {
   group('CragListItem Widget Tests', () {
@@ -127,5 +142,49 @@ void main() {
       expect(openChamado, isTrue);
     });
   });
-}
 
+  group('_buildCragIcon Tests', () {
+    testWidgets('Deve usar FutureBuilder<Directory> (tenta carregar arquivo local) se cragId existir', (WidgetTester tester) async {
+      final Map<String, dynamic> crag = {
+        'id': 'pico_offline',
+        'nome': 'Pico Local',
+        'thumbnailUrl': 'https://serving.arestaclimb.com/v3/thumbnails/pico_offline.webp',
+      };
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragListItem(crag, false, () {}),
+          ),
+        ),
+      );
+
+      final finder = find.byType(FutureBuilder<Directory>);
+      expect(finder, findsOneWidget);
+    });
+
+    testWidgets('Deve usar icone de fallback se cragId NAO existir (sem imagens de rede)', (WidgetTester tester) async {
+      final Map<String, dynamic> crag = {
+        'nome': 'Pico Sem ID',
+        'thumbnailUrl': 'https://serving.arestaclimb.com/v3/thumbnails/pico_network.webp',
+      };
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragListItem(crag, false, () {}),
+          ),
+        ),
+      );
+
+      final futureBuilderFinder = find.byType(FutureBuilder<Directory>);
+      expect(futureBuilderFinder, findsNothing);
+      
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsNothing);
+
+      final iconFinder = find.byIcon(Icons.terrain);
+      expect(iconFinder, findsOneWidget);
+    });
+  });
+}

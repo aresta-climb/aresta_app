@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -315,7 +317,7 @@ class _CragListItemState extends State<_CragListItem>
                   // ── Linha principal (sempre visível) ──────────────────
                   Row(
                     children: [
-                      _buildCragIcon(safeString(widget.crag['thumbnailUrl'])),
+                      _buildCragIcon(safeString(widget.crag['thumbnailUrl']), cragId: safeString(widget.crag['id'])),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -487,7 +489,7 @@ class _CragListItemState extends State<_CragListItem>
 ///
 /// Agora utiliza a thumbnail disponível no servidor se [thumbnailUrl] não estiver vazia,
 /// e lida com URLs 'aresta-zip://' baixando os bytes em memória.
-Widget _buildCragIcon(String thumbnailUrl) {
+Widget _buildCragIcon(String thumbnailUrl, {String? cragId}) {
   Widget content;
 
   if (thumbnailUrl.isNotEmpty) {
@@ -518,34 +520,38 @@ Widget _buildCragIcon(String thumbnailUrl) {
         },
       );
     } else {
-      content = Image.network(
-        thumbnailUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildPlaceholderIcon(), // Caso tiver um error, ir para o ícone de fallback
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-
-          double? progressValue;
-          if (loadingProgress.expectedTotalBytes != null) {
-            progressValue =
-                loadingProgress.cumulativeBytesLoaded /
-                loadingProgress.expectedTotalBytes!;
-          }
-
-          return Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: beastHide.withValues(alpha: 0.5),
-                value: progressValue,
-              ),
-            ),
-          );
-        },
-      );
+      if (cragId != null && cragId.isNotEmpty) {
+        content = FutureBuilder<Directory>(
+          future: getApplicationDocumentsDirectory(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: beastHide.withValues(alpha: 0.5),
+                  ),
+                ),
+              );
+            }
+            if (snapshot.hasData) {
+              final file = File('${snapshot.data!.path}/thumbnails/$cragId.webp');
+              if (file.existsSync()) {
+                return Image.file(
+                  file,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => _buildPlaceholderIcon(),
+                );
+              }
+            }
+            return _buildPlaceholderIcon();
+          },
+        );
+      } else {
+        content = _buildPlaceholderIcon();
+      }
     }
   } else {
     content = _buildPlaceholderIcon();

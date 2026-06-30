@@ -15,8 +15,29 @@ import 'sync_network.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
+
+/// Classe auxiliar que agrega todas as operações de disco (.tmp -> renomeio, deleções)
+/// e atualizações de estado em memória (metadados).
+/// Utilizada para garantir que **nenhuma** alteração seja efetivada se houver falhas parciais.
+class _SyncUpdates {
+  final List<String> filesToDelete = [];
+  final Map<String, String> filesToRename = {};
+  final Map<String, Croqui> metadataToUpdate = {};
+  final List<String> failedPicos = [];
+  bool hasErrors = false;
+
+  /// Combina as operações pendentes de outro [other] com este agregador.
+  void merge(_SyncUpdates other) {
+    filesToDelete.addAll(other.filesToDelete);
+    filesToRename.addAll(other.filesToRename);
+    metadataToUpdate.addAll(other.metadataToUpdate);
+    failedPicos.addAll(other.failedPicos);
+    if (other.hasErrors) hasErrors = true;
+  }
+}
+
 /// Representa o estado de sincronização do aplicativo.
-enum SyncStatus { updated, updating, outdated, error, justUpdated }
+enum SyncStatus { updated, updating, outdated, error, justUpdated, offline }
 
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 ///
@@ -126,7 +147,8 @@ class SyncService {
         datasetRepository.editorDeCroqui.downloadsPath(directory.path),
       );
 
-      bool success = await _downloadOrUpdatePico(resumo, downloadsDir);
+      _SyncUpdates updates = await _downloadOrUpdatePico(resumo, downloadsDir);
+      bool success = !updates.hasErrors;
 
       if (!success) {
         // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto 
@@ -139,12 +161,22 @@ class SyncService {
           final updatedResumoList = currentIndice.croquis.where((c) => c.id == id).toList();
           if (updatedResumoList.isNotEmpty) {
              debugPrint('Tentando download novamente com o índice atualizado...');
-             success = await _downloadOrUpdatePico(updatedResumoList.first, downloadsDir);
+             updates = await _downloadOrUpdatePico(updatedResumoList.first, downloadsDir);
+             success = !updates.hasErrors;
           }
         }
       }
 
       if (success) {
+        if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
+          await _storage.applyAtomicFileUpdates(
+            filesToDelete: updates.filesToDelete,
+            filesToRename: updates.filesToRename,
+          );
+        }
+        for (final entry in updates.metadataToUpdate.entries) {
+          await _updatePicoMetadata(entry.key, entry.value);
+        }
         await datasetRepository.updateDatasetAfterDownload(id);
         TelemetryService.instance.logAcaoExplorar(id, 'baixar');
       }
@@ -205,7 +237,7 @@ class SyncService {
 
       if (result == null) {
         await _loadLocalIndiceAndNotify(localIndicePath);
-        setUpdatedStatus();
+        syncStatus.value = SyncStatus.offline;
         return failedPicos;
       }
 
@@ -217,28 +249,56 @@ class SyncService {
 
           await datasetRepository.loadIndiceToMemory(newIndice);
 
+          final globalUpdates = _SyncUpdates();
+
           if (!editorDeCroqui.isExperimentalMode.value) {
-            failedPicos.addAll(await _checkForUpdates(oldIndice, newIndice));
+            final thumbUpdates = await _syncThumbnails(oldIndice, newIndice, baseUrl);
+            globalUpdates.merge(thumbUpdates);
+
+            final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
+            globalUpdates.merge(croquiUpdates);
           } else {
             setUpdatedStatus();
           }
 
-          if (failedPicos.isEmpty) {
+          if (globalUpdates.failedPicos.isNotEmpty) {
+            failedPicos.addAll(globalUpdates.failedPicos);
+          }
+
+          if (failedPicos.isEmpty && !globalUpdates.hasErrors) {
+            // Sucesso total. Efetivar todas as alterações pendentes de uma vez só (Atomic Global Updates).
+            // Isso previne que o aplicativo fique com dados e arquivos em estados inconsistentes caso
+            // o índice mestre falhe ao ser baixado ou processado.
+            if (globalUpdates.filesToDelete.isNotEmpty || globalUpdates.filesToRename.isNotEmpty) {
+              await _storage.applyAtomicFileUpdates(
+                filesToDelete: globalUpdates.filesToDelete,
+                filesToRename: globalUpdates.filesToRename,
+              );
+            }
+
+            // Atualiza os metadados do aplicativo na RAM de forma segura após as operações de disco.
+            for (final entry in globalUpdates.metadataToUpdate.entries) {
+              await _updatePicoMetadata(entry.key, entry.value);
+            }
+
             await _persistNewIndice(
               localIndicePath,
               localEtagPath,
               responseBytes,
               result.newEtag,
             );
+            setUpdatedStatus();
           } else {
             AppLogger.instance.logError(
-              '[SyncService] Falha na atualização de ${failedPicos.length} picos. O índice não será sobrescrito.',
+              '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
             );
             if (!forceBypassCache) {
               debugPrint('[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...');
               final fallbackFailedPicos = await syncIndex(auto: auto, forceBypassCache: true);
               failedPicos.clear();
               failedPicos.addAll(fallbackFailedPicos);
+            } else {
+              syncStatus.value = SyncStatus.error;
             }
           }
         case IndiceUnchanged():
@@ -302,10 +362,11 @@ class SyncService {
   /// Compara o índice baixado (`newIndice`) com o antigo (`oldIndice`) para identificar
   /// quais Croquis já armazenados localmente sofreram alterações (baseado no sha256).
   /// Caso alterações sejam detectadas, os baixa novamente de forma transparente.
-  Future<List<String>> _checkForUpdates(
+  Future<_SyncUpdates> _checkForUpdates(
     Indice? oldIndice,
     Indice newIndice,
   ) async {
+    final updates = _SyncUpdates();
     debugPrint('Checking for outdated picos...');
     syncStatus.value = SyncStatus.updating;
     final directory = await getApplicationDocumentsDirectory();
@@ -315,10 +376,8 @@ class SyncService {
 
     if (!await downloadsDir.exists()) {
       setUpdatedStatus();
-      return [];
+      return updates;
     }
-
-    final List<String> failedPicos = [];
 
     try {
       for (var newResumo in newIndice.croquis) {
@@ -348,43 +407,135 @@ class SyncService {
 
           if (needsUpdate) {
             debugPrint('Pico ${newResumo.id} requires update (outdated or fallback). Updating...');
-            final success = await _downloadOrUpdatePico(
+            final picoUpdates = await _downloadOrUpdatePico(
               newResumo,
               downloadsDir,
             );
-            if (!success) {
-              failedPicos.add(newResumo.nome);
+            if (picoUpdates.hasErrors) {
+              updates.failedPicos.add(newResumo.nome);
+              updates.hasErrors = true;
+            } else {
+              updates.merge(picoUpdates);
             }
           }
         }
-      }
-
-      if (failedPicos.isNotEmpty) {
-        syncStatus.value = SyncStatus.error;
-      } else {
-        setUpdatedStatus();
       }
     } catch (e) {
       AppLogger.instance.logError(
         'Erro crítico durante atualização de picos',
         error: e,
       );
-      syncStatus.value = SyncStatus.error;
+      updates.hasErrors = true;
     }
 
     debugPrint('Background update check complete.');
-    return failedPicos;
+    return updates;
+  }
+
+  /// Sincroniza as thumbnails globais para a tela "Explorar".
+  /// Baixa as thumbnails de todos os picos do índice caso elas sejam novas ou tenham mudado.
+  Future<_SyncUpdates> _syncThumbnails(
+    Indice? oldIndice,
+    Indice newIndice,
+    String baseUrl,
+  ) async {
+    final updates = _SyncUpdates();
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final thumbnailsDir = Directory('${directory.path}/thumbnails');
+      if (!await thumbnailsDir.exists()) {
+        await thumbnailsDir.create(recursive: true);
+      }
+
+      final Map<String, String> oldHashes = {};
+      final Set<String> oldIds = {};
+      if (oldIndice != null) {
+        for (var c in oldIndice.croquis) {
+          oldIds.add(c.id);
+          if (c.checksumSha256Thumbnail.isNotEmpty) {
+            oldHashes[c.id] = c.checksumSha256Thumbnail;
+          }
+        }
+      }
+
+      final Set<String> newIdsWithThumbs = newIndice.croquis
+          .where((c) => c.checksumSha256Thumbnail.isNotEmpty)
+          .map((c) => c.id)
+          .toSet();
+
+      for (var oldId in oldIds) {
+        if (!newIdsWithThumbs.contains(oldId)) {
+          final thumbPath = '${thumbnailsDir.path}/$oldId.webp';
+          if (await File(thumbPath).exists()) {
+            updates.filesToDelete.add(thumbPath);
+          }
+        }
+      }
+
+      final List<Future<bool>> downloadTasks = [];
+
+      for (var newResumo in newIndice.croquis) {
+        if (newResumo.checksumSha256Thumbnail.isEmpty) continue;
+
+        final id = newResumo.id;
+        final newHash = newResumo.checksumSha256Thumbnail;
+        final oldHash = oldHashes[id];
+
+        final thumbPath = '${thumbnailsDir.path}/$id.webp';
+        final thumbFile = File(thumbPath);
+
+        bool needsDownload = false;
+
+        if (oldHash != newHash) {
+          needsDownload = true;
+        } else if (!await thumbFile.exists()) {
+          // Se o hash é o mesmo, mas o arquivo não está no disco, baixe novamente.
+          needsDownload = true;
+        }
+
+        if (needsDownload) {
+          final url = '$baseUrl/thumbnails/$id.webp';
+          final tmpPath = '$thumbPath.tmp';
+          
+          downloadTasks.add(
+            _downloadFileAtomic(url, tmpPath, newHash).then((success) {
+              if (success) {
+                updates.filesToRename[tmpPath] = thumbPath;
+              }
+              return success;
+            })
+          );
+        }
+      }
+
+      // Aguarda todos os downloads de thumbnails completarem paralelamente
+      if (downloadTasks.isNotEmpty) {
+        debugPrint('Baixando ${downloadTasks.length} thumbnails...');
+        final results = await Future.wait(downloadTasks);
+        if (results.any((success) => !success)) {
+          updates.hasErrors = true;
+        }
+      }
+    } catch (e) {
+      AppLogger.instance.logError('Erro ao sincronizar thumbnails globais', error: e);
+      updates.hasErrors = true;
+    }
+    return updates;
   }
 
   /// Atualiza ou baixa um pico e sincroniza suas imagens de forma atômica.
-  /// Retorna true se o update/download teve sucesso, false caso contrário.
+  /// Retorna _SyncUpdates com as alterações pendentes. Se houver erro, retorna _SyncUpdates com hasErrors=true.
   /// NOTA: Essa função deve ser chamada após garantir que o índice já está atualizado.
-  Future<bool> _downloadOrUpdatePico(
+  Future<_SyncUpdates> _downloadOrUpdatePico(
     ResumoCroqui newResumo,
     Directory downloadsDir,
   ) async {
+    final updates = _SyncUpdates();
     final currentIndice = datasetRepository.indiceData.value;
-    if (currentIndice == null) return false;
+    if (currentIndice == null) {
+      updates.hasErrors = true;
+      return updates;
+    }
 
     final latestResumoList = currentIndice.croquis
         .where((c) => c.id == newResumo.id)
@@ -393,7 +544,8 @@ class SyncService {
       AppLogger.instance.logError(
         'Croqui ${newResumo.id} não foi encontrado no índice atualizado.',
       );
-      return false;
+      updates.hasErrors = true;
+      return updates;
     }
 
     final latestResumo = latestResumoList.first;
@@ -413,10 +565,16 @@ class SyncService {
         tmpPicoFilePath,
         latestResumo.checksumSha256Croqui,
       );
-      if (!mainFileSuccess) return false;
+      if (!mainFileSuccess) {
+        updates.hasErrors = true;
+        return updates;
+      }
 
       final newPicoData = await _storage.readLocalCroqui(tmpPicoFilePath);
-      if (newPicoData == null) return false;
+      if (newPicoData == null) {
+        updates.hasErrors = true;
+        return updates;
+      }
 
       final oldPicoData = await _storage.readLocalCroqui(picoFilePath);
 
@@ -429,32 +587,32 @@ class SyncService {
         baseUrl: baseUrl,
       );
 
-      if (syncResult == null) return false;
+      if (syncResult == null) {
+        updates.hasErrors = true;
+        return updates;
+      }
 
       // 3. Efetivar alteração do arquivo principal e arquivos externos
-      await _storage.applyAtomicFileUpdates(
-        filesToDelete: syncResult.filesToDelete,
-        filesToRename: {
-          tmpPicoFilePath: picoFilePath,
-          ...syncResult.filesToRename,
-        },
-      );
+      updates.filesToDelete.addAll(syncResult.filesToDelete);
+      updates.filesToRename[tmpPicoFilePath] = picoFilePath;
+      updates.filesToRename.addAll(syncResult.filesToRename);
 
-      await _updatePicoMetadata(id, newPicoData);
+      updates.metadataToUpdate[id] = newPicoData;
 
       TelemetryService.instance.logAtualizarCroqui(
         id,
         latestResumo.checksumSha256Croqui,
         latestResumo.timestampUpdate.toDateTime().toIso8601String(),
       );
-      debugPrint('Updated pico $id successfully.');
-      return true;
+      debugPrint('Updated pico $id successfully (pending atomic apply).');
+      return updates;
     } catch (e) {
       AppLogger.instance.logError(
         'Erro crítico durante o download do pico $id',
         error: e,
       );
-      return false;
+      updates.hasErrors = true;
+      return updates;
     }
   }
 
