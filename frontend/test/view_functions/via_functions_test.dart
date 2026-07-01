@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/via_functions.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -80,5 +81,40 @@ void main() {
       expect(getGrauValue(escalada), 0);
     });
   });
-}
 
+  group('buildViaBody', () {
+    testWidgets('deve renderizar chip Ver no mapa se houver mapa em pico maps index', (tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
+      final mapa = Mapa()..caminhoImagemMapa = 'mapa1.png';
+      mapa.referencias.add(Mapa_Referencia(escalada: 'Via Teste', ids: ['p1']));
+      
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.add(escalada);
+      setor.mapas.add(mapa);
+      
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return buildViaBody(
+                context,
+                escalada,
+                'crag1',
+                pico: pico,
+                setor: setor,
+                grupo: null,
+                fromSetorPage: false,
+                fromMapaPage: false,
+              );
+            },
+          ),
+        ),
+      ));
+
+      expect(find.text('Ver no mapa'), findsOneWidget);
+    });
+  });
+}

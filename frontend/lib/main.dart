@@ -508,6 +508,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       if (node is ViaNode) {
         escaladaNome = node.escaladaNome;
         setorNome = node.setorNome;
+        grupoNome = node.grupoNome;
       }
       if (node is GrupoNode) grupoNome = node.grupoNome;
       if (node is MapaInterativoNode) setorNome = node.setorContextNome;
@@ -590,8 +591,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             return GrupoPage(grupo: grupo!, cragId: cragId);
           } else if (node is ViaNode) {
             return ViaPage(
+              pico: pico,
               escalada: escalada!,
               setor: setor,
+              grupo: grupo,
               cragId: cragId,
             );
           }

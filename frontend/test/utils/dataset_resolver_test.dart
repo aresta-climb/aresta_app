@@ -156,4 +156,34 @@ void main() {
       });
     });
   });
+
+  group('ResolvedDataset', () {
+    test('should properly store and retrieve values', () {
+      final pico = Pico()..nome = 'Pico Teste';
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
+
+      final resolved = ResolvedDataset(
+        grupo: grupo,
+        setor: setor,
+        escalada: escalada,
+      );
+
+      expect(resolved.grupo?.nome, 'Grupo Teste');
+      expect(resolved.setor?.nome, 'Setor Teste');
+      expect(resolved.escalada?.viaEsportiva.nome, 'Via Teste');
+    });
+
+    test('should support equality', () {
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      
+      final resolved1 = ResolvedDataset(grupo: grupo);
+      final resolved2 = ResolvedDataset(grupo: grupo);
+      final resolved3 = ResolvedDataset(grupo: Grupo()..nome = 'Grupo Teste');
+
+      expect(resolved1, resolved2);
+      expect(resolved1, resolved3); // value equality works
+    });
+  });
 }

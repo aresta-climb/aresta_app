@@ -190,10 +190,12 @@ class GrupoNode extends PicoContextNode {
 class ViaNode extends PicoContextNode {
   final String escaladaNome;
   final String? setorNome;
+  final String? grupoNome;
 
   const ViaNode({
     required this.escaladaNome,
     this.setorNome,
+    this.grupoNome,
     required super.cragId,
     required NavNode parent,
   }) : super(parent: parent);
@@ -203,6 +205,7 @@ class ViaNode extends PicoContextNode {
     return ViaNode(
       escaladaNome: escaladaNome,
       setorNome: setorNome,
+      grupoNome: grupoNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
@@ -327,7 +330,7 @@ class TreeNavigationController extends ChangeNotifier {
       return a.cragId == b.cragId && a.grupoNome == b.grupoNome;
     }
     if (a is ViaNode && b is ViaNode) {
-      return a.cragId == b.cragId && a.escaladaNome == b.escaladaNome;
+      return a.cragId == b.cragId && a.escaladaNome == b.escaladaNome && a.setorNome == b.setorNome && a.grupoNome == b.grupoNome;
     }
     if (a is GPSNode && b is GPSNode) {
       return a.cragId == b.cragId;

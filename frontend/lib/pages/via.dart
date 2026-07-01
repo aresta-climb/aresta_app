@@ -10,7 +10,9 @@ import '../view_functions/via_functions.dart';
 class ViaPage extends StatelessWidget {
   final Escalada escalada;
   final String cragId;
+  final Pico? pico;
   final Setor? setor;
+  final Grupo? grupo;
   final bool fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
   final bool fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
 
@@ -18,7 +20,9 @@ class ViaPage extends StatelessWidget {
     super.key, 
     required this.escalada, 
     required this.cragId, 
+    this.pico,
     this.setor,
+    this.grupo,
     this.fromSetorPage = false,
     this.fromMapaPage = false,
   });
@@ -31,7 +35,7 @@ class ViaPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, nome),
-      body: SafeArea(bottom: true, child: buildViaBody(context, escalada, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)),
+      body: SafeArea(bottom: true, child: buildViaBody(context, escalada, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

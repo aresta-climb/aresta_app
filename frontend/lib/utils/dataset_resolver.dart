@@ -6,6 +6,18 @@ class ResolvedDataset {
   final Escalada? escalada;
 
   ResolvedDataset({this.grupo, this.setor, this.escalada});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ResolvedDataset &&
+          runtimeType == other.runtimeType &&
+          grupo == other.grupo &&
+          setor == other.setor &&
+          escalada == other.escalada;
+
+  @override
+  int get hashCode => grupo.hashCode ^ setor.hashCode ^ escalada.hashCode;
 }
 
 extension MapaReferenciaExtension on Mapa_Referencia {
@@ -14,6 +26,25 @@ extension MapaReferenciaExtension on Mapa_Referencia {
     if (setor.isNotEmpty) return setor;
     if (grupo.isNotEmpty) return grupo;
     return '';
+  }
+}
+
+extension EscaladaExtension on Escalada {
+  String get nome {
+    switch (whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        return viaEsportiva.nome;
+      case Escalada_Tipo.viaMovel:
+        return viaMovel.nome;
+      case Escalada_Tipo.boulder:
+        return boulder.nome;
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        return viaMultiplasEnfiadas.nome;
+      case Escalada_Tipo.highline:
+        return highline.nome;
+      default:
+        return '';
+    }
   }
 }
 

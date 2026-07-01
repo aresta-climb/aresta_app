@@ -19,16 +19,19 @@ void main() {
     test('copyWithMergedAncestor works for PicoContextNode', () {
       final root = HomeNode();
       final node1 = PicoNode(cragId: '123', parent: root);
-      final node2 = SetorNode(cragId: '123', setorNome: 'Setor', parent: node1);
-      final node3 = ViaNode(cragId: '123', escaladaNome: 'Via', parent: node2);
+      final node2 = GrupoNode(cragId: '123', grupoNome: 'Grupo', parent: node1);
+      final node3 = SetorNode(cragId: '123', setorNome: 'Setor', parent: node2);
+      final node4 = ViaNode(cragId: '123', escaladaNome: 'Via', grupoNome: 'Grupo', parent: node3);
 
-      final path = node3.path;
+      final path = node4.path;
 
-      expect(path.length, 4);
+      expect(path.length, 5);
       expect(path[0], isA<HomeNode>());
       expect(path[1], isA<PicoNode>());
-      expect(path[2], isA<SetorNode>());
-      expect(path[3], isA<ViaNode>());
+      expect(path[2], isA<GrupoNode>());
+      expect(path[3], isA<SetorNode>());
+      expect(path[4], isA<ViaNode>());
+      expect((path[4] as ViaNode).grupoNome, 'Grupo');
     });
 
     test('path returns single node if it has no parent', () {

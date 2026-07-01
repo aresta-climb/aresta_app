@@ -5,6 +5,8 @@ import 'offline_markdown.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../utils/croqui_map_index.dart';
+import '../utils/dataset_resolver.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
 String getEscaladaNome(Escalada escalada) {
@@ -57,28 +59,28 @@ int getGrauValue(Escalada escalada) {
 }
 
 /// Constrói o corpo rolável principal da página da Via.
-Widget buildViaBody(BuildContext context, Escalada escalada, String cragId, {Setor? setor, bool fromSetorPage = false, bool fromMapaPage = false}) {
+Widget buildViaBody(BuildContext context, Escalada escalada, String cragId, {Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage = false, bool fromMapaPage = false}) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [_buildContentForEscalada(context, escalada, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)],
+      children: [_buildContentForEscalada(context, escalada, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)],
     ),
   );
 }
 
-Widget _buildContentForEscalada(BuildContext context, Escalada escalada, String cragId, {Setor? setor, bool fromSetorPage = false, bool fromMapaPage = false}) {
+Widget _buildContentForEscalada(BuildContext context, Escalada escalada, String cragId, {Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage = false, bool fromMapaPage = false}) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      return _buildViaEsportiva(context, escalada, escalada.viaEsportiva, cragId, setor, fromSetorPage, fromMapaPage);
+      return _buildViaEsportiva(context, escalada, escalada.viaEsportiva, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage);
     case Escalada_Tipo.viaMovel:
-      return _buildViaMovel(context, escalada, escalada.viaMovel, cragId, setor, fromSetorPage, fromMapaPage);
+      return _buildViaMovel(context, escalada, escalada.viaMovel, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage);
     case Escalada_Tipo.boulder:
-      return _buildBoulder(context, escalada, escalada.boulder, cragId, setor, fromSetorPage, fromMapaPage);
+      return _buildBoulder(context, escalada, escalada.boulder, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage);
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return _buildMultipitch(context, escalada, escalada.viaMultiplasEnfiadas, cragId, setor, fromSetorPage, fromMapaPage);
+      return _buildMultipitch(context, escalada, escalada.viaMultiplasEnfiadas, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage);
     case Escalada_Tipo.highline:
-      return _buildHighline(context, escalada, escalada.highline, cragId, setor, fromSetorPage, fromMapaPage);
+      return _buildHighline(context, escalada, escalada.highline, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage);
     default:
       return Text(
         'Detalhes não disponíveis.',
@@ -104,7 +106,7 @@ String _fmtEnum(dynamic e) {
   return text[0].toUpperCase() + text.substring(1);
 }
 
-Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva via, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage) {
+Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
   if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard('Extensão', '${via.extensao}m', Icons.height));
@@ -121,7 +123,7 @@ Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
+      _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
       _buildHeader('Informações da Via Esportiva'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -155,7 +157,7 @@ Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva 
   );
 }
 
-Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage) {
+Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
   if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard('Extensão', '${via.extensao}m', Icons.height));
@@ -173,7 +175,7 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
+      _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
       _buildHeader('Informações da Via Móvel'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -213,7 +215,7 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
   );
 }
 
-Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage) {
+Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
   if (via.hasTipoParede()) statCards.add(_buildStatCard('Parede', _fmtEnum(via.tipoParede), Icons.terrain));
@@ -225,7 +227,7 @@ Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, Strin
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
+      _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
       _buildHeader('Informações do Boulder'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -252,7 +254,7 @@ Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, Strin
   );
 }
 
-Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnfiadas via, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage) {
+Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnfiadas via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
   if (via.hasDificuldadeMaxima()) statCards.add(_buildStatCard('Dificuldade Máx', _fmtEnum(via.dificuldadeMaxima), Icons.trending_up));
   if (via.hasDificuldadeMedia()) statCards.add(_buildStatCard('Dificuldade Média', _fmtEnum(via.dificuldadeMedia), Icons.trending_flat));
@@ -273,7 +275,7 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
+      _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque, ),
       if (via.mapas.isNotEmpty) ...[
         _buildHeader('Mapas'),
         _buildMapas(via.mapas, cragId, via.enfiadas, setor),
@@ -341,7 +343,7 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  _buildContentForEscalada(context, enf, cragId, setor: setor, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage),
+                  _buildContentForEscalada(context, enf, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage),
                 ],
               ),
             ),
@@ -352,7 +354,7 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
   );
 }
 
-Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage) {
+Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
   if (via.hasDistancia() && via.distancia > 0) statCards.add(_buildStatCard('Distância', '${via.distancia}m', Icons.straighten));
   if (via.hasAltura() && via.altura > 0) statCards.add(_buildStatCard('Altura', '${via.altura}m', Icons.height));
@@ -366,7 +368,7 @@ Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, Str
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildTopBadges(context, escalada, cragId, setor, fromSetorPage, fromMapaPage, via.destaque, ),
+      _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque, ),
       _buildHeader('Informações do Highline'),
       if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
       
@@ -450,7 +452,17 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, Setor? setor, bool fromSetorPage, bool fromMapaPage, bool destaque) {
+Widget _buildTopBadges(
+  BuildContext context,
+  Escalada escalada,
+  String cragId,
+  Pico? pico,
+  Setor? setor,
+  Grupo? grupo,
+  bool fromSetorPage,
+  bool fromMapaPage,
+  bool isDestaque,
+) {
   List<Widget> badges = [];
 
   if (setor != null && setor.nome.isNotEmpty) {
@@ -491,7 +503,7 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
     );
   }
 
-  if (destaque) {
+  if (isDestaque) {
     badges.add(
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -520,9 +532,19 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
   }
 
   // Verificar se há referência em algum mapa
-  bool hasMapInfo = setor?.mapas.isNotEmpty ?? false;
+  List<IndexedMap> foundMaps = [];
+  
+  if (pico != null) {
+    final index = CroquiMapIndex(pico);
+    final resolved = ResolvedDataset(
+      grupo: grupo,
+      setor: setor,
+      escalada: escalada,
+    );
+    foundMaps = index.getMapasForReference(resolved);
+  }
 
-  Widget buildMapChip(String label, Mapa targetMap, String id) {
+  Widget buildMapChip(String label, Mapa targetMap, String id, Setor? mapSetorContext) {
     Widget chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -542,7 +564,7 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
     
     return GestureDetector(
       onTap: () async {
-        TelemetryService.instance.logAcaoEscalada(cragId, setor!.nome, getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
+        TelemetryService.instance.logAcaoEscalada(cragId, setor?.nome ?? '', getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
 
         if (fromMapaPage) {
           AppNav.back(context);
@@ -552,7 +574,7 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
             mapa: targetMap,
             cragId: cragId,
             initialSelectedId: id.isNotEmpty ? id : null,
-            setorContext: setor,
+            setorContext: mapSetorContext,
           );
         }
       },
@@ -560,29 +582,15 @@ Widget _buildTopBadges(BuildContext context, Escalada escalada, String cragId, S
     );
   }
 
-  if (hasMapInfo) {
-    String nomeVia = getEscaladaNome(escalada);
-    List<Map<String, dynamic>> foundMaps = [];
-    
-    for (int i = 0; i < setor!.mapas.length; i++) {
-       final mapa = setor.mapas[i];
-       for (final ref in mapa.referencias) {
-          if (ref.escalada == nomeVia) {
-             foundMaps.add({
-                'mapa': mapa,
-                'index': i,
-                'id': ref.ids.isNotEmpty ? ref.ids.first : ''
-             });
-             break;
-          }
-       }
+  if (foundMaps.length == 1) {
+    if (foundMaps.first.mapa != null) {
+      badges.add(buildMapChip('Ver no mapa', foundMaps.first.mapa!, foundMaps.first.referencedId, foundMaps.first.setorContext));
     }
-
-    if (foundMaps.length == 1) {
-      badges.add(buildMapChip('Ver no mapa', foundMaps.first['mapa'], foundMaps.first['id']));
-    } else if (foundMaps.length > 1) {
-      for (final fm in foundMaps) {
-        badges.add(buildMapChip('Ver no mapa ${fm['index'] + 1}', fm['mapa'], fm['id']));
+  } else if (foundMaps.length > 1) {
+    for (int i = 0; i < foundMaps.length; i++) {
+      final fm = foundMaps[i];
+      if (fm.mapa != null) {
+        badges.add(buildMapChip('Ver no mapa ${i + 1}', fm.mapa!, fm.referencedId, fm.setorContext));
       }
     }
   }
