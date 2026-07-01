@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../utils/markdown_utils.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/main.dart';
 import 'common_functions.dart';

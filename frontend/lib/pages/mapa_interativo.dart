@@ -8,7 +8,6 @@ import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
-import '../view_functions/offline_markdown.dart';
 import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';

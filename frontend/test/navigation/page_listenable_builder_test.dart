@@ -4,8 +4,6 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/pages/mapa_interativo.dart';
 
 // Mock observer para testar se AppNav.back() foi chamado
 class MockNavigatorObserver extends NavigatorObserver {

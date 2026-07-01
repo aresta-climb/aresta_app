@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
-import '../lib/aresta_api/proto/generated/indice.pb.dart';
-import '../lib/constants/network_constants.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/constants/network_constants.dart';
 
 import '../tool/sync_preload.dart';
 
