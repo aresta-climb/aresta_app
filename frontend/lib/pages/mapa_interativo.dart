@@ -103,13 +103,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       _buildReferenceMaps();
     }
     
-    final isExperimental = EditorDeCroqui.instance.isExperimentalMode.value;
-    if (widget.mapa.caminhoImagemMapa != oldWidget.mapa.caminhoImagemMapa || isExperimental) {
-      if (isExperimental) {
-        // In experimental mode, the file on disk might have been overwritten without path changes.
-        // We evict the image from the cache to force a reload from disk.
-        _imageProviderFuture?.then((provider) { provider?.evict(); });
-      }
+    if (widget.mapa != oldWidget.mapa || widget.imageProviderOverride != oldWidget.imageProviderOverride) {
+      // The map object changed (either experimental mode update or a new downloaded update)
+      // The file on disk might have been overwritten without path changes.
+      // We evict the image from the cache to force a reload from disk.
+      _imageProviderFuture?.then((provider) { provider?.evict(); });
+      
       _imageProviderFuture = widget.imageProviderOverride != null
           ? Future.value(widget.imageProviderOverride)
           : _resolveImageProvider();
