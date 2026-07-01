@@ -299,7 +299,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     bool hasMultiplePoints = pontos.length > 1;
 
-    if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
+    if (ref != null && ref.hasAjusteDeCamera() && ref.ajusteDeCamera.hasZoom()) {
+      targetScale = ref.ajusteDeCamera.zoom;
+    } else if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
       // Usa lógica de Bounding Box para qualquer rota com múltiplos pontos (início/fim, meio, boulders, etc)
       final double availableHeight = viewportSize.height * 0.55;
       final double availableWidth = viewportSize.width * 0.85;
@@ -309,7 +311,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       
       if (scaleX.isFinite && scaleY.isFinite) {
         final calculatedScale = math.min(scaleX, scaleY);
-        targetScale = math.min(math.max(calculatedScale, 1.0), 5.0);
+        double maxAutoZoom = 2.5;
+        targetScale = math.min(math.max(calculatedScale, 1.0), maxAutoZoom);
       }
     }
 
