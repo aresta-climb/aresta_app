@@ -96,6 +96,26 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         : _resolveImageProvider();
   }
 
+  @override
+  void didUpdateWidget(MapaInterativoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.mapa != oldWidget.mapa || widget.pico != oldWidget.pico) {
+      _buildReferenceMaps();
+    }
+    
+    final isExperimental = EditorDeCroqui.instance.isExperimentalMode.value;
+    if (widget.mapa.caminhoImagemMapa != oldWidget.mapa.caminhoImagemMapa || isExperimental) {
+      if (isExperimental) {
+        // In experimental mode, the file on disk might have been overwritten without path changes.
+        // We evict the image from the cache to force a reload from disk.
+        _imageProviderFuture?.then((provider) { provider?.evict(); });
+      }
+      _imageProviderFuture = widget.imageProviderOverride != null
+          ? Future.value(widget.imageProviderOverride)
+          : _resolveImageProvider();
+    }
+  }
+
   void _buildReferenceMaps() {
     _poiToRefs.clear();
     _refToResolved.clear();
