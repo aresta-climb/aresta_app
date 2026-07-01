@@ -41,6 +41,11 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           submodules: 'recursive'
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
       - name: Bump Version and Create Tag
         id: bump
         run: |
@@ -75,6 +80,12 @@ jobs:
           # Atualiza o arquivo pubspec.yaml substituindo a linha
           sed -i "s/^version: .*/version: ${FINAL_VERSION}/" $PUBSPEC
           
+          # Atualiza o preload (baixa as capas mais recentes)
+          cd frontend
+          flutter pub get
+          dart tool/sync_preload.dart
+          cd ..
+          
           # Configura a identidade do robô no git
           git config --global user.name "aresta-climb-bot[bot]"
           git config --global user.email "281080576+aresta-climb-bot[bot]@users.noreply.github.com"
@@ -91,7 +102,7 @@ jobs:
           fi
           
           # Commita as alterações
-          git add $PUBSPEC
+          git add $PUBSPEC frontend/assets/preload/
           git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo ($DEPLOY_MSG)"
           
           # Cria a tag apontando para este exato commit
