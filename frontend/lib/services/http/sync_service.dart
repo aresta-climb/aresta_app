@@ -796,10 +796,10 @@ class SyncService {
 
       // Furador de cache (Cache-Busting) para CDNs (Cloudflare/GitHub Pages)
       // Como os arquivos mantêm o mesmo nome ao serem atualizados, a CDN pode servir cache velho.
-      // Adicionando `?sha256sum=hash`, forçamos a CDN a buscar a versão mais recente.
+      // Adicionando `?v=hash`, forçamos a CDN a buscar a versão mais recente.
       final cacheBustingUrl = fileUrl.contains('?') 
-          ? '$fileUrl&sha256sum=$expectedHash' 
-          : '$fileUrl?sha256sum=$expectedHash';
+          ? '$fileUrl&v=$expectedHash' 
+          : '$fileUrl?v=$expectedHash';
 
       debugPrint('Downloading file: $cacheBustingUrl to .tmp');
       final bytes = await _network.downloadFile(cacheBustingUrl);
