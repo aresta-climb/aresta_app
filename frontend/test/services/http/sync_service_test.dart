@@ -5,7 +5,6 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/constants/network_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/http/sync_storage.dart';
-import 'package:frontend/services/http/sync_network.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -14,9 +13,9 @@ import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
 class FakeRemoteConfigService implements RemoteConfigService {
-  int _hard = 0;
+  final int _hard = 0;
   int _soft = 0;
-  int _rec = 0;
+  final int _rec = 0;
 
   @override int get hardMinVersion => _hard;
   @override int get softMinVersion => _soft;
@@ -25,7 +24,7 @@ class FakeRemoteConfigService implements RemoteConfigService {
   @override bool getBool(String key) => false;
   @override String getString(String key) => "";
   
-  String _iosUrl = "";
+  final String _iosUrl = "";
   @override String get storeUrlIos => _iosUrl;
   @override Future<void> initialize() async {}
   @override FirebaseRemoteConfig? debugRemoteConfig;
