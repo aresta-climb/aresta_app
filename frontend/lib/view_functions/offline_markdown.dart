@@ -14,12 +14,31 @@ import 'common_functions.dart';
 /// 
 /// Ele resolve automaticamente caminhos de imagem relativos com o diretório
 /// 'downloads' local do aplicativo.
-class OfflineMarkdown extends StatelessWidget {
+class OfflineMarkdown extends StatefulWidget {
   /// A string markdown original a ser renderizada.
   final String data;
   final String cragId;
 
   const OfflineMarkdown({super.key, required this.data, required this.cragId});
+
+  @override
+  State<OfflineMarkdown> createState() => _OfflineMarkdownState();
+}
+
+class _OfflineMarkdownState extends State<OfflineMarkdown> {
+  // Store the image providers we create so we can evict them later
+  final List<ImageProvider> _imageProviders = [];
+
+  @override
+  void didUpdateWidget(OfflineMarkdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (EditorDeCroqui.instance.isExperimentalMode.value) {
+      for (var provider in _imageProviders) {
+        provider.evict();
+      }
+      _imageProviders.clear();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +50,10 @@ class OfflineMarkdown extends StatelessWidget {
         }
 
         final editor = EditorDeCroqui.instance;
-        final downloadsPath = '${editor.downloadsPath(snapshot.data!.path)}/$cragId';
+        final downloadsPath = '${editor.downloadsPath(snapshot.data!.path)}/${widget.cragId}';
         
         return MarkdownBody(
-          data: data,
+          data: widget.data,
           extensionSet: md.ExtensionSet.gitHubFlavored,
           onTapLink: (text, href, title) async {
             if (href != null) {
@@ -177,17 +196,23 @@ class OfflineMarkdown extends StatelessWidget {
 
             // Retorna o arquivo local se encontrado
             if (localFile != null && localFile.existsSync()) {
-              return buildZoomableImage(Image.file(
-                localFile,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red),
+              final provider = FileImage(localFile);
+              _imageProviders.add(provider);
+              return buildZoomableImage(Image(
+                image: provider,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 50, color: Colors.grey),
               ));
             }
             
             // Fallback para a rede se for uma URL absoluta (apenas caso não tenha sido baixada)
             if (path.startsWith('http://') || path.startsWith('https://')) {
-              return buildZoomableImage(Image.network(
-                path,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey),
+              final provider = NetworkImage(path);
+              _imageProviders.add(provider);
+              return buildZoomableImage(Image(
+                image: provider,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 50, color: Colors.grey),
               ));
             }
             
