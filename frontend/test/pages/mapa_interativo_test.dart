@@ -7,6 +7,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/editor_croqui.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49,
@@ -177,6 +178,7 @@ void main() {
     late MockTelemetryService mockTelemetry;
 
     setUpAll(() {
+      EditorDeCroqui(); // Instancia o singleton
       PathProviderPlatform.instance = MockPathProviderPlatform();
     });
 
@@ -521,6 +523,35 @@ void main() {
       
       // Should exactly match the custom zoom from reference
       expect(matrix.storage[0], closeTo(4.0, 0.01));
+    });
+
+    testWidgets('didUpdateWidget in experimental mode successfully re-resolves references for hot reload', (WidgetTester tester) async {
+      EditorDeCroqui.instance.isExperimentalMode.value = true;
+      
+      Mapa testMapa = mockMapa;
+      final esc1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Inicial', dificuldade: GrauVia_GrauVia.BR_5));
+      
+      await tester.pumpWidget(buildApp([esc1], testMapa));
+      await tester.pumpAndSettle();
+
+      // O marker p1 está no dataset original de pontos de interesse, mas como ele não tem 
+      // uma referência apontando para ele, ele NÃO deve ser renderizado na UI
+      expect(find.byKey(const Key('marker_p1')), findsNothing);
+
+      // Simulando o hot-reload: O dataset foi atualizado!
+      final newMapaObj = Mapa.fromBuffer(testMapa.writeToBuffer());
+      newMapaObj.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Inicial', ids: ['p1']));
+      
+      // Pump widget again with the new map object to trigger didUpdateWidget
+      await tester.pumpWidget(buildApp([esc1], newMapaObj));
+      await tester.pumpAndSettle();
+
+      // Clicar no p1 de novo deve encontrar a via e abrir o card!
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Via Inicial'), findsOneWidget);
+      
+      EditorDeCroqui.instance.isExperimentalMode.value = false;
     });
   });
 
