@@ -189,7 +189,7 @@ void main() {
 
     // The SnackBar should appear
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('Falha na sincronização em segundo plano. Verifique sua conexão.'), findsOneWidget);
+    expect(find.text('Erro ao sincronizar os dados. Tente novamente mais tarde.'), findsOneWidget);
   });
 
   testWidgets('MyApp registers AppColors extension in both light and dark themes', (WidgetTester tester) async {
@@ -325,5 +325,18 @@ void main() {
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     // DatabaseMigrationScreen should NOT be shown yet
     expect(find.byType(DatabaseMigrationScreen), findsNothing);
+  });
+
+  group('TreeNavigationWrapper', () {
+    testWidgets('should render correctly', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+        ),
+      ));
+      
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    });
   });
 }

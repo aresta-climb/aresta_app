@@ -21,4 +21,32 @@ void main() {
     final SafeArea safeArea = scaffold.body as SafeArea;
     expect(safeArea.bottom, isTrue);
   });
+
+  testWidgets('ViaPage should correctly receive and expose pico, setor, and grupo parameters', (tester) async {
+    final pico = Pico()..nome = 'Pico Teste';
+    final setor = Setor()..nome = 'Setor Teste';
+    final grupo = Grupo()..nome = 'Grupo Teste';
+    final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
+
+    await tester.pumpWidget(MaterialApp(
+      home: ViaPage(
+        escalada: escalada,
+        cragId: 'crag1',
+        pico: pico,
+        setor: setor,
+        grupo: grupo,
+      ),
+    ));
+
+    final scaffoldFinder = find.byType(Scaffold);
+    expect(scaffoldFinder, findsOneWidget);
+
+    final viaPageFinder = find.byType(ViaPage);
+    expect(viaPageFinder, findsOneWidget);
+    
+    final ViaPage page = tester.widget(viaPageFinder);
+    expect(page.pico?.nome, 'Pico Teste');
+    expect(page.setor?.nome, 'Setor Teste');
+    expect(page.grupo?.nome, 'Grupo Teste');
+  });
 }

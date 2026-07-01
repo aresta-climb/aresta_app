@@ -532,7 +532,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             'abrir_detalhes',
             'mapa'
           );
-          AppNav.toVia(context, escalada: escalada, setor: widget.setorContext);
+          final resolved = _refToResolved[ref];
+          AppNav.toVia(
+            context,
+            cragId: widget.cragId,
+            escalada: escalada,
+            setor: resolved?.setor,
+            grupo: resolved?.grupo,
+          );
         }
       },
     );

@@ -169,6 +169,7 @@ class AppNav {
     BuildContext context, {
     required Escalada escalada,
     Setor? setor,
+    Grupo? grupo,
     Pico? pico,
     Croqui? croqui,
     String? cragId,
@@ -184,6 +185,7 @@ class AppNav {
     ctrl.navigateTo(ViaNode(
       escaladaNome: _getNomeEscalada(escalada),
       setorNome: setor?.nome,
+      grupoNome: grupo?.nome,
       cragId: finalCragId,
       parent: ctrl.currentNode,
     ));
