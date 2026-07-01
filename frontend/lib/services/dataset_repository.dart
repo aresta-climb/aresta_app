@@ -9,6 +9,9 @@ import 'editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/constants/network_constants.dart';
+
 class TopoDataset {
   final List<Map<String, dynamic>> availablePicos;
   final List<Map<String, dynamic>> downloadedPicos;
@@ -133,6 +136,12 @@ class DatasetRepository {
           }
         }
       }
+
+      // Evita que o app considere esta instalação limpa como "precisando de migração",
+      // registrando a versão dos dados recém pré-carregados.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
+
     } catch (e) {
       AppLogger.instance.logError('[DatasetRepo] Erro geral ao descompactar assets', error: e);
     }

@@ -319,7 +319,7 @@ void main() {
       // Cache-Busting Verification
       final expectedHash = sha256.convert(newCroqui.writeToBuffer()).toString();
       final fullUrl = fakeClient.requestedFullUrls.firstWhere((u) => u.contains('$picoId.binarypb'));
-      expect(fullUrl, contains('?sha256sum='), reason: 'A URL do arquivo deve ter o furador de cache ?sha256sum=');
+      expect(fullUrl, contains('?v='), reason: 'A URL do arquivo deve ter o furador de cache ?v=');
       expect(fullUrl, contains(expectedHash), reason: 'A URL deve ter o hash real do croqui para furar o cache da CDN');
 
       // Sync External Files Verification
@@ -464,11 +464,11 @@ void main() {
 
       await syncService.syncIndex();
 
-      // Verifica que a URL da thumbnail foi requisitada com ?sha256sum=
+      // Verifica que a URL da thumbnail foi requisitada com ?v=
       final expectedHash = sha256.convert([10]).toString();
       final thumbUrl = fakeClient.requestedFullUrls.firstWhere((u) => u.contains('pico_thumb.webp'), orElse: () => '');
       expect(thumbUrl, isNotEmpty, reason: 'A thumbnail deveria ter sido baixada');
-      expect(thumbUrl, contains('?sha256sum=$expectedHash'));
+      expect(thumbUrl, contains('?v=$expectedHash'));
 
       // Verifica que o arquivo foi salvo no disco
       final thumbFile = File('${thumbnailsDir.path}/pico_thumb.webp');

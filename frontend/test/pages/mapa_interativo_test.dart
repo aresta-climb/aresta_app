@@ -454,6 +454,74 @@ void main() {
       expect(find.textContaining('A very very very'), findsOneWidget);
       expect(find.byType(Wrap), findsWidgets);
     });
+
+    testWidgets('Multiple points very close should be capped at reasonable maximum zoom', (WidgetTester tester) async {
+      final ponto1 = Mapa_PontoDeInteresse(
+        id: 'start_id',
+        circular: BoundingCircular(x: 10, y: 10, raio: 5),
+      );
+      final ponto2 = Mapa_PontoDeInteresse(
+        id: 'middle_id',
+        circular: BoundingCircular(x: 11, y: 11, raio: 5), // Very close
+      );
+      final mapaClose = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto1, ponto2],
+      );
+      mapaClose.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Boulder Perto', ids: ['start_id', 'middle_id']));
+
+      final escBoulder = Escalada(
+        boulder: Boulder(nome: 'Boulder Perto'), 
+      );
+      
+      await tester.pumpWidget(buildApp([escBoulder], mapaClose));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_start_id')));
+      await tester.pumpAndSettle(); 
+
+      final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final matrix = interactiveViewer.transformationController!.value;
+      
+      // Without capping, the zoom would be close to 5.0. It should be capped at 2.5
+      expect(matrix.storage[0], closeTo(2.5, 0.01));
+    });
+
+    testWidgets('Custom camera zoom in reference should override calculated zoom', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'p1',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapa = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      
+      mapa.referencias.add(Mapa_Referencia(
+        setor: 'Setor Teste', 
+        escalada: 'Via Custom', 
+        ids: ['p1'],
+        ajusteDeCamera: Mapa_AjusteDeCamera(zoom: 4.0),
+      ));
+
+      final esc = Escalada(
+        boulder: Boulder(nome: 'Via Custom'), 
+      );
+      
+      await tester.pumpWidget(buildApp([esc], mapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle(); 
+
+      final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final matrix = interactiveViewer.transformationController!.value;
+      
+      // Should exactly match the custom zoom from reference
+      expect(matrix.storage[0], closeTo(4.0, 0.01));
+    });
   });
 
 }

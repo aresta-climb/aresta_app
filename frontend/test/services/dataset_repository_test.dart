@@ -16,6 +16,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../mocks/mock_telemetry_service.dart';
 import '../mocks/mock_app_logger.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/constants/network_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 
@@ -114,7 +116,7 @@ void main() {
           
       // Injeta o mockBundle (adicionaremos no DatasetRepository depois)
       repo.assetBundle = mockBundle;
-
+      SharedPreferences.setMockInitialValues({});
       await repo.init();
 
       final docsPath = tempDir.path;
@@ -286,6 +288,23 @@ void main() {
         mockLogger.recordedErrors.any((e) => e['contextMessage'].contains('Erro ao carregar thumbnail pico_sem_thumb')),
         isTrue,
       );
+    });
+
+    test('deve definir a cached_data_version para evitar tela de migração na primeira instalação', () async {
+      SharedPreferences.setMockInitialValues({});
+      final mockBundle = MockAssetBundle();
+      final mockIndice = Indice();
+      final indiceBytes = mockIndice.writeToBuffer();
+      
+      when(() => mockBundle.load('assets/preload/indice.binarypb'))
+          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
+          
+      repo.assetBundle = mockBundle;
+      
+      await repo.init();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('cached_data_version'), equals(NetworkConstants.kDataVersion));
     });
   });
 }
