@@ -32,12 +32,10 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
   @override
   void didUpdateWidget(OfflineMarkdown oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (EditorDeCroqui.instance.isExperimentalMode.value) {
-      for (var provider in _imageProviders) {
-        provider.evict();
-      }
-      _imageProviders.clear();
+    for (var provider in _imageProviders) {
+      provider.evict();
     }
+    _imageProviders.clear();
   }
 
   @override

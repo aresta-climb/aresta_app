@@ -42,11 +42,8 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   @override
   void didUpdateWidget(MapaThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final isExperimental = EditorDeCroqui.instance.isExperimentalMode.value;
-    if (widget.mapa.caminhoImagemMapa != oldWidget.mapa.caminhoImagemMapa || isExperimental) {
-      if (isExperimental) {
-        _imageProviderFuture?.then((provider) { provider?.evict(); });
-      }
+    if (widget.mapa != oldWidget.mapa || widget.imageProviderOverride != oldWidget.imageProviderOverride) {
+      _imageProviderFuture?.then((provider) { provider?.evict(); });
       _imageProviderFuture = _resolveImageProvider();
     }
   }
