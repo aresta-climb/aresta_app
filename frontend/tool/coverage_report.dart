@@ -13,7 +13,7 @@ void main(List<String> args) {
 void generateReport(String lcovPath, String outHtmlPath) {
   final file = File(lcovPath);
   if (!file.existsSync()) {
-    print('Arquivo de coverage não encontrado em: ' + lcovPath);
+    print('Arquivo de coverage não encontrado em: $lcovPath');
     return;
   }
 
@@ -92,8 +92,8 @@ void generateReport(String lcovPath, String outHtmlPath) {
   
   html.writeln('    <div class="summary">');
   html.writeln('        <h2>Resumo Geral (Excluindo código gerado)</h2>');
-  html.writeln('        <p><strong>Cobertura Total:</strong> ' + totalPercentage.toStringAsFixed(2) + '%</p>');
-  html.writeln('        <p><strong>Linhas Cobertas:</strong> ' + totalHit.toString() + ' de ' + totalFound.toString() + '</p>');
+  html.writeln('        <p><strong>Cobertura Total:</strong> ${totalPercentage.toStringAsFixed(2)}%</p>');
+  html.writeln('        <p><strong>Linhas Cobertas:</strong> $totalHit de $totalFound</p>');
   html.writeln('    </div>');
   
   html.writeln('    <h2>Cobertura por Arquivo</h2>');
@@ -122,10 +122,10 @@ void generateReport(String lcovPath, String outHtmlPath) {
     final String fileStr = stat['file'];
     
     html.writeln('            <tr>');
-    html.writeln('                <td>' + fileStr + '</td>');
-    html.writeln('                <td class="' + pctClass + '">' + pct.toStringAsFixed(2) + '%</td>');
-    html.writeln('                <td>' + hit.toString() + '</td>');
-    html.writeln('                <td>' + found.toString() + '</td>');
+    html.writeln('                <td>$fileStr</td>');
+    html.writeln('                <td class="$pctClass">${pct.toStringAsFixed(2)}%</td>');
+    html.writeln('                <td>$hit</td>');
+    html.writeln('                <td>$found</td>');
     html.writeln('            </tr>');
   }
   
@@ -136,5 +136,5 @@ void generateReport(String lcovPath, String outHtmlPath) {
 
   final outFile = File(outHtmlPath);
   outFile.writeAsStringSync(html.toString());
-  print('HTML gerado em: ' + outFile.absolute.path);
+  print('HTML gerado em: ${outFile.absolute.path}');
 }

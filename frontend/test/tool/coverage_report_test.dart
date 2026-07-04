@@ -13,8 +13,8 @@ void main() {
 
     setUp(() {
       tempDir = Directory.systemTemp.createTempSync('coverage_test_');
-      lcovPath = tempDir.path + '/lcov.info';
-      outHtmlPath = tempDir.path + '/coverage_report.html';
+      lcovPath = '${tempDir.path}/lcov.info';
+      outHtmlPath = '${tempDir.path}/coverage_report.html';
     });
 
     tearDown(() {

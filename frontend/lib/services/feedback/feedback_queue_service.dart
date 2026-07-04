@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks

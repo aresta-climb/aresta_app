@@ -76,11 +76,14 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
     final minLines = isKeyboardVisible ? 2 : 1;
     final maxLines = isKeyboardVisible ? 3 : 2;
 
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
+    return SafeArea(
+      bottom: true,
+      top: false,
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -151,6 +154,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
           onPressed: () => widget.onSubmit(controller.text),
         ),
       ],
+        ),
       ),
     );
   }

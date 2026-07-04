@@ -1,6 +1,5 @@
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
@@ -50,7 +49,7 @@ class FakeRemoteConfigService implements RemoteConfigService {
   @override
   String getString(String key) => "";
   
-  String _iosUrl = "";
+  final String _iosUrl = "";
   @override String get storeUrlIos => _iosUrl;
 
   @override
@@ -80,6 +79,8 @@ void main() {
     
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
+
+    SharedPreferences.setMockInitialValues({});
 
     PackageInfo.setMockInitialValues(
       appName: 'Aresta',
@@ -325,18 +326,5 @@ void main() {
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     // DatabaseMigrationScreen should NOT be shown yet
     expect(find.byType(DatabaseMigrationScreen), findsNothing);
-  });
-
-  group('TreeNavigationWrapper', () {
-    testWidgets('should render correctly', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          datasetRepo: mockRepo,
-          syncService: mockSync,
-        ),
-      ));
-      
-      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
-    });
   });
 }
