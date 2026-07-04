@@ -238,6 +238,7 @@ class SyncService {
       if (result == null) {
         await _loadLocalIndiceAndNotify(localIndicePath);
         syncStatus.value = SyncStatus.offline;
+        TelemetryService.instance.logResultadoSincronizacao('erro');
         return failedPicos;
       }
 
@@ -299,6 +300,7 @@ class SyncService {
               failedPicos.addAll(fallbackFailedPicos);
             } else {
               syncStatus.value = SyncStatus.error;
+              TelemetryService.instance.logResultadoSincronizacao('erro');
             }
           }
         case IndiceUnchanged():
@@ -317,6 +319,7 @@ class SyncService {
         datasetRepository.editorDeCroqui.indicePath(directory.path),
       );
       syncStatus.value = SyncStatus.error;
+      TelemetryService.instance.logResultadoSincronizacao('erro');
     }
     return failedPicos;
   }
@@ -352,6 +355,7 @@ class SyncService {
   /// automática para "concluído/atualizado" após alguns segundos.
   void setUpdatedStatus({bool noNewUpdates = false}) {
     syncStatus.value = noNewUpdates ? SyncStatus.noNewUpdates : SyncStatus.justUpdated;
+    TelemetryService.instance.logResultadoSincronizacao(noNewUpdates ? 'sem_atualizacoes' : 'sucesso');
     Future.delayed(const Duration(seconds: 4), () {
       if (syncStatus.value == SyncStatus.justUpdated || syncStatus.value == SyncStatus.noNewUpdates) {
         syncStatus.value = SyncStatus.updated;

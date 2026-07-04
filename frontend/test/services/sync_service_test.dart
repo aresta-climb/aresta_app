@@ -575,9 +575,9 @@ void main() {
 
       await syncService.syncIndex();
 
-      // Thumbnail removida NÃO deve ter sido apagada do disco, pois o SyncIndex falhou e abortou as alterações atômicas
       expect(thumbRemovida.existsSync(), isTrue, reason: 'Thumbnail órfã NÃO deve ser apagada devido à falha de download no SyncUpdates');
       expect(syncService.syncStatus.value, SyncStatus.error, reason: 'Status deve refletir o erro do syncIndex');
+      expect(mockTelemetry.recordedEvents, contains('resultado_sincronizacao'));
     });
   });
 
@@ -690,6 +690,7 @@ void main() {
 
       expect(syncService.syncStatus.value, SyncStatus.offline,
           reason: 'Se o fetch falhar, o status final deve ser offline, em vez de erro.');
+      expect(mockTelemetry.recordedEvents, contains('resultado_sincronizacao'));
     });
 
     test('deve tentar bypass de cache se a atualizacao de picos falhar (failedPicos.isNotEmpty) e forceBypassCache for falso', () async {
@@ -803,6 +804,7 @@ void main() {
       final finalIndice = Indice.fromBuffer(finalBytes);
       expect(finalIndice.croquis, isEmpty, reason: 'Nao deve sobrescrever indice se retornou 304');
       expect(syncServiceFake.syncStatus.value, equals(SyncStatus.noNewUpdates));
+      expect(mockTelemetry.recordedEvents, contains('resultado_sincronizacao'));
     });
 
     test('nao deve recarregar DatasetRepo em memoria se ja estiver carregado e retornar 304', () async {

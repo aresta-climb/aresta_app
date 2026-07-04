@@ -152,6 +152,19 @@ class TelemetryService {
     return _logEvent('sincronizar_app', {'acao': acao});
   }
 
+  /// Registra o resultado final da sincronização de dados (sucesso, sem_atualizacoes, erro).
+  Future<void> logResultadoSincronizacao(String status) {
+    return _logEvent('resultado_sincronizacao', {'acao': status});
+  }
+
+  /// Registra a subida hierárquica no mapa interativo (ex: de Setor para Grupo).
+  Future<void> logNavegacaoHierarquica(String idCroqui, String destino) {
+    return _logEvent('navegacao_hierarquica_mapa', {
+      'id_croqui': idCroqui,
+      'acao': destino,
+    });
+  }
+
   /// Registra cliques em links de rotas de GPS e páginas web (ex: Termos de uso).
   Future<void> logLinkExterno(String url, String origem) {
     return _logEvent('link_externo', {'url': url, 'origem': origem});

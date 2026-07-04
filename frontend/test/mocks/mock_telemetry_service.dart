@@ -87,6 +87,18 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
+  Future<void> logResultadoSincronizacao(String status) async {
+    recordedEvents.add('resultado_sincronizacao');
+    recordedParams['resultado_sincronizacao'] = {'acao': status};
+  }
+
+  @override
+  Future<void> logNavegacaoHierarquica(String idCroqui, String destino) async {
+    recordedEvents.add('navegacao_hierarquica_mapa');
+    recordedParams['navegacao_hierarquica_mapa'] = {'id_croqui': idCroqui, 'acao': destino};
+  }
+
+  @override
   Future<void> logLinkExterno(String url, String origem) async {
     recordedEvents.add('link_externo');
     recordedParams['link_externo'] = {'url': url, 'origem': origem};
