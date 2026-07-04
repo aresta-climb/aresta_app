@@ -4,6 +4,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -320,18 +321,17 @@ void main() {
       expect(find.byType(SizedBox), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('Clicking Mapa Geral triggers telemetry and navigation', (WidgetTester tester) async {
+    testWidgets('3.1: Ausência do botão "Subir" em mapas sem nível superior', (WidgetTester tester) async {
       final pico = Pico()..nome = 'Pico Teste';
-      final setorSul = Setor()..nome = 'Setor Sul';
-      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorSul));
-
+      // Pico não tem mapas gerais, setor não tem grupo
+      
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: MapaInterativoPage(
             cragId: 'test_crag',
             pico: pico,
             mapa: mockMapa,
-            setorContext: setorSul,
+            setorContext: Setor()..nome = 'Setor Sul',
             imageProviderOverride: mockImage,
           ),
         ),
@@ -339,14 +339,79 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final btn = find.text('Mapa Geral');
+      final btn = find.byIcon(Icons.turn_left_outlined); // assuming we use this icon for up
+      final btnFallback = find.byType(ActionChip);
+      
+      expect(btn, findsNothing);
+      expect(btnFallback, findsNothing);
+    });
+
+    testWidgets('3.2: Nomes muito grandes ficam truncados com ellipsis', (WidgetTester tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final grupo = Grupo()..nome = 'Grupo com um nome absurdamente gigante para testar o truncamento de texto na interface';
+      grupo.mapas.add(Mapa()..caminhoImagemMapa = 'grupo.png');
+      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            cragId: 'test_crag',
+            pico: pico,
+            mapa: mockMapa,
+            setorContext: Setor()..nome = 'Setor Sul',
+            grupoContext: grupo,
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+
+      final chipFinder = find.byType(ActionChip);
+      expect(chipFinder, findsOneWidget);
+      
+      // Ensure there's a ConstrainedBox restricting its width
+      final constrainedBoxFinder = find.ancestor(
+        of: chipFinder,
+        matching: find.byType(ConstrainedBox),
+      ).first;
+      expect(constrainedBoxFinder, findsOneWidget);
+      
+      final ConstrainedBox constrainedBox = tester.widget(constrainedBoxFinder);
+      expect(constrainedBox.constraints.maxWidth, isNotNull);
+    });
+
+    testWidgets('3.3: Clique no botão empurra a página esperada na pilha', (WidgetTester tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      grupo.mapas.add(Mapa()..caminhoImagemMapa = 'grupo.png');
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            cragId: 'test_crag',
+            pico: pico,
+            mapa: mockMapa,
+            setorContext: Setor()..nome = 'Setor Sul',
+            grupoContext: grupo,
+            imageProviderOverride: mockImage,
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+      
+      final file = File('debug_tree.txt');
+      file.writeAsStringSync(tester.element(find.byType(MapaInterativoPage)).toStringDeep());
+
+      final btn = find.text('Grupo Teste'); // Assumed label
       expect(btn, findsOneWidget);
 
       await tester.tap(btn);
       await tester.pumpAndSettle();
-
+      
+      // Telemetry should be fired
       expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
-      expect(mockTelemetry.recordedParams['acao_escalada']?['nome_escalada'], 'Geral');
     });
 
     testWidgets('MapaInterativoPage deve renderizar o botão de feedback (bug_report)', (WidgetTester tester) async {

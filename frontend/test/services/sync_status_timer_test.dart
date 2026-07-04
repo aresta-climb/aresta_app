@@ -48,5 +48,24 @@ void main() {
       // Não deve ter voltado para updated, deve ter mantido o erro
       expect(syncService.syncStatus.value, SyncStatus.error);
     });
+
+    testWidgets('Deve mudar para noNewUpdates e depois para updated após 4 segundos', (WidgetTester tester) async {
+      final editor = EditorDeCroqui();
+      final repo = DatasetRepository(editorDeCroqui: editor);
+      final syncService = SyncService(datasetRepository: repo);
+
+      syncService.syncStatus.value = SyncStatus.updating;
+
+      // Dispara o status com noNewUpdates: true
+      syncService.setUpdatedStatus(noNewUpdates: true);
+
+      expect(syncService.syncStatus.value, SyncStatus.noNewUpdates);
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(syncService.syncStatus.value, SyncStatus.noNewUpdates);
+
+      await tester.pump(const Duration(milliseconds: 3100));
+      expect(syncService.syncStatus.value, SyncStatus.updated);
+    });
   });
 }

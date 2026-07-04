@@ -139,10 +139,12 @@ class PicoNode extends PicoContextNode {
 /// Nó que representa a tela de detalhes de um Setor específico dentro de um Pico (SetorView).
 class SetorNode extends PicoContextNode {
   final String setorNome;
+  final String? grupoNome;
   final String? scrollToEscaladaNome;
 
   const SetorNode({
     required this.setorNome,
+    this.grupoNome,
     this.scrollToEscaladaNome,
     required super.cragId,
     required NavNode parent,
@@ -153,6 +155,7 @@ class SetorNode extends PicoContextNode {
     final hasScroll = scrollToEscaladaNome != null;
     return SetorNode(
       setorNome: setorNome,
+      grupoNome: grupoNome ?? matchingAncestor.grupoNome,
       scrollToEscaladaNome: hasScroll ? scrollToEscaladaNome : matchingAncestor.scrollToEscaladaNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
@@ -317,14 +320,21 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is MapaoGlobalNode && b is MapaoGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
     if (a is MapaInterativoNode && b is MapaInterativoNode) {
-      return a.cragId == b.cragId && a.setorContextNome == b.setorContextNome;
+      // Para o mapa interativo, é crucial checar além do cragId e setorContextNome:
+      // Validamos a imagem e o grupoContextNome para distinguir corretamente
+      // o Mapa Geral, Mapa de Setor e Mapa de Grupo na pilha de navegação,
+      // evitando que o voltar feche mapas distintos de forma errada.
+      return a.cragId == b.cragId && 
+             a.mapaCaminhoImagem == b.mapaCaminhoImagem &&
+             a.setorContextNome == b.setorContextNome &&
+             a.grupoContextNome == b.grupoContextNome;
     }
 
     if (a is PicoNode && b is PicoNode) {
       return a.cragId == b.cragId;
     }
     if (a is SetorNode && b is SetorNode) {
-      return a.cragId == b.cragId && a.setorNome == b.setorNome;
+      return a.cragId == b.cragId && a.setorNome == b.setorNome && a.grupoNome == b.grupoNome;
     }
     if (a is GrupoNode && b is GrupoNode) {
       return a.cragId == b.cragId && a.grupoNome == b.grupoNome;

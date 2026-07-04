@@ -97,4 +97,17 @@ void main() {
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
     expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
   });
+
+  testWidgets('buildSyncBadge exibe texto correto para noNewUpdates', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: buildSyncBadge(SyncStatus.noNewUpdates),
+        ),
+      ),
+    );
+
+    expect(find.text('Sem atualizações'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+  });
 }

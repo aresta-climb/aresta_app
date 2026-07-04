@@ -13,6 +13,7 @@ import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
+import '../navigation/map_hierarchy_resolver.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -568,11 +569,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         }
         if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) indiceMapa = 0;
         
+        final resolved = _refToResolved[ref];
         AppNav.toMapaInterativo(
           context,
           mapa: setor.mapas[indiceMapa],
           cragId: widget.cragId,
           setorContext: setor,
+          grupoContext: resolved?.grupo,
         );
       } : null,
     );
@@ -607,6 +610,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           context,
           mapa: grupo.mapas[indiceMapa],
           cragId: widget.cragId,
+          grupoContext: grupo,
         );
       } : null,
     );
@@ -978,29 +982,60 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       ),
                     ),
                   ),
-                  if (widget.setorContext != null)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: SafeArea(
-                        child: FloatingActionButton.extended(
-                          heroTag: 'btnMapaGeral',
-                          onPressed: () {
-                            TelemetryService.instance.logAcaoEscalada(
-                              widget.cragId, 
-                              widget.setorContext!.nome, 
-                              'Geral', 
-                              'abrir_mapa_geral', 
-                              'mapa_setor'
-                            );
-                            AppNav.toPico(context, cragId: widget.cragId, scrollToMapaGeral: true, returnToSetor: widget.setorContext);
-                          },
-                          backgroundColor: beastHide,
-                          icon: Icon(Icons.map, color: nobleBlack),
-                          label: Text('Mapa Geral', style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold)),
+                  // Camada 4: Botão de Navegação "Subir" (Up)
+                  // Um botão dinâmico exibido apenas quando existe um mapa
+                  // de nível hierárquico superior (ex: Setor -> Grupo, ou Grupo -> Geral).
+                  Builder(
+                    builder: (context) {
+                      final upDest = MapHierarchyResolver.resolveUpDestination(
+                        pico: widget.pico,
+                        setorContext: widget.setorContext,
+                        grupoContext: widget.grupoContext,
+                      );
+                      
+                      if (upDest == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Positioned(
+                        top: 10,
+                        left: 10,
+                        child: SafeArea(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.45,
+                            ),
+                            child: ActionChip(
+                              side: BorderSide.none,
+                              backgroundColor: beastHide,
+                              avatar: Icon(Icons.turn_left_outlined, color: nobleBlack, size: 18),
+                              label: Text(
+                                '${upDest.label}',
+                                style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onPressed: () {
+                                TelemetryService.instance.logAcaoEscalada(
+                                  widget.cragId,
+                                  upDest.label,
+                                  'Up Navigation',
+                                  'abrir_mapa_superior',
+                                  'mapa_interativo',
+                                );
+                                AppNav.toMapaInterativo(
+                                  context,
+                                  cragId: widget.cragId,
+                                  mapa: upDest.mapa,
+                                  grupoContext: upDest.grupoContext,
+                                  setorContext: upDest.setorContext,
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    }
+                  ),
                 ],
               ),
             );

@@ -56,9 +56,8 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<Arq
           Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
         else
           ...sortedSetores.map((arquivoSetor) {
-            // Renderiza apenas grupos que possuem conteúdo carregado
             if (arquivoSetor.hasConteudo()) {
-              return buildSectorTile(context, arquivoSetor.conteudo, cragId);
+              return buildSectorTile(context, arquivoSetor.conteudo, cragId, grupoContext: grupo);
             }
             return const SizedBox.shrink();
           }),

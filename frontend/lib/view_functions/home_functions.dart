@@ -185,6 +185,11 @@ Widget buildSyncBadge(SyncStatus status) {
       color = Colors.blue.shade600;
       icon = Icons.cloud_done;
       break;
+    case SyncStatus.noNewUpdates:
+      text = 'Sem atualizações';
+      color = Colors.teal.shade600;
+      icon = Icons.check_circle_outline;
+      break;
   }
 
   return Container(

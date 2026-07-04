@@ -95,7 +95,8 @@ class _SetorPageState extends State<SetorPage> {
             EscaladaSortMode.gradeAsc: 'Dificuldade (Fácil primeiro)',
             EscaladaSortMode.gradeDesc: 'Dificuldade (Difícil primeiro)',
           },
-        )
+        ),
+        widget.grupoContext,
       )),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );

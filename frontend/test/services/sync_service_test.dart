@@ -125,6 +125,7 @@ void main() {
         SyncStatus.error,
         SyncStatus.offline,
         SyncStatus.justUpdated,
+        SyncStatus.noNewUpdates,
       ]));
     });
   });
@@ -801,7 +802,7 @@ void main() {
       final finalBytes = indiceFile.readAsBytesSync();
       final finalIndice = Indice.fromBuffer(finalBytes);
       expect(finalIndice.croquis, isEmpty, reason: 'Nao deve sobrescrever indice se retornou 304');
-      expect(syncServiceFake.syncStatus.value, equals(SyncStatus.justUpdated));
+      expect(syncServiceFake.syncStatus.value, equals(SyncStatus.noNewUpdates));
     });
 
     test('nao deve recarregar DatasetRepo em memoria se ja estiver carregado e retornar 304', () async {
