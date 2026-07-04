@@ -18,3 +18,18 @@ O sistema DEVE ser desenvolvido utilizando Test-Driven Development (TDD) e mante
 - **WHEN** a lógica de sincronização e apresentação de status for modificada
 - **THEN** os testes unitários DEVEM ser escritos antes da implementação
 - **AND** a cobertura de testes para os arquivos modificados (ex: `sync_service.dart`, `home_functions.dart`) DEVE ser 100%
+
+### Requirement: Telemetria de Resultado da Sincronização
+O sistema MUST registrar na telemetria o resultado exato do término do fluxo global de sincronização.
+
+#### Scenario: Sincronização com Atualizações
+- **WHEN** a sincronização de todos os picos locais finaliza e há atualizações efetivas (status: justUpdated)
+- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'sucesso'
+
+#### Scenario: Sincronização sem Atualizações (No Updates)
+- **WHEN** a sincronização finaliza mas nenhum pacote novo precisou ser baixado (status: noNewUpdates)
+- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'sem_atualizacoes'
+
+#### Scenario: Falha na Sincronização
+- **WHEN** a sincronização global resulta em erro para o usuário (status: error)
+- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'erro'

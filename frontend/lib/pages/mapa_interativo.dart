@@ -1033,12 +1033,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onPressed: () {
-                                TelemetryService.instance.logAcaoEscalada(
+                                TelemetryService.instance.logNavegacaoHierarquica(
                                   widget.cragId,
                                   upDest.label,
-                                  'Up Navigation',
-                                  'abrir_mapa_superior',
-                                  'mapa_interativo',
                                 );
                                 AppNav.toMapaInterativo(
                                   context,

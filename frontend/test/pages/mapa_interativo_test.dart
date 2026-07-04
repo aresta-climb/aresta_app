@@ -413,7 +413,7 @@ void main() {
       await tester.pumpAndSettle();
       
       // Telemetry should be fired
-      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      expect(mockTelemetry.recordedEvents, contains('navegacao_hierarquica_mapa'));
     });
 
     testWidgets('MapaInterativoPage deve renderizar o botão de feedback (bug_report)', (WidgetTester tester) async {
