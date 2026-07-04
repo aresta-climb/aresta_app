@@ -7,10 +7,11 @@
 ///
 /// Isso fará com que o aplicativo embuta (via assets/preload) uma versão inicial
 /// que será descompactada na primeira abertura do app pelo usuário offline.
+library;
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../lib/aresta_api/proto/generated/indice.pb.dart';
-import '../lib/constants/network_constants.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/constants/network_constants.dart';
 
 class SyncPreloadRunner {
   final http.Client client;

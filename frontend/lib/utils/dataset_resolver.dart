@@ -148,9 +148,7 @@ class DatasetResolver {
 
     if (resolveEscalada != null && resolveSetor == null) {
       resolveSetor = defaultSetorNome;
-      if (resolveGrupo == null) {
-        resolveGrupo = defaultGrupoNome;
-      }
+      resolveGrupo ??= defaultGrupoNome;
     } else if (resolveSetor != null && resolveGrupo == null) {
        resolveGrupo = defaultGrupoNome;
     }

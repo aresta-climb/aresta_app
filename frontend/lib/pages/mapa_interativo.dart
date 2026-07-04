@@ -8,7 +8,6 @@ import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
-import '../view_functions/offline_markdown.dart';
 import '../view_functions/via_functions.dart';
 import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
@@ -96,6 +95,25 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     _imageProviderFuture = widget.imageProviderOverride != null
         ? Future.value(widget.imageProviderOverride)
         : _resolveImageProvider();
+  }
+
+  @override
+  void didUpdateWidget(MapaInterativoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.mapa != oldWidget.mapa || widget.pico != oldWidget.pico) {
+      _buildReferenceMaps();
+    }
+    
+    if (widget.mapa != oldWidget.mapa || widget.imageProviderOverride != oldWidget.imageProviderOverride) {
+      // The map object changed (either experimental mode update or a new downloaded update)
+      // The file on disk might have been overwritten without path changes.
+      // We evict the image from the cache to force a reload from disk.
+      _imageProviderFuture?.then((provider) { provider?.evict(); });
+      
+      _imageProviderFuture = widget.imageProviderOverride != null
+          ? Future.value(widget.imageProviderOverride)
+          : _resolveImageProvider();
+    }
   }
 
   void _buildReferenceMaps() {

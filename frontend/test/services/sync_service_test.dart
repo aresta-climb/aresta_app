@@ -1168,7 +1168,7 @@ void main() {
       indiceFile.parent.createSync(recursive: true);
       indiceFile.writeAsBytesSync(oldIndice.writeToBuffer());
       
-      final etagFile = File('${indicePath}.etag');
+      final etagFile = File('$indicePath.etag');
       etagFile.writeAsStringSync('old_etag');
 
       repo.indiceData.value = oldIndice; // Carregado em memória

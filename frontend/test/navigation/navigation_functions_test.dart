@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/pages/browse.dart';
 import 'package:frontend/navigation/navigation_functions.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';

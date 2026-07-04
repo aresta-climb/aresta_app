@@ -107,7 +107,13 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: buildCommonAppBar(context, 'Mapão Global'),
+          appBar: buildCommonAppBar(
+            context,
+            'Mapão Global',
+            actions: [
+              buildFeedbackButton(context),
+            ],
+          ),
           body: buildMapaoGlobalMap(
             initialTarget: initialTarget,
             markers: markers,
