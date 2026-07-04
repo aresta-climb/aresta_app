@@ -139,7 +139,7 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget buildSectorTile(BuildContext context, Setor setor, String cragId) {
+Widget buildSectorTile(BuildContext context, Setor setor, String cragId, {Grupo? grupoContext}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 15),
     child: Material(
@@ -161,7 +161,7 @@ Widget buildSectorTile(BuildContext context, Setor setor, String cragId) {
       trailing: Icon(Icons.chevron_right, color: beastHide),
       onTap: () {
         TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
-        AppNav.toSetor(context, setor: setor);
+        AppNav.toSetor(context, setor: setor, grupoContext: grupoContext);
       },
     ),
   ));

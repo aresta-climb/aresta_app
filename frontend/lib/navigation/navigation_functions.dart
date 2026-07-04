@@ -118,6 +118,7 @@ class AppNav {
   static void toSetor(
     BuildContext context, {
     required Setor setor,
+    Grupo? grupoContext,
     Escalada? scrollToEscalada,
     Pico? pico,
     Croqui? croqui,
@@ -133,6 +134,7 @@ class AppNav {
     
     ctrl.navigateTo(SetorNode(
       setorNome: setor.nome,
+      grupoNome: grupoContext?.nome,
       scrollToEscaladaNome: scrollToEscalada != null ? _getNomeEscalada(scrollToEscalada) : null,
       cragId: finalCragId,
       parent: ctrl.currentNode,

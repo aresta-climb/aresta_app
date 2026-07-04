@@ -504,14 +504,20 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       if (node is PicoContextNode) cragId = node.cragId;
       if (node is MapaInterativoNode) cragId = node.cragId;
 
-      if (node is SetorNode) setorNome = node.setorNome;
+      if (node is SetorNode) {
+        setorNome = node.setorNome;
+        grupoNome = node.grupoNome;
+      }
       if (node is ViaNode) {
         escaladaNome = node.escaladaNome;
         setorNome = node.setorNome;
         grupoNome = node.grupoNome;
       }
       if (node is GrupoNode) grupoNome = node.grupoNome;
-      if (node is MapaInterativoNode) setorNome = node.setorContextNome;
+      if (node is MapaInterativoNode) {
+        setorNome = node.setorContextNome;
+        grupoNome = node.grupoContextNome;
+      }
 
       return PageListenableBuilder(
         cragId: cragId,
@@ -552,6 +558,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               cragId: cragId,
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
+              grupoContext: grupo,
             );
           } else if (node is SetorNode) {
             Escalada? scrollToEscalada;

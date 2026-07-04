@@ -7,6 +7,7 @@ Atualmente, quando o aplicativo verifica por atualizações e recebe um status 3
 - Adição de lógica para diferenciar a resposta 304 (Sem modificações) de uma resposta de sucesso com novos dados durante a sincronização de atualizações.
 - Introdução de uma notificação/badge distinta na interface informando que os dados já estão atualizados ou que não há atualizações disponíveis (ex: "Sem atualizações" ou "Já está atualizado").
 - Atualização da notificação/badge existente ("foram atualizadas") para aparecer apenas quando a atualização trouxer, de fato, novos dados.
+- **Implementação com TDD e 100% de Unit Test Coverage:** Todo o código deste fluxo será desenvolvido guiado por testes, garantindo que as novas regras de negócio e transições de UI possuam cobertura total por testes unitários.
 
 ## Capabilities
 

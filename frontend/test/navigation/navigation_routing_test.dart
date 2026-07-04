@@ -300,5 +300,47 @@ void main() {
       expect(treeController.currentNode, isA<MapaoGlobalNode>());
       expect(find.byType(MapaoGlobalPage), findsOneWidget);
     });
+
+    testWidgets('MapaInterativoNode receives grupoContext when passing grupoContextNome', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final pico = Pico()..nome = 'Pico Teste';
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      final mapa = Mapa()..caminhoImagemMapa = 'mapa_setor.png';
+      final setor = Setor()..nome = 'Setor Teste'..mapas.add(mapa);
+      grupo.setores.add(ArquivoSetor()..conteudo = setor);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo));
+      
+      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
+        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
+      ], availablePicos: []);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      
+      treeController.navigateTo(MapaInterativoNode(
+        cragId: '123',
+        mapaCaminhoImagem: 'mapa_setor.png',
+        setorContextNome: 'Setor Teste',
+        grupoContextNome: 'Grupo Teste',
+        parent: treeController.currentNode,
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(MapaInterativoPage), findsOneWidget);
+      final page = tester.widget<MapaInterativoPage>(find.byType(MapaInterativoPage));
+      expect(page.setorContext?.nome, 'Setor Teste');
+      expect(page.grupoContext?.nome, 'Grupo Teste');
+    });
   });
 }

@@ -10,6 +10,7 @@ Esse comportamento gera confusão para o usuário, que recebe um feedback de que
 - Diferenciar os estados pós-sincronização baseando-se no retorno do servidor (HTTP 200 vs 304).
 - Fornecer um feedback claro ("Já está atualizado" ou "Sem atualizações") quando não houver novos dados, distinto de quando realmente algo foi modificado.
 - Manter o timer existente que faz o status de `justUpdated` (ou similar) voltar para o estado `updated` após alguns segundos para não poluir a UI indefinidamente.
+- Seguir estritamente o desenvolvimento orientado a testes (TDD), alcançando 100% de cobertura nos testes unitários relevantes.
 
 **Non-Goals:**
 - Alterar a lógica de cache ou a forma como o `SyncNetwork` e o `SyncStorage` lidam com requisições 304.
@@ -35,4 +36,4 @@ Esse comportamento gera confusão para o usuário, que recebe um feedback de que
 - Modificar o enum `SyncStatus`.
 - Atualizar a função `setUpdatedStatus()` no `SyncService` para aceitar um argumento de se houve modificação ou se foi 304.
 - Atualizar a UI em `home_functions.dart`.
-- Ajustar ou criar testes em `sync_service_test.dart` e `sync_status_timer_test.dart` para validar os dois cenários (200 e 304).
+- Como TDD será usado, o desenvolvimento começará pela escrita/atualização de testes em `sync_service_test.dart` e `sync_status_timer_test.dart`, e possivelmente `home_functions_test.dart` antes de implementar o código funcional, garantindo 100% de cobertura.

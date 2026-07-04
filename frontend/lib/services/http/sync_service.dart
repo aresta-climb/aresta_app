@@ -37,7 +37,7 @@ class _SyncUpdates {
 }
 
 /// Representa o estado de sincronização do aplicativo.
-enum SyncStatus { updated, updating, outdated, error, justUpdated, offline }
+enum SyncStatus { updated, updating, outdated, error, justUpdated, noNewUpdates, offline }
 
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 ///
@@ -308,7 +308,7 @@ class SyncService {
           if (datasetRepository.activeDataset.value == null) {
             await _loadLocalIndiceAndNotify(localIndicePath);
           }
-          setUpdatedStatus();
+          setUpdatedStatus(noNewUpdates: true);
       }
     } catch (e) {
       AppLogger.instance.logError('Failed to connect to the server', error: e);
@@ -350,10 +350,10 @@ class SyncService {
 
   /// Troca o status da sincronização para recém-atualizado e agenda a transição
   /// automática para "concluído/atualizado" após alguns segundos.
-  void setUpdatedStatus() {
-    syncStatus.value = SyncStatus.justUpdated;
+  void setUpdatedStatus({bool noNewUpdates = false}) {
+    syncStatus.value = noNewUpdates ? SyncStatus.noNewUpdates : SyncStatus.justUpdated;
     Future.delayed(const Duration(seconds: 4), () {
-      if (syncStatus.value == SyncStatus.justUpdated) {
+      if (syncStatus.value == SyncStatus.justUpdated || syncStatus.value == SyncStatus.noNewUpdates) {
         syncStatus.value = SyncStatus.updated;
       }
     });
