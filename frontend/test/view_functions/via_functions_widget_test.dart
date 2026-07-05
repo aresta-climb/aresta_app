@@ -24,7 +24,7 @@ void main() {
       expect(find.text('Ver no mapa'), findsNothing);
     });
 
-    testWidgets('deve exibir botoes individuais para cada mapa que contem a referencia', (WidgetTester tester) async {
+    testWidgets('deve exibir botao agrupado quando tiver multiplos mapas contendo a referencia', (WidgetTester tester) async {
       final mapa1 = Mapa(
         referencias: [Mapa_Referencia(escalada: 'Via Dupla', ids: ['p1'])]
       );
@@ -48,10 +48,9 @@ void main() {
         ),
       ));
       
-      expect(find.text('Ver no mapa 1'), findsOneWidget);
-      expect(find.text('Ver no mapa 2'), findsOneWidget);
-      expect(find.text('Ver no mapa 3'), findsNothing);
-      expect(find.text('Ver no mapa'), findsNothing);
+      expect(find.text('Ver no mapa 1'), findsNothing);
+      expect(find.text('Ver no mapa 2'), findsNothing);
+      expect(find.text('Ver nos mapas (2)'), findsOneWidget);
     });
   });
 }

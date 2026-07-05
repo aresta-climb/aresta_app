@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
+import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -298,6 +299,40 @@ void main() {
 
       expect(treeController.currentNode, isA<MapaoGlobalNode>());
       expect(find.byType(MapaoGlobalPage), findsOneWidget);
+    });
+
+    testWidgets('MapasCarrosselNode generates MapasCarrosselPage and passes cragId', (WidgetTester tester) async {
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final pico = Pico()..nome = 'Pico Teste';
+      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
+        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
+      ], availablePicos: []);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      
+      treeController.navigateTo(MapasCarrosselNode(
+        cragId: '123',
+        initialIndex: 0,
+        mapas: [],
+        parent: treeController.currentNode,
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(treeController.currentNode, isA<MapasCarrosselNode>());
+      expect(find.byType(MapasCarrosselPage), findsOneWidget);
+      expect(find.text('Unknown Node'), findsNothing);
     });
 
     testWidgets('MapaInterativoNode receives grupoContext when passing grupoContextNome', (WidgetTester tester) async {
