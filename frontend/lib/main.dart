@@ -7,6 +7,7 @@ import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
+import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapao_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
@@ -492,7 +493,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         node is SetorNode ||
         node is GrupoNode ||
         node is ViaNode ||
-        node is MapaInterativoNode) {
+        node is MapaInterativoNode ||
+        node is MapasCarrosselNode) {
       String cragId = '';
       String? setorNome;
       String? grupoNome;
@@ -500,6 +502,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
       if (node is PicoContextNode) cragId = node.cragId;
       if (node is MapaInterativoNode) cragId = node.cragId;
+      if (node is MapasCarrosselNode) cragId = node.cragId;
 
       if (node is SetorNode) {
         setorNome = node.setorNome;
@@ -514,6 +517,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       if (node is MapaInterativoNode) {
         setorNome = node.setorContextNome;
         grupoNome = node.grupoContextNome;
+        escaladaNome = node.escaladaContextNome;
       }
 
       return PageListenableBuilder(
@@ -556,6 +560,15 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               initialSelectedId: node.initialSelectedId,
               setorContext: setor,
               grupoContext: grupo,
+              escaladaContextNome: node.escaladaContextNome,
+            );
+          } else if (node is MapasCarrosselNode) {
+            return MapasCarrosselPage(
+              pico: pico,
+              cragId: cragId,
+              mapas: node.mapas,
+              initialIndex: node.initialIndex,
+              imageProviderOverride: node.imageProviderOverride,
             );
           } else if (node is SetorNode) {
             Escalada? scrollToEscalada;

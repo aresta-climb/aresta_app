@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:frontend/widgets/mapa_thumbnail.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/utils/croqui_map_index.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/constants/network_constants.dart';
@@ -38,6 +41,7 @@ class MapaInterativoPage extends StatefulWidget {
   final String? initialSelectedId;
   final Setor? setorContext;
   final Grupo? grupoContext;
+  final String? escaladaContextNome;
 
   const MapaInterativoPage({
     super.key,
@@ -49,6 +53,7 @@ class MapaInterativoPage extends StatefulWidget {
     this.initialSelectedId,
     this.setorContext,
     this.grupoContext,
+    this.escaladaContextNome,
   });
 
   @override
@@ -89,6 +94,24 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     
     if (widget.initialSelectedId != null) {
       _selectedId = widget.initialSelectedId;
+      
+      // Se um contexto de escalada foi fornecido, tentamos focar automaticamente
+      // na aba do carrossel correspondente a essa escalada.
+      // Isso previne o bug onde múltiplos pontos (ex: 2-A e 2-B) compartilham o mesmo
+      // ID no mapa (o mesmo "pin"), fazendo com que o pin abra na primeira aba (2-A)
+      // mesmo quando o usuário clicou em "Ver no mapa" a partir da via 2-B.
+      if (widget.escaladaContextNome != null) {
+        final refs = _poiToRefs[_selectedId!];
+        if (refs != null) {
+          for (int i = 0; i < refs.length; i++) {
+            final resolved = _refToResolved[refs[i]];
+            if (resolved?.escalada != null && getEscaladaNome(resolved!.escalada!) == widget.escaladaContextNome) {
+              _focusedItemIndex = i;
+              break;
+            }
+          }
+        }
+      }
     }
     _updateFeedbackNode();
 
@@ -253,13 +276,33 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }) {
     setState(() {
       _selectedId = marker.id;
-      _focusedItemIndex = 0;
+      
+      int targetIndex = 0;
+      
+      // Durante o carregamento inicial (isUserInteraction = false), se houver um 
+      // contexto de escalada, localizamos a aba correta deste ponto de interesse.
+      // Evita focar erroneamente no primeiro item do carrossel caso vários itens 
+      // compartilhem o mesmo marcador no croqui.
+      if (!isUserInteraction && widget.escaladaContextNome != null) {
+        final refs = _poiToRefs[marker.id];
+        if (refs != null) {
+          for (int i = 0; i < refs.length; i++) {
+            final resolved = _refToResolved[refs[i]];
+            if (resolved?.escalada != null && getEscaladaNome(resolved!.escalada!) == widget.escaladaContextNome) {
+              targetIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      
+      _focusedItemIndex = targetIndex;
       _updateFeedbackNode();
     });
 
     final refs = _poiToRefs[marker.id];
     if (refs != null && refs.isNotEmpty) {
-      final ref = refs.first;
+      final ref = refs[_focusedItemIndex]; // Use correct ref!
       final resolved = _refToResolved[ref];
       if (isUserInteraction && resolved?.escalada != null) {
         TelemetryService.instance.logAcaoEscalada(
@@ -524,6 +567,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       return labels.isNotEmpty ? labels.join('-') : ref.nome;
     }
 
+    final resolved = _refToResolved[ref];
+    List<IndexedMap> foundMaps = [];
+    if (resolved != null && resolved.escalada != null) {
+      final index = CroquiMapIndex(widget.pico);
+      foundMaps = index.getMapasForReference(resolved);
+    }
+
     return _buildBaseCard(
       title: title,
       subtitle: subtitle,
@@ -551,7 +601,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             'abrir_detalhes',
             'mapa'
           );
-          final resolved = _refToResolved[ref];
           AppNav.toVia(
             context,
             cragId: widget.cragId,
@@ -561,6 +610,28 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           );
         }
       },
+      secondaryActionLabel: foundMaps.length > 1 ? 'Ver nos mapas (${foundMaps.length})' : null,
+      onSecondaryAction: foundMaps.length > 1 ? () {
+        TelemetryService.instance.logAcaoEscalada(
+          widget.cragId,
+          widget.setorContext?.nome ?? 'Geral',
+          title,
+          'ver_nos_mapas_carrossel',
+          'mapa'
+        );
+        final mapasData = foundMaps.map((fm) => CarrosselItemData(
+          mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
+          setorContextNome: fm.setorContext?.nome,
+          grupoContextNome: null, // Assume flat for now or find it if needed
+          initialSelectedId: fm.referencedId,
+        )).toList();
+        
+        AppNav.toMapasCarrossel(
+          context,
+          cragId: widget.cragId,
+          mapas: mapasData,
+        );
+      } : null,
     );
   }
 
@@ -577,7 +648,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Setor',
       onAction: () => AppNav.toSetor(context, setor: setor),
-      secondaryActionLabel: setor.mapas.isNotEmpty ? 'Ver Mapa do Setor' : null,
+      secondaryActionLabel: setor.mapas.length > 1 ? 'Ver mapas (${setor.mapas.length})' : (setor.mapas.isNotEmpty ? 'Ver mapa' : null),
       onSecondaryAction: setor.mapas.isNotEmpty ? () {
         int indiceMapa = 0;
         if (ref.hasIndiceMapaAlvo()) {
@@ -588,13 +659,28 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) indiceMapa = 0;
         
         final resolved = _refToResolved[ref];
-        AppNav.toMapaInterativo(
-          context,
-          mapa: setor.mapas[indiceMapa],
-          cragId: widget.cragId,
-          setorContext: setor,
-          grupoContext: resolved?.grupo,
-        );
+        if (setor.mapas.length > 1) {
+          final mapasData = setor.mapas.map((m) => CarrosselItemData(
+            mapaCaminhoImagem: m.caminhoImagemMapa,
+            setorContextNome: setor.nome,
+            grupoContextNome: resolved?.grupo?.nome,
+          )).toList();
+          
+          AppNav.toMapasCarrossel(
+            context,
+            cragId: widget.cragId,
+            mapas: mapasData,
+            initialIndex: indiceMapa,
+          );
+        } else {
+          AppNav.toMapaInterativo(
+            context,
+            mapa: setor.mapas[0],
+            cragId: widget.cragId,
+            setorContext: setor,
+            grupoContext: resolved?.grupo,
+          );
+        }
       } : null,
     );
   }
@@ -611,10 +697,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         });
       },
       actionLabel: 'Ir para Grupo',
-      onAction: () {
-        AppNav.toGrupo(context, grupo: grupo);
-      },
-      secondaryActionLabel: grupo.mapas.isNotEmpty ? 'Ver Mapa do Grupo' : null,
+      onAction: () => AppNav.toGrupo(context, grupo: grupo),
+      secondaryActionLabel: grupo.mapas.length > 1 ? 'Ver mapas (${grupo.mapas.length})' : (grupo.mapas.isNotEmpty ? 'Ver mapa' : null),
       onSecondaryAction: grupo.mapas.isNotEmpty ? () {
         int indiceMapa = 0;
         if (ref.hasIndiceMapaAlvo()) {
@@ -624,12 +708,26 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         }
         if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) indiceMapa = 0;
         
-        AppNav.toMapaInterativo(
-          context,
-          mapa: grupo.mapas[indiceMapa],
-          cragId: widget.cragId,
-          grupoContext: grupo,
-        );
+        if (grupo.mapas.length > 1) {
+          final mapasData = grupo.mapas.map((m) => CarrosselItemData(
+            mapaCaminhoImagem: m.caminhoImagemMapa,
+            grupoContextNome: grupo.nome,
+          )).toList();
+          
+          AppNav.toMapasCarrossel(
+            context,
+            cragId: widget.cragId,
+            mapas: mapasData,
+            initialIndex: indiceMapa,
+          );
+        } else {
+          AppNav.toMapaInterativo(
+            context,
+            mapa: grupo.mapas[0],
+            cragId: widget.cragId,
+            grupoContext: grupo,
+          );
+        }
       } : null,
     );
   }
@@ -712,8 +810,15 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: (secondaryActionLabel != null && onSecondaryAction != null)
+                    ? WrapAlignment.spaceBetween
+                    : WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+              runSpacing: 4,
               children: [
                 if (secondaryActionLabel != null && onSecondaryAction != null)
                   TextButton.icon(
@@ -724,7 +829,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       style: TextStyle(color: fishBone, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
-                const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: onAction,
                   icon: Icon(Icons.open_in_new, color: beastHide, size: 16),
@@ -734,6 +838,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   ),
                 ),
               ],
+            ),
             ),
           ],
         ),
@@ -771,6 +876,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           _zoomToPoints(pontos, _imageSize!, viewportSize, ref: newRef);
         }
       }
+
+
 
       content = GestureDetector(
         onHorizontalDragEnd: (details) {

@@ -41,6 +41,31 @@ void main() {
       expect(path.length, 1);
       expect(path[0], isA<HomeNode>());
     });
+
+    test('copyWithMergedAncestor works for MapasCarrosselNode', () {
+      final baseNode = HomeNode();
+      final node = MapasCarrosselNode(
+        cragId: '1',
+        initialIndex: 0,
+        mapas: const [CarrosselItemData(mapaCaminhoImagem: 'a')],
+        parent: baseNode,
+      );
+
+      final newBase = HomeNode();
+      final newNode = MapasCarrosselNode(
+        cragId: '1',
+        initialIndex: 1, // different
+        mapas: const [CarrosselItemData(mapaCaminhoImagem: 'b')], // different
+        parent: newBase,
+      );
+
+      final copied = node.copyWithMergedAncestor(newNode) as MapasCarrosselNode;
+      // Should copy the data from the old node, but the parent from the new node
+      expect(copied.cragId, '1');
+      expect(copied.initialIndex, 0);
+      expect(copied.mapas.first.mapaCaminhoImagem, 'a');
+      expect(copied.parent, newBase);
+    });
   });
 
   group('TreeNavigationController - Infinite Loop Prevention', () {
@@ -156,6 +181,18 @@ void main() {
       expect(nodeSemSetor.toString(), 'MapaInterativoNode(map.png)');
     });
 
+    test('MapasCarrosselNode toString()', () {
+      final node = MapasCarrosselNode(
+        cragId: 'pico_santuario',
+        initialIndex: 0,
+        mapas: const [
+          CarrosselItemData(mapaCaminhoImagem: 'assets/map1.png'),
+          CarrosselItemData(mapaCaminhoImagem: 'assets/map2.png'),
+        ],
+        parent: HomeNode(),
+      );
+      expect(node.toString(), 'MapasCarrosselNode(2 mapas, inicial: 0)');
+    });
 
     test('GPSNode toString()', () {
       const node = GPSNode(cragId: 'pico_santuario', parent: HomeNode());

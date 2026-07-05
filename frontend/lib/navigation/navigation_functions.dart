@@ -83,6 +83,7 @@ class AppNav {
     String? initialSelectedId,
     Setor? setorContext,
     Grupo? grupoContext,
+    Escalada? escaladaContext,
     ImageProvider? imageProviderOverride,
   }) {
     final ctrl = _ctrl(context);
@@ -93,7 +94,27 @@ class AppNav {
       mapaCaminhoImagem: mapa.caminhoImagemMapa,
       setorContextNome: setorContext?.nome,
       grupoContextNome: grupoContext?.nome,
+      escaladaContextNome: escaladaContext != null ? _getNomeEscalada(escaladaContext) : null,
       initialSelectedId: initialSelectedId,
+      imageProviderOverride: imageProviderOverride,
+      parent: ctrl.currentNode,
+    ));
+  }
+
+  static void toMapasCarrossel(
+    BuildContext context, {
+    required String cragId,
+    required List<CarrosselItemData> mapas,
+    int initialIndex = 0,
+    ImageProvider? imageProviderOverride,
+  }) {
+    final ctrl = _ctrl(context);
+    if (ctrl == null) return;
+    
+    ctrl.navigateTo(MapasCarrosselNode(
+      cragId: cragId,
+      initialIndex: initialIndex,
+      mapas: mapas,
       imageProviderOverride: imageProviderOverride,
       parent: ctrl.currentNode,
     ));

@@ -7,6 +7,7 @@ import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../utils/croqui_map_index.dart';
 import '../utils/dataset_resolver.dart';
+import '../navigation/navigation_tree.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
 String getEscaladaNome(Escalada escalada) {
@@ -575,6 +576,7 @@ Widget _buildTopBadges(
             cragId: cragId,
             initialSelectedId: id.isNotEmpty ? id : null,
             setorContext: mapSetorContext,
+            escaladaContext: escalada,
           );
         }
       },
@@ -587,12 +589,47 @@ Widget _buildTopBadges(
       badges.add(buildMapChip('Ver no mapa', foundMaps.first.mapa!, foundMaps.first.referencedId, foundMaps.first.setorContext));
     }
   } else if (foundMaps.length > 1) {
-    for (int i = 0; i < foundMaps.length; i++) {
-      final fm = foundMaps[i];
-      if (fm.mapa != null) {
-        badges.add(buildMapChip('Ver no mapa ${i + 1}', fm.mapa!, fm.referencedId, fm.setorContext));
-      }
-    }
+    Widget chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: nobleBlack,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.layers, color: beastHide, size: 14),
+          const SizedBox(width: 4),
+          Text('Ver nos mapas (${foundMaps.length})', style: TextStyle(color: fishBone, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+    
+    badges.add(
+      GestureDetector(
+        onTap: () {
+          TelemetryService.instance.logAcaoEscalada(cragId, setor?.nome ?? '', getEscaladaNome(escalada), 'ver_nos_mapas_carrossel', 'detalhes_via');
+          if (fromMapaPage) {
+            AppNav.back(context);
+          } else {
+            final mapasData = foundMaps.map((fm) => CarrosselItemData(
+              mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
+              setorContextNome: fm.setorContext?.nome,
+              grupoContextNome: null,
+              initialSelectedId: fm.referencedId,
+            )).toList();
+            
+            AppNav.toMapasCarrossel(
+              context,
+              cragId: cragId,
+              mapas: mapasData,
+            );
+          }
+        },
+        child: chip,
+      ),
+    );
   }
 
   if (badges.isEmpty) return const SizedBox.shrink();

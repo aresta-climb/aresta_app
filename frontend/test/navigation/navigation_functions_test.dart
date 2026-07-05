@@ -144,5 +144,42 @@ void main() {
       expect(setorNode.setorNome, 'Setor Teste');
       expect(setorNode.cragId, 'test_crag');
     });
+
+    testWidgets('toMapasCarrossel pushes MapasCarrosselNode to the TreeNavigationController', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: TreeNavigationWrapper(
+          key: TreeNavigationWrapper.navKey,
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final BuildContext context = tester.element(find.byType(Scaffold).first);
+      final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
+      
+      // Navigate to PicoNode to establish context
+      controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
+      await tester.pumpAndSettle();
+
+      AppNav.toMapasCarrossel(
+        context,
+        cragId: 'test_crag',
+        initialIndex: 1,
+        mapas: const [
+          CarrosselItemData(mapaCaminhoImagem: 'assets/map1.png', initialSelectedId: 'a'),
+          CarrosselItemData(mapaCaminhoImagem: 'assets/map2.png', initialSelectedId: 'b'),
+        ],
+      );
+
+      final currentNode = controller.currentNode;
+      expect(currentNode, isA<MapasCarrosselNode>());
+      
+      final carrosselNode = currentNode as MapasCarrosselNode;
+      expect(carrosselNode.cragId, 'test_crag');
+      expect(carrosselNode.initialIndex, 1);
+      expect(carrosselNode.mapas.length, 2);
+      expect(carrosselNode.mapas[0].initialSelectedId, 'a');
+    });
   });
 }

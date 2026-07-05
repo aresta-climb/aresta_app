@@ -224,6 +224,7 @@ class MapaInterativoNode extends NavNode {
   final String mapaCaminhoImagem;
   final String? setorContextNome;
   final String? grupoContextNome;
+  final String? escaladaContextNome;
   final String? initialSelectedId;
   final ImageProvider? imageProviderOverride;
 
@@ -232,6 +233,7 @@ class MapaInterativoNode extends NavNode {
     required this.mapaCaminhoImagem,
     this.setorContextNome,
     this.grupoContextNome,
+    this.escaladaContextNome,
     this.initialSelectedId,
     this.imageProviderOverride,
     required super.parent,
@@ -245,6 +247,7 @@ class MapaInterativoNode extends NavNode {
       mapaCaminhoImagem: mapaCaminhoImagem,
       setorContextNome: setorContextNome,
       grupoContextNome: grupoContextNome,
+      escaladaContextNome: escaladaContextNome,
       initialSelectedId: hasInitialId ? initialSelectedId : matchingAncestor.initialSelectedId,
       imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
       parent: matchingAncestor.parent!,
@@ -255,6 +258,50 @@ class MapaInterativoNode extends NavNode {
   String toString() => 'MapaInterativoNode(${mapaCaminhoImagem.split('/').last})';
 }
 
+/// Dados necessários para renderizar um item de mapa dentro do carrossel.
+class CarrosselItemData {
+  final String mapaCaminhoImagem;
+  final String? setorContextNome;
+  final String? grupoContextNome;
+  final String? initialSelectedId;
+
+  const CarrosselItemData({
+    required this.mapaCaminhoImagem,
+    this.setorContextNome,
+    this.grupoContextNome,
+    this.initialSelectedId,
+  });
+}
+
+/// Nó que representa a tela do Carrossel de Mapas (múltiplos mapas sequenciais).
+class MapasCarrosselNode extends NavNode {
+  final String cragId;
+  final int initialIndex;
+  final List<CarrosselItemData> mapas;
+  final ImageProvider? imageProviderOverride;
+
+  const MapasCarrosselNode({
+    required this.cragId,
+    required this.initialIndex,
+    required this.mapas,
+    this.imageProviderOverride,
+    required super.parent,
+  });
+
+  @override
+  NavNode copyWithMergedAncestor(covariant MapasCarrosselNode matchingAncestor) {
+    return MapasCarrosselNode(
+      cragId: cragId,
+      initialIndex: initialIndex,
+      mapas: mapas,
+      imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
+      parent: matchingAncestor.parent!,
+    );
+  }
+
+  @override
+  String toString() => 'MapasCarrosselNode(${mapas.length} mapas, inicial: $initialIndex)';
+}
 
 /// Nó que representa a tela de rotas de GPS/localização.
 class GPSNode extends PicoContextNode {

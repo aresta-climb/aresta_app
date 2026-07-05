@@ -416,6 +416,53 @@ void main() {
       expect(mockTelemetry.recordedEvents, contains('navegacao_hierarquica_mapa'));
     });
 
+    testWidgets('Initial selected id with escaladaContext opens carousel at correct index', (WidgetTester tester) async {
+      final mockMapa = Mapa(
+        caminhoImagemMapa: 'mapa.webp',
+        larguraMapa: 1000,
+        alturaMapa: 800,
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(
+            id: 'shared_id',
+            label: 'Shared Marker',
+            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+          ),
+        ],
+      );
+
+      final escWrong = Escalada(viaEsportiva: ViaEsportiva(nome: 'Wrong Via', dificuldade: GrauVia_GrauVia.BR_5));
+      final escTarget = Escalada(boulder: Boulder(nome: 'Target Via'));
+
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Wrong Via', ids: ['shared_id']));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Target Via', ids: ['shared_id']));
+
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.addAll([escWrong, escTarget]);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapaInterativoPage(
+              pico: pico,
+              mapa: mockMapa,
+              cragId: 'test_crag',
+              autoZoomEnabled: false,
+              imageProviderOverride: MemoryImage(kTransparentImage),
+              initialSelectedId: 'shared_id',
+              escaladaContextNome: 'Target Via',
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Target Via'), findsOneWidget);
+      expect(find.text('Wrong Via'), findsNothing);
+    });
+
     testWidgets('MapaInterativoPage deve renderizar o botão de feedback (bug_report)', (WidgetTester tester) async {
       await tester.pumpWidget(buildApp([], mockMapa));
       await tester.pumpAndSettle();
@@ -617,6 +664,197 @@ void main() {
       expect(find.text('Via Inicial'), findsOneWidget);
       
       EditorDeCroqui.instance.isExperimentalMode.value = false;
+    });
+
+    testWidgets('Tapping on a marker with multiple maps displays "Ver nos mapas (N)" button', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'p1',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapa1 = Mapa(
+        caminhoImagemMapa: 'map1.webp',
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      final mapa2 = Mapa(
+        caminhoImagemMapa: 'map2.webp',
+        pontosDeInteresse: [ponto],
+      );
+      
+      final ref = Mapa_Referencia(
+        setor: 'Setor Teste', 
+        escalada: 'Via Dupla', 
+        ids: ['p1'],
+      );
+      mapa1.referencias.add(ref);
+      mapa2.referencias.add(ref);
+
+      final esc = Escalada(
+        viaEsportiva: ViaEsportiva(nome: 'Via Dupla', dificuldade: GrauVia_GrauVia.BR_5), 
+      );
+      
+      final pico = Pico(nome: 'Pico Multi');
+      final setor = Setor(nome: 'Setor Teste', mapas: [mapa1, mapa2], escaladas: [esc]);
+      pico.setoresOuGrupos.add(SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            pico: pico,
+            mapa: mapa1,
+            cragId: 'crag1',
+            setorContext: setor,
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle(); 
+
+      expect(find.text('Ver nos mapas (2)'), findsOneWidget);
+    });
+
+    testWidgets('Setor Card with multiple maps displays "Ver Mapas do Setor (2)" and uses carousel', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'p1',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapaGeral = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      
+      final mapaSetor1 = Mapa(caminhoImagemMapa: 's1.webp');
+      final mapaSetor2 = Mapa(caminhoImagemMapa: 's2.webp');
+      
+      final setor = Setor(nome: 'Setor Teste', mapas: [mapaSetor1, mapaSetor2]);
+      
+      final ref = Mapa_Referencia(
+        setor: 'Setor Teste', 
+        ids: ['p1'],
+      );
+      mapaGeral.referencias.add(ref);
+
+      final pico = Pico(nome: 'Pico Multi');
+      pico.setoresOuGrupos.add(SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            pico: pico,
+            mapa: mapaGeral,
+            cragId: 'crag1',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle(); 
+
+      expect(find.text('Ver mapas (2)'), findsOneWidget);
+    });
+
+    testWidgets('Grupo Card with multiple maps displays "Ver mapas (2)" and uses carousel', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'p1',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapaGeral = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      
+      final mapaGrupo1 = Mapa(caminhoImagemMapa: 'g1.webp');
+      final mapaGrupo2 = Mapa(caminhoImagemMapa: 'g2.webp');
+      
+      final grupo = Grupo(nome: 'Grupo Teste', mapas: [mapaGrupo1, mapaGrupo2]);
+      
+      final ref = Mapa_Referencia(
+        grupo: 'Grupo Teste', 
+        ids: ['p1'],
+      );
+      mapaGeral.referencias.add(ref);
+
+      final pico = Pico(nome: 'Pico Multi');
+      pico.setoresOuGrupos.add(SetorOuGrupo(grupo: ArquivoGrupo(conteudo: grupo)));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            pico: pico,
+            mapa: mapaGeral,
+            cragId: 'crag1',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle(); 
+
+      expect(find.text('Ver mapas (2)'), findsOneWidget);
+    });
+
+    testWidgets('Base card action buttons use Wrap to prevent overflow on narrow screens', (WidgetTester tester) async {
+      // Set a very narrow screen size to force wrapping
+      tester.view.physicalSize = const Size(300, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+      addTearDown(() => tester.view.resetDevicePixelRatio());
+
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'p1',
+        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+      );
+      final mapaGeral = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      
+      final mapaSetor1 = Mapa(caminhoImagemMapa: 's1.webp');
+      final mapaSetor2 = Mapa(caminhoImagemMapa: 's2.webp');
+      final mapaSetor3 = Mapa(caminhoImagemMapa: 's3.webp');
+      final mapaSetor4 = Mapa(caminhoImagemMapa: 's4.webp');
+      final mapaSetor5 = Mapa(caminhoImagemMapa: 's5.webp');
+      
+      final setor = Setor(nome: 'Setor Com Um Nome Incrivelmente Grande e Complexo', mapas: [mapaSetor1, mapaSetor2, mapaSetor3, mapaSetor4, mapaSetor5]);
+      
+      final ref = Mapa_Referencia(
+        setor: 'Setor Com Um Nome Incrivelmente Grande e Complexo', 
+        ids: ['p1'],
+      );
+      mapaGeral.referencias.add(ref);
+
+      final pico = Pico(nome: 'Pico Multi');
+      pico.setoresOuGrupos.add(SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            pico: pico,
+            mapa: mapaGeral,
+            cragId: 'crag1',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Tap marker to show the card. 
+      // If it uses Row, it will overflow and throw a FlutterError failing the test.
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle(); 
+
+      expect(find.text('Ver mapas (5)'), findsOneWidget);
     });
   });
 
