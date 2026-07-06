@@ -134,7 +134,7 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
                   filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.white24),
                     ),
