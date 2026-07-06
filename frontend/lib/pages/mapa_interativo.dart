@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/utils/croqui_map_index.dart';
 import 'package:flutter/material.dart';
@@ -1135,7 +1134,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               backgroundColor: beastHide,
                               avatar: Icon(Icons.turn_left_outlined, color: nobleBlack, size: 18),
                               label: Text(
-                                '${upDest.label}',
+                                upDest.label,
                                 style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                               ),
