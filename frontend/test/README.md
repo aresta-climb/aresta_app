@@ -10,7 +10,7 @@ test/
 ├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
 ├── legal/           Testes para validação e extração de datas de documentos legais
 ├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder (Hot-Reload)
-├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
+├── pages/           Testes de widget das páginas de roteamento superior (ex: mapa_global)
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
 ├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage, AmbientP2PService, P2PTransferManager)
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar

@@ -10,7 +10,7 @@ Esta pasta contém testes unitários das funções utilitárias compartilhadas e
 | `fuzzy_search_test.dart` | Busca Global | Testa a lógica do Fuzzy Search integrada com a normalização para ignorar acentos e pontuação em pesquisas. |
 | `via_functions_test.dart` | `getGrauString`, `getGrauValue` | Testa a extração e formatação do grau de vias em strings e valores numéricos utilizados para ordenação e busca por dificuldade. |
 | `browse_functions_test.dart` | `buildBrowseBody`, Interface de Exploração | Testa as funcionalidades da tela de exploração, como a exibição granular do progresso de download (`LinearProgressIndicator`), a renderização da descrição curta do pico e acionamento de telemetria de visualização do pico. |
-| `mapao_global_functions_test.dart` | `buildMapaoBody`, Interface do Mapa Global | Testa a criação e montagem interativa do Mapão Global, com interações de bottom sheet e navegação. |
+| `mapa_global_functions_test.dart` | `buildMapaBody`, Interface do Mapa Global | Testa a criação e montagem interativa do Mapa Global, com interações de bottom sheet e navegação. |
 
 ## Como executar
 

@@ -63,9 +63,9 @@ frontend/
 │   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
 │   │   ├── settings_functions.dart      - Importação de .croqui, QR code, conexão com editor
-│   │   ├── mapao/
-│   │   │   ├── mapao_global_functions.dart - Funções e visual builders específicos para o mapa mundial
-│   │   │   └── mapao_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
+│   │   ├── mapa/
+│   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
+│   │   │   └── mapa_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
 │   │   └── *_functions.dart             - Funções específicas por página (home, browse, pico, …)
 │   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
@@ -76,7 +76,7 @@ frontend/
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
 │   │   ├── browse.dart                  - Índice remoto com download inline
-│   │   ├── mapao_global.dart            - Visão de mapa global interativa a partir do Explorar
+│   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
 │   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
 
-/// Coleção de funções de UI puras (view_functions) para o Mapão Global.
+/// Coleção de funções de UI puras (view_functions) para o Mapa Global.
 ///
 /// Este arquivo concentra a lógica de construção visual isolada para o mapa,
 /// como a geração do widget [GoogleMap], a extração e mapeamento das
@@ -96,8 +96,8 @@ Set<Marker> buildMapMarkers({
   return markers;
 }
 
-/// Constrói o widget do Google Map para a página do Mapão Global.
-Widget buildMapaoGlobalMap({
+/// Constrói o widget do Google Map para a página do Mapa Global.
+Widget buildMapaGlobalMap({
   required LatLng initialTarget,
   required Set<Marker> markers,
 }) {

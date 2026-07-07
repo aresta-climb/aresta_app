@@ -1,12 +1,12 @@
 /// Testes de widget para a tela principal do Mapão Global.
 ///
-/// Assegura que a página [MapaoGlobalPage] seja capaz de instanciar o mapa
+/// Assegura que a página [MapaGlobalPage] seja capaz de instanciar o mapa
 /// e renderizar a barra de navegação corretamente sem quebrar a árvore
 /// de widgets, utilizando uma carga simulada de picos.
 library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/pages/mapao_global.dart';
+import 'package:frontend/pages/mapa_global.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -21,7 +21,7 @@ class FakeSyncService extends SyncService {
 }
 
 void main() {
-  testWidgets('MapaoGlobalPage renders correctly with crags', (WidgetTester tester) async {
+  testWidgets('MapaGlobalPage renders correctly with crags', (WidgetTester tester) async {
     final mockEditor = EditorDeCroqui();
     final mockRepo = FakeDatasetRepository(mockEditor);
     final mockSync = FakeSyncService(mockRepo);
@@ -37,7 +37,7 @@ void main() {
     ];
 
     await tester.pumpWidget(MaterialApp(
-      home: MapaoGlobalPage(
+      home: MapaGlobalPage(
         crags: crags,
         datasetRepo: mockRepo,
         syncService: mockSync,

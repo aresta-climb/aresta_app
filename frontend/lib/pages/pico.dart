@@ -114,7 +114,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   AppNav.home(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Guia excluído com sucesso.' : 'Erro ao excluir guia.'),
+                      content: Text(success ? 'Guia excluído.' : 'Erro ao excluir guia.'),
                       backgroundColor: success ? mossRock : Theme.of(context).colorScheme.error,
                     ),
                   );

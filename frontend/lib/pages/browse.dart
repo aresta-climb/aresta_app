@@ -98,7 +98,7 @@ class _BrowsePageState extends State<BrowsePage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? '$name baixado com sucesso!' : 'Falha ao baixar $name'),
+            content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
             backgroundColor: success ? Colors.green : Colors.red,
           ),
         );

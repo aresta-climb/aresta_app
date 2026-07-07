@@ -120,15 +120,15 @@ class AppNav {
     ));
   }
 
-  /// Navega para o Mapão Global.
-  static void toMapaoGlobal(
+  /// Navega para o Mapa Global.
+  static void toMapaGlobal(
     BuildContext context, {
     required List<Map<String, dynamic>> crags,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     
-    ctrl.navigateTo(MapaoGlobalNode(
+    ctrl.navigateTo(MapaGlobalNode(
       crags: crags,
       parent: ctrl.currentNode,
     ));
