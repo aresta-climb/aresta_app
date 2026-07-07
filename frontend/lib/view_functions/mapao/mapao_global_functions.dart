@@ -13,7 +13,7 @@ import '../browse_functions.dart';
 void showCragModal({
   required BuildContext context,
   required Map<String, dynamic> crag,
-  required bool isDownloading,
+  required double? downloadProgress,
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
@@ -34,7 +34,7 @@ void showCragModal({
               ),
               child: buildCragListItem(
                 crag,
-                isDownloading,
+                downloadProgress,
                 () {
                   onDownload();
                   Navigator.of(context).pop();
@@ -58,7 +58,7 @@ void showCragModal({
 Set<Marker> buildMapMarkers({
   required BuildContext context,
   required List<Map<String, dynamic>> crags,
-  required Set<String> downloadingCrags,
+  required Map<String, double> downloadingCrags,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   BitmapDescriptor? customIcon,
@@ -82,7 +82,7 @@ Set<Marker> buildMapMarkers({
               showCragModal(
                 context: context,
                 crag: crag,
-                isDownloading: downloadingCrags.contains(crag['id']),
+                downloadProgress: downloadingCrags[crag['id']],
                 onDownload: () => onDownload(crag),
                 onOpen: onOpen != null ? () => onOpen(crag) : null,
               );

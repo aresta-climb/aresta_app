@@ -161,7 +161,7 @@ class _BrowsePageState extends State<BrowsePage> {
                     addCallback = null;
                   }
 
-                  return ValueListenableBuilder<Set<String>>(
+                  return ValueListenableBuilder<Map<String, double>>(
                     valueListenable: widget.syncService.downloadingCrags,
                     builder: (context, downloadingCrags, child) {
                       return buildBrowseBody(

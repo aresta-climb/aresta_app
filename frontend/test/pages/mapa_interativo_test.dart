@@ -403,8 +403,6 @@ void main() {
 
       await tester.pumpAndSettle();
       
-      final file = File('debug_tree.txt');
-      file.writeAsStringSync(tester.element(find.byType(MapaInterativoPage)).toStringDeep());
 
       final btn = find.text('Grupo Teste'); // Assumed label
       expect(btn, findsOneWidget);

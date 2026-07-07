@@ -29,7 +29,7 @@ void main() {
               mockRepo,
               mockSync,
               downloadedPicos,
-              {}, // downloadingCrags
+              <String, double>{}, // downloadingCrags
               onAddCrag: () {},
             );
           },

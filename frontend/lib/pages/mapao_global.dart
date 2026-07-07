@@ -88,7 +88,7 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Set<String>>(
+    return ValueListenableBuilder<Map<String, double>>(
       valueListenable: widget.syncService.downloadingCrags,
       builder: (context, downloadingCrags, _) {
         final markers = buildMapMarkers(

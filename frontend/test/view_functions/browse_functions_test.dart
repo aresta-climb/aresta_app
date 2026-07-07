@@ -70,7 +70,7 @@ void main() {
             return buildBrowseBody(
               context,
               availableCrags,
-              {'crag_dl'}, // Simula que está baixando
+              {'crag_dl': 0.5}, // Simula que está baixando com 50%
               onSearchChanged: (_) {},
               onDownload: (_) {},
             );
@@ -87,7 +87,7 @@ void main() {
     // Existem vários, então vamos focar no ElevatedButton.
     final loadingIndicator = find.descendant(
       of: find.byType(ElevatedButton),
-      matching: find.byType(CircularProgressIndicator),
+      matching: find.byType(LinearProgressIndicator),
     );
 
     expect(loadingIndicator, findsOneWidget);

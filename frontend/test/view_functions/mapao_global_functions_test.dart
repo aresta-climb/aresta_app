@@ -25,7 +25,7 @@ void main() {
                 showCragModal(
                   context: context,
                   crag: crag,
-                  isDownloading: false,
+                  downloadProgress: null,
                   onDownload: () {},
                   onOpen: () {
                     onOpenCalled = true;

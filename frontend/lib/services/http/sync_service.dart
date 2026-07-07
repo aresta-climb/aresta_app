@@ -10,8 +10,10 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/constants/network_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:isolate';
 import 'sync_storage.dart';
 import 'sync_network.dart';
+import 'sync_isolate.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
@@ -42,6 +44,7 @@ enum SyncStatus { updated, updating, outdated, error, justUpdated, noNewUpdates,
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 ///
 class SyncService {
+  static String? baseUrlOverride;
   final DatasetRepository datasetRepository;
   final SyncStorage _storage;
   final SyncNetwork _network;
@@ -51,14 +54,18 @@ class SyncService {
     SyncStatus.updating,
   );
 
-  /// Indica se há algum download de pico em andamento e armazena os IDs dos picos que estão sendo baixados.
-  final ValueNotifier<Set<String>> downloadingCrags =
-      ValueNotifier<Set<String>>({});
+  /// Indica se há algum download de pico em andamento e armazena os IDs dos picos que estão sendo baixados, 
+  /// juntamente com a porcentagem de progresso (0.0 a 1.0).
+  final ValueNotifier<Map<String, double>> downloadingCrags =
+      ValueNotifier<Map<String, double>>({});
 
   /// Indica se a última tentativa de sincronização foi automática (true) ou manual (false).
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier<bool>(true);
 
   final RemoteConfigService? remoteConfigService;
+
+  @visibleForTesting
+  Future<void> Function(void Function(DownloadIsolateArgs), DownloadIsolateArgs)? mockIsolateSpawn;
 
   SyncService({
     required this.datasetRepository,
@@ -132,9 +139,7 @@ class SyncService {
       );
       return false;
     }
-
-    downloadingCrags.value = {...downloadingCrags.value, id};
-
+    downloadingCrags.value = {...downloadingCrags.value, id: 0.0};
     try {
       debugPrint('Baixando pico $id de $url...');
 
@@ -185,7 +190,6 @@ class SyncService {
     } catch (e) {
       AppLogger.instance.logError('Error downloading crag $id', error: e);
     } finally {
-      // Desmarca como baixando, independentemente de sucesso ou falha
       downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
     return false;
@@ -218,7 +222,7 @@ class SyncService {
       final localIndicePath = editorDeCroqui.indicePath(directory.path);
       final localEtagPath = '$localIndicePath.etag';
 
-      final baseUrl = editorDeCroqui.activeBaseUrl;
+      final baseUrl = baseUrlOverride ?? editorDeCroqui.activeBaseUrl;
       
       if (baseUrl.isEmpty) {
         debugPrint('[SyncService] URL base vazia. Sincronização ignorada, carregando local...');
@@ -389,6 +393,7 @@ class SyncService {
             '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
         if (await File(picoFilePath).exists()) {
           bool needsUpdate = false;
+          print('DEBUG: Checking pico ${newResumo.id}');
 
           if (oldIndice == null) {
             // Fallback de Breaking Change: o indice local antigo estava corrompido ou era ilegível.
@@ -400,15 +405,18 @@ class SyncService {
                 .where((c) => c.id == newResumo.id)
                 .toList();
             
+            print('DEBUG: oldResumoList is not empty for ${newResumo.id}');
             if (oldResumoList.isNotEmpty) {
               final oldResumo = oldResumoList.first;
               needsUpdate = oldResumo.checksumSha256Croqui != newResumo.checksumSha256Croqui;
+              print('DEBUG: needsUpdate=$needsUpdate old=${oldResumo.checksumSha256Croqui} new=${newResumo.checksumSha256Croqui}');
             } else {
               // Pico existe no disco mas não estava no índice antigo. Pode ter sido um download incompleto.
               needsUpdate = true;
             }
           }
 
+          print('DEBUG: needsUpdate flag is $needsUpdate');
           if (needsUpdate) {
             debugPrint('Pico ${newResumo.id} requires update (outdated or fallback). Updating...');
             final picoUpdates = await _downloadOrUpdatePico(
@@ -554,61 +562,54 @@ class SyncService {
 
     final latestResumo = latestResumoList.first;
 
-    final baseUrl = datasetRepository.editorDeCroqui.activeBaseUrl;
-    final url = '$baseUrl/${latestResumo.caminhoRelativo}';
+    final baseUrl = baseUrlOverride ?? datasetRepository.editorDeCroqui.activeBaseUrl;
     final id = latestResumo.id;
-
     try {
-      final picoDirPath = '${downloadsDir.path}/$id';
-      final picoFilePath = '$picoDirPath/$id.binarypb';
-      final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
-
-      // 1. Processar arquivo principal do Pico (.binarypb)
-      final mainFileSuccess = await _downloadFileAtomic(
-        url,
-        tmpPicoFilePath,
-        latestResumo.checksumSha256Croqui,
-      );
-      if (!mainFileSuccess) {
-        updates.hasErrors = true;
-        return updates;
-      }
-
-      final newPicoData = await _storage.readLocalCroqui(tmpPicoFilePath);
-      if (newPicoData == null) {
-        updates.hasErrors = true;
-        return updates;
-      }
-
-      final oldPicoData = await _storage.readLocalCroqui(picoFilePath);
-
-      // 2. Sincronizar arquivos externos (imagens)
-      final syncResult = await _syncExternalFiles(
-        newPicoData: newPicoData,
-        oldPicoData: oldPicoData,
-        newResumo: latestResumo,
-        picoDirPath: picoDirPath,
+      final receivePort = ReceivePort();
+      
+      final args = DownloadIsolateArgs(
+        newResumoBytes: latestResumo.writeToBuffer(),
+        downloadsDirPath: downloadsDir.path,
         baseUrl: baseUrl,
+        sendPort: receivePort.sendPort,
       );
 
-      if (syncResult == null) {
-        updates.hasErrors = true;
-        return updates;
+      print('DEBUG: mockIsolateSpawn is not null! \'\'');
+      if (mockIsolateSpawn != null) {
+        await mockIsolateSpawn!(downloadIsolateMain, args);
+      } else {
+        await Isolate.spawn(downloadIsolateMain, args);
       }
 
-      // 3. Efetivar alteração do arquivo principal e arquivos externos
-      updates.filesToDelete.addAll(syncResult.filesToDelete);
-      updates.filesToRename[tmpPicoFilePath] = picoFilePath;
-      updates.filesToRename.addAll(syncResult.filesToRename);
+      await for (final message in receivePort) {
+        if (message is double) {
+          downloadingCrags.value = {...downloadingCrags.value, id: message};
+        } else if (message is DownloadIsolateResult) {
+          receivePort.close();
+          
+          if (message.error != null) {
+            AppLogger.instance.logError('Erro no isolate de download do pico $id: ${message.error}');
+            updates.hasErrors = true;
+            return updates;
+          }
 
-      updates.metadataToUpdate[id] = newPicoData;
+          updates.filesToDelete.addAll(message.filesToDelete);
+          updates.filesToRename.addAll(message.filesToRename);
+          
+          if (message.newPicoDataBytes != null) {
+            final newPicoData = Croqui.fromBuffer(message.newPicoDataBytes!);
+            updates.metadataToUpdate[id] = newPicoData;
+          }
 
-      TelemetryService.instance.logAtualizarCroqui(
-        id,
-        latestResumo.checksumSha256Croqui,
-        latestResumo.timestampUpdate.toDateTime().toIso8601String(),
-      );
-      debugPrint('Updated pico $id successfully (pending atomic apply).');
+          TelemetryService.instance.logAtualizarCroqui(
+            id,
+            latestResumo.checksumSha256Croqui,
+            latestResumo.timestampUpdate.toDateTime().toIso8601String(),
+          );
+          debugPrint('Updated pico $id successfully (pending atomic apply).');
+          return updates;
+        }
+      }
       return updates;
     } catch (e) {
       AppLogger.instance.logError(
