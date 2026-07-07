@@ -207,7 +207,7 @@ void main() {
       );
     });
 
-    Widget buildApp(List<Escalada> escaladas, Mapa mapa, {bool autoZoom = true}) {
+    Widget buildApp(List<Escalada> escaladas, Mapa mapa, {bool autoZoom = true, bool hideAppBar = false}) {
       final pico = Pico()..nome = 'Pico Teste';
       final setor = Setor()..nome = 'Setor Teste';
       setor.escaladas.addAll(escaladas);
@@ -219,6 +219,7 @@ void main() {
           pico: pico,
           cragId: 'test_crag',
           autoZoomEnabled: autoZoom,
+          hideAppBar: hideAppBar,
           imageProviderOverride: mockImage,
         ),
       );
@@ -230,6 +231,22 @@ void main() {
 
       expect(find.byType(InteractiveViewer), findsOneWidget);
       expect(find.byType(CustomPaint), findsAtLeastNWidgets(2));
+    });
+
+    testWidgets('Renders AppBar when hideAppBar is false', (WidgetTester tester) async {
+      await tester.pumpWidget(buildApp([], mockMapa, hideAppBar: false));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.text('Croqui Interativo'), findsOneWidget);
+    });
+
+    testWidgets('Does not render AppBar when hideAppBar is true', (WidgetTester tester) async {
+      await tester.pumpWidget(buildApp([], mockMapa, hideAppBar: true));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppBar), findsNothing);
+      expect(find.text('Croqui Interativo'), findsNothing);
     });
 
     testWidgets('Selecting a marker shows floating card', (WidgetTester tester) async {
