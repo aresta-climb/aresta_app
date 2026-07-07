@@ -62,7 +62,7 @@ class HomePage extends StatelessWidget {
             );
           }
 
-          return ValueListenableBuilder<Set<String>>(
+          return ValueListenableBuilder<Map<String, double>>(
             valueListenable: syncService.downloadingCrags,
             builder: (context, downloadingCrags, child) {
               return buildHomeBody(

@@ -31,7 +31,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, false, () {}),
+            body: buildCragListItem(sampleCrag, null, () {}),
           ),
         ),
       );
@@ -52,7 +52,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, false, () {}),
+            body: buildCragListItem(sampleCrag, null, () {}),
           ),
         ),
       );
@@ -79,7 +79,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, false, () {
+            body: buildCragListItem(sampleCrag, null, () {
               downloadChamado = true;
             }),
           ),
@@ -103,7 +103,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(downloadedCrag, false, () {}),
+            body: buildCragListItem(downloadedCrag, null, () {}),
           ),
         ),
       );
@@ -125,7 +125,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(downloadedCrag, false, () {}, onOpen: () {
+            body: buildCragListItem(downloadedCrag, null, () {}, onOpen: () {
               openChamado = true;
             }),
           ),
@@ -154,7 +154,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(crag, false, () {}),
+            body: buildCragListItem(crag, null, () {}),
           ),
         ),
       );
@@ -172,7 +172,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(crag, false, () {}),
+            body: buildCragListItem(crag, null, () {}),
           ),
         ),
       );

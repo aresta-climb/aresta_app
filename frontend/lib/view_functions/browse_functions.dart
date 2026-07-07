@@ -16,7 +16,7 @@ import '../navigation/navigation_functions.dart';
 Widget buildBrowseBody(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Set<String> downloadingCrags, {
+  Map<String, double> downloadingCrags, {
   required ValueChanged<String> onSearchChanged,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
@@ -46,7 +46,7 @@ Widget buildBrowseBody(
 Widget _buildCragList(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Set<String> downloadingCrags,
+  Map<String, double> downloadingCrags,
   Function(Map<String, dynamic>) onDownload, {
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
@@ -115,7 +115,7 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => buildCragListItem(
               crag,
-              downloadingCrags.contains(crag['id']),
+              downloadingCrags[crag['id']],
               () => onDownload(crag),
               onOpen: onOpen != null ? () => onOpen(crag) : null,
             ),
@@ -209,24 +209,24 @@ Widget buildBrowseSectionTitle(String title) {
 /// Ao expandir, também exibe a data do último update e o botão de download.
 Widget buildCragListItem(
   Map<String, dynamic> crag,
-  bool isDownloading,
+  double? downloadProgress,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
 }) {
-  return _CragListItem(crag: crag, isDownloading: isDownloading, onDownload: onDownload, onOpen: onOpen);
+  return _CragListItem(crag: crag, downloadProgress: downloadProgress, onDownload: onDownload, onOpen: onOpen);
 }
 
 /// Widget com estado para o card expansível de cada pico.
 class _CragListItem extends StatefulWidget {
   const _CragListItem({
     required this.crag,
-    required this.isDownloading,
+    required this.downloadProgress,
     required this.onDownload,
     this.onOpen,
   });
 
   final Map<String, dynamic> crag;
-  final bool isDownloading;
+  final double? downloadProgress;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
 
@@ -437,7 +437,7 @@ class _CragListItemState extends State<_CragListItem>
                         _buildDownloadButton(
                           widget.crag,
                           widget.onDownload,
-                          widget.isDownloading,
+                          widget.downloadProgress,
                           onOpen: widget.onOpen,
                         ),
                       ],
@@ -579,12 +579,12 @@ Widget _buildPlaceholderIcon() {
 Widget _buildDownloadButton(
   Map<String, dynamic> crag,
   VoidCallback onDownload,
-  bool isDownloading, {
+  double? downloadProgress, {
   VoidCallback? onOpen,
 }) {
   final bool isDownloaded = crag['isDownloaded'] == true;
 
-  if (isDownloading) {
+  if (downloadProgress != null) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -593,10 +593,28 @@ Widget _buildDownloadButton(
           disabledBackgroundColor: mossRock.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: fishBone),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'BAIXANDO...',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  fontSize: 13,
+                  color: fishBone,
+                ),
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: downloadProgress,
+                color: fishBone,
+                backgroundColor: fishBone.withValues(alpha: 0.2),
+              ),
+            ],
+          ),
         ),
       ),
     );
