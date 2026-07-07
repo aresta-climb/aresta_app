@@ -33,7 +33,7 @@ Esta é a funcionalidade crítica do sistema baseada em árvore, projetada para 
 
 ### 7. Hierarquia Específica de Contexto
 * Certifica que sub-nós específicos injetem corretamente a herança lógica de navegação. 
-* Por exemplo, garante que o `MapaoGlobalNode` (o mapa-múndi) atue estritamente como um nó folha descendente do `BrowseNode` quando acionado a partir da aba Explorar, preservando a linha do tempo do usuário ao recuar.
+* Por exemplo, garante que o `MapaGlobalNode` (o mapa-múndi) atue estritamente como um nó folha descendente do `BrowseNode` quando acionado a partir da aba Explorar, preservando a linha do tempo do usuário ao recuar.
 
 ### 8. Hot-Reload Reativo (PageListenableBuilder)
 * **`page_listenable_builder_test.dart`**: Garante o core da funcionalidade de atualizações em tempo real do modo de edição de croquis.

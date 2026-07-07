@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../view_functions/mapao/mapao_global_functions.dart';
+import '../view_functions/mapa/mapa_global_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
-import '../view_functions/mapao/mapao_marker.dart';
+import '../view_functions/mapa/mapa_marker.dart';
 import '../view_functions/home_functions.dart';
 
-/// Arquivo principal da tela do "Mapão Global" (Mapa de Picos).
-class MapaoGlobalPage extends StatefulWidget {
+/// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
+class MapaGlobalPage extends StatefulWidget {
   final List<Map<String, dynamic>> crags;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
-  const MapaoGlobalPage({
+  const MapaGlobalPage({
     super.key,
     required this.crags,
     required this.datasetRepo,
@@ -21,10 +21,10 @@ class MapaoGlobalPage extends StatefulWidget {
   });
 
   @override
-  State<MapaoGlobalPage> createState() => _MapaoGlobalPageState();
+  State<MapaGlobalPage> createState() => _MapaGlobalPageState();
 }
 
-class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
+class _MapaGlobalPageState extends State<MapaGlobalPage> {
   void _handleDownload(Map<String, dynamic> crag) async {
     final name = crag['nome'] ?? 'Pico';
     final String id = crag['id'];
@@ -54,7 +54,7 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? '$name baixado com sucesso!' : 'Falha ao baixar $name'),
+          content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
@@ -83,7 +83,7 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
   }
 
   void _handleOpen(Map<String, dynamic> crag) {
-    handlePicoSelection(context, widget.datasetRepo, crag, source: 'mapao_global');
+    handlePicoSelection(context, widget.datasetRepo, crag, source: 'mapa_global');
   }
 
   @override
@@ -109,12 +109,12 @@ class _MapaoGlobalPageState extends State<MapaoGlobalPage> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: buildCommonAppBar(
             context,
-            'Mapão Global',
+            'Mapa Global',
             actions: [
               buildFeedbackButton(context),
             ],
           ),
-          body: buildMapaoGlobalMap(
+          body: buildMapaGlobalMap(
             initialTarget: initialTarget,
             markers: markers,
           ),

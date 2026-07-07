@@ -65,7 +65,7 @@ Widget _buildCragList(
             buildBrowseSectionTitle('Picos Disponíveis'),
             _AnimatedMapButton(
               onPressed: () {
-                AppNav.toMapaoGlobal(
+                AppNav.toMapaGlobal(
                   context,
                   crags: availableCrags,
                 );
