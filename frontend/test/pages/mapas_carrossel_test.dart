@@ -42,6 +42,9 @@ void main() {
 
       // Should render the pagination text
       expect(find.text('01 de 03'), findsOneWidget);
+
+      // Verify that the new AppBar is present instead of just a floating widget
+      expect(find.byType(AppBar), findsOneWidget);
     });
 
     testWidgets('Navigation arrows work correctly', (tester) async {
