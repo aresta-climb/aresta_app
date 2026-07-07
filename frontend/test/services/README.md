@@ -14,6 +14,7 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 | `sync_storage_test.dart` | `SyncStorage` | Testa a persistência atômica usando arquivos `.tmp` e a extração do `indice.binarypb` |
 | `sync_status_timer_test.dart`| `SyncStatusTimer` | Testa a debouncer do status de sync que previne *flickering* rápido na UI |
 | `sync_service_test.dart` | `SyncService` | Testes complexos de sincronização atômica, checagem de hashes SHA-256 e extração de imagens Markdown |
+| `p2p_test.dart` | `AmbientP2PService` e `P2PTransferManager` | Testa a desserialização de payloads e a resistência da malha P2P a JSONs maliciosos e desconhecidos |
 | `feedback/feedback_queue_service_test.dart` | `FeedbackQueueService` | Testa o enfileiramento local (SharedPreferences) e a chamada agendada do Workmanager |
 | `feedback/background_worker_test.dart` | `BackgroundWorker` | Testa a execução da fila de feedback em background, requests HTTP multipart e lógica de retry (Backoff) |
 | `feedback/feedback_metadata_collector_test.dart` | `FeedbackMetadataCollector` | Testa a coleta correta dos metadados de telemetria do dispositivo na hora do envio do reporte |
