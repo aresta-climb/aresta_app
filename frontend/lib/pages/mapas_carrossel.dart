@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
+import 'package:frontend/view_functions/common_functions.dart';
+import 'package:frontend/navigation/navigation_functions.dart';
 
 
 typedef MapBuilder = Widget Function(BuildContext context, int index, CarrosselItemData item);
@@ -103,6 +105,7 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       setorContext: resolvedSetor,
       grupoContext: resolvedGrupo,
       imageProviderOverride: widget.imageProviderOverride,
+      hideAppBar: true,
     );
   }
 
@@ -110,69 +113,57 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(), // Evita conflito com o mapa
-            itemCount: widget.mapas.length,
-            itemBuilder: (context, index) {
-              final builder = widget.mapBuilder ?? _defaultMapBuilder;
-              return builder(context, index, widget.mapas[index]);
-            },
-          ),
-          
-          // UI Flutuante Superior
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left, color: Colors.white),
-                          onPressed: _currentIndex > 0 ? _goToPrevious : null,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            '${(_currentIndex + 1).toString().padLeft(2, '0')} de ${widget.mapas.length.toString().padLeft(2, '0')}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right, color: Colors.white),
-                          onPressed: _currentIndex < widget.mapas.length - 1 ? _goToNext : null,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                        ),
-                      ],
-                    ),
-                  ),
+      appBar: AppBar(
+        backgroundColor: Colors.black.withValues(alpha: 0.5),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => AppNav.back(context),
+        ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: Colors.white),
+              onPressed: _currentIndex > 0 ? _goToPrevious : null,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                '${(_currentIndex + 1).toString().padLeft(2, '0')} de ${widget.mapas.length.toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
             ),
-          ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, color: Colors.white),
+              onPressed: _currentIndex < widget.mapas.length - 1 ? _goToNext : null,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          ],
+        ),
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          buildFeedbackButton(context, color: Colors.white),
+          const SizedBox(width: 12),
         ],
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(), // Evita conflito com o mapa
+        itemCount: widget.mapas.length,
+        itemBuilder: (context, index) {
+          final builder = widget.mapBuilder ?? _defaultMapBuilder;
+          return builder(context, index, widget.mapas[index]);
+        },
       ),
     );
   }
