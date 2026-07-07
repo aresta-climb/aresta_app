@@ -7,7 +7,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ## Funcionalidades
 
 - **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`).
-- **Compartilhamento P2P Offline**: Módulo de rede descentralizada via Wi-Fi Direct e Bluetooth LE. Permite a transferência direta e offline de guias de escalada inteiros (milhares de imagens e metadados) entre escaladores próximos sem depender de internet.
+- **Compartilhamento P2P Offline**: Módulo de rede descentralizada (Peer-to-Peer) via Wi-Fi Direct e Bluetooth LE. Permite a transferência direta e incrivelmente rápida de guias de escalada inteiros (centenas de megabytes de imagens e metadados) entre os aparelhos de escaladores na base da montanha, de forma 100% offline, sem depender de qualquer torre de celular.
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
 - **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo (via nuvem ou via rede P2P próxima), além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
 - **GPS / Mapas em Carrossel**: Visualização horizontal contínua de múltiplos mapas de setores e picos com overlay interativo e navegação hierárquica fluida entre áreas e subsetores (Carousel).
