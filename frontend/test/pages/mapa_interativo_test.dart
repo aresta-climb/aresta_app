@@ -4,7 +4,6 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';

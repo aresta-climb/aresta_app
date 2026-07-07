@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'sync_storage.dart';
 
