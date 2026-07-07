@@ -12,7 +12,7 @@ test/
 ├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder (Hot-Reload)
 ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapao_global)
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
-├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
+├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage, AmbientP2PService, P2PTransferManager)
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
 ├── utils/           Testes de funções utilitárias isoladas (ex: parsers de Markdown)
 ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
@@ -45,7 +45,7 @@ flutter test test/services/zip_interceptor_test.dart
 
 | Pasta | Arquivos | Testes |
 |---|---|---|
-| `services/` | 12 | ~110 |
+| `services/` | 13 | ~112 |
 | `view_functions/` | 12 | ~40 |
 | `navigation/` | 3 | ~17 |
 | `theme/` | 1 | ~3 |

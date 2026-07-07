@@ -7,8 +7,9 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ## Funcionalidades
 
 - **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`).
+- **Compartilhamento P2P Offline**: Módulo de rede descentralizada via Wi-Fi Direct e Bluetooth LE. Permite a transferência direta e offline de guias de escalada inteiros (milhares de imagens e metadados) entre escaladores próximos sem depender de internet.
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
-- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo, além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
+- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo (via nuvem ou via rede P2P próxima), além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
 - **GPS / Mapas em Carrossel**: Visualização horizontal contínua de múltiplos mapas de setores e picos com overlay interativo e navegação hierárquica fluida entre áreas e subsetores (Carousel).
 - **Leitura Offline**: Textos, imagens e betas funcionam sem conexão após o primeiro download.
 - **Ghost Protocol (`aresta-zip://`)**: Arquivos `.croqui` locais são tratados como servidores HTTP internos — o mesmo pipeline de rede serve dados remotos e locais sem ramificações no código.
@@ -32,6 +33,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 | **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
 | **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
 | **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para importação de repositórios |
+| **`flutter_nearby_connections`** | `^2.1.2` | Malha P2P offline via Wi-Fi Direct e Bluetooth LE para transferência local |
 | **`file_picker`** | `^11.0.2` | Seleção de arquivos `.croqui` no dispositivo |
 | **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync |
 
@@ -98,6 +100,9 @@ frontend/
 │   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   ├── zip_interceptor_client.dart - Ghost Protocol: intercepta aresta-zip://
 │   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   ├── p2p/
+│   │   │   ├── ambient_p2p_service.dart - Singleton gerenciador do Wi-Fi Direct e Discovery local
+│   │   │   └── p2p_transfer_manager.dart- Empacotador e transferidor de arquivos base64 via P2P
 │   │   ├── feedback/
 │   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
 │   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
