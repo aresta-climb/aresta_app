@@ -6,9 +6,10 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 
 ## Funcionalidades
 
+- **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`).
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
 - **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo, além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
-- **GPS / Mapa Interativo**: Visualização de mapas de setores e picos com overlay interativo e navegação hierárquica.
+- **GPS / Mapas em Carrossel**: Visualização horizontal contínua de múltiplos mapas de setores e picos com overlay interativo e navegação hierárquica fluida entre áreas e subsetores (Carousel).
 - **Leitura Offline**: Textos, imagens e betas funcionam sem conexão após o primeiro download.
 - **Ghost Protocol (`aresta-zip://`)**: Arquivos `.croqui` locais são tratados como servidores HTTP internos — o mesmo pipeline de rede serve dados remotos e locais sem ramificações no código.
 - **Modo Experimental** _(oculto)_: Ferramentas para editores importarem repositórios em desenvolvimento. Acesso via Easter Egg nas Configurações (7 toques no ícone de status). Dados se auto-destroem após 20 minutos.
@@ -91,8 +92,9 @@ frontend/
 │   │   │   ├── remote_config_service.dart - Fallbacks e cache local
 │   │   │   └── app_logger.dart          - Logger de eventos local (debug)
 │   │   ├── http/
-│   │   │   ├── sync_service.dart        - Orquestra download e validação
-│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto
+│   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
+│   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
+│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto e gestão de ETags
 │   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   ├── zip_interceptor_client.dart - Ghost Protocol: intercepta aresta-zip://
 │   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
