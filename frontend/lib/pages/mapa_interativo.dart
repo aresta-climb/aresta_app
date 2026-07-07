@@ -41,6 +41,12 @@ class MapaInterativoPage extends StatefulWidget {
   final Setor? setorContext;
   final Grupo? grupoContext;
   final String? escaladaContextNome;
+  
+  /// Quando `true`, esta página não desenhará o seu próprio `Scaffold` com `AppBar`.
+  /// Isso é essencial quando o mapa é embutido dentro de um Carrossel (`MapasCarrosselPage`),
+  /// onde a navegação superior (AppBar) é delegada ao container pai para evitar "clipping" visual
+  /// e garantir que a barra fique fixa durante a animação de swipe. Padrão é `false`.
+  final bool hideAppBar;
 
   const MapaInterativoPage({
     super.key,
@@ -53,6 +59,7 @@ class MapaInterativoPage extends StatefulWidget {
     this.setorContext,
     this.grupoContext,
     this.escaladaContextNome,
+    this.hideAppBar = false,
   });
 
   @override
@@ -955,27 +962,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       return const SizedBox.shrink(); // Mapa inválido
     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black.withValues(alpha: 0.5),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => AppNav.back(context),
-        ),
-        title: const Text(
-          'Croqui Interativo',
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          buildFeedbackButton(context, color: Colors.white),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, viewportConstraints) {
+    final bodyContent = LayoutBuilder(
+      builder: (context, viewportConstraints) {
           final viewportSize = Size(
             viewportConstraints.maxWidth,
             viewportConstraints.maxHeight,
@@ -1163,7 +1151,38 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             },
           );
         },
+    );
+
+    // Se hideAppBar for true, retornamos apenas o corpo embrulhado em um SafeArea
+    // para garantir que os botões absolutos não fiquem escondidos na status bar.
+    if (widget.hideAppBar) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(child: bodyContent),
+      );
+    }
+
+    // Comportamento padrão (Standalone)
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black.withValues(alpha: 0.5),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => AppNav.back(context),
+        ),
+        title: const Text(
+          'Croqui Interativo',
+          style: TextStyle(color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          buildFeedbackButton(context, color: Colors.white),
+          const SizedBox(width: 12),
+        ],
       ),
+      body: bodyContent,
     );
   }
 }
