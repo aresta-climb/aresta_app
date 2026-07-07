@@ -62,5 +62,6 @@ flutter test test/services/zip_interceptor_test.dart
 
 - Todos os comentários e nomes de testes estão em **português**.
 - Arquivos temporários criados nos testes são armazenados em `Directory.systemTemp` e removidos no `tearDown`.
-- Testes que dependem de I/O de rede usam o interceptor `aresta-zip://` para simular respostas locais, sem fazer requisições reais.
+- Testes que dependem de I/O de rede geralmente usam o interceptor `aresta-zip://` ou um mock de cliente `http` para simular respostas locais.
+- Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir mocks de bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
 - Testes que dependem do binding do Flutter (ex: `path_provider`) são separados nos testes de widget ou integração com binding explícito.

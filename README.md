@@ -24,9 +24,9 @@ Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), c
 
 O aplicativo é desenvolvido com uma arquitetura **MVVM (Model-View-ViewModel)** robusta e utiliza classes **Protobuf** geradas automaticamente (`ResumoCroqui`, `Indice`, `Croqui`) como seus **Models** centrais, fortemente tipados de ponta a ponta.
 
-Isso previne o uso excessivo de *Mapas* genéricos (mock data) e garante uma comunicação transparente entre a lógica de serviços (como downloads atômicos do `SyncService`) e as interfaces (Views). As funcionalidades de rede, persistência no disco e tratamento HTTP foram unificadas no módulo isolado `services/http`.
+A sincronização de picos com a nuvem é de última geração: o `SyncService` utiliza **Isolates em background** para realizar cálculos de criptografia (SHA256) e persistência de arquivos sem travar a interface (`Main Thread`). Os downloads são do tipo **Delta Syncs (Atômicos)** — o aplicativo só baixa imagens e arquivos que sofreram mutação na nova versão, economizando banda e validando integridade bit a bit.
 
-Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Em conjunto com o `PageListenableBuilder`, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI sempre que os dados sofrerem um update invisível no background (garantindo um **Hot-Reload de dados em tempo real** sem piscar a tela).
+Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Isso se estende para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download através de barras de progresso lineares, tudo em **tempo real** e sem piscar a tela.
 
 ---
 

@@ -97,11 +97,11 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - `downloadsPath(docsPath)` e `indicePath(docsPath)` retornam os caminhos corretos por modo
 - Persiste configuração em `editor_config.json`
 
-### `SyncService`
+### `SyncService` e `SyncIsolate`
 - Usa `ZipInterceptorClient` como cliente HTTP
-- `syncIndex()`: busca índice e aciona checagem de checksums em segundo plano
-- `_checkForUpdates()`: itera picos baixados e atualiza os desatualizados
-- `_extractMarkdownImages()`: extrai caminhos de imagens embutidos em Markdown via RegExp
+- `syncIndex()`: busca índice e aciona checagem em background
+- **`SyncIsolate`**: Recebe o tráfego pesado de dados e orquestra os downloads delegando as validações criptográficas (SHA256) e persistência atômica (`.tmp` -> `.binarypb`) das Delta Syncs para uma thread secundária (Isolate).
+- Mantém a interface de usuário 100% responsiva, emitindo eventos granulares de andamento para renderização reativa das barras de progresso lineares.
 
 ### Módulo de In-App Feedback (`feedback/`)
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
