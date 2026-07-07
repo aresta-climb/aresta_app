@@ -1,4 +1,4 @@
-/// Testes de widget para a tela principal do Mapão Global.
+/// Testes de widget para a tela principal do Mapa Global.
 ///
 /// Assegura que a página [MapaGlobalPage] seja capaz de instanciar o mapa
 /// e renderizar a barra de navegação corretamente sem quebrar a árvore
@@ -45,7 +45,7 @@ void main() {
     ));
 
     // Verifica AppBar
-    expect(find.text('Mapão Global'), findsOneWidget);
+    expect(find.text('Mapa Global'), findsOneWidget);
     
     // Verifica se o GoogleMap é renderizado
     expect(find.byType(GoogleMap), findsOneWidget);
