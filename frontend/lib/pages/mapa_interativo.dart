@@ -66,8 +66,18 @@ class MapaInterativoPage extends StatefulWidget {
   State<MapaInterativoPage> createState() => _MapaInterativoPageState();
 }
 
+/// O estado da página [MapaInterativoPage].
+///
+/// Utiliza o [AutomaticKeepAliveClientMixin] para preservar o estado visual
+/// (nível de zoom, posição de pan, e status de animações já tocadas) quando 
+/// este widget é embutido dentro de listas sob demanda como o [PageView]
+/// (usado na `MapasCarrosselPage`). Isso evita o recarregamento do zero da
+/// imagem do mapa e das animações.
 class _MapaInterativoPageState extends State<MapaInterativoPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true;
   String? _selectedId;
   late TransformationController _transformationController;
   late AnimationController _animationController;
@@ -958,6 +968,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) {
       return const SizedBox.shrink(); // Mapa inválido
     }

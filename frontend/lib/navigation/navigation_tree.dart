@@ -300,7 +300,7 @@ class MapasCarrosselNode extends NavNode {
   }
 
   @override
-  String toString() => 'MapasCarrosselNode(${mapas.length} mapas, inicial: $initialIndex)';
+  String toString() => 'MapasCarrosselNode(${mapas.map((m) => m.mapaCaminhoImagem.split('/').last).join(',')})';
 }
 
 /// Nó que representa a tela de rotas de GPS/localização.
@@ -375,6 +375,13 @@ class TreeNavigationController extends ChangeNotifier {
              a.mapaCaminhoImagem == b.mapaCaminhoImagem &&
              a.setorContextNome == b.setorContextNome &&
              a.grupoContextNome == b.grupoContextNome;
+    }
+    if (a is MapasCarrosselNode && b is MapasCarrosselNode) {
+      if (a.cragId != b.cragId || a.mapas.length != b.mapas.length) return false;
+      for (int i = 0; i < a.mapas.length; i++) {
+        if (a.mapas[i].mapaCaminhoImagem != b.mapas[i].mapaCaminhoImagem) return false;
+      }
+      return true;
     }
 
     if (a is PicoNode && b is PicoNode) {

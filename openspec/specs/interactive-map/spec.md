@@ -50,3 +50,13 @@ When presenting multiple maps, the Carousel SHALL manage its own fixed Top Bar t
 - **THEN** the map image slides to the new page
 - **THEN** the top navigation bar (AppBar) remains fixed on screen
 - **THEN** the carousel pagination indicator (e.g., `< 01 de 02 >`) is rendered within the fixed Top Bar, avoiding overlap with map elements.
+
+### Requirement: Estado Visual do Mapa Interativo
+
+O sistema DEVE preservar o estado visual do mapa interativo (incluindo nível de zoom, posição de movimentação/pan e estado inicial de animação) quando o usuário navega entre múltiplos mapas em um carrossel.
+
+#### Scenario: Deslizando de volta para um mapa visualizado anteriormente
+- **WHEN** o usuário está visualizando múltiplos mapas interativos em um carrossel
+- **AND** o usuário desliza para um novo mapa, e então desliza de volta para o mapa anterior
+- **THEN** o mapa anterior retém sua posição exata de zoom e movimentação
+- **AND** a animação inicial de zoom não é reproduzida novamente

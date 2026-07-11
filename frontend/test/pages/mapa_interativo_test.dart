@@ -873,6 +873,69 @@ void main() {
 
       expect(find.text('Ver mapas (5)'), findsOneWidget);
     });
+
+    testWidgets('TDD 1.2: PageView swiping preserves MapaInterativoPage state', (WidgetTester tester) async {
+      final mapa1 = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+      );
+      final mapa2 = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+      );
+      final pico = Pico(nome: 'Pico Teste');
+
+      final pageController = PageController(initialPage: 0);
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: PageView(
+            controller: pageController,
+            children: [
+              MapaInterativoPage(
+                key: const ValueKey('mapa1'),
+                pico: pico,
+                mapa: mapa1,
+                cragId: 'crag1',
+                imageProviderOverride: mockImage,
+              ),
+              MapaInterativoPage(
+                key: const ValueKey('mapa2'),
+                pico: pico,
+                mapa: mapa2,
+                cragId: 'crag1',
+                imageProviderOverride: mockImage,
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+
+      // Encontrar o InteractiveViewer da página 0
+      final interactiveViewers = tester.widgetList<InteractiveViewer>(find.descendant(of: find.byKey(const ValueKey('mapa1')), matching: find.byType(InteractiveViewer))).toList();
+      expect(interactiveViewers, isNotEmpty);
+      final firstViewer = interactiveViewers.first;
+      
+      // Modificar a matriz (pan/zoom)
+      firstViewer.transformationController!.value = Matrix4.identity()..scale(2.0)..translate(10.0, 10.0);
+      final modifiedMatrix = firstViewer.transformationController!.value;
+
+      // Deslizar para a página 1
+      pageController.jumpToPage(1);
+      await tester.pumpAndSettle();
+
+      // Deslizar de volta para a página 0
+      pageController.jumpToPage(0);
+      await tester.pumpAndSettle();
+
+      // Verificar se o estado foi preservado
+      final newViewers = tester.widgetList<InteractiveViewer>(find.descendant(of: find.byKey(const ValueKey('mapa1')), matching: find.byType(InteractiveViewer))).toList();
+      expect(newViewers, isNotEmpty);
+      final restoredViewer = newViewers.first;
+      
+      expect(restoredViewer.transformationController!.value, equals(modifiedMatrix));
+    });
   });
 
 }
