@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_nearby_connections/flutter_nearby_connections.dart';
+import 'package:flutter_nearby_connections_plus/flutter_nearby_connections_plus.dart';
 import '../dataset_repository.dart';
 
 class AmbientP2PService {

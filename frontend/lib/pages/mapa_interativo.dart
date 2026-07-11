@@ -488,7 +488,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         height: (relHeight * constraints.maxHeight) + (hitBoxPadding * 2),
         child: GestureDetector(
           key: Key('marker_${ponto.id}'),
-          behavior: HitTestBehavior.opaque,
+          // HitTestBehavior default is deferToChild, which forwards the hit test down to CustomPainter.
+          // This ensures accurate clicks on rotated polygons rather than their larger AABBs.
           onTap: () => _onMarkerTap(ponto, constraints, viewportSize),
           child: CustomPaint(
             painter: MarkerPainter(
@@ -1206,7 +1207,13 @@ class AreaInfo {
   AreaInfo({required this.polygon, required this.bounds});
 }
 
+/// Helper class that converts Protobuf marker bounds (`Mapa_PontoDeInteresse`)
+/// into a polygon of relative/absolute coordinates and calculates its enclosing
+/// Axis-Aligned Bounding Box (AABB). This is used to create a `Positioned` widget
+/// and to power the precise `MarkerPainter` hit-testing.
 class AreaHelper {
+  /// Computes a list of vertices forming the polygon for a given marker,
+  /// along with its encompassing AABB. Returns `null` if the shape is not supported.
   static AreaInfo? getAreaInfo(Mapa_PontoDeInteresse ponto) {
     List<Offset> polygon = [];
     double minX, minY, maxX, maxY;
@@ -1463,6 +1470,12 @@ class MapHelper {
 
 }
 
+/// A `CustomPainter` responsible for drawing map markers and precisely detecting taps.
+///
+/// It operates in the local coordinate space established by the `Positioned` widget
+/// which acts as an Axis-Aligned Bounding Box (AABB) around the marker. The polygon's
+/// absolute map coordinates are translated by `minX`/`minY` and scaled down to the
+/// UI `constraints` proportionally based on the original `mapWidth`/`mapHeight`.
 class MarkerPainter extends CustomPainter {
   final List<Offset> polygon;
   final double minX;
@@ -1528,12 +1541,16 @@ class MarkerPainter extends CustomPainter {
   @override
   bool? hitTest(Offset position) {
     final path = Path();
+    final localPolygon = <Offset>[];
     for (int i = 0; i < polygon.length; i++) {
       final p = polygon[i];
       final localX =
           ((p.dx - minX) / mapWidth * constraints.maxWidth) + padding;
       final localY =
           ((p.dy - minY) / mapHeight * constraints.maxHeight) + padding;
+      
+      final localOffset = Offset(localX, localY);
+      localPolygon.add(localOffset);
 
       if (i == 0) {
         path.moveTo(localX, localY);
@@ -1543,8 +1560,33 @@ class MarkerPainter extends CustomPainter {
     }
     path.close();
 
-    // Inflate path for easier tapping
-    return path.contains(position);
+    // First, check if the point is strictly inside the mathematical bounds.
+    if (path.contains(position)) return true;
+
+    // Inflate path for easier tapping by checking distance to all polygon segments.
+    // A tolerance of 10.0 units is reasonable for finger taps.
+    const double tolerance = 10.0;
+    const double toleranceSq = tolerance * tolerance;
+
+    for (int i = 0; i < localPolygon.length; i++) {
+      final p1 = localPolygon[i];
+      final p2 = localPolygon[(i + 1) % localPolygon.length];
+      
+      final l2 = (p1.dx - p2.dx) * (p1.dx - p2.dx) + (p1.dy - p2.dy) * (p1.dy - p2.dy);
+      double distSq;
+      if (l2 == 0) {
+        distSq = (position.dx - p1.dx) * (position.dx - p1.dx) + (position.dy - p1.dy) * (position.dy - p1.dy);
+      } else {
+        var t = ((position.dx - p1.dx) * (p2.dx - p1.dx) + (position.dy - p1.dy) * (p2.dy - p1.dy)) / l2;
+        t = t < 0 ? 0 : (t > 1 ? 1 : t);
+        final proj = Offset(p1.dx + t * (p2.dx - p1.dx), p1.dy + t * (p2.dy - p1.dy));
+        distSq = (position.dx - proj.dx) * (position.dx - proj.dx) + (position.dy - proj.dy) * (position.dy - proj.dy);
+      }
+
+      if (distSq <= toleranceSq) return true;
+    }
+
+    return false;
   }
 
   @override
