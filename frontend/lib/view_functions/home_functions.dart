@@ -69,7 +69,7 @@ Widget buildHomeBody(
   DatasetRepository datasetRepo,
   SyncService syncService,
   List<Map<String, dynamic>> downloadedPicos,
-  Set<String> downloadingCrags, {
+  Map<String, double> downloadingCrags, {
   required VoidCallback onAddCrag,
 }) {
   return Container(
@@ -219,7 +219,7 @@ Widget buildSyncBadge(SyncStatus status) {
 /// Constrói uma lista expansível mostrando todos os guias baixados.
 Widget _buildAllGuidesDropdown(
   List<Map<String, dynamic>> picos,
-  Set<String> downloadingCrags, {
+  Map<String, double> downloadingCrags, {
   required VoidCallback onAddCrag,
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
@@ -253,14 +253,17 @@ Widget _buildAllGuidesDropdown(
       collapsedBackgroundColor: Colors.transparent,
       children: [
         ...picos.map((pico) {
-          final isDownloading = downloadingCrags.contains(pico['id']);
+          final isDownloading = downloadingCrags.containsKey(pico['id']);
           
           Widget trailingIcon;
           if (isDownloading) {
             trailingIcon = SizedBox(
-              width: 16, 
-              height: 16, 
-              child: CircularProgressIndicator(color: fishBone, strokeWidth: 2)
+              width: 60,
+              child: LinearProgressIndicator(
+                value: downloadingCrags[pico['id']],
+                color: fishBone,
+                backgroundColor: fishBone.withValues(alpha: 0.2),
+              ),
             );
           } else {
             trailingIcon = Icon(Icons.chevron_right, color: fishBone, size: 18);
@@ -338,7 +341,7 @@ Widget buildSectionHeader(String title) {
 /// Permite loop infinito se houver exatamente 4 itens.
 Widget buildPicosCarousel(
   List<Map<String, dynamic>> allPicos,
-  Set<String> downloadingCrags, {
+  Map<String, double> downloadingCrags, {
   required VoidCallback onAddCrag,
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
@@ -428,7 +431,7 @@ Widget buildPicosCarousel(
             }
 
             final pico = picosToShow[actualIndex];
-            final isDownloading = downloadingCrags.contains(pico['id']);
+            final isDownloading = downloadingCrags.containsKey(pico['id']);
 
             VoidCallback? onTapCallback;
             if (isDownloading) {

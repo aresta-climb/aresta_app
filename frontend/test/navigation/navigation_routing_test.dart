@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/pages/mapao_global.dart';
+import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
@@ -274,7 +274,7 @@ void main() {
       expect(navigator.pages[2].key, const ValueKey('TextNode(Modal)'));
     });
 
-    testWidgets('MapaoGlobalNode generates MapaoGlobalPage directly', (WidgetTester tester) async {
+    testWidgets('MapaGlobalNode generates MapaGlobalPage directly', (WidgetTester tester) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final syncService = SyncService(datasetRepository: datasetRepo);
 
@@ -291,14 +291,14 @@ void main() {
 
       final treeController = TreeNavigationWrapper.currentTreeController!;
       
-      treeController.navigateTo(MapaoGlobalNode(
+      treeController.navigateTo(MapaGlobalNode(
         crags: [],
         parent: treeController.currentNode,
       ));
       await tester.pump(const Duration(seconds: 1));
 
-      expect(treeController.currentNode, isA<MapaoGlobalNode>());
-      expect(find.byType(MapaoGlobalPage), findsOneWidget);
+      expect(treeController.currentNode, isA<MapaGlobalNode>());
+      expect(find.byType(MapaGlobalPage), findsOneWidget);
     });
 
     testWidgets('MapasCarrosselNode generates MapasCarrosselPage and passes cragId', (WidgetTester tester) async {

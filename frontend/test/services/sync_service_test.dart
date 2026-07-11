@@ -14,8 +14,38 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:crypto/crypto.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks/mock_telemetry_service.dart';
+
+late HttpServer localServer;
+Map<String, List<int>> mockServerResponses = {};
+List<String> requestedPaths = [];
+
+Future<void> setupLocalServer() async {
+  localServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  localServer.listen((HttpRequest request) {
+    final path = request.uri.path;
+    requestedPaths.add(request.uri.toString());
+    print('LOCAL SERVER REQUEST: ');
+    for (var entry in mockServerResponses.entries) {
+      if (path.endsWith(entry.key)) {
+        print('LOCAL SERVER FOUND MATCH: ');
+        request.response.add(entry.value);
+        request.response.close();
+        return;
+      }
+    }
+    print('LOCAL SERVER 404: ');
+    request.response.statusCode = 404;
+    request.response.close();
+  });
+}
+
+Future<void> teardownLocalServer() async {
+  await localServer.close(force: true);
+}
 
 class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
   final String tempPath;
@@ -45,7 +75,10 @@ class FakeClient extends http.BaseClient {
   final List<String> requestedFullUrls = [];
   final Map<String, String> receivedHeaders = {};
   
-  FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn, this.freshIndiceForBypass]);
+  FakeClient(this.newIndice, [this.mockFiles = const {}, this.etagToReturn, this.freshIndiceForBypass]) {
+    mockServerResponses.clear();
+    mockServerResponses.addAll(mockFiles);
+  }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -84,6 +117,10 @@ class FakeClient extends http.BaseClient {
 
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
+  setUpAll(() async { await setupLocalServer(); });
+  tearDownAll(() async { await teardownLocalServer(); });
   late EditorDeCroqui editor;
   late DatasetRepository repo;
   late SyncService syncService;
@@ -92,10 +129,14 @@ void main() {
 
   setUp(() {
     editor = EditorDeCroqui();
+    editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
+    SyncService.baseUrlOverride = 'http://${localServer.address.address}:${localServer.port}/v3';
     repo = DatasetRepository(editorDeCroqui: editor);
-    syncService = SyncService(datasetRepository: repo);
+    syncService = SyncService(datasetRepository: repo)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
+    SharedPreferences.setMockInitialValues({});
+    requestedPaths.clear();
   });
 
 
@@ -166,6 +207,7 @@ void main() {
 
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
       tempDir = await Directory.systemTemp.createTemp('sync_delta_test');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
       
@@ -192,11 +234,11 @@ void main() {
       await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
 
       final fakeClient = FakeClient(newIndice);
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
-      expect(fakeClient.requestedUrls.any((url) => url.contains('picos/')), isFalse);
+      expect(requestedPaths.any((url) => url.contains('picos/')), isFalse);
     });
 
     test('não baixa arquivo externo de novo se checksum é o mesmo', () async {
@@ -221,11 +263,11 @@ void main() {
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
-      expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'imagem\.webp$')))));
+      expect(requestedPaths, isNot(contains(matches(RegExp(r'imagem\.webp$')))));
       expect(fileToKeep.existsSync(), isTrue);
     });
 
@@ -254,11 +296,11 @@ void main() {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
         'picos/imagem.webp': [2],
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
-      expect(fakeClient.requestedUrls.any((url) => url.endsWith('imagem.webp')), isTrue);
+      expect(requestedPaths.any((url) => url.contains('imagem.webp')), isTrue);
       expect(await fileToUpdate.readAsBytes(), equals([2]));
     });
 
@@ -285,7 +327,7 @@ void main() {
       final fakeClient = FakeClient(newIndice, {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
@@ -313,18 +355,19 @@ void main() {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
         'picos/nova.webp': [3],
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
       // Cache-Busting Verification
       final expectedHash = sha256.convert(newCroqui.writeToBuffer()).toString();
-      final fullUrl = fakeClient.requestedFullUrls.firstWhere((u) => u.contains('$picoId.binarypb'));
+      print('requestedPaths: $requestedPaths');
+      final fullUrl = requestedPaths.firstWhere((u) => u.contains('$picoId.binarypb'));
       expect(fullUrl, contains('?v='), reason: 'A URL do arquivo deve ter o furador de cache ?v=');
       expect(fullUrl, contains(expectedHash), reason: 'A URL deve ter o hash real do croqui para furar o cache da CDN');
 
       // Sync External Files Verification
-      expect(fakeClient.requestedUrls.any((url) => url.endsWith('nova.webp')), isTrue);
+      expect(requestedPaths.any((url) => url.contains('nova.webp')), isTrue);
       expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
     });
 
@@ -366,7 +409,7 @@ void main() {
         'picos/atualizada.webp': [22],
         'picos/nova.webp': [44],
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncService.syncIndex();
 
@@ -375,7 +418,7 @@ void main() {
       expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue);
       expect(await fileToUpdate.readAsBytes(), equals([22]));
       
-      expect(fakeClient.requestedUrls, isNot(contains(matches(RegExp(r'mantida\.webp$')))));
+      expect(requestedPaths, isNot(contains(matches(RegExp(r'mantida\.webp$')))));
     });
 
     test('sobrevive a breaking changes (oldPicoData corrompido) varrendo a pasta para deletar orfaos e validando hash local', () async {
@@ -413,7 +456,7 @@ void main() {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
         'picos/nova.webp': [44],
       });
-      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncServiceFake.syncIndex();
 
@@ -422,7 +465,7 @@ void main() {
       
       // Arquivo válido deve ter sido mantido sem download.
       expect(validFile.existsSync(), isTrue, reason: 'Arquivo valido deveria ter sido mantido');
-      expect(fakeClient.requestedUrls.any((url) => url.endsWith('valida.webp')), isFalse, reason: 'O arquivo valido NAO deve ter sido baixado');
+      expect(requestedPaths.any((url) => url.contains('valida.webp')), isFalse, reason: 'O arquivo valido NAO deve ter sido baixado');
       
       // Novo arquivo deve ser baixado
       expect(File('${picoDir.path}/nova.webp').existsSync(), isTrue, reason: 'Arquivo novo deve ter sido baixado');
@@ -439,6 +482,7 @@ void main() {
 
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
       tempDir = await Directory.systemTemp.createTemp('sync_thumbnails_test');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
       thumbnailsDir = Directory('${tempDir.path}/thumbnails');
@@ -461,7 +505,7 @@ void main() {
       final fakeClient = FakeClient(newIndice, {
         'thumbnails/pico_thumb.webp': [10],
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       await syncService.syncIndex();
 
@@ -500,12 +544,12 @@ void main() {
       final fakeClient = FakeClient(newIndice, {
         'thumbnails/$picoId.webp': [11], // Mock pra caso tente baixar
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       await syncService.syncIndex();
 
       // Nenhuma thumbnail deveria ser requisitada
-      expect(fakeClient.requestedUrls.any((url) => url.contains('.webp')), isFalse);
+      expect(requestedPaths.any((url) => url.contains('.webp')), isFalse);
     });
 
     test('deve deletar thumbnails órfãs que estavam no índice antigo mas não no novo', () async {
@@ -536,7 +580,7 @@ void main() {
       await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
 
       final fakeClient = FakeClient(newIndice, {});
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       await syncService.syncIndex();
 
@@ -571,7 +615,7 @@ void main() {
 
       final mockClient = FakeClient(newIndice, {});
 
-      final syncService = SyncService(datasetRepository: repo, client: mockClient);
+      final syncService = SyncService(datasetRepository: repo, client: mockClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       await syncService.syncIndex();
 
@@ -590,6 +634,7 @@ void main() {
 
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
       tempDir = Directory.systemTemp.createTempSync('sync_test');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
@@ -626,7 +671,7 @@ void main() {
       final fakeClient = FakeClient(newIndice, {
         'picos/pico_orfao.binarypb': newCroqui.writeToBuffer(),
       });
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       // We must not be in experimental mode for _checkForUpdates to run
       editor.isExperimentalMode.value = false;
@@ -636,7 +681,7 @@ void main() {
 
       // 5. Verifica se o FakeClient foi acionado para tentar baixar o `pico_orfao.binarypb`
       // Isso prova que mesmo com o Indice antigo sendo ilegível, ele forçou a atualização do pico local!
-      expect(fakeClient.requestedUrls.any((url) => url.contains('pico_orfao.binarypb')), isTrue,
+      expect(requestedPaths.any((url) => url.contains('pico_orfao.binarypb')), isTrue,
           reason: 'O pico deve ser atualizado compulsoriamente se o indice local for ilegível/ausente');
     });
 
@@ -665,7 +710,7 @@ void main() {
           ..checksumSha256Croqui = 'NEW_CHECKSUM');
           
       final fakeClient = FakeClient(newIndice);
-      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       // We must not be in experimental mode for _checkForUpdates to run
       editor.isExperimentalMode.value = false;
@@ -684,7 +729,7 @@ void main() {
     test('deve definir syncStatus para offline se falhar ao buscar o indice.binarypb na nuvem', () async {
       // Simula uma falha de rede completa para fetchIndiceWithRetries retornar null
       final errorClient = _ErrorClient();
-      final syncService = SyncService(datasetRepository: repo, client: errorClient);
+      final syncService = SyncService(datasetRepository: repo, client: errorClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       await syncService.syncIndex();
 
@@ -731,7 +776,7 @@ void main() {
         'picos/$picoId.binarypb': croquiBytes,
       }, null, freshIndice);
       
-      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       // We must not be in experimental mode for _checkForUpdates to run
       editor.isExperimentalMode.value = false;
@@ -760,6 +805,7 @@ void main() {
 
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
       tempDir = Directory.systemTemp.createTempSync('sync_etag_test');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     });
@@ -775,7 +821,7 @@ void main() {
     test('deve salvar etag ao baixar indice.binarypb com sucesso', () async {
       final newIndice = Indice()..croquis.add(ResumoCroqui()..id = 'pico1');
       final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
-      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       await syncServiceFake.syncIndex();
 
@@ -787,7 +833,7 @@ void main() {
     test('deve enviar If-None-Match e processar 304 Not Modified corretamente', () async {
       final newIndice = Indice()..croquis.add(ResumoCroqui()..id = 'pico_fake_nao_deve_baixar');
       final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
-      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       final indiceFile = File(editor.indicePath(tempDir.path));
       indiceFile.parent.createSync(recursive: true);
@@ -809,7 +855,7 @@ void main() {
 
     test('nao deve recarregar DatasetRepo em memoria se ja estiver carregado e retornar 304', () async {
       final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
-      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: fakeClient)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
       
       final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
       etagFile.parent.createSync(recursive: true);
@@ -862,10 +908,10 @@ void main() {
         'picos/imagens/capa.webp': [1, 2, 3],
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -893,10 +939,10 @@ void main() {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -928,9 +974,9 @@ void main() {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       // O app localmente acha que tem o OLD_HASH
       repo.indiceData.value = oldIndice;
@@ -955,9 +1001,9 @@ void main() {
       final client = FakeClient(newIndice, {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -988,9 +1034,9 @@ void main() {
         'picos/$picoId.binarypb': croquiBytes,
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -1034,9 +1080,9 @@ void main() {
         'picos/capa.webp': fileData,
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -1075,9 +1121,9 @@ void main() {
       // We DO NOT serve the croqui from FakeClient. If it tries to download, it will fail!
       final client = FakeClient(newIndice, {});
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -1112,9 +1158,9 @@ void main() {
         'picos/$picoId.binarypb': croquiBytes,
       });
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       repo.indiceData.value = newIndice;
       
@@ -1160,9 +1206,9 @@ void main() {
         'picos/$picoId.binarypb': croquiBytes,
       }, 'old_etag');
 
-      editor.editorUrl.value = 'https://fake.url';
+      editor.editorUrl.value = 'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
-      final syncServiceFake = SyncService(datasetRepository: repo, client: client);
+      final syncServiceFake = SyncService(datasetRepository: repo, client: client)..mockIsolateSpawn = (mainFunc, args) async { await downloadIsolateMain(args); };
 
       // Preparamos o ambiente local como se o app tivesse o índice velho e a etag velha salvos
       final indicePath = editor.indicePath(tempDir.path);

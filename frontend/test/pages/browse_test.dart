@@ -77,7 +77,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('Pico Teste baixado com sucesso!'), findsOneWidget);
+    expect(find.text('Pico Teste baixado'), findsOneWidget);
   });
 
   testWidgets('BrowsePage shows error SnackBar when download fails', (WidgetTester tester) async {

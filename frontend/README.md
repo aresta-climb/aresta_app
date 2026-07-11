@@ -6,9 +6,11 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 
 ## Funcionalidades
 
+- **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`).
+- **Compartilhamento P2P Offline**: Módulo de rede descentralizada (Peer-to-Peer) via Wi-Fi Direct e Bluetooth LE. Permite a transferência direta e incrivelmente rápida de guias de escalada inteiros (centenas de megabytes de imagens e metadados) entre os aparelhos de escaladores na base da montanha, de forma 100% offline, sem depender de qualquer torre de celular.
 - **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
-- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo, além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
-- **GPS / Mapa Interativo**: Visualização de mapas de setores e picos com overlay interativo e navegação hierárquica.
+- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo (via nuvem ou via rede P2P próxima), além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
+- **GPS / Mapas em Carrossel**: Visualização horizontal contínua de múltiplos mapas de setores e picos com overlay interativo e navegação hierárquica fluida entre áreas e subsetores (Carousel).
 - **Leitura Offline**: Textos, imagens e betas funcionam sem conexão após o primeiro download.
 - **Ghost Protocol (`aresta-zip://`)**: Arquivos `.croqui` locais são tratados como servidores HTTP internos — o mesmo pipeline de rede serve dados remotos e locais sem ramificações no código.
 - **Modo Experimental** _(oculto)_: Ferramentas para editores importarem repositórios em desenvolvimento. Acesso via Easter Egg nas Configurações (7 toques no ícone de status). Dados se auto-destroem após 20 minutos.
@@ -31,6 +33,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 | **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
 | **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
 | **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para importação de repositórios |
+| **`flutter_nearby_connections`** | `^2.1.2` | Malha P2P offline via Wi-Fi Direct e Bluetooth LE para transferência local |
 | **`file_picker`** | `^11.0.2` | Seleção de arquivos `.croqui` no dispositivo |
 | **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync |
 
@@ -60,9 +63,9 @@ frontend/
 │   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
 │   │   ├── settings_functions.dart      - Importação de .croqui, QR code, conexão com editor
-│   │   ├── mapao/
-│   │   │   ├── mapao_global_functions.dart - Funções e visual builders específicos para o mapa mundial
-│   │   │   └── mapao_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapão
+│   │   ├── mapa/
+│   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
+│   │   │   └── mapa_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
 │   │   └── *_functions.dart             - Funções específicas por página (home, browse, pico, …)
 │   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
@@ -73,7 +76,7 @@ frontend/
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
 │   │   ├── browse.dart                  - Índice remoto com download inline
-│   │   ├── mapao_global.dart            - Visão de mapa global interativa a partir do Explorar
+│   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
 │   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
@@ -91,11 +94,15 @@ frontend/
 │   │   │   ├── remote_config_service.dart - Fallbacks e cache local
 │   │   │   └── app_logger.dart          - Logger de eventos local (debug)
 │   │   ├── http/
-│   │   │   ├── sync_service.dart        - Orquestra download e validação
-│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto
+│   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
+│   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
+│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto e gestão de ETags
 │   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   ├── zip_interceptor_client.dart - Ghost Protocol: intercepta aresta-zip://
 │   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   ├── p2p/
+│   │   │   ├── ambient_p2p_service.dart - Singleton gerenciador do Wi-Fi Direct e Discovery local
+│   │   │   └── p2p_transfer_manager.dart- Empacotador e transferidor de arquivos base64 via P2P
 │   │   ├── feedback/
 │   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
 │   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)

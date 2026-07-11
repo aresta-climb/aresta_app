@@ -7,6 +7,8 @@ import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/http/sync_service.dart';
+import '../services/p2p/ambient_p2p_service.dart';
+import '../services/p2p/p2p_transfer_manager.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
@@ -30,6 +32,14 @@ class _BrowsePageState extends State<BrowsePage> {
   Timer? _debounceTimer;
 
   @override
+  void initState() {
+    super.initState();
+    // Inicializa os serviços P2P ao entrar na página de explorar
+    AmbientP2PService.instance.init();
+    P2PTransferManager.instance.init();
+  }
+
+  @override
   void dispose() {
     _debounceTimer?.cancel();
     super.dispose();
@@ -42,8 +52,9 @@ class _BrowsePageState extends State<BrowsePage> {
   void _handleDownload(Map<String, dynamic> crag) async {
     final name = safeString(crag['nome'], fallback: 'Pico');
     final String id = crag['id'];
+    final isP2P = AmbientP2PService.instance.nearbyAvailableCrags.value.contains(id);
 
-    if (await widget.syncService.isNetworkDisabled()) {
+    if (!isP2P && await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
       }
@@ -73,22 +84,25 @@ class _BrowsePageState extends State<BrowsePage> {
     
     // Mostra um SnackBar para fornecer feedback ao usuário
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Baixando $name...')),
+      SnackBar(content: Text(isP2P ? 'Solicitando $name via P2P...' : 'Baixando $name...')),
     );
 
-    // Executa o download real através do serviço.
-    // O arquivo é salvo no diretório de documentos local do aplicativo.
-    final success = await widget.syncService.downloadCrag(resumo);
+    if (isP2P) {
+      P2PTransferManager.instance.requestCragFromPeer(id);
+      // O P2PManager lida com o progresso internamente
+    } else {
+      final success = await widget.syncService.downloadCrag(resumo);
 
-    if (mounted) {
-      // Atualiza o usuário com o resultado
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? '$name baixado com sucesso!' : 'Falha ao baixar $name'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
+      if (mounted) {
+        // Atualiza o usuário com o resultado
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -161,28 +175,34 @@ class _BrowsePageState extends State<BrowsePage> {
                     addCallback = null;
                   }
 
-                  return ValueListenableBuilder<Set<String>>(
+                  return ValueListenableBuilder<Map<String, double>>(
                     valueListenable: widget.syncService.downloadingCrags,
                     builder: (context, downloadingCrags, child) {
-                      return buildBrowseBody(
-                        context,
-                        filteredCrags,
-                        downloadingCrags,
-                        onSearchChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
-                          
-                          if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-                          _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-                            if (_searchQuery.isNotEmpty) {
-                              TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
-                            }
-                          });
+                      return ValueListenableBuilder<Set<String>>(
+                        valueListenable: AmbientP2PService.instance.nearbyAvailableCrags,
+                        builder: (context, nearbyCrags, child) {
+                          return buildBrowseBody(
+                            context,
+                            filteredCrags,
+                            downloadingCrags,
+                            onSearchChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                              
+                              if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                              _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+                                if (_searchQuery.isNotEmpty) {
+                                  TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
+                                }
+                              });
+                            },
+                            onDownload: _handleDownload,
+                            onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
+                            onAddExperimental: addCallback,
+                            nearbyAvailableCrags: nearbyCrags,
+                          );
                         },
-                        onDownload: _handleDownload,
-                        onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
-                        onAddExperimental: addCallback,
                       );
                     },
                   );
