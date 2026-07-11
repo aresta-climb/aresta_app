@@ -162,8 +162,16 @@ class SetorNode extends PicoContextNode {
     );
   }
 
+  /// Retorna uma representação em string deste nó.
+  /// 
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
-  String toString() => 'SetorNode($setorNome)';
+  String toString() => 'SetorNode($cragId, $setorNome, $grupoNome)';
 }
 
 /// Nó que representa a visualização de um Grupo.
@@ -185,8 +193,16 @@ class GrupoNode extends PicoContextNode {
     );
   }
 
+  /// Retorna uma representação em string deste nó.
+  /// 
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
-  String toString() => 'GrupoNode($grupoNome)';
+  String toString() => 'GrupoNode($cragId, $grupoNome)';
 }
 
 /// Nó que representa a tela de visualização de uma Via específica de escalada (ViaView).
@@ -214,8 +230,16 @@ class ViaNode extends PicoContextNode {
     );
   }
 
+  /// Retorna uma representação em string deste nó.
+  /// 
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
-  String toString() => 'ViaNode($escaladaNome)';
+  String toString() => 'ViaNode($cragId, $setorNome, $grupoNome, $escaladaNome)';
 }
 
 /// Nó que representa o mapa interativo de um setor.
@@ -254,8 +278,16 @@ class MapaInterativoNode extends NavNode {
     );
   }
 
+  /// Retorna uma representação em string deste nó.
+  /// 
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
-  String toString() => 'MapaInterativoNode(${mapaCaminhoImagem.split('/').last})';
+  String toString() => 'MapaInterativoNode($cragId, ${mapaCaminhoImagem.split('/').last}, $setorContextNome, $grupoContextNome)';
 }
 
 /// Dados necessários para renderizar um item de mapa dentro do carrossel.

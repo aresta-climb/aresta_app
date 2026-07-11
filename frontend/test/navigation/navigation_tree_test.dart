@@ -143,7 +143,7 @@ void main() {
         setorNome: 'Clube da Luta',
         parent: HomeNode(),
       );
-      expect(node.toString(), 'SetorNode(Clube da Luta)');
+      expect(node.toString(), 'SetorNode(pico_santuario, Clube da Luta, null)');
     });
 
     test('GrupoNode toString()', () {
@@ -152,33 +152,47 @@ void main() {
         grupoNome: 'Pedra Principal',
         parent: HomeNode(),
       );
-      expect(node.toString(), 'GrupoNode(Pedra Principal)');
+      expect(node.toString(), 'GrupoNode(pico_santuario, Pedra Principal)');
     });
 
-    test('ViaNode toString()', () {
-      const node = ViaNode(
+    test('ViaNode toString() garante unicidade baseada em contexto (TDD)', () {
+      const nodeComSetor = ViaNode(
+        cragId: 'pico_santuario',
+        setorNome: 'Clube da Luta',
+        escaladaNome: 'Via Láctea',
+        parent: HomeNode(),
+      );
+      expect(nodeComSetor.toString(), 'ViaNode(pico_santuario, Clube da Luta, null, Via Láctea)');
+
+      const nodeSemSetor = ViaNode(
         cragId: 'pico_santuario',
         escaladaNome: 'Via Láctea',
         parent: HomeNode(),
       );
-      expect(node.toString(), 'ViaNode(Via Láctea)');
+      expect(nodeSemSetor.toString(), 'ViaNode(pico_santuario, null, null, Via Láctea)');
+
+      // A chave (toString) deve ser diferente mesmo se o nome da escalada for igual
+      expect(nodeComSetor.toString() != nodeSemSetor.toString(), isTrue);
     });
 
-    test('MapaInterativoNode toString()', () {
+    test('MapaInterativoNode toString() garante unicidade baseada em contexto (TDD)', () {
       const nodeComSetor = MapaInterativoNode(
         cragId: 'pico_santuario',
         mapaCaminhoImagem: 'assets/map.png',
         setorContextNome: 'Clube da Luta',
         parent: HomeNode(),
       );
-      expect(nodeComSetor.toString(), 'MapaInterativoNode(map.png)');
+      expect(nodeComSetor.toString(), 'MapaInterativoNode(pico_santuario, map.png, Clube da Luta, null)');
 
       const nodeSemSetor = MapaInterativoNode(
         cragId: 'pico_santuario',
         mapaCaminhoImagem: 'assets/map.png',
         parent: HomeNode(),
       );
-      expect(nodeSemSetor.toString(), 'MapaInterativoNode(map.png)');
+      expect(nodeSemSetor.toString(), 'MapaInterativoNode(pico_santuario, map.png, null, null)');
+
+      // A chave (toString) deve ser diferente mesmo se o arquivo de mapa for igual
+      expect(nodeComSetor.toString() != nodeSemSetor.toString(), isTrue);
     });
 
     test('MapasCarrosselNode toString()', () {
@@ -191,7 +205,7 @@ void main() {
         ],
         parent: HomeNode(),
       );
-      expect(node.toString(), 'MapasCarrosselNode(2 mapas, inicial: 0)');
+      expect(node.toString(), 'MapasCarrosselNode(map1.png,map2.png)');
     });
 
     test('GPSNode toString()', () {

@@ -13,14 +13,18 @@ import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
 /// Uma página que permite aos usuários explorar e pesquisar picos disponíveis.
-/// 
+///
 /// Ela exibe uma lista de picos buscada do [DatasetRepository] e
 /// fornece uma barra de pesquisa para filtrar por nome ou localização.
 class BrowsePage extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
-  const BrowsePage({super.key, required this.datasetRepo, required this.syncService});
+  const BrowsePage({
+    super.key,
+    required this.datasetRepo,
+    required this.syncService,
+  });
 
   @override
   State<BrowsePage> createState() => _BrowsePageState();
@@ -34,9 +38,6 @@ class _BrowsePageState extends State<BrowsePage> {
   @override
   void initState() {
     super.initState();
-    // Inicializa os serviços P2P ao entrar na página de explorar
-    AmbientP2PService.instance.init();
-    P2PTransferManager.instance.init();
   }
 
   @override
@@ -46,13 +47,14 @@ class _BrowsePageState extends State<BrowsePage> {
   }
 
   /// Aciona o download dos dados binários de um pico (.binarypb).
-  /// 
+  ///
   /// Mostra um SnackBar durante o processo e outro para indicar
   /// sucesso ou falha após a conclusão.
   void _handleDownload(Map<String, dynamic> crag) async {
     final name = safeString(crag['nome'], fallback: 'Pico');
     final String id = crag['id'];
-    final isP2P = AmbientP2PService.instance.nearbyAvailableCrags.value.contains(id);
+    final isP2P = AmbientP2PService.instance.nearbyAvailableCrags.value
+        .contains(id);
 
     if (!isP2P && await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -65,7 +67,9 @@ class _BrowsePageState extends State<BrowsePage> {
     if (indice == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro: Índice não carregado. Tente novamente.')),
+          const SnackBar(
+            content: Text('Erro: Índice não carregado. Tente novamente.'),
+          ),
         );
       }
       return;
@@ -75,16 +79,22 @@ class _BrowsePageState extends State<BrowsePage> {
     if (resumos.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pico inédito ou não encontrado no índice local.')),
+          const SnackBar(
+            content: Text('Pico inédito ou não encontrado no índice local.'),
+          ),
         );
       }
       return;
     }
     final resumo = resumos.first;
-    
+
     // Mostra um SnackBar para fornecer feedback ao usuário
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isP2P ? 'Solicitando $name via P2P...' : 'Baixando $name...')),
+      SnackBar(
+        content: Text(
+          isP2P ? 'Solicitando $name via P2P...' : 'Baixando $name...',
+        ),
+      ),
     );
 
     if (isP2P) {
@@ -121,9 +131,7 @@ class _BrowsePageState extends State<BrowsePage> {
         builder: (context, dataset, child) {
           // Enquanto o repositório ainda está inicializando/buscando, mostra um spinner.
           if (dataset == null) {
-            return Center(
-              child: CircularProgressIndicator(color: beastHide),
-            );
+            return Center(child: CircularProgressIndicator(color: beastHide));
           }
 
           final allCrags = dataset.availablePicos;
@@ -138,12 +146,14 @@ class _BrowsePageState extends State<BrowsePage> {
                 keys: [
                   WeightedKey(
                     name: 'nome',
-                    getter: (Map<String, dynamic> c) => normalizeSearchString(safeString(c['nome'])),
+                    getter: (Map<String, dynamic> c) =>
+                        normalizeSearchString(safeString(c['nome'])),
                     weight: 1.0,
                   ),
                   WeightedKey(
                     name: 'local',
-                    getter: (Map<String, dynamic> c) => normalizeSearchString(safeString(c['local'])),
+                    getter: (Map<String, dynamic> c) =>
+                        normalizeSearchString(safeString(c['local'])),
                     weight: 0.5,
                   ),
                 ],
@@ -167,8 +177,8 @@ class _BrowsePageState extends State<BrowsePage> {
                   VoidCallback? addCallback;
                   if (isEditor) {
                     addCallback = () => mostrarDialogConexao(
-                      context, 
-                      widget.datasetRepo, 
+                      context,
+                      widget.datasetRepo,
                       titulo: 'Trocar serving',
                     );
                   } else {
@@ -179,7 +189,8 @@ class _BrowsePageState extends State<BrowsePage> {
                     valueListenable: widget.syncService.downloadingCrags,
                     builder: (context, downloadingCrags, child) {
                       return ValueListenableBuilder<Set<String>>(
-                        valueListenable: AmbientP2PService.instance.nearbyAvailableCrags,
+                        valueListenable:
+                            AmbientP2PService.instance.nearbyAvailableCrags,
                         builder: (context, nearbyCrags, child) {
                           return buildBrowseBody(
                             context,
@@ -189,16 +200,28 @@ class _BrowsePageState extends State<BrowsePage> {
                               setState(() {
                                 _searchQuery = value;
                               });
-                              
-                              if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-                              _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
-                                if (_searchQuery.isNotEmpty) {
-                                  TelemetryService.instance.logBuscaCroquis(_searchQuery, filteredCrags.length);
-                                }
-                              });
+
+                              if (_debounceTimer?.isActive ?? false)
+                                _debounceTimer!.cancel();
+                              _debounceTimer = Timer(
+                                const Duration(milliseconds: 1000),
+                                () {
+                                  if (_searchQuery.isNotEmpty) {
+                                    TelemetryService.instance.logBuscaCroquis(
+                                      _searchQuery,
+                                      filteredCrags.length,
+                                    );
+                                  }
+                                },
+                              );
                             },
                             onDownload: _handleDownload,
-                            onOpen: (crag) => handlePicoSelection(context, widget.datasetRepo, crag, source: 'explorar'),
+                            onOpen: (crag) => handlePicoSelection(
+                              context,
+                              widget.datasetRepo,
+                              crag,
+                              source: 'explorar',
+                            ),
                             onAddExperimental: addCallback,
                             nearbyAvailableCrags: nearbyCrags,
                           );
@@ -215,4 +238,3 @@ class _BrowsePageState extends State<BrowsePage> {
     );
   }
 }
-
