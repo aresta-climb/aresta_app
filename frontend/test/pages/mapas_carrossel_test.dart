@@ -92,7 +92,40 @@ void main() {
       // Click Left again (should do nothing because we are at the beginning)
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
       expect(find.text('01 de 03'), findsOneWidget);
+    });
+
+    testWidgets('Updates page when initialIndex changes in didUpdateWidget', (tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final mapas = [
+        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
+        const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
+        const CarrosselItemData(mapaCaminhoImagem: 'map3.png'),
+      ];
+
+      Widget buildCarousel(int initialIndex) {
+        return MaterialApp(
+          home: MapasCarrosselPage(
+            pico: pico,
+            cragId: '1',
+            mapas: mapas,
+            initialIndex: initialIndex,
+            mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildCarousel(0));
+      expect(find.text('01 de 03'), findsOneWidget);
+      expect(find.text('MapaInterativo 0'), findsOneWidget);
+
+      // Update widget with new initialIndex (simulating clicking "Ver mapas (N)" again)
+      await tester.pumpWidget(buildCarousel(2));
+      await tester.pumpAndSettle();
+
+      expect(find.text('03 de 03'), findsOneWidget);
+      expect(find.text('MapaInterativo 2'), findsOneWidget);
     });
   });
 }

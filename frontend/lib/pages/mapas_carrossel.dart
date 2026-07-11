@@ -43,6 +43,19 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
   }
 
   @override
+  void didUpdateWidget(MapasCarrosselPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != oldWidget.initialIndex) {
+      _currentIndex = widget.initialIndex;
+      // We don't want to jump instantly without animation or wait if it's already on that page.
+      // jumpToPage handles this synchronously.
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(_currentIndex);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
