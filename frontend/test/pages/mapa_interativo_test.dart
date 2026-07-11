@@ -170,7 +170,100 @@ void main() {
     });
   });
 
+  group('MarkerPainter hitTest Tests', () {
+    test('hitTest detects point inside and outside unrotated rectangle', () {
+      final polygon = [
+        const Offset(70, 80),
+        const Offset(130, 80),
+        const Offset(130, 120),
+        const Offset(70, 120)
+      ];
+      final minX = 70.0;
+      final minY = 80.0;
+      final padding = 4.0;
+      
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: minX,
+        minY: minY,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: padding,
+      );
 
+      // Width of bounds is 60, height is 40. With 1:1 scale, local bounding box is [padding, padding] to [padding+60, padding+40].
+      // Inside point (center of the local AABB: 30 + 4, 20 + 4) = (34, 24)
+      expect(painter.hitTest(const Offset(34, 24)), isTrue);
+      // Outside point
+      expect(painter.hitTest(const Offset(10, 14)), isFalse);
+    });
+
+    test('hitTest correctly excludes corners of AABB for rotated rectangle', () {
+      // Rotate 60x40 box by 45 degrees.
+      // We will just create a diamond polygon for simplicity to test the hitTest logic.
+      final polygon = [
+        const Offset(100, 50),
+        const Offset(150, 100),
+        const Offset(100, 150),
+        const Offset(50, 100)
+      ];
+      final minX = 50.0;
+      final minY = 50.0;
+      final padding = 4.0;
+      
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: minX,
+        minY: minY,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: padding,
+      );
+
+      // Local AABB size is 100x100.
+      // Center is at 50 + 4 = 54.
+      expect(painter.hitTest(const Offset(54, 54)), isTrue);
+
+      // Top-left corner of local AABB is (4, 4). Since it's a diamond, (4,4) is outside the polygon!
+      expect(painter.hitTest(const Offset(5, 5)), isFalse);
+    });
+
+    test('hitTest allows slight inflation for tapping near thin polygons', () {
+      // Thin line at y=100 from x=50 to x=150
+      final polygon = [
+        const Offset(50, 100),
+        const Offset(150, 100),
+      ];
+      final minX = 50.0;
+      final minY = 100.0;
+      final padding = 4.0;
+      
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: minX,
+        minY: minY,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: padding,
+      );
+
+      // Center of line is local x = 50+4 = 54. local y = 0+4 = 4.
+      // Directly on the line
+      expect(painter.hitTest(const Offset(54, 4)), isTrue);
+      
+      // Slightly above the line (distance 4), should be within tolerance if inflated.
+      expect(painter.hitTest(const Offset(54, 0)), isTrue);
+      
+      // Far away
+      expect(painter.hitTest(const Offset(54, 20)), isFalse);
+    });
+  });
 
   group('MapaInterativoPage Widget Tests', () {
     late Mapa mockMapa;
