@@ -84,7 +84,7 @@ void main() {
       expect(controller.currentNode, isA<PicoNode>());
     });
     
-    test('Navigating to MapaoGlobal should set BrowseNode as parent', () {
+    test('Navigating to MapaGlobal should set BrowseNode as parent', () {
       final controller = TreeNavigationController();
       
       // Navigate to Home
@@ -95,14 +95,14 @@ void main() {
       controller.navigateTo(browseNode);
       expect(controller.currentNode, isA<BrowseNode>());
       
-      // Navigate to MapaoGlobal
-      final mapaoGlobalNode = MapaoGlobalNode(
+      // Navigate to MapaGlobal
+      final mapaGlobalNode = MapaGlobalNode(
         crags: [],
         parent: controller.currentNode,
       );
-      controller.navigateTo(mapaoGlobalNode);
+      controller.navigateTo(mapaGlobalNode);
       
-      expect(controller.currentNode, isA<MapaoGlobalNode>());
+      expect(controller.currentNode, isA<MapaGlobalNode>());
       expect(controller.currentNode.parent, isA<BrowseNode>());
       expect(controller.currentNode.parent?.parent, isA<HomeNode>());
     });
@@ -119,12 +119,12 @@ void main() {
       expect(node.toString(), 'BrowseNode');
     });
 
-    test('MapaoGlobalNode toString()', () {
-      const node = MapaoGlobalNode(
+    test('MapaGlobalNode toString()', () {
+      const node = MapaGlobalNode(
         crags: [{'id': 'pico1'}, {'id': 'pico2'}],
         parent: HomeNode(),
       );
-      expect(node.toString(), 'MapaoGlobalNode(2 picos)');
+      expect(node.toString(), 'MapaGlobalNode(2 picos)');
     });
 
     test('SettingsNode toString()', () {

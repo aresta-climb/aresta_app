@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
 
-/// Coleção de funções de UI puras (view_functions) para o Mapão Global.
+/// Coleção de funções de UI puras (view_functions) para o Mapa Global.
 ///
 /// Este arquivo concentra a lógica de construção visual isolada para o mapa,
 /// como a geração do widget [GoogleMap], a extração e mapeamento das
@@ -13,7 +13,7 @@ import '../browse_functions.dart';
 void showCragModal({
   required BuildContext context,
   required Map<String, dynamic> crag,
-  required bool isDownloading,
+  required double? downloadProgress,
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
@@ -34,7 +34,7 @@ void showCragModal({
               ),
               child: buildCragListItem(
                 crag,
-                isDownloading,
+                downloadProgress,
                 () {
                   onDownload();
                   Navigator.of(context).pop();
@@ -58,7 +58,7 @@ void showCragModal({
 Set<Marker> buildMapMarkers({
   required BuildContext context,
   required List<Map<String, dynamic>> crags,
-  required Set<String> downloadingCrags,
+  required Map<String, double> downloadingCrags,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   BitmapDescriptor? customIcon,
@@ -82,7 +82,7 @@ Set<Marker> buildMapMarkers({
               showCragModal(
                 context: context,
                 crag: crag,
-                isDownloading: downloadingCrags.contains(crag['id']),
+                downloadProgress: downloadingCrags[crag['id']],
                 onDownload: () => onDownload(crag),
                 onOpen: onOpen != null ? () => onOpen(crag) : null,
               );
@@ -96,8 +96,8 @@ Set<Marker> buildMapMarkers({
   return markers;
 }
 
-/// Constrói o widget do Google Map para a página do Mapão Global.
-Widget buildMapaoGlobalMap({
+/// Constrói o widget do Google Map para a página do Mapa Global.
+Widget buildMapaGlobalMap({
   required LatLng initialTarget,
   required Set<Marker> markers,
 }) {

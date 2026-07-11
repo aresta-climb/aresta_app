@@ -16,11 +16,12 @@ import '../navigation/navigation_functions.dart';
 Widget buildBrowseBody(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Set<String> downloadingCrags, {
+  Map<String, double> downloadingCrags, {
   required ValueChanged<String> onSearchChanged,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
+  Set<String> nearbyAvailableCrags = const {},
 }) {
   return Column(
     children: [
@@ -34,6 +35,7 @@ Widget buildBrowseBody(
           onDownload,
           onOpen: onOpen,
           onAddExperimental: onAddExperimental,
+          nearbyAvailableCrags: nearbyAvailableCrags,
         ),
       ),
     ],
@@ -46,10 +48,11 @@ Widget buildBrowseBody(
 Widget _buildCragList(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Set<String> downloadingCrags,
+  Map<String, double> downloadingCrags,
   Function(Map<String, dynamic>) onDownload, {
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
+  Set<String> nearbyAvailableCrags = const {},
 }) {
   return SingleChildScrollView(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -62,7 +65,7 @@ Widget _buildCragList(
             buildBrowseSectionTitle('Picos Disponíveis'),
             _AnimatedMapButton(
               onPressed: () {
-                AppNav.toMapaoGlobal(
+                AppNav.toMapaGlobal(
                   context,
                   crags: availableCrags,
                 );
@@ -115,9 +118,10 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => buildCragListItem(
               crag,
-              downloadingCrags.contains(crag['id']),
+              downloadingCrags[crag['id']],
               () => onDownload(crag),
               onOpen: onOpen != null ? () => onOpen(crag) : null,
+              isAvailableP2P: nearbyAvailableCrags.contains(crag['id']),
             ),
           ),
       ],
@@ -209,36 +213,40 @@ Widget buildBrowseSectionTitle(String title) {
 /// Ao expandir, também exibe a data do último update e o botão de download.
 Widget buildCragListItem(
   Map<String, dynamic> crag,
-  bool isDownloading,
+  double? downloadProgress,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
+  bool isAvailableP2P = false,
 }) {
-  return _CragListItem(crag: crag, isDownloading: isDownloading, onDownload: onDownload, onOpen: onOpen);
+  return _CragListItem(crag: crag, downloadProgress: downloadProgress, onDownload: onDownload, onOpen: onOpen, isAvailableP2P: isAvailableP2P);
 }
 
 /// Widget com estado para o card expansível de cada pico.
 class _CragListItem extends StatefulWidget {
   const _CragListItem({
     required this.crag,
-    required this.isDownloading,
+    required this.downloadProgress,
     required this.onDownload,
     this.onOpen,
+    this.isAvailableP2P = false,
   });
 
   final Map<String, dynamic> crag;
-  final bool isDownloading;
+  final double? downloadProgress;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
+  final bool isAvailableP2P;
 
   @override
   State<_CragListItem> createState() => _CragListItemState();
 }
 
 class _CragListItemState extends State<_CragListItem>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _expanded = false;
   late final AnimationController _chevronController;
   late final Animation<double> _chevronAngle;
+  late final AnimationController _p2pPulseController;
 
   @override
   void initState() {
@@ -250,11 +258,34 @@ class _CragListItemState extends State<_CragListItem>
     _chevronAngle = Tween<double>(begin: 0, end: 0.5).animate(
       CurvedAnimation(parent: _chevronController, curve: Curves.easeInOut),
     );
+    
+    _p2pPulseController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    if (widget.isAvailableP2P) {
+      _p2pPulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CragListItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAvailableP2P != oldWidget.isAvailableP2P) {
+      if (widget.isAvailableP2P) {
+        _p2pPulseController.repeat(reverse: true);
+      } else {
+        _p2pPulseController.stop();
+        _p2pPulseController.value = 0.0;
+      }
+    }
   }
 
   @override
   void dispose() {
     _chevronController.dispose();
+    _p2pPulseController.dispose();
     super.dispose();
   }
 
@@ -281,26 +312,45 @@ class _CragListItemState extends State<_CragListItem>
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final baseColor = isDark 
+        ? (_expanded
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.05))
+        : obsidianBrown;
+        
+    final p2pBgColor = isDark ? Colors.green.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.3);
+    final p2pBorderColor = Colors.green.withValues(alpha: 0.6);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: isDark 
-              ? (_expanded
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.white.withValues(alpha: 0.05))
-              : obsidianBrown,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _expanded
-                ? beastHide.withValues(alpha: 0.4)
-                : fishBone.withValues(alpha: 0.1),
-            width: 1,
-          ),
-        ),
+      child: AnimatedBuilder(
+        animation: _p2pPulseController,
+        builder: (context, child) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: widget.isAvailableP2P 
+                  ? Color.lerp(baseColor, p2pBgColor, _p2pPulseController.value)
+                  : baseColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: widget.isAvailableP2P 
+                    ? Color.lerp(
+                        _expanded ? beastHide.withValues(alpha: 0.4) : fishBone.withValues(alpha: 0.1),
+                        p2pBorderColor,
+                        _p2pPulseController.value,
+                      )!
+                    : (_expanded
+                        ? beastHide.withValues(alpha: 0.4)
+                        : fishBone.withValues(alpha: 0.1)),
+                width: 1,
+              ),
+            ),
+            child: child,
+          );
+        },
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(16),
@@ -437,8 +487,9 @@ class _CragListItemState extends State<_CragListItem>
                         _buildDownloadButton(
                           widget.crag,
                           widget.onDownload,
-                          widget.isDownloading,
+                          widget.downloadProgress,
                           onOpen: widget.onOpen,
+                          isAvailableP2P: widget.isAvailableP2P,
                         ),
                       ],
                     ),
@@ -579,12 +630,13 @@ Widget _buildPlaceholderIcon() {
 Widget _buildDownloadButton(
   Map<String, dynamic> crag,
   VoidCallback onDownload,
-  bool isDownloading, {
+  double? downloadProgress, {
   VoidCallback? onOpen,
+  bool isAvailableP2P = false,
 }) {
   final bool isDownloaded = crag['isDownloaded'] == true;
 
-  if (isDownloading) {
+  if (downloadProgress != null) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -593,40 +645,148 @@ Widget _buildDownloadButton(
           disabledBackgroundColor: mossRock.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: fishBone),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'BAIXANDO...',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  fontSize: 13,
+                  color: fishBone,
+                ),
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: downloadProgress,
+                color: fishBone,
+                backgroundColor: fishBone.withValues(alpha: 0.2),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  if (isDownloaded) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onOpen,
+        icon: const Icon(Icons.folder_open_rounded, size: 18),
+        label: const Text(
+          'ABRIR CROQUI',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.1,
+            fontSize: 13,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: beastHide,
+          foregroundColor: nobleBlack,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+
+  // Se não estiver baixado, e estiver disponível via P2P
+  if (isAvailableP2P) {
+    return _PulsingDownloadButton(onPressed: onDownload);
+  }
+
+  // Padrão (Não baixado, apenas Cloud)
   return SizedBox(
     width: double.infinity,
     child: ElevatedButton.icon(
-      onPressed: isDownloaded ? onOpen : onDownload,
-      icon: Icon(
-        isDownloaded ? Icons.folder_open_rounded : Icons.download_rounded,
-        size: 18,
-      ),
-      label: Text(
-        isDownloaded ? 'ABRIR CROQUI' : 'BAIXAR',
-        style: const TextStyle(
+      onPressed: onDownload,
+      icon: const Icon(Icons.download_rounded, size: 18),
+      label: const Text(
+        'BAIXAR',
+        style: TextStyle(
           fontWeight: FontWeight.bold,
           letterSpacing: 1.1,
           fontSize: 13,
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isDownloaded ? beastHide : mossRock,
-        foregroundColor: isDownloaded ? nobleBlack : fishBone,
-        disabledBackgroundColor: Colors.grey.withValues(alpha: 0.15),
-        disabledForegroundColor: fishBone.withValues(alpha: 0.35),
+        backgroundColor: mossRock,
+        foregroundColor: fishBone,
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
   );
+}
+
+class _PulsingDownloadButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  const _PulsingDownloadButton({required this.onPressed});
+  @override
+  State<_PulsingDownloadButton> createState() => _PulsingDownloadButtonState();
+}
+
+class _PulsingDownloadButtonState extends State<_PulsingDownloadButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    
+    _colorAnimation = ColorTween(
+      begin: mossRock,
+      end: Colors.greenAccent.shade400,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: AnimatedBuilder(
+        animation: _colorAnimation,
+        builder: (context, child) {
+          return ElevatedButton.icon(
+            onPressed: widget.onPressed,
+            icon: const Icon(Icons.wifi_tethering, size: 18),
+            label: const Text(
+              'BAIXAR DE UM AMIGO PRÓXIMO',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.1,
+                fontSize: 13,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _colorAnimation.value,
+              foregroundColor: nobleBlack,
+              elevation: 4,
+              shadowColor: Colors.greenAccent.withValues(alpha: 0.5),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

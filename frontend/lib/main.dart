@@ -9,7 +9,7 @@ import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
-import 'package:frontend/pages/mapao_global.dart';
+import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -620,8 +620,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       );
     }
 
-    if (node is MapaoGlobalNode) {
-      return MapaoGlobalPage(
+    if (node is MapaGlobalNode) {
+      return MapaGlobalPage(
         crags: node.crags,
         datasetRepo: widget.datasetRepo,
         syncService: widget.syncService,

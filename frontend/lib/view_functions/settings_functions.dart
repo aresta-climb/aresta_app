@@ -566,7 +566,7 @@ Widget buildEditorCard({
                                   datasetRepo.loadEmpty(); 
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Ambiente experimental limpo com sucesso.')),
+                                      const SnackBar(content: Text('Ambiente experimental limpo.')),
                                     );
                                   }
                                 }

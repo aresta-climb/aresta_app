@@ -54,7 +54,7 @@ class FakeSyncService extends Fake implements SyncService {
   @override
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier(false);
   @override
-  final ValueNotifier<Set<String>> downloadingCrags = ValueNotifier(<String>{});
+  final ValueNotifier<Map<String, double>> downloadingCrags = ValueNotifier(<String, double>{});
 }
 
 class FakeEditorDeCroqui extends Fake implements EditorDeCroqui {

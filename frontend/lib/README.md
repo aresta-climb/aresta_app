@@ -17,11 +17,18 @@ O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo 
 ### Módulo HTTP e Conectividade (`http/`)
 Diretório isolado que retém todas as responsabilidades que interagem com tráfego de rede, conexões externas e simulações do *Ghost Protocol*. A arquitetura geral do aplicativo é completamente agnóstica à internet (offline-first) fora desse módulo.
 
-- **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Valida checksums SHA-256 e aciona os downloads atômicos apenas de arquivos alterados.
+- **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Aciona e monitora a thread secundária (`Isolate`), convertendo atualizações em eventos para barras de progresso na UI.
+- **`SyncIsolate` (`sync_isolate.dart`)**: Executa as validações pesadas de integridade (SHA256) e gere o fluxo das Delta Syncs (baixando apenas arquivos que mudaram) em uma thread separada para não causar travamentos ou "lag" na UI.
 - **`SyncNetwork` (`sync_network.dart`)**: Responsável pela comunicação HTTP pura, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
 - **`SyncStorage` (`sync_storage.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
 - **`ZipInterceptorClient` (`zip_interceptor_client.dart`)**: Implementa o **Ghost Protocol** (`aresta-zip://`). Lê arquivos transparentemente do interior de ZIPs `.croqui` criptografados (XOR) servindo os bytes decodificados como se fosse uma resposta HTTP normal.
 - **`UpdateDownloader` (`update_downloader.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
+
+### Módulo de Rede P2P (`p2p/`)
+O recém-lançado recurso de compartilhamento descentralizado, permitindo que alpinistas transfiram picos inteiros (dezenas de MBs ou GBs de imagens) diretamente de aparelho para aparelho sem internet, no meio do nada.
+
+- **`AmbientP2PService` (`ambient_p2p_service.dart`)**: Gerenciador de ciclo de vida que descobre continuamente outros celulares rodando o Aresta próximos, formando uma malha utilizando Wi-Fi Direct e Bluetooth LE (via `flutter_nearby_connections`).
+- **`P2PTransferManager` (`p2p_transfer_manager.dart`)**: Responsável por "picotar" os `.croqui` (ZIPs), enviar blocos (chunks) codificados sobre a rede P2P, reconstruí-los na outra ponta e enviá-los ao `SyncService` para extração e processamento padrão, como se tivessem sido baixados da nuvem.
 
 ### `EditorDeCroqui` (`editor_croqui.dart`)
 O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.
@@ -51,7 +58,7 @@ Inicializa os bindings do Flutter, cria instâncias do `DatasetRepository` e `Sy
 ### Páginas de Nível Superior
 - **`home.dart`**: Exibe um carrossel dos picos de maior prioridade e uma lista suspensa de todos os picos disponíveis localmente.
 - **`browse.dart`**: Lista todos os guias disponíveis no índice mestre com thumbnails dinâmicos, indicadores de download e ações de download inline.
-- **`mapao_global.dart`**: O "Mapão Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com interações de bottom sheet.
+- **`mapa_global.dart`**: O "Mapa Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com interações de bottom sheet.
 - **`settings.dart`**: Gerenciamento do aplicativo, cache e ferramentas de editor experimental.
 - **`terms_of_use.dart`**: Exibe a interface de visualização dos documentos legais do aplicativo (Termos de Uso e Privacidade).
 
@@ -59,6 +66,7 @@ Inicializa os bindings do Flutter, cria instâncias do `DatasetRepository` e `Sy
 Representam a estrutura topológica aninhada de um guia de escalada. O estado flui para baixo passando `DatasetRepository` e `cragId` por toda a hierarquia:
 
 - **`pico.dart`**: Nó raiz de um guia. Exibe resumo, informações logísticas e a lista de setores ou grupos.
+- **`mapas_carrossel.dart`**: Navegação em formato carrossel horizontal (swiping) contendo múltiplos `mapa_interativo.dart`, oferecendo transições de mapa mais fluidas entre hierarquias e subsetores do guia de escalada.
 - **`grupo.dart` / `setor.dart`**: Subárea geográfica. Adapta a nomenclatura dinamicamente ("Vias" vs "Boulders") de acordo com o tipo de conteúdo do setor.
 - **`via.dart`**: Nó folha com beta, descrições e imagens croqui (topo) de alta resolução.
 
@@ -70,7 +78,7 @@ A camada de navegação gerencia o fluxo de telas do aplicativo utilizando uma a
 
 ### `navigation_tree.dart`
 Contém as definições da estrutura lógica dos nós e o controlador central de estado da navegação.
-* **`NavNode`**: Classe base abstrata. Cada nó na árvore mantém uma referência opcional para o seu pai (`parent`) e armazena **apenas identificadores em texto** (como `cragId`, `setorNome`, etc.), nunca objetos do banco de dados, para garantir a resiliência a hot-reloads de dados. Os nós implementados incluem: `HomeNode`, `BrowseNode`, `MapaoGlobalNode`, `PicoNode`, `SetorNode`, `ViaNode`, `MapaInterativoNode`, entre outros.
+* **`NavNode`**: Classe base abstrata. Cada nó na árvore mantém uma referência opcional para o seu pai (`parent`) e armazena **apenas identificadores em texto** (como `cragId`, `setorNome`, etc.), nunca objetos do banco de dados, para garantir a resiliência a hot-reloads de dados. Os nós implementados incluem: `HomeNode`, `BrowseNode`, `MapaGlobalNode`, `PicoNode`, `SetorNode`, `ViaNode`, `MapaInterativoNode`, entre outros.
 * **`TreeNavigationController`**: Um `ChangeNotifier` que rastreia o nó ativo (`currentNode`).
   * **Prevenção de Loops**: Realiza um retrocesso (*rewind*) para o nó original em vez de empilhar uma nova página redundante se o nó já existir no histórico.
   * **Botão de Voltar / Home**: Gerencia o retorno de telas (`goBack`) e reset para a tela inicial (`goHome`).
@@ -83,7 +91,7 @@ O coração do **Hot-Reload Reativo**. Atua como o elo entre a Árvore de Navega
 
 ### `navigation_functions.dart`
 Expõe a API pública estática **`AppNav`**, que simplifica a navegação no aplicativo.
-* **Métodos Principais**: `AppNav.toPico`, `AppNav.toMapaoGlobal`, `AppNav.toSetor`, `AppNav.toGrupo`, `AppNav.toVia`, `AppNav.toGPS`, `AppNav.back`, `AppNav.home`, e `AppNav.canGoBack`.
+* **Métodos Principais**: `AppNav.toPico`, `AppNav.toMapaGlobal`, `AppNav.toSetor`, `AppNav.toGrupo`, `AppNav.toVia`, `AppNav.toGPS`, `AppNav.back`, `AppNav.home`, e `AppNav.canGoBack`.
 
 ---
 
@@ -92,7 +100,7 @@ Expõe a API pública estática **`AppNav`**, que simplifica a navegação no ap
 Para evitar arquivos de página monolíticos, todos os construtores de UI complexos, estilização e callbacks são extraídos para o diretório `view_functions/`.
 
 - **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`.
-- **`mapao/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapao_global_functions.dart` e o `mapao_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
+- **`mapa/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapa_global_functions.dart` e o `mapa_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
 - **`common_functions.dart`**: Sistema de design genérico. Define componentes como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária. Obs: O controle mestre de cores passou para o diretório `theme/app_colors.dart`.
 - **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
 - **`settings_functions.dart`**: Gerencia a importação de arquivos `.croqui` (via file picker ou URL), a conexão com servidores de editor e a leitura de QR codes. Após a importação, constrói a URL `aresta-zip://` e aciona a sincronização via `SyncService`.
