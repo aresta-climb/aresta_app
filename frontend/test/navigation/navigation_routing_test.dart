@@ -61,7 +61,7 @@ void main() {
     
     treeController.navigateTo(MapasCarrosselNode(
       cragId: 'crag123',
-      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png')],
+      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png', setorContextNome: 'Setor 1')],
       initialIndex: 0,
       parent: treeController.currentNode,
     ));
@@ -135,12 +135,12 @@ void main() {
 
     await tester.pump(const Duration(seconds: 1));
 
-    // 4. Verify MapasCarrosselPage is present
-    final mapaInterativoFinder = find.byType(MapasCarrosselPage);
-    expect(mapaInterativoFinder, findsOneWidget);
+    // 4. Verify MapaInterativoPage is present inside Carrossel
+    final mapaInterativoFinder = find.byType(MapaInterativoPage);
+    expect(mapaInterativoFinder, findsWidgets);
 
-    // 5. Verify the injected properties
-    final MapaInterativoPage page = tester.widget(mapaInterativoFinder);
+    // 5. Verify the injected properties on the first page
+    final MapaInterativoPage page = tester.widget(mapaInterativoFinder.first);
     
     // As it was navigated WITHOUT a setorContextNome (i.e. Mapa Geral), 
     // `setorContext` MUST be null.
