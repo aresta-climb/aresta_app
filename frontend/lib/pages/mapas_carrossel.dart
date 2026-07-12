@@ -118,6 +118,7 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       grupoContext: resolvedGrupo,
       imageProviderOverride: widget.imageProviderOverride,
       hideAppBar: widget.mapas.length > 1,
+      popOnActionIfOriginal: false, // Previne que o clique em 'Mais Info' do carrossel feche a tela
     );
   }
 

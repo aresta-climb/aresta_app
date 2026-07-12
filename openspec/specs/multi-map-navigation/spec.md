@@ -8,7 +8,7 @@ O sistema DEVE ser desenvolvido utilizando Test-Driven Development (TDD), com o 
 - **THEN** as classes `MapasCarrosselNode`, a função de navegação, e o `MapasCarrosselPage` exibirão 100% de cobertura.
 
 ### Requirement: Carrossel de Mapas Interativos
-O sistema DEVE prover uma interface para navegar de forma sequencial entre múltiplos mapas interativos (`MapasCarrosselPage`), garantindo que o mapa ativo seja trocado apenas via controles explícitos para não conflitar com a navegação do `InteractiveViewer`.
+O sistema DEVE prover uma interface para navegar de forma sequencial entre múltiplos mapas interativos (`MapasCarrosselPage`), garantindo que o mapa ativo seja trocado apenas via controles explícitos para não conflitar com a navegação do `InteractiveViewer`. O carrossel DEVE instanciar seus mapas explicitamente instruindo-os a não fazer "pop" da navegação ao acionar o botão principal de informações (Mais Info).
 
 #### Scenario: Visualizando a via em múltiplos mapas
 - **WHEN** o usuário toca no botão "Ver nos mapas (N)" na tela da Via
@@ -24,3 +24,7 @@ O sistema DEVE prover uma interface para navegar de forma sequencial entre múlt
 - **WHEN** o usuário está num carrossel focado na Rota A, mas toca no SVG da Rota B no mesmo mapa
 - **THEN** o cartão flutuante da Rota B aparece no rodapé normalmente.
 - **AND** o carrossel continua gerindo as configurações da Rota A no topo da tela, mas se a Rota B possui múltiplos mapas, um botão extra surge no cartão flutuante para "Ver nos mapas".
+
+#### Scenario: Acessando Detalhes da Via através do Carrossel
+- **WHEN** o usuário toca no botão "Mais Info" no cartão flutuante de uma rota exibida dentro do carrossel, mesmo que seja a rota originalmente focada ao abrir a tela
+- **THEN** o sistema DEVE abrir a tela de Detalhes da Via (PUSH) em vez de fechar o carrossel (POP).
