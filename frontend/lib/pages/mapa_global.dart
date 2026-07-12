@@ -88,17 +88,14 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Map<String, double>>(
-      valueListenable: widget.syncService.downloadingCrags,
-      builder: (context, downloadingCrags, _) {
-        final markers = buildMapMarkers(
-          context: context,
-          crags: widget.crags,
-          downloadingCrags: downloadingCrags,
-          onDownload: _handleDownload,
-          onOpen: _handleOpen,
-          customIcon: _customIcon,
-        );
+    final markers = buildMapMarkers(
+      context: context,
+      crags: widget.crags,
+      downloadingCrags: widget.syncService.downloadingCrags,
+      onDownload: _handleDownload,
+      onOpen: _handleOpen,
+      customIcon: _customIcon,
+    );
 
         LatLng initialTarget = const LatLng(-14.2350, -51.9253);
         if (markers.isNotEmpty) {
@@ -119,7 +116,5 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
             markers: markers,
           ),
         );
-      },
-    );
   }
 }

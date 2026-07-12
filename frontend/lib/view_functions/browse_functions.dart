@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/http/zip_interceptor_client.dart';
@@ -16,7 +17,7 @@ import '../navigation/navigation_functions.dart';
 Widget buildBrowseBody(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Map<String, double> downloadingCrags, {
+  ValueListenable<Map<String, double>> downloadingCrags, {
   required ValueChanged<String> onSearchChanged,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
@@ -46,7 +47,7 @@ Widget buildBrowseBody(
 Widget _buildCragList(
   BuildContext context,
   List<Map<String, dynamic>> availableCrags,
-  Map<String, double> downloadingCrags,
+  ValueListenable<Map<String, double>> downloadingCrags,
   Function(Map<String, dynamic>) onDownload, {
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
@@ -115,7 +116,7 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => buildCragListItem(
               crag,
-              downloadingCrags[crag['id']],
+              downloadingCrags,
               () => onDownload(crag),
               onOpen: onOpen != null ? () => onOpen(crag) : null,
             ),
@@ -209,24 +210,24 @@ Widget buildBrowseSectionTitle(String title) {
 /// Ao expandir, também exibe a data do último update e o botão de download.
 Widget buildCragListItem(
   Map<String, dynamic> crag,
-  double? downloadProgress,
+  ValueListenable<Map<String, double>> downloadingCrags,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
 }) {
-  return _CragListItem(crag: crag, downloadProgress: downloadProgress, onDownload: onDownload, onOpen: onOpen);
+  return _CragListItem(crag: crag, downloadingCrags: downloadingCrags, onDownload: onDownload, onOpen: onOpen);
 }
 
 /// Widget com estado para o card expansível de cada pico.
 class _CragListItem extends StatefulWidget {
   const _CragListItem({
     required this.crag,
-    required this.downloadProgress,
+    required this.downloadingCrags,
     required this.onDownload,
     this.onOpen,
   });
 
   final Map<String, dynamic> crag;
-  final double? downloadProgress;
+  final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
 
@@ -434,11 +435,16 @@ class _CragListItemState extends State<_CragListItem>
                         ],
                         const SizedBox(height: 16),
                         // Botão de download ou abrir croqui em largura total
-                        _buildDownloadButton(
-                          widget.crag,
-                          widget.onDownload,
-                          widget.downloadProgress,
-                          onOpen: widget.onOpen,
+                        ValueListenableBuilder<Map<String, double>>(
+                          valueListenable: widget.downloadingCrags,
+                          builder: (context, downloadingCragsMap, child) {
+                            return _buildDownloadButton(
+                              widget.crag,
+                              widget.onDownload,
+                              downloadingCragsMap[widget.crag['id']],
+                              onOpen: widget.onOpen,
+                            );
+                          },
                         ),
                       ],
                     ),
