@@ -30,13 +30,7 @@ subprojects {
         }
     }
     
-    // Fix for JVM target incompatibility between Java and Kotlin in older plugins
-    if (project.name == "flutter_nearby_connections" || project.name == "flutter_nearby_connections_plus") {
-        tasks.withType<KotlinCompile>().configureEach {
-            compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-        }
-    }
-    
+
     project.evaluationDependsOn(":app")
 }
 

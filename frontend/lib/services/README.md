@@ -11,7 +11,7 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `dataset_repository.dart` | Gerenciador de estado central: downloads, índice, metadados e prioridade |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
 | `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA) |
-| `p2p/` | Módulo de compartilhamento offline nativo (Wi-Fi Direct / Bluetooth LE) via AmbientP2PService e P2PTransferManager |
+
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
 
@@ -103,11 +103,6 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates.
 - Reflete o progresso percentual diretamente via `DatasetRepository.instance!.downloadingCrags`.
 
-### `AmbientP2PService` e `P2PTransferManager`
-- Responsáveis por formar uma malha P2P (Peer-to-Peer) local sem internet entre aparelhos próximos usando Wi-Fi Direct e Bluetooth LE (`flutter_nearby_connections`).
-- Operam de maneira isolada: interceptam conexões dinâmicas de dispositivos próximos, trocam *manifests* dos picos oficiais instalados e coordenam fluxos de download descentralizados sem onerar a Main Thread.
-- Ao parear e iniciar uma transferência, o pico requisitado é condensado em um `zip`, transmitido em pequenos chunks (128 KB) via Message Channels de alta performance e decodificado pelo receptor perfeitamente para o repositório principal do app, comportando-se idêntico ao processo HTTP padrão.
-- Bloqueado propositalmente no `Modo Experimental`.
 
 ### Módulo de In-App Feedback (`feedback/`)
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).

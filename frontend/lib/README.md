@@ -24,12 +24,6 @@ Diretório isolado que retém todas as responsabilidades que interagem com tráf
 - **`ZipInterceptorClient` (`zip_interceptor_client.dart`)**: Implementa o **Ghost Protocol** (`aresta-zip://`). Lê arquivos transparentemente do interior de ZIPs `.croqui` criptografados (XOR) servindo os bytes decodificados como se fosse uma resposta HTTP normal.
 - **`UpdateDownloader` (`update_downloader.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
 
-### Módulo de Rede P2P (`p2p/`)
-O recém-lançado recurso de compartilhamento descentralizado, permitindo que alpinistas transfiram picos inteiros (dezenas de MBs ou GBs de imagens) diretamente de aparelho para aparelho sem internet, no meio do nada.
-
-- **`AmbientP2PService` (`ambient_p2p_service.dart`)**: Gerenciador de ciclo de vida que descobre continuamente outros celulares rodando o Aresta próximos, formando uma malha utilizando Wi-Fi Direct e Bluetooth LE (via `flutter_nearby_connections`).
-- **`P2PTransferManager` (`p2p_transfer_manager.dart`)**: Responsável por "picotar" os `.croqui` (ZIPs), enviar blocos (chunks) codificados sobre a rede P2P, reconstruí-los na outra ponta e enviá-los ao `SyncService` para extração e processamento padrão, como se tivessem sido baixados da nuvem.
-
 ### `EditorDeCroqui` (`editor_croqui.dart`)
 O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.
 
