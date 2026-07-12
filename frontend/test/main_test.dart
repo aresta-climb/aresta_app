@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
@@ -326,5 +327,32 @@ void main() {
     expect(find.byType(TermsOfUsePage), findsOneWidget);
     // DatabaseMigrationScreen should NOT be shown yet
     expect(find.byType(DatabaseMigrationScreen), findsNothing);
+  });
+  testWidgets('TreeNavigationWrapper atualiza pico_aberto_id quando a rota muda', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: TreeNavigationWrapper(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      ),
+    ));
+    
+    await tester.pump(const Duration(milliseconds: 500));
+    
+    final wrapperState = tester.state<State<TreeNavigationWrapper>>(find.byType(TreeNavigationWrapper)) as dynamic;
+    final treeController = wrapperState.treeController;
+
+    expect(mockSync.pico_aberto_id.value, isNull);
+
+    // Navega para um Pico
+    treeController.navigateTo(PicoNode(cragId: 'pico_99', parent: const HomeNode()));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(mockSync.pico_aberto_id.value, 'pico_99');
+
+    // Volta para Home
+    treeController.navigateTo(const HomeNode());
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(mockSync.pico_aberto_id.value, isNull);
   });
 }

@@ -369,11 +369,13 @@ class _MyAppState extends State<MyApp> {
 class TreeNavigationWrapper extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
+  final Widget? child; // Utilizado puramente para injeção em testes
 
   const TreeNavigationWrapper({
     super.key,
     required this.datasetRepo,
     required this.syncService,
+    this.child,
   });
 
   static final GlobalKey<_TreeNavigationWrapperState> navKey =
@@ -398,6 +400,8 @@ class TreeNavigationWrapper extends StatefulWidget {
 
 class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
+  
+  SyncService get syncService => widget.syncService;
 
   @override
   void initState() {
@@ -433,6 +437,27 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   }
 
   void _onNodeChanged() {
+    final path = treeController.currentNode.path;
+    String? currentCragId;
+    
+    // Procura na ordem do mais interno (ativo) para o mais externo
+    for (final node in path.reversed) {
+      if (node is PicoContextNode) {
+        currentCragId = node.cragId;
+        break;
+      }
+      if (node is TextNode) {
+        currentCragId = node.cragId;
+        break;
+      }
+      if (node is MapasCarrosselNode) {
+        currentCragId = node.cragId;
+        break;
+      }
+    }
+    
+    widget.syncService.pico_aberto_id.value = currentCragId;
+
     setState(() {});
   }
 

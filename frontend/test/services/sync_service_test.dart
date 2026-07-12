@@ -241,6 +241,66 @@ void main() {
       expect(requestedPaths.any((url) => url.contains('picos/')), isFalse);
     });
 
+    test('deve remover id de downloadingCrags mesmo se Isolate lançar exceção severa', () async {
+      final picoId = 'pico_falho';
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'HASH');
+      
+      final fakeClient = FakeClient(newIndice);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      syncService.mockIsolateSpawn = (mainFunc, args) async {
+        args.sendPort.send(0.5);
+        args.sendPort.send(Exception('Isolate crashed'));
+      };
+
+      await syncService.syncIndex();
+
+      expect(syncService.downloadingCrags.value.containsKey(picoId), isFalse);
+    });
+
+    test('deve bloquear a aplicação atômica e gerar pendência se o pico_aberto_id for igual ao pico atualizado', () async {
+      final picoId = 'pico_aberto_bloqueado';
+      final newIndice = Indice()..croquis.add(ResumoCroqui()..id = picoId..caminhoRelativo = 'picos/$picoId.binarypb'..checksumSha256Croqui = 'NEW_HASH');
+      
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes((Indice()..croquis.add(ResumoCroqui()..id = picoId..checksumSha256Croqui = 'OLD_HASH')).writeToBuffer());
+      
+      final picoDir = Directory('${downloadsDir.path}/$picoId');
+      await picoDir.create(recursive: true);
+      final oldPicoFile = File('${picoDir.path}/$picoId.binarypb');
+      await oldPicoFile.writeAsBytes(Croqui().writeToBuffer());
+
+      final fakeClient = FakeClient(newIndice);
+      final syncService = SyncService(datasetRepository: repo, client: fakeClient);
+      
+      syncService.mockIsolateSpawn = (mainFunc, args) async {
+        // Mocking a successful download isolate result!
+        File('${picoDir.path}/$picoId.binarypb.tmp').createSync(recursive: true);
+        args.sendPort.send(DownloadIsolateResult(
+          filesToDelete: [],
+          filesToRename: {'${picoDir.path}/$picoId.binarypb.tmp': '${picoDir.path}/$picoId.binarypb'},
+          newPicoDataBytes: Croqui().writeToBuffer(),
+        ));
+      };
+
+      // Simulamos que a interface tem esse pico aberto!
+      syncService.pico_aberto_id.value = picoId;
+
+      await syncService.syncIndex();
+
+      // Verificamos que o pendente engatilhou
+      expect(syncService.recarga_pendente_pico_id.value, picoId);
+      
+      // E garantimos que o .tmp NÂO foi renomeado atomaticamente para sobreescrever o real
+      expect(File('${picoDir.path}/$picoId.binarypb.tmp').existsSync(), isTrue);
+      
+      // Ao comitar a pendência, o arquivo é movido
+      await syncService.commitPendenciasAtomaticas(picoId);
+      expect(syncService.recarga_pendente_pico_id.value, isNull);
+      expect(File('${picoDir.path}/$picoId.binarypb.tmp').existsSync(), isFalse);
+    });
+
     test('não baixa arquivo externo de novo se checksum é o mesmo', () async {
       final picoId = 'pico_ext_igual';
       final picoDir = Directory('${downloadsDir.path}/$picoId');

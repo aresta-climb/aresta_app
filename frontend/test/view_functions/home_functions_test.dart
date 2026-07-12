@@ -110,4 +110,36 @@ void main() {
     expect(find.text('Sem atualizações'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
   });
+  testWidgets('buildPicosCarousel mantém Opacity 1.0 e clicável para pico já baixado que está atualizando', (WidgetTester tester) async {
+    final mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
+    
+    final dummyPico = {
+      'id': 'test-pico-update',
+      'nome': 'Pico Atualizando',
+      'local': 'Local Atualizando',
+    };
+
+    final downloadingCrags = ValueNotifier<Map<String, double>>({
+      'test-pico-update': 0.5, // Está baixando/atualizando
+    });
+
+    bool wasTapped = false;
+
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(builder: (context) {
+      return buildPicosCarousel(
+        [dummyPico],
+        downloadingCrags,
+        onAddCrag: () {},
+        onPicoSelect: (pico) {
+          wasTapped = true;
+        },
+      );
+    }))));
+
+    // O GestureDetector deve estar ativo (onTap != null). 
+    // Podemos tentar clicar e verificar se chamou o callback.
+    await tester.tap(find.text('Pico Atualizando'));
+    expect(wasTapped, isTrue);
+  });
 }

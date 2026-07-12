@@ -591,39 +591,84 @@ Widget _buildDownloadButton(
   final bool isDownloaded = crag['isDownloaded'] == true;
 
   if (downloadProgress != null) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: null,
-        style: ElevatedButton.styleFrom(
-          disabledBackgroundColor: mossRock.withValues(alpha: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'BAIXANDO...',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  fontSize: 13,
-                  color: fishBone,
+    if (isDownloaded) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onOpen,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: beastHide,
+            foregroundColor: nobleBlack,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.folder_open_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'ABRIR CROQUI (ATUALIZANDO)',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: downloadProgress,
-                color: fishBone,
-                backgroundColor: fishBone.withValues(alpha: 0.2),
-              ),
-            ],
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: downloadProgress,
+                  color: nobleBlack,
+                  backgroundColor: nobleBlack.withValues(alpha: 0.2),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: null,
+          style: ElevatedButton.styleFrom(
+            disabledBackgroundColor: mossRock.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'BAIXANDO...',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                    fontSize: 13,
+                    color: fishBone,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: downloadProgress,
+                  color: fishBone,
+                  backgroundColor: fishBone.withValues(alpha: 0.2),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   return SizedBox(
