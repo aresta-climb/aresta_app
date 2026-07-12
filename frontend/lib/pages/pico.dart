@@ -5,6 +5,7 @@ import '../view_functions/pico_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
+import '../navigation/navigation_tree.dart';
 import '../services/firebase/telemetry_service.dart';
 
 /// Uma página que exibe informações detalhadas sobre um pico específico.
@@ -132,11 +133,15 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           // Then immediately push the map!
           Future.delayed(const Duration(milliseconds: 300), () {
             if (context.mounted) {
-              AppNav.toMapaInterativo(
+              AppNav.toMapas(
                 context,
-                mapa: widget.returnToSetor!.mapas.first,
                 cragId: widget.cragId,
-                setorContext: widget.returnToSetor,
+                mapas: [
+                  CarrosselItemData(
+                    mapaCaminhoImagem: widget.returnToSetor!.mapas.first.caminhoImagemMapa,
+                    setorContextNome: widget.returnToSetor!.nome,
+                  )
+                ],
               );
             }
           });

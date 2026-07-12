@@ -1,18 +1,19 @@
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import 'navigation_tree.dart' show CarrosselItemData;
 
 /// Representa o destino de navegação hierárquica a partir de um mapa.
 /// 
-/// Contém o mapa alvo a ser exibido, o rótulo para o botão de interface
+/// Contém a lista de dados dos mapas alvo a serem exibidos, o rótulo para o botão de interface
 /// (por exemplo, nome do Grupo ou "Mapa Geral"), e os contextos necessários
-/// para inicializar a [MapaInterativoPage] (como [grupoContext] e [setorContext]).
+/// para inicializar o visualizador (como [grupoContext] e [setorContext]).
 class MapDestination {
-  final Mapa mapa;
+  final List<CarrosselItemData> mapasData;
   final String label;
   final Grupo? grupoContext;
   final Setor? setorContext;
 
   MapDestination({
-    required this.mapa,
+    required this.mapasData,
     required this.label,
     this.grupoContext,
     this.setorContext,
@@ -41,10 +42,14 @@ class MapHierarchyResolver {
 
     // 1. Se estivermos visualizando um Setor, e ele pertencer a um Grupo que possui mapas
     if (setorContext != null && grupoContext != null && grupoContext.mapas.isNotEmpty) {
-      // Retorna o Mapa do Grupo
-      final mapa = grupoContext.mapas.first; // Pode ser aprimorado usando indiceMapaPadrao no futuro
+      // Retorna todos os mapas do Grupo
+      final mapasData = grupoContext.mapas.map((m) => CarrosselItemData(
+        mapaCaminhoImagem: m.caminhoImagemMapa,
+        grupoContextNome: grupoContext.nome,
+      )).toList();
+
       return MapDestination(
-        mapa: mapa,
+        mapasData: mapasData,
         label: grupoContext.nome,
         grupoContext: grupoContext,
         setorContext: null, // Subiu de Setor para Grupo, então perde o contexto de Setor
@@ -54,8 +59,12 @@ class MapHierarchyResolver {
     // 2. Se estivermos num Grupo, ou num Setor sem Grupo (ou cujo grupo não tem mapa)
     // Verificamos se o Pico tem Mapas Gerais
     if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo() && pico.mapasGerais.conteudo.mapas.isNotEmpty) {
+      final mapasData = pico.mapasGerais.conteudo.mapas.map((m) => CarrosselItemData(
+        mapaCaminhoImagem: m.caminhoImagemMapa,
+      )).toList();
+
       return MapDestination(
-        mapa: pico.mapasGerais.conteudo.mapas.first,
+        mapasData: mapasData,
         label: 'Mapa Geral',
         grupoContext: null, // Subiu para o Geral, perde o contexto de Grupo
         setorContext: null, // Subiu para o Geral, perde o contexto de Setor

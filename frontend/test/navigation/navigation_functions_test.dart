@@ -145,7 +145,7 @@ void main() {
       expect(setorNode.cragId, 'test_crag');
     });
 
-    testWidgets('toMapasCarrossel pushes MapasCarrosselNode to the TreeNavigationController', (tester) async {
+    testWidgets('toMapas pushes MapasCarrosselNode to the TreeNavigationController', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: TreeNavigationWrapper(
           key: TreeNavigationWrapper.navKey,
@@ -162,7 +162,7 @@ void main() {
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
       await tester.pumpAndSettle();
 
-      AppNav.toMapasCarrossel(
+      AppNav.toMapas(
         context,
         cragId: 'test_crag',
         initialIndex: 1,

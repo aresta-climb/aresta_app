@@ -35,7 +35,8 @@ void main() {
 
       expect(dest, isNotNull);
       expect(dest!.label, 'Grupo Cheio');
-      expect(dest.mapa.caminhoImagemMapa, 'grupo.jpg');
+      expect(dest.mapasData.length, 1);
+      expect(dest.mapasData.first.mapaCaminhoImagem, 'grupo.jpg');
       expect(dest.grupoContext, grupoComMapa);
       expect(dest.setorContext, isNull);
     });
@@ -50,7 +51,8 @@ void main() {
 
       expect(destA, isNotNull);
       expect(destA!.label, 'Mapa Geral');
-      expect(destA.mapa.caminhoImagemMapa, 'geral.jpg');
+      expect(destA.mapasData.length, 1);
+      expect(destA.mapasData.first.mapaCaminhoImagem, 'geral.jpg');
       expect(destA.grupoContext, isNull);
       expect(destA.setorContext, isNull);
 
@@ -62,7 +64,8 @@ void main() {
 
       expect(destB, isNotNull);
       expect(destB!.label, 'Mapa Geral');
-      expect(destB.mapa.caminhoImagemMapa, 'geral.jpg');
+      expect(destB.mapasData.length, 1);
+      expect(destB.mapasData.first.mapaCaminhoImagem, 'geral.jpg');
       expect(destB.grupoContext, isNull);
       expect(destB.setorContext, isNull);
       
@@ -74,7 +77,8 @@ void main() {
 
       expect(destC, isNotNull);
       expect(destC!.label, 'Mapa Geral');
-      expect(destC.mapa.caminhoImagemMapa, 'geral.jpg');
+      expect(destC.mapasData.length, 1);
+      expect(destC.mapasData.first.mapaCaminhoImagem, 'geral.jpg');
       expect(destC.grupoContext, isNull);
       expect(destC.setorContext, isNull);
     });

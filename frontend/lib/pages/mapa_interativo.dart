@@ -643,7 +643,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           initialSelectedId: fm.referencedId,
         )).toList();
         
-        AppNav.toMapasCarrossel(
+        AppNav.toMapas(
           context,
           cragId: widget.cragId,
           mapas: mapasData,
@@ -683,19 +683,23 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             grupoContextNome: resolved?.grupo?.nome,
           )).toList();
           
-          AppNav.toMapasCarrossel(
+          AppNav.toMapas(
             context,
             cragId: widget.cragId,
             mapas: mapasData,
             initialIndex: indiceMapa,
           );
         } else {
-          AppNav.toMapaInterativo(
+          AppNav.toMapas(
             context,
-            mapa: setor.mapas[0],
             cragId: widget.cragId,
-            setorContext: setor,
-            grupoContext: resolved?.grupo,
+            mapas: [
+              CarrosselItemData(
+                mapaCaminhoImagem: setor.mapas[0].caminhoImagemMapa,
+                setorContextNome: setor.nome,
+                grupoContextNome: resolved?.grupo?.nome,
+              )
+            ],
           );
         }
       } : null,
@@ -731,18 +735,22 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             grupoContextNome: grupo.nome,
           )).toList();
           
-          AppNav.toMapasCarrossel(
+          AppNav.toMapas(
             context,
             cragId: widget.cragId,
             mapas: mapasData,
             initialIndex: indiceMapa,
           );
         } else {
-          AppNav.toMapaInterativo(
+          AppNav.toMapas(
             context,
-            mapa: grupo.mapas[0],
             cragId: widget.cragId,
-            grupoContext: grupo,
+            mapas: [
+              CarrosselItemData(
+                mapaCaminhoImagem: grupo.mapas[0].caminhoImagemMapa,
+                grupoContextNome: grupo.nome,
+              )
+            ],
           );
         }
       } : null,
@@ -1144,12 +1152,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                   widget.cragId,
                                   upDest.label,
                                 );
-                                AppNav.toMapaInterativo(
+                                AppNav.toMapas(
                                   context,
                                   cragId: widget.cragId,
-                                  mapa: upDest.mapa,
-                                  grupoContext: upDest.grupoContext,
-                                  setorContext: upDest.setorContext,
+                                  mapas: upDest.mapasData,
                                 );
                               },
                             ),
