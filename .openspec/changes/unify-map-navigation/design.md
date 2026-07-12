@@ -5,28 +5,26 @@ Atualmente, o aplicativo possui lógica espalhada em vários arquivos para verif
 ## Goals / Non-Goals
 
 **Goals:**
-- Centralizar a lógica que escolhe entre um mapa único e um carrossel de mapas dentro do `AppNav.toMapas`.
+- Centralizar a lógica que escolhe entre um mapa único e um carrossel de mapas dentro de `AppNav.toMapas`.
 - Garantir que `MapasCarrosselPage` consiga lidar perfeitamente com a exibição de um mapa único sem a interface de carrossel quando `mapas.length == 1`.
+- Eliminar completamente a rota de navegação externa para `MapaInterativoPage`, forçando todos os acessos a mapas a passarem pelo `MapasCarrosselPage`. Isso garante que a abstração nunca seja "burlada" por desenvolvedores no futuro.
 - Simplificar o `MapHierarchyResolver` para que a navegação "Up" mantenha o acesso a todos os mapas da entidade pai.
-- Aplicar princípios de Desenvolvimento Orientado a Testes (TDD) em todas as mudanças.
-- Garantir 100% de cobertura de testes unitários para as novas abstrações e refatorações.
+- Aplicar princípios de Desenvolvimento Orientado a Testes (TDD) em todas as mudanças, com 100% de cobertura de testes unitários.
 - Assegurar que docstrings completas e precisas sejam fornecidas para todos os módulos/funções novos e modificados.
 
 **Non-Goals:**
-- Remover completamente o uso do `MapaInterativoPage` fora do `MapasCarrosselPage`. (Acessos diretos muito específicos ainda podem precisar dele, embora `AppNav.toMapas` se torne o método padrão).
 - Alterar como os mapas são buscados ou carregados no backend/storage.
 
 ## Decisions
 
-1. **Desenvolvimento Orientado a Testes (TDD)**:
-   - Antes de implementar as mudanças no `MapasCarrosselPage`, escreveremos testes de widget (widget tests) que passam um único mapa e validam que o `PageView` e a UI de paginação *não* estão presentes.
-   - Antes de refatorar o `MapHierarchyResolver`, escreveremos testes unitários validando que o `MapDestination` completo guarda corretamente os múltiplos mapas/entidades.
-2. **Atualização do MapasCarrosselPage**: Modificaremos o método `build` de `_MapasCarrosselPageState` para adicionar um retorno antecipado: `if (widget.mapas.length == 1) return _defaultMapBuilder(...)`.
-3. **Abstração de AppNav.toMapas**: Usaremos `AppNav.toMapasCarrossel` (renomeando para `AppNav.toMapas`) como o helper universal. Sua docstring detalhará claramente como ele delega a renderização com base no tamanho da lista de mapas.
-4. **Refatoração das Chamadas**: Substituiremos as verificações `if (mapas.length > 1)` espalhadas por `mapa_interativo.dart` e `via_functions.dart` por chamadas diretas ao `AppNav.toMapas`.
+1. **Abstração Restrita de Navegação**: Removeremos completamente o `AppNav.toMapaInterativo` e o `MapaInterativoNode` da árvore de navegação (`main.dart`, `navigation_tree.dart`). Todo acesso externo será feito por `AppNav.toMapas`, garantindo uma API única para visualização de mapas.
+2. **Desenvolvimento Orientado a Testes (TDD)**:
+   - Antes de implementar as mudanças, escreveremos testes de widget (widget tests) que passam um único mapa para `MapasCarrosselPage` e validam que o `PageView` e a UI de paginação *não* estão presentes.
+3. **Atualização do MapasCarrosselPage**: Modificaremos o método `build` de `_MapasCarrosselPageState` para adicionar um retorno antecipado: `if (widget.mapas.length == 1) return _defaultMapBuilder(...)`.
+4. **Refatoração das Chamadas**: Substituiremos as verificações `if (mapas.length > 1)` e chamadas a `toMapaInterativo` espalhadas por `mapa_interativo.dart`, `via_functions.dart` e `pico.dart` por chamadas diretas ao `AppNav.toMapas`.
 5. **Atualização do MapHierarchyResolver**: Modificaremos o `MapDestination` para guardar `List<CarrosselItemData> mapasData`. O botão "Up" será testado via testes de widget garantindo que os parâmetros corretos sejam passados.
 
 ## Risks / Trade-offs
 
-- **Risco**: O retorno antecipado no `MapasCarrosselPage` pode interferir na inicialização padrão do contexto ou no estado da app bar.
-- **Mitigação**: Garantiremos que retornar o `_defaultMapBuilder` forneça a mesma estrutura de `Scaffold` ou árvore de widgets exigida pelo `MapaInterativoPage`. Isso será amplamente verificado pela suíte de testes de widget (TDD).
+- **Risco**: O retorno antecipado no `MapasCarrosselPage` pode interferir na inicialização padrão do contexto ou no estado da app bar caso a árvore não esteja idêntica à chamada direta antiga.
+- **Mitigação**: Garantiremos que retornar o `_defaultMapBuilder` forneça a mesma estrutura de `Scaffold` exigida pelo `MapaInterativoPage`. Isso será amplamente verificado pela suíte de testes de widget (TDD).

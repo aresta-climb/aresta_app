@@ -7,6 +7,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/constants/network_constants.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../navigation/navigation_tree.dart';
 
 class MapaThumbnail extends StatefulWidget {
   final Mapa mapa;
@@ -150,12 +151,16 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               widget.cragId, 
               widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral'
             );
-            AppNav.toMapaInterativo(
+            AppNav.toMapas(
               context,
-              mapa: widget.mapa,
               cragId: widget.cragId,
-              setorContext: widget.setorContext,
-              grupoContext: widget.grupoContext,
+              mapas: [
+                CarrosselItemData(
+                  mapaCaminhoImagem: widget.mapa.caminhoImagemMapa,
+                  setorContextNome: widget.setorContext?.nome,
+                  grupoContextNome: widget.grupoContext?.nome,
+                )
+              ],
               imageProviderOverride: widget.imageProviderOverride,
             );
           },

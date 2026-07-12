@@ -175,25 +175,6 @@ void main() {
       expect(nodeComSetor.toString() != nodeSemSetor.toString(), isTrue);
     });
 
-    test('MapaInterativoNode toString() garante unicidade baseada em contexto (TDD)', () {
-      const nodeComSetor = MapaInterativoNode(
-        cragId: 'pico_santuario',
-        mapaCaminhoImagem: 'assets/map.png',
-        setorContextNome: 'Clube da Luta',
-        parent: HomeNode(),
-      );
-      expect(nodeComSetor.toString(), 'MapaInterativoNode(pico_santuario, map.png, Clube da Luta, null)');
-
-      const nodeSemSetor = MapaInterativoNode(
-        cragId: 'pico_santuario',
-        mapaCaminhoImagem: 'assets/map.png',
-        parent: HomeNode(),
-      );
-      expect(nodeSemSetor.toString(), 'MapaInterativoNode(pico_santuario, map.png, null, null)');
-
-      // A chave (toString) deve ser diferente mesmo se o arquivo de mapa for igual
-      expect(nodeComSetor.toString() != nodeSemSetor.toString(), isTrue);
-    });
 
     test('MapasCarrosselNode toString()', () {
       final node = MapasCarrosselNode(

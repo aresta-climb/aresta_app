@@ -493,7 +493,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         node is SetorNode ||
         node is GrupoNode ||
         node is ViaNode ||
-        node is MapaInterativoNode ||
+        node is TextNode ||
         node is MapasCarrosselNode) {
       String cragId = '';
       String? setorNome;
@@ -501,7 +501,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       String? escaladaNome;
 
       if (node is PicoContextNode) cragId = node.cragId;
-      if (node is MapaInterativoNode) cragId = node.cragId;
+      if (node is TextNode) cragId = node.cragId;
       if (node is MapasCarrosselNode) cragId = node.cragId;
 
       if (node is SetorNode) {
@@ -514,11 +514,6 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         grupoNome = node.grupoNome;
       }
       if (node is GrupoNode) grupoNome = node.grupoNome;
-      if (node is MapaInterativoNode) {
-        setorNome = node.setorContextNome;
-        grupoNome = node.grupoContextNome;
-        escaladaNome = node.escaladaContextNome;
-      }
 
       return PageListenableBuilder(
         cragId: cragId,
@@ -544,23 +539,6 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               datasetRepo: widget.datasetRepo,
               scrollToMapaGeral: node.scrollToMapaGeral,
               returnToSetor: returnToSetor,
-            );
-          } else if (node is MapaInterativoNode) {
-            final result = MapHelper.resolveMapaAndContext(
-              pico: pico,
-              mapaCaminhoImagem: node.mapaCaminhoImagem,
-              setorContextNome: node.setorContextNome,
-              grupoContextNome: node.grupoContextNome,
-            );
-
-            return MapaInterativoPage(
-              pico: pico,
-              mapa: result.mapa,
-              cragId: cragId,
-              initialSelectedId: node.initialSelectedId,
-              setorContext: setor,
-              grupoContext: grupo,
-              escaladaContextNome: node.escaladaContextNome,
             );
           } else if (node is MapasCarrosselNode) {
             return MapasCarrosselPage(

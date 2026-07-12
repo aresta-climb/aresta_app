@@ -570,13 +570,17 @@ Widget _buildTopBadges(
         if (fromMapaPage) {
           AppNav.back(context);
         } else {
-          AppNav.toMapaInterativo(
+          AppNav.toMapas(
             context,
-            mapa: targetMap,
             cragId: cragId,
-            initialSelectedId: id.isNotEmpty ? id : null,
-            setorContext: mapSetorContext,
-            escaladaContext: escalada,
+            mapas: [
+              CarrosselItemData(
+                mapaCaminhoImagem: targetMap.caminhoImagemMapa,
+                setorContextNome: mapSetorContext?.nome,
+                escaladaContextNome: getEscaladaNome(escalada),
+                initialSelectedId: id.isNotEmpty ? id : null,
+              )
+            ],
           );
         }
       },
@@ -620,7 +624,7 @@ Widget _buildTopBadges(
               initialSelectedId: fm.referencedId,
             )).toList();
             
-            AppNav.toMapasCarrossel(
+            AppNav.toMapas(
               context,
               cragId: cragId,
               mapas: mapasData,

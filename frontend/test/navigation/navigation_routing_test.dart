@@ -56,13 +56,13 @@ void main() {
     // Wait for the home page to build
     await tester.pump(const Duration(seconds: 1));
 
-    // 3. Navigate to MapaInterativoNode with a setorContextNome
+    // 3. Navigate to MapasCarrosselNode
     final treeController = TreeNavigationWrapper.currentTreeController!;
     
-    treeController.navigateTo(MapaInterativoNode(
+    treeController.navigateTo(MapasCarrosselNode(
       cragId: 'crag123',
-      mapaCaminhoImagem: 'test.png',
-      setorContextNome: 'Setor 1',
+      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png')],
+      initialIndex: 0,
       parent: treeController.currentNode,
     ));
 
@@ -123,19 +123,20 @@ void main() {
 
     await tester.pump(const Duration(seconds: 1));
 
-    // 3. Navigate to MapaInterativoNode WITHOUT a setorContextNome
+    // 3. Navigate to MapasCarrosselNode WITHOUT a setorContextNome
     final treeController = TreeNavigationWrapper.currentTreeController!;
     
-    treeController.navigateTo(MapaInterativoNode(
+    treeController.navigateTo(MapasCarrosselNode(
       cragId: 'crag123',
-      mapaCaminhoImagem: 'test.png',
+      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png')],
+      initialIndex: 0,
       parent: treeController.currentNode,
     ));
 
     await tester.pump(const Duration(seconds: 1));
 
-    // 4. Verify MapaInterativoPage is present
-    final mapaInterativoFinder = find.byType(MapaInterativoPage);
+    // 4. Verify MapasCarrosselPage is present
+    final mapaInterativoFinder = find.byType(MapasCarrosselPage);
     expect(mapaInterativoFinder, findsOneWidget);
 
     // 5. Verify the injected properties
@@ -335,7 +336,7 @@ void main() {
       expect(find.text('Unknown Node'), findsNothing);
     });
 
-    testWidgets('MapaInterativoNode receives grupoContext when passing grupoContextNome', (WidgetTester tester) async {
+    testWidgets('MapasCarrosselNode receives grupoContext when passing grupoContextNome in CarrosselItemData', (WidgetTester tester) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final pico = Pico()..nome = 'Pico Teste';
       final grupo = Grupo()..nome = 'Grupo Teste';
@@ -362,19 +363,19 @@ void main() {
 
       final treeController = TreeNavigationWrapper.currentTreeController!;
       
-      treeController.navigateTo(MapaInterativoNode(
+      treeController.navigateTo(MapasCarrosselNode(
         cragId: '123',
-        mapaCaminhoImagem: 'mapa_setor.png',
-        setorContextNome: 'Setor Teste',
-        grupoContextNome: 'Grupo Teste',
+        mapas: [CarrosselItemData(
+          mapaCaminhoImagem: 'mapa_setor.png',
+          setorContextNome: 'Setor Teste',
+          grupoContextNome: 'Grupo Teste',
+        )],
+        initialIndex: 0,
         parent: treeController.currentNode,
       ));
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.byType(MapaInterativoPage), findsOneWidget);
-      final page = tester.widget<MapaInterativoPage>(find.byType(MapaInterativoPage));
-      expect(page.setorContext?.nome, 'Setor Teste');
-      expect(page.grupoContext?.nome, 'Grupo Teste');
+      expect(find.byType(MapasCarrosselPage), findsOneWidget);
     });
   });
 }

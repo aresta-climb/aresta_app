@@ -5,7 +5,8 @@ Atualmente, o aplicativo espalha a lógica de abrir mapas para uma entidade (Pic
 ## What Changes
 
 - Atualizar o `MapasCarrosselPage` para lidar de forma inteligente com um único mapa (ignorando o `PageView` e a interface do carrossel quando `mapas.length == 1`).
-- Introduzir um único helper de navegação unificado `AppNav.toMapas` (ou similar) que recebe uma entidade/referência e abre seus mapas.
+- Introduzir um único helper de navegação unificado `AppNav.toMapas` que recebe uma entidade/referência e abre seus mapas.
+- Remover completamente a rota exposta `AppNav.toMapaInterativo` e o `MapaInterativoNode`. Toda navegação para mapas, sem exceção, passará pelo novo helper, forçando a abstração em nível de API. O `MapaInterativoPage` passa a ser um componente interno usado apenas pelo `MapasCarrosselPage`.
 - Refatorar todos os locais atuais que chamam a navegação de mapas para usar o novo helper unificado.
 - Atualizar o `MapHierarchyResolver` para retornar a entidade pai (Grupo ou Pico) em vez de apenas o primeiro mapa, e atualizar o botão "Up" para usar o `AppNav.toMapas`.
 - **Garantia de Qualidade**: Toda a mudança será implementada via Desenvolvimento Orientado a Testes (TDD), buscando 100% de cobertura de testes unitários. Além disso, todo método novo ou modificado será totalmente documentado com docstrings em Dart.
@@ -20,8 +21,9 @@ None.
 
 ## Impact
 
-- `AppNav` (lógica de navegação)
-- `MapasCarrosselPage` (modificação de UI para suportar itens únicos)
+- `AppNav` (lógica de navegação, remoção do método legado)
+- `MapasCarrosselPage` (modificação de UI para suportar itens únicos e atuar como container universal)
 - `MapHierarchyResolver` (hierarquia de navegação)
-- Vários arquivos de funções de view (`via_functions.dart`, `mapa_interativo.dart`, etc.)
+- `navigation_tree.dart` (remoção do `MapaInterativoNode`)
+- Vários arquivos de funções de view (`via_functions.dart`, `mapa_interativo.dart`, `pico.dart`, etc.)
 - Suítes de testes em todos esses domínios.

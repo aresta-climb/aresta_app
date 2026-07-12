@@ -242,65 +242,20 @@ class ViaNode extends PicoContextNode {
   String toString() => 'ViaNode($cragId, $setorNome, $grupoNome, $escaladaNome)';
 }
 
-/// Nó que representa o mapa interativo de um setor.
-class MapaInterativoNode extends NavNode {
-  final String cragId;
-  final String mapaCaminhoImagem;
-  final String? setorContextNome;
-  final String? grupoContextNome;
-  final String? escaladaContextNome;
-  final String? initialSelectedId;
-  final ImageProvider? imageProviderOverride;
-
-  const MapaInterativoNode({
-    required this.cragId,
-    required this.mapaCaminhoImagem,
-    this.setorContextNome,
-    this.grupoContextNome,
-    this.escaladaContextNome,
-    this.initialSelectedId,
-    this.imageProviderOverride,
-    required super.parent,
-  });
-
-  @override
-  NavNode copyWithMergedAncestor(covariant MapaInterativoNode matchingAncestor) {
-    final hasInitialId = initialSelectedId != null;
-    return MapaInterativoNode(
-      cragId: cragId,
-      mapaCaminhoImagem: mapaCaminhoImagem,
-      setorContextNome: setorContextNome,
-      grupoContextNome: grupoContextNome,
-      escaladaContextNome: escaladaContextNome,
-      initialSelectedId: hasInitialId ? initialSelectedId : matchingAncestor.initialSelectedId,
-      imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
-      parent: matchingAncestor.parent!,
-    );
-  }
-
-  /// Retorna uma representação em string deste nó.
-  /// 
-  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
-  /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
-  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
-  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
-  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
-  /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
-  @override
-  String toString() => 'MapaInterativoNode($cragId, ${mapaCaminhoImagem.split('/').last}, $setorContextNome, $grupoContextNome)';
-}
 
 /// Dados necessários para renderizar um item de mapa dentro do carrossel.
 class CarrosselItemData {
   final String mapaCaminhoImagem;
   final String? setorContextNome;
   final String? grupoContextNome;
+  final String? escaladaContextNome;
   final String? initialSelectedId;
 
   const CarrosselItemData({
     required this.mapaCaminhoImagem,
     this.setorContextNome,
     this.grupoContextNome,
+    this.escaladaContextNome,
     this.initialSelectedId,
   });
 }
@@ -398,22 +353,10 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is BrowseNode && b is BrowseNode) return true;
     if (a is MapaGlobalNode && b is MapaGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
-    if (a is MapaInterativoNode && b is MapaInterativoNode) {
-      // Para o mapa interativo, é crucial checar além do cragId e setorContextNome:
-      // Validamos a imagem e o grupoContextNome para distinguir corretamente
-      // o Mapa Geral, Mapa de Setor e Mapa de Grupo na pilha de navegação,
-      // evitando que o voltar feche mapas distintos de forma errada.
-      return a.cragId == b.cragId && 
-             a.mapaCaminhoImagem == b.mapaCaminhoImagem &&
-             a.setorContextNome == b.setorContextNome &&
-             a.grupoContextNome == b.grupoContextNome;
-    }
     if (a is MapasCarrosselNode && b is MapasCarrosselNode) {
-      if (a.cragId != b.cragId || a.mapas.length != b.mapas.length) return false;
-      for (int i = 0; i < a.mapas.length; i++) {
-        if (a.mapas[i].mapaCaminhoImagem != b.mapas[i].mapaCaminhoImagem) return false;
-      }
-      return true;
+      return a.cragId == b.cragId && 
+             a.mapas.length == b.mapas.length && 
+             (a.mapas.isNotEmpty ? a.mapas.first.mapaCaminhoImagem == b.mapas.first.mapaCaminhoImagem : true);
     }
 
     if (a is PicoNode && b is PicoNode) {

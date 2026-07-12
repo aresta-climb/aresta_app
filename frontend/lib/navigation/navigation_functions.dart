@@ -75,33 +75,12 @@ class AppNav {
     ));
   }
 
-  static void toMapaInterativo(
-    BuildContext context, {
-    required Mapa mapa,
-    required String cragId,
 
-    String? initialSelectedId,
-    Setor? setorContext,
-    Grupo? grupoContext,
-    Escalada? escaladaContext,
-    ImageProvider? imageProviderOverride,
-  }) {
-    final ctrl = _ctrl(context);
-    if (ctrl == null) return;
-    
-    ctrl.navigateTo(MapaInterativoNode(
-      cragId: cragId,
-      mapaCaminhoImagem: mapa.caminhoImagemMapa,
-      setorContextNome: setorContext?.nome,
-      grupoContextNome: grupoContext?.nome,
-      escaladaContextNome: escaladaContext != null ? _getNomeEscalada(escaladaContext) : null,
-      initialSelectedId: initialSelectedId,
-      imageProviderOverride: imageProviderOverride,
-      parent: ctrl.currentNode,
-    ));
-  }
-
-  static void toMapasCarrossel(
+  /// Helper de navegação unificado para mapas.
+  /// Recebe uma lista de [mapas] e delega a renderização para [MapasCarrosselNode].
+  /// Esta abstração garante que o sistema escolha automaticamente entre mostrar um
+  /// mapa simples ou um carrossel de mapas, prevenindo burlar a lógica de exibição.
+  static void toMapas(
     BuildContext context, {
     required String cragId,
     required List<CarrosselItemData> mapas,

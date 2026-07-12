@@ -117,12 +117,17 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       setorContext: resolvedSetor,
       grupoContext: resolvedGrupo,
       imageProviderOverride: widget.imageProviderOverride,
-      hideAppBar: true,
+      hideAppBar: widget.mapas.length > 1,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.mapas.length == 1) {
+      final builder = widget.mapBuilder ?? _defaultMapBuilder;
+      return builder(context, 0, widget.mapas.first);
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

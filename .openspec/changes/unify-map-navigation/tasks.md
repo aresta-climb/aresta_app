@@ -1,21 +1,22 @@
 ## 1. Configuração e Preparação para Testes (TDD)
 
-- [ ] 1.1 Criar ou atualizar os arquivos de teste unitário para `MapHierarchyResolver` (`map_hierarchy_resolver_test.dart`) e `AppNav` (`navigation_functions_test.dart`) para preparar para o novo comportamento.
-- [ ] 1.2 Escrever testes unitários que devem falhar (failing tests) para o `MapHierarchyResolver` garantindo que o `MapDestination` retorne corretamente uma lista de mapas/entidades, assegurando 100% de cobertura de testes para este módulo.
-- [ ] 1.3 Escrever testes de widget (failing tests) para o `MapasCarrosselPage` garantindo que passar um único mapa renderize a tela sem um `PageView` e sem as setas ou paginação do carrossel.
-- [ ] 1.4 Garantir que todos os arquivos de teste tenham o scaffolding básico e docstrings.
+- [x] 1.1 Criar ou atualizar os arquivos de teste unitário para `MapHierarchyResolver` (`map_hierarchy_resolver_test.dart`) e `AppNav` (`navigation_functions_test.dart`) para preparar para o novo comportamento de roteamento restrito a `toMapas`.
+- [x] 1.2 Escrever testes unitários que devem falhar (failing tests) para o `MapHierarchyResolver` garantindo que o `MapDestination` retorne corretamente uma lista de mapas/entidades, assegurando 100% de cobertura de testes para este módulo.
+- [x] 1.3 Escrever testes de widget (failing tests) para o `MapasCarrosselPage` garantindo que passar um único mapa renderize a tela sem um `PageView` e sem as setas ou paginação do carrossel.
+- [x] 1.4 Garantir que todos os arquivos de teste tenham o scaffolding básico e docstrings.
 
 ## 2. Implementação Core (Fazendo os testes passarem)
 
 - [ ] 2.1 Atualizar `MapHierarchyResolver`: Modificar o `MapDestination` para guardar uma lista de mapas (`List<CarrosselItemData> mapasData`). Adicionar docstrings detalhadas. Garantir que os testes unitários passem.
 - [ ] 2.2 Atualizar `MapasCarrosselPage`: Modificar o método `_MapasCarrosselPageState.build` com um retorno antecipado para renderizar apenas o mapa único se `widget.mapas.length == 1`. Adicionar docstrings. Garantir que os testes de widget passem.
-- [ ] 2.3 Atualizar `AppNav` em `navigation_functions.dart`: Refatorar/renomear `AppNav.toMapasCarrossel` para `AppNav.toMapas`. Adicionar docstrings detalhadas explicando a abstração unificada. Garantir que testes unitários relacionados passem.
+- [ ] 2.3 Atualizar `AppNav` e `navigation_tree.dart`: Remover completamente o `MapaInterativoNode` e o `AppNav.toMapaInterativo`. Renomear `AppNav.toMapasCarrossel` para `AppNav.toMapas`. Adicionar docstrings detalhadas explicando a abstração restrita. Garantir que testes unitários relacionados passem.
 
 ## 3. Refatoração dos Locais de Chamada
 
-- [ ] 3.1 Atualizar `mapa_interativo.dart` (botão "Up"): Alterar a lógica do `onPressed` para usar `AppNav.toMapas` com a lista de mapas do `upDest`. Garantir presença de docstrings adequadas.
-- [ ] 3.2 Atualizar `mapa_interativo.dart` (lógica "Ver mapas"): Substituir as verificações inline `if (mapas.length > 1)` nas bottom sheets de Grupo e Setor (linhas ~650-730) pelo `AppNav.toMapas`.
-- [ ] 3.3 Atualizar `via_functions.dart` ("Ver nos mapas"): Substituir as verificações inline pelo `AppNav.toMapas`. Adicionar/atualizar docstrings.
+- [ ] 3.1 Atualizar chamadores remanescentes do `toMapaInterativo`: No `pico.dart` e demais locais que chamavam a rota legada, altere para chamar `AppNav.toMapas`.
+- [ ] 3.2 Atualizar `mapa_interativo.dart` (botão "Up"): Alterar a lógica do `onPressed` para usar `AppNav.toMapas` com a lista de mapas do `upDest`. Garantir presença de docstrings adequadas.
+- [ ] 3.3 Atualizar `mapa_interativo.dart` (lógica "Ver mapas"): Substituir as verificações inline `if (mapas.length > 1)` nas bottom sheets de Grupo e Setor (linhas ~650-730) pelo `AppNav.toMapas`.
+- [ ] 3.4 Atualizar `via_functions.dart` ("Ver nos mapas"): Substituir as verificações inline pelo `AppNav.toMapas`. Adicionar/atualizar docstrings.
 
 ## 4. Verificação Final e Checagem de Cobertura
 
