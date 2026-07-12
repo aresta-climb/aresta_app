@@ -14,16 +14,6 @@
 		<string>Este aplicativo precisa de acesso ao microfone (requerido por dependências internas).</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Este aplicativo precisa de acesso à localização para recursos de mapeamento e distâncias.</string>
-		<key>NSBluetoothAlwaysUsageDescription</key>
-		<string>Este aplicativo precisa do Bluetooth para descobrir aparelhos próximos e transferir croquis offline.</string>
-		<key>NSBluetoothPeripheralUsageDescription</key>
-		<string>Este aplicativo precisa do Bluetooth para pareamento offline.</string>
-		<key>NSLocalNetworkUsageDescription</key>
-		<string>Este aplicativo precisa de acesso à rede local para descobrir aparelhos e transferir arquivos sem internet.</string>
-		<key>NSBonjourServices</key>
-		<array>
-			<string>_mp-connection._tcp</string>
-		</array>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>

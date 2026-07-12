@@ -12,7 +12,7 @@ test/
 ├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder (Hot-Reload)
 ├── pages/           Testes de widget das páginas de roteamento superior (ex: mapa_global)
 ├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
-├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage, AmbientP2PService, P2PTransferManager)
+├── services/        Testes unitários dos serviços principais (ZipInterceptor, EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
 ├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
 ├── utils/           Testes de funções utilitárias isoladas (ex: parsers de Markdown)
 ├── view_functions/  Testes unitários de funções utilitárias compartilhadas
@@ -64,5 +64,5 @@ flutter test test/services/zip_interceptor_test.dart
 - Arquivos temporários criados nos testes são armazenados em `Directory.systemTemp` e removidos no `tearDown`.
 - Testes que dependem de I/O de rede geralmente usam o interceptor `aresta-zip://` ou um mock de cliente `http` para simular respostas locais.
 - Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir mocks de bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
-- **Rede P2P Offline**: Os testes da malha descentralizada garantem a resistência dos listeners de descoberta (Wi-Fi Direct e Bluetooth LE) contra payloads JSON maliciosos, blocos incompletos e desconexões abruptas de pares na base da montanha.
+
 - Testes que dependem do binding do Flutter (ex: `path_provider`) são separados nos testes de widget ou integração com binding explícito.

@@ -25,7 +25,7 @@ void main() {
             return buildBrowseBody(
               context,
               availableCrags,
-              {},
+              ValueNotifier<Map<String, double>>({}),
               onSearchChanged: (_) {},
               onDownload: (_) {},
               onOpen: (crag) {
@@ -70,7 +70,7 @@ void main() {
             return buildBrowseBody(
               context,
               availableCrags,
-              {'crag_dl': 0.5}, // Simula que está baixando com 50%
+              ValueNotifier<Map<String, double>>({'crag_dl': 0.5}), // Simula que está baixando com 50%
               onSearchChanged: (_) {},
               onDownload: (_) {},
             );
@@ -111,7 +111,7 @@ void main() {
             return buildBrowseBody(
               context,
               availableCrags,
-              {},
+              ValueNotifier<Map<String, double>>({}),
               onSearchChanged: (_) {},
               onDownload: (_) {},
             );
