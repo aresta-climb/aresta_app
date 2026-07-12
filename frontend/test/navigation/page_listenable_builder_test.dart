@@ -4,6 +4,9 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
 
 // Mock observer para testar se AppNav.back() foi chamado
 class MockNavigatorObserver extends NavigatorObserver {
@@ -207,6 +210,46 @@ void main() {
       // Verifica que o Sub-setor de Teste carregou e não fez pop
       expect(find.text('View do Sub-setor Teste'), findsOneWidget);
       expect(mockObserver.hasPopped, isFalse);
+    });
+    testWidgets('Deve exibir o popup bloqueante se houver recarga pendente', (WidgetTester tester) async {
+      final picoV1 = Pico()..nome = 'Pico Teste';
+      final croqui = Croqui();
+
+      repo.activeDataset.value = TopoDataset(
+        downloadedPicos: [
+          {'id': 'pico_1', 'data': {'pico': picoV1, 'croqui': croqui}, 'isDownloaded': true}
+        ],
+        availablePicos: [],
+      );
+
+      final syncService = SyncService(datasetRepository: repo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: repo,
+            syncService: syncService,
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      
+      final wrapperState = tester.state<State<TreeNavigationWrapper>>(find.byType(TreeNavigationWrapper)) as dynamic;
+      final treeController = wrapperState.treeController;
+
+      treeController.navigateTo(PicoNode(cragId: 'pico_1', parent: const HomeNode()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Croqui Atualizado'), findsNothing);
+
+      // Simula fim do download atômico
+      syncService.recarga_pendente_pico_id.value = 'pico_1';
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // O popup bloqueante deve aparecer
+      expect(find.text('Croqui Atualizado'), findsOneWidget);
+      expect(find.text('RECARREGAR'), findsOneWidget);
     });
   });
 }

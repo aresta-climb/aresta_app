@@ -59,6 +59,45 @@ class SyncService {
   final ValueNotifier<Map<String, double>> downloadingCrags =
       ValueNotifier<Map<String, double>>({});
 
+  /// Controla qual croqui (Pico) está ativamente renderizado na tela (Main Thread/UI).
+  ///
+  /// O ciclo de vida do mapa (initState/dispose) deve definir este ID.
+  /// Serve como um "lock" reativo: o [SyncService] lerá esta variável de forma
+  /// síncrona na Event Loop após o término do download no Isolate. Se o ID
+  /// do pico baixado for igual a este, a atualização atômica de arquivos
+  /// não deve ser aplicada instantaneamente, evitando _crashs_ de leitura.
+  final ValueNotifier<String?> pico_aberto_id = ValueNotifier<String?>(null);
+
+  /// Se uma atualização atômica for impedida pelo fato de o pico alvo
+  /// estar aberto na tela (ver [pico_aberto_id]), seu ID será injetado
+  /// nesta variável. A interface de mapa a ouve e projeta um Popup
+  /// de bloqueio, exigindo do usuário a recarga manual via [commitPendenciasAtomaticas].
+  final ValueNotifier<String?> recarga_pendente_pico_id = ValueNotifier<String?>(null);
+
+  /// Guarda atualizações atômicas deferidas pela UI
+  final Map<String, _SyncUpdates> _pendenciasAtomicas = {};
+
+  /// Aplica manualmente as pendências atômicas para um croqui específico.
+  Future<void> commitPendenciasAtomaticas(String id) async {
+    final updates = _pendenciasAtomicas.remove(id);
+    if (updates != null) {
+      if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
+        await _storage.applyAtomicFileUpdates(
+          filesToDelete: updates.filesToDelete,
+          filesToRename: updates.filesToRename,
+        );
+      }
+      for (final entry in updates.metadataToUpdate.entries) {
+        await _updatePicoMetadata(entry.key, entry.value);
+      }
+      await datasetRepository.updateDatasetAfterDownload(id);
+    }
+    
+    if (recarga_pendente_pico_id.value == id) {
+      recarga_pendente_pico_id.value = null;
+    }
+  }
+
   /// Indica se a última tentativa de sincronização foi automática (true) ou manual (false).
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier<bool>(true);
 
@@ -74,7 +113,15 @@ class SyncService {
     SyncNetwork? network,
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
-       _network = network ?? SyncNetwork(client ?? ZipInterceptorClient());
+       _network = network ?? SyncNetwork(client ?? ZipInterceptorClient()) {
+    pico_aberto_id.addListener(() {
+      final currentOpenId = pico_aberto_id.value;
+      final idsToCommit = _pendenciasAtomicas.keys.where((id) => id != currentOpenId).toList();
+      for (final id in idsToCommit) {
+        commitPendenciasAtomaticas(id);
+      }
+    });
+  }
 
   int? _cachedBuildNumber;
 
@@ -173,16 +220,22 @@ class SyncService {
       }
 
       if (success) {
-        if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
-          await _storage.applyAtomicFileUpdates(
-            filesToDelete: updates.filesToDelete,
-            filesToRename: updates.filesToRename,
-          );
+        if (pico_aberto_id.value == id) {
+          _pendenciasAtomicas[id] = updates;
+          recarga_pendente_pico_id.value = id;
+          debugPrint('Download manual retido em pendência porque croqui $id está aberto.');
+        } else {
+          if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
+            await _storage.applyAtomicFileUpdates(
+              filesToDelete: updates.filesToDelete,
+              filesToRename: updates.filesToRename,
+            );
+          }
+          for (final entry in updates.metadataToUpdate.entries) {
+            await _updatePicoMetadata(entry.key, entry.value);
+          }
+          await datasetRepository.updateDatasetAfterDownload(id);
         }
-        for (final entry in updates.metadataToUpdate.entries) {
-          await _updatePicoMetadata(entry.key, entry.value);
-        }
-        await datasetRepository.updateDatasetAfterDownload(id);
         TelemetryService.instance.logAcaoExplorar(id, 'baixar');
       }
 
@@ -427,7 +480,13 @@ class SyncService {
               updates.failedPicos.add(newResumo.nome);
               updates.hasErrors = true;
             } else {
-              updates.merge(picoUpdates);
+              if (pico_aberto_id.value == newResumo.id) {
+                _pendenciasAtomicas[newResumo.id] = picoUpdates;
+                recarga_pendente_pico_id.value = newResumo.id;
+                debugPrint('Sincronização em background do croqui ${newResumo.id} retida em pendência (aberto).');
+              } else {
+                updates.merge(picoUpdates);
+              }
             }
           }
         }
@@ -618,6 +677,8 @@ class SyncService {
       );
       updates.hasErrors = true;
       return updates;
+    } finally {
+      downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
   }
 

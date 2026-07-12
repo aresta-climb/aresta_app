@@ -273,19 +273,8 @@ Widget _buildAllGuidesDropdown(
                 trailingIcon = Icon(Icons.chevron_right, color: fishBone, size: 18);
               }
               
-              Color titleColor;
-              if (isDownloading) {
-                titleColor = fishBone.withValues(alpha: 0.5);
-              } else {
-                titleColor = fishBone;
-              }
-
-              VoidCallback? onTapCallback;
-              if (isDownloading) {
-                onTapCallback = null;
-              } else {
-                onTapCallback = () => onPicoSelect(pico);
-              }
+              Color titleColor = fishBone;
+              VoidCallback onTapCallback = () => onPicoSelect(pico);
 
               return Material(
                 type: MaterialType.transparency,
@@ -443,26 +432,11 @@ Widget buildPicosCarousel(
               builder: (context, downloadingMap, child) {
                 final isDownloading = downloadingMap.containsKey(pico['id']);
 
-                VoidCallback? onTapCallback;
-                if (isDownloading) {
-                  onTapCallback = null;
-                } else {
-                  onTapCallback = () => onPicoSelect(pico);
-                }
-                
-                double cardOpacity;
-                if (isDownloading) {
-                  cardOpacity = 0.6;
-                } else {
-                  cardOpacity = 1.0;
-                }
+                VoidCallback onTapCallback = () => onPicoSelect(pico);
 
                 return GestureDetector(
                   onTap: onTapCallback,
-                  child: Opacity(
-                    opacity: cardOpacity,
-                    child: buildPicoCard(pico, rightPadding, cardColor, isDownloading, onPicoSelect),
-                  ),
+                  child: buildPicoCard(pico, rightPadding, cardColor, isDownloading, onPicoSelect),
                 );
               },
             );
@@ -646,19 +620,11 @@ Widget buildPicoCard(Map<String, dynamic> pico, double rightPadding, Color cardC
                   const Spacer(),
                   Builder(
                     builder: (context) {
-                      VoidCallback? onPressed;
-                      if (isDownloading) {
-                        onPressed = null;
-                      } else {
-                        onPressed = () => onPicoSelect(pico);
-                      }
-
-                      String buttonText;
-                      if (isDownloading) {
-                        buttonText = 'BAIXANDO...';
-                      } else {
-                        buttonText = 'VER GUIA';
-                      }
+                      VoidCallback onPressed = () => onPicoSelect(pico);
+                      
+                      // Mantemos o texto "VER GUIA" para que a ação principal fique clara
+                      // mesmo durante a atualização silenciosa em background.
+                      String buttonText = 'VER GUIA';
 
                       return ElevatedButton(
                         onPressed: onPressed, 

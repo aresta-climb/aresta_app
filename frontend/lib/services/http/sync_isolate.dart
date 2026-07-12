@@ -5,6 +5,11 @@ import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'sync_storage.dart';
 
+/// Argumentos necessários para instanciar o [downloadIsolateMain].
+/// 
+/// Como Isolates não compartilham memória com a Main Isolate (Thread da UI),
+/// todos os dados de configuração e a porta de comunicação de mão única
+/// ([SendPort]) precisam ser empacotados e serializados nesta classe de entrada.
 class DownloadIsolateArgs {
   final Uint8List newResumoBytes;
   final String downloadsDirPath;
@@ -19,6 +24,11 @@ class DownloadIsolateArgs {
   });
 }
 
+/// Resultado final do processamento empacotado que o Isolate envia para a Main Thread.
+/// 
+/// Contém o resumo das operações físicas (arquivos deletados e temporários a renomear)
+/// e o novo buffer de dados que o Dart (Main Isolate) usará para atualizar
+/// a memória do aplicativo de forma atômica e segura.
 class DownloadIsolateResult {
   final List<String> filesToDelete;
   final Map<String, String> filesToRename;
@@ -33,6 +43,21 @@ class DownloadIsolateResult {
   });
 }
 
+/// Ponto de entrada (Entrypoint) estático para o Isolate de download em background.
+/// 
+/// Esta função roda em uma thread computacional apartada (Background Isolate),
+/// totalmente isolada do Event Loop principal (Main Isolate) onde a UI funciona.
+///
+/// **Fluxo de Trabalho**:
+/// 1. Baixa o arquivo principal (`.binarypb`) como um `.tmp` e valida o seu Hash.
+/// 2. Lê os arquivos antigos e novos para definir um Diff (arquivos a deletar vs a baixar).
+/// 3. Inicia downloads atômicos dos arquivos de mídia (`.tmp`) paralelamente.
+/// 4. Emite mensagens do tipo [double] periodicamente via `args.sendPort` com o progresso de 0.0 a 1.0.
+/// 5. Ao finalizar (ou falhar), envia um objeto [DownloadIsolateResult] de volta à Thread principal.
+///
+/// **Ausência de Race Conditions**:
+/// Como este método apenas baixa para `.tmp` e não faz o `rename` dos arquivos originais,
+/// ele nunca interfere na leitura em disco que o App possa estar fazendo na Thread principal.
 Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
   try {
     final client = http.Client();
