@@ -196,8 +196,8 @@ void main() {
       // Width of bounds is 60, height is 40. With 1:1 scale, local bounding box is [padding, padding] to [padding+60, padding+40].
       // Inside point (center of the local AABB: 30 + 4, 20 + 4) = (34, 24)
       expect(painter.hitTest(const Offset(34, 24)), isTrue);
-      // Outside point
-      expect(painter.hitTest(const Offset(10, 14)), isFalse);
+      // Outside point (outside local AABB and inflation tolerance)
+      expect(painter.hitTest(const Offset(100, 100)), isFalse);
     });
 
     test('hitTest correctly excludes corners of AABB for rotated rectangle', () {

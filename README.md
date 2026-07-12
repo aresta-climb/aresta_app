@@ -18,7 +18,7 @@ Aresta Climb_App/
 
 O Aresta Climb é um guia de escalada digital. O app permite que alpinistas baixem informações completas de picos — croquis, betas, mapas GPS e descrições — para acesso **completamente offline** no campo, sem depender de sinal de celular.
 
-Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), podendo ser baixados do nosso servidor remoto, importados de repositórios locais via **Ghost Protocol** (`aresta-zip://`), ou até mesmo compartilhados nativamente entre aparelhos sem qualquer conexão de internet, utilizando nossa **Rede P2P Offline** (Bluetooth LE e Wi-Fi Direct).
+Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), podendo ser baixados do nosso servidor remoto ou importados de repositórios locais via **Ghost Protocol** (`aresta-zip://`).
 
 ## Arquitetura e Padrões
 
@@ -26,9 +26,7 @@ O aplicativo é desenvolvido com uma arquitetura **MVVM (Model-View-ViewModel)**
 
 A sincronização de picos com a nuvem é de última geração: o `SyncService` utiliza **Isolates em background** para realizar cálculos de criptografia (SHA256) e persistência de arquivos sem travar a interface (`Main Thread`). Os downloads são do tipo **Delta Syncs (Atômicos)** — o aplicativo só baixa imagens e arquivos que sofreram mutação na nova versão, economizando banda e validando integridade bit a bit.
 
-Além da sincronização tradicional, a arquitetura abraça o **Descentralizado**. Os serviços `AmbientP2PService` e `P2PTransferManager` mantêm uma malha de conexão contínua permitindo a transferência de milhares de imagens e croquis inteiros entre os próprios usuários do app na base da montanha.
-
-Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Isso se estende para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download (via internet ou P2P) através de barras de progresso lineares, tudo em **tempo real** e sem piscar a tela.
+Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Isso se estende para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download através de barras de progresso lineares, tudo em **tempo real** e sem piscar a tela.
 
 ---
 
