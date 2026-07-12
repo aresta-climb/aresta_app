@@ -48,6 +48,19 @@ class MapaInterativoPage extends StatefulWidget {
   /// e garantir que a barra fique fixa durante a animação de swipe. Padrão é `false`.
   final bool hideAppBar;
 
+  /// Define se a ação principal do cartão flutuante ("Mais Info") deve realizar
+  /// um `Navigator.pop` quando o mapa foi aberto inicialmente para focar neste exato item.
+  /// 
+  /// Por padrão (`true`), se o usuário abre o mapa a partir da tela de Detalhes da Via
+  /// (passando `initialSelectedId`), ao clicar "Mais Info", o app apenas volta
+  /// para a tela anterior (para não empilhar telas duplicadas).
+  ///
+  /// Quando `false`, a ação sempre forçará um `push` (ex: `AppNav.toVia`), ignorando
+  /// se foi o item originalmente focado. Isso é essencial quando o mapa está embutido
+  /// em um carrossel que foi aberto a partir de *outro* mapa, onde um `pop`
+  /// fecharia o carrossel indevidamente em vez de abrir os detalhes da via.
+  final bool popOnActionIfOriginal;
+
   const MapaInterativoPage({
     super.key,
     required this.pico,
@@ -60,6 +73,7 @@ class MapaInterativoPage extends StatefulWidget {
     this.grupoContext,
     this.escaladaContextNome,
     this.hideAppBar = false,
+    this.popOnActionIfOriginal = true,
   });
 
   @override
@@ -608,7 +622,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           isOriginal = true;
         }
 
-        if (isOriginal) {
+        // Se isOriginal for true (foi a rota focada inicialmente),
+        // SÓ faz pop se popOnActionIfOriginal for true.
+        // Se estivermos dentro do carrossel (que passa false), queremos abrir a tela de via (push).
+        if (isOriginal && widget.popOnActionIfOriginal) {
           AppNav.back(context);
         } else {
           TelemetryService.instance.logAcaoEscalada(

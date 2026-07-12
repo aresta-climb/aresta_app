@@ -186,6 +186,33 @@ void main() {
       // hideAppBar should be false because there is only 1 map and no carousel UI is wrapping it
       expect(mapaPage.hideAppBar, isFalse);
     });
+
+    testWidgets('TDD 1.3: _defaultMapBuilder passes popOnActionIfOriginal: false to MapaInterativoPage', (tester) async {
+      final mapa1 = Mapa()..caminhoImagemMapa = 'map1.png';
+      final mapa2 = Mapa()..caminhoImagemMapa = 'map2.png';
+      final pico = Pico()..nome = 'Pico Teste'..mapasGerais = (ArquivoMapas()..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
+      final mapas = [
+        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
+        const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
+      ];
+
+      await tester.pumpWidget(MaterialApp(
+        home: MapasCarrosselPage(
+          pico: pico,
+          cragId: '1',
+          mapas: mapas,
+          initialIndex: 0,
+          imageProviderOverride: MemoryImage(Uint8List(0)), 
+        ),
+      ));
+
+      // Should render the first map using MapaInterativoPage
+      expect(find.byType(MapaInterativoPage), findsOneWidget);
+
+      final mapaPage = tester.widget<MapaInterativoPage>(find.byType(MapaInterativoPage));
+      
+      expect(mapaPage.popOnActionIfOriginal, isFalse);
+    });
   });
 }
 

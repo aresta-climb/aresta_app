@@ -1026,6 +1026,120 @@ void main() {
       
       expect(restoredViewer.transformationController!.value, equals(modifiedMatrix));
     });
+    testWidgets('TDD 1.1: popOnActionIfOriginal=true and isOriginal=true does AppNav.back (pop)', (WidgetTester tester) async {
+      final mockMapa = Mapa(
+        caminhoImagemMapa: 'mapa.webp',
+        larguraMapa: 1000,
+        alturaMapa: 800,
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(
+            id: 'via_id',
+            label: 'Via Label',
+            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+          ),
+        ],
+      );
+
+      final esc = Escalada(viaEsportiva: ViaEsportiva(nome: 'Target Via'));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Target Via', ids: ['via_id']));
+
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.add(esc);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      await tester.pumpWidget(MaterialApp(
+        initialRoute: '/',
+        routes: {
+          '/': (context) => Scaffold(
+            body: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapaInterativoPage(
+                  pico: pico,
+                  mapa: mockMapa,
+                  cragId: 'test_crag',
+                  autoZoomEnabled: false,
+                  imageProviderOverride: MemoryImage(kTransparentImage),
+                  initialSelectedId: 'via_id',
+                  popOnActionIfOriginal: true,
+                )));
+              },
+              child: const Text('Go to Map'),
+            ),
+          ),
+        },
+      ));
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Go to Map'));
+      await tester.pumpAndSettle();
+
+      // Ensure the card is open
+      expect(find.text('Target Via'), findsOneWidget);
+
+      final btn = find.text('Mais Info');
+      expect(btn, findsOneWidget);
+
+      // Tap Mais Info
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+
+      // Because popOnActionIfOriginal is true, it pops back to '/'
+      expect(find.text('Target Via'), findsNothing); 
+      expect(find.text('Go to Map'), findsOneWidget);
+    });
+
+    testWidgets('TDD 1.2: popOnActionIfOriginal=false and isOriginal=true does AppNav.toVia (push)', (WidgetTester tester) async {
+      final mockMapa = Mapa(
+        caminhoImagemMapa: 'mapa.webp',
+        larguraMapa: 1000,
+        alturaMapa: 800,
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(
+            id: 'via_id',
+            label: 'Via Label',
+            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+          ),
+        ],
+      );
+
+      final esc = Escalada(viaEsportiva: ViaEsportiva(nome: 'Target Via'));
+      mockMapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Target Via', ids: ['via_id']));
+
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.add(esc);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            pico: pico,
+            mapa: mockMapa,
+            cragId: 'test_crag',
+            autoZoomEnabled: false,
+            imageProviderOverride: MemoryImage(kTransparentImage),
+            initialSelectedId: 'via_id',
+            popOnActionIfOriginal: false, // HERE: this is what carrossel does
+          ),
+        ),
+      ));
+
+      await tester.pumpAndSettle();
+
+      final btn = find.text('Mais Info');
+      expect(btn, findsOneWidget);
+
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+
+      // Telemetry for opening details SHOULD be fired (or we can just verify the Via node was pushed)
+      // The push triggers AppNav.toVia, which if TreeNavigation is active pushes ViaNode.
+      // If it's a direct MaterialApp, AppNav.toVia might fail or do nothing if no tree controller.
+      // But we can check that it DID NOT POP by ensuring the card is still there 
+      // (or actually, in tests AppNav.toVia without TreeController does nothing, so the page remains)
+      expect(find.text('Target Via'), findsOneWidget); 
+    });
   });
 
 }
