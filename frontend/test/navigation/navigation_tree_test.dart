@@ -176,6 +176,22 @@ void main() {
     });
 
 
+    test('CarrosselItemData armazena propriedades de contexto (TDD)', () {
+      const data = CarrosselItemData(
+        mapaCaminhoImagem: 'assets/map1.png',
+        setorContextNome: 'Setor A',
+        grupoContextNome: 'Grupo B',
+        escaladaContextNome: 'Via C',
+        initialSelectedId: 'marker_1',
+      );
+      
+      expect(data.mapaCaminhoImagem, 'assets/map1.png');
+      expect(data.setorContextNome, 'Setor A');
+      expect(data.grupoContextNome, 'Grupo B');
+      expect(data.escaladaContextNome, 'Via C');
+      expect(data.initialSelectedId, 'marker_1');
+    });
+
     test('MapasCarrosselNode toString()', () {
       final node = MapasCarrosselNode(
         cragId: 'pico_santuario',

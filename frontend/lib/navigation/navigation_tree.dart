@@ -245,10 +245,19 @@ class ViaNode extends PicoContextNode {
 
 /// Dados necessários para renderizar um item de mapa dentro do carrossel.
 class CarrosselItemData {
+  /// Caminho da imagem (asset ou arquivo local) do mapa/croqui.
   final String mapaCaminhoImagem;
+  
+  /// Nome do Setor ao qual este mapa pertence (se houver), usado para resolver SVG aninhado.
   final String? setorContextNome;
+  
+  /// Nome do Grupo ao qual este mapa pertence (se houver), usado para resolver SVG aninhado.
   final String? grupoContextNome;
+  
+  /// Nome da via/escalada que motivou a abertura deste mapa, usado para desambiguação de rotas que compartilham o mesmo marcador.
   final String? escaladaContextNome;
+  
+  /// ID opcional (Ponto de Interesse) que deve receber o auto-zoom inicial.
   final String? initialSelectedId;
 
   const CarrosselItemData({

@@ -656,7 +656,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         final mapasData = foundMaps.map((fm) => CarrosselItemData(
           mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
           setorContextNome: fm.setorContext?.nome,
-          grupoContextNome: null, // Assume flat for now or find it if needed
+          // Repassado para garantir foco no polígono exato do grupo
+          grupoContextNome: fm.grupoContext?.nome,
+          // Repassado para resolver qual aba abrir quando múltiplas vias dividem a pedra
+          escaladaContextNome: getEscaladaNome(resolved!.escalada!),
           initialSelectedId: fm.referencedId,
         )).toList();
         
@@ -697,6 +700,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           final mapasData = setor.mapas.map((m) => CarrosselItemData(
             mapaCaminhoImagem: m.caminhoImagemMapa,
             setorContextNome: setor.nome,
+            // Mantém contexto hierárquico se estiver aninhado
             grupoContextNome: resolved?.grupo?.nome,
           )).toList();
           

@@ -620,7 +620,10 @@ Widget _buildTopBadges(
             final mapasData = foundMaps.map((fm) => CarrosselItemData(
               mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
               setorContextNome: fm.setorContext?.nome,
-              grupoContextNome: null,
+              // Repassado para resolver corretamente as coordenadas aninhadas (TDD 2.2)
+              grupoContextNome: fm.grupoContext?.nome,
+              // Repassado para garantir que a aba certa do carrossel receba o foco quando rotas compartilham SVG
+              escaladaContextNome: getEscaladaNome(escalada),
               initialSelectedId: fm.referencedId,
             )).toList();
             
