@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/dataset_repository.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
@@ -69,7 +70,7 @@ Widget buildHomeBody(
   DatasetRepository datasetRepo,
   SyncService syncService,
   List<Map<String, dynamic>> downloadedPicos,
-  Map<String, double> downloadingCrags, {
+  ValueListenable<Map<String, double>> downloadingCragsListenable, {
   required VoidCallback onAddCrag,
 }) {
   return Container(
@@ -128,7 +129,7 @@ Widget buildHomeBody(
           // O carrossel agora lida internamente com o limite de 4 cartões
           buildPicosCarousel(
             downloadedPicos, 
-            downloadingCrags,
+            downloadingCragsListenable,
             onAddCrag: onAddCrag,
             onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
           ),
@@ -136,7 +137,7 @@ Widget buildHomeBody(
             const SizedBox(height: 10),
             _buildAllGuidesDropdown(
               downloadedPicos, 
-              downloadingCrags,
+              downloadingCragsListenable,
               onAddCrag: onAddCrag, 
               onPicoSelect: (pico) => handlePicoSelection(context, datasetRepo, pico),
             ),
@@ -219,7 +220,7 @@ Widget buildSyncBadge(SyncStatus status) {
 /// Constrói uma lista expansível mostrando todos os guias baixados.
 Widget _buildAllGuidesDropdown(
   List<Map<String, dynamic>> picos,
-  Map<String, double> downloadingCrags, {
+  ValueListenable<Map<String, double>> downloadingCrags, {
   required VoidCallback onAddCrag,
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
@@ -253,50 +254,55 @@ Widget _buildAllGuidesDropdown(
       collapsedBackgroundColor: Colors.transparent,
       children: [
         ...picos.map((pico) {
-          final isDownloading = downloadingCrags.containsKey(pico['id']);
-          
-          Widget trailingIcon;
-          if (isDownloading) {
-            trailingIcon = SizedBox(
-              width: 60,
-              child: LinearProgressIndicator(
-                value: downloadingCrags[pico['id']],
-                color: fishBone,
-                backgroundColor: fishBone.withValues(alpha: 0.2),
-              ),
-            );
-          } else {
-            trailingIcon = Icon(Icons.chevron_right, color: fishBone, size: 18);
-          }
-          
-          Color titleColor;
-          if (isDownloading) {
-            titleColor = fishBone.withValues(alpha: 0.5);
-          } else {
-            titleColor = fishBone;
-          }
+          return ValueListenableBuilder<Map<String, double>>(
+            valueListenable: downloadingCrags,
+            builder: (context, downloadingMap, child) {
+              final isDownloading = downloadingMap.containsKey(pico['id']);
+              
+              Widget trailingIcon;
+              if (isDownloading) {
+                trailingIcon = SizedBox(
+                  width: 60,
+                  child: LinearProgressIndicator(
+                    value: downloadingMap[pico['id']],
+                    color: fishBone,
+                    backgroundColor: fishBone.withValues(alpha: 0.2),
+                  ),
+                );
+              } else {
+                trailingIcon = Icon(Icons.chevron_right, color: fishBone, size: 18);
+              }
+              
+              Color titleColor;
+              if (isDownloading) {
+                titleColor = fishBone.withValues(alpha: 0.5);
+              } else {
+                titleColor = fishBone;
+              }
 
-          VoidCallback? onTapCallback;
-          if (isDownloading) {
-            onTapCallback = null;
-          } else {
-            onTapCallback = () => onPicoSelect(pico);
-          }
+              VoidCallback? onTapCallback;
+              if (isDownloading) {
+                onTapCallback = null;
+              } else {
+                onTapCallback = () => onPicoSelect(pico);
+              }
 
-          return Material(
-            type: MaterialType.transparency,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-              title: Text(
-                safeString(pico['nome']),
-                style: TextStyle(
-                  color: titleColor, 
-                  fontSize: 15
+              return Material(
+                type: MaterialType.transparency,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+                  title: Text(
+                    safeString(pico['nome']),
+                    style: TextStyle(
+                      color: titleColor, 
+                      fontSize: 15
+                    ),
+                  ),
+                  trailing: trailingIcon,
+                  onTap: onTapCallback,
                 ),
-              ),
-              trailing: trailingIcon,
-              onTap: onTapCallback,
-            ),
+              );
+            },
           );
         }),
         Material(
@@ -341,7 +347,7 @@ Widget buildSectionHeader(String title) {
 /// Permite loop infinito se houver exatamente 4 itens.
 Widget buildPicosCarousel(
   List<Map<String, dynamic>> allPicos,
-  Map<String, double> downloadingCrags, {
+  ValueListenable<Map<String, double>> downloadingCrags, {
   required VoidCallback onAddCrag,
   required Function(Map<String, dynamic>) onPicoSelect,
 }) {
@@ -431,28 +437,34 @@ Widget buildPicosCarousel(
             }
 
             final pico = picosToShow[actualIndex];
-            final isDownloading = downloadingCrags.containsKey(pico['id']);
 
-            VoidCallback? onTapCallback;
-            if (isDownloading) {
-              onTapCallback = null;
-            } else {
-              onTapCallback = () => onPicoSelect(pico);
-            }
-            
-            double cardOpacity;
-            if (isDownloading) {
-              cardOpacity = 0.6;
-            } else {
-              cardOpacity = 1.0;
-            }
+            return ValueListenableBuilder<Map<String, double>>(
+              valueListenable: downloadingCrags,
+              builder: (context, downloadingMap, child) {
+                final isDownloading = downloadingMap.containsKey(pico['id']);
 
-            return GestureDetector(
-              onTap: onTapCallback,
-              child: Opacity(
-                opacity: cardOpacity,
-                child: buildPicoCard(pico, rightPadding, cardColor, isDownloading, onPicoSelect),
-              ),
+                VoidCallback? onTapCallback;
+                if (isDownloading) {
+                  onTapCallback = null;
+                } else {
+                  onTapCallback = () => onPicoSelect(pico);
+                }
+                
+                double cardOpacity;
+                if (isDownloading) {
+                  cardOpacity = 0.6;
+                } else {
+                  cardOpacity = 1.0;
+                }
+
+                return GestureDetector(
+                  onTap: onTapCallback,
+                  child: Opacity(
+                    opacity: cardOpacity,
+                    child: buildPicoCard(pico, rightPadding, cardColor, isDownloading, onPicoSelect),
+                  ),
+                );
+              },
             );
           },
         ),

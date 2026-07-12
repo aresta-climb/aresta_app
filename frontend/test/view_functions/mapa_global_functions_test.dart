@@ -25,7 +25,7 @@ void main() {
                 showCragModal(
                   context: context,
                   crag: crag,
-                  downloadProgress: null,
+                  downloadingCrags: ValueNotifier<Map<String, double>>({}),
                   onDownload: () {},
                   onOpen: () {
                     onOpenCalled = true;

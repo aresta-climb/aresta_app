@@ -189,7 +189,7 @@ void main() {
       expect(navigator.pages.length, 3);
       expect(navigator.pages[0].key, const ValueKey('TabsPage'));
       expect(navigator.pages[1].key, const ValueKey('PicoNode(123)'));
-      expect(navigator.pages[2].key, const ValueKey('SetorNode(S1)'));
+      expect(navigator.pages[2].key, const ValueKey('SetorNode(123, S1, null)'));
     });
 
     testWidgets('System back button or Navigator pop triggers treeController.goBack()', (WidgetTester tester) async {

@@ -31,7 +31,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, null, () {}),
+            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {}),
           ),
         ),
       );
@@ -52,7 +52,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, null, () {}),
+            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {}),
           ),
         ),
       );
@@ -79,7 +79,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, null, () {
+            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {
               downloadChamado = true;
             }),
           ),
@@ -103,7 +103,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(downloadedCrag, null, () {}),
+            body: buildCragListItem(downloadedCrag, ValueNotifier<Map<String, double>>({}), () {}),
           ),
         ),
       );
@@ -125,7 +125,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(downloadedCrag, null, () {}, onOpen: () {
+            body: buildCragListItem(downloadedCrag, ValueNotifier<Map<String, double>>({}), () {}, onOpen: () {
               openChamado = true;
             }),
           ),
@@ -154,7 +154,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(crag, null, () {}),
+            body: buildCragListItem(crag, ValueNotifier<Map<String, double>>({}), () {}),
           ),
         ),
       );
@@ -172,7 +172,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(crag, null, () {}),
+            body: buildCragListItem(crag, ValueNotifier<Map<String, double>>({}), () {}),
           ),
         ),
       );
