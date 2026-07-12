@@ -1246,8 +1246,8 @@ class AreaHelper {
     double minX, minY, maxX, maxY;
 
     switch (ponto.whichTipoArea()) {
-      case Mapa_PontoDeInteresse_TipoArea.circular:
-        final c = ponto.circular;
+      case Mapa_PontoDeInteresse_TipoArea.circulo:
+        final c = ponto.circulo;
         final int points = 32;
         for (int i = 0; i < points; i++) {
           final double theta = 2.0 * math.pi * i / points;
@@ -1264,8 +1264,26 @@ class AreaHelper {
         maxY = (c.y + c.raio).toDouble();
         break;
 
-      case Mapa_PontoDeInteresse_TipoArea.box:
-        final b = ponto.box;
+      case Mapa_PontoDeInteresse_TipoArea.quadrado:
+        final q = ponto.quadrado;
+        final double l2 = q.lado / 2.0;
+        final List<Offset> corners = [
+          Offset(-l2, -l2),
+          Offset(l2, -l2),
+          Offset(l2, l2),
+          Offset(-l2, l2),
+        ];
+        for (var corner in corners) {
+          polygon.add(Offset(q.x + corner.dx, q.y + corner.dy));
+        }
+        minX = polygon.map((p) => p.dx).reduce(math.min);
+        maxX = polygon.map((p) => p.dx).reduce(math.max);
+        minY = polygon.map((p) => p.dy).reduce(math.min);
+        maxY = polygon.map((p) => p.dy).reduce(math.max);
+        break;
+
+      case Mapa_PontoDeInteresse_TipoArea.retangulo:
+        final b = ponto.retangulo;
         final double w2 = b.comprimento / 2.0;
         final double h2 = b.largura / 2.0;
         final double angle = (b.anguloGrausX100 / 100.0) * math.pi / 180.0;
@@ -1291,8 +1309,8 @@ class AreaHelper {
         maxY = polygon.map((p) => p.dy).reduce(math.max);
         break;
 
-      case Mapa_PontoDeInteresse_TipoArea.areaLivre:
-        final al = ponto.areaLivre;
+      case Mapa_PontoDeInteresse_TipoArea.poligono:
+        final al = ponto.poligono;
         if (al.coordenadas.length < 2) return null;
         for (int i = 0; i < al.coordenadas.length; i += 2) {
           polygon.add(
