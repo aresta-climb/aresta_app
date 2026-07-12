@@ -29,7 +29,7 @@ void main() {
               mockRepo,
               mockSync,
               downloadedPicos,
-              <String, double>{}, // downloadingCrags
+              ValueNotifier<Map<String, double>>({}), // downloadingCrags
               onAddCrag: () {},
             );
           },

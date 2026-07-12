@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
@@ -13,7 +14,7 @@ import '../browse_functions.dart';
 void showCragModal({
   required BuildContext context,
   required Map<String, dynamic> crag,
-  required double? downloadProgress,
+  required ValueListenable<Map<String, double>> downloadingCrags,
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
@@ -34,7 +35,7 @@ void showCragModal({
               ),
               child: buildCragListItem(
                 crag,
-                downloadProgress,
+                downloadingCrags,
                 () {
                   onDownload();
                   Navigator.of(context).pop();
@@ -58,7 +59,7 @@ void showCragModal({
 Set<Marker> buildMapMarkers({
   required BuildContext context,
   required List<Map<String, dynamic>> crags,
-  required Map<String, double> downloadingCrags,
+  required ValueListenable<Map<String, double>> downloadingCrags,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   BitmapDescriptor? customIcon,
@@ -82,7 +83,7 @@ Set<Marker> buildMapMarkers({
               showCragModal(
                 context: context,
                 crag: crag,
-                downloadProgress: downloadingCrags[crag['id']],
+                downloadingCrags: downloadingCrags,
                 onDownload: () => onDownload(crag),
                 onOpen: onOpen != null ? () => onOpen(crag) : null,
               );
