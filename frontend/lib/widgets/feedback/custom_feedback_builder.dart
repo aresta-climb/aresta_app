@@ -136,24 +136,32 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
           ),
         ),
         const SizedBox(height: 8),
-        ElevatedButton(
-          key: const Key('submit_feedback_button'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: buttonColor,
-            foregroundColor: appColors.nobleBlack,
-            minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Enviar',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          onPressed: () => widget.onSubmit(controller.text),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, child) {
+            final isEmpty = value.text.trim().isEmpty;
+            return ElevatedButton(
+              key: const Key('submit_feedback_button'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor,
+                foregroundColor: appColors.nobleBlack,
+                disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
+                disabledForegroundColor: appColors.nobleBlack.withValues(alpha: 0.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: isEmpty ? null : () => widget.onSubmit(controller.text),
+              child: const Text(
+                'Enviar',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            );
+          },
         ),
       ],
         ),

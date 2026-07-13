@@ -64,6 +64,60 @@ void main() {
       );
     });
 
+    testWidgets('submit button is disabled when text is empty', (WidgetTester tester) async {
+      bool submitted = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return customFeedbackBuilder(
+                  context,
+                  (text, {extras}) async {
+                    submitted = true;
+                  },
+                  null,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      final buttonFinder = find.byKey(const Key('submit_feedback_button'));
+      expect(buttonFinder, findsOneWidget);
+
+      // Initial state: empty text, button disabled
+      ElevatedButton button = tester.widget(buttonFinder);
+      expect(button.enabled, isFalse);
+
+      // Tapping does nothing
+      await tester.tap(buttonFinder);
+      await tester.pumpAndSettle();
+      expect(submitted, isFalse);
+
+      // Type only spaces, button should remain disabled
+      final textFieldFinder = find.byType(TextField);
+      await tester.enterText(textFieldFinder, '   ');
+      await tester.pump();
+
+      button = tester.widget(buttonFinder);
+      expect(button.enabled, isFalse);
+
+      // Type actual text, button should be enabled
+      await tester.enterText(textFieldFinder, 'Problema real');
+      await tester.pump();
+
+      button = tester.widget(buttonFinder);
+      expect(button.enabled, isTrue);
+
+      // Tapping now works
+      await tester.tap(buttonFinder);
+      await tester.pumpAndSettle();
+      expect(submitted, isTrue);
+    });
+
     testWidgets('adapts to dark mode styling', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
