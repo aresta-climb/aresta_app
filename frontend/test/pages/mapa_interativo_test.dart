@@ -61,7 +61,7 @@ void main() {
     test('Circular Area', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '1',
-        circular: BoundingCircular(x: 100, y: 100, raio: 50),
+        circulo: BoundingCirculo(x: 100, y: 100, raio: 50),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -84,7 +84,7 @@ void main() {
     test('Box Area - No Rotation', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '2',
-        box: BoundingBox(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 0),
+        retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 0),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -106,7 +106,7 @@ void main() {
     test('Box Area - 90 Degree Rotation', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '3',
-        box: BoundingBox(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 9000),
+        retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 9000),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -124,7 +124,7 @@ void main() {
     test('Area Livre', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '4',
-        areaLivre: BoundingAreaLivre(coordenadas: [0, 0, 10, 0, 10, 10, 0, 10]),
+        poligono: BoundingPoligono(coordenadas: [0, 0, 10, 0, 10, 10, 0, 10]),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -141,7 +141,7 @@ void main() {
     test('Area Livre - Minimal Points', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '5',
-        areaLivre: BoundingAreaLivre(coordenadas: [0, 0, 1, 1]),
+        poligono: BoundingPoligono(coordenadas: [0, 0, 1, 1]),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -153,7 +153,7 @@ void main() {
     test('Box Area - Large Angle', () {
       final ponto = Mapa_PontoDeInteresse(
         id: '6',
-        box: BoundingBox(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 36000),
+        retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 60, largura: 40, anguloGrausX100: 36000),
       );
 
       final areaInfo = AreaHelper.getAreaInfo(ponto);
@@ -288,12 +288,12 @@ void main() {
           Mapa_PontoDeInteresse(
             id: 'p1',
             label: 'Ponto 1',
-            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+            retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
           ),
           Mapa_PontoDeInteresse(
             id: 'p2',
             label: 'Ponto 2',
-            circular: BoundingCircular(x: 500, y: 400, raio: 30),
+            circulo: BoundingCirculo(x: 500, y: 400, raio: 30),
           ),
         ],
       );
@@ -532,7 +532,7 @@ void main() {
           Mapa_PontoDeInteresse(
             id: 'shared_id',
             label: 'Shared Marker',
-            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+            retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
           ),
         ],
       );
@@ -601,7 +601,7 @@ void main() {
     testWidgets('Single point marker with duplicate ids should zoom to 2.5 instead of 5.0', (WidgetTester tester) async {
       final pontoDuplicado = Mapa_PontoDeInteresse(
         id: 'dup_id',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapaUnico = Mapa(
         larguraMapa: 100,
@@ -629,11 +629,11 @@ void main() {
     testWidgets('Multiple points without inicio and fim should use bounding box zoom', (WidgetTester tester) async {
       final ponto1 = Mapa_PontoDeInteresse(
         id: 'start_id',
-        circular: BoundingCircular(x: 10, y: 10, raio: 5),
+        circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
       );
       final ponto2 = Mapa_PontoDeInteresse(
         id: 'middle_id',
-        circular: BoundingCircular(x: 90, y: 90, raio: 5), // Far apart
+        circulo: BoundingCirculo(x: 90, y: 90, raio: 5), // Far apart
       );
       final mapaMulti = Mapa(
         larguraMapa: 100,
@@ -679,11 +679,11 @@ void main() {
     testWidgets('Multiple points very close should be capped at reasonable maximum zoom', (WidgetTester tester) async {
       final ponto1 = Mapa_PontoDeInteresse(
         id: 'start_id',
-        circular: BoundingCircular(x: 10, y: 10, raio: 5),
+        circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
       );
       final ponto2 = Mapa_PontoDeInteresse(
         id: 'middle_id',
-        circular: BoundingCircular(x: 11, y: 11, raio: 5), // Very close
+        circulo: BoundingCirculo(x: 11, y: 11, raio: 5), // Very close
       );
       final mapaClose = Mapa(
         larguraMapa: 100,
@@ -712,7 +712,7 @@ void main() {
     testWidgets('Custom camera zoom in reference should override calculated zoom', (WidgetTester tester) async {
       final ponto = Mapa_PontoDeInteresse(
         id: 'p1',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapa = Mapa(
         larguraMapa: 100,
@@ -776,7 +776,7 @@ void main() {
     testWidgets('Tapping on a marker with multiple maps displays "Ver nos mapas (N)" button', (WidgetTester tester) async {
       final ponto = Mapa_PontoDeInteresse(
         id: 'p1',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapa1 = Mapa(
         caminhoImagemMapa: 'map1.webp',
@@ -827,7 +827,7 @@ void main() {
     testWidgets('Setor Card with multiple maps displays "Ver Mapas do Setor (2)" and uses carousel', (WidgetTester tester) async {
       final ponto = Mapa_PontoDeInteresse(
         id: 'p1',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapaGeral = Mapa(
         larguraMapa: 100,
@@ -870,7 +870,7 @@ void main() {
     testWidgets('Grupo Card with multiple maps displays "Ver mapas (2)" and uses carousel', (WidgetTester tester) async {
       final ponto = Mapa_PontoDeInteresse(
         id: 'p1',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapaGeral = Mapa(
         larguraMapa: 100,
@@ -919,7 +919,7 @@ void main() {
 
       final ponto = Mapa_PontoDeInteresse(
         id: 'p1',
-        circular: BoundingCircular(x: 50, y: 50, raio: 5),
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
       );
       final mapaGeral = Mapa(
         larguraMapa: 100,
@@ -1035,7 +1035,7 @@ void main() {
           Mapa_PontoDeInteresse(
             id: 'via_id',
             label: 'Via Label',
-            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+            retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
           ),
         ],
       );
@@ -1098,7 +1098,7 @@ void main() {
           Mapa_PontoDeInteresse(
             id: 'via_id',
             label: 'Via Label',
-            box: BoundingBox(x: 100, y: 100, comprimento: 50, largura: 50),
+            retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
           ),
         ],
       );
