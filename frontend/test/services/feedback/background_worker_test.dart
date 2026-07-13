@@ -156,5 +156,33 @@ void main() {
       verifyNever(() => mockClient.send(any()));
       expect(queueDir.listSync().isEmpty, isTrue);
     });
+
+    test('deleta silenciosamente feedbacks antigos sem feedbackId nos metadados', () async {
+      when(() => mockClient.send(any())).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+      // Cria um feedback velho, onde não havia feedbackId dentro do metadata
+      final id = 'uuid-old-format';
+      final pngFile = File('${queueDir.path}/$id.png');
+      pngFile.writeAsBytesSync([1, 2, 3]);
+
+      final jsonFile = File('${queueDir.path}/$id.json');
+      jsonFile.writeAsStringSync(jsonEncode({
+        'id': id,
+        'description': 'bug velho',
+        'metadata': {'os': 'ios'}, // sem feedbackId
+        'timestamp': DateTime.now().toIso8601String(),
+      }));
+
+      await BackgroundWorker.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+      );
+
+      // Não deve tentar enviar para a nuvem
+      verifyNever(() => mockClient.send(any()));
+      
+      // Deve ter apagado tanto o .json quanto o .png da fila
+      expect(queueDir.listSync().isEmpty, isTrue);
+    });
   });
 }
