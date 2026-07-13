@@ -52,6 +52,16 @@ void main() {
 
       // Verify onSubmit callback was called with correct text
       expect(submittedText, 'Tive um problema no mapa');
+
+      // Verify TextField is wrapped with DefaultTextEditingShortcuts
+      // so backspace and other keys work outside MaterialApp
+      expect(
+        find.ancestor(
+          of: textFieldFinder,
+          matching: find.byType(DefaultTextEditingShortcuts),
+        ),
+        findsWidgets,
+      );
     });
 
     testWidgets('adapts to dark mode styling', (WidgetTester tester) async {

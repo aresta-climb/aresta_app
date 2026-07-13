@@ -48,24 +48,30 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
       TelemetryService.instance.logAcaoFeedback('abrir_feedback');
 
       BetterFeedback.of(context).show((UserFeedback feedback) async {
-        TelemetryService.instance.logAcaoFeedback('enviar_feedback');
-        final metadata = await FeedbackMetadataCollector().collect(context: context);
-        await FeedbackQueueService().enqueueFeedback(
-          description: feedback.text,
-          screenshot: feedback.screenshot,
-          metadata: metadata,
-        );
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Feedback recebido! Muito obrigado por ajudar a melhorar o app.'),
-              backgroundColor: beastHide,
-            ),
-          );
-        }
+        await processFeedbackSubmission(context, feedback);
       });
     },
   );
+}
+
+@visibleForTesting
+Future<void> processFeedbackSubmission(BuildContext context, UserFeedback feedback) async {
+  BetterFeedback.of(context).hide();
+  TelemetryService.instance.logAcaoFeedback('enviar_feedback');
+  final metadata = await FeedbackMetadataCollector().collect(context: context);
+  await FeedbackQueueService().enqueueFeedback(
+    description: feedback.text,
+    screenshot: feedback.screenshot,
+    metadata: metadata,
+  );
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Feedback recebido! Muito obrigado por ajudar a melhorar o app.'),
+        backgroundColor: AppColors.light.beastHide,
+      ),
+    );
+  }
 }
 
 PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions}) {
