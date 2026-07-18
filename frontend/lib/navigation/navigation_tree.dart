@@ -110,6 +110,31 @@ class SettingsNode extends NavNode {
   String toString() => 'SettingsNode';
 }
 
+class ComunidadeNode extends NavNode {
+  const ComunidadeNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant ComunidadeNode matchingAncestor) {
+    return ComunidadeNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'ComunidadeNode';
+}
+
+class MeusCroquisNode extends NavNode {
+  const MeusCroquisNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant MeusCroquisNode matchingAncestor) {
+    return MeusCroquisNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'MeusCroquisNode';
+}
+
+
 /// Nó que representa a tela de detalhes de um Pico específico (PicoView).
 class PicoNode extends PicoContextNode {
   final bool scrollToMapaGeral;
@@ -362,6 +387,8 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is BrowseNode && b is BrowseNode) return true;
     if (a is MapaGlobalNode && b is MapaGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
+    if (a is ComunidadeNode && b is ComunidadeNode) return true;
+    if (a is MeusCroquisNode && b is MeusCroquisNode) return true;
     if (a is MapasCarrosselNode && b is MapasCarrosselNode) {
       return a.cragId == b.cragId && 
              a.mapas.length == b.mapas.length && 

@@ -15,8 +15,6 @@ class FakeDatasetRepository extends DatasetRepository {
 
   @override
   Future<Croqui?> getCroqui(String id) async {
-    // Return null to simulate failure and trigger the SnackBar,
-    // or return a dummy Croqui. Returning null is fine to test the loading indicator.
     await Future.delayed(const Duration(milliseconds: 100));
     return null;
   }
@@ -63,15 +61,14 @@ void main() {
         body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
       ),
     ));
-
-    // Tap the item to expand
-    await tester.tap(find.text('Pico Teste'));
     await tester.pumpAndSettle();
 
-    // Tap the download icon
-    final downloadButton = find.byIcon(Icons.download_rounded);
-    expect(downloadButton, findsOneWidget);
-    await tester.tap(downloadButton);
+    // Tap the card to open the bottom sheet
+    await tester.tap(find.text('PICO TESTE'));
+    await tester.pumpAndSettle();
+
+    // Tap the download button in the bottom sheet
+    await tester.tap(find.text('BAIXAR CROQUI'));
     
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();
@@ -96,15 +93,14 @@ void main() {
         body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
       ),
     ));
-
-    // Tap the item to expand
-    await tester.tap(find.text('Pico Teste'));
     await tester.pumpAndSettle();
 
-    // Tap the download icon
-    final downloadButton = find.byIcon(Icons.download_rounded);
-    expect(downloadButton, findsOneWidget);
-    await tester.tap(downloadButton);
+    // Tap the card to open the bottom sheet
+    await tester.tap(find.text('PICO TESTE'));
+    await tester.pumpAndSettle();
+
+    // Tap the download button in the bottom sheet
+    await tester.tap(find.text('BAIXAR CROQUI'));
     
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();
@@ -117,7 +113,7 @@ void main() {
     mockRepo.activeDataset.value = TopoDataset(
       availablePicos: [
         {'id': 'pico_1', 'nome': 'Pico Alpha', 'url': 'fake1.url'},
-        {'id': 'pico_2', 'nome': 'Pico Beta', 'url': 'fake2.url'},
+        {'id': 'pico_2', 'nome': 'Pico Beta', 'url': 'fake2.url'}
       ],
       downloadedPicos: [],
     );
@@ -127,18 +123,18 @@ void main() {
         body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
       ),
     ));
-
     await tester.pumpAndSettle();
 
-    expect(find.text('Pico Alpha'), findsOneWidget);
-    expect(find.text('Pico Beta'), findsOneWidget);
+    expect(find.text('PICO ALPHA'), findsOneWidget);
+    expect(find.text('PICO BETA'), findsOneWidget);
 
     // Enter search query
     await tester.enterText(find.byType(TextField), 'Alpha');
+    await tester.pump(const Duration(milliseconds: 600)); // wait for debounce
     await tester.pumpAndSettle();
 
-    expect(find.text('Pico Alpha'), findsOneWidget);
-    expect(find.text('Pico Beta'), findsNothing);
+    expect(find.text('PICO ALPHA'), findsOneWidget);
+    expect(find.text('PICO BETA'), findsNothing);
   });
 
   testWidgets('BrowsePage shows CircularProgressIndicator when tapping a downloaded crag', (WidgetTester tester) async {
@@ -147,7 +143,7 @@ void main() {
         {'id': 'pico_1', 'nome': 'Pico Baixado', 'url': 'fake.url', 'isDownloaded': true}
       ],
       downloadedPicos: [
-        {'id': 'pico_1', 'nome': 'Pico Baixado', 'url': 'fake.url', 'isDownloaded': true}
+        {'id': 'pico_1', 'nome': 'Pico Baixado'}
       ],
     );
 
@@ -156,17 +152,12 @@ void main() {
         body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
       ),
     ));
-
     await tester.pumpAndSettle();
 
-    // Tap the item to expand it
-    await tester.tap(find.text('Pico Baixado'));
-    await tester.pumpAndSettle();
-
-    // Now tap the 'ABRIR CROQUI' button
-    await tester.tap(find.text('ABRIR CROQUI'));
+    // Tapping a downloaded crag directly opens it (triggers AppNav.toPico which shows indicator in tests)
+    await tester.tap(find.text('PICO BAIXADO'));
     
-    // Pump just ONE frame to see the dialog
+    // Pump just ONE frame to see the dialog/indicator
     await tester.pump();
 
     // The CircularProgressIndicator should be visible
@@ -174,5 +165,55 @@ void main() {
     
     // Settle to let the dialog close
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('BrowsePage filters sort list by default, alphabetical, and by route count', (WidgetTester tester) async {
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: [
+        {'id': 'pico_c', 'nome': 'C Pico', 'estatisticas': {'totalVias': 10}},
+        {'id': 'pico_a', 'nome': 'A Pico', 'estatisticas': {'totalVias': 5}},
+        {'id': 'pico_b', 'nome': 'B Pico', 'estatisticas': {'totalVias': 50}},
+      ],
+      downloadedPicos: [],
+    );
+    mockRepo.indiceData.value = Indice();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Helper to get vertical position of an item
+    double getPos(String text) => tester.getTopLeft(find.text(text)).dy;
+
+    // Default order should be the original list order: C, A, B
+    expect(getPos('C PICO') < getPos('A PICO'), true, reason: 'Default order: C should be before A');
+    expect(getPos('A PICO') < getPos('B PICO'), true, reason: 'Default order: A should be before B');
+
+    // Open filter menu
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+
+    // Select Alphabetical
+    await tester.tap(find.text('Alfabético (A-Z)'));
+    await tester.pumpAndSettle();
+
+    // Alphabetical order: A, B, C
+    expect(getPos('A PICO') < getPos('B PICO'), true, reason: 'Alpha order: A should be before B');
+    expect(getPos('B PICO') < getPos('C PICO'), true, reason: 'Alpha order: B should be before C');
+
+    // Open filter menu again
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pumpAndSettle();
+
+    // Select Route Count
+    await tester.tap(find.text('Por número de escaladas'));
+    await tester.pumpAndSettle();
+
+    // Route count order (descending): B (50), C (10), A (5)
+    expect(getPos('B PICO') < getPos('C PICO'), true, reason: 'Routes order: B should be before C');
+    expect(getPos('C PICO') < getPos('A PICO'), true, reason: 'Routes order: C should be before A');
   });
 }

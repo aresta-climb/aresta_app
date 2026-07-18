@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
+import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/pages/settings.dart';
+import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/setor.dart';
@@ -469,15 +471,18 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         treeController.navigateTo(const HomeNode());
       }
     } else if (index == 1) {
-      if (treeController.currentNode is! SettingsNode) {
-        treeController.navigateTo(SettingsNode(const HomeNode()));
-      }
-    } else if (index == 2) {
       if (treeController.currentNode is! BrowseNode) {
         treeController.navigateTo(BrowseNode(const HomeNode()));
       }
+    } else if (index == 2) {
+      if (treeController.currentNode is! MeusCroquisNode) {
+        treeController.navigateTo(MeusCroquisNode(const HomeNode()));
+      }
+    } else if (index == 3) {
+      if (treeController.currentNode is! ComunidadeNode) {
+        treeController.navigateTo(ComunidadeNode(const HomeNode()));
+      }
     }
-    // index == 3 (GPS) is handled via AppNav.toGPS from the secondary bottom nav
   }
 
   /// Constrói o alicerce principal do aplicativo (Tabs).
@@ -485,8 +490,9 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   /// (scroll) e navegação entre abas usando um `IndexedStack`.
   Widget _buildTabsWidget(NavNode node) {
     int tabIndex = 0;
-    if (node is SettingsNode) tabIndex = 1;
-    if (node is BrowseNode) tabIndex = 2;
+    if (node is BrowseNode) tabIndex = 1;
+    if (node is MeusCroquisNode) tabIndex = 2; 
+    if (node is ComunidadeNode) tabIndex = 3;
 
     return Scaffold(
       body: IndexedStack(
@@ -497,11 +503,12 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             syncService: widget.syncService,
             onSwitchTab: _onItemTapped,
           ),
-          SettingsPage(datasetRepo: widget.datasetRepo),
           BrowsePage(
             datasetRepo: widget.datasetRepo,
             syncService: widget.syncService,
           ),
+          MeusCroquisPage(datasetRepo: widget.datasetRepo, syncService: widget.syncService),
+          const ComunidadePage(), // Pass dependencies if needed in the future
         ],
       ),
       bottomNavigationBar: buildPrimaryBottomNav(
@@ -637,6 +644,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       return GPSPage(datasetRepo: widget.datasetRepo);
     }
 
+    if (node is SettingsNode) {
+      return SettingsPage(datasetRepo: widget.datasetRepo);
+    }
+
     return const Center(child: Text('Unknown Node'));
   }
 
@@ -648,13 +659,13 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     // 2. A página base é estritamente a nossa aba (Home, Settings, Browse). 
     // Como ela contém um IndexedStack, evitamos desmontá-la para preservar scrolls infinitos e abas de usuário.
     final baseNode = fullPath.lastWhere(
-      (n) => n is HomeNode || n is SettingsNode || n is BrowseNode, 
+      (n) => n is HomeNode || n is MeusCroquisNode || n is BrowseNode || n is ComunidadeNode, 
       orElse: () => const HomeNode()
     );
 
     // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
     // Agora INCLUÍMOS o TextNode, pois ele mapeia para um ModalBottomSheetPage!
-    final pushedNodes = fullPath.where((n) => !(n is HomeNode || n is SettingsNode || n is BrowseNode)).toList();
+    final pushedNodes = fullPath.where((n) => !(n is HomeNode || n is MeusCroquisNode || n is BrowseNode || n is ComunidadeNode)).toList();
 
     // 4. ... e magicamente empilhados por cima da aba base de forma declarativa!
     final pages = <Page>[

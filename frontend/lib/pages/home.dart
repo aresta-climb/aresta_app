@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import '../view_functions/home_functions.dart';
-import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
+import '../theme/app_colors.dart';
 
-/// A página inicial do aplicativo.
-/// 
-/// Ela exibe um painel (dashboard) de picos baixados recentemente e fornece
-/// acesso a todos os guias disponíveis.
+/// A página inicial do aplicativo (nova versão).
 class HomePage extends StatelessWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -23,54 +20,9 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      // O AppBar agora contém apenas o título e o botão de sincronização manual
-      appBar: buildCommonAppBar(context, 
-        'Home', 
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: () async {
-              if (await syncService.isNetworkDisabled()) {
-                if (context.mounted) {
-                  showDeprecatedAppVersionSnackBar(context);
-                }
-                return;
-              }
-              final failedPicos = await syncService.syncIndex(auto: false);
-              if (failedPicos.isNotEmpty && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Falha ao atualizar: ${failedPicos.join(', ')}. Verifique a conexão.'),
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                );
-              }
-            },
-            tooltip: 'Sincronizar Catálogo',
-          ),
-        ],
-      ),
-      
-      // ValueListenableBuilder escuta as alterações no activeDataset.
-      body: ValueListenableBuilder<TopoDataset?>(
-        valueListenable: datasetRepo.activeDataset,
-        builder: (context, dataset, child) {
-          if (dataset == null) {
-            return Center(
-              child: CircularProgressIndicator(color: beastHide),
-            );
-          }
-
-          return buildHomeBody(
-            context,
-            datasetRepo,
-            syncService,
-            dataset.downloadedPicos,
-            syncService.downloadingCrags,
-            onAddCrag: () => onSwitchTab(2),
-          );
-        },
+      backgroundColor: context.colors.homeBg,
+      body: SafeArea(
+        child: buildHomeBody(context, onSwitchTab),
       ),
     );
   }
