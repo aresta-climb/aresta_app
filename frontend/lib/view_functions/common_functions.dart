@@ -99,37 +99,60 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
 
 /// Um widget de barra de pesquisa que lida com filtragem em tempo real
 Widget buildSearchBar({
-    required ValueChanged<String> onChanged,
-    String hintText = 'Pesquisar...',
-  }) {
-    return Builder(
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bgColor = isDark ? fishBone : obsidianBrown;
-        final textColor = isDark ? nobleBlack : fishBone;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-          child: TextField(
-            onChanged: onChanged,
-            style: TextStyle(color: textColor),
-            cursorColor: textColor,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(color: textColor.withValues(alpha: 0.6)),
-              prefixIcon: Icon(Icons.search, color: textColor),
-              filled: true,
-              fillColor: bgColor,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide.none,
+  required ValueChanged<String> onChanged,
+  String hintText = 'Buscar picos para escalar...',
+  VoidCallback? onFilterPressed,
+}) {
+  return Builder(
+    builder: (context) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: TextField(
+                  onChanged: onChanged,
+                  style: TextStyle(color: context.colors.textDarkBlue),
+                  cursorColor: context.colors.textDarkBlue,
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: TextStyle(
+                      color: context.colors.textGrey,
+                      fontSize: 14,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    border: InputBorder.none,
+                  ),
+                ),
               ),
             ),
-          ),
-        );
-      }
-    );
-  }
+            const SizedBox(width: 12),
+            Container(
+              height: 52,
+              width: 52,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.tune_rounded, // Filter icon similar to mockup
+                  color: const Color(0xFFC05244), // Red matching mock
+                ),
+                onPressed: onFilterPressed ?? () {},
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  );
+}
 
 /// Normaliza uma string de pesquisa convertendo para minúsculas e removendo acentos/diacríticos.
 String normalizeSearchString(String value) {
@@ -208,39 +231,47 @@ bool isBoulderArea(List<Escalada> escaladas) {
 }
 
 /// A barra de navegação inferior principal usada no MainNavigationWrapper raiz.
-/// Ela renderiza as abas para alternar entre Início (Home), Configurações e Explorar.
 Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(int) onItemTapped) {
   return Theme(
     data: Theme.of(context).copyWith(
-      canvasColor: nobleBlack,
+      canvasColor: context.colors.homeBg,
     ),
     child: BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
-          icon: Icon(Icons.home_rounded),
-          label: 'Home',
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'INÍCIO',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings_rounded),
-          label: 'Configurações',
+          icon: Icon(Icons.explore_outlined),
+          activeIcon: Icon(Icons.explore_rounded),
+          label: 'EXPLORAR',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.explore_rounded),
-          label: 'Explorar',
+          icon: Icon(Icons.bookmark_outline),
+          activeIcon: Icon(Icons.bookmark_rounded),
+          label: 'MEUS CROQUIS',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline),
+          activeIcon: Icon(Icons.people_alt_rounded),
+          label: 'COMUNIDADE',
         ),
       ],
       currentIndex: selectedIndex,
-      selectedItemColor: beastHide,
-      unselectedItemColor: fishBone.withValues(alpha: 0.5),
-      backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+      selectedItemColor: AppColors.brandColor,
+      unselectedItemColor: context.colors.textGrey,
+      backgroundColor: context.colors.homeBg,
       onTap: (index) {
-        final abas = ['home', 'configuracoes', 'explorar'];
+        final abas = ['home', 'explorar', 'meus_croquis', 'comunidade'];
         final aba = index < abas.length ? abas[index] : 'desconhecida';
         TelemetryService.instance.logNavegarAba(aba);
         onItemTapped(index);
       },
       type: BottomNavigationBarType.fixed,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
+      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.5),
     ),
   );
 }

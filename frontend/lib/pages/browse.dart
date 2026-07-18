@@ -7,9 +7,11 @@ import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/http/sync_service.dart';
-
 import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../theme/app_colors.dart';
+
+enum SortOrder { padrao, alfabetico, escaladas }
 
 /// Uma página que permite aos usuários explorar e pesquisar picos disponíveis.
 ///
@@ -33,6 +35,7 @@ class _BrowsePageState extends State<BrowsePage> {
   /// O texto atual inserido na barra de pesquisa.
   String _searchQuery = '';
   Timer? _debounceTimer;
+  SortOrder _sortOrder = SortOrder.padrao;
 
   @override
   void initState() {
@@ -62,7 +65,9 @@ class _BrowsePageState extends State<BrowsePage> {
     final indice = widget.datasetRepo.indiceData.value;
     if (indice == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
           const SnackBar(
             content: Text('Erro: Índice não carregado. Tente novamente.'),
           ),
@@ -74,7 +79,9 @@ class _BrowsePageState extends State<BrowsePage> {
     final resumos = indice.croquis.where((r) => r.id == id).toList();
     if (resumos.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
           const SnackBar(
             content: Text('Pico inédito ou não encontrado no índice local.'),
           ),
@@ -84,15 +91,18 @@ class _BrowsePageState extends State<BrowsePage> {
     }
     final resumo = resumos.first;
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
       SnackBar(content: Text('Baixando $name...')),
     );
 
     final success = await widget.syncService.downloadCrag(resumo);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
         SnackBar(
           content: Text(success ? '$name baixado' : 'Falha ao baixar $name'),
           backgroundColor: success ? Colors.green : Colors.red,
@@ -106,13 +116,13 @@ class _BrowsePageState extends State<BrowsePage> {
     final EditorDeCroqui configService = widget.datasetRepo.editorDeCroqui;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, 'Explorar Locais'),
-
+      backgroundColor: context.colors.homeBg, // Use new theme background
+      
       // ValueListenableBuilder reconstrói automaticamente esta parte da interface
       // sempre que o conjunto de dados no repositório muda (após a busca inicial).
-      body: ValueListenableBuilder<TopoDataset?>(
-        valueListenable: widget.datasetRepo.activeDataset,
+      body: SafeArea(
+        child: ValueListenableBuilder<TopoDataset?>(
+          valueListenable: widget.datasetRepo.activeDataset,
         builder: (context, dataset, child) {
           // Enquanto o repositório ainda está inicializando/buscando, mostra um spinner.
           if (dataset == null) {
@@ -123,7 +133,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
           List<Map<String, dynamic>> filteredCrags;
           if (_searchQuery.isEmpty) {
-            filteredCrags = allCrags;
+            filteredCrags = allCrags.toList();
           } else {
             final fuse = Fuzzy<Map<String, dynamic>>(
               allCrags,
@@ -148,6 +158,18 @@ class _BrowsePageState extends State<BrowsePage> {
 
             final queryLower = normalizeSearchString(_searchQuery);
             filteredCrags = fuse.search(queryLower).map((r) => r.item).toList();
+          }
+
+          if (_sortOrder == SortOrder.alfabetico) {
+            filteredCrags.sort((a, b) => safeString(a['nome']).compareTo(safeString(b['nome'])));
+          } else if (_sortOrder == SortOrder.escaladas) {
+            filteredCrags.sort((a, b) {
+              final statsA = a['estatisticas'] ?? {};
+              final statsB = b['estatisticas'] ?? {};
+              final viasA = (statsA['totalVias'] as num?)?.toInt() ?? 0;
+              final viasB = (statsB['totalVias'] as num?)?.toInt() ?? 0;
+              return viasB.compareTo(viasA);
+            });
           }
 
           // Verifica se o modo editor está ativo para passar as funções de importação
@@ -201,12 +223,93 @@ class _BrowsePageState extends State<BrowsePage> {
                       source: 'explorar',
                     ),
                     onAddExperimental: addCallback,
+                    onFilterPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        builder: (context) {
+                          return SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Text(
+                                      'ORDENAÇÃO DE PICOS',
+                                      style: TextStyle(
+                                        color: const Color(0xFFC05244),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  const Divider(),
+                                  _buildSortOption(
+                                    context,
+                                    'Padrão',
+                                    SortOrder.padrao,
+                                  ),
+                                  _buildSortOption(
+                                    context,
+                                    'Alfabético (A-Z)',
+                                    SortOrder.alfabetico,
+                                  ),
+                                  _buildSortOption(
+                                    context,
+                                    'Por número de escaladas',
+                                    SortOrder.escaladas,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   );
                 },
               );
             },
           );
         },
+      ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(BuildContext context, String title, SortOrder order) {
+    final isSelected = _sortOrder == order;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _sortOrder = order;
+        });
+        Navigator.pop(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFFC05244) : context.colors.textDarkBlue,
+                fontSize: 16,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check, color: Color(0xFFC05244), size: 20),
+          ],
+        ),
       ),
     );
   }
