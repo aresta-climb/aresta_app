@@ -39,7 +39,7 @@ Widget buildActionCard(
                 Text(
                   title,
                   style: TextStyle(
-                    color: context.colors.textDarkBlue,
+                    color: context.colors.slateBlue,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
@@ -49,7 +49,7 @@ Widget buildActionCard(
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: context.colors.textGrey,
+                    color: context.colors.ashGrey,
                     fontSize: 12,
                   ),
                 ),
@@ -105,7 +105,7 @@ Widget buildTermsCard(BuildContext context) {
                 Text(
                   'Termos de Uso e Privacidade',
                   style: TextStyle(
-                    color: context.colors.textDarkBlue,
+                    color: context.colors.slateBlue,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -114,80 +114,16 @@ Widget buildTermsCard(BuildContext context) {
                 Text(
                   'Controle voluntário de riscos e diretrizes de privacidade offline.',
                   style: TextStyle(
-                    color: context.colors.textDarkBlue.withValues(alpha: 0.7),
+                    color: context.colors.slateBlue.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: context.colors.textDarkBlue.withValues(alpha: 0.5)),
+          Icon(Icons.chevron_right, color: context.colors.slateBlue.withValues(alpha: 0.5)),
         ],
       ),
-    ),
-  );
-}
-
-Widget buildAvisosCard(BuildContext context) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'AVISOS',
-          style: TextStyle(
-            color: context.colors.textDarkBlue,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Divider(color: Colors.grey.withValues(alpha: 0.2), height: 1),
-        const SizedBox(height: 16),
-        Text(
-          'Mutirão de Limpeza no Cume da Pedra Grande',
-          style: TextStyle(
-            color: context.colors.textDarkBlue,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Traga sacos de lixo de alta resistência e luvas de proteção. Encontro marcado para as 7h30 no estacionamento principal das falésias de Igarapé para fazermos a limpeza coletiva.',
-          style: TextStyle(
-            color: context.colors.textDarkBlue.withValues(alpha: 0.7),
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Divider(color: Colors.grey.withValues(alpha: 0.2), height: 1),
-        const SizedBox(height: 16),
-        Text(
-          'Re-chapeamento do setor G3 concluído',
-          style: TextStyle(
-            color: context.colors.textDarkBlue,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'A associação local substituiu todas as paradas antigas por argolas de inox duplicadas novíssimas. Setor totalmente liberado e seguro para as cadenas.',
-          style: TextStyle(
-            color: context.colors.textDarkBlue.withValues(alpha: 0.7),
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
-      ],
     ),
   );
 }
@@ -205,16 +141,16 @@ Widget buildFooter(BuildContext context) {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: context.colors.cardOlive,
+          color: context.colors.darkPine,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: context.colors.borderGrey),
+          border: Border.all(color: context.colors.graniteEdge),
         ),
         child: Column(
           children: [
             Text(
               'Aresta Climb v$version',
               style: TextStyle(
-                color: context.colors.textOlive,
+                color: context.colors.dryMoss,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -224,7 +160,7 @@ Widget buildFooter(BuildContext context) {
               'Uma iniciativa independente pelo montanhismo conservador e livre de Minas Gerais.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: context.colors.textGrey,
+                color: context.colors.ashGrey,
                 fontSize: 12,
                 height: 1.4,
               ),

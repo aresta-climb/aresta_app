@@ -3,6 +3,7 @@ import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/meus_croquis_functions.dart';
+import '../view_functions/common_functions.dart';
 
 class MeusCroquisPage extends StatelessWidget {
   final DatasetRepository datasetRepo;
@@ -17,35 +18,42 @@ class MeusCroquisPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.homeBg,
+      backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'MEUS CROQUIS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'MEUS CROQUIS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ARMAZENAMENTO OFFLINE',
+                        style: TextStyle(
+                          color: context.colors.dryMoss,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'ARMAZENAMENTO OFFLINE',
-                    style: TextStyle(
-                      color: context.colors.textOlive,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
+                  buildFeedbackButton(context, color: context.colors.ashGrey),
                 ],
               ),
             ),
@@ -63,7 +71,7 @@ class MeusCroquisPage extends StatelessWidget {
                     return Center(
                       child: Text(
                         'Nenhum croqui salvo offline ainda.',
-                        style: TextStyle(color: context.colors.textGrey),
+                        style: TextStyle(color: context.colors.ashGrey),
                       ),
                     );
                   }

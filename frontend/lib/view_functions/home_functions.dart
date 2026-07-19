@@ -6,6 +6,7 @@ import '../navigation/navigation_tree.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
+import '../view_functions/common_functions.dart';
 
 /// Navega para a página de detalhes de um pico selecionado.
 /// (Mantido para compatibilidade com browse.dart e mapa_global.dart)
@@ -73,7 +74,7 @@ Widget _buildHeader(BuildContext context) {
         Row(
           children: [
             // TODO: Fake Logo (Placeholder for the real asset)
-            Icon(Icons.terrain, color: context.colors.tagTextOrange, size: 28),
+            Icon(Icons.terrain, color: context.colors.rustIron, size: 28),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -95,15 +96,16 @@ Widget _buildHeader(BuildContext context) {
                     ),
                     TextSpan(
                       text: 'A',
-                      style: TextStyle(color: context.colors.tagTextOrange),
+                      style: TextStyle(color: context.colors.rustIron),
                     ),
                   ],
                 ),
               ),
             ),
             const Spacer(),
+            buildFeedbackButton(context, color: context.colors.ashGrey),
             IconButton(
-              icon: Icon(Icons.settings, color: context.colors.textGrey),
+              icon: Icon(Icons.settings, color: context.colors.ashGrey),
               onPressed: () {
                 TreeNavigationWrapper.of(context).treeController.navigateTo(SettingsNode(const HomeNode()));
               },
@@ -114,7 +116,7 @@ Widget _buildHeader(BuildContext context) {
         Text(
           'BEM VINDO!',
           style: TextStyle(
-            color: context.colors.textOlive,
+            color: context.colors.dryMoss,
             fontSize: 14,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.2,
@@ -124,7 +126,7 @@ Widget _buildHeader(BuildContext context) {
         Text(
           'O guia definitivo para facilitar a sua escalada. Explore setores, vias e boulders locais e salve os croquis para acessar totalmente offline.',
           style: TextStyle(
-            color: context.colors.textGrey,
+            color: context.colors.ashGrey,
             fontSize: 15,
             height: 1.4,
           ),
@@ -145,19 +147,19 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: context.colors.searchBg,
+          color: context.colors.caveShadow,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: context.colors.borderGrey),
+          border: Border.all(color: context.colors.graniteEdge),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Icon(Icons.search, color: context.colors.textGrey, size: 20),
+            Icon(Icons.search, color: context.colors.ashGrey, size: 20),
             const SizedBox(width: 12),
             Text(
               'Buscar picos para escalar...',
               style: TextStyle(
-                color: context.colors.textGrey,
+                color: context.colors.ashGrey,
                 fontSize: 15,
               ),
             ),
@@ -293,7 +295,7 @@ Widget _buildGuiaRapido(BuildContext context) {
     child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: context.colors.cardOffWhite,
+        color: context.colors.chalkWhite,
         borderRadius: BorderRadius.circular(32),
       ),
       padding: const EdgeInsets.all(32),
@@ -303,13 +305,13 @@ Widget _buildGuiaRapido(BuildContext context) {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: context.colors.tagBgOrange,
+              color: context.colors.clayDust,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               'COMO FUNCIONA',
               style: TextStyle(
-                color: context.colors.tagTextOrange,
+                color: context.colors.rustIron,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -320,7 +322,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           Text(
             'GUIA RÁPIDO DO ARESTA',
             style: TextStyle(
-              color: context.colors.textDarkBlue,
+              color: context.colors.slateBlue,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -329,7 +331,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           Text(
             'Quatro passos pra você sair do app direto pro paredão.',
             style: TextStyle(
-              color: context.colors.textDarkBlue.withValues(alpha: 0.7),
+              color: context.colors.slateBlue.withValues(alpha: 0.7),
               fontSize: 14,
               height: 1.4,
             ),
@@ -442,7 +444,7 @@ Widget _buildStepItem(
                 Text(
                   title,
                   style: TextStyle(
-                    color: context.colors.textDarkBlue,
+                    color: context.colors.slateBlue,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -451,7 +453,7 @@ Widget _buildStepItem(
                 Text(
                   desc,
                   style: TextStyle(
-                    color: context.colors.textDarkBlue.withValues(alpha: 0.6),
+                    color: context.colors.slateBlue.withValues(alpha: 0.6),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -471,9 +473,9 @@ Widget _buildConservacao(BuildContext context) {
     child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: context.colors.cardOlive,
+        color: context.colors.darkPine,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.colors.borderGrey),
+        border: Border.all(color: context.colors.graniteEdge),
       ),
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -485,7 +487,7 @@ Widget _buildConservacao(BuildContext context) {
               color: Colors.white.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.shield_outlined, color: context.colors.iconOlive),
+            child: Icon(Icons.shield_outlined, color: context.colors.fernGreen),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -495,7 +497,7 @@ Widget _buildConservacao(BuildContext context) {
                 Text(
                   'CONSERVAÇÃO E ACESSO',
                   style: TextStyle(
-                    color: context.colors.iconOlive,
+                    color: context.colors.fernGreen,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -504,7 +506,7 @@ Widget _buildConservacao(BuildContext context) {
                 Text(
                   'O acesso aos picos depende de cuidado, ética e envolvimento com as comunidades locais. Cada local tem suas regras, seus guardiões e sua história. Escalar com responsabilidade é garantir que os picos continuem abertos.',
                   style: TextStyle(
-                    color: context.colors.iconOlive.withValues(alpha: 0.7),
+                    color: context.colors.fernGreen.withValues(alpha: 0.7),
                     fontSize: 13,
                     height: 1.5,
                   ),

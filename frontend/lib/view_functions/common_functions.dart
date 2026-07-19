@@ -102,6 +102,7 @@ Widget buildSearchBar({
   required ValueChanged<String> onChanged,
   String hintText = 'Buscar picos para escalar...',
   VoidCallback? onFilterPressed,
+  bool showFeedback = false,
 }) {
   return Builder(
     builder: (context) {
@@ -117,12 +118,12 @@ Widget buildSearchBar({
                 ),
                 child: TextField(
                   onChanged: onChanged,
-                  style: TextStyle(color: context.colors.textDarkBlue),
-                  cursorColor: context.colors.textDarkBlue,
+                  style: TextStyle(color: context.colors.slateBlue),
+                  cursorColor: context.colors.slateBlue,
                   decoration: InputDecoration(
                     hintText: hintText,
                     hintStyle: TextStyle(
-                      color: context.colors.textGrey,
+                      color: context.colors.ashGrey,
                       fontSize: 14,
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -147,6 +148,10 @@ Widget buildSearchBar({
                 onPressed: onFilterPressed ?? () {},
               ),
             ),
+            if (showFeedback) ...[
+              const SizedBox(width: 4),
+              buildFeedbackButton(context, color: context.colors.ashGrey),
+            ],
           ],
         ),
       );
@@ -234,7 +239,7 @@ bool isBoulderArea(List<Escalada> escaladas) {
 Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(int) onItemTapped) {
   return Theme(
     data: Theme.of(context).copyWith(
-      canvasColor: context.colors.homeBg,
+      canvasColor: context.colors.deepBasalt,
     ),
     child: BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
@@ -261,8 +266,8 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
       ],
       currentIndex: selectedIndex,
       selectedItemColor: AppColors.brandColor,
-      unselectedItemColor: context.colors.textGrey,
-      backgroundColor: context.colors.homeBg,
+      unselectedItemColor: context.colors.ashGrey,
+      backgroundColor: context.colors.deepBasalt,
       onTap: (index) {
         final abas = ['home', 'explorar', 'meus_croquis', 'comunidade'];
         final aba = index < abas.length ? abas[index] : 'desconhecida';

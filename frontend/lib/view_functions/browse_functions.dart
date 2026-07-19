@@ -30,6 +30,7 @@ Widget buildBrowseBody(
       buildSearchBar(
         onChanged: onSearchChanged,
         onFilterPressed: onFilterPressed,
+        showFeedback: true,
       ),
       Expanded(
         child: _buildCragList(
@@ -65,7 +66,7 @@ Widget _buildCragList(
             Text(
               'GRADE DE CROQUIS',
               style: TextStyle(
-                color: context.colors.textOlive,
+                color: context.colors.dryMoss,
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.5,
@@ -118,7 +119,7 @@ Widget _buildCragList(
               padding: EdgeInsets.only(top: 40.0),
               child: Text(
                 'Nenhum pico encontrado.',
-                style: TextStyle(color: context.colors.textGrey, fontSize: 16),
+                style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
               ),
             ),
           )
@@ -277,7 +278,7 @@ class _CragCard extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: context.colors.cardOlive,
+          color: context.colors.darkPine,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
@@ -486,7 +487,7 @@ void _showDownloadBottomSheet(
 ) {
   showModalBottomSheet(
     context: context,
-    backgroundColor: context.colors.homeBg,
+    backgroundColor: context.colors.deepBasalt,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -504,7 +505,7 @@ void _showDownloadBottomSheet(
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: context.colors.borderGrey,
+                    color: context.colors.graniteEdge,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -512,8 +513,8 @@ void _showDownloadBottomSheet(
               const SizedBox(height: 24),
               Text(
                 safeString(crag['nome'], fallback: 'Pico'),
-                style: TextStyle(
-                  color: context.colors.textDarkBlue,
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
@@ -522,7 +523,7 @@ void _showDownloadBottomSheet(
               Text(
                 safeString(crag['local'], fallback: 'Local Desconhecido'),
                 style: TextStyle(
-                  color: context.colors.textGrey,
+                  color: context.colors.ashGrey,
                   fontSize: 14,
                 ),
               ),
@@ -531,7 +532,7 @@ void _showDownloadBottomSheet(
                 Text(
                   crag['descricao'],
                   style: TextStyle(
-                    color: context.colors.textDarkBlue.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -551,7 +552,7 @@ void _showDownloadBottomSheet(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
-                        color: context.colors.cardOlive,
+                        color: context.colors.darkPine,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -559,7 +560,7 @@ void _showDownloadBottomSheet(
                           Text(
                             'BAIXANDO...',
                             style: TextStyle(
-                              color: context.colors.textOlive,
+                              color: context.colors.dryMoss,
                               fontWeight: FontWeight.w900,
                               fontSize: 12,
                               letterSpacing: 1.1,
@@ -570,8 +571,8 @@ void _showDownloadBottomSheet(
                             padding: const EdgeInsets.symmetric(horizontal: 24.0),
                             child: LinearProgressIndicator(
                               value: progress,
-                              backgroundColor: context.colors.borderGrey,
-                              color: context.colors.textOlive,
+                              backgroundColor: context.colors.graniteEdge,
+                              color: context.colors.dryMoss,
                             ),
                           ),
                         ],

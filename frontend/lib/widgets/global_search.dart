@@ -305,7 +305,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final searchBgColor = isDark ? fishBone : obsidianBrown;
+    final caveShadowColor = isDark ? fishBone : obsidianBrown;
     final searchTextColor = isDark ? nobleBlack : fishBone;
 
     return Padding(
@@ -317,7 +317,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
             duration: const Duration(milliseconds: 300),
             height: 50,
             decoration: BoxDecoration(
-              color: searchBgColor,
+              color: caveShadowColor,
               borderRadius: BorderRadius.circular(15),
             ),
             child: Row(
