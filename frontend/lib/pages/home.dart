@@ -20,7 +20,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.homeBg,
+      backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
         child: buildHomeBody(context, onSwitchTab),
       ),

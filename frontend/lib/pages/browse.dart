@@ -116,7 +116,7 @@ class _BrowsePageState extends State<BrowsePage> {
     final EditorDeCroqui configService = widget.datasetRepo.editorDeCroqui;
 
     return Scaffold(
-      backgroundColor: context.colors.homeBg, // Use new theme background
+      backgroundColor: context.colors.deepBasalt, // Use new theme background
       
       // ValueListenableBuilder reconstrói automaticamente esta parte da interface
       // sempre que o conjunto de dados no repositório muda (após a busca inicial).
@@ -301,7 +301,7 @@ class _BrowsePageState extends State<BrowsePage> {
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? const Color(0xFFC05244) : context.colors.textDarkBlue,
+                color: isSelected ? const Color(0xFFC05244) : context.colors.slateBlue,
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),

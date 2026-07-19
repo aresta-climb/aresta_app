@@ -41,7 +41,7 @@ class OfflineCragCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: context.colors.searchBg,
+        color: context.colors.caveShadow,
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(16),
@@ -56,7 +56,7 @@ class OfflineCragCard extends StatelessWidget {
                 child: Container(
                   width: 60,
                   height: 60,
-                  color: context.colors.borderGrey,
+                  color: context.colors.graniteEdge,
                   child: FutureBuilder<Directory>(
                     future: getApplicationDocumentsDirectory(),
                     builder: (context, snapshot) {
@@ -66,11 +66,11 @@ class OfflineCragCard extends StatelessWidget {
                           return Image.file(
                             file,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(Icons.terrain, color: context.colors.textGrey),
+                            errorBuilder: (_, __, ___) => Icon(Icons.terrain, color: context.colors.ashGrey),
                           );
                         }
                       }
-                      return Icon(Icons.terrain, color: context.colors.textGrey);
+                      return Icon(Icons.terrain, color: context.colors.ashGrey);
                     },
                   ),
                 ),
@@ -93,7 +93,7 @@ class OfflineCragCard extends StatelessWidget {
                     Text(
                       local,
                       style: TextStyle(
-                        color: context.colors.textOlive,
+                        color: context.colors.dryMoss,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -103,7 +103,7 @@ class OfflineCragCard extends StatelessWidget {
                     Text(
                       statsText,
                       style: TextStyle(
-                        color: context.colors.textGrey,
+                        color: context.colors.ashGrey,
                         fontSize: 12,
                       ),
                     ),
@@ -163,7 +163,7 @@ class OfflineCragCard extends StatelessWidget {
                               ? 'Tudo atualizado!' 
                               : 'Concluído com falhas: ${failed.join(', ')}'
                           ),
-                          backgroundColor: failed.isEmpty ? context.colors.textOlive : Theme.of(context).colorScheme.error,
+                          backgroundColor: failed.isEmpty ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
                         ),
                       );
                   }
@@ -188,11 +188,11 @@ class OfflineCragCard extends StatelessWidget {
       height: 48,
       decoration: BoxDecoration(
         color: Colors.transparent,
-        border: Border.all(color: context.colors.borderGrey),
+        border: Border.all(color: context.colors.graniteEdge),
         borderRadius: BorderRadius.circular(12),
       ),
       child: IconButton(
-        icon: Icon(icon, color: context.colors.textGrey, size: 20),
+        icon: Icon(icon, color: context.colors.ashGrey, size: 20),
         onPressed: onPressed,
       ),
     );
@@ -202,13 +202,13 @@ class OfflineCragCard extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.searchBg,
+        backgroundColor: context.colors.caveShadow,
         title: const Text('Excluir?', style: TextStyle(color: Colors.white)),
-        content: Text('Deseja excluir o guia de $nome?', style: TextStyle(color: context.colors.textGrey)),
+        content: Text('Deseja excluir o guia de $nome?', style: TextStyle(color: context.colors.ashGrey)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('CANCELAR', style: TextStyle(color: context.colors.textGrey)),
+            child: Text('CANCELAR', style: TextStyle(color: context.colors.ashGrey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -226,7 +226,7 @@ class OfflineCragCard extends StatelessWidget {
           ..showSnackBar(
           SnackBar(
             content: Text(success ? 'Guia excluído.' : 'Erro ao excluir guia.'),
-            backgroundColor: success ? context.colors.textOlive : Theme.of(context).colorScheme.error,
+            backgroundColor: success ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
           ),
         );
       }

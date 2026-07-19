@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
+import '../view_functions/common_functions.dart';
 
 class ComunidadePage extends StatelessWidget {
   const ComunidadePage({super.key});
@@ -8,7 +9,7 @@ class ComunidadePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.homeBg,
+      backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -16,14 +17,22 @@ class ComunidadePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'MÍDIAS, APOIOS E INTERATIVIDADES',
-                style: TextStyle(
-                  color: context.colors.textOlive,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'MÍDIAS, APOIOS E INTERATIVIDADES',
+                      style: TextStyle(
+                        color: context.colors.dryMoss,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  buildFeedbackButton(context, color: context.colors.ashGrey),
+                ],
               ),
               const SizedBox(height: 24),
               buildActionCard(
@@ -54,8 +63,6 @@ class ComunidadePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               buildTermsCard(context),
-              const SizedBox(height: 32),
-              buildAvisosCard(context),
               const SizedBox(height: 32),
               buildFooter(context),
             ],

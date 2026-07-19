@@ -12,18 +12,18 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color clayEarth;
   final Color weatheredIron;
 
-  // Novas cores para a Home Page
-  final Color homeBg;
-  final Color textOlive;
-  final Color textGrey;
-  final Color cardOffWhite;
-  final Color textDarkBlue;
-  final Color tagBgOrange;
-  final Color tagTextOrange;
-  final Color cardOlive;
-  final Color iconOlive;
-  final Color borderGrey;
-  final Color searchBg;
+  // Novas cores
+  final Color deepBasalt;
+  final Color dryMoss;
+  final Color ashGrey;
+  final Color chalkWhite;
+  final Color slateBlue;
+  final Color clayDust;
+  final Color rustIron;
+  final Color darkPine;
+  final Color fernGreen;
+  final Color graniteEdge;
+  final Color caveShadow;
 
   const AppColors({
     required this.nobleBlack,
@@ -35,17 +35,17 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.mossRock,
     required this.clayEarth,
     required this.weatheredIron,
-    this.homeBg = const Color(0xFF161616),
-    this.textOlive = const Color(0xFF7B8B6F),
-    this.textGrey = const Color(0xFF8E959D),
-    this.cardOffWhite = const Color(0xFFF4F3ED),
-    this.textDarkBlue = const Color(0xFF1B2430),
-    this.tagBgOrange = const Color(0xFFFCECE6),
-    this.tagTextOrange = const Color(0xFFE27D60),
-    this.cardOlive = const Color(0xFF2C332A),
-    this.iconOlive = const Color(0xFF7B8B6F),
-    this.borderGrey = const Color(0xFF2A2A2A),
-    this.searchBg = const Color(0xFF1F1F1F),
+    this.deepBasalt = const Color(0xFF161616),
+    this.dryMoss = const Color(0xFF7B8B6F),
+    this.ashGrey = const Color(0xFF8E959D),
+    this.chalkWhite = const Color(0xFFF4F3ED),
+    this.slateBlue = const Color(0xFF1B2430),
+    this.clayDust = const Color(0xFFFCECE6),
+    this.rustIron = const Color(0xFFE27D60),
+    this.darkPine = const Color(0xFF2C332A),
+    this.fernGreen = const Color(0xFF7B8B6F),
+    this.graniteEdge = const Color(0xFF2A2A2A),
+    this.caveShadow = const Color(0xFF1F1F1F),
   });
 
   @override
@@ -59,17 +59,17 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? mossRock,
     Color? clayEarth,
     Color? weatheredIron,
-    Color? homeBg,
-    Color? textOlive,
-    Color? textGrey,
-    Color? cardOffWhite,
-    Color? textDarkBlue,
-    Color? tagBgOrange,
-    Color? tagTextOrange,
-    Color? cardOlive,
-    Color? iconOlive,
-    Color? borderGrey,
-    Color? searchBg,
+    Color? deepBasalt,
+    Color? dryMoss,
+    Color? ashGrey,
+    Color? chalkWhite,
+    Color? slateBlue,
+    Color? clayDust,
+    Color? rustIron,
+    Color? darkPine,
+    Color? fernGreen,
+    Color? graniteEdge,
+    Color? caveShadow,
   }) {
     return AppColors(
       nobleBlack: nobleBlack ?? this.nobleBlack,
@@ -81,17 +81,17 @@ class AppColors extends ThemeExtension<AppColors> {
       mossRock: mossRock ?? this.mossRock,
       clayEarth: clayEarth ?? this.clayEarth,
       weatheredIron: weatheredIron ?? this.weatheredIron,
-      homeBg: homeBg ?? this.homeBg,
-      textOlive: textOlive ?? this.textOlive,
-      textGrey: textGrey ?? this.textGrey,
-      cardOffWhite: cardOffWhite ?? this.cardOffWhite,
-      textDarkBlue: textDarkBlue ?? this.textDarkBlue,
-      tagBgOrange: tagBgOrange ?? this.tagBgOrange,
-      tagTextOrange: tagTextOrange ?? this.tagTextOrange,
-      cardOlive: cardOlive ?? this.cardOlive,
-      iconOlive: iconOlive ?? this.iconOlive,
-      borderGrey: borderGrey ?? this.borderGrey,
-      searchBg: searchBg ?? this.searchBg,
+      deepBasalt: deepBasalt ?? this.deepBasalt,
+      dryMoss: dryMoss ?? this.dryMoss,
+      ashGrey: ashGrey ?? this.ashGrey,
+      chalkWhite: chalkWhite ?? this.chalkWhite,
+      slateBlue: slateBlue ?? this.slateBlue,
+      clayDust: clayDust ?? this.clayDust,
+      rustIron: rustIron ?? this.rustIron,
+      darkPine: darkPine ?? this.darkPine,
+      fernGreen: fernGreen ?? this.fernGreen,
+      graniteEdge: graniteEdge ?? this.graniteEdge,
+      caveShadow: caveShadow ?? this.caveShadow,
     );
   }
 
@@ -110,17 +110,17 @@ class AppColors extends ThemeExtension<AppColors> {
       mossRock: Color.lerp(mossRock, other.mossRock, t)!,
       clayEarth: Color.lerp(clayEarth, other.clayEarth, t)!,
       weatheredIron: Color.lerp(weatheredIron, other.weatheredIron, t)!,
-      homeBg: Color.lerp(homeBg, other.homeBg, t)!,
-      textOlive: Color.lerp(textOlive, other.textOlive, t)!,
-      textGrey: Color.lerp(textGrey, other.textGrey, t)!,
-      cardOffWhite: Color.lerp(cardOffWhite, other.cardOffWhite, t)!,
-      textDarkBlue: Color.lerp(textDarkBlue, other.textDarkBlue, t)!,
-      tagBgOrange: Color.lerp(tagBgOrange, other.tagBgOrange, t)!,
-      tagTextOrange: Color.lerp(tagTextOrange, other.tagTextOrange, t)!,
-      cardOlive: Color.lerp(cardOlive, other.cardOlive, t)!,
-      iconOlive: Color.lerp(iconOlive, other.iconOlive, t)!,
-      borderGrey: Color.lerp(borderGrey, other.borderGrey, t)!,
-      searchBg: Color.lerp(searchBg, other.searchBg, t)!,
+      deepBasalt: Color.lerp(deepBasalt, other.deepBasalt, t)!,
+      dryMoss: Color.lerp(dryMoss, other.dryMoss, t)!,
+      ashGrey: Color.lerp(ashGrey, other.ashGrey, t)!,
+      chalkWhite: Color.lerp(chalkWhite, other.chalkWhite, t)!,
+      slateBlue: Color.lerp(slateBlue, other.slateBlue, t)!,
+      clayDust: Color.lerp(clayDust, other.clayDust, t)!,
+      rustIron: Color.lerp(rustIron, other.rustIron, t)!,
+      darkPine: Color.lerp(darkPine, other.darkPine, t)!,
+      fernGreen: Color.lerp(fernGreen, other.fernGreen, t)!,
+      graniteEdge: Color.lerp(graniteEdge, other.graniteEdge, t)!,
+      caveShadow: Color.lerp(caveShadow, other.caveShadow, t)!,
     );
   }
 
@@ -137,17 +137,17 @@ class AppColors extends ThemeExtension<AppColors> {
     weatheredIron: Color(0xFF3E4247),
     
     // Novas cores da home
-    homeBg: Color(0xFF161616),
-    textOlive: Color(0xFF7B8B6F),
-    textGrey: Color(0xFF8E959D),
-    cardOffWhite: Color(0xFFF4F3ED),
-    textDarkBlue: Color(0xFF1B2430),
-    tagBgOrange: Color(0xFFFCECE6),
-    tagTextOrange: Color(0xFFE27D60),
-    cardOlive: Color(0xFF2C332A),
-    iconOlive: Color(0xFF7B8B6F),
-    borderGrey: Color(0xFF2A2A2A),
-    searchBg: Color(0xFF1F1F1F),
+    deepBasalt: Color(0xFF161616),
+    dryMoss: Color(0xFF7B8B6F),
+    ashGrey: Color(0xFF8E959D),
+    chalkWhite: Color(0xFFF4F3ED),
+    slateBlue: Color(0xFF1B2430),
+    clayDust: Color(0xFFFCECE6),
+    rustIron: Color(0xFFE27D60),
+    darkPine: Color(0xFF2C332A),
+    fernGreen: Color(0xFF7B8B6F),
+    graniteEdge: Color(0xFF2A2A2A),
+    caveShadow: Color(0xFF1F1F1F),
   );
 
   // Nova Paleta Clara
