@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
-import '../pages/terms_of_use.dart';
+import 'common_functions.dart';
 
 Widget buildActionCard(
   BuildContext context, {
@@ -64,17 +65,7 @@ Widget buildActionCard(
 
 Widget buildTermsCard(BuildContext context) {
   return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TermsOfUsePage(
-            onAccepted: () {},
-            showAcceptButton: false,
-          ),
-        ),
-      );
-    },
+    onTap: () => showTermsBottomSheet(context),
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -190,5 +181,230 @@ Future<void> launchURL(BuildContext context, String url) async {
         const SnackBar(content: Text('Erro ao abrir o link.')),
       );
     }
+  }
+}
+
+/// Exibe os Termos de Uso e Privacidade em um bottom sheet customizado
+void showTermsBottomSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: context.colors.deepBasalt,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) {
+      return const _TermsBottomSheetContent();
+    },
+  );
+}
+
+class _TermsBottomSheetContent extends StatefulWidget {
+  const _TermsBottomSheetContent();
+
+  @override
+  State<_TermsBottomSheetContent> createState() => _TermsBottomSheetContentState();
+}
+
+class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isAtBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    
+    // Verifica se já está no final caso o texto caiba na tela sem scroll
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfAtBottom();
+    });
+  }
+
+  void _checkIfAtBottom() {
+    if (!_scrollController.hasClients) return;
+    
+    // Se o maxScrollExtent for pequeno ou 0, significa que não precisa de scroll
+    // ou se já rolou até o fim
+    if (_scrollController.position.maxScrollExtent <= 0 ||
+        _scrollController.offset >= _scrollController.position.maxScrollExtent - 10) {
+      if (!_isAtBottom) {
+        setState(() {
+          _isAtBottom = true;
+        });
+      }
+    }
+  }
+
+  void _scrollListener() {
+    _checkIfAtBottom();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.colors.graniteEdge,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.gpp_maybe_outlined,
+                color: context.colors.rustIron,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'TERMOS E PRIVACIDADE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              buildFeedbackButton(context, color: context.colors.ashGrey),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Scrollable Content
+          Flexible(
+            child: FutureBuilder<String>(
+              future: DefaultAssetBundle.of(context).loadString('legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md'),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                // Dispara a verificação após o conteúdo ser carregado
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _checkIfAtBottom();
+                });
+
+                return SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  child: MarkdownBody(
+                    data: snapshot.data!,
+                    onTapLink: (text, href, title) {
+                      if (href != null) launchURL(context, href);
+                    },
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                      h1: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      h2: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      h3: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      strong: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      blockSpacing: 16.0,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Footer
+          if (_isAtBottom) ...[
+            Container(
+              width: double.infinity,
+              height: 1,
+              color: context.colors.graniteEdge,
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF232323),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'FECHAR',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+             Center(
+               child: GestureDetector(
+                 onTap: () {
+                   if (_scrollController.hasClients) {
+                     _scrollController.animateTo(
+                       _scrollController.position.maxScrollExtent,
+                       duration: const Duration(milliseconds: 300),
+                       curve: Curves.easeOut,
+                     );
+                   }
+                 },
+                 child: Padding(
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                   child: Icon(
+                     Icons.keyboard_arrow_down,
+                     color: context.colors.rustIron.withValues(alpha: 0.5),
+                     size: 32,
+                   ),
+                 ),
+               ),
+             ),
+          ],
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
   }
 }

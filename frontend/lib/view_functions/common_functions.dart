@@ -159,6 +159,8 @@ Widget buildSearchBar({
   );
 }
 
+
+
 /// Normaliza uma string de pesquisa convertendo para minúsculas e removendo acentos/diacríticos.
 String normalizeSearchString(String value) {
   const withDia = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÑñ';
