@@ -12,7 +12,7 @@ import 'package:frontend/theme/app_colors.dart';
 class NearbyCragsCarousel extends StatefulWidget {
   final SyncService syncService;
   
-  const NearbyCragsCarousel({Key? key, required this.syncService}) : super(key: key);
+  const NearbyCragsCarousel({super.key, required this.syncService});
 
   @override
   State<NearbyCragsCarousel> createState() => _NearbyCragsCarouselState();

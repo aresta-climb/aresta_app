@@ -1,6 +1,5 @@
 import '../main.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/pico_functions.dart';
@@ -13,10 +12,6 @@ import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 
 // New imports for sub-pages
-import 'pico_subpages/setores_page.dart';
-import 'pico_subpages/explorar_local_page.dart';
-import 'pico_subpages/comunidade_pico_page.dart';
-import 'pico_subpages/apoie_pico_page.dart';
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
 import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
