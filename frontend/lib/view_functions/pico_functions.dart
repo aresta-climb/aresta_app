@@ -153,10 +153,6 @@ Widget buildSectorTile(BuildContext context, Setor setor, String cragId, {Grupo?
         setor.nome,
         style: TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
       ),
-      subtitle: setor.descricao.isNotEmpty
-          ? Text(setor.descricao, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
-          : null,
       trailing: Icon(Icons.chevron_right, color: beastHide),
       onTap: () {
         TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
@@ -181,10 +177,6 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
         grupo.nome,
         style: TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
       ),
-      subtitle: grupo.descricao.isNotEmpty
-          ? Text(grupo.descricao, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
-          : null,
       trailing: Icon(Icons.folder, color: beastHide),
       onTap: () {
         TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
