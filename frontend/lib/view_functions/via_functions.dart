@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
@@ -130,12 +132,13 @@ String _fmtEnum(dynamic e) {
 
 Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
-  if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard('Extensão', '${via.extensao}m', Icons.height));
-  if (via.hasTipoParede()) statCards.add(_buildStatCard('Parede', _fmtEnum(via.tipoParede), Icons.terrain));
-  if (via.hasQuantidadeProtecoesIntermediarias() && via.quantidadeProtecoesIntermediarias > 0) statCards.add(_buildStatCard('Proteções', via.quantidadeProtecoesIntermediarias.toString(), Icons.shield_outlined));
-  if (via.hasExposicao()) statCards.add(_buildStatCard('Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
-  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard('Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
+  if (via.hasDificuldade()) statCards.add(_buildStatCard(context, 'Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
+  if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard(context, 'Extensão', '${via.extensao}m', Icons.height));
+  if (via.hasTipoParede()) statCards.add(_buildStatCard(context, 'Parede', _fmtEnum(via.tipoParede), Icons.terrain));
+  if (via.hasQuantidadeProtecoesIntermediarias() && via.quantidadeProtecoesIntermediarias > 0) statCards.add(_buildStatCard(context, 'Proteções', via.quantidadeProtecoesIntermediarias.toString(), Icons.shield_outlined));
+  if (via.hasExposicao()) statCards.add(_buildStatCard(context, 'Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
+  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) statCards.add(_buildStatCard(context, 'Paradas', via.quantidadeProtecoesParada.toString(), Icons.anchor));
+  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard(context, 'Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
 
   List<Widget> historyRows = [];
   if (via.conquistadores.isNotEmpty) historyRows.add(_buildHistoryRow('Conquistadores', via.conquistadores.join(', ')));
@@ -146,22 +149,47 @@ Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva 
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
-      _buildHeader('Informações da Via Esportiva'),
-      if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
+      _buildInteractiveMapButton(context, escalada, cragId, pico, setor, grupo, fromMapaPage),
+      
+      if (statCards.isNotEmpty) Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: statCards.map((card) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 40 - 12) / 2,
+          child: card,
+        )).toList(),
+      ),
       
       if (via.hasQuantidadeProtecoesParada() || (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
         const SizedBox(height: 10),
-        _buildHeader('Parada & Ancoragem'),
-        if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) _buildInfoRow('Proteções na Parada', via.quantidadeProtecoesParada.toString()),
+        _buildHeader('Informações'),
         if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
       
       if (historyRows.isNotEmpty) ...[
-        _buildHeader('Histórico'),
+        const SizedBox(height: 12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: historyRows),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.menu_book, color: context.colors.slateStone, size: 16),
+                  const SizedBox(width: 8),
+                  Text('HISTÓRICO & CONQUISTA', style: TextStyle(color: context.colors.slateStone, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...historyRows,
+            ],
+          ),
         ),
       ],
       
@@ -181,13 +209,14 @@ Widget _buildViaEsportiva(BuildContext context, Escalada escalada, ViaEsportiva 
 
 Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
-  if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard('Extensão', '${via.extensao}m', Icons.height));
-  if (via.hasTipoParede()) statCards.add(_buildStatCard('Parede', _fmtEnum(via.tipoParede), Icons.terrain));
-  if (via.hasQuantidadeProtecoesIntermediarias() && via.quantidadeProtecoesIntermediarias > 0) statCards.add(_buildStatCard('Proteções Fixas', via.quantidadeProtecoesIntermediarias.toString(), Icons.shield_outlined));
-  if (via.hasExposicao()) statCards.add(_buildStatCard('Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
-  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard('Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
-  if (via.hasDificuldadeArtificialEmLivre()) statCards.add(_buildStatCard('Art. em Livre', _fmtEnum(via.dificuldadeArtificialEmLivre), Icons.back_hand));
+  if (via.hasDificuldade()) statCards.add(_buildStatCard(context, 'Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
+  if (via.hasExtensao() && via.extensao > 0) statCards.add(_buildStatCard(context, 'Extensão', '${via.extensao}m', Icons.height));
+  if (via.hasTipoParede()) statCards.add(_buildStatCard(context, 'Parede', _fmtEnum(via.tipoParede), Icons.terrain));
+  if (via.hasQuantidadeProtecoesIntermediarias() && via.quantidadeProtecoesIntermediarias > 0) statCards.add(_buildStatCard(context, 'Proteções Fixas', via.quantidadeProtecoesIntermediarias.toString(), Icons.shield_outlined));
+  if (via.hasExposicao()) statCards.add(_buildStatCard(context, 'Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
+  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) statCards.add(_buildStatCard(context, 'Paradas', via.quantidadeProtecoesParada.toString(), Icons.anchor));
+  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard(context, 'Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
+  if (via.hasDificuldadeArtificialEmLivre()) statCards.add(_buildStatCard(context, 'Art. em Livre', _fmtEnum(via.dificuldadeArtificialEmLivre), Icons.back_hand));
 
   List<Widget> historyRows = [];
   if (via.conquistadores.isNotEmpty) historyRows.add(_buildHistoryRow('Conquistadores', via.conquistadores.join(', ')));
@@ -198,8 +227,16 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
-      _buildHeader('Informações da Via Móvel'),
-      if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
+      _buildInteractiveMapButton(context, escalada, cragId, pico, setor, grupo, fromMapaPage),
+      
+      if (statCards.isNotEmpty) Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: statCards.map((card) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 40 - 12) / 2,
+          child: card,
+        )).toList(),
+      ),
       
       if (via.hasProtecoesMoveis() && via.protecoesMoveis.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -210,16 +247,33 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
       if (via.hasQuantidadeProtecoesParada() || (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
         const SizedBox(height: 10),
         _buildHeader('Parada & Ancoragem'),
-        if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) _buildInfoRow('Proteções na Parada', via.quantidadeProtecoesParada.toString()),
         if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
       
       if (historyRows.isNotEmpty) ...[
-        _buildHeader('Histórico'),
+        const SizedBox(height: 12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: historyRows),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.menu_book, color: context.colors.slateStone, size: 16),
+                  const SizedBox(width: 8),
+                  Text('HISTÓRICO & CONQUISTA', style: TextStyle(color: context.colors.slateStone, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...historyRows,
+            ],
+          ),
         ),
       ],
       
@@ -239,8 +293,8 @@ Widget _buildViaMovel(BuildContext context, Escalada escalada, ViaMovel via, Str
 
 Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade()) statCards.add(_buildStatCard('Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
-  if (via.hasTipoParede()) statCards.add(_buildStatCard('Parede', _fmtEnum(via.tipoParede), Icons.terrain));
+  if (via.hasDificuldade()) statCards.add(_buildStatCard(context, 'Dificuldade', _fmtEnum(via.dificuldade), Icons.trending_up));
+  if (via.hasTipoParede()) statCards.add(_buildStatCard(context, 'Parede', _fmtEnum(via.tipoParede), Icons.terrain));
 
   List<Widget> historyRows = [];
   if (via.conquistadores.isNotEmpty) historyRows.add(_buildHistoryRow('Conquistadores', via.conquistadores.join(', ')));
@@ -250,15 +304,41 @@ Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, Strin
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque),
-      _buildHeader('Informações do Boulder'),
-      if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
+      _buildInteractiveMapButton(context, escalada, cragId, pico, setor, grupo, fromMapaPage),
+      
+      if (statCards.isNotEmpty) Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: statCards.map((card) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 40 - 12) / 2,
+          child: card,
+        )).toList(),
+      ),
       
       if (historyRows.isNotEmpty) ...[
-        _buildHeader('Histórico'),
+        const SizedBox(height: 12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: historyRows),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.menu_book, color: context.colors.slateStone, size: 16),
+                  const SizedBox(width: 8),
+                  Text('HISTÓRICO & CONQUISTA', style: TextStyle(color: context.colors.slateStone, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...historyRows,
+            ],
+          ),
         ),
       ],
       
@@ -278,16 +358,17 @@ Widget _buildBoulder(BuildContext context, Escalada escalada, Boulder via, Strin
 
 Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnfiadas via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
-  if (via.hasDificuldadeMaxima()) statCards.add(_buildStatCard('Dificuldade Máx', _fmtEnum(via.dificuldadeMaxima), Icons.trending_up));
-  if (via.hasDificuldadeMedia()) statCards.add(_buildStatCard('Dificuldade Média', _fmtEnum(via.dificuldadeMedia), Icons.trending_flat));
-  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard('Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
-  if (via.hasDificuldadeArtificialEmLivre()) statCards.add(_buildStatCard('Art. em Livre', _fmtEnum(via.dificuldadeArtificialEmLivre), Icons.back_hand));
-  if (via.hasExposicao()) statCards.add(_buildStatCard('Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
-  if (via.hasDuracao()) statCards.add(_buildStatCard('Duração', _fmtEnum(via.duracao), Icons.timer));
-  if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0) statCards.add(_buildStatCard('Enfiadas', via.numeroEnfiadas.toString(), Icons.format_list_numbered));
-  if (via.hasComprimentoTotal() && via.comprimentoTotal > 0) statCards.add(_buildStatCard('Comprimento', '${via.comprimentoTotal}m', Icons.height));
-  if (via.hasComprimentoMaiorEnfiada() && via.comprimentoMaiorEnfiada > 0) statCards.add(_buildStatCard('Maior Enfiada', '${via.comprimentoMaiorEnfiada}m', Icons.straighten));
-  if (via.hasTipoViaMultiplasEnfiadas()) statCards.add(_buildStatCard('Tipo', _fmtEnum(via.tipoViaMultiplasEnfiadas), Icons.merge_type));
+  if (via.hasDificuldadeMaxima()) statCards.add(_buildStatCard(context, 'Dificuldade Máx', _fmtEnum(via.dificuldadeMaxima), Icons.trending_up));
+  if (via.hasDificuldadeMedia()) statCards.add(_buildStatCard(context, 'Dificuldade Média', _fmtEnum(via.dificuldadeMedia), Icons.trending_flat));
+  if (via.hasDificuldadeArtificial()) statCards.add(_buildStatCard(context, 'Artificial', _fmtEnum(via.dificuldadeArtificial), Icons.architecture));
+  if (via.hasDificuldadeArtificialEmLivre()) statCards.add(_buildStatCard(context, 'Art. em Livre', _fmtEnum(via.dificuldadeArtificialEmLivre), Icons.back_hand));
+  if (via.hasExposicao()) statCards.add(_buildStatCard(context, 'Exposição', _fmtEnum(via.exposicao), Icons.warning_amber_rounded));
+  if (via.hasDuracao()) statCards.add(_buildStatCard(context, 'Duração', _fmtEnum(via.duracao), Icons.timer));
+  if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0) statCards.add(_buildStatCard(context, 'Enfiadas', via.numeroEnfiadas.toString(), Icons.format_list_numbered));
+  if (via.hasQuantidadeEquipamentosParada() && via.quantidadeEquipamentosParada > 0) statCards.add(_buildStatCard(context, 'Paradas', via.quantidadeEquipamentosParada.toString(), Icons.anchor));
+  if (via.hasComprimentoTotal() && via.comprimentoTotal > 0) statCards.add(_buildStatCard(context, 'Comprimento', '${via.comprimentoTotal}m', Icons.height));
+  if (via.hasComprimentoMaiorEnfiada() && via.comprimentoMaiorEnfiada > 0) statCards.add(_buildStatCard(context, 'Maior Enfiada', '${via.comprimentoMaiorEnfiada}m', Icons.straighten));
+  if (via.hasTipoViaMultiplasEnfiadas()) statCards.add(_buildStatCard(context, 'Tipo', _fmtEnum(via.tipoViaMultiplasEnfiadas), Icons.merge_type));
 
   List<Widget> historyRows = [];
   if (via.conquistadores.isNotEmpty) historyRows.add(_buildHistoryRow('Conquistadores', via.conquistadores.join(', ')));
@@ -303,7 +384,14 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
         _buildMapas(via.mapas, cragId, via.enfiadas, setor),
       ],
       _buildHeader('Informações da Multipitch'),
-      if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
+      if (statCards.isNotEmpty) Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: statCards.map((card) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 40 - 12) / 2,
+          child: card,
+        )).toList(),
+      ),
       
       if (via.hasEquipamentoRecomendado() && via.equipamentoRecomendado.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -316,15 +404,32 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
         const SizedBox(height: 10),
         _buildHeader('Quantidade Média p/ Enfiada'),
         if (via.hasQuantidadeCosturasIntermediarias() && via.quantidadeCosturasIntermediarias > 0) _buildInfoRow('Costuras Intermediárias', via.quantidadeCosturasIntermediarias.toString()),
-        if (via.hasQuantidadeEquipamentosParada() && via.quantidadeEquipamentosParada > 0) _buildInfoRow('Equipamentos na Parada', via.quantidadeEquipamentosParada.toString()),
       ],
 
       if (historyRows.isNotEmpty) ...[
-        _buildHeader('Histórico'),
+        const SizedBox(height: 12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: historyRows),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.menu_book, color: context.colors.slateStone, size: 16),
+                  const SizedBox(width: 8),
+                  Text('HISTÓRICO & CONQUISTA', style: TextStyle(color: context.colors.slateStone, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...historyRows,
+            ],
+          ),
         ),
       ],
       
@@ -378,9 +483,9 @@ Widget _buildMultipitch(BuildContext context, Escalada escalada, ViaMultiplasEnf
 
 Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromSetorPage, bool fromMapaPage) {
   List<Widget> statCards = [];
-  if (via.hasDistancia() && via.distancia > 0) statCards.add(_buildStatCard('Distância', '${via.distancia}m', Icons.straighten));
-  if (via.hasAltura() && via.altura > 0) statCards.add(_buildStatCard('Altura', '${via.altura}m', Icons.height));
-  if (via.hasExposicao() && via.exposicao > 0) statCards.add(_buildStatCard('Exposição', via.exposicao.toString(), Icons.warning_amber_rounded));
+  if (via.hasDistancia() && via.distancia > 0) statCards.add(_buildStatCard(context, 'Distância', '${via.distancia}m', Icons.straighten));
+  if (via.hasAltura() && via.altura > 0) statCards.add(_buildStatCard(context, 'Altura', '${via.altura}m', Icons.height));
+  if (via.hasExposicao() && via.exposicao > 0) statCards.add(_buildStatCard(context, 'Exposição', via.exposicao.toString(), Icons.warning_amber_rounded));
 
   List<Widget> historyRows = [];
   if (via.conquistadores.isNotEmpty) historyRows.add(_buildHistoryRow('Conquistadores', via.conquistadores.join(', ')));
@@ -391,15 +496,40 @@ Widget _buildHighline(BuildContext context, Escalada escalada, Highline via, Str
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _buildTopBadges(context, escalada, cragId, pico, setor, grupo, fromSetorPage, fromMapaPage, via.destaque, ),
-      _buildHeader('Informações do Highline'),
-      if (statCards.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: statCards),
+      
+      if (statCards.isNotEmpty) Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: statCards.map((card) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 40 - 12) / 2,
+          child: card,
+        )).toList(),
+      ),
       
       if (historyRows.isNotEmpty) ...[
-        _buildHeader('Histórico'),
+        const SizedBox(height: 12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: historyRows),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.menu_book, color: context.colors.slateStone, size: 16),
+                  const SizedBox(width: 8),
+                  Text('HISTÓRICO & CONQUISTA', style: TextStyle(color: context.colors.slateStone, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...historyRows,
+            ],
+          ),
         ),
       ],
       
@@ -474,6 +604,58 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
+Widget _buildInteractiveMapButton(BuildContext context, Escalada escalada, String cragId, Pico? pico, Setor? setor, Grupo? grupo, bool fromMapaPage) {
+  List<IndexedMap> foundMaps = [];
+  if (pico != null) {
+    final index = CroquiMapIndex(pico);
+    final resolved = ResolvedDataset(grupo: grupo, setor: setor, escalada: escalada);
+    foundMaps = index.getMapasForReference(resolved);
+  }
+
+  if (foundMaps.isEmpty) return const SizedBox.shrink();
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 20),
+    child: InkWell(
+      onTap: () {
+        TelemetryService.instance.logAcaoEscalada(cragId, setor?.nome ?? '', getEscaladaNome(escalada), 'ver_no_mapa_destaque', 'detalhes_via');
+        if (fromMapaPage) {
+          AppNav.back(context);
+        } else {
+          final mapasData = foundMaps.map((fm) => CarrosselItemData(
+            mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
+            setorContextNome: fm.setorContext?.nome,
+            grupoContextNome: fm.grupoContext?.nome,
+            escaladaContextNome: getEscaladaNome(escalada),
+            initialSelectedId: fm.referencedId,
+          )).toList();
+          AppNav.toMapas(context, cragId: cragId, mapas: mapasData);
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.brandColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.explore_outlined, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'VER NO CROQUI INTERATIVO',
+              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 Widget _buildTopBadges(
   BuildContext context,
   Escalada escalada,
@@ -499,19 +681,19 @@ Widget _buildTopBadges(
           }
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: fishBone.withValues(alpha: 0.1),
+            color: context.colors.mossRock.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: fishBone.withValues(alpha: 0.2)),
+            border: Border.all(color: context.colors.mossRock.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_on, size: 14, color: fishBone),
-              const SizedBox(width: 4),
+              Icon(Icons.location_on, size: 14, color: context.colors.mossRock),
+              const SizedBox(width: 6),
               Text(
-                setor.nome,
+                setor.nome.toUpperCase(),
                 style: TextStyle(
                   color: fishBone,
                   fontSize: 13,
@@ -528,7 +710,7 @@ Widget _buildTopBadges(
   if (isDestaque) {
     badges.add(
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.amber.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
@@ -538,9 +720,9 @@ Widget _buildTopBadges(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.star, size: 14, color: Colors.amber),
-            const SizedBox(width: 4),
-            Text(
-              'Destaque',
+            const SizedBox(width: 6),
+            const Text(
+              'CLÁSSICA',
               style: TextStyle(
                 color: Colors.amber,
                 fontSize: 13,
@@ -553,117 +735,10 @@ Widget _buildTopBadges(
     );
   }
 
-  // Verificar se há referência em algum mapa
-  List<IndexedMap> foundMaps = [];
-  
-  if (pico != null) {
-    final index = CroquiMapIndex(pico);
-    final resolved = ResolvedDataset(
-      grupo: grupo,
-      setor: setor,
-      escalada: escalada,
-    );
-    foundMaps = index.getMapasForReference(resolved);
-  }
-
-  Widget buildMapChip(String label, Mapa targetMap, String id, Setor? mapSetorContext) {
-    Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: beastHide.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.play_arrow_rounded, color: beastHide, size: 14),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: fishBone, fontSize: 12, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-    
-    return GestureDetector(
-      onTap: () async {
-        TelemetryService.instance.logAcaoEscalada(cragId, setor?.nome ?? '', getEscaladaNome(escalada), 'ver_no_mapa', 'detalhes_via');
-
-        if (fromMapaPage) {
-          AppNav.back(context);
-        } else {
-          AppNav.toMapas(
-            context,
-            cragId: cragId,
-            mapas: [
-              CarrosselItemData(
-                mapaCaminhoImagem: targetMap.caminhoImagemMapa,
-                setorContextNome: mapSetorContext?.nome,
-                escaladaContextNome: getEscaladaNome(escalada),
-                initialSelectedId: id.isNotEmpty ? id : null,
-              )
-            ],
-          );
-        }
-      },
-      child: chip,
-    );
-  }
-
-  if (foundMaps.length == 1) {
-    if (foundMaps.first.mapa != null) {
-      badges.add(buildMapChip('Ver no mapa', foundMaps.first.mapa!, foundMaps.first.referencedId, foundMaps.first.setorContext));
-    }
-  } else if (foundMaps.length > 1) {
-    Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: beastHide.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.layers, color: beastHide, size: 14),
-          const SizedBox(width: 4),
-          Text('Ver nos mapas (${foundMaps.length})', style: TextStyle(color: fishBone, fontSize: 12, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-    
-    badges.add(
-      GestureDetector(
-        onTap: () {
-          TelemetryService.instance.logAcaoEscalada(cragId, setor?.nome ?? '', getEscaladaNome(escalada), 'ver_nos_mapas_carrossel', 'detalhes_via');
-          if (fromMapaPage) {
-            AppNav.back(context);
-          } else {
-            final mapasData = foundMaps.map((fm) => CarrosselItemData(
-              mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
-              setorContextNome: fm.setorContext?.nome,
-              // Repassado para resolver corretamente as coordenadas aninhadas (TDD 2.2)
-              grupoContextNome: fm.grupoContext?.nome,
-              // Repassado para garantir que a aba certa do carrossel receba o foco quando rotas compartilham SVG
-              escaladaContextNome: getEscaladaNome(escalada),
-              initialSelectedId: fm.referencedId,
-            )).toList();
-            
-            AppNav.toMapas(
-              context,
-              cragId: cragId,
-              mapas: mapasData,
-            );
-          }
-        },
-        child: chip,
-      ),
-    );
-  }
-
   if (badges.isEmpty) return const SizedBox.shrink();
 
   return Padding(
-    padding: const EdgeInsets.only(bottom: 15),
+    padding: const EdgeInsets.only(bottom: 20, top: 10),
     child: Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -700,32 +775,8 @@ Widget _buildMapas(List<Mapa> mapas, String cragId, List<Escalada> escaladasDaVi
   );
 }
 
-Widget _buildStatCard(String label, String value, IconData icon) {
-  return Container(
-    width: 155,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: beastHide.withValues(alpha: 0.3)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: beastHide, size: 20),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 12),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(color: fishBone, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
-    ),
-  );
+Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
+  return buildOutlineStatCard(context, label, value, icon);
 }
 
 Widget _buildActionButton(String label, IconData icon, VoidCallback onTap, {Color? color}) {
@@ -734,13 +785,13 @@ Widget _buildActionButton(String label, IconData icon, VoidCallback onTap, {Colo
     padding: const EdgeInsets.symmetric(vertical: 8.0),
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -759,18 +810,13 @@ Widget _buildActionButton(String label, IconData icon, VoidCallback onTap, {Colo
 
 Widget _buildHistoryRow(String label, String value) {
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 130,
-          child: Text(label, style: TextStyle(color: beastHide.withValues(alpha: 0.8), fontWeight: FontWeight.w600)),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(value, style: TextStyle(color: fishBone)),
-        ),
+        Text(label.toUpperCase(), style: TextStyle(color: slateStone, fontSize: 10, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: fishBone, fontSize: 14)),
       ],
     ),
   );

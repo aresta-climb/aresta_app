@@ -68,6 +68,74 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   );
 }
 
+Widget buildOutlineStatCard(BuildContext context, String title, String value, IconData icon) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: context.colors.ashGrey.withValues(alpha: 0.3)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.brandColor, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                title.toUpperCase(),
+                style: TextStyle(color: context.colors.slateStone, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(color: fishBone, fontSize: 16, fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    ),
+  );
+}
+
+Widget buildInfoCard(BuildContext context, String title, String description, IconData icon) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.brandColor.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.brandColor.withValues(alpha: 0.3)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: AppColors.brandColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              title.toUpperCase(),
+              style: TextStyle(color: AppColors.brandColor, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          description,
+          style: TextStyle(color: fishBone, fontSize: 14, height: 1.4),
+        ),
+      ],
+    ),
+  );
+}
+
 PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions, String? subtitle}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final bgColor = isDark ? context.colors.deepBasalt : beastHide;
