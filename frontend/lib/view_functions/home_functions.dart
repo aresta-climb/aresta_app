@@ -7,6 +7,8 @@ import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
+import '../widgets/nearby_crags_carousel.dart';
+import '../services/http/sync_service.dart';
 
 /// Navega para a página de detalhes de um pico selecionado.
 /// (Mantido para compatibilidade com browse.dart e mapa_global.dart)
@@ -48,7 +50,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 }
 
 /// Constrói o corpo principal da página inicial refatorada.
-Widget buildHomeBody(BuildContext context, Function(int) onSwitchTab) {
+Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int) onSwitchTab) {
   return SingleChildScrollView(
     physics: const BouncingScrollPhysics(),
     child: Column(
@@ -56,7 +58,7 @@ Widget buildHomeBody(BuildContext context, Function(int) onSwitchTab) {
       children: [
         _buildHeader(context),
         _buildSearchBar(context, onSwitchTab),
-        _buildCarouselSection(context),
+        NearbyCragsCarousel(syncService: syncService),
         _buildGuiaRapido(context),
         _buildConservacao(context),
         const SizedBox(height: 30),
@@ -170,124 +172,7 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
   );
 }
 
-Widget _buildCarouselSection(BuildContext context) {
-  // Dados mockados conforme instrução ("picos próximos" is a placeholder)
-  final mockPicos = [
-    {
-      'nome': 'PEDRA GRANDE',
-      'local': 'IGARAPÉ, MG',
-      'detalhes': '12 setores • 184 vias',
-      'imageUrl': 'assets/images/placeholder1.jpg', // Usar asset se existir, ou fallback cor
-      'color': const Color(0xFF2B3A42),
-    },
-    {
-      'nome': 'PEDRA RACHADA',
-      'local': 'SABARÁ, MG',
-      'detalhes': '4 setores • 45 vias',
-      'imageUrl': 'assets/images/placeholder2.jpg',
-      'color': const Color(0xFF1B3135),
-    },
-  ];
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Text(
-          'MAIS PRÓXIMOS DE VOCÊ',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-          ),
-        ),
-      ),
-      const SizedBox(height: 16),
-      SizedBox(
-        height: 380,
-        child: ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          scrollDirection: Axis.horizontal,
-          itemCount: mockPicos.length,
-          padding: const EdgeInsets.only(left: 24, right: 8),
-          itemBuilder: (context, index) {
-            final pico = mockPicos[index];
-            return Container(
-              width: 260,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: pico['color'] as Color,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
-                  children: [
-                    // Fake image gradient since we don't have the assets
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.8),
-                            ],
-                            stops: const [0.5, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 24,
-                      left: 20,
-                      right: 20,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pico['local'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            pico['nome'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            pico['detalhes'] as String,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    ],
-  );
-}
 
 Widget _buildGuiaRapido(BuildContext context) {
   return Padding(

@@ -22,9 +22,8 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
-        child: buildHomeBody(context, onSwitchTab),
+        child: buildHomeBody(context, syncService, onSwitchTab),
       ),
     );
   }
 }
-

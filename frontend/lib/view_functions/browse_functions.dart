@@ -127,7 +127,7 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: _CragCard(
+              child: CragCard(
                 crag: crag,
                 downloadingCrags: downloadingCrags,
                 onDownload: () => onDownload(crag),
@@ -227,7 +227,7 @@ Widget buildCragListItem(
   VoidCallback onDownload, {
   VoidCallback? onOpen,
 }) {
-  return _CragCard(
+  return CragCard(
     crag: crag,
     downloadingCrags: downloadingCrags,
     onDownload: onDownload,
@@ -235,17 +235,19 @@ Widget buildCragListItem(
   );
 }
 
-class _CragCard extends StatelessWidget {
+class CragCard extends StatelessWidget {
   final Map<String, dynamic> crag;
   final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
+  final String? distanceStr;
 
-  const _CragCard({
+  const CragCard({
     required this.crag,
     required this.downloadingCrags,
     required this.onDownload,
     this.onOpen,
+    this.distanceStr,
   });
 
   @override
@@ -270,7 +272,7 @@ class _CragCard extends StatelessWidget {
         if (isDownloaded) {
           onOpen?.call();
         } else {
-          _showDownloadBottomSheet(context, crag, onDownload, downloadingCrags);
+          showDownloadBottomSheet(context, crag, onDownload, downloadingCrags);
         }
       },
       child: Container(
@@ -292,7 +294,7 @@ class _CragCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background Image
-            _buildCragBackground(safeString(crag['thumbnailUrl']), cragId: safeString(crag['id'])),
+            buildCragBackground(safeString(crag['thumbnailUrl']), cragId: safeString(crag['id'])),
             
             // Gradient Overlay for readability
             Container(
@@ -321,6 +323,31 @@ class _CragCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      if (distanceStr != null)
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.place, color: context.colors.rustIron, size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                distanceStr!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (isDownloaded)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -422,7 +449,7 @@ class _CragCard extends StatelessWidget {
   }
 }
 
-Widget _buildCragBackground(String thumbnailUrl, {String? cragId}) {
+Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
   Widget placeholder = Container(
     color: const Color(0xFF2C332A),
     child: Center(
@@ -469,7 +496,7 @@ Widget _buildCragBackground(String thumbnailUrl, {String? cragId}) {
   return placeholder;
 }
 
-void _showDownloadBottomSheet(
+void showDownloadBottomSheet(
   BuildContext context,
   Map<String, dynamic> crag,
   VoidCallback onDownload,
