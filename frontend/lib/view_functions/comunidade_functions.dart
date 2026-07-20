@@ -149,7 +149,7 @@ Widget buildFooter(BuildContext context) {
             ),
             const SizedBox(height: 8),
             Text(
-              'Uma iniciativa independente pelo montanhismo conservador e livre de Minas Gerais.',
+              'Uma iniciativa independente pelo montanhismo livre do Brasil.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: context.colors.ashGrey,
