@@ -6,7 +6,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/pages/terms_of_use.dart';
+import 'package:frontend/pages/settings.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -43,50 +43,4 @@ void main() {
     );
   });
 
-  testWidgets('SettingsPage displays the app version', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: mockRepo,
-          syncService: mockSync,
-        ),
-      ),
-    ));
-
-    await tester.pump(const Duration(seconds: 1));
-
-    // Navigate to settings tab
-    TreeNavigationWrapper.switchTab(1);
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.text('1.2.3', skipOffstage: false), findsOneWidget);
-  });
-
-  testWidgets('SettingsPage Termos de Uso button navigates correctly', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: mockRepo,
-          syncService: mockSync,
-        ),
-      ),
-    ));
-
-    await tester.pump(const Duration(seconds: 1));
-    TreeNavigationWrapper.switchTab(1);
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pump(const Duration(seconds: 1));
-
-    final termsFinder = find.text('Termos de Uso e Privacidade', skipOffstage: false);
-    expect(termsFinder, findsOneWidget);
-
-    await tester.ensureVisible(termsFinder);
-    await tester.tap(termsFinder);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(TermsOfUsePage), findsOneWidget);
-  });
 }

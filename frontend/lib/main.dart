@@ -186,7 +186,7 @@ class _MyAppState extends State<MyApp> {
 
         return BetterFeedback(
           feedbackBuilder: customFeedbackBuilder,
-          themeMode: currentMode,
+          themeMode: ThemeMode.dark, // Temporary: locked to dark mode
           theme: FeedbackThemeData(
             background: AppColors.light.nobleBlack,
             feedbackSheetColor: AppColors.light.obsidianBrown,
@@ -201,9 +201,9 @@ class _MyAppState extends State<MyApp> {
             ],
           ),
           darkTheme: FeedbackThemeData(
-            background: AppColors.dark.nobleBlack,
-            feedbackSheetColor: AppColors.dark.obsidianBrown,
-            activeFeedbackModeColor: AppColors.dark.beastHide,
+            background: AppColors.dark.deepBasalt,
+            feedbackSheetColor: AppColors.dark.caveShadow,
+            activeFeedbackModeColor: AppColors.dark.rustIron,
             sheetIsDraggable: false,
             drawColors: const [
               AppColors.brandColor,
@@ -220,7 +220,7 @@ class _MyAppState extends State<MyApp> {
           child: MaterialApp(
             title: 'Aresta Climb',
             debugShowCheckedModeBanner: false,
-          themeMode: currentMode,
+          themeMode: ThemeMode.dark, // Temporary: locked to dark mode
           theme: ThemeData(
             fontFamily: 'Montserrat',
             useMaterial3: true,
@@ -247,7 +247,7 @@ class _MyAppState extends State<MyApp> {
               brightness: Brightness.dark,
               primary: AppColors.dark.beastHide,
             ),
-            scaffoldBackgroundColor: AppColors.dark.nobleBlack,
+            scaffoldBackgroundColor: AppColors.dark.deepBasalt,
             textSelectionTheme: TextSelectionThemeData(
               cursorColor: AppColors.dark.fishBone,
               selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),

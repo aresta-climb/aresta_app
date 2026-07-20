@@ -37,29 +37,47 @@ class ComunidadePage extends StatelessWidget {
               const SizedBox(height: 24),
               buildActionCard(
                 context,
-                title: 'GRUPOS DE WHATSAPP',
-                subtitle: 'Combine escaladas, tire dúvidas e receba avisos.',
+                title: 'WHATSAPP DO PROJETO',
+                subtitle: 'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
-                onTap: () => launchURL(context, 'https://whatsapp.com'), // Placeholder
+                onTap: () => showLinkOverlay(
+                  context,
+                  title: 'WhatsApp Oficial',
+                  link: 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv',
+                  iconData: Icons.chat_bubble_outline,
+                  iconColor: const Color(0xFF128C7E),
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'PERFIS DE INSTAGRAM',
-                subtitle: 'Acompanhe fotos, croquis e relatos de cadenas.',
+                title: 'INSTAGRAM OFICIAL',
+                subtitle: 'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
-                onTap: () => launchURL(context, 'https://instagram.com'), // Placeholder
+                onTap: () => showLinkOverlay(
+                  context,
+                  title: 'Instagram',
+                  link: '', // No link yet, triggers fallback
+                  iconData: Icons.camera_alt_outlined,
+                  iconColor: const Color(0xFFE1306C),
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'CANAIS DO YOUTUBE',
-                subtitle: 'Confira vídeos das betas e conquistas locais.',
-                iconData: Icons.play_arrow_rounded,
-                iconBgColor: const Color(0xFFFF0000), // YouTube Red
-                onTap: () => launchURL(context, 'https://youtube.com'), // Placeholder
+                title: 'DISCORD DOS DESENVOLVEDORES',
+                subtitle: 'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
+                iconData: Icons.discord,
+                iconBgColor: const Color(0xFF5865F2), // Discord Blurple
+                onTap: () => showLinkOverlay(
+                  context,
+                  title: 'Discord do Projeto',
+                  link: 'https://discord.gg/3KDTwcxHK',
+                  iconData: Icons.discord,
+                  iconColor: const Color(0xFF5865F2),
+                ),
               ),
               const SizedBox(height: 16),
               buildTermsCard(context),

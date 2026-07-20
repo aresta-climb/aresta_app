@@ -27,7 +27,7 @@ void main() {
       'thumbnailUrl': '',
     };
 
-    testWidgets('Deve renderizar inicialmente em estado colapsado', (WidgetTester tester) async {
+    testWidgets('Deve renderizar os dados do pico no card', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -37,43 +37,10 @@ void main() {
       );
 
       // Verifica elementos básicos
-      expect(find.text('Pedra do Baú'), findsOneWidget);
-      expect(find.text('São Bento do Sapucaí, SP'), findsOneWidget);
-      
-      // Verifica se o AnimatedCrossFade está no estado colapsado
-      final crossFade = tester.widget<AnimatedCrossFade>(find.byType(AnimatedCrossFade));
-      expect(crossFade.crossFadeState, equals(CrossFadeState.showFirst));
-      
-      // Deve mostrar o ícone de localização
-      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.text('PEDRA DO BAÚ'), findsOneWidget); // UPPER CASE NOW
     });
 
-    testWidgets('Deve expandir ao ser tocado e mostrar informações extras', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {}),
-          ),
-        ),
-      );
-
-      // Toca no card para expandir
-      await tester.tap(find.text('Pedra do Baú'));
-      await tester.pumpAndSettle(); // Aguarda as animações
-
-      // Agora deve mostrar o botão de download
-      expect(find.text('BAIXAR'), findsOneWidget);
-      
-      // O subtítulo deve ter mudado para o tempo relativo (AnimatedSwitcher)
-      expect(find.textContaining('atualizado há 2 dias'), findsOneWidget);
-      expect(find.byIcon(Icons.access_time_rounded), findsOneWidget);
-      
-      // Deve mostrar os detalhes extras na área expandida
-      expect(find.text('Localização'), findsOneWidget);
-      expect(find.text('Última atualização'), findsOneWidget);
-    });
-
-    testWidgets('Deve chamar o callback onDownload ao clicar no botão', (WidgetTester tester) async {
+    testWidgets('Deve abrir bottom sheet de download ao clicar se nao baixado', (WidgetTester tester) async {
       bool downloadChamado = false;
 
       await tester.pumpWidget(
@@ -86,37 +53,20 @@ void main() {
         ),
       );
 
-      // Expandir primeiro
-      await tester.tap(find.text('Pedra do Baú'));
+      // Clicar no card
+      await tester.tap(find.text('PEDRA DO BAÚ'));
       await tester.pumpAndSettle();
 
-      // Clicar no botão de baixar
-      await tester.tap(find.text('BAIXAR'));
+      // Verifica se abriu o bottom sheet com botão BAIXAR CROQUI
+      expect(find.text('BAIXAR CROQUI'), findsOneWidget);
+
+      // Clicar no botão de baixar no bottom sheet
+      await tester.tap(find.text('BAIXAR CROQUI'));
       
       expect(downloadChamado, isTrue);
     });
 
-    testWidgets('Deve mostrar botão para abrir se já estiver baixado', (WidgetTester tester) async {
-      final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
-      downloadedCrag['isDownloaded'] = true;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(downloadedCrag, ValueNotifier<Map<String, double>>({}), () {}),
-          ),
-        ),
-      );
-
-      // Expandir
-      await tester.tap(find.text('Pedra do Baú'));
-      await tester.pumpAndSettle();
-
-      // Verifica se o texto do botão mudou
-      expect(find.text('ABRIR CROQUI'), findsOneWidget);
-      expect(find.byIcon(Icons.folder_open_rounded), findsOneWidget);
-    });
-    testWidgets('Deve chamar o callback onOpen ao clicar no botão ABRIR CROQUI se já baixado', (WidgetTester tester) async {
+    testWidgets('Deve chamar onOpen ao clicar no card se ja baixado', (WidgetTester tester) async {
       final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
       downloadedCrag['isDownloaded'] = true;
 
@@ -132,12 +82,9 @@ void main() {
         ),
       );
 
-      // Expandir primeiro
-      await tester.tap(find.text('Pedra do Baú'));
+      // Clicar no card
+      await tester.tap(find.text('PEDRA DO BAÚ'));
       await tester.pumpAndSettle();
-
-      // Clicar no botão de abrir
-      await tester.tap(find.text('ABRIR CROQUI'));
       
       expect(openChamado, isTrue);
     });

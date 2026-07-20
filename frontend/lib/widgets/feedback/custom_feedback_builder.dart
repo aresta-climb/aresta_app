@@ -64,11 +64,11 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
     final appColors = isDark ? AppColors.dark : AppColors.light;
 
     // Determine colors for the text field and button
-    final textColor = isDark ? appColors.fishBone : appColors.fishBone;
-    final hintColor = isDark ? appColors.fishBone.withValues(alpha: 0.5) : appColors.fishBone.withValues(alpha: 0.6);
-    final fillColor = isDark ? appColors.nobleBlack.withValues(alpha: 0.4) : appColors.slateStone;
-    final borderColor = isDark ? appColors.weatheredIron.withValues(alpha: 0.5) : Colors.transparent;
-    final buttonColor = appColors.beastHide;
+    final textColor = isDark ? Colors.white : appColors.fishBone;
+    final hintColor = isDark ? appColors.ashGrey : appColors.fishBone.withValues(alpha: 0.6);
+    final fillColor = isDark ? appColors.deepBasalt : appColors.slateStone;
+    final borderColor = isDark ? appColors.graniteEdge : Colors.transparent;
+    final buttonColor = isDark ? appColors.rustIron : appColors.beastHide;
 
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     

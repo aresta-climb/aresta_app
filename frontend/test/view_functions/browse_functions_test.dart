@@ -38,15 +38,10 @@ void main() {
       ),
     ));
 
-    // O card precisa ser expandido para ver o botão "ABRIR CROQUI"
-    await tester.tap(find.text('Pico Teste'));
+    // Agora o tap no card já chama onOpen diretamente se estiver baixado!
+    await tester.tap(find.text('PICO TESTE'));
     await tester.pumpAndSettle();
 
-    // Encontra e toca no botão
-    final openBtn = find.text('ABRIR CROQUI');
-    expect(openBtn, findsOneWidget);
-    await tester.tap(openBtn);
-    
     // Verifica a telemetria disparada pelo onOpen
     expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
@@ -79,18 +74,16 @@ void main() {
       ),
     ));
 
-    await tester.tap(find.text('Pico Baixando'));
+    await tester.tap(find.text('PICO BAIXANDO'));
     await tester.pump(const Duration(milliseconds: 500));
 
     // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
     // Como trocamos o conteúdo do botão, vamos procurar o CircularProgressIndicator.
-    // Existem vários, então vamos focar no ElevatedButton.
-    final loadingIndicator = find.descendant(
-      of: find.byType(ElevatedButton),
-      matching: find.byType(LinearProgressIndicator),
+    // Existem vários, então    // Verifica se a barra de progresso (LinearProgressIndicator) está presente.
+    expect(
+      find.byType(LinearProgressIndicator),
+      findsOneWidget,
     );
-
-    expect(loadingIndicator, findsOneWidget);
   });
 
   testWidgets('buildBrowseBody exibe a descrição curta do pico caso exista', (WidgetTester tester) async {
@@ -120,14 +113,14 @@ void main() {
       ),
     ));
 
-    // A descrição fica dentro do expanded (segundo filho do AnimatedCrossFade)
-    // Logo, o texto já existe na árvore.
-    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
+    // A descrição não é mais renderizada no CragCard diretamente.
+    // Ela aparece no Modal após o clique.
+    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsNothing);
 
-    await tester.tap(find.text('Pico Descrição'));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('PICO DESCRIÇÃO')); // Note the uppercase name!
+    await tester.pumpAndSettle();
 
-    // Ainda deve existir após a expansão
+    // Deve existir após abrir o modal
     expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
   });
 }

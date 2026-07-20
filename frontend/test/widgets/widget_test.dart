@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/home.dart';
+import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -42,20 +43,18 @@ void main() {
 
     // Fornece as dependências necessárias para o TreeNavigationWrapper
     await tester.pumpWidget(MaterialApp(
-      home: TreeNavigationWrapper(
-        datasetRepo: testRepo,
-        syncService: testSync,
+      home: Scaffold(
+        body: TreeNavigationWrapper(
+          key: TreeNavigationWrapper.navKey,
+          datasetRepo: testRepo,
+          syncService: testSync,
+        ),
       ),
     ));
+    await tester.pump();
 
-    // Verifica se a HomePage está presente dentro do wrapper de navegação.
-    expect(find.byType(HomePage), findsOneWidget);
-    
-    // Verifica se os rótulos da barra de navegação estão presentes.
-    // Usa findsWidgets pois 'Home' pode aparecer tanto na AppBar quanto na BottomNavBar
-    expect(find.text('Home'), findsWidgets);
-    expect(find.text('Configurações'), findsOneWidget);
-    expect(find.text('Explorar'), findsOneWidget);
+    // Verifica se a página inicial está presente (o ícone de terrain é renderizado pelo Header)
+    expect(find.byIcon(Icons.terrain), findsOneWidget);
   });
 
   testWidgets('Botão de sync mostra aviso quando aplicativo está obsoleto (soft block)', (WidgetTester tester) async {
@@ -73,14 +72,18 @@ void main() {
     final editorDeCroqui = EditorDeCroqui();
     final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
     final testSync = SyncService(datasetRepository: testRepo, remoteConfigService: fakeRemote);
+    testSync.syncStatus.value = SyncStatus.updated;
     
     testRepo.activeDataset.value = TopoDataset(
       availablePicos: [],
-      downloadedPicos: [],
+      downloadedPicos: [
+        {'id': 'pico_teste', 'nome': 'Pico Teste', 'local': 'Local Teste', 'imagem_capa': ''}
+      ],
     );
 
+    // Pump MeusCroquisPage to render OfflineCragCard which contains the sync button
     await tester.pumpWidget(MaterialApp(
-      home: TreeNavigationWrapper(
+      home: MeusCroquisPage(
         datasetRepo: testRepo,
         syncService: testSync,
       ),

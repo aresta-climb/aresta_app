@@ -15,6 +15,7 @@ import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
+import '../theme/app_colors.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -818,7 +819,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               child: Text(
                                 resolvedLabel,
                                 style: TextStyle(
-                                  color: fishBone,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
@@ -839,7 +840,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         Text(
                           subtitle,
                           style: TextStyle(
-                            color: fishBone.withValues(alpha: 0.7),
+                            color: context.colors.ashGrey,
                             fontSize: 14,
                           ),
                         ),
@@ -848,7 +849,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: fishBone),
+                  icon: Icon(Icons.close, color: Colors.white),
                   onPressed: onClose,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -869,18 +870,18 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                 if (secondaryActionLabel != null && onSecondaryAction != null)
                   TextButton.icon(
                     onPressed: onSecondaryAction,
-                    icon: Icon(Icons.map, color: fishBone, size: 16),
+                    icon: Icon(Icons.map, color: Colors.white, size: 16),
                     label: Text(
                       secondaryActionLabel,
-                      style: TextStyle(color: fishBone, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                 TextButton.icon(
                   onPressed: onAction,
-                  icon: Icon(Icons.open_in_new, color: beastHide, size: 16),
+                  icon: Icon(Icons.open_in_new, color: context.colors.rustIron, size: 16),
                   label: Text(
                     actionLabel,
-                    style: TextStyle(color: beastHide, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(color: context.colors.rustIron, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
@@ -980,12 +981,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
 
     return Card(
-      color: obsidianBrown,
+      color: context.colors.caveShadow,
       elevation: 8,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: beastHide.withValues(alpha: 0.3), width: 1),
+        side: BorderSide(color: context.colors.graniteEdge, width: 1),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -1161,7 +1162,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             ),
                             child: ActionChip(
                               side: BorderSide.none,
-                              backgroundColor: beastHide,
+                              backgroundColor: context.colors.rustIron,
                               avatar: Icon(Icons.turn_left_outlined, color: nobleBlack, size: 18),
                               label: Text(
                                 upDest.label,

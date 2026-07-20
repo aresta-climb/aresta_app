@@ -46,22 +46,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Clica no item para expandi-lo
-    await tester.tap(find.text('Pico Teste'));
+    await tester.tap(find.text('PICO TESTE'));
     await tester.pumpAndSettle();
 
-    // Verifica se o modal (e portanto o botão "ABRIR CROQUI") está visível
-    expect(find.text('ABRIR CROQUI'), findsOneWidget);
-
-    // Usa warnIfMissed: false porque o modal pode estar animando ou fora do hit box padrão no teste
-    await tester.tap(find.text('ABRIR CROQUI'), warnIfMissed: false);
-    
-    // Deixa os callbacks e animações de navegação executarem
-    await tester.pumpAndSettle();
-
+    // Como isDownloaded=true, ao clicar no CragCard ele já chama onOpen diretamente!
     // Verifica se o callback foi chamado
     expect(onOpenCalled, isTrue);
-
-    // E o modal não deve mais estar na tela
-    expect(find.text('ABRIR CROQUI'), findsNothing);
   });
 }
