@@ -493,3 +493,34 @@ void showDeprecatedAppVersionSnackBar(BuildContext context) {
     ),
   );
 }
+
+/// Remove marcações Markdown de um texto para ser exibido em subtítulos de lista.
+String stripMarkdownForSubtitle(String markdown) {
+  if (markdown.isEmpty) return markdown;
+  // Remove imagens: ![alt](url)
+  String text = markdown.replaceAll(RegExp(r'!\[.*?\]\(.*?\)', dotAll: true), '');
+  // Remove links: [text](url) -> text
+  text = text.replaceAllMapped(RegExp(r'\[(.*?)\]\(.*?\)', dotAll: true), (match) => match.group(1) ?? '');
+  
+  // Remove markdown table alignment rows (e.g. |:---:|) before removing |
+  text = text.replaceAll(RegExp(r'\|[-\s:]+\|'), ' ');
+  // Remove table characters and dividers
+  text = text.replaceAll(RegExp(r'\|'), ' ');
+  // Remove :--: or :-: or --- (leftover from tables)
+  text = text.replaceAll(RegExp(r':?-{2,}:?'), ' ');
+  text = text.replaceAll(RegExp(r':-+:'), ' ');
+  
+  // Remove HTML tags se houver
+  text = text.replaceAll(RegExp(r'<[^>]*>'), '');
+  // Remove negrito e itálico
+  text = text.replaceAll(RegExp(r'\*\*|__|\*|_'), '');
+  // Remove cabeçalhos
+  text = text.replaceAll(RegExp(r'#+\s*'), '');
+  // Remove blockquotes
+  text = text.replaceAll(RegExp(r'>\s*'), '');
+  // Remove marcadores de lista
+  text = text.replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '');
+  // Troca todos os espaços e quebras de linha por um espaço simples
+  text = text.replaceAll(RegExp(r'\s+'), ' ');
+  return text.trim();
+}
