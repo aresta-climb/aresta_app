@@ -45,18 +45,18 @@ flutter test test/services/zip_interceptor_test.dart
 
 | Pasta | Arquivos | Testes |
 |---|---|---|
-| `services/` | 13 | ~112 |
-| `view_functions/` | 12 | ~40 |
-| `navigation/` | 3 | ~17 |
+| `services/` | 19 | ~141 |
+| `view_functions/` | 13 | ~63 |
+| `navigation/` | 6 | ~42 |
 | `theme/` | 1 | ~3 |
-| `protobuf/` | 1 | ~20 |
-| `integration/` | 2 | ~10 |
-| `pages/` | 8 | ~50 |
-| `widgets/` | 4 | ~35 |
-| `architecture/` | 1 | ~10 |
-| `legal/` | 1 | ~10 |
-| `utils/` | 1 | ~10 |
-| **Total** | **46** | **~317** |
+| `protobuf/` | 1 | ~18 |
+| `integration/` | 3 | ~12 |
+| `pages/` | 12 | ~71 |
+| `widgets/` | 6 | ~18 |
+| `architecture/` | 1 | ~1 |
+| `legal/` | 1 | ~1 |
+| `utils/` | 4 | ~38 |
+| **Total** | **67** | **~408** |
 
 ## Convenções
 
