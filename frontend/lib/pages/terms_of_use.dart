@@ -305,62 +305,54 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                     ),
                   const SizedBox(height: 16),
                   if (widget.showAcceptButton)
-                    Card(
-                      elevation: 0,
-                      color: context.colors.rustIron,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          CheckboxListTile(
-                              title: const Text(
-                                'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
-                              ),
-                              value: _isChecked,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  _isChecked = value ?? false;
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 50,
-                              child: FilledButton(
-                                onPressed: _isChecked
-                                    ? () {
-                                        TelemetryService.instance.logAcaoConfiguracoes(
-                                          'aceitar_termos_uso',
-                                        );
-                                        widget.onAccepted();
-                                      }
-                                    : null,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.brandColor,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Aceitar Termos e Continuar',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                    Column(
+                      children: [
+                        CheckboxListTile(
+                          title: const Text(
+                            'Li e concordo com os Termos de Uso e a Política de Privacidade.',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                          ),
+                          value: _isChecked,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _isChecked = value ?? false;
+                            });
+                          },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: AppColors.brandColor,
+                          checkColor: Colors.white,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: FilledButton(
+                            onPressed: _isChecked
+                                ? () {
+                                    TelemetryService.instance.logAcaoConfiguracoes(
+                                      'aceitar_termos_uso',
+                                    );
+                                    widget.onAccepted();
+                                  }
+                                : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.brandColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Aceitar Termos e Continuar',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),

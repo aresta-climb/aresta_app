@@ -338,7 +338,7 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           color = Colors.transparent;
         } else {
           double fadeProgress = (value - 0.40) / 0.60;
-          color = Colors.amber.withValues(alpha: 0.3 * (1.0 - fadeProgress));
+          color = context.colors.rustIron.withValues(alpha: 0.3 * (1.0 - fadeProgress));
         }
 
         return Stack(
