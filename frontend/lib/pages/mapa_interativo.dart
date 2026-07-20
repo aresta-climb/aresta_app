@@ -676,7 +676,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
     return _buildBaseCard(
       title: setor.nome,
-      subtitle: 'Setor',
+      subtitle: '',
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -686,8 +686,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Setor',
       onAction: () => AppNav.toSetor(context, setor: setor),
-      secondaryActionLabel: setor.mapas.length > 1 ? 'Ver mapas (${setor.mapas.length})' : (setor.mapas.isNotEmpty ? 'Ver mapa' : null),
-      onSecondaryAction: setor.mapas.isNotEmpty ? () {
+      secondaryActionLabel: setor.mapas.length > 1 ? 'Ver mapas (${setor.mapas.length})' : null,
+      onSecondaryAction: setor.mapas.length > 1 ? () {
         int indiceMapa = 0;
         if (ref.hasIndiceMapaAlvo()) {
           indiceMapa = ref.indiceMapaAlvo;
@@ -731,7 +731,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   Widget _buildGrupoCard(Mapa_Referencia ref, Grupo grupo) {
     return _buildBaseCard(
       title: grupo.nome,
-      subtitle: 'Grupo',
+      subtitle: '',
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -741,8 +741,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Grupo',
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
-      secondaryActionLabel: grupo.mapas.length > 1 ? 'Ver mapas (${grupo.mapas.length})' : (grupo.mapas.isNotEmpty ? 'Ver mapa' : null),
-      onSecondaryAction: grupo.mapas.isNotEmpty ? () {
+      secondaryActionLabel: grupo.mapas.length > 1 ? 'Ver mapas (${grupo.mapas.length})' : null,
+      onSecondaryAction: grupo.mapas.length > 1 ? () {
         int indiceMapa = 0;
         if (ref.hasIndiceMapaAlvo()) {
           indiceMapa = ref.indiceMapaAlvo;
@@ -825,14 +825,15 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 ),
                               ),
                             ),
-                          Text(
-                            title,
-                            style: TextStyle(
-                              color: beastHide,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                          if (title.toUpperCase() != resolvedLabel.toUpperCase())
+                            Text(
+                              title,
+                              style: TextStyle(
+                                color: beastHide,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                       if (subtitle.isNotEmpty) ...[
@@ -878,10 +879,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   ),
                 TextButton.icon(
                   onPressed: onAction,
-                  icon: Icon(Icons.open_in_new, color: context.colors.rustIron, size: 16),
+                  icon: Icon(Icons.open_in_new, color: AppColors.brandColor, size: 16),
                   label: Text(
                     actionLabel,
-                    style: TextStyle(color: context.colors.rustIron, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(color: AppColors.brandColor, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
@@ -1162,11 +1163,11 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             ),
                             child: ActionChip(
                               side: BorderSide.none,
-                              backgroundColor: context.colors.rustIron,
-                              avatar: Icon(Icons.turn_left_outlined, color: Colors.black, size: 18),
+                              backgroundColor: AppColors.brandColor,
+                              avatar: Icon(Icons.turn_left_outlined, color: Colors.white, size: 18),
                               label: Text(
                                 upDest.label,
-                                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onPressed: () {

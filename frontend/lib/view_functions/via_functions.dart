@@ -88,7 +88,23 @@ Widget buildViaBody(BuildContext context, Escalada escalada, String cragId, {Pic
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [_buildContentForEscalada(context, escalada, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)],
+      children: [
+        _buildContentForEscalada(context, escalada, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage),
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => AppNav.home(context),
+            icon: const Icon(Icons.home, color: Colors.white),
+            label: const Text('Voltar para o Início', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

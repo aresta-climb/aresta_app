@@ -80,6 +80,21 @@ class ComunidadePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              buildActionCard(
+                context,
+                title: 'GITHUB DO ARESTA',
+                subtitle: 'Acesse o perfil com os repositórios do github.',
+                iconData: Icons.code,
+                iconBgColor: const Color(0xFF333333), // GitHub Dark Gray
+                onTap: () => showLinkOverlay(
+                  context,
+                  title: 'GitHub Oficial',
+                  link: 'https://github.com/aresta-climb',
+                  iconData: Icons.code,
+                  iconColor: const Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 16),
               buildTermsCard(context),
               const SizedBox(height: 32),
               buildFooter(context),
