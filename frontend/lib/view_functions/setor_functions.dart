@@ -333,11 +333,12 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
       duration: const Duration(milliseconds: 2500), // 1000ms scroll delay + 1500ms fade
       builder: (context, value, child) {
         Color color;
+        double fadeProgress = 0.0;
         // 1000ms / 2500ms = 0.40
         if (value < 0.40) {
           color = Colors.transparent;
         } else {
-          double fadeProgress = (value - 0.40) / 0.60;
+          fadeProgress = (value - 0.40) / 0.60;
           color = AppColors.brandColor.withValues(alpha: 0.3 * (1.0 - fadeProgress));
         }
 
@@ -355,6 +356,13 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(10),
+                    boxShadow: color.alpha == 0 ? null : [
+                      BoxShadow(
+                        color: AppColors.brandColor.withValues(alpha: 0.6 * (1.0 - fadeProgress)),
+                        blurRadius: 15 * (1.0 - fadeProgress),
+                        spreadRadius: 2 * (1.0 - fadeProgress),
+                      )
+                    ],
                   ),
                 ),
               ),

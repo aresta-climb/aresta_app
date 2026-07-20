@@ -62,20 +62,34 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   }
 
   BitmapDescriptor? _customIcon;
+  final Map<String, BitmapDescriptor> _textIcons = {};
+  double _currentZoom = 4.0;
+  GoogleMapController? _mapController;
 
   @override
   void initState() {
     super.initState();
-    _loadCustomIcon();
+    _loadCustomIcons();
   }
 
-  Future<void> _loadCustomIcon() async {
+  Future<void> _loadCustomIcons() async {
     try {
       final icon = await createCustomMarkerBitmap('assets/logo_app.png', size: 120);
       if (mounted) {
         setState(() {
           _customIcon = icon;
         });
+      }
+      
+      // Generate text icons for each crag in background
+      for (final crag in widget.crags) {
+        final name = crag['nome'] ?? 'Pico';
+        final textIcon = await createCustomMarkerBitmapWithText('assets/logo_app.png', name, size: 120);
+        if (mounted) {
+          setState(() {
+            _textIcons[crag['id']] = textIcon;
+          });
+        }
       }
     } catch (e) {
       // Silently fall back to default marker
@@ -88,18 +102,14 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
   @override
   Widget build(BuildContext context) {
-    final markers = buildMapMarkers(
-      context: context,
-      crags: widget.crags,
-      downloadingCrags: widget.syncService.downloadingCrags,
-      onDownload: _handleDownload,
-      onOpen: _handleOpen,
-      customIcon: _customIcon,
-    );
+    // Removed markers generation from here since it needs to be inside body for zoom reactivity
 
         LatLng initialTarget = const LatLng(-14.2350, -51.9253);
-        if (markers.isNotEmpty) {
-          initialTarget = markers.first.position;
+        if (widget.crags.isNotEmpty) {
+          final firstCrag = widget.crags.first;
+          if (firstCrag['latitude'] != null && firstCrag['longitude'] != null) {
+            initialTarget = LatLng(firstCrag['latitude'], firstCrag['longitude']);
+          }
         }
 
         return Scaffold(
@@ -111,9 +121,42 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
               buildFeedbackButton(context),
             ],
           ),
-          body: buildMapaGlobalMap(
-            initialTarget: initialTarget,
-            markers: markers,
+          body: GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: initialTarget,
+              zoom: _currentZoom,
+            ),
+            markers: buildMapMarkers(
+              context: context,
+              crags: widget.crags,
+              downloadingCrags: widget.syncService.downloadingCrags,
+              onDownload: _handleDownload,
+              onOpen: _handleOpen,
+              customIcon: _customIcon,
+              textIcons: _textIcons,
+              currentZoom: _currentZoom,
+            ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            mapToolbarEnabled: false,
+            zoomControlsEnabled: false,
+            onMapCreated: (controller) {
+              _mapController = controller;
+            },
+            onCameraMove: (CameraPosition position) {
+              if (mounted) {
+                // Only rebuild if we cross the zoom threshold (e.g., 4.0)
+                final bool wasZoomedIn = _currentZoom >= 4.0;
+                final bool isZoomedIn = position.zoom >= 4.0;
+                if (wasZoomedIn != isZoomedIn) {
+                  setState(() {
+                    _currentZoom = position.zoom;
+                  });
+                } else {
+                  _currentZoom = position.zoom;
+                }
+              }
+            },
           ),
         );
   }
