@@ -67,7 +67,7 @@ class OfflineCragCard extends StatelessWidget {
                           return Image.file(
                             file,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(Icons.terrain, color: context.colors.ashGrey),
+                            errorBuilder: (_, _, _) => Icon(Icons.terrain, color: context.colors.ashGrey),
                           );
                         }
                       }

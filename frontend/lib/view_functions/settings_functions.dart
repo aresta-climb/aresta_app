@@ -5,14 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../view_functions/common_functions.dart';
-import '../view_functions/comunidade_functions.dart';
 import '../pages/qr_scanner.dart';
 import '../services/http/sync_service.dart';
 import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting

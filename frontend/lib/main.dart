@@ -15,7 +15,6 @@ import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
-import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';

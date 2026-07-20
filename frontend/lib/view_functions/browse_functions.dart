@@ -3,12 +3,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/http/zip_interceptor_client.dart';
 import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
-import '../utils/pico_categorization.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///
@@ -243,7 +241,7 @@ class CragCard extends StatelessWidget {
   final VoidCallback? onOpen;
   final String? distanceStr;
 
-  const CragCard({
+  const CragCard({super.key, 
     required this.crag,
     required this.downloadingCrags,
     required this.onDownload,

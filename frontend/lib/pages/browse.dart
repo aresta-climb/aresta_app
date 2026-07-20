@@ -201,8 +201,9 @@ class _BrowsePageState extends State<BrowsePage> {
                         _searchQuery = value;
                       });
 
-                      if (_debounceTimer?.isActive ?? false)
+                      if (_debounceTimer?.isActive ?? false) {
                         _debounceTimer!.cancel();
+                      }
                       _debounceTimer = Timer(
                         const Duration(milliseconds: 1000),
                         () {

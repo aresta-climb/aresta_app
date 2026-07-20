@@ -133,7 +133,7 @@ class _GrupoPageState extends State<GrupoPage> {
                                     gradient: LinearGradient(
                                       begin: Alignment.topCenter,
                                       end: Alignment.bottomCenter,
-                                      colors: [Colors.black, Colors.black.withOpacity(0.7), Colors.transparent],
+                                      colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
                                       stops: const [0.0, 0.4, 1.0],
                                     ),
                                   ),
@@ -149,7 +149,7 @@ class _GrupoPageState extends State<GrupoPage> {
                                     gradient: LinearGradient(
                                       begin: Alignment.bottomCenter,
                                       end: Alignment.topCenter,
-                                      colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6), Colors.transparent],
+                                      colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
                                       stops: const [0.0, 0.4, 1.0],
                                     ),
                                   ),
@@ -172,7 +172,7 @@ class _GrupoPageState extends State<GrupoPage> {
                                   gradient: LinearGradient(
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
-                                    colors: [Colors.black, Colors.black.withOpacity(0.7), Colors.transparent],
+                                    colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
                                     stops: const [0.0, 0.4, 1.0],
                                   ),
                                 ),
@@ -188,7 +188,7 @@ class _GrupoPageState extends State<GrupoPage> {
                                   gradient: LinearGradient(
                                     begin: Alignment.bottomCenter,
                                     end: Alignment.topCenter,
-                                    colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6), Colors.transparent],
+                                    colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
                                     stops: const [0.0, 0.4, 1.0],
                                   ),
                                 ),
@@ -212,7 +212,7 @@ class _GrupoPageState extends State<GrupoPage> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.black, Colors.black.withOpacity(0.7), Colors.transparent],
+                                colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
                                 stops: const [0.0, 0.4, 1.0],
                               ),
                             ),
@@ -228,7 +228,7 @@ class _GrupoPageState extends State<GrupoPage> {
                               gradient: LinearGradient(
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
-                                colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6), Colors.transparent],
+                                colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
                                 stops: const [0.0, 0.4, 1.0],
                               ),
                             ),
