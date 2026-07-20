@@ -136,7 +136,7 @@ Widget buildInfoCard(BuildContext context, String title, String description, Ico
   );
 }
 
-PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions, String? subtitle}) {
+PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions, String? subtitle, VoidCallback? onBack}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final bgColor = isDark ? context.colors.deepBasalt : beastHide;
   final fgColor = isDark ? Colors.white : Colors.black;
@@ -182,10 +182,10 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
   }
 
   return AppBar(
-    leading: AppNav.canGoBack(context)
+    leading: ModalRoute.of(context)?.canPop == true || AppNav.canGoBack(context)
         ? IconButton(
             icon: Icon(Icons.arrow_back, color: fgColor),
-            onPressed: () => AppNav.back(context),
+            onPressed: onBack ?? () => AppNav.back(context),
           )
         : null,
     title: titleWidget,

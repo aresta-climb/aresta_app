@@ -128,7 +128,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: context.colors.rustIron.withValues(alpha: 0.8),
+                  color: AppColors.brandColor.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: beastHide.withValues(alpha: 0.5)),
                 ),
@@ -138,7 +138,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                     Icon(Icons.map, color: Colors.white),
                     SizedBox(width: 8),
                     Text(
-                      'Abrir Mapa',
+                      'Abrir Mapa Interativo',
                       style: TextStyle(
                         color: fishBone,
                         fontWeight: FontWeight.bold,
