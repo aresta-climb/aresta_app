@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
+import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 
@@ -147,6 +148,12 @@ class OfflineCragCard extends StatelessWidget {
                 context,
                 icon: Icons.sync,
                 onPressed: () async {
+                  if (await syncService.isNetworkDisabled()) {
+                    if (context.mounted) {
+                      showDeprecatedAppVersionSnackBar(context);
+                    }
+                    return;
+                  }
                   ScaffoldMessenger.of(context)
                     ..clearSnackBars()
                     ..showSnackBar(

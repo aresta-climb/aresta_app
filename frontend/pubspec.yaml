@@ -62,6 +62,9 @@ flutter:
     - assets/preload/thumbnails/
 
   fonts:
+    - family: BebasNeue
+      fonts:
+        - asset: fonts/BebasNeue-Regular.ttf
     - family: Montserrat
       fonts:
         - asset: fonts/Montserrat-Bold.ttf

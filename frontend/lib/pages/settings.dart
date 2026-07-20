@@ -32,13 +32,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 clickCount: _clickCount,
                 onSetClickCount: (val) => setState(() => _clickCount = val),
               ),
-              const SizedBox(height: 16),
-              buildAppVersionCard(context),
             ],
           ),
         ),
-        buildLegalLinks(context),
-        const SizedBox(height: 16),
+        // buildLegalLinks(context),
+        // const SizedBox(height: 16),
       ],
     );
   }

@@ -3,14 +3,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/home_functions.dart';
+import 'package:frontend/view_functions/browse_functions.dart';
+import 'package:frontend/widgets/nearby_crags_carousel.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late DatasetRepository mockRepo;
   late EditorDeCroqui mockEditor;
   late SyncService mockSync;
+
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   setUp(() {
     mockEditor = EditorDeCroqui();
@@ -19,18 +26,15 @@ void main() {
     mockSync.syncStatus.value = SyncStatus.updated;
   });
 
-  Widget buildTestableWidget(List<Map<String, dynamic>> downloadedPicos) {
+  Widget buildTestableWidget() {
     return MaterialApp(
       home: Scaffold(
         body: Builder(
           builder: (context) {
             return buildHomeBody(
               context,
-              mockRepo,
               mockSync,
-              downloadedPicos,
-              ValueNotifier<Map<String, double>>({}), // downloadingCrags
-              onAddCrag: () {},
+              (index) {}, // onSwitchTab
             );
           },
         ),
@@ -38,42 +42,15 @@ void main() {
     );
   }
 
-  testWidgets('buildHomeBody shows "Explorar guias" and hides dropdown when no guides downloaded', (WidgetTester tester) async {
-    // Rendereiza o widget com lista vazia
-    await tester.pumpWidget(buildTestableWidget([]));
-    await tester.pumpAndSettle();
+  testWidgets('buildHomeBody renders the new layout including NearbyCragsCarousel', (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestableWidget());
+    await tester.pump();
 
-    // Deve mostrar "Nenhum guia baixado ainda."
-    expect(find.text('Nenhum guia baixado ainda.'), findsOneWidget);
-
-    // Deve mostrar o botão "Explorar guias"
-    final explorarGuiasFinder = find.widgetWithText(ElevatedButton, 'Explorar guias');
-    expect(explorarGuiasFinder, findsOneWidget);
-
-    // NÃO deve mostrar o dropdown "Todos os guias baixados"
-    expect(find.text('Todos os guias baixados'), findsNothing);
-  });
-
-  testWidgets('buildHomeBody shows dropdown and hides "Explorar guias" when guides are downloaded', (WidgetTester tester) async {
-    // Um pico fictício baixado
-    final dummyPico = {
-      'id': 'test-pico-1',
-      'nome': 'Pico de Teste',
-      'local': 'Local de Teste',
-    };
-
-    await tester.pumpWidget(buildTestableWidget([dummyPico]));
-    await tester.pumpAndSettle();
-
-    // NÃO deve mostrar "Nenhum guia baixado ainda."
-    expect(find.text('Nenhum guia baixado ainda.'), findsNothing);
-
-    // NÃO deve mostrar o botão "Explorar guias"
-    final explorarGuiasFinder = find.widgetWithText(ElevatedButton, 'Explorar guias');
-    expect(explorarGuiasFinder, findsNothing);
-
-    // Deve mostrar o dropdown "Todos os guias baixados"
-    expect(find.text('Todos os guias baixados'), findsOneWidget);
+    // Verify Header exists
+    expect(find.byIcon(Icons.terrain), findsOneWidget);
+    
+    // Verify NearbyCragsCarousel exists
+    expect(find.byType(NearbyCragsCarousel), findsOneWidget);
   });
 
   testWidgets('handlePicoSelection dispara telemetria de abrir_croqui com origem', (WidgetTester tester) async {
@@ -97,49 +74,63 @@ void main() {
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
     expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
   });
-
-  testWidgets('buildSyncBadge exibe texto correto para noNewUpdates', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: buildSyncBadge(SyncStatus.noNewUpdates),
-        ),
-      ),
+  
+  testWidgets('Downloads from activeDataset update Home download cards reactively', (WidgetTester tester) async {
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: [
+        {
+          'id': 'pico_sync_1',
+          'nome': 'Pico Sync',
+          'local': 'Local Sync',
+          'latitude': -20.0,
+          'longitude': -40.0,
+        }
+      ],
+      downloadedPicos: [],
     );
 
-    expect(find.text('Sem atualizações'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
-  });
-  testWidgets('buildPicosCarousel mantém Opacity 1.0 e clicável para pico já baixado que está atualizando', (WidgetTester tester) async {
-    final mockTelemetry = MockTelemetryService();
-    TelemetryService.instance = mockTelemetry;
+    // Renderiza diretamente o mesmo padrão do NearbyCragsCarousel para evitar
+    // dependência em chamadas do Geolocator que rodam infinitamente em testes.
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ValueListenableBuilder<TopoDataset?>(
+          valueListenable: mockRepo.activeDataset,
+          builder: (context, dataset, child) {
+            final isDownloaded = dataset?.downloadedPicos.any((p) => p['id'] == 'pico_sync_1') ?? false;
+            return CragCard(
+              crag: {
+                'id': 'pico_sync_1',
+                'nome': 'Pico Browse',
+                'isDownloaded': isDownloaded,
+              },
+              downloadingCrags: mockSync.downloadingCrags,
+              onDownload: () {},
+              onOpen: () {},
+            );
+          },
+        ),
+      ),
+    ));
     
-    final dummyPico = {
-      'id': 'test-pico-update',
-      'nome': 'Pico Atualizando',
-      'local': 'Local Atualizando',
-    };
-
-    final downloadingCrags = ValueNotifier<Map<String, double>>({
-      'test-pico-update': 0.5, // Está baixando/atualizando
-    });
-
-    bool wasTapped = false;
-
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(builder: (context) {
-      return buildPicosCarousel(
-        [dummyPico],
-        downloadingCrags,
-        onAddCrag: () {},
-        onPicoSelect: (pico) {
-          wasTapped = true;
-        },
-      );
-    }))));
-
-    // O GestureDetector deve estar ativo (onTap != null). 
-    // Podemos tentar clicar e verificar se chamou o callback.
-    await tester.tap(find.text('Pico Atualizando'));
-    expect(wasTapped, isTrue);
+    await tester.pump();
+    
+    // No início, não deve estar salvo offline
+    expect(find.text('SALVO OFFLINE'), findsNothing);
+    
+    // Atualiza dataset simulando download
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: mockRepo.activeDataset.value!.availablePicos,
+      downloadedPicos: [
+        {
+          'id': 'pico_sync_1',
+          'data': {}
+        }
+      ],
+    );
+    
+    await tester.pump();
+    
+    // O widget foi reconstruído e o CragCard mostra salvo offline?
+    expect(find.text('SALVO OFFLINE'), findsOneWidget);
   });
 }

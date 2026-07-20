@@ -272,7 +272,7 @@ class CragCard extends StatelessWidget {
         if (isDownloaded) {
           onOpen?.call();
         } else {
-          showDownloadBottomSheet(context, crag, onDownload, downloadingCrags);
+          showDownloadBottomSheet(context, crag, onDownload, downloadingCrags, onOpen: onOpen);
         }
       },
       child: Container(
@@ -328,14 +328,14 @@ class CragCard extends StatelessWidget {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
+                            color: context.colors.rustIron,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.place, color: context.colors.rustIron, size: 12),
+                              const Icon(Icons.place, color: Colors.white, size: 12),
                               const SizedBox(width: 4),
                               Text(
                                 distanceStr!,
@@ -500,8 +500,9 @@ void showDownloadBottomSheet(
   BuildContext context,
   Map<String, dynamic> crag,
   VoidCallback onDownload,
-  ValueListenable<Map<String, double>> downloadingCrags,
-) {
+  ValueListenable<Map<String, double>> downloadingCrags, {
+  VoidCallback? onOpen,
+}) {
   showModalBottomSheet(
     context: context,
     backgroundColor: context.colors.deepBasalt,
@@ -593,6 +594,35 @@ void showDownloadBottomSheet(
                             ),
                           ),
                         ],
+                      ),
+                    );
+                  }
+
+                  if (crag['isDownloaded'] == true && onOpen != null) {
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(bottomSheetContext); // Close sheet first
+                          onOpen();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.colors.dryMoss,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'ABRIR CROQUI',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
                       ),
                     );
                   }

@@ -54,6 +54,12 @@ class FakeSyncService extends Fake implements SyncService {
   @override
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier(false);
   @override
+  final ValueNotifier<String?> pico_aberto_id = ValueNotifier<String?>(null);
+  
+  @override
+  final ValueNotifier<String?> recarga_pendente_pico_id = ValueNotifier<String?>(null);
+  
+  @override
   final ValueNotifier<Map<String, double>> downloadingCrags = ValueNotifier(<String, double>{});
 }
 
@@ -86,14 +92,14 @@ void main() {
           syncService: mockSync,
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final BuildContext context = tester.element(find.byType(Scaffold).first);
       final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
       
       // Navigate to PicoNode to establish context
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
       final setor = Setor()..nome = 'Setor Teste';
@@ -124,14 +130,14 @@ void main() {
           syncService: mockSync,
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final BuildContext context = tester.element(find.byType(Scaffold).first);
       final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
       
       // Navigate to PicoNode to establish context
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final setor = Setor()..nome = 'Setor Teste';
 
@@ -153,14 +159,14 @@ void main() {
           syncService: mockSync,
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final BuildContext context = tester.element(find.byType(Scaffold).first);
       final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
       
       // Navigate to PicoNode to establish context
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       AppNav.toMapas(
         context,

@@ -56,7 +56,7 @@ Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(context),
+        _buildHeader(context, syncService),
         _buildSearchBar(context, onSwitchTab),
         NearbyCragsCarousel(syncService: syncService),
         _buildGuiaRapido(context),
@@ -67,7 +67,7 @@ Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int
   );
 }
 
-Widget _buildHeader(BuildContext context) {
+Widget _buildHeader(BuildContext context, SyncService syncService) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
     child: Column(
@@ -86,7 +86,8 @@ Widget _buildHeader(BuildContext context) {
               ),
               child: RichText(
                 text: TextSpan(
-                  style: GoogleFonts.bebasNeue(
+                  style: const TextStyle(
+                    fontFamily: 'BebasNeue',
                     fontSize: 26,
                     letterSpacing: 1.5,
                     height: 1.2, // Tweak line height for new text font

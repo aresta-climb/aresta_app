@@ -370,37 +370,28 @@ Widget buildEditorCard({
           return ValueListenableBuilder<bool>(
             valueListenable: configService.isDevModeEnabled,
             builder: (context, isDevMode, _) {
-              Color cardColor;
               IconData statusIcon;
               String statusLabel;
               String description;
-              Color buttonBgColor;
               String buttonText;
-              Color buttonTextColor;
-
-              final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
               if (isEditor) {
-                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.science;
-                statusLabel = 'Modo Experimental Ativo';
-                description = 'O aplicativo está em modo de teste. Os dados são carregados de uma fonte externa ou local e mantidos isolados.';
-                buttonBgColor = Colors.blueGrey.shade700;
-                buttonText = 'Voltar para oficial';
-                buttonTextColor = Colors.white;
+                statusLabel = 'MODO EXPERIMENTAL';
+                description = 'O aplicativo está em modo de teste e isolado da base oficial.';
+                buttonText = 'VOLTAR PARA OFICIAL';
               } else {
-                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.verified;
-                statusLabel = 'Modo Oficial Ativo';
-                description = 'O aplicativo está conectado ao repositório oficial da Aresta Climb.';
-                buttonBgColor = context.colors.beastHide;
-                buttonText = 'Conectar como editor';
-                buttonTextColor = context.colors.nobleBlack;
+                statusLabel = 'MODO OFICIAL';
+                description = 'Conectado ao repositório oficial da Aresta Climb.';
+                buttonText = 'CONECTAR COMO EDITOR';
               }
 
               return Card(
-                color: cardColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                color: context.colors.caveShadow,
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -421,65 +412,94 @@ Widget buildEditorCard({
                                 );
                               }
                             },
-                            child: Icon(statusIcon, color: context.colors.fishBone),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colors.graniteEdge,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(statusIcon, color: context.colors.ashGrey, size: 24),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            statusLabel,
-                            style: TextStyle(
-                              color: context.colors.fishBone,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  statusLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  description,
+                                  style: TextStyle(
+                                    color: context.colors.ashGrey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        description,
-                        style: TextStyle(color: context.colors.fishBone),
-                      ),
                       if (isExperimental && activeUrl != null) ...[
                         const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: context.colors.nobleBlack, // Inset background (Beige in light, Black in dark)
+                            color: context.colors.deepBasalt,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: context.colors.graniteEdge),
                           ),
                           child: Text(
                             activeUrl,
-                            style: TextStyle(color: context.colors.fishBone, fontFamily: 'monospace'), // High contrast text
+                            style: TextStyle(
+                              color: context.colors.ashGrey,
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
                       if (isDevMode || isEditor) ...[
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonBgColor,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onPressed: () async {
-                              if (isEditor) {
-                                TelemetryService.instance.logAcaoConfiguracoes('desconectar_editor');
-                                await configService.disconnect();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Voltando ao repositório oficial...')),
-                                  );
-                                }
-                              } else {
-                                mostrarDialogConexao(context, datasetRepo);
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () async {
+                            if (isEditor) {
+                              TelemetryService.instance.logAcaoConfiguracoes('desconectar_editor');
+                              await configService.disconnect();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Voltando ao repositório oficial...')),
+                                );
                               }
-                            },
+                            } else {
+                              mostrarDialogConexao(context, datasetRepo);
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC04F34),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
                             child: Text(
                               buttonText,
-                              style: TextStyle(
-                                color: buttonTextColor,
-                                fontWeight: FontWeight.bold,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -491,32 +511,41 @@ Widget buildEditorCard({
                               if (snapshot.data == true) {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 12.0),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: context.colors.beastHide, width: 1.2),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      TelemetryService.instance.logAcaoConfiguracoes('reativar_experimental');
+                                      await configService.activateExperimental();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Reativando dados experimentais locais...')),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.transparent,
+                                        border: Border.all(color: context.colors.graniteEdge),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      icon: Icon(Icons.history_rounded, color: context.colors.beastHide, size: 18),
-                                      label: Text(
-                                        'Reativar modo experimental',
-                                        style: TextStyle(
-                                          color: context.colors.beastHide, 
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.5,
-                                        ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.history_rounded, color: context.colors.ashGrey, size: 18),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'REATIVAR MODO EXPERIMENTAL',
+                                            style: TextStyle(
+                                              color: context.colors.ashGrey,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      onPressed: () async {
-                                        TelemetryService.instance.logAcaoConfiguracoes('reativar_experimental');
-                                        await configService.activateExperimental();
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Reativando dados experimentais locais...')),
-                                          );
-                                        }
-                                      },
                                     ),
                                   ),
                                 );
@@ -526,52 +555,67 @@ Widget buildEditorCard({
                           ),
                         if (isEditor) ...[
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              icon: const Icon(Icons.delete_forever, color: Colors.red),
-                              label: const Text(
-                                'LIMPAR DADOS EXPERIMENTAIS',
-                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: context.colors.nobleBlack,
-                                    title: const Text('Nuke It?', style: TextStyle(color: Colors.red)),
-                                    content: Text(
-                                      'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
-                                      style: TextStyle(color: context.colors.fishBone),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: Text('Cancelar', style: TextStyle(color: context.colors.fishBone)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: const Text('APAGAR TUDO', style: TextStyle(color: Colors.red)),
-                                      ),
-                                    ],
+                          GestureDetector(
+                            onTap: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: context.colors.caveShadow,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  title: const Text('Apagar Tudo?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  content: Text(
+                                    'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
+                                    style: TextStyle(color: context.colors.ashGrey),
                                   ),
-                                );
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: Text('CANCELAR', style: TextStyle(color: context.colors.ashGrey, fontWeight: FontWeight.bold)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('APAGAR TUDO', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                                if (confirm == true) {
-                                  TelemetryService.instance.logAcaoConfiguracoes('limpar_dados_experimentais');
-                                  await configService.nukeExperimentalData();
-                                  datasetRepo.loadEmpty(); 
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Ambiente experimental limpo.')),
-                                    );
-                                  }
+                              if (confirm == true) {
+                                TelemetryService.instance.logAcaoConfiguracoes('limpar_dados_experimentais');
+                                await configService.nukeExperimentalData();
+                                datasetRepo.loadEmpty(); 
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Ambiente experimental limpo.')),
+                                  );
                                 }
-                              },
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.delete_forever, color: Colors.red.withValues(alpha: 0.8), size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'LIMPAR DADOS EXPERIMENTAIS',
+                                    style: TextStyle(
+                                      color: Colors.red.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -589,10 +633,11 @@ Widget buildEditorCard({
 }
 
 Widget buildThemeSelectionCard(BuildContext context) {
-  final bool isDark = Theme.of(context).brightness == Brightness.dark;
   return Card(
-    color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 0,
+    color: context.colors.caveShadow,
+    margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -600,14 +645,38 @@ Widget buildThemeSelectionCard(BuildContext context) {
         children: [
           Row(
             children: [
-              Icon(Icons.palette, color: context.colors.fishBone),
-              const SizedBox(width: 8),
-              Text(
-                'Aparência (Tema)',
-                style: TextStyle(
-                  color: context.colors.fishBone,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: context.colors.graniteEdge,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.palette, color: context.colors.ashGrey, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'APARÊNCIA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Personalize o tema do aplicativo.',
+                      style: TextStyle(
+                        color: context.colors.ashGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -622,13 +691,12 @@ Widget buildThemeSelectionCard(BuildContext context) {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Escolher tema manualmente',
-                          style: TextStyle(
-                            color: context.colors.fishBone,
-                            fontSize: 16,
-                          ),
+                      const Text(
+                        'Escolher tema manualmente',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       Switch(
@@ -640,7 +708,10 @@ Widget buildThemeSelectionCard(BuildContext context) {
                             ThemeController().setThemeMode(ThemeMode.system);
                           }
                         },
-                        activeThumbColor: context.colors.beastHide,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: Colors.white.withValues(alpha: 0.5),
+                        inactiveThumbColor: context.colors.ashGrey,
+                        inactiveTrackColor: context.colors.graniteEdge,
                       ),
                     ],
                   ),
@@ -648,10 +719,10 @@ Widget buildThemeSelectionCard(BuildContext context) {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(
+                        /* Expanded(
                           child: buildThemeOption(
                             context: context,
-                            title: 'Claro',
+                            title: 'CLARO',
                             icon: Icons.light_mode,
                             isSelected: currentMode == ThemeMode.light,
                             onTap: () {
@@ -660,11 +731,11 @@ Widget buildThemeSelectionCard(BuildContext context) {
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12), */
                         Expanded(
                           child: buildThemeOption(
                             context: context,
-                            title: 'Escuro',
+                            title: 'ESCURO',
                             icon: Icons.dark_mode,
                             isSelected: currentMode == ThemeMode.dark,
                             onTap: () {
@@ -693,28 +764,29 @@ Widget buildThemeOption({
   required bool isSelected,
   required VoidCallback onTap,
 }) {
-  return InkWell(
+  return GestureDetector(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(8),
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: isSelected ? context.colors.beastHide.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
         border: Border.all(
-          color: isSelected ? context.colors.beastHide : context.colors.weatheredIron,
+          color: isSelected ? Colors.white : context.colors.graniteEdge,
           width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Icon(icon, color: isSelected ? context.colors.beastHide : context.colors.fishBone),
+          Icon(icon, color: isSelected ? Colors.white : context.colors.ashGrey, size: 24),
           const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              color: isSelected ? context.colors.beastHide : context.colors.fishBone,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.white : context.colors.ashGrey,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -723,67 +795,24 @@ Widget buildThemeOption({
   );
 }
 
-Widget buildAppVersionCard(BuildContext context) {
-  return FutureBuilder<PackageInfo>(
-    future: PackageInfo.fromPlatform(),
-    builder: (context, snapshot) {
-      if (snapshot.hasData) {
-        final version = snapshot.data!.version;
-        final bool isDark = Theme.of(context).brightness == Brightness.dark;
-        return Card(
-          color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: context.colors.fishBone),
-                const SizedBox(width: 8),
-                Text(
-                  'Versão do app',
-                  style: TextStyle(
-                    color: context.colors.fishBone,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  version,
-                  style: TextStyle(
-                    color: context.colors.beastHide,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-      return const SizedBox.shrink();
-    },
-  );
-}
-
+/*
 Widget buildLegalLinks(BuildContext context) {
   return Center(
     child: TextButton(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       onPressed: () => showTermsBottomSheet(context),
       child: Text(
         'Termos de Uso e Privacidade',
         style: TextStyle(
-          color: context.colors.beastHide,
+          color: context.colors.ashGrey,
           fontSize: 14,
-          decoration: TextDecoration.underline,
+          fontWeight: FontWeight.bold,
         ),
       ),
     ),
   );
 }
+*/
 

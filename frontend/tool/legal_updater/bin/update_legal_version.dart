@@ -74,8 +74,13 @@ const Map<String, String> kLegalHashes = {
 }
 
 Future<void> main(List<String> args) async {
-  final String repoPath = args.isNotEmpty ? args[0] : '../../legal/repo';
-  final String outputPath = args.length > 1 ? args[1] : '../../lib/constants/legal_version.g.dart';
+  final String repoPath = args.isNotEmpty 
+      ? args[0] 
+      : Platform.script.resolve('../../../legal/repo').toFilePath();
+      
+  final String outputPath = args.length > 1 
+      ? args[1] 
+      : Platform.script.resolve('../../../lib/constants/legal_version.g.dart').toFilePath();
   
   final updater = LegalVersionUpdater(repoPath, outputPath);
   print('Checking for changes in legal documents...');

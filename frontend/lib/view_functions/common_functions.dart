@@ -69,30 +69,34 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
 }
 
 PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions}) {
-  final feedbackButton = buildFeedbackButton(context);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final bgColor = isDark ? context.colors.deepBasalt : beastHide;
+  final fgColor = isDark ? Colors.white : nobleBlack;
+
+  final feedbackButton = buildFeedbackButton(context, color: fgColor);
 
   final updatedActions = actions != null ? [...actions, feedbackButton] : [feedbackButton];
 
   return AppBar(
     leading: AppNav.canGoBack(context)
         ? IconButton(
-            icon: Icon(Icons.arrow_back, color: nobleBlack),
+            icon: Icon(Icons.arrow_back, color: fgColor),
             onPressed: () => AppNav.back(context),
           )
         : null,
     title: Text(
       title,
       style: TextStyle(
-        color: nobleBlack,
+        color: fgColor,
         fontSize: 24,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.2,
       ),
     ),
-    backgroundColor: beastHide,
+    backgroundColor: bgColor,
     centerTitle: true,
-    elevation: 4,
-    shadowColor: Colors.black.withValues(alpha: 0.5),
+    elevation: isDark ? 0 : 4,
+    shadowColor: isDark ? Colors.transparent : Colors.black.withValues(alpha: 0.5),
     actions: updatedActions,
   );
 }
