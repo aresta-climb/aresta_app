@@ -40,7 +40,7 @@ void main() {
     await tester.pumpAndSettle();
     
     // Tap on the generated button
-    await tester.tap(find.text('Abrir Mapa'));
+    await tester.tap(find.text('Abrir Mapa Interativo'));
     await tester.pumpAndSettle();
 
     expect(mockTelemetry.recordedEvents, contains('abrir_mapa'));

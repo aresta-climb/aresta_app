@@ -156,6 +156,45 @@ void main() {
       expect(controller.goBack(), isFalse);
     });
 
+    test('Deve persistir escaladaNome em SetorNode ao retornar (goBack) de ViaNode', () {
+      final home = controller.currentNode;
+
+      final picoNode = PicoNode(
+        cragId: cragId,
+        parent: home,
+      );
+      controller.navigateTo(picoNode);
+
+      final setorNode = SetorNode(
+        setorNome: setor.nome,
+        cragId: cragId,
+        parent: picoNode,
+      );
+      controller.navigateTo(setorNode);
+
+      final viaNode = ViaNode(
+        escaladaNome: escalada.viaEsportiva.nome,
+        setorNome: setor.nome,
+        cragId: cragId,
+        parent: setorNode,
+      );
+      controller.navigateTo(viaNode);
+
+      // Node atual é a Via
+      expect(controller.currentNode, isA<ViaNode>());
+      expect((controller.currentNode as ViaNode).escaladaNome, escalada.viaEsportiva.nome);
+
+      // Simula o clique no botão voltar do Android (ou AppNav.back)
+      expect(controller.goBack(), isTrue);
+
+      // Deve ter retornado para o SetorNode
+      expect(controller.currentNode, isA<SetorNode>());
+      
+      // O SetorNode deve ter recebido o escaladaNome do ViaNode para fazer a animação de scroll
+      final updatedSetorNode = controller.currentNode as SetorNode;
+      expect(updatedSetorNode.scrollToEscaladaNome, escalada.viaEsportiva.nome);
+    });
+
     test('goHome deve resetar a árvore inteira para o HomeNode', () {
       final home = controller.currentNode;
 

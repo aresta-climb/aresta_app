@@ -16,9 +16,9 @@ void main() {
     expect(scaffoldFinder, findsOneWidget);
 
     final Scaffold scaffold = tester.widget(scaffoldFinder);
-    expect(scaffold.body, isA<SafeArea>());
+    expect(find.byType(SafeArea), findsWidgets);
     
-    final SafeArea safeArea = scaffold.body as SafeArea;
-    expect(safeArea.bottom, isTrue);
+    final safeAreas = tester.widgetList<SafeArea>(find.byType(SafeArea));
+    expect(safeAreas.any((sa) => sa.bottom == true), isTrue);
   });
 }

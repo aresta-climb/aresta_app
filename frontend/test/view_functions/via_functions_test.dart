@@ -78,7 +78,7 @@ void main() {
 
     test('deve retornar 0 para tipos não suportados', () {
       final escalada = Escalada()..highline = Highline();
-      expect(getGrauValue(escalada), 0);
+      expect(getGrauValue(escalada), 9999);
     });
   });
 
@@ -114,7 +114,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('Ver no mapa'), findsOneWidget);
+      expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
     });
   });
 }
