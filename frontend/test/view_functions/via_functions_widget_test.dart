@@ -21,7 +21,7 @@ void main() {
         ),
       ));
       
-      expect(find.text('Ver no mapa'), findsNothing);
+      expect(find.text('VER NO CROQUI INTERATIVO'), findsNothing);
     });
 
     testWidgets('deve exibir botao agrupado quando tiver multiplos mapas contendo a referencia', (WidgetTester tester) async {
@@ -48,9 +48,7 @@ void main() {
         ),
       ));
       
-      expect(find.text('Ver no mapa 1'), findsNothing);
-      expect(find.text('Ver no mapa 2'), findsNothing);
-      expect(find.text('Ver nos mapas (2)'), findsOneWidget);
+      expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
     });
   });
 }

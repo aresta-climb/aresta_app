@@ -46,8 +46,8 @@ void main() {
     await tester.pumpWidget(buildTestableWidget());
     await tester.pump();
 
-    // Verify Header exists
-    expect(find.byIcon(Icons.terrain), findsOneWidget);
+    // Verify Header exists by checking for settings icon
+    expect(find.byIcon(Icons.settings), findsOneWidget);
     
     // Verify NearbyCragsCarousel exists
     expect(find.byType(NearbyCragsCarousel), findsOneWidget);

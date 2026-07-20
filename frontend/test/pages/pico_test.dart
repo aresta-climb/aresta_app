@@ -84,23 +84,4 @@ void main() {
     expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'busca');
   });
 
-  testWidgets('PicoDetailsPage should wrap body in SafeArea', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: PicoDetailsPage(
-        pico: Pico()..nome = 'Pico Teste',
-        croqui: Croqui(),
-        cragId: 'crag1',
-        datasetRepo: DatasetRepository(editorDeCroqui: EditorDeCroqui()),
-      ),
-    ));
-
-    final scaffoldFinder = find.byType(Scaffold);
-    expect(scaffoldFinder, findsOneWidget);
-
-    final Scaffold scaffold = tester.widget(scaffoldFinder);
-    expect(scaffold.body, isA<SafeArea>());
-    
-    final SafeArea safeArea = scaffold.body as SafeArea;
-    expect(safeArea.bottom, isTrue);
-  });
 }

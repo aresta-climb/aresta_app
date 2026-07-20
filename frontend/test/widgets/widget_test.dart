@@ -52,8 +52,8 @@ void main() {
     ));
     await tester.pump();
 
-    // Verifica se a página inicial está presente (o ícone de terrain é renderizado pelo Header)
-    expect(find.byIcon(Icons.terrain), findsOneWidget);
+    // Verifica se a página inicial está presente (o ícone de settings é renderizado pelo Header)
+    expect(find.byIcon(Icons.settings), findsOneWidget);
   });
 
   testWidgets('Botão de sync mostra aviso quando aplicativo está obsoleto (soft block)', (WidgetTester tester) async {
