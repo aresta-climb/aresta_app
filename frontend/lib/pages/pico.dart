@@ -153,38 +153,65 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 },
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 20, right: 20),
-              title: Text(
-                widget.pico.nome.toUpperCase(),
-                style: TextStyle(
-                  color: context.colors.chalkWhite,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                ),
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  buildCragBackground(widget.croqui.caminhoThumbnail, cragId: widget.cragId),
-                  
-                  // Gradient to make text readable
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          context.colors.deepBasalt.withValues(alpha: 0.8),
-                          context.colors.deepBasalt,
+            flexibleSpace: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final top = constraints.biggest.height;
+                final collapsedHeight = MediaQuery.of(context).padding.top + kToolbarHeight;
+                final expandedHeight = 300.0;
+                // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
+                // Usamos isso para animar manualmente o padding e o tamanho da fonte.
+                double t = (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+                t = t.clamp(0.0, 1.0);
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    FlexibleSpaceBar(
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          buildCragBackground(widget.croqui.caminhoThumbnail, cragId: widget.cragId),
+                          
+                          // Gradient to make text readable
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  context.colors.deepBasalt.withValues(alpha: 0.8),
+                                  context.colors.deepBasalt,
+                                ],
+                                stops: const [0.5, 0.8, 1.0],
+                              ),
+                            ),
+                          ),
                         ],
-                        stops: const [0.5, 0.8, 1.0],
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    Positioned(
+                      // Anima a margem esquerda de 20 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
+                      left: 20 + (52 * (1 - t)),
+                      // Anima a margem direita para dar espaço aos botões de share e feedback.
+                      right: 20 + (84 * (1 - t)), // Make room for share and feedback buttons
+                      bottom: 20,
+                      child: Text(
+                        widget.pico.nome.toUpperCase(),
+                        style: TextStyle(
+                          color: context.colors.chalkWhite,
+                          fontWeight: FontWeight.w900,
+                          // A fonte diminui suavemente de 24 para 18.
+                          fontSize: 18 + (6 * t),
+                        ),
+                        // Força para 1 linha a partir da metade do scroll para evitar que o texto bata na status bar.
+                        maxLines: t > 0.5 ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           SliverToBoxAdapter(

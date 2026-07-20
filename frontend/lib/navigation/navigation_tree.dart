@@ -445,7 +445,17 @@ class TreeNavigationController extends ChangeNotifier {
   bool goBack() {
     final parentNode = _currentNode.parent;
     if (parentNode != null) {
-      _currentNode = parentNode;
+      if (parentNode is SetorNode && _currentNode is ViaNode) {
+        _currentNode = SetorNode(
+          setorNome: parentNode.setorNome,
+          grupoNome: parentNode.grupoNome,
+          scrollToEscaladaNome: (_currentNode as ViaNode).escaladaNome,
+          cragId: parentNode.cragId,
+          parent: parentNode.parent!,
+        );
+      } else {
+        _currentNode = parentNode;
+      }
       notifyListeners();
       return true;
     }
