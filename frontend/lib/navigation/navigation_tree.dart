@@ -395,6 +395,10 @@ class TreeNavigationController extends ChangeNotifier {
              (a.mapas.isNotEmpty ? a.mapas.first.mapaCaminhoImagem == b.mapas.first.mapaCaminhoImagem : true);
     }
 
+        if (a is SetoresNode && b is SetoresNode) return a.cragId == b.cragId;
+    if (a is ExplorarLocalNode && b is ExplorarLocalNode) return a.cragId == b.cragId;
+    if (a is ComunidadePicoNode && b is ComunidadePicoNode) return a.cragId == b.cragId;
+    if (a is ApoiePicoNode && b is ApoiePicoNode) return a.cragId == b.cragId;
     if (a is PicoNode && b is PicoNode) {
       return a.cragId == b.cragId;
     }
@@ -461,4 +465,29 @@ class TreeNavigationController extends ChangeNotifier {
       notifyListeners();
     }
   }
+}
+
+
+class SetoresNode extends PicoContextNode {
+  const SetoresNode({required super.cragId, required super.parent});
+  @override NavNode copyWithMergedAncestor(covariant SetoresNode matchingAncestor) => SetoresNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override String toString() => 'SetoresNode';
+}
+
+class ExplorarLocalNode extends PicoContextNode {
+  const ExplorarLocalNode({required super.cragId, required super.parent});
+  @override NavNode copyWithMergedAncestor(covariant ExplorarLocalNode matchingAncestor) => ExplorarLocalNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override String toString() => 'ExplorarLocalNode';
+}
+
+class ComunidadePicoNode extends PicoContextNode {
+  const ComunidadePicoNode({required super.cragId, required super.parent});
+  @override NavNode copyWithMergedAncestor(covariant ComunidadePicoNode matchingAncestor) => ComunidadePicoNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override String toString() => 'ComunidadePicoNode';
+}
+
+class ApoiePicoNode extends PicoContextNode {
+  const ApoiePicoNode({required super.cragId, required super.parent});
+  @override NavNode copyWithMergedAncestor(covariant ApoiePicoNode matchingAncestor) => ApoiePicoNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override String toString() => 'ApoiePicoNode';
 }

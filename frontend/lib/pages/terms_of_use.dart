@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import '../theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -273,19 +274,31 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                       onTapLink: _onTapLink,
                       styleSheet: MarkdownStyleSheet(
                         p: TextStyle(
-                          fontSize: 16, 
-                          height: 1.6, 
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                        h1: TextStyle(
+                          color: context.colors.rustIron,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                        h2: TextStyle(
+                          color: context.colors.rustIron,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
                         h3: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: context.colors.rustIron,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
-                        h3Align: WrapAlignment.center,
-                        strong: TextStyle(
+                        strong: const TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Colors.white,
                         ),
                         blockSpacing: 16.0,
                       ),
@@ -294,7 +307,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                   if (widget.showAcceptButton)
                     Card(
                       elevation: 0,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      color: context.colors.rustIron,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -305,7 +318,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                           CheckboxListTile(
                               title: const Text(
                                 'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
                               ),
                               value: _isChecked,
                               onChanged: (bool? value) {
@@ -330,6 +343,8 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                                       }
                                     : null,
                                 style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.brandColor,
+                                  foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),

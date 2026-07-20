@@ -20,7 +20,7 @@ bool get _isLight {
 
 AppColors get _currentColors => _isLight ? AppColors.light : AppColors.dark;
 
-Color get nobleBlack => _currentColors.nobleBlack;
+
 Color get beastHide => _currentColors.beastHide;
 Color get fishBone => _currentColors.fishBone;
 Color get leatherWork => _currentColors.leatherWork;
@@ -32,7 +32,7 @@ Color get weatheredIron => _currentColors.weatheredIron;
 
 Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   return IconButton(
-    icon: Icon(Icons.bug_report, color: color ?? nobleBlack),
+    icon: Icon(Icons.bug_report, color: color ?? Colors.black),
     tooltip: 'Enviar Feedback/Bug',
     onPressed: () {
       if (!BackgroundWorker.isConfigured) {
@@ -68,14 +68,50 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   );
 }
 
-PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions}) {
+PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions, String? subtitle}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final bgColor = isDark ? context.colors.deepBasalt : beastHide;
-  final fgColor = isDark ? Colors.white : nobleBlack;
+  final fgColor = isDark ? Colors.white : Colors.black;
 
   final feedbackButton = buildFeedbackButton(context, color: fgColor);
 
   final updatedActions = actions != null ? [...actions, feedbackButton] : [feedbackButton];
+
+  Widget titleWidget = Text(
+    title,
+    style: TextStyle(
+      color: fgColor,
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 1.2,
+    ),
+  );
+
+  if (subtitle != null) {
+    titleWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: fgColor,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: context.colors.dryMoss, // A nice subtle color for the subtitle
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
 
   return AppBar(
     leading: AppNav.canGoBack(context)
@@ -84,15 +120,7 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
             onPressed: () => AppNav.back(context),
           )
         : null,
-    title: Text(
-      title,
-      style: TextStyle(
-        color: fgColor,
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-      ),
-    ),
+    title: titleWidget,
     backgroundColor: bgColor,
     centerTitle: true,
     elevation: isDark ? 0 : 4,
@@ -291,7 +319,7 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
 /// Ela imita o design da MainNavBar, mas fornece especificamente atalhos para voltar apenas para as abas Home ou GPS.
 Widget buildSecondaryBottomNav(BuildContext context) {
   return Container(
-    color: nobleBlack,
+    color: Colors.black,
     child: SafeArea(
       child: Material(
         color: Colors.transparent,
@@ -380,7 +408,7 @@ Widget buildSortMenu<T>({
 
   return PopupMenuButton<T>(
     icon: Icon(Icons.sort, color: fishBone),
-    color: nobleBlack,
+    color: Colors.black,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     onSelected: onSelected,
     itemBuilder: (BuildContext context) => options.entries

@@ -75,8 +75,10 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
       children: [
         Row(
           children: [
-            // TODO: Fake Logo (Placeholder for the real asset)
-            Icon(Icons.terrain, color: context.colors.rustIron, size: 28),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.asset('assets/logo_in_app.jpg', width: 28, height: 28, fit: BoxFit.cover),
+            ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -99,7 +101,7 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
                     ),
                     TextSpan(
                       text: 'A',
-                      style: TextStyle(color: context.colors.rustIron),
+                      style: TextStyle(color: AppColors.brandColor),
                     ),
                   ],
                 ),
@@ -330,7 +332,7 @@ Widget _buildStepItem(
                 Text(
                   title,
                   style: TextStyle(
-                    color: context.colors.slateBlue,
+                      color: AppColors.brandColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),

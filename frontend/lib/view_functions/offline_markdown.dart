@@ -19,14 +19,18 @@ class OfflineMarkdown extends StatefulWidget {
   final String data;
   final String cragId;
 
-  const OfflineMarkdown({super.key, required this.data, required this.cragId});
+  const OfflineMarkdown({
+    super.key,
+    required this.data,
+    required this.cragId,
+  });
 
   @override
   State<OfflineMarkdown> createState() => _OfflineMarkdownState();
 }
 
 class _OfflineMarkdownState extends State<OfflineMarkdown> {
-  // Store the image providers we create so we can evict them later
+  // Guarda os image providers criados para limpar da memória depois
   final List<ImageProvider> _imageProviders = [];
 
   @override
@@ -50,8 +54,10 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
         final editor = EditorDeCroqui.instance;
         final downloadsPath = '${editor.downloadsPath(snapshot.data!.path)}/${widget.cragId}';
         
+        String markdownData = widget.data;
+
         return MarkdownBody(
-          data: widget.data,
+          data: markdownData,
           extensionSet: md.ExtensionSet.gitHubFlavored,
           onTapLink: (text, href, title) async {
             if (href != null) {

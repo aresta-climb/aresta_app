@@ -298,7 +298,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
 
   Widget _buildList() {
     if (query.isEmpty) {
-      return Container(color: nobleBlack);
+      return Container(color: Colors.black);
     }
 
     final queryLower = normalizeSearchString(query);
@@ -331,7 +331,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
       }
       
       return Container(
-        color: nobleBlack,
+        color: Colors.black,
         alignment: Alignment.center,
         child: Text(
           emptyText,
@@ -341,7 +341,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     }
 
     return Container(
-      color: nobleBlack,
+      color: Colors.black,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: ListView.builder(
         itemCount: results.length,

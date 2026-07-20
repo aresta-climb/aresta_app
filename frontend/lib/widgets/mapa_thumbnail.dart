@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'package:path_provider/path_provider.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
@@ -53,71 +54,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
     if (widget.imageProviderOverride != null) {
       return widget.imageProviderOverride;
     }
-
-    final dir = await getApplicationDocumentsDirectory();
-    final editor = EditorDeCroqui.instance;
-    final downloadsPath = '${editor.downloadsPath(dir.path)}/${widget.cragId}';
-
-    String path = widget.mapa.caminhoImagemMapa;
-    String fileName = path.split('/').last;
-
-    File? localFile;
-    
-    // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
-    final baseUrl = '${NetworkConstants.officialServerUrl}/';
-    if (path.startsWith(baseUrl)) {
-      final relativePath = path.replaceFirst(baseUrl, '');
-      final directFile = File('$downloadsPath/$relativePath');
-      if (directFile.existsSync()) {
-        localFile = directFile;
-      }
-    }
-
-    // 2. Tenta usar o caminho diretamente como um caminho relativo
-    if (localFile == null) {
-      String cleanPath = path.startsWith('/') ? path.substring(1) : path;
-      final directFile = File('$downloadsPath/$cleanPath');
-      if (directFile.existsSync()) {
-        localFile = directFile;
-      }
-    }
-
-    if (localFile == null && fileName.isNotEmpty) {
-      final searchName = Uri.decodeComponent(fileName).toLowerCase();
-      String searchBaseName = searchName.contains('.') ? searchName.substring(0, searchName.lastIndexOf('.')) : searchName;
-
-      try {
-        final downloadsDir = Directory(downloadsPath);
-        if (downloadsDir.existsSync()) {
-          final entities = downloadsDir.listSync(recursive: true);
-          for (var entity in entities) {
-            if (entity is File) {
-              final String ePath = entity.path.replaceAll('\\', '/');
-              final String eName = ePath.split('/').last;
-              final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
-              if (eNameLower == searchName) {
-                localFile = entity;
-                break;
-              }
-              String eBaseName = eNameLower.contains('.') ? eNameLower.substring(0, eNameLower.lastIndexOf('.')) : eNameLower;
-              if (eBaseName == searchBaseName) {
-                localFile = entity;
-                break;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // ignora erros
-      }
-    }
-
-    if (localFile != null && localFile.existsSync()) {
-      return FileImage(localFile);
-    }
-
-    debugPrint('Erro: Imagem do mapa não encontrada localmente: $path');
-    return null;
+    return resolveMapImageProvider(widget.cragId, widget.mapa);
   }
 
   @override
@@ -191,7 +128,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: nobleBlack.withValues(alpha: 0.8),
+                  color: context.colors.rustIron.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: beastHide.withValues(alpha: 0.5)),
                 ),
@@ -219,3 +156,70 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   }
 }
 
+
+Future<ImageProvider?> resolveMapImageProvider(String cragId, Mapa mapa) async {
+  return resolveImagePathProvider(cragId, mapa.caminhoImagemMapa);
+}
+
+Future<ImageProvider?> resolveImagePathProvider(String cragId, String path) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final editor = EditorDeCroqui.instance;
+  final downloadsPath = '${editor.downloadsPath(dir.path)}/$cragId';
+
+  String fileName = path.split('/').last;
+
+  File? localFile;
+  
+  final baseUrl = '${NetworkConstants.officialServerUrl}/';
+  if (path.startsWith(baseUrl)) {
+    final relativePath = path.replaceFirst(baseUrl, '');
+    final directFile = File('$downloadsPath/$relativePath');
+    if (directFile.existsSync()) {
+      localFile = directFile;
+    }
+  }
+
+  if (localFile == null) {
+    String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    final directFile = File('$downloadsPath/$cleanPath');
+    if (directFile.existsSync()) {
+      localFile = directFile;
+    }
+  }
+
+  if (localFile == null && fileName.isNotEmpty) {
+    final searchName = Uri.decodeComponent(fileName).toLowerCase();
+    String searchBaseName = searchName.contains('.') ? searchName.substring(0, searchName.lastIndexOf('.')) : searchName;
+
+    try {
+      final downloadsDir = Directory(downloadsPath);
+      if (downloadsDir.existsSync()) {
+        final entities = downloadsDir.listSync(recursive: true);
+        for (var entity in entities) {
+          if (entity is File) {
+            final String ePath = entity.path.replaceAll('\\', '/');
+            final String eName = ePath.split('/').last;
+            final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
+            if (eNameLower == searchName) {
+              localFile = entity;
+              break;
+            }
+            String eBaseName = eNameLower.contains('.') ? eNameLower.substring(0, eNameLower.lastIndexOf('.')) : eNameLower;
+            if (eBaseName == searchBaseName) {
+              localFile = entity;
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ignora erros
+    }
+  }
+
+  if (localFile != null && localFile.existsSync()) {
+    return FileImage(localFile);
+  }
+
+  return null;
+}
