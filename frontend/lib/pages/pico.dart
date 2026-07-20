@@ -98,6 +98,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
             actions: [
+              buildFeedbackButton(context, color: context.colors.chalkWhite),
               IconButton(
                 icon: Icon(Icons.search, color: context.colors.chalkWhite),
                 tooltip: searchTooltip,
