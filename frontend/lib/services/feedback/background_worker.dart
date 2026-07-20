@@ -133,7 +133,23 @@ class BackgroundWorker {
         bool success = false;
         try {
           final jsonContent = jsonDecode(processingFile.readAsStringSync());
-          final id = jsonContent['metadata']['feedbackId'];
+          
+          // O usuário preferiu descartar sumariamente os feedbacks gerados 
+          // em versões anteriores à v0.0.24, que não possuíam id nos metadados.
+          final feedbackId = jsonContent['metadata']?['feedbackId'];
+          if (feedbackId == null) {
+            try {
+              processingFile.deleteSync();
+              final oldId = jsonContent['id'];
+              if (oldId != null) {
+                final pngFile = File(p.join(queueDir.path, '$oldId.png'));
+                if (pngFile.existsSync()) pngFile.deleteSync();
+              }
+            } catch (_) {}
+            continue; // Pula para o próximo arquivo sem enviar
+          }
+
+          final id = feedbackId;
           final pngPath = p.join(queueDir.path, '$id.png');
           final pngFile = File(pngPath);
 
@@ -174,7 +190,6 @@ class BackgroundWorker {
         if (success) {
           try {
             processingFile.deleteSync();
-            final jsonContent = jsonDecode(processingFile.readAsStringSync()); // Ops, já deletado!
           } catch (_) {}
           
           // Refazendo a leitura segura

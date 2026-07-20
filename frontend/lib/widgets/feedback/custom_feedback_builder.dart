@@ -105,56 +105,66 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
               selectionHandleColor: buttonColor,
             ),
           ),
-          child: TextField(
-            key: const Key('text_input_field'),
-            maxLines: maxLines,
-            minLines: minLines,
-            controller: controller,
-            textInputAction: TextInputAction.done,
-            style: TextStyle(color: textColor),
-            cursorColor: buttonColor,
-            decoration: InputDecoration(
-              hintText: 'Descreva o problema ou sugestão...',
-              hintStyle: TextStyle(color: hintColor),
-              filled: true,
-              fillColor: fillColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: buttonColor, width: 2),
+          child: DefaultTextEditingShortcuts(
+            child: TextField(
+              key: const Key('text_input_field'),
+              maxLines: maxLines,
+              minLines: minLines,
+              controller: controller,
+              textInputAction: TextInputAction.done,
+              style: TextStyle(color: textColor),
+              cursorColor: buttonColor,
+              decoration: InputDecoration(
+                hintText: 'Descreva o problema ou sugestão...',
+                hintStyle: TextStyle(color: hintColor),
+                filled: true,
+                fillColor: fillColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: buttonColor, width: 2),
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 8),
-        ElevatedButton(
-          key: const Key('submit_feedback_button'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: buttonColor,
-            foregroundColor: appColors.fishBone,
-            minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Enviar',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          onPressed: () => widget.onSubmit(controller.text),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, child) {
+            final isEmpty = value.text.trim().isEmpty;
+            return ElevatedButton(
+              key: const Key('submit_feedback_button'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor,
+                foregroundColor: appColors.fishBone,
+                disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
+                disabledForegroundColor: appColors.fishBone.withValues(alpha: 0.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: isEmpty ? null : () => widget.onSubmit(controller.text),
+              child: const Text(
+                'Enviar',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            );
+          },
         ),
       ],
-        ),
+    ),
       ),
     );
   }

@@ -9,9 +9,10 @@ import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:flutter/services.dart';
+import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
 
 void main() {
-  // ---------------------------------------------------------------------------
   // safeString
   // ---------------------------------------------------------------------------
 
@@ -256,6 +257,65 @@ void main() {
 
       BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
     });
+
+    testWidgets('deve chamar hide() e logar telemetria em processFeedbackSubmission', (WidgetTester tester) async {
+      BackgroundWorker.debugIsConfiguredOverride = true;
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      // Mock method channels to prevent MissingPluginException
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (MethodCall methodCall) async => '.',
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('be.tramckrijte.workmanager/workmanager'),
+        (MethodCall methodCall) async => true,
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/package_info'),
+        (MethodCall methodCall) async => {
+          'appName': 'Aresta',
+          'packageName': 'com.aresta.app',
+          'version': '1.0.0',
+          'buildNumber': '1',
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BetterFeedback(
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    // Open feedback first so we have the overlay
+                    BetterFeedback.of(context).show((_) {});
+                    
+                    final dummyFeedback = UserFeedback(text: 'Test text', screenshot: Uint8List(0));
+                    await processFeedbackSubmission(context, dummyFeedback);
+                  },
+                  child: const Text('Simulate'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Simulate'));
+      await tester.pumpAndSettle();
+
+      // Ensure Telemetry logged 'enviar_feedback'
+      expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);
+      expect(mockTelemetry.recordedParams['acao_feedback']?['acao'], 'enviar_feedback');
+
+      // Ensure FeedbackUI is not visible anymore
+      final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
+      expect(BetterFeedback.of(scaffoldState.context).isVisible, isFalse);
+
+      BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -289,3 +349,4 @@ void main() {
     });
   });
 }
+
