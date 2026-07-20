@@ -689,12 +689,8 @@ Widget _buildTopBadges(
     badges.add(
       GestureDetector(
         onTap: () {
-          if (fromSetorPage) {
-            AppNav.back(context);
-          } else {
-            TelemetryService.instance.logAcaoEscalada(cragId, setor.nome, getEscaladaNome(escalada), 'abrir_setor', 'detalhes_via');
-            AppNav.toSetor(context, setor: setor, grupoContext: grupo, scrollToEscalada: escalada);
-          }
+          TelemetryService.instance.logAcaoEscalada(cragId, setor.nome, getEscaladaNome(escalada), 'abrir_setor', 'detalhes_via');
+          AppNav.toSetor(context, setor: setor, grupoContext: grupo, scrollToEscalada: escalada);
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

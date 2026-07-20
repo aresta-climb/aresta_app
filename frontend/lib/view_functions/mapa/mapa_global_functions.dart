@@ -23,32 +23,34 @@ void showCragModal({
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) {
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: buildCragListItem(
+                  crag,
+                  downloadingCrags,
+                  () {
+                    onDownload();
+                    Navigator.of(context).pop();
+                  },
+                  onOpen: onOpen != null
+                      ? () {
+                          Navigator.of(context).pop();
+                          onOpen();
+                        }
+                      : null,
+                ),
               ),
-              child: buildCragListItem(
-                crag,
-                downloadingCrags,
-                () {
-                  onDownload();
-                  Navigator.of(context).pop();
-                },
-                onOpen: onOpen != null
-                    ? () {
-                        Navigator.of(context).pop();
-                        onOpen();
-                      }
-                    : null,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     },
@@ -63,32 +65,37 @@ Set<Marker> buildMapMarkers({
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   BitmapDescriptor? customIcon,
+  Map<String, BitmapDescriptor>? textIcons,
+  double currentZoom = 4.0,
 }) {
   final markers = <Marker>{};
+  final bool showText = currentZoom >= 4.0;
 
   for (final crag in crags) {
     if (crag['latitude'] != null && crag['longitude'] != null) {
       final double lat = crag['latitude'];
       final double lng = crag['longitude'];
+      final String id = crag['id'];
+      
+      BitmapDescriptor iconToUse = customIcon ?? BitmapDescriptor.defaultMarker;
+      if (showText && textIcons != null && textIcons.containsKey(id)) {
+        iconToUse = textIcons[id]!;
+      }
 
       markers.add(
         Marker(
-          markerId: MarkerId(crag['id']),
+          markerId: MarkerId(id),
           position: LatLng(lat, lng),
-          icon: customIcon ?? BitmapDescriptor.defaultMarker,
-          infoWindow: InfoWindow(
-            title: crag['nome'],
-            snippet: crag['local'],
-            onTap: () {
-              showCragModal(
-                context: context,
-                crag: crag,
-                downloadingCrags: downloadingCrags,
-                onDownload: () => onDownload(crag),
-                onOpen: onOpen != null ? () => onOpen(crag) : null,
-              );
-            },
-          ),
+          icon: iconToUse,
+          onTap: () {
+            showCragModal(
+              context: context,
+              crag: crag,
+              downloadingCrags: downloadingCrags,
+              onDownload: () => onDownload(crag),
+              onOpen: onOpen != null ? () => onOpen(crag) : null,
+            );
+          },
         ),
       );
     }
