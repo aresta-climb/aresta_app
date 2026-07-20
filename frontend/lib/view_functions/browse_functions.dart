@@ -8,6 +8,7 @@ import '../services/http/zip_interceptor_client.dart';
 import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
+import '../utils/pico_categorization.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///
@@ -328,7 +329,7 @@ class CragCard extends StatelessWidget {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: context.colors.rustIron,
+                            color: AppColors.brandColor,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
@@ -457,22 +458,20 @@ Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
     ),
   );
 
-  if (thumbnailUrl.isNotEmpty) {
-    if (thumbnailUrl.startsWith('aresta-zip://')) {
-      return FutureBuilder<http.Response>(
-        future: ZipInterceptorClient().get(Uri.parse(thumbnailUrl)),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return placeholder;
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) return placeholder;
-          return Image.memory(
-            snapshot.data!.bodyBytes,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => placeholder,
-          );
-        },
-      );
-    } else {
-      if (cragId != null && cragId.isNotEmpty) {
+  if (thumbnailUrl.isNotEmpty && thumbnailUrl.startsWith('aresta-zip://')) {
+    return FutureBuilder<http.Response>(
+      future: ZipInterceptorClient().get(Uri.parse(thumbnailUrl)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return placeholder;
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) return placeholder;
+        return Image.memory(
+          snapshot.data!.bodyBytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => placeholder,
+        );
+      },
+    );
+  } else if (cragId != null && cragId.isNotEmpty) {
         return FutureBuilder<Directory>(
           future: getApplicationDocumentsDirectory(),
           builder: (context, snapshot) {
@@ -491,8 +490,6 @@ Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
           },
         );
       }
-    }
-  }
   return placeholder;
 }
 

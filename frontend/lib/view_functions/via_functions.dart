@@ -45,15 +45,36 @@ String getGrauString(Escalada escalada) {
 
 /// Retorna um valor numérico representando a dificuldade para fins de ordenação.
 int getGrauValue(Escalada escalada) {
+  int value = 0;
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      return escalada.viaEsportiva.dificuldade.value;
+      value = escalada.viaEsportiva.dificuldade.value;
+      break;
     case Escalada_Tipo.viaMovel:
-      return escalada.viaMovel.dificuldade.value;
+      value = escalada.viaMovel.dificuldade.value;
+      break;
     case Escalada_Tipo.boulder:
-      return escalada.boulder.dificuldade.value;
+      value = escalada.boulder.dificuldade.value;
+      break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return escalada.viaMultiplasEnfiadas.dificuldadeMaxima.value;
+      value = escalada.viaMultiplasEnfiadas.dificuldadeMaxima.value;
+      break;
+    default:
+      value = 0;
+  }
+  return value == 0 ? 9999 : value;
+}
+
+/// Retorna a quantidade de proteções (fixas + móveis) para fins de ordenação.
+int getProtecoesValue(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      return escalada.viaEsportiva.quantidadeProtecoesIntermediarias + escalada.viaEsportiva.quantidadeProtecoesParada;
+    case Escalada_Tipo.viaMovel:
+      return escalada.viaMovel.quantidadeProtecoesIntermediarias + escalada.viaMovel.quantidadeProtecoesParada;
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      // Multi-pitch might not have simple protections count at the top level
+      return 0; 
     default:
       return 0;
   }
@@ -549,7 +570,7 @@ Widget _buildTopBadges(
     Widget chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: nobleBlack,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: beastHide.withValues(alpha: 0.5)),
       ),
@@ -596,7 +617,7 @@ Widget _buildTopBadges(
     Widget chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: nobleBlack,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: beastHide.withValues(alpha: 0.5)),
       ),

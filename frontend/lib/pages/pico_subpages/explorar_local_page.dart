@@ -1,0 +1,117 @@
+import '../../main.dart';
+import 'package:flutter/material.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../view_functions/common_functions.dart';
+import '../../utils/pico_categorization.dart';
+import '../../widgets/pico_menu_card.dart';
+import '../../theme/app_colors.dart';
+import '../../navigation/navigation_tree.dart';
+import '../../navigation/navigation_functions.dart';
+import '../../widgets/mapa_thumbnail.dart';
+
+class ExplorarLocalPage extends StatelessWidget {
+  final Pico pico;
+  final String cragId;
+  final PicoCategorizedData categories;
+
+  const ExplorarLocalPage({
+    super.key,
+    required this.pico,
+    required this.cragId,
+    required this.categories,
+  });
+
+  void _pushTextNode(BuildContext context, String title, String content) {
+    final treeNav = TreeNavigationWrapper.currentTreeController;
+    if (treeNav != null) {
+      treeNav.navigateTo(TextNode(
+        title: title,
+        content: content,
+        cragId: cragId,
+        parent: treeNav.currentNode,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: buildCommonAppBar(context, 'EXPLORAR O LOCAL', subtitle: pico.nome),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            if (categories.sobre.isNotEmpty)
+              ...categories.sobre.map((b) => PicoMenuCard(
+                title: 'Sobre o local',
+                subtitle: b.texto,
+                icon: Icons.menu_book,
+                iconColor: context.colors.beastHide,
+                backgroundColor: context.colors.caveShadow, // Bright generic container
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                onTap: () => _pushTextNode(context, 'Sobre o local', b.destino.secaoTextual.conteudo),
+              )),
+            if (categories.sobre.isEmpty && pico.descricao.isNotEmpty)
+              PicoMenuCard(
+                title: 'Sobre o local',
+                subtitle: 'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
+                icon: Icons.menu_book,
+                iconColor: context.colors.beastHide,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                onTap: () => _pushTextNode(context, 'Sobre o local', pico.descricao),
+              ),
+
+            if (categories.comoChegar.isNotEmpty)
+              ...categories.comoChegar.map((b) => PicoMenuCard(
+                title: 'Como chegar',
+                subtitle: b.texto,
+                icon: Icons.near_me,
+                iconColor: context.colors.beastHide,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                onTap: () => _pushTextNode(context, 'Como chegar', b.destino.secaoTextual.conteudo),
+              )),
+
+            if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo() && pico.mapasGerais.conteudo.mapas.isNotEmpty)
+              PicoMenuCard(
+                title: 'Mapas gerais',
+                subtitle: 'Visualização cartográfica, setores físicos e panorama das paredes.',
+                icon: Icons.map,
+                iconColor: context.colors.rustIron,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                onTap: () {
+                  AppNav.toMapas(
+                    context,
+                    cragId: cragId,
+                    mapas: pico.mapasGerais.conteudo.mapas.map((mapa) => CarrosselItemData(
+                      mapaCaminhoImagem: mapa.caminhoImagemMapa,
+                      setorContextNome: pico.nome,
+                    )).toList(),
+                  );
+                },
+              ),
+              
+            if (categories.outros.isNotEmpty)
+              ...categories.outros.map((b) => PicoMenuCard(
+                title: b.texto,
+                subtitle: 'Informações extras sobre o local.',
+                icon: Icons.info_outline,
+                iconColor: context.colors.dryMoss,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                onTap: () => _pushTextNode(context, b.texto, b.destino.secaoTextual.conteudo),
+              )),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  final Color nobleBlack;
   final Color beastHide;
   final Color fishBone;
   final Color leatherWork;
@@ -26,7 +25,6 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color caveShadow;
 
   const AppColors({
-    required this.nobleBlack,
     required this.beastHide,
     required this.fishBone,
     required this.leatherWork,
@@ -50,7 +48,6 @@ class AppColors extends ThemeExtension<AppColors> {
 
   @override
   AppColors copyWith({
-    Color? nobleBlack,
     Color? beastHide,
     Color? fishBone,
     Color? leatherWork,
@@ -72,7 +69,6 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? caveShadow,
   }) {
     return AppColors(
-      nobleBlack: nobleBlack ?? this.nobleBlack,
       beastHide: beastHide ?? this.beastHide,
       fishBone: fishBone ?? this.fishBone,
       leatherWork: leatherWork ?? this.leatherWork,
@@ -101,7 +97,6 @@ class AppColors extends ThemeExtension<AppColors> {
       return this;
     }
     return AppColors(
-      nobleBlack: Color.lerp(nobleBlack, other.nobleBlack, t)!,
       beastHide: Color.lerp(beastHide, other.beastHide, t)!,
       fishBone: Color.lerp(fishBone, other.fishBone, t)!,
       leatherWork: Color.lerp(leatherWork, other.leatherWork, t)!,
@@ -126,7 +121,6 @@ class AppColors extends ThemeExtension<AppColors> {
 
   // Paleta Escura Atual
   static const AppColors dark = AppColors(
-    nobleBlack: Color(0xFF1F2128),
     beastHide: Color(0xFFAE8F68),
     fishBone: Color(0xFFE4DAC5),
     leatherWork: Color(0xFF896449),
@@ -152,7 +146,6 @@ class AppColors extends ThemeExtension<AppColors> {
 
   // Nova Paleta Clara
   static const AppColors light = AppColors(
-    nobleBlack: Color(0xFFEBE8E0),
     beastHide: Color(0xFFD68C3E),
     fishBone: Color(0xFF2A2E33),
     leatherWork: Color(0xFF996642),

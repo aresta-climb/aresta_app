@@ -812,7 +812,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: nobleBlack,
+                                color: Colors.black,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(color: beastHide.withValues(alpha: 0.5)),
                               ),
@@ -1114,7 +1114,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                     right: 10,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: nobleBlack.withValues(alpha: 0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
@@ -1163,10 +1163,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             child: ActionChip(
                               side: BorderSide.none,
                               backgroundColor: context.colors.rustIron,
-                              avatar: Icon(Icons.turn_left_outlined, color: nobleBlack, size: 18),
+                              avatar: Icon(Icons.turn_left_outlined, color: Colors.black, size: 18),
                               label: Text(
                                 upDest.label,
-                                style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onPressed: () {

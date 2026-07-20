@@ -306,7 +306,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final caveShadowColor = isDark ? fishBone : obsidianBrown;
-    final searchTextColor = isDark ? nobleBlack : fishBone;
+    final searchTextColor = isDark ? Colors.black : fishBone;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
@@ -365,7 +365,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
               children: [
                 PopupMenuButton<String>(
                   onSelected: _onFilterChanged,
-                  color: nobleBlack,
+                  color: Colors.black,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   itemBuilder: (BuildContext context) {
                     return _filters.map((String filter) {

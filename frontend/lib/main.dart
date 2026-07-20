@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/pages/pico_subpages/setores_page.dart';
+import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
+import 'package:frontend/pages/pico_subpages/comunidade_pico_page.dart';
+import 'package:frontend/pages/pico_subpages/apoie_pico_page.dart';
+import 'package:frontend/utils/pico_categorization.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/meus_croquis.dart';
@@ -188,7 +193,7 @@ class _MyAppState extends State<MyApp> {
           feedbackBuilder: customFeedbackBuilder,
           themeMode: ThemeMode.dark, // Temporary: locked to dark mode
           theme: FeedbackThemeData(
-            background: AppColors.light.nobleBlack,
+            background: AppColors.light.slateStone,
             feedbackSheetColor: AppColors.light.obsidianBrown,
             activeFeedbackModeColor: AppColors.light.beastHide,
             sheetIsDraggable: false,
@@ -230,7 +235,7 @@ class _MyAppState extends State<MyApp> {
               brightness: Brightness.light,
               primary: AppColors.light.beastHide,
             ),
-            scaffoldBackgroundColor: AppColors.light.nobleBlack,
+            scaffoldBackgroundColor: AppColors.light.slateStone,
             textSelectionTheme: TextSelectionThemeData(
               cursorColor: AppColors.light.fishBone,
               selectionColor: AppColors.light.beastHide.withValues(alpha: 0.3),
@@ -522,6 +527,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   /// Resolve e constrói a página (Widget) correspondente a um nó (NavNode) da árvore de roteamento.
   Widget _buildNodeAsWidget(NavNode node) {
     if (node is PicoNode ||
+        node is SetoresNode ||
+        node is ExplorarLocalNode ||
+        node is ComunidadePicoNode ||
+        node is ApoiePicoNode ||
         node is SetorNode ||
         node is GrupoNode ||
         node is ViaNode ||
@@ -572,6 +581,14 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               scrollToMapaGeral: node.scrollToMapaGeral,
               returnToSetor: returnToSetor,
             );
+                    } else if (node is SetoresNode) {
+            return SetoresPage(pico: pico, cragId: cragId);
+          } else if (node is ExplorarLocalNode) {
+            return ExplorarLocalPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
+          } else if (node is ComunidadePicoNode) {
+            return ComunidadePicoPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
+          } else if (node is ApoiePicoNode) {
+            return ApoiePicoPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
           } else if (node is MapasCarrosselNode) {
             return MapasCarrosselPage(
               pico: pico,

@@ -4,6 +4,7 @@ import 'common_functions.dart';
 import 'offline_markdown.dart';
 import 'via_functions.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../theme/app_colors.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 
@@ -257,7 +258,7 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: nobleBlack,
+                    color: context.colors.deepBasalt,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: beastHide.withValues(alpha: 0.5)),
                   ),
@@ -310,7 +311,7 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           left: -6,
           child: Container(
             decoration: BoxDecoration(
-              color: nobleBlack,
+              color: context.colors.deepBasalt,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -368,4 +369,4 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
   return card;
 }
 
-enum EscaladaSortMode { original, alphaAsc, alphaDesc, gradeAsc, gradeDesc }
+enum EscaladaSortMode { original, alphaAsc, alphaDesc, gradeAsc, gradeDesc, protectionsAsc, protectionsDesc }

@@ -138,7 +138,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
           key: const Key('submit_feedback_button'),
           style: ElevatedButton.styleFrom(
             backgroundColor: buttonColor,
-            foregroundColor: appColors.nobleBlack,
+            foregroundColor: appColors.fishBone,
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

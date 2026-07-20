@@ -1,16 +1,26 @@
+import '../main.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/pico_functions.dart';
+import '../view_functions/browse_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/navigation_tree.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../theme/app_colors.dart';
 
-/// Uma página que exibe informações detalhadas sobre um pico específico.
-///
-/// Ela apresenta a descrição do pico e lista todos os setores contidos nele.
+// New imports for sub-pages
+import 'pico_subpages/setores_page.dart';
+import 'pico_subpages/explorar_local_page.dart';
+import 'pico_subpages/comunidade_pico_page.dart';
+import 'pico_subpages/apoie_pico_page.dart';
+import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
+import '../widgets/pico_menu_card.dart';
+import '../utils/pico_categorization.dart';
+
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;
   final Croqui croqui;
@@ -35,10 +45,13 @@ class PicoDetailsPage extends StatefulWidget {
 
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
+  late PicoCategorizedData _categories;
 
   @override
   void initState() {
     super.initState();
+    _categories = PicoCategorizedData(widget.croqui);
+    
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted && _mapaKey.currentContext != null) {
@@ -46,11 +59,23 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             _mapaKey.currentContext!,
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeInOut,
-            alignment: 0.1, // Scroll so the map is near the top
+            alignment: 0.1,
           );
         }
       });
     }
+  }
+
+  int _countTotalSetores() {
+    int count = 0;
+    for (var sg in widget.pico.setoresOuGrupos) {
+      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
+        count++;
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
+        count += sg.grupo.conteudo.setores.length;
+      }
+    }
+    return count;
   }
 
   @override
@@ -59,78 +84,251 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     if (isPicoBoulderArea(widget.pico)) {
       searchTooltip = 'Buscar boulder';
     }
+    
+    final int setoresCount = _countTotalSetores();
+    final String subtitleText = "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES";
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, 
-        widget.pico.nome,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: nobleBlack),
-            tooltip: searchTooltip,
-            onPressed: () async {
-              TelemetryService.instance.logAcaoCroqui(widget.cragId, 'buscar');
-              final result = await showSearch<Escalada?>(
-                context: context,
-                delegate: ViaSearchDelegate(widget.pico, widget.cragId),
-              );
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 300.0,
+            pinned: true,
+            backgroundColor: context.colors.deepBasalt,
+            iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.search, color: context.colors.chalkWhite),
+                tooltip: searchTooltip,
+                onPressed: () async {
+                  TelemetryService.instance.logAcaoCroqui(widget.cragId, 'buscar');
+                  final result = await showSearch<Escalada?>(
+                    context: context,
+                    delegate: ViaSearchDelegate(widget.pico, widget.cragId),
+                  );
 
-              if (result != null && context.mounted) {
-                final setor = findSetorForEscalada(widget.pico, result);
-                if (setor != null) {
-                  AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
-                }
-                TelemetryService.instance.logAcaoEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'abrir_detalhes', 'busca');
-                AppNav.toVia(context, escalada: result, setor: setor);
-              }
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: nobleBlack),
-            tooltip: 'Excluir guia',
-            onPressed: () async {
-              TelemetryService.instance.logAcaoCroqui(widget.cragId, 'excluir');
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-                  title: Text('Excluir?', style: TextStyle(color: beastHide)),
-                  content: Text('Deseja excluir o guia de ${widget.pico.nome}?', style: TextStyle(color: fishBone)),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text('CANCELAR', style: TextStyle(color: fishBone)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true && context.mounted) {
-                final success = await widget.datasetRepo.deleteCrag(widget.cragId);
-                if (context.mounted) {
-                  AppNav.home(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success ? 'Guia excluído.' : 'Erro ao excluir guia.'),
-                      backgroundColor: success ? mossRock : Theme.of(context).colorScheme.error,
+                  if (result != null && context.mounted) {
+                    final setor = findSetorForEscalada(widget.pico, result);
+                    if (setor != null) {
+                      AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
+                    }
+                    TelemetryService.instance.logAcaoEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'abrir_detalhes', 'busca');
+                    AppNav.toVia(context, escalada: result, setor: setor);
+                  }
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: context.colors.chalkWhite),
+                tooltip: 'Excluir guia',
+                onPressed: () async {
+                  TelemetryService.instance.logAcaoCroqui(widget.cragId, 'excluir');
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+                      title: Text('Excluir?', style: TextStyle(color: context.colors.fishBone)),
+                      content: Text('Deseja excluir o guia de ${widget.pico.nome}?', style: TextStyle(color: context.colors.fishBone)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text('CANCELAR', style: TextStyle(color: context.colors.fishBone)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
                     ),
                   );
-                }
-              }
-            },
+
+                  if (confirm == true && context.mounted) {
+                    final success = await widget.datasetRepo.deleteCrag(widget.cragId);
+                    if (context.mounted) {
+                      AppNav.home(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success ? 'Guia excluído.' : 'Erro ao excluir guia.'),
+                          backgroundColor: success ? context.colors.mossRock : Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 20, right: 20),
+              title: Text(
+                widget.pico.nome.toUpperCase(),
+                style: TextStyle(
+                  color: context.colors.chalkWhite,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                ),
+              ),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  buildCragBackground(widget.croqui.caminhoThumbnail, cragId: widget.cragId),
+                  
+                  // Gradient to make text readable
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          context.colors.deepBasalt.withValues(alpha: 0.8),
+                          context.colors.deepBasalt,
+                        ],
+                        stops: const [0.5, 0.8, 1.0],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subtitleText,
+                    style: TextStyle(
+                      color: context.colors.mossRock,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          icon: Icon(Icons.check, size: 18, color: context.colors.chalkWhite),
+                          label: Text('SALVO OFFLINE', style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: context.colors.mossRock,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          icon: Icon(Icons.share, size: 18, color: context.colors.chalkWhite),
+                          label: Text('COMPARTILHAR', style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: context.colors.caveShadow,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // Main Hub Cards
+                  PicoMenuCard(
+                    title: 'Setores',
+                    subtitle: 'Croquis detalhados, grau e vias',
+                    icon: Icons.landscape,
+                    iconColor: context.colors.rustIron,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      TreeNavigationWrapper.of(context).treeController.navigateTo(SetoresNode(cragId: widget.cragId, parent: TreeNavigationWrapper.of(context).treeController.currentNode));
+                    },
+                  ),
+                  
+                  PicoMenuCard(
+                    title: 'Explorar Local',
+                    subtitle: 'Como chegar, mapas gerais do croqui, clima e informações úteis.',
+                    icon: Icons.explore,
+                    iconColor: context.colors.beastHide,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      TreeNavigationWrapper.of(context).treeController.navigateTo(ExplorarLocalNode(cragId: widget.cragId, parent: TreeNavigationWrapper.of(context).treeController.currentNode));
+                    },
+                  ),
+                  
+                  PicoMenuCard(
+                    title: 'Regras e recomendações',
+                    subtitle: 'Normas de conduta ecológica, segurança básica, ética e boa convivência.',
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: context.colors.dryMoss,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      showRegrasBottomSheet(context, _categories.regras, widget.cragId);
+                    },
+                  ),
+                  
+                  PicoMenuCard(
+                    title: 'Comunidade',
+                    subtitle: 'Redes sociais, canal de Whatsapp, patrocinadores e comércio local.',
+                    icon: Icons.people_outline,
+                    iconColor: context.colors.rustIron,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      TreeNavigationWrapper.of(context).treeController.navigateTo(ComunidadePicoNode(cragId: widget.cragId, parent: TreeNavigationWrapper.of(context).treeController.currentNode));
+                    },
+                  ),
+                  
+                  PicoMenuCard(
+                    title: 'Apoie o Pico',
+                    subtitle: 'Contribua para a manutenção e sustentabilidade do pico.',
+                    icon: Icons.favorite_border,
+                    iconColor: context.colors.mossRock,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      TreeNavigationWrapper.of(context).treeController.navigateTo(ApoiePicoNode(cragId: widget.cragId, parent: TreeNavigationWrapper.of(context).treeController.currentNode));
+                    },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Text(
+                      'Última atualização: Hoje',
+                      style: TextStyle(
+                        color: context.colors.ashGrey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 100), // spacing for FAB
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: SafeArea(bottom: true, child: buildPicoBody(context, widget.pico, widget.croqui, widget.cragId, _mapaKey)),
       floatingActionButton: widget.returnToSetor != null ? FloatingActionButton.extended(
         onPressed: () {
           TelemetryService.instance.logAcaoCroqui(widget.cragId, 'voltar_mapa_setor');
           AppNav.toSetor(context, setor: widget.returnToSetor!);
-          // Then immediately push the map!
           Future.delayed(const Duration(milliseconds: 300), () {
             if (context.mounted) {
               AppNav.toMapas(
@@ -146,13 +344,11 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             }
           });
         },
-        backgroundColor: beastHide,
-        icon: Icon(Icons.map, color: nobleBlack),
-        label: Text('Voltar para o Mapa do Setor', style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold)),
+        backgroundColor: context.colors.rustIron,
+        icon: Icon(Icons.map, color: context.colors.chalkWhite),
+        label: Text('Voltar para o Mapa do Setor', style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold)),
       ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }
 }
-

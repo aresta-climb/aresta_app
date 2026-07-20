@@ -12,7 +12,6 @@ import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
-
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
@@ -326,10 +325,10 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                     buttonChild = SizedBox(
                       height: 20, 
                       width: 20, 
-                      child: CircularProgressIndicator(color: nobleBlack, strokeWidth: 2)
+                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)
                     );
                   } else {
-                    buttonChild = Text('Conectar', style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold));
+                    buttonChild = Text('Conectar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold));
                   }
 
                   return ElevatedButton(

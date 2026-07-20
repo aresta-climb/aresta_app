@@ -4,23 +4,21 @@ import 'common_functions.dart';
 import 'pico_functions.dart';
 import 'offline_markdown.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../theme/app_colors.dart';
 
 /// Constrói o corpo rolável principal da página do Grupo.
 ///
 /// Ele exibe as informações do grupo e uma lista de todos os grupos de setores (setores)
 /// disponíveis dentro do pico.
-Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<ArquivoSetor> sortedSetores, [Widget? sortButton]) {
+Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<ArquivoSetor> sortedSetores, GrupoSortMode currentSortMode, Function(GrupoSortMode) onSortChanged) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader('Informações do Grupo'),
-        _buildInfoRow('Nome', grupo.nome),
         if (grupo.descricao.isNotEmpty) ...[
-          const SizedBox(height: 10),
           OfflineMarkdown(data: grupo.descricao, cragId: cragId),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
         ],
         if (grupo.mapas.isNotEmpty) ...[
           ...grupo.mapas.map((mapa) {
@@ -45,13 +43,8 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<Arq
           }),
         ],
         const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildHeader('Subsetores'),
-            ?sortButton,
-          ],
-        ),
+        _buildGrupoSortGrid(context, currentSortMode, onSortChanged),
+        const SizedBox(height: 16),
         if (sortedSetores.isEmpty)
           Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
         else
@@ -81,23 +74,76 @@ Widget _buildHeader(String title) {
   );
 }
 
-/// Constrói uma linha exibindo um rótulo e seu valor correspondente.
-/// 
-/// Retorna um espaço vazio se o valor estiver vazio.
-Widget _buildInfoRow(String label, String value) {
-  if (value.isEmpty) return const SizedBox.shrink();
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: RichText(
-      text: TextSpan(
+
+
+Widget _buildGrupoSortGrid(BuildContext context, GrupoSortMode currentMode, Function(GrupoSortMode)? onSortChanged) {
+  return GridView.count(
+    crossAxisCount: 2,
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisSpacing: 10,
+    mainAxisSpacing: 10,
+    childAspectRatio: 3.0,
+    children: [
+      _buildSortCard(
+        context: context,
+        label: 'PADRÃO',
+        icon: Icons.grid_view_rounded,
+        isActive: currentMode == GrupoSortMode.original,
+        onTap: () => onSortChanged?.call(GrupoSortMode.original),
+      ),
+      _buildSortCard(
+        context: context,
+        label: 'ALFABÉTICO',
+        icon: Icons.sort_by_alpha,
+        isActive: currentMode == GrupoSortMode.alphaAsc || currentMode == GrupoSortMode.alphaDesc,
+        onTap: () {
+          if (currentMode == GrupoSortMode.alphaAsc) {
+            onSortChanged?.call(GrupoSortMode.alphaDesc);
+          } else {
+            onSortChanged?.call(GrupoSortMode.alphaAsc);
+          }
+        },
+      ),
+    ],
+  );
+}
+
+Widget _buildSortCard({
+  required BuildContext context,
+  required String label,
+  required IconData icon,
+  required bool isActive,
+  required VoidCallback onTap,
+}) {
+  final Color activeColor = AppColors.brandColor;
+  final Color inactiveColor = context.colors.fishBone.withValues(alpha: 0.5);
+  final Color bgColor = context.colors.caveShadow;
+
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border.all(
+          color: isActive ? activeColor : inactiveColor,
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          TextSpan(
-            text: '$label: ',
-            style: TextStyle(color: beastHide, fontWeight: FontWeight.bold),
-          ),
-          TextSpan(
-            text: value,
-            style: TextStyle(color: fishBone),
+          Icon(icon, color: isActive ? activeColor : inactiveColor, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? activeColor : inactiveColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              letterSpacing: 1.0,
+            ),
           ),
         ],
       ),
