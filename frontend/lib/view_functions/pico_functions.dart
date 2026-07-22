@@ -9,6 +9,7 @@ import 'via_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../theme/app_colors.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {
@@ -234,15 +235,15 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     final theme = Theme.of(context);
     return theme.copyWith(
       appBarTheme: AppBarTheme(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        iconTheme: IconThemeData(color: beastHide),
+        backgroundColor: context.colors.deepBasalt,
+        iconTheme: const IconThemeData(color: Color(0xFFC04F34)),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        hintStyle: TextStyle(color: fishBone, fontSize: 14),
+        hintStyle: TextStyle(color: context.colors.ashGrey, fontSize: 14),
         border: InputBorder.none,
       ),
       textTheme: theme.textTheme.copyWith(
-        titleLarge: TextStyle(color: beastHide, fontSize: 16),
+        titleLarge: TextStyle(color: context.colors.chalkWhite, fontSize: 16),
       ),
     );
   }
@@ -261,7 +262,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     return [
       if (query.isNotEmpty)
         IconButton(
-          icon: Icon(Icons.clear, color: beastHide),
+          icon: const Icon(Icons.clear, color: Color(0xFFC04F34)),
           onPressed: () {
             query = '';
             showSuggestions(context);
@@ -273,24 +274,24 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: beastHide),
+      icon: const Icon(Icons.arrow_back, color: Color(0xFFC04F34)),
       onPressed: () => close(context, null),
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    return _buildList();
+    return _buildList(context);
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return _buildList();
+    return _buildList(context);
   }
 
-  Widget _buildList() {
+  Widget _buildList(BuildContext context) {
     if (query.isEmpty) {
-      return Container(color: Colors.black);
+      return Container(color: context.colors.deepBasalt);
     }
 
     final queryLower = normalizeSearchString(query);
@@ -323,17 +324,17 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
       }
       
       return Container(
-        color: Colors.black,
+        color: context.colors.deepBasalt,
         alignment: Alignment.center,
         child: Text(
           emptyText,
-          style: TextStyle(color: fishBone, fontSize: 16),
+          style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
         ),
       );
     }
 
     return Container(
-      color: Colors.black,
+      color: context.colors.deepBasalt,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: ListView.builder(
         itemCount: results.length,
@@ -346,17 +347,17 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Material(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: context.colors.caveShadow,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: beastHide.withValues(alpha: 0.2)),
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: context.colors.graniteEdge),
               ),
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-              title: Text(nome, style: TextStyle(color: fishBone, fontWeight: FontWeight.bold)),
-              subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 12)) : null,
-              leading: Icon(Icons.terrain, color: beastHide),
-              trailing: Icon(Icons.chevron_right, color: beastHide),
+              title: Text(nome, style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold)),
+              subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: context.colors.ashGrey, fontSize: 12)) : null,
+              leading: const Icon(Icons.terrain, color: Color(0xFFC04F34)),
+              trailing: const Icon(Icons.chevron_right, color: Color(0xFFC04F34)),
               onTap: () {
                 close(context, escalada);
               },
