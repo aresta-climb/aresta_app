@@ -99,18 +99,23 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 tooltip: searchTooltip,
                 onPressed: () async {
                   TelemetryService.instance.logAcaoCroqui(widget.cragId, 'buscar');
-                  final result = await showSearch<Escalada?>(
+                  final result = await showSearch<Object?>(
                     context: context,
-                    delegate: ViaSearchDelegate(widget.pico, widget.cragId),
+                    delegate: PicoSearchDelegate(widget.pico, widget.cragId),
                   );
 
                   if (result != null && context.mounted) {
-                    final setor = findSetorForEscalada(widget.pico, result);
-                    if (setor != null) {
-                      AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
+                    if (result is Escalada) {
+                      final setor = findSetorForEscalada(widget.pico, result);
+                      if (setor != null) {
+                        AppNav.toSetor(context, setor: setor, scrollToEscalada: result);
+                      }
+                      TelemetryService.instance.logAcaoEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'abrir_detalhes', 'busca');
+                      AppNav.toVia(context, escalada: result, setor: setor);
+                    } else if (result is Setor) {
+                      TelemetryService.instance.logAbrirSetor(widget.cragId, result.nome);
+                      AppNav.toSetor(context, setor: result);
                     }
-                    TelemetryService.instance.logAcaoEscalada(widget.cragId, setor?.nome ?? 'Geral', getEscaladaNome(result), 'abrir_detalhes', 'busca');
-                    AppNav.toVia(context, escalada: result, setor: setor);
                   }
                 },
               ),
