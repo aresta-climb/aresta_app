@@ -51,7 +51,12 @@ class _GlobalSearchState extends State<GlobalSearch> {
   List<GlobalSearchResult> _filteredResults = [];
 
   final List<String> _filters = [
-    'Todos', 'Setores', 'Esportivas', 'Móveis', 'Boulders', 'Highlines'
+    'Todos',
+    'Setores',
+    'Esportivas',
+    'Móveis',
+    'Boulders',
+    'Highlines',
   ];
 
   final FocusNode _searchFocusNode = FocusNode();
@@ -128,47 +133,101 @@ class _GlobalSearchState extends State<GlobalSearch> {
       if (croqui == null || croqui.picos.isEmpty) continue;
 
       final pico = croqui.picos.first;
-      final picoNome = pico.nome.isNotEmpty ? pico.nome : (cragData['nome'] ?? 'Sem Nome');
+      final picoNome = pico.nome.isNotEmpty
+          ? pico.nome
+          : (cragData['nome'] ?? 'Sem Nome');
 
       for (final sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
           final setor = sg.setor.conteudo;
-          
-          aggregatedData.add(GlobalSearchResult(
-            title: setor.nome,
-            subtitle: 'Setor • $picoNome',
-            icon: Icons.terrain,
-            originalItem: setor,
-            onTap: () {
-              TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
-              AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
-              AppNav.toSetor(context, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
-            },
-          ));
+
+          aggregatedData.add(
+            GlobalSearchResult(
+              title: setor.nome,
+              subtitle: 'Setor • $picoNome',
+              icon: Icons.terrain,
+              originalItem: setor,
+              onTap: () {
+                TelemetryService.instance.logAcaoCroqui(
+                  cragId,
+                  'abrir_croqui',
+                  origem: 'busca_global',
+                );
+                AppNav.toPico(
+                  context,
+                  pico: pico,
+                  croqui: croqui,
+                  cragId: cragId,
+                );
+                AppNav.toSetor(
+                  context,
+                  setor: setor,
+                  pico: pico,
+                  croqui: croqui,
+                  cragId: cragId,
+                );
+              },
+            ),
+          );
 
           for (final escalada in setor.escaladas) {
-            _addEscalada(aggregatedData, escalada, cragId, picoNome, pico, setor, croqui);
+            _addEscalada(
+              aggregatedData,
+              escalada,
+              cragId,
+              picoNome,
+              pico,
+              setor,
+              croqui,
+            );
           }
-
-        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
           for (final s in sg.grupo.conteudo.setores) {
             if (s.hasConteudo()) {
               final setor = s.conteudo;
-              
-              aggregatedData.add(GlobalSearchResult(
-                title: setor.nome,
-                subtitle: 'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
-                icon: Icons.terrain,
-                originalItem: setor,
-                onTap: () {
-                  TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
-                  AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
-                  AppNav.toSetor(context, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
-                },
-              ));
+
+              aggregatedData.add(
+                GlobalSearchResult(
+                  title: setor.nome,
+                  subtitle:
+                      'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
+                  icon: Icons.terrain,
+                  originalItem: setor,
+                  onTap: () {
+                    TelemetryService.instance.logAcaoCroqui(
+                      cragId,
+                      'abrir_croqui',
+                      origem: 'busca_global',
+                    );
+                    AppNav.toPico(
+                      context,
+                      pico: pico,
+                      croqui: croqui,
+                      cragId: cragId,
+                    );
+                    AppNav.toSetor(
+                      context,
+                      setor: setor,
+                      pico: pico,
+                      croqui: croqui,
+                      cragId: cragId,
+                    );
+                  },
+                ),
+              );
 
               for (final escalada in setor.escaladas) {
-                _addEscalada(aggregatedData, escalada, cragId, picoNome, pico, setor, croqui);
+                _addEscalada(
+                  aggregatedData,
+                  escalada,
+                  cragId,
+                  picoNome,
+                  pico,
+                  setor,
+                  croqui,
+                );
               }
             }
           }
@@ -186,7 +245,15 @@ class _GlobalSearchState extends State<GlobalSearch> {
     }
   }
 
-  void _addEscalada(List<GlobalSearchResult> list, Escalada escalada, String cragId, String picoNome, Pico pico, Setor setor, Croqui croqui) {
+  void _addEscalada(
+    List<GlobalSearchResult> list,
+    Escalada escalada,
+    String cragId,
+    String picoNome,
+    Pico pico,
+    Setor setor,
+    Croqui croqui,
+  ) {
     String escaladaNome = getEscaladaNome(escalada);
     String tipoStr = 'Via';
     IconData icon = Icons.trending_up;
@@ -216,18 +283,38 @@ class _GlobalSearchState extends State<GlobalSearch> {
     final grauStr = getGrauString(escalada);
     final grauDisplay = grauStr.isNotEmpty ? ' | $grauStr' : '';
 
-    list.add(GlobalSearchResult(
-      title: escaladaNome,
-      subtitle: '$tipoStr$grauDisplay • ${setor.nome} • $picoNome',
-      icon: icon,
-      originalItem: escalada,
-      onTap: () {
-        TelemetryService.instance.logAcaoCroqui(cragId, 'abrir_croqui', origem: 'busca_global');
-        AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
-        AppNav.toSetor(context, setor: setor, scrollToEscalada: escalada, pico: pico, croqui: croqui, cragId: cragId);
-        AppNav.toVia(context, escalada: escalada, setor: setor, pico: pico, croqui: croqui, cragId: cragId);
-      },
-    ));
+    list.add(
+      GlobalSearchResult(
+        title: escaladaNome,
+        subtitle: '$tipoStr$grauDisplay • ${setor.nome} • $picoNome',
+        icon: icon,
+        originalItem: escalada,
+        onTap: () {
+          TelemetryService.instance.logAcaoCroqui(
+            cragId,
+            'abrir_croqui',
+            origem: 'busca_global',
+          );
+          AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
+          AppNav.toSetor(
+            context,
+            setor: setor,
+            scrollToEscalada: escalada,
+            pico: pico,
+            croqui: croqui,
+            cragId: cragId,
+          );
+          AppNav.toVia(
+            context,
+            escalada: escalada,
+            setor: setor,
+            pico: pico,
+            croqui: croqui,
+            cragId: cragId,
+          );
+        },
+      ),
+    );
   }
 
   void _onSearchChanged(String query) {
@@ -235,11 +322,15 @@ class _GlobalSearchState extends State<GlobalSearch> {
       _searchQuery = query;
     });
     _applyFilters();
-    
+
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
       if (_searchQuery.isNotEmpty) {
-        TelemetryService.instance.logBuscaEscaladas(_searchQuery, _filteredResults.length, 'global');
+        TelemetryService.instance.logBuscaEscaladas(
+          _searchQuery,
+          _filteredResults.length,
+          'global',
+        );
       }
     });
   }
@@ -261,14 +352,23 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     final typeFilteredData = _allData.where((item) {
       if (_selectedFilter != 'Todos') {
-        if (_selectedFilter == 'Setores' && item.originalItem is! Setor) return false;
-        
+        if (_selectedFilter == 'Setores' && item.originalItem is! Setor)
+          return false;
+
         if (item.originalItem is Escalada) {
           final esc = item.originalItem as Escalada;
-          if (_selectedFilter == 'Esportivas' && esc.whichTipo() != Escalada_Tipo.viaEsportiva) return false;
-          if (_selectedFilter == 'Móveis' && esc.whichTipo() != Escalada_Tipo.viaMovel) return false;
-          if (_selectedFilter == 'Boulders' && esc.whichTipo() != Escalada_Tipo.boulder) return false;
-          if (_selectedFilter == 'Highlines' && esc.whichTipo() != Escalada_Tipo.highline) return false;
+          if (_selectedFilter == 'Esportivas' &&
+              esc.whichTipo() != Escalada_Tipo.viaEsportiva)
+            return false;
+          if (_selectedFilter == 'Móveis' &&
+              esc.whichTipo() != Escalada_Tipo.viaMovel)
+            return false;
+          if (_selectedFilter == 'Boulders' &&
+              esc.whichTipo() != Escalada_Tipo.boulder)
+            return false;
+          if (_selectedFilter == 'Highlines' &&
+              esc.whichTipo() != Escalada_Tipo.highline)
+            return false;
         } else if (_selectedFilter != 'Setores') {
           return false;
         }
@@ -339,7 +439,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     cursorColor: const Color(0xFFC04F34),
                     decoration: InputDecoration(
                       hintText: 'Pesquisar em seus guias baixados...',
-                      hintStyle: TextStyle(color: searchTextColor.withValues(alpha: 0.6)),
+                      hintStyle: TextStyle(
+                        color: searchTextColor.withValues(alpha: 0.6),
+                      ),
                       border: InputBorder.none,
                     ),
                     readOnly: false,
@@ -359,15 +461,18 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ],
             ),
           ),
-          
+
           if (_isExpanded) ...[
             const SizedBox(height: 12),
             Row(
               children: [
                 PopupMenuButton<String>(
                   onSelected: _onFilterChanged,
-                  color: Colors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  color: caveShadowColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: context.colors.graniteEdge),
+                  ),
                   itemBuilder: (BuildContext context) {
                     return _filters.map((String filter) {
                       final isSelected = _selectedFilter == filter;
@@ -376,28 +481,42 @@ class _GlobalSearchState extends State<GlobalSearch> {
                         child: Text(
                           filter,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? beastHide : fishBone,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? const Color(0xFFC04F34)
+                                : context.colors.chalkWhite,
                           ),
                         ),
                       );
                     }).toList();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+                      color: caveShadowColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: context.colors.graniteEdge),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.filter_list, size: 16, color: fishBone),
+                        Icon(
+                          Icons.filter_list,
+                          size: 16,
+                          color: context.colors.ashGrey,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Filtro: $_selectedFilter',
-                          style: TextStyle(color: fishBone, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: context.colors.ashGrey,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -408,7 +527,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                   child: Text(
                     'Dica: você também pode pesquisar por dificuldade (ex: 7a, V4)',
                     style: TextStyle(
-                      color: fishBone.withValues(alpha: 0.5),
+                      color: context.colors.ashGrey,
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
                     ),
@@ -418,53 +537,77 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             if (_isLoading)
-              Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Center(child: CircularProgressIndicator(color: beastHide)),
+              Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: const Color(0xFFC04F34),
+                  ),
+                ),
               )
             else if (_searchQuery.isNotEmpty && _filteredResults.isEmpty)
-              Padding(
-                padding: EdgeInsets.all(20.0),
+              Expanded(
                 child: Center(
                   child: Text(
                     'Nenhum resultado encontrado.',
-                    style: TextStyle(color: fishBone),
+                    style: TextStyle(color: context.colors.ashGrey),
                   ),
                 ),
               )
             else if (_searchQuery.isNotEmpty && _filteredResults.isNotEmpty)
-              Material(
-                color: Colors.black.withValues(alpha: 0.3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: beastHide.withValues(alpha: 0.3)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.45,
+              Expanded(
+                child: Material(
+                  color: caveShadowColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: context.colors.graniteEdge),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _filteredResults.length,
-                  separatorBuilder: (context, index) => Divider(color: beastHide.withValues(alpha: 0.1), height: 1),
-                  itemBuilder: (context, index) {
-                    final item = _filteredResults[index];
-                    return ListTile(
-                      leading: Icon(item.icon, color: beastHide),
-                      title: Text(item.title, style: TextStyle(color: fishBone, fontWeight: FontWeight.bold)),
-                      subtitle: Text(item.subtitle, style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 12)),
-                      onTap: () {
-                        TelemetryService.instance.logAcaoEscalada('global_search', 'global', item.title, 'abrir_detalhes', 'busca_global');
-                        item.onTap();
-                      },
-                    );
-                  },
+                    shrinkWrap: true,
+                    itemCount: _filteredResults.length,
+                    separatorBuilder: (context, index) => Divider(
+                      color: context.colors.graniteEdge.withValues(alpha: 0.5),
+                      height: 1,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _filteredResults[index];
+                      return ListTile(
+                        leading: Icon(
+                          item.icon,
+                          color: const Color(0xFFC04F34),
+                        ),
+                        title: Text(
+                          item.title,
+                          style: TextStyle(
+                            color: context.colors.chalkWhite,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          item.subtitle,
+                          style: TextStyle(
+                            color: context.colors.ashGrey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        onTap: () {
+                          TelemetryService.instance.logAcaoEscalada(
+                            'global_search',
+                            'global',
+                            item.title,
+                            'abrir_detalhes',
+                            'busca_global',
+                          );
+                          item.onTap();
+                        },
+                      );
+                    },
+                  ),
                 ),
-              )),
-            
+              ),
+
             const SizedBox(height: 10),
           ],
         ],
@@ -472,4 +615,3 @@ class _GlobalSearchState extends State<GlobalSearch> {
     );
   }
 }
-
