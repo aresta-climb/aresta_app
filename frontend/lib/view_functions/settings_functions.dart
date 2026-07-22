@@ -11,6 +11,7 @@ import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
+import 'package:frontend/widgets/app_version_checker.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
@@ -648,7 +649,11 @@ Widget buildEditorCard({
                           GestureDetector(
                             onTap: () {
                               ScaffoldMessenger.of(context).clearSnackBars();
-                              showDeprecatedAppVersionSnackBar(context);
+                              Future.microtask(() {
+                                if (context.mounted) {
+                                  showDeprecatedAppVersionSnackBar(context);
+                                }
+                              });
                             },
                             child: Container(
                               width: double.infinity,
@@ -668,6 +673,45 @@ Widget buildEditorCard({
                                     'TESTAR ALERTA DE OBSOLESCÊNCIA',
                                     style: TextStyle(
                                       color: Colors.orange.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AppVersionHardBlockScreen(
+                                    onUpdatePressed: () => Navigator.pop(context),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(color: Colors.red.shade900.withValues(alpha: 0.5)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.system_update_rounded, color: Colors.red.shade900.withValues(alpha: 0.8), size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'TESTAR TELA DE BLOQUEIO',
+                                    style: TextStyle(
+                                      color: Colors.red.shade900.withValues(alpha: 0.8),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.5,
