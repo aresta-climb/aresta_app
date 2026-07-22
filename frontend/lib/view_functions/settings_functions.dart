@@ -210,12 +210,23 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
       return StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-            title: Text(
-              titulo ?? 'Conectar como editor', 
-              style: TextStyle(color: beastHide, fontSize: 18),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            backgroundColor: context.colors.caveShadow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: context.colors.graniteEdge),
+            ),
+            title: Column(
+              children: [
+                Icon(Icons.link, color: context.colors.beastHide, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  titulo ?? 'Conectar Editor', 
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
             content: Column(
@@ -223,35 +234,40 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                 children: [
                 Text(
                   'Insira a URL do repositório experimental para testar novos croquis.',
-                  style: TextStyle(color: fishBone, fontSize: 13),
+                  style: TextStyle(color: context.colors.ashGrey, fontSize: 13),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextField(
                   controller: urlController,
-                  style: TextStyle(color: fishBone, fontSize: 14),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     hintText: 'ex: aresta-climb.github.io/aresta_serving',
-                    hintStyle: TextStyle(color: fishBone.withValues(alpha: 0.5), fontSize: 13),
+                    hintStyle: TextStyle(color: context.colors.ashGrey.withValues(alpha: 0.5), fontSize: 13),
+                    filled: true,
+                    fillColor: context.colors.deepBasalt,
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: mossRock),
-                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: context.colors.graniteEdge),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: beastHide),
-                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: context.colors.beastHide),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: OutlinedButton.icon(
-                    icon: Icon(Icons.qr_code_scanner, color: beastHide),
-                    label: Text('Escanear QR Code', style: TextStyle(color: beastHide)),
+                    icon: Icon(Icons.qr_code_scanner, color: context.colors.beastHide, size: 20),
+                    label: Text('ESCANEAR QR CODE', style: TextStyle(color: context.colors.beastHide, fontWeight: FontWeight.bold, fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: beastHide),
+                      side: BorderSide(color: context.colors.beastHide.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       TelemetryService.instance.logAcaoConfiguracoes('abrir_qr_scanner');
@@ -268,11 +284,13 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: OutlinedButton.icon(
-                    icon: Icon(Icons.file_present, color: beastHide),
-                    label: Text('Importar .croqui local', style: TextStyle(color: beastHide)),
+                    icon: Icon(Icons.file_present, color: context.colors.ashGrey, size: 20),
+                    label: Text('IMPORTAR .CROQUI', style: TextStyle(color: context.colors.ashGrey, fontWeight: FontWeight.bold, fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: beastHide),
+                      side: BorderSide(color: context.colors.graniteEdge),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       Navigator.of(context).pop(); // Fecha o diálogo antes
@@ -283,14 +301,17 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
               ],
             ),
             actions: [
-            TextButton(
-                onPressed: () {
-                  if (isLoading) {
-                    return;
-                  }
-                  Navigator.of(context).pop();
-                },
-                child: Text('Cancelar', style: TextStyle(color: fishBone.withValues(alpha: 0.7))),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8, right: 8),
+                child: TextButton(
+                  onPressed: () {
+                    if (isLoading) {
+                      return;
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('CANCELAR', style: TextStyle(color: context.colors.ashGrey, fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
               ),
               Builder(
                 builder: (context) {
@@ -320,22 +341,27 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
 
                   Widget buttonChild;
                   if (isLoading) {
-                    buttonChild = SizedBox(
-                      height: 20, 
-                      width: 20, 
-                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)
+                    buttonChild = const SizedBox(
+                      height: 16, 
+                      width: 16, 
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                     );
                   } else {
-                    buttonChild = Text('Conectar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold));
+                    buttonChild = const Text('CONECTAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12));
                   }
 
-                  return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: beastHide,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8, right: 8),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.colors.beastHide,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: onConnect,
+                      child: buttonChild,
                     ),
-                    onPressed: onConnect,
-                    child: buttonChild,
                   );
                 }
               ),
@@ -618,6 +644,7 @@ Widget buildEditorCard({
                           const SizedBox(height: 12),
                           GestureDetector(
                             onTap: () {
+                              ScaffoldMessenger.of(context).clearSnackBars();
                               showDeprecatedAppVersionSnackBar(context);
                             },
                             child: Container(
