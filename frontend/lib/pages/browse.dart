@@ -227,6 +227,7 @@ class _BrowsePageState extends State<BrowsePage> {
                     onFilterPressed: () {
                       showModalBottomSheet(
                         context: context,
+                        useRootNavigator: true,
                         backgroundColor: Colors.white,
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

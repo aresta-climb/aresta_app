@@ -186,6 +186,7 @@ Future<void> launchURL(BuildContext context, String url) async {
 void showTermsBottomSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: context.colors.deepBasalt,
     shape: const RoundedRectangleBorder(
@@ -422,6 +423,7 @@ void showLinkOverlay(
 }) {
   showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.colors.deepBasalt,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -551,6 +553,7 @@ void showLinkOverlay(
 void showPrivacyPolicyBottomSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: context.colors.deepBasalt,
     shape: const RoundedRectangleBorder(

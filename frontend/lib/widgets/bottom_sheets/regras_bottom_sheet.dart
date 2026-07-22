@@ -109,6 +109,7 @@ class RegrasBottomSheet extends StatelessWidget {
 void showRegrasBottomSheet(BuildContext context, List<Botao> regrasBotoes, String cragId) {
   showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) => FractionallySizedBox(

@@ -21,6 +21,7 @@ void showCragModal({
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     builder: (context) {
       return SafeArea(
