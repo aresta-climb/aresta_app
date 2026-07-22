@@ -19,7 +19,11 @@ void main() {
       final croqui = Croqui();
       datasetRepo.activeDataset.value = TopoDataset(
         downloadedPicos: [
-          {'id': 'test_pico_1', 'data': {'pico': pico, 'croqui': croqui}, 'isDownloaded': true}
+          {
+            'id': 'test_pico_1',
+            'data': {'pico': pico, 'croqui': croqui},
+            'isDownloaded': true,
+          },
         ],
         availablePicos: [],
       );
@@ -27,13 +31,17 @@ void main() {
       syncService = SyncService(datasetRepository: datasetRepo);
     });
 
-    testWidgets('Fluxo 5.1: Atualização silenciosa no background', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          datasetRepo: datasetRepo,
-          syncService: syncService,
+    testWidgets('Fluxo 5.1: Atualização silenciosa no background', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+          ),
         ),
-      ));
+      );
 
       // Espera inicializar
       await tester.pump(const Duration(milliseconds: 500));
@@ -44,7 +52,7 @@ void main() {
 
       // Simulamos uma pendência retida no SyncService mesmo sem o pico estar aberto
       // (Isso não deveria acontecer, pois ela seria commitada imediatamente se o pico não estivesse aberto, mas vamos simular)
-      
+
       // Quando estamos na home e há uma pendência, não deve aparecer popup
       syncService.recarga_pendente_pico_id.value = 'test_pico_1';
       await tester.pump(const Duration(milliseconds: 500));
@@ -54,21 +62,32 @@ void main() {
       expect(find.text('Croqui Atualizado'), findsNothing);
     });
 
-    testWidgets('Fluxo 5.2: Bloqueio e recarga opcional para pico ativo', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          datasetRepo: datasetRepo,
-          syncService: syncService,
+    testWidgets('Fluxo 5.2: Bloqueio e recarga opcional para pico ativo', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+          ),
         ),
-      ));
+      );
 
       await tester.pump(const Duration(milliseconds: 500));
 
       // Navegar para o pico e torná-lo ativo
-      final wrapperState = tester.state<State<TreeNavigationWrapper>>(find.byType(TreeNavigationWrapper)) as dynamic;
-      final TreeNavigationController treeController = wrapperState.treeController;
+      final wrapperState =
+          tester.state<State<TreeNavigationWrapper>>(
+                find.byType(TreeNavigationWrapper),
+              )
+              as dynamic;
+      final TreeNavigationController treeController =
+          wrapperState.treeController;
 
-      treeController.navigateTo(PicoNode(cragId: 'test_pico_1', parent: const HomeNode()));
+      treeController.navigateTo(
+        PicoNode(cragId: 'test_pico_1', parent: const HomeNode()),
+      );
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 

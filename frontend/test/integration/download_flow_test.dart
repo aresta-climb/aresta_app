@@ -1,6 +1,7 @@
 /// Suíte de testes do protocolo aresta-zip via ZipInterceptorClient.
 /// Simula downloads completos (indice + pico) a partir de um arquivo .croqui local.
 library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:archive/archive.dart';
@@ -27,8 +28,16 @@ Future<File> _criarCroquiComDados(Directory tempDir, String picoId) async {
   final indiceBytes = indice.writeToBuffer();
   final croquiBytes = croqui.writeToBuffer();
 
-  archive.addFile(ArchiveFile('compilado/indice.binarypb', indiceBytes.length, indiceBytes));
-  archive.addFile(ArchiveFile('compilado/$picoId/$picoId.binarypb', croquiBytes.length, croquiBytes));
+  archive.addFile(
+    ArchiveFile('compilado/indice.binarypb', indiceBytes.length, indiceBytes),
+  );
+  archive.addFile(
+    ArchiveFile(
+      'compilado/$picoId/$picoId.binarypb',
+      croquiBytes.length,
+      croquiBytes,
+    ),
+  );
 
   final zipData = ZipEncoder().encode(archive);
 
@@ -122,26 +131,29 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('Persistência de downloads', () {
-    test('deve ser possível salvar os bytes recebidos em um arquivo local', () async {
-      const picoId = 'pedra_vermelha';
-      final croquiFile = await _criarCroquiComDados(tempDir, picoId);
+    test(
+      'deve ser possível salvar os bytes recebidos em um arquivo local',
+      () async {
+        const picoId = 'pedra_vermelha';
+        final croquiFile = await _criarCroquiComDados(tempDir, picoId);
 
-      final uri = Uri(
-        scheme: 'aresta-zip',
-        path: '${croquiFile.path}/indice.binarypb',
-      );
+        final uri = Uri(
+          scheme: 'aresta-zip',
+          path: '${croquiFile.path}/indice.binarypb',
+        );
 
-      final response = await client.get(uri);
-      expect(response.statusCode, 200);
+        final response = await client.get(uri);
+        expect(response.statusCode, 200);
 
-      // Salva os bytes em disco (como o DatasetRepository faz)
-      final savedFile = File('${tempDir.path}/indice_salvo.binarypb');
-      await savedFile.writeAsBytes(response.bodyBytes);
+        // Salva os bytes em disco (como o DatasetRepository faz)
+        final savedFile = File('${tempDir.path}/indice_salvo.binarypb');
+        await savedFile.writeAsBytes(response.bodyBytes);
 
-      // Verifica que o arquivo salvo pode ser re-lido como Indice
-      final bytes = await savedFile.readAsBytes();
-      final indice = Indice.fromBuffer(bytes);
-      expect(indice.croquis.isNotEmpty, isTrue);
-    });
+        // Verifica que o arquivo salvo pode ser re-lido como Indice
+        final bytes = await savedFile.readAsBytes();
+        final indice = Indice.fromBuffer(bytes);
+        expect(indice.croquis.isNotEmpty, isTrue);
+      },
+    );
   });
 }

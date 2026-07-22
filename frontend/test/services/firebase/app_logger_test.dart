@@ -15,38 +15,58 @@ void main() {
       final exception = Exception('Falha grave');
       final stack = StackTrace.fromString('linha 1, arquivo teste.dart');
 
-      AppLogger.instance.logError('Erro de teste', error: exception, stackTrace: stack);
+      AppLogger.instance.logError(
+        'Erro de teste',
+        error: exception,
+        stackTrace: stack,
+      );
 
       expect(mockLogger.recordedErrors.length, 1);
-      expect(mockLogger.recordedErrors.first['contextMessage'], 'Erro de teste');
+      expect(
+        mockLogger.recordedErrors.first['contextMessage'],
+        'Erro de teste',
+      );
       expect(mockLogger.recordedErrors.first['error'], exception);
       expect(mockLogger.recordedErrors.first['stackTrace'], stack);
     });
   });
 
   group('AppLogger Real Instance Tests (With Overrides)', () {
-    test('Should send error to Crashlytics when debug mode is disabled', () async {
-      AppLogger.resetForTesting();
-      
-      // Simula modo release (debug false)
-      AppLogger.instance.debugModeOverride = false;
-      
-      bool crashlyticsCalled = false;
-      dynamic capturedException;
-      String? capturedReason;
+    test(
+      'Should send error to Crashlytics when debug mode is disabled',
+      () async {
+        AppLogger.resetForTesting();
 
-      // Injeta comportamento mock do Crashlytics
-      AppLogger.instance.crashlyticsOverride = (exception, stack, {reason, printDetails = false, fatal = false}) async {
-        crashlyticsCalled = true;
-        capturedException = exception;
-        capturedReason = reason;
-      };
+        // Simula modo release (debug false)
+        AppLogger.instance.debugModeOverride = false;
 
-      AppLogger.instance.logError('Erro de produção fake', error: Exception('Crash'));
+        bool crashlyticsCalled = false;
+        dynamic capturedException;
+        String? capturedReason;
 
-      expect(crashlyticsCalled, isTrue);
-      expect(capturedReason, 'Erro de produção fake');
-      expect(capturedException.toString(), contains('Crash'));
-    });
+        // Injeta comportamento mock do Crashlytics
+        AppLogger.instance.crashlyticsOverride =
+            (
+              exception,
+              stack, {
+              reason,
+              printDetails = false,
+              fatal = false,
+            }) async {
+              crashlyticsCalled = true;
+              capturedException = exception;
+              capturedReason = reason;
+            };
+
+        AppLogger.instance.logError(
+          'Erro de produção fake',
+          error: Exception('Crash'),
+        );
+
+        expect(crashlyticsCalled, isTrue);
+        expect(capturedReason, 'Erro de produção fake');
+        expect(capturedException.toString(), contains('Crash'));
+      },
+    );
   });
 }

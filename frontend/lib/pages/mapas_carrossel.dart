@@ -5,8 +5,8 @@ import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/navigation/navigation_functions.dart';
 
-
-typedef MapBuilder = Widget Function(BuildContext context, int index, CarrosselItemData item);
+typedef MapBuilder =
+    Widget Function(BuildContext context, int index, CarrosselItemData item);
 
 class MapasCarrosselPage extends StatefulWidget {
   final Pico pico;
@@ -78,14 +78,18 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
     }
   }
 
-  Widget _defaultMapBuilder(BuildContext context, int index, CarrosselItemData item) {
+  Widget _defaultMapBuilder(
+    BuildContext context,
+    int index,
+    CarrosselItemData item,
+  ) {
     final result = MapHelper.resolveMapaAndContext(
       pico: widget.pico,
       mapaCaminhoImagem: item.mapaCaminhoImagem,
       setorContextNome: item.setorContextNome,
       grupoContextNome: item.grupoContextNome,
     );
-    
+
     Setor? resolvedSetor;
     Grupo? resolvedGrupo;
 
@@ -118,7 +122,8 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       grupoContext: resolvedGrupo,
       imageProviderOverride: widget.imageProviderOverride,
       hideAppBar: widget.mapas.length > 1,
-      popOnActionIfOriginal: false, // Previne que o clique em 'Mais Info' do carrossel feche a tela
+      popOnActionIfOriginal:
+          false, // Previne que o clique em 'Mais Info' do carrossel feche a tela
     );
   }
 
@@ -161,7 +166,9 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right, color: Colors.white),
-              onPressed: _currentIndex < widget.mapas.length - 1 ? _goToNext : null,
+              onPressed: _currentIndex < widget.mapas.length - 1
+                  ? _goToNext
+                  : null,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
@@ -176,7 +183,8 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       ),
       body: PageView.builder(
         controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(), // Evita conflito com o mapa
+        physics:
+            const NeverScrollableScrollPhysics(), // Evita conflito com o mapa
         itemCount: widget.mapas.length,
         itemBuilder: (context, index) {
           final builder = widget.mapBuilder ?? _defaultMapBuilder;

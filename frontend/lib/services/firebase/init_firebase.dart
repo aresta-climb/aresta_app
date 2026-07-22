@@ -8,9 +8,7 @@ import 'remote_config_service.dart';
 /// Esta função encapsula todo o contato direto com a API core do Firebase.
 Future<void> initFirebase() async {
   // Inicialização básica
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initCrashlytics();
 

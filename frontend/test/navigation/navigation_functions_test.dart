@@ -18,50 +18,57 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
   final ValueNotifier<int> homeResetTrigger = ValueNotifier(0);
   @override
   late final EditorDeCroqui editorDeCroqui;
-  
+
   FakeDatasetRepository(this.editorDeCroqui) {
     final via = ViaEsportiva()..nome = 'Via Teste';
     final escalada = Escalada()..viaEsportiva = via;
-    final setor = Setor()..nome = 'Setor Teste'..escaladas.add(escalada);
+    final setor = Setor()
+      ..nome = 'Setor Teste'
+      ..escaladas.add(escalada);
     final arquivoSetor = ArquivoSetor()..conteudo = setor;
-    
-    final grupo = Grupo()..nome = 'Grupo Teste'..setores.add(arquivoSetor);
+
+    final grupo = Grupo()
+      ..nome = 'Grupo Teste'
+      ..setores.add(arquivoSetor);
     final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
-    
+
     final grupoNode = SetorOuGrupo()..grupo = arquivoGrupo;
-    
+
     final pico = Pico()..setoresOuGrupos.add(grupoNode);
     final croqui = Croqui();
-    
-    activeDataset = ValueNotifier(TopoDataset(
-      availablePicos: [],
-      downloadedPicos: [
-        {
-          'id': 'test_crag',
-          'data': {
-            'pico': pico,
-            'croqui': croqui,
-          }
-        }
-      ],
-    ));
+
+    activeDataset = ValueNotifier(
+      TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [
+          {
+            'id': 'test_crag',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+      ),
+    );
   }
 }
 
 class FakeSyncService extends Fake implements SyncService {
   @override
-  final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(SyncStatus.updated);
+  final ValueNotifier<SyncStatus> syncStatus = ValueNotifier(
+    SyncStatus.updated,
+  );
   @override
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier(false);
   @override
   final ValueNotifier<String?> pico_aberto_id = ValueNotifier<String?>(null);
-  
-  @override
-  final ValueNotifier<String?> recarga_pendente_pico_id = ValueNotifier<String?>(null);
-  
-  @override
-  final ValueNotifier<Map<String, double>> downloadingCrags = ValueNotifier(<String, double>{});
 
+  @override
+  final ValueNotifier<String?> recarga_pendente_pico_id =
+      ValueNotifier<String?>(null);
+
+  @override
+  final ValueNotifier<Map<String, double>> downloadingCrags = ValueNotifier(
+    <String, double>{},
+  );
 }
 
 class FakeEditorDeCroqui extends Fake implements EditorDeCroqui {
@@ -85,37 +92,38 @@ void main() {
   });
 
   group('AppNav tests', () {
-    testWidgets('toVia pushes ViaNode to the TreeNavigationController', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: mockRepo,
-          syncService: mockSync,
+    testWidgets('toVia pushes ViaNode to the TreeNavigationController', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
         ),
-      ));
+      );
       await tester.pump();
 
       final BuildContext context = tester.element(find.byType(Scaffold).first);
-      final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
-      
+      final controller =
+          TreeNavigationWrapper.navKey.currentState!.treeController;
+
       // Navigate to PicoNode to establish context
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
       await tester.pump();
 
-      final escalada = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
+      final escalada = Escalada()
+        ..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
       final setor = Setor()..nome = 'Setor Teste';
       final grupo = Grupo()..nome = 'Grupo Teste';
 
-      AppNav.toVia(
-        context,
-        escalada: escalada,
-        setor: setor,
-        grupo: grupo,
-      );
+      AppNav.toVia(context, escalada: escalada, setor: setor, grupo: grupo);
 
       final currentNode = controller.currentNode;
       expect(currentNode, isA<ViaNode>());
-      
+
       final viaNode = currentNode as ViaNode;
       expect(viaNode.escaladaNome, 'Via Teste');
       expect(viaNode.setorNome, 'Setor Teste');
@@ -123,19 +131,24 @@ void main() {
       expect(viaNode.cragId, 'test_crag');
     });
 
-    testWidgets('toSetor pushes SetorNode to the TreeNavigationController', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: mockRepo,
-          syncService: mockSync,
+    testWidgets('toSetor pushes SetorNode to the TreeNavigationController', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
         ),
-      ));
+      );
       await tester.pump();
 
       final BuildContext context = tester.element(find.byType(Scaffold).first);
-      final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
-      
+      final controller =
+          TreeNavigationWrapper.navKey.currentState!.treeController;
+
       // Navigate to PicoNode to establish context
       controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
       await tester.pump();
@@ -146,47 +159,63 @@ void main() {
 
       final currentNode = controller.currentNode;
       expect(currentNode, isA<SetorNode>());
-      
+
       final setorNode = currentNode as SetorNode;
       expect(setorNode.setorNome, 'Setor Teste');
       expect(setorNode.cragId, 'test_crag');
     });
 
-    testWidgets('toMapas pushes MapasCarrosselNode to the TreeNavigationController', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: mockRepo,
-          syncService: mockSync,
-        ),
-      ));
-      await tester.pump();
+    testWidgets(
+      'toMapas pushes MapasCarrosselNode to the TreeNavigationController',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
 
-      final BuildContext context = tester.element(find.byType(Scaffold).first);
-      final controller = TreeNavigationWrapper.navKey.currentState!.treeController;
-      
-      // Navigate to PicoNode to establish context
-      controller.navigateTo(PicoNode(cragId: 'test_crag', parent: HomeNode()));
-      await tester.pump();
+        final BuildContext context = tester.element(
+          find.byType(Scaffold).first,
+        );
+        final controller =
+            TreeNavigationWrapper.navKey.currentState!.treeController;
 
-      AppNav.toMapas(
-        context,
-        cragId: 'test_crag',
-        initialIndex: 1,
-        mapas: const [
-          CarrosselItemData(mapaCaminhoImagem: 'assets/map1.png', initialSelectedId: 'a'),
-          CarrosselItemData(mapaCaminhoImagem: 'assets/map2.png', initialSelectedId: 'b'),
-        ],
-      );
+        // Navigate to PicoNode to establish context
+        controller.navigateTo(
+          PicoNode(cragId: 'test_crag', parent: HomeNode()),
+        );
+        await tester.pump();
 
-      final currentNode = controller.currentNode;
-      expect(currentNode, isA<MapasCarrosselNode>());
-      
-      final carrosselNode = currentNode as MapasCarrosselNode;
-      expect(carrosselNode.cragId, 'test_crag');
-      expect(carrosselNode.initialIndex, 1);
-      expect(carrosselNode.mapas.length, 2);
-      expect(carrosselNode.mapas[0].initialSelectedId, 'a');
-    });
+        AppNav.toMapas(
+          context,
+          cragId: 'test_crag',
+          initialIndex: 1,
+          mapas: const [
+            CarrosselItemData(
+              mapaCaminhoImagem: 'assets/map1.png',
+              initialSelectedId: 'a',
+            ),
+            CarrosselItemData(
+              mapaCaminhoImagem: 'assets/map2.png',
+              initialSelectedId: 'b',
+            ),
+          ],
+        );
+
+        final currentNode = controller.currentNode;
+        expect(currentNode, isA<MapasCarrosselNode>());
+
+        final carrosselNode = currentNode as MapasCarrosselNode;
+        expect(carrosselNode.cragId, 'test_crag');
+        expect(carrosselNode.initialIndex, 1);
+        expect(carrosselNode.mapas.length, 2);
+        expect(carrosselNode.mapas[0].initialSelectedId, 'a');
+      },
+    );
   });
 }

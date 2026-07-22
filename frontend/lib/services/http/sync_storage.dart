@@ -8,8 +8,8 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 /// ocultando os detalhes de I/O do SyncService.
 class SyncStorage {
   /// Lê o arquivo de índice mestre do armazenamento local.
-  /// 
-  /// Retorna o objeto [Indice] populado se o arquivo existir, 
+  ///
+  /// Retorna o objeto [Indice] populado se o arquivo existir,
   /// caso contrário, retorna nulo.
   Future<Indice?> readLocalIndice(String filePath) async {
     final file = File(filePath);
@@ -18,14 +18,16 @@ class SyncStorage {
         final bytes = await file.readAsBytes();
         return Indice.fromBuffer(bytes);
       } catch (e) {
-        debugPrint('[SyncStorage] Erro ao ler indice local (possível breaking change): $e');
+        debugPrint(
+          '[SyncStorage] Erro ao ler indice local (possível breaking change): $e',
+        );
         return null;
       }
     }
     return null;
   }
 
-  /// Salva os bytes do índice no arquivo local especificado, 
+  /// Salva os bytes do índice no arquivo local especificado,
   /// criando a estrutura de diretórios caso necessário.
   Future<void> writeLocalIndice(String filePath, Uint8List bytes) async {
     final file = File(filePath);
@@ -36,7 +38,7 @@ class SyncStorage {
   }
 
   /// Lê o conteúdo do ETag em cache do arquivo local.
-  /// 
+  ///
   /// Usado para cache condicional HTTP. Retorna nulo se o arquivo não existir.
   Future<String?> readETag(String etagPath) async {
     final file = File(etagPath);
@@ -61,7 +63,7 @@ class SyncStorage {
   }
 
   /// Lê um arquivo `.binarypb` de um Croqui específico.
-  /// 
+  ///
   /// Retorna o objeto [Croqui] se o arquivo existir, nulo caso contrário.
   Future<Croqui?> readLocalCroqui(String croquiPath) async {
     final file = File(croquiPath);
@@ -69,7 +71,9 @@ class SyncStorage {
       try {
         return Croqui.fromBuffer(await file.readAsBytes());
       } catch (e) {
-        debugPrint('[SyncStorage] Erro ao ler croqui local (possível breaking change): $e');
+        debugPrint(
+          '[SyncStorage] Erro ao ler croqui local (possível breaking change): $e',
+        );
         return null;
       }
     }
@@ -113,10 +117,13 @@ class SyncStorage {
   ///
   /// Se [expectedSha256Hash] for vazio ou se o hash do arquivo não bater, o arquivo é deletado
   /// e o método retorna `false`. Se o hash bater perfeitamente, retorna `true`.
-  Future<bool> validateExistingTmpFile(String tmpPath, String expectedSha256Hash) async {
+  Future<bool> validateExistingTmpFile(
+    String tmpPath,
+    String expectedSha256Hash,
+  ) async {
     final file = File(tmpPath);
     if (!await file.exists()) return false;
-    
+
     if (expectedSha256Hash.isEmpty) {
       await file.delete();
       return false;
@@ -132,7 +139,6 @@ class SyncStorage {
     }
   }
 
-
   /// Aplica a deleção e o rename atômico de arquivos de forma robusta e unificada.
   ///
   /// [filesToRename] é um mapa onde a chave (key) é o caminho temporário original
@@ -145,7 +151,7 @@ class SyncStorage {
     for (var entry in filesToRename.entries) {
       final tmpFile = File(entry.key);
       final finalFile = File(entry.value);
-      
+
       if (await finalFile.exists()) {
         await finalFile.delete();
       }

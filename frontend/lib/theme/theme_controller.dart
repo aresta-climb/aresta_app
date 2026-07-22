@@ -11,7 +11,9 @@ class ThemeController {
   Future<void> loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final themeIndex = prefs.getInt('theme_mode');
-    if (themeIndex != null && themeIndex >= 0 && themeIndex < ThemeMode.values.length) {
+    if (themeIndex != null &&
+        themeIndex >= 0 &&
+        themeIndex < ThemeMode.values.length) {
       themeMode.value = ThemeMode.values[themeIndex];
     }
   }

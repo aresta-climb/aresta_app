@@ -38,11 +38,14 @@ class RegrasBottomSheet extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Header
             Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: context.colors.dryMoss),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: context.colors.dryMoss,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'REGRAS E RECOMENDAÇÕES',
@@ -55,7 +58,7 @@ class RegrasBottomSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            
+
             // Content
             Flexible(
               child: SingleChildScrollView(
@@ -65,23 +68,27 @@ class RegrasBottomSheet extends StatelessWidget {
                     if (regrasBotoes.isEmpty)
                       Text(
                         'Nenhuma regra específica cadastrada para este local. Por favor, siga as normas de conduta ética e ambiental padrão.',
-                        style: TextStyle(color: context.colors.fishBone.withValues(alpha: 0.8)),
+                        style: TextStyle(
+                          color: context.colors.fishBone.withValues(alpha: 0.8),
+                        ),
                       )
                     else
-                      ...regrasBotoes.map((b) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: OfflineMarkdown(
-                          data: b.destino.secaoTextual.conteudo,
-                          cragId: cragId,
+                      ...regrasBotoes.map(
+                        (b) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: OfflineMarkdown(
+                            data: b.destino.secaoTextual.conteudo,
+                            cragId: cragId,
+                          ),
                         ),
-                      )),
+                      ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Back Button
             SizedBox(
               width: double.infinity,
@@ -89,14 +96,19 @@ class RegrasBottomSheet extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: context.colors.graniteEdge.withValues(alpha: 0.1),
+                  backgroundColor: context.colors.graniteEdge.withValues(
+                    alpha: 0.1,
+                  ),
                   foregroundColor: context.colors.fishBone,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('VOLTAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'VOLTAR',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -106,7 +118,11 @@ class RegrasBottomSheet extends StatelessWidget {
   }
 }
 
-void showRegrasBottomSheet(BuildContext context, List<Botao> regrasBotoes, String cragId) {
+void showRegrasBottomSheet(
+  BuildContext context,
+  List<Botao> regrasBotoes,
+  String cragId,
+) {
   showModalBottomSheet(
     context: context,
     useRootNavigator: true,

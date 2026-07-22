@@ -6,7 +6,9 @@ import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/view_functions/offline_markdown.dart';
 
 void main() {
-  testWidgets('buildPicoBody renders Mapas Gerais correctly', (WidgetTester tester) async {
+  testWidgets('buildPicoBody renders Mapas Gerais correctly', (
+    WidgetTester tester,
+  ) async {
     final mapa1 = Mapa()
       ..caminhoImagemMapa = 'path/to/image.png'
       ..larguraMapa = 1000
@@ -20,7 +22,7 @@ void main() {
       ..mapasGerais = mapasGerais;
 
     final croqui = Croqui();
-    
+
     // We need to wrap it in a MaterialApp to provide Theme and Directionality
     await tester.pumpWidget(
       MaterialApp(
@@ -30,17 +32,11 @@ void main() {
               return SingleChildScrollView(
                 child: Column(
                   children: [
-                    buildPicoBody(
-                      context,
-                      pico,
-                      croqui,
-                      'crag1',
-                      GlobalKey(),
-                    ),
+                    buildPicoBody(context, pico, croqui, 'crag1', GlobalKey()),
                   ],
                 ),
               );
-            }
+            },
           ),
         ),
       ),
@@ -48,18 +44,20 @@ void main() {
 
     // Should find the 'Mapas Gerais' header
     expect(find.text('Mapas Gerais'), findsOneWidget);
-    
+
     // Should find the MapaThumbnail widget
     expect(find.byType(MapaThumbnail), findsOneWidget);
   });
 
-  testWidgets('buildPicoBody renders Capa buttons inline', (WidgetTester tester) async {
+  testWidgets('buildPicoBody renders Capa buttons inline', (
+    WidgetTester tester,
+  ) async {
     final botaoCapa = Botao()
       ..texto = 'Capa'
       ..destino = (DestinoBotao()
         ..secaoTextual = (ArquivoMarkdown()
           ..conteudo = '# Titulo da Capa\nEste é o texto da capa.'));
-          
+
     final croqui = Croqui()..botoes.add(botaoCapa);
     final pico = Pico()..nome = 'Pico Capa';
 
@@ -70,17 +68,10 @@ void main() {
             builder: (context) {
               return SingleChildScrollView(
                 child: Column(
-                  children: [
-                    buildPicoBody(
-                      context,
-                      pico,
-                      croqui,
-                      'crag2',
-                    ),
-                  ],
+                  children: [buildPicoBody(context, pico, croqui, 'crag2')],
                 ),
               );
-            }
+            },
           ),
         ),
       ),

@@ -36,7 +36,10 @@ Este é o conteúdo principal.''';
       const rawContent = '''## História de Igarapé - MG
 Este é o conteúdo principal.''';
 
-      final result = MarkdownUtils.cleanModalContent(rawContent, 'História de Igarapé');
+      final result = MarkdownUtils.cleanModalContent(
+        rawContent,
+        'História de Igarapé',
+      );
       expect(result, 'Este é o conteúdo principal.');
     });
 
@@ -48,7 +51,10 @@ meta: data
 
 Este é o conteúdo principal.''';
 
-      final result = MarkdownUtils.cleanModalContent(rawContent, 'História de Igarapé');
+      final result = MarkdownUtils.cleanModalContent(
+        rawContent,
+        'História de Igarapé',
+      );
       expect(result, 'Este é o conteúdo principal.');
     });
 
@@ -56,7 +62,10 @@ Este é o conteúdo principal.''';
       const rawContent = '''# Regras Locais
 Este é o conteúdo principal.''';
 
-      final result = MarkdownUtils.cleanModalContent(rawContent, 'História de Igarapé');
+      final result = MarkdownUtils.cleanModalContent(
+        rawContent,
+        'História de Igarapé',
+      );
       expect(result, '# Regras Locais\nEste é o conteúdo principal.');
     });
 
@@ -77,7 +86,8 @@ Este é o conteúdo principal.''';
     });
 
     test('remove frontmatter com BOM character no inicio', () {
-      const rawContent = '\uFEFF---\ntitle: História\n---\nEste é o conteúdo principal.';
+      const rawContent =
+          '\uFEFF---\ntitle: História\n---\nEste é o conteúdo principal.';
 
       final result = MarkdownUtils.cleanModalContent(rawContent, 'História');
       expect(result, 'Este é o conteúdo principal.');
@@ -86,7 +96,10 @@ Este é o conteúdo principal.''';
     test('remove frontmatter vazio (como em igarape/regras.md)', () {
       const rawContent = '---\n---\n\n# SEJA CONSCIENTE!';
 
-      final result = MarkdownUtils.cleanModalContent(rawContent, 'Recomendações e Regras');
+      final result = MarkdownUtils.cleanModalContent(
+        rawContent,
+        'Recomendações e Regras',
+      );
       expect(result, '# SEJA CONSCIENTE!');
     });
 

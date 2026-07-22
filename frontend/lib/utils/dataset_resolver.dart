@@ -61,7 +61,11 @@ class DatasetResolver {
 
     if (grupoNome != null) {
       matchedGrupo = pico.setoresOuGrupos
-          .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo())
+          .where(
+            (sg) =>
+                sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+                sg.grupo.hasConteudo(),
+          )
           .map<Grupo?>((sg) => sg.grupo.conteudo)
           .firstWhere((g) => g?.nome == grupoNome, orElse: () => null);
     }
@@ -74,19 +78,24 @@ class DatasetResolver {
             .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
       } else {
         matchedSetor = pico.setoresOuGrupos
-            .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
+            .where(
+              (sg) =>
+                  sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+                  sg.setor.hasConteudo(),
+            )
             .map<Setor?>((sg) => sg.setor.conteudo)
             .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
 
         // Fallback: search in all groups if no group was specified and setor was not found globally
         if (matchedSetor == null && grupoNome == null) {
           for (var sg in pico.setoresOuGrupos) {
-            if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+            if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+                sg.grupo.hasConteudo()) {
               matchedSetor = sg.grupo.conteudo.setores
                   .where((s) => s.hasConteudo())
                   .map<Setor?>((s) => s.conteudo)
                   .firstWhere((s) => s?.nome == setorNome, orElse: () => null);
-              
+
               if (matchedSetor != null) {
                 matchedGrupo = sg.grupo.conteudo;
                 break;
@@ -102,27 +111,31 @@ class DatasetResolver {
     }
 
     if (setorNome != null && matchedSetor == null) {
-      throw Exception('Setor not found: "$setorNome" (in grupo: "${grupoNome ?? 'global/all'}")');
+      throw Exception(
+        'Setor not found: "$setorNome" (in grupo: "${grupoNome ?? 'global/all'}")',
+      );
     }
 
     if (escaladaNome != null && matchedSetor != null) {
-      matchedEscalada = matchedSetor.escaladas.map<Escalada?>((e) => e).firstWhere((e) {
-        if (e == null) return false;
-        switch (e.whichTipo()) {
-          case Escalada_Tipo.viaEsportiva:
-            return e.viaEsportiva.nome == escaladaNome;
-          case Escalada_Tipo.viaMovel:
-            return e.viaMovel.nome == escaladaNome;
-          case Escalada_Tipo.boulder:
-            return e.boulder.nome == escaladaNome;
-          case Escalada_Tipo.viaMultiplasEnfiadas:
-            return e.viaMultiplasEnfiadas.nome == escaladaNome;
-          case Escalada_Tipo.highline:
-            return e.highline.nome == escaladaNome;
-          default:
-            return false;
-        }
-      }, orElse: () => null);
+      matchedEscalada = matchedSetor.escaladas
+          .map<Escalada?>((e) => e)
+          .firstWhere((e) {
+            if (e == null) return false;
+            switch (e.whichTipo()) {
+              case Escalada_Tipo.viaEsportiva:
+                return e.viaEsportiva.nome == escaladaNome;
+              case Escalada_Tipo.viaMovel:
+                return e.viaMovel.nome == escaladaNome;
+              case Escalada_Tipo.boulder:
+                return e.boulder.nome == escaladaNome;
+              case Escalada_Tipo.viaMultiplasEnfiadas:
+                return e.viaMultiplasEnfiadas.nome == escaladaNome;
+              case Escalada_Tipo.highline:
+                return e.highline.nome == escaladaNome;
+              default:
+                return false;
+            }
+          }, orElse: () => null);
     }
 
     if (escaladaNome != null && matchedEscalada == null) {
@@ -142,18 +155,26 @@ class DatasetResolver {
     String? defaultGrupoNome,
     String? defaultSetorNome,
   }) {
-    String? resolveGrupo = referencia.grupo.isNotEmpty ? referencia.grupo : null;
-    String? resolveSetor = referencia.setor.isNotEmpty ? referencia.setor : null;
-    String? resolveEscalada = referencia.escalada.isNotEmpty ? referencia.escalada : null;
+    String? resolveGrupo = referencia.grupo.isNotEmpty
+        ? referencia.grupo
+        : null;
+    String? resolveSetor = referencia.setor.isNotEmpty
+        ? referencia.setor
+        : null;
+    String? resolveEscalada = referencia.escalada.isNotEmpty
+        ? referencia.escalada
+        : null;
 
     if (resolveEscalada != null && resolveSetor == null) {
       resolveSetor = defaultSetorNome;
       resolveGrupo ??= defaultGrupoNome;
     } else if (resolveSetor != null && resolveGrupo == null) {
-       resolveGrupo = defaultGrupoNome;
+      resolveGrupo = defaultGrupoNome;
     }
 
-    if (resolveGrupo == null && resolveSetor == null && resolveEscalada == null) {
+    if (resolveGrupo == null &&
+        resolveSetor == null &&
+        resolveEscalada == null) {
       throw Exception('Reference is empty');
     }
 

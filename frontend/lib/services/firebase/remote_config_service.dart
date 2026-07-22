@@ -34,7 +34,8 @@ class RemoteConfigService {
   @visibleForTesting
   FirebaseRemoteConfig? debugRemoteConfig;
 
-  FirebaseRemoteConfig get _remoteConfig => debugRemoteConfig ?? FirebaseRemoteConfig.instance;
+  FirebaseRemoteConfig get _remoteConfig =>
+      debugRemoteConfig ?? FirebaseRemoteConfig.instance;
 
   Future<void>? _initFuture;
 

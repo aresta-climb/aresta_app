@@ -11,7 +11,7 @@ import 'package:frontend/theme/app_colors.dart';
 
 class NearbyCragsCarousel extends StatefulWidget {
   final SyncService syncService;
-  
+
   const NearbyCragsCarousel({super.key, required this.syncService});
 
   @override
@@ -44,23 +44,22 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     final repo = DatasetRepository.instance;
     if (repo == null) return;
-    
+
     final indice = repo.indiceData.value;
     if (indice == null) return;
 
     final resumos = indice.croquis.where((r) => r.id == id).toList();
     if (resumos.isEmpty) return;
-    
+
     final resumo = resumos.first;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Baixando $name...')),
-    );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
 
     final success = await widget.syncService.downloadCrag(resumo);
 
     if (mounted) {
-      
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -111,8 +110,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     });
 
     LocationPermission permission = await Geolocator.requestPermission();
-    
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       await _fetchIpLocationFallback();
     } else {
       await _fetchGpsLocation();
@@ -122,7 +122,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   Future<void> _fetchGpsLocation() async {
     try {
       Position? position;
-      
+
       try {
         // 1. First try high accuracy (GPS) which works offline in airplane mode
         position = await Geolocator.getCurrentPosition(
@@ -172,7 +172,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     } catch (e) {
       debugPrint('Erro ao obter IP location: $e');
     }
-    
+
     // Total failure
     setState(() {
       _isLoading = false;
@@ -181,17 +181,23 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   void _calculateDistances(double userLat, double userLon) {
     final datasetRepo = DatasetRepository.instance;
-    final availablePicos = datasetRepo?.activeDataset.value?.availablePicos ?? [];
-    
+    final availablePicos =
+        datasetRepo?.activeDataset.value?.availablePicos ?? [];
+
     List<Map<String, dynamic>> cragsWithDistance = [];
 
     for (var pico in availablePicos) {
       if (pico.containsKey('latitude') && pico.containsKey('longitude')) {
         double picoLat = pico['latitude'];
         double picoLon = pico['longitude'];
-        
-        double distanceInMeters = Geolocator.distanceBetween(userLat, userLon, picoLat, picoLon);
-        
+
+        double distanceInMeters = Geolocator.distanceBetween(
+          userLat,
+          userLon,
+          picoLat,
+          picoLon,
+        );
+
         // Cópia do mapa para poder adicionar a distância sem mutar o original
         Map<String, dynamic> picoComDistancia = Map.from(pico);
         picoComDistancia['distanceMeters'] = distanceInMeters;
@@ -199,7 +205,11 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       }
     }
 
-    cragsWithDistance.sort((a, b) => (a['distanceMeters'] as double).compareTo(b['distanceMeters'] as double));
+    cragsWithDistance.sort(
+      (a, b) => (a['distanceMeters'] as double).compareTo(
+        b['distanceMeters'] as double,
+      ),
+    );
 
     setState(() {
       _closestCrags = cragsWithDistance.take(5).toList();
@@ -236,18 +246,20 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               if (_ipLocation != null && _closestCrags.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Icon(Icons.wifi, color: context.colors.ashGrey, size: 14),
-              ] else if (_currentPosition != null && _closestCrags.isNotEmpty) ...[
+              ] else if (_currentPosition != null &&
+                  _closestCrags.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                Icon(Icons.location_on, color: context.colors.ashGrey, size: 14),
-              ]
+                Icon(
+                  Icons.location_on,
+                  color: context.colors.ashGrey,
+                  size: 14,
+                ),
+              ],
             ],
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 280,
-          child: _buildContent(),
-        ),
+        SizedBox(height: 280, child: _buildContent()),
       ],
     );
   }
@@ -271,7 +283,11 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.location_off_outlined, color: context.colors.ashGrey, size: 48),
+            Icon(
+              Icons.location_off_outlined,
+              color: context.colors.ashGrey,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Permita o acesso à localização para ver os picos mais próximos de você.',
@@ -288,7 +304,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Permitir Localização', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Permitir Localização',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -305,7 +324,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
 
     return ValueListenableBuilder<TopoDataset?>(
-      valueListenable: DatasetRepository.instance?.activeDataset ?? ValueNotifier(null),
+      valueListenable:
+          DatasetRepository.instance?.activeDataset ?? ValueNotifier(null),
       builder: (context, dataset, child) {
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
@@ -314,12 +334,19 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           padding: const EdgeInsets.only(left: 24, right: 8),
           itemBuilder: (context, index) {
             final picoBase = _closestCrags[index];
-            final distanceStr = _formatDistance(picoBase['distanceMeters'] as double);
-            
+            final distanceStr = _formatDistance(
+              picoBase['distanceMeters'] as double,
+            );
+
             // Re-evaluate isDownloaded from the active dataset
-            final isDownloaded = dataset?.downloadedPicos.any((p) => p['id'] == picoBase['id']) ?? false;
-            final pico = Map<String, dynamic>.from(picoBase)..['isDownloaded'] = isDownloaded;
-            
+            final isDownloaded =
+                dataset?.downloadedPicos.any(
+                  (p) => p['id'] == picoBase['id'],
+                ) ??
+                false;
+            final pico = Map<String, dynamic>.from(picoBase)
+              ..['isDownloaded'] = isDownloaded;
+
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: SizedBox(

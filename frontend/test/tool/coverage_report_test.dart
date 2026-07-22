@@ -62,16 +62,19 @@ end_of_record
       expect(outFile.existsSync(), isTrue);
 
       final htmlContent = outFile.readAsStringSync();
-      
+
       // Verifica o título e estrutura básica
-      expect(htmlContent, contains('Relatório Detalhado de Cobertura de Testes'));
-      
+      expect(
+        htmlContent,
+        contains('Relatório Detalhado de Cobertura de Testes'),
+      );
+
       // Verifica se os arquivos válidos foram processados
       expect(htmlContent, contains('lib/pages/home.dart'));
       expect(htmlContent, contains('lib/utils/helper.dart'));
       expect(htmlContent, contains('50.00%')); // 1/2 home.dart
       expect(htmlContent, contains('100.00%')); // 2/2 helper.dart
-      
+
       // Verifica resumo (1 de home + 2 de helper = 3 lines hit, 2 + 2 = 4 lines found -> 75%)
       expect(htmlContent, contains('3 de 4'));
       expect(htmlContent, contains('75.00%'));

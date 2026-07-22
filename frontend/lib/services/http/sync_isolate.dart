@@ -6,7 +6,7 @@ import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'sync_storage.dart';
 
 /// Argumentos necessários para instanciar o [downloadIsolateMain].
-/// 
+///
 /// Como Isolates não compartilham memória com a Main Isolate (Thread da UI),
 /// todos os dados de configuração e a porta de comunicação de mão única
 /// ([SendPort]) precisam ser empacotados e serializados nesta classe de entrada.
@@ -25,7 +25,7 @@ class DownloadIsolateArgs {
 }
 
 /// Resultado final do processamento empacotado que o Isolate envia para a Main Thread.
-/// 
+///
 /// Contém o resumo das operações físicas (arquivos deletados e temporários a renomear)
 /// e o novo buffer de dados que o Dart (Main Isolate) usará para atualizar
 /// a memória do aplicativo de forma atômica e segura.
@@ -44,7 +44,7 @@ class DownloadIsolateResult {
 }
 
 /// Ponto de entrada (Entrypoint) estático para o Isolate de download em background.
-/// 
+///
 /// Esta função roda em uma thread computacional apartada (Background Isolate),
 /// totalmente isolada do Event Loop principal (Main Isolate) onde a UI funciona.
 ///
@@ -70,10 +70,19 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
 
     // Helper for atomic download
-    Future<bool> downloadAtomic(String fileUrl, String tmpPath, String expectedHash) async {
-      final isTmpValid = await storage.validateExistingTmpFile(tmpPath, expectedHash);
+    Future<bool> downloadAtomic(
+      String fileUrl,
+      String tmpPath,
+      String expectedHash,
+    ) async {
+      final isTmpValid = await storage.validateExistingTmpFile(
+        tmpPath,
+        expectedHash,
+      );
       if (isTmpValid) return true;
-      final cacheBustingUrl = fileUrl.contains('?') ? '$fileUrl&v=$expectedHash' : '$fileUrl?v=$expectedHash';
+      final cacheBustingUrl = fileUrl.contains('?')
+          ? '$fileUrl&v=$expectedHash'
+          : '$fileUrl?v=$expectedHash';
       final response = await client.get(Uri.parse(cacheBustingUrl));
       if (response.statusCode != 200) return false;
       await storage.saveTmpFile(tmpPath, response.bodyBytes);
@@ -83,22 +92,46 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     // 1% progress for starting/downloading main file
     args.sendPort.send(0.01);
 
-    final mainFileSuccess = await downloadAtomic(url, tmpPicoFilePath, newResumo.checksumSha256Croqui);
+    final mainFileSuccess = await downloadAtomic(
+      url,
+      tmpPicoFilePath,
+      newResumo.checksumSha256Croqui,
+    );
     if (!mainFileSuccess) {
-      args.sendPort.send(DownloadIsolateResult(filesToDelete: [], filesToRename: {}, error: 'Falha ao baixar binarypb'));
+      args.sendPort.send(
+        DownloadIsolateResult(
+          filesToDelete: [],
+          filesToRename: {},
+          error: 'Falha ao baixar binarypb',
+        ),
+      );
       return;
     }
 
     final newPicoData = await storage.readLocalCroqui(tmpPicoFilePath);
     if (newPicoData == null) {
-      args.sendPort.send(DownloadIsolateResult(filesToDelete: [], filesToRename: {}, error: 'Falha ao ler novo binarypb'));
+      args.sendPort.send(
+        DownloadIsolateResult(
+          filesToDelete: [],
+          filesToRename: {},
+          error: 'Falha ao ler novo binarypb',
+        ),
+      );
       return;
     }
 
     final oldPicoData = await storage.readLocalCroqui(picoFilePath);
 
-    final newContent = {for (var ext in newPicoData.arquivosExternos) ext.caminho: ext.checksumSha256};
-    final oldContent = oldPicoData != null ? {for (var ext in oldPicoData.arquivosExternos) ext.caminho: ext.checksumSha256} : <String, String>{};
+    final newContent = {
+      for (var ext in newPicoData.arquivosExternos)
+        ext.caminho: ext.checksumSha256,
+    };
+    final oldContent = oldPicoData != null
+        ? {
+            for (var ext in oldPicoData.arquivosExternos)
+              ext.caminho: ext.checksumSha256,
+          }
+        : <String, String>{};
 
     final List<String> filesToDelete = [];
     if (oldPicoData != null) {
@@ -113,10 +146,14 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         await for (var entity in dir.list(recursive: true)) {
           if (entity is File) {
             final filePath = entity.path;
-            if (filePath.endsWith('.binarypb') || filePath.endsWith('.binarypb.tmp')) continue;
+            if (filePath.endsWith('.binarypb') ||
+                filePath.endsWith('.binarypb.tmp'))
+              continue;
             bool isNeeded = false;
             for (var key in newContent.keys) {
-              if (filePath.replaceAll('\\', '/').endsWith(key.replaceAll('\\', '/'))) {
+              if (filePath
+                  .replaceAll('\\', '/')
+                  .endsWith(key.replaceAll('\\', '/'))) {
                 isNeeded = true;
                 break;
               }
@@ -127,8 +164,11 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
       }
     }
 
-    final baseDir = newResumo.caminhoRelativo.lastIndexOf('/') != -1 
-        ? newResumo.caminhoRelativo.substring(0, newResumo.caminhoRelativo.lastIndexOf('/')) 
+    final baseDir = newResumo.caminhoRelativo.lastIndexOf('/') != -1
+        ? newResumo.caminhoRelativo.substring(
+            0,
+            newResumo.caminhoRelativo.lastIndexOf('/'),
+          )
         : '';
 
     final Map<String, String> filesToRename = {};
@@ -145,26 +185,37 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     for (var newExt in newPicoData.arquivosExternos) {
       String localPath = newExt.caminho;
       if (localPath.startsWith('/')) localPath = localPath.substring(1);
-        
+
       bool needsDownload = false;
       if (oldContent.containsKey(newExt.caminho)) {
         needsDownload = oldContent[newExt.caminho] != newExt.checksumSha256;
       } else {
-        final existingFileValid = await storage.validateExistingTmpFile('$picoDirPath/$localPath', newExt.checksumSha256);
+        final existingFileValid = await storage.validateExistingTmpFile(
+          '$picoDirPath/$localPath',
+          newExt.checksumSha256,
+        );
         needsDownload = !existingFileValid;
       }
 
       if (needsDownload) {
-        String remotePath = (baseDir.isNotEmpty && !localPath.startsWith(baseDir)) ? '$baseDir/$localPath' : localPath;
+        String remotePath =
+            (baseDir.isNotEmpty && !localPath.startsWith(baseDir))
+            ? '$baseDir/$localPath'
+            : localPath;
         downloadFutures.add(
-          downloadAtomic('${args.baseUrl}/$remotePath', '$picoDirPath/$localPath.tmp', newExt.checksumSha256).then((success) {
+          downloadAtomic(
+            '${args.baseUrl}/$remotePath',
+            '$picoDirPath/$localPath.tmp',
+            newExt.checksumSha256,
+          ).then((success) {
             if (success) {
-              filesToRename['$picoDirPath/$localPath.tmp'] = '$picoDirPath/$localPath';
+              filesToRename['$picoDirPath/$localPath.tmp'] =
+                  '$picoDirPath/$localPath';
             }
             completedFiles++;
             args.sendPort.send(0.01 + (0.99 * (completedFiles / totalFiles)));
             return success;
-          })
+          }),
         );
       } else {
         completedFiles++;
@@ -175,18 +226,31 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     if (downloadFutures.isNotEmpty) {
       final results = await Future.wait(downloadFutures);
       if (results.any((success) => !success)) {
-        args.sendPort.send(DownloadIsolateResult(filesToDelete: [], filesToRename: {}, error: 'Falha em downloads de imagens'));
+        args.sendPort.send(
+          DownloadIsolateResult(
+            filesToDelete: [],
+            filesToRename: {},
+            error: 'Falha em downloads de imagens',
+          ),
+        );
         return;
       }
     }
 
-    args.sendPort.send(DownloadIsolateResult(
-      filesToDelete: filesToDelete,
-      filesToRename: filesToRename,
-      newPicoDataBytes: newPicoData.writeToBuffer(),
-    ));
-
+    args.sendPort.send(
+      DownloadIsolateResult(
+        filesToDelete: filesToDelete,
+        filesToRename: filesToRename,
+        newPicoDataBytes: newPicoData.writeToBuffer(),
+      ),
+    );
   } catch (e) {
-    args.sendPort.send(DownloadIsolateResult(filesToDelete: [], filesToRename: {}, error: e.toString()));
+    args.sendPort.send(
+      DownloadIsolateResult(
+        filesToDelete: [],
+        filesToRename: {},
+        error: e.toString(),
+      ),
+    );
   }
 }

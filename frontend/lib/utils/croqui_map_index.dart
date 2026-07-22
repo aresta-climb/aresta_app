@@ -2,18 +2,14 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/utils/dataset_resolver.dart';
 
 /// Classe auxiliar para converter Referências string-based e dados reais (Protobuf)
-/// em uma chave de hashing universal. Essencial para construir mapas globais e 
+/// em uma chave de hashing universal. Essencial para construir mapas globais e
 /// resolver O(1) de onde um setor/grupo/escalada se encontra em qualquer mapa do pico.
 class ReferenceKey {
   final String? grupoNome;
   final String? setorNome;
   final String? escaladaNome;
 
-  const ReferenceKey({
-    this.grupoNome,
-    this.setorNome,
-    this.escaladaNome,
-  });
+  const ReferenceKey({this.grupoNome, this.setorNome, this.escaladaNome});
 
   /// Constrói uma `ReferenceKey` a partir de um [ResolvedDataset] já estabilizado,
   /// utilizando os nomes canônicos de cada camada da hierarquia.
@@ -45,14 +41,14 @@ class ReferenceKey {
 /// contendo todo o contexto `setorContext` e `grupoContext` apropriado para navegação e breadcrumbs.
 class IndexedMap {
   /// O mapa de destino em que a referência foi encontrada
-  final Mapa? mapa; 
-  
+  final Mapa? mapa;
+
   /// O setor (se existente) que engloba esse mapa
   final Setor? setorContext;
-  
+
   /// O grupo (se existente) que engloba esse mapa
   final Grupo? grupoContext;
-  
+
   /// ID da referência (ponto SVG) encontrada dentro do mapa.
   final String referencedId;
 
@@ -89,7 +85,8 @@ class CroquiMapIndex {
             _indexMapas(pico, s.conteudo.mapas, s.conteudo, grupo);
           }
         }
-      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+          sg.setor.hasConteudo()) {
         final setor = sg.setor.conteudo;
         _indexMapas(pico, setor.mapas, setor, null);
       }
@@ -115,7 +112,7 @@ class CroquiMapIndex {
               grupoContext: grupo,
               referencedId: ref.ids.isNotEmpty ? ref.ids.first : '',
             );
-            
+
             _index.putIfAbsent(key, () => []).add(indexedMap);
           }
         } catch (e) {

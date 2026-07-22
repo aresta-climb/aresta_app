@@ -39,7 +39,15 @@ class _SyncUpdates {
 }
 
 /// Representa o estado de sincronização do aplicativo.
-enum SyncStatus { updated, updating, outdated, error, justUpdated, noNewUpdates, offline }
+enum SyncStatus {
+  updated,
+  updating,
+  outdated,
+  error,
+  justUpdated,
+  noNewUpdates,
+  offline,
+}
 
 /// Um serviço responsável por sincronizar os dados locais com o backend remoto.
 ///
@@ -54,7 +62,7 @@ class SyncService {
     SyncStatus.updating,
   );
 
-  /// Indica se há algum download de pico em andamento e armazena os IDs dos picos que estão sendo baixados, 
+  /// Indica se há algum download de pico em andamento e armazena os IDs dos picos que estão sendo baixados,
   /// juntamente com a porcentagem de progresso (0.0 a 1.0).
   final ValueNotifier<Map<String, double>> downloadingCrags =
       ValueNotifier<Map<String, double>>({});
@@ -72,7 +80,8 @@ class SyncService {
   /// estar aberto na tela (ver [pico_aberto_id]), seu ID será injetado
   /// nesta variável. A interface de mapa a ouve e projeta um Popup
   /// de bloqueio, exigindo do usuário a recarga manual via [commitPendenciasAtomaticas].
-  final ValueNotifier<String?> recarga_pendente_pico_id = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> recarga_pendente_pico_id =
+      ValueNotifier<String?>(null);
 
   /// Guarda atualizações atômicas deferidas pela UI
   final Map<String, _SyncUpdates> _pendenciasAtomicas = {};
@@ -81,7 +90,8 @@ class SyncService {
   Future<void> commitPendenciasAtomaticas(String id) async {
     final updates = _pendenciasAtomicas.remove(id);
     if (updates != null) {
-      if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
+      if (updates.filesToDelete.isNotEmpty ||
+          updates.filesToRename.isNotEmpty) {
         await _storage.applyAtomicFileUpdates(
           filesToDelete: updates.filesToDelete,
           filesToRename: updates.filesToRename,
@@ -92,7 +102,7 @@ class SyncService {
       }
       await datasetRepository.updateDatasetAfterDownload(id);
     }
-    
+
     if (recarga_pendente_pico_id.value == id) {
       recarga_pendente_pico_id.value = null;
     }
@@ -104,7 +114,11 @@ class SyncService {
   final RemoteConfigService? remoteConfigService;
 
   @visibleForTesting
-  Future<void> Function(void Function(DownloadIsolateArgs), DownloadIsolateArgs)? mockIsolateSpawn;
+  Future<void> Function(
+    void Function(DownloadIsolateArgs),
+    DownloadIsolateArgs,
+  )?
+  mockIsolateSpawn;
 
   SyncService({
     required this.datasetRepository,
@@ -116,7 +130,9 @@ class SyncService {
        _network = network ?? SyncNetwork(client ?? ZipInterceptorClient()) {
     pico_aberto_id.addListener(() {
       final currentOpenId = pico_aberto_id.value;
-      final idsToCommit = _pendenciasAtomicas.keys.where((id) => id != currentOpenId).toList();
+      final idsToCommit = _pendenciasAtomicas.keys
+          .where((id) => id != currentOpenId)
+          .toList();
       for (final id in idsToCommit) {
         commitPendenciasAtomaticas(id);
       }
@@ -153,7 +169,10 @@ class SyncService {
       final cachedVersion = prefs.getInt('cached_data_version') ?? 0;
       return NetworkConstants.kDataVersion > cachedVersion;
     } catch (e) {
-      AppLogger.instance.logError('[SyncService] Falha ao verificar versão da base de dados', error: e);
+      AppLogger.instance.logError(
+        '[SyncService] Falha ao verificar versão da base de dados',
+        error: e,
+      );
       return false;
     }
   }
@@ -163,7 +182,9 @@ class SyncService {
   Future<void> confirmMigrationComplete() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
-    debugPrint('[SyncService] Nova versão de dados registrada com sucesso: ${NetworkConstants.kDataVersion}');
+    debugPrint(
+      '[SyncService] Nova versão de dados registrada com sucesso: ${NetworkConstants.kDataVersion}',
+    );
   }
 
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
@@ -203,18 +224,27 @@ class SyncService {
       bool success = !updates.hasErrors;
 
       if (!success) {
-        // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto 
+        // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto
         // e a CDN buscou um arquivo novo). Vamos forçar uma atualização do índice e tentar de novo.
-        debugPrint('Download falhou. Forçando atualização do índice ignorando o cache...');
+        debugPrint(
+          'Download falhou. Forçando atualização do índice ignorando o cache...',
+        );
         await syncIndex(auto: false, forceBypassCache: true);
-        
+
         final currentIndice = datasetRepository.indiceData.value;
         if (currentIndice != null) {
-          final updatedResumoList = currentIndice.croquis.where((c) => c.id == id).toList();
+          final updatedResumoList = currentIndice.croquis
+              .where((c) => c.id == id)
+              .toList();
           if (updatedResumoList.isNotEmpty) {
-             debugPrint('Tentando download novamente com o índice atualizado...');
-             updates = await _downloadOrUpdatePico(updatedResumoList.first, downloadsDir);
-             success = !updates.hasErrors;
+            debugPrint(
+              'Tentando download novamente com o índice atualizado...',
+            );
+            updates = await _downloadOrUpdatePico(
+              updatedResumoList.first,
+              downloadsDir,
+            );
+            success = !updates.hasErrors;
           }
         }
       }
@@ -223,9 +253,12 @@ class SyncService {
         if (pico_aberto_id.value == id) {
           _pendenciasAtomicas[id] = updates;
           recarga_pendente_pico_id.value = id;
-          debugPrint('Download manual retido em pendência porque croqui $id está aberto.');
+          debugPrint(
+            'Download manual retido em pendência porque croqui $id está aberto.',
+          );
         } else {
-          if (updates.filesToDelete.isNotEmpty || updates.filesToRename.isNotEmpty) {
+          if (updates.filesToDelete.isNotEmpty ||
+              updates.filesToRename.isNotEmpty) {
             await _storage.applyAtomicFileUpdates(
               filesToDelete: updates.filesToDelete,
               filesToRename: updates.filesToRename,
@@ -254,10 +287,19 @@ class SyncService {
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
   /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
-  Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
+  Future<List<String>> syncIndex({
+    bool auto = true,
+    bool forceBypassCache = false,
+  }) async {
     if (await isNetworkDisabled()) {
-      debugPrint('[SyncService] Sincronização em background abortada: App descontinuado.');
-      await _loadLocalIndiceAndNotify(datasetRepository.editorDeCroqui.indicePath((await getApplicationDocumentsDirectory()).path));
+      debugPrint(
+        '[SyncService] Sincronização em background abortada: App descontinuado.',
+      );
+      await _loadLocalIndiceAndNotify(
+        datasetRepository.editorDeCroqui.indicePath(
+          (await getApplicationDocumentsDirectory()).path,
+        ),
+      );
       syncStatus.value = SyncStatus.outdated;
       return [];
     }
@@ -276,9 +318,11 @@ class SyncService {
       final localEtagPath = '$localIndicePath.etag';
 
       final baseUrl = baseUrlOverride ?? editorDeCroqui.activeBaseUrl;
-      
+
       if (baseUrl.isEmpty) {
-        debugPrint('[SyncService] URL base vazia. Sincronização ignorada, carregando local...');
+        debugPrint(
+          '[SyncService] URL base vazia. Sincronização ignorada, carregando local...',
+        );
         await _loadLocalIndiceAndNotify(localIndicePath);
         setUpdatedStatus();
         return failedPicos;
@@ -289,8 +333,14 @@ class SyncService {
       );
 
       final localEtag = await _storage.readETag(localEtagPath);
-      debugPrint('[SyncService] 🔍 ETag Local sendo enviado na requisição: $localEtag');
-      final result = await _network.fetchIndiceWithRetries(baseUrl, localEtag, forceBypassCache: forceBypassCache);
+      debugPrint(
+        '[SyncService] 🔍 ETag Local sendo enviado na requisição: $localEtag',
+      );
+      final result = await _network.fetchIndiceWithRetries(
+        baseUrl,
+        localEtag,
+        forceBypassCache: forceBypassCache,
+      );
 
       if (result == null) {
         await _loadLocalIndiceAndNotify(localIndicePath);
@@ -310,7 +360,11 @@ class SyncService {
           final globalUpdates = _SyncUpdates();
 
           if (!editorDeCroqui.isExperimentalMode.value) {
-            final thumbUpdates = await _syncThumbnails(oldIndice, newIndice, baseUrl);
+            final thumbUpdates = await _syncThumbnails(
+              oldIndice,
+              newIndice,
+              baseUrl,
+            );
             globalUpdates.merge(thumbUpdates);
 
             final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
@@ -327,7 +381,8 @@ class SyncService {
             // Sucesso total. Efetivar todas as alterações pendentes de uma vez só (Atomic Global Updates).
             // Isso previne que o aplicativo fique com dados e arquivos em estados inconsistentes caso
             // o índice mestre falhe ao ser baixado ou processado.
-            if (globalUpdates.filesToDelete.isNotEmpty || globalUpdates.filesToRename.isNotEmpty) {
+            if (globalUpdates.filesToDelete.isNotEmpty ||
+                globalUpdates.filesToRename.isNotEmpty) {
               await _storage.applyAtomicFileUpdates(
                 filesToDelete: globalUpdates.filesToDelete,
                 filesToRename: globalUpdates.filesToRename,
@@ -351,8 +406,13 @@ class SyncService {
               '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
             );
             if (!forceBypassCache) {
-              debugPrint('[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...');
-              final fallbackFailedPicos = await syncIndex(auto: auto, forceBypassCache: true);
+              debugPrint(
+                '[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...',
+              );
+              final fallbackFailedPicos = await syncIndex(
+                auto: auto,
+                forceBypassCache: true,
+              );
               failedPicos.clear();
               failedPicos.addAll(fallbackFailedPicos);
             } else {
@@ -411,10 +471,15 @@ class SyncService {
   /// Troca o status da sincronização para recém-atualizado e agenda a transição
   /// automática para "concluído/atualizado" após alguns segundos.
   void setUpdatedStatus({bool noNewUpdates = false}) {
-    syncStatus.value = noNewUpdates ? SyncStatus.noNewUpdates : SyncStatus.justUpdated;
-    TelemetryService.instance.logResultadoSincronizacao(noNewUpdates ? 'sem_atualizacoes' : 'sucesso');
+    syncStatus.value = noNewUpdates
+        ? SyncStatus.noNewUpdates
+        : SyncStatus.justUpdated;
+    TelemetryService.instance.logResultadoSincronizacao(
+      noNewUpdates ? 'sem_atualizacoes' : 'sucesso',
+    );
     Future.delayed(const Duration(seconds: 4), () {
-      if (syncStatus.value == SyncStatus.justUpdated || syncStatus.value == SyncStatus.noNewUpdates) {
+      if (syncStatus.value == SyncStatus.justUpdated ||
+          syncStatus.value == SyncStatus.noNewUpdates) {
         syncStatus.value = SyncStatus.updated;
       }
     });
@@ -457,12 +522,16 @@ class SyncService {
             final oldResumoList = oldIndice.croquis
                 .where((c) => c.id == newResumo.id)
                 .toList();
-            
+
             print('DEBUG: oldResumoList is not empty for ${newResumo.id}');
             if (oldResumoList.isNotEmpty) {
               final oldResumo = oldResumoList.first;
-              needsUpdate = oldResumo.checksumSha256Croqui != newResumo.checksumSha256Croqui;
-              print('DEBUG: needsUpdate=$needsUpdate old=${oldResumo.checksumSha256Croqui} new=${newResumo.checksumSha256Croqui}');
+              needsUpdate =
+                  oldResumo.checksumSha256Croqui !=
+                  newResumo.checksumSha256Croqui;
+              print(
+                'DEBUG: needsUpdate=$needsUpdate old=${oldResumo.checksumSha256Croqui} new=${newResumo.checksumSha256Croqui}',
+              );
             } else {
               // Pico existe no disco mas não estava no índice antigo. Pode ter sido um download incompleto.
               needsUpdate = true;
@@ -471,7 +540,9 @@ class SyncService {
 
           print('DEBUG: needsUpdate flag is $needsUpdate');
           if (needsUpdate) {
-            debugPrint('Pico ${newResumo.id} requires update (outdated or fallback). Updating...');
+            debugPrint(
+              'Pico ${newResumo.id} requires update (outdated or fallback). Updating...',
+            );
             final picoUpdates = await _downloadOrUpdatePico(
               newResumo,
               downloadsDir,
@@ -483,7 +554,9 @@ class SyncService {
               if (pico_aberto_id.value == newResumo.id) {
                 _pendenciasAtomicas[newResumo.id] = picoUpdates;
                 recarga_pendente_pico_id.value = newResumo.id;
-                debugPrint('Sincronização em background do croqui ${newResumo.id} retida em pendência (aberto).');
+                debugPrint(
+                  'Sincronização em background do croqui ${newResumo.id} retida em pendência (aberto).',
+                );
               } else {
                 updates.merge(picoUpdates);
               }
@@ -567,14 +640,14 @@ class SyncService {
         if (needsDownload) {
           final url = '$baseUrl/thumbnails/$id.webp';
           final tmpPath = '$thumbPath.tmp';
-          
+
           downloadTasks.add(
             _downloadFileAtomic(url, tmpPath, newHash).then((success) {
               if (success) {
                 updates.filesToRename[tmpPath] = thumbPath;
               }
               return success;
-            })
+            }),
           );
         }
       }
@@ -588,7 +661,10 @@ class SyncService {
         }
       }
     } catch (e) {
-      AppLogger.instance.logError('Erro ao sincronizar thumbnails globais', error: e);
+      AppLogger.instance.logError(
+        'Erro ao sincronizar thumbnails globais',
+        error: e,
+      );
       updates.hasErrors = true;
     }
     return updates;
@@ -621,11 +697,12 @@ class SyncService {
 
     final latestResumo = latestResumoList.first;
 
-    final baseUrl = baseUrlOverride ?? datasetRepository.editorDeCroqui.activeBaseUrl;
+    final baseUrl =
+        baseUrlOverride ?? datasetRepository.editorDeCroqui.activeBaseUrl;
     final id = latestResumo.id;
     try {
       final receivePort = ReceivePort();
-      
+
       final args = DownloadIsolateArgs(
         newResumoBytes: latestResumo.writeToBuffer(),
         downloadsDirPath: downloadsDir.path,
@@ -645,16 +722,18 @@ class SyncService {
           downloadingCrags.value = {...downloadingCrags.value, id: message};
         } else if (message is DownloadIsolateResult) {
           receivePort.close();
-          
+
           if (message.error != null) {
-            AppLogger.instance.logError('Erro no isolate de download do pico $id: ${message.error}');
+            AppLogger.instance.logError(
+              'Erro no isolate de download do pico $id: ${message.error}',
+            );
             updates.hasErrors = true;
             return updates;
           }
 
           updates.filesToDelete.addAll(message.filesToDelete);
           updates.filesToRename.addAll(message.filesToRename);
-          
+
           if (message.newPicoDataBytes != null) {
             final newPicoData = Croqui.fromBuffer(message.newPicoDataBytes!);
             updates.metadataToUpdate[id] = newPicoData;
@@ -717,15 +796,15 @@ class SyncService {
     for (var newExt in newPicoData.arquivosExternos) {
       String localPath = newExt.caminho;
       if (localPath.startsWith('/')) localPath = localPath.substring(1);
-        
+
       bool needsDownload = false;
       if (oldContent.containsKey(newExt.caminho)) {
         // Caminho feliz: sabemos o hash antigo e comparamos direto com o novo.
         needsDownload = oldContent[newExt.caminho] != newExt.checksumSha256;
       } else {
-        // Fallback de Breaking Change: o oldPicoData não foi lido (retornou null), 
+        // Fallback de Breaking Change: o oldPicoData não foi lido (retornou null),
         // então não sabemos se a imagem no disco é a versão velha ou a nova.
-        // Para economizar banda e não rebaixar tudo, validamos o hash do arquivo 
+        // Para economizar banda e não rebaixar tudo, validamos o hash do arquivo
         // que já está no disco. validateExistingTmpFile já deleta o arquivo se o hash não bater.
         final existingFileValid = await _storage.validateExistingTmpFile(
           '$picoDirPath/$localPath',
@@ -768,8 +847,8 @@ class SyncService {
 
   /// Cruza a lista de caminhos do arquivo novo vs o antigo para retornar a lista de
   /// arquivos descontinuados que precisam ser apagados do cache no fim do processo.
-  /// 
-  /// Caso o `oldPicoData` seja nulo (ex: devido a um breaking change no schema do Protobuf 
+  ///
+  /// Caso o `oldPicoData` seja nulo (ex: devido a um breaking change no schema do Protobuf
   /// que tornou o arquivo antigo ilegível), a rotina entra num fallback que varre ativamente
   /// a pasta do pico, apagando qualquer arquivo que não esteja declarado no `newContent`.
   Future<List<String>> _identifyFilesToDelete(
@@ -793,14 +872,17 @@ class SyncService {
         await for (var entity in dir.list(recursive: true)) {
           if (entity is File) {
             final filePath = entity.path;
-            if (filePath.endsWith('.binarypb') || filePath.endsWith('.binarypb.tmp')) {
+            if (filePath.endsWith('.binarypb') ||
+                filePath.endsWith('.binarypb.tmp')) {
               continue;
             }
-            
+
             bool isNeeded = false;
             for (var key in newContent.keys) {
               // Ensure we match the relative path accurately
-              if (filePath.replaceAll('\\', '/').endsWith(key.replaceAll('\\', '/'))) {
+              if (filePath
+                  .replaceAll('\\', '/')
+                  .endsWith(key.replaceAll('\\', '/'))) {
                 isNeeded = true;
                 break;
               }
@@ -863,8 +945,8 @@ class SyncService {
       // Furador de cache (Cache-Busting) para CDNs (Cloudflare/GitHub Pages)
       // Como os arquivos mantêm o mesmo nome ao serem atualizados, a CDN pode servir cache velho.
       // Adicionando `?v=hash`, forçamos a CDN a buscar a versão mais recente.
-      final cacheBustingUrl = fileUrl.contains('?') 
-          ? '$fileUrl&v=$expectedHash' 
+      final cacheBustingUrl = fileUrl.contains('?')
+          ? '$fileUrl&v=$expectedHash'
           : '$fileUrl?v=$expectedHash';
 
       debugPrint('Downloading file: $cacheBustingUrl to .tmp');

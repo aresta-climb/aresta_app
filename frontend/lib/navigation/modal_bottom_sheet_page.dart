@@ -25,10 +25,13 @@ class ModalBottomSheetPage<T> extends Page<T> {
       builder: builder,
       isScrollControlled: isScrollControlled,
       settings: this,
-      backgroundColor: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-      shape: shape ?? const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor:
+          backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+      shape:
+          shape ??
+          const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
     );
   }
 }

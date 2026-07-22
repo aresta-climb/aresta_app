@@ -17,18 +17,28 @@ class FakeRemoteConfigService implements RemoteConfigService {
   int _soft = 0;
   final int _rec = 0;
 
-  @override int get hardMinVersion => _hard;
-  @override int get softMinVersion => _soft;
-  @override int get recommendedVersion => _rec;
-  @override int getInt(String key) => 0;
-  @override bool getBool(String key) => false;
-  @override String getString(String key) => "";
-  
+  @override
+  int get hardMinVersion => _hard;
+  @override
+  int get softMinVersion => _soft;
+  @override
+  int get recommendedVersion => _rec;
+  @override
+  int getInt(String key) => 0;
+  @override
+  bool getBool(String key) => false;
+  @override
+  String getString(String key) => "";
+
   final String _iosUrl = "";
-  @override String get storeUrlIos => _iosUrl;
-  @override Future<void> initialize() async {}
-  @override FirebaseRemoteConfig? debugRemoteConfig;
-  @override void clearInitFuture() {}
+  @override
+  String get storeUrlIos => _iosUrl;
+  @override
+  Future<void> initialize() async {}
+  @override
+  FirebaseRemoteConfig? debugRemoteConfig;
+  @override
+  void clearInitFuture() {}
 }
 
 // Mock simple PathProviderPlatform
@@ -53,7 +63,7 @@ void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
-    
+
     tempDir = await Directory.systemTemp.createTemp('sync_service_test');
     PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
 
@@ -74,25 +84,37 @@ void main() {
     }
   });
 
-  test('checkNeedsMigration deve retornar true se a versão salva for menor', () async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion - 1);
+  test(
+    'checkNeedsMigration deve retornar true se a versão salva for menor',
+    () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+        'cached_data_version',
+        NetworkConstants.kDataVersion - 1,
+      );
 
-    final result = await syncService.checkNeedsMigration();
-    expect(result, isTrue);
-  });
+      final result = await syncService.checkNeedsMigration();
+      expect(result, isTrue);
+    },
+  );
 
-  test('checkNeedsMigration deve retornar false se a versão for igual', () async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
+  test(
+    'checkNeedsMigration deve retornar false se a versão for igual',
+    () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
 
-    final result = await syncService.checkNeedsMigration();
-    expect(result, isFalse);
-  });
+      final result = await syncService.checkNeedsMigration();
+      expect(result, isFalse);
+    },
+  );
 
   test('confirmMigrationComplete grava a versão correta', () async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion - 1);
+    await prefs.setInt(
+      'cached_data_version',
+      NetworkConstants.kDataVersion - 1,
+    );
 
     await syncService.confirmMigrationComplete();
 
@@ -108,10 +130,10 @@ void main() {
       buildNumber: '10',
       buildSignature: '',
     );
-    
+
     final fakeRemote = FakeRemoteConfigService();
-    fakeRemote._soft = 11; 
-    
+    fakeRemote._soft = 11;
+
     final tempSyncService = SyncService(
       datasetRepository: datasetRepository,
       storage: storage,

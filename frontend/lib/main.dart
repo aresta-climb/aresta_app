@@ -48,9 +48,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializa o Workmanager para processamento de feedback em background
-  Workmanager().initialize(
-    callbackDispatcher,
-  );
+  Workmanager().initialize(callbackDispatcher);
 
   // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
   await initFirebase();
@@ -105,9 +103,12 @@ void main() async {
 }
 
 @visibleForTesting
-Future<bool> setupAppServices(DatasetRepository datasetRepo, SyncService syncService) async {
+Future<bool> setupAppServices(
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+) async {
   await datasetRepo.init();
-  
+
   final needsMigration = await syncService.checkNeedsMigration();
   if (!needsMigration) {
     // Roda em background sem dar await
@@ -157,7 +158,9 @@ class _MyAppState extends State<MyApp> {
     _networkFeedbackTrigger = NetworkFeedbackTrigger(
       connectivityStream: Connectivity().onConnectivityChanged,
       onNetworkRestored: () async {
-        await BackgroundWorker.processFeedbackQueue(dispatcher: 'connectivity_plus');
+        await BackgroundWorker.processFeedbackQueue(
+          dispatcher: 'connectivity_plus',
+        );
       },
     );
   }
@@ -171,7 +174,10 @@ class _MyAppState extends State<MyApp> {
   void _onTermsAccepted() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('accepted_legal_version', kLegalVersion);
-    await prefs.setString('accepted_legal_timestamp', DateTime.now().toIso8601String());
+    await prefs.setString(
+      'accepted_legal_timestamp',
+      DateTime.now().toIso8601String(),
+    );
     setState(() {
       _acceptedLegalVersion = kLegalVersion;
     });
@@ -186,8 +192,6 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController().themeMode,
       builder: (context, currentMode, _) {
-
-
         return BetterFeedback(
           feedbackBuilder: customFeedbackBuilder,
           themeMode: ThemeMode.dark, // Temporary: locked to dark mode
@@ -217,153 +221,158 @@ class _MyAppState extends State<MyApp> {
               Colors.yellow,
             ],
           ),
-          localizationsDelegates: [
-            GlobalFeedbackLocalizationsDelegate(),
-          ],
+          localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
           localeOverride: const Locale('pt', 'BR'),
           child: MaterialApp(
             title: 'Aresta Climb',
             debugShowCheckedModeBanner: false,
-          themeMode: ThemeMode.dark, // Temporary: locked to dark mode
-          theme: ThemeData(
-            fontFamily: 'Montserrat',
-            useMaterial3: true,
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: AppColors.light.beastHide,
+            themeMode: ThemeMode.dark, // Temporary: locked to dark mode
+            theme: ThemeData(
+              fontFamily: 'Montserrat',
+              useMaterial3: true,
               brightness: Brightness.light,
-              primary: AppColors.light.beastHide,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: AppColors.light.beastHide,
+                brightness: Brightness.light,
+                primary: AppColors.light.beastHide,
+              ),
+              scaffoldBackgroundColor: AppColors.light.slateStone,
+              textSelectionTheme: TextSelectionThemeData(
+                cursorColor: AppColors.light.fishBone,
+                selectionColor: AppColors.light.beastHide.withValues(
+                  alpha: 0.3,
+                ),
+                selectionHandleColor: AppColors.light.beastHide,
+              ),
+              extensions: const [AppColors.light],
             ),
-            scaffoldBackgroundColor: AppColors.light.slateStone,
-            textSelectionTheme: TextSelectionThemeData(
-              cursorColor: AppColors.light.fishBone,
-              selectionColor: AppColors.light.beastHide.withValues(alpha: 0.3),
-              selectionHandleColor: AppColors.light.beastHide,
-            ),
-            extensions: const [AppColors.light],
-          ),
-          darkTheme: ThemeData(
-            fontFamily: 'Montserrat',
-            useMaterial3: true,
-            brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: AppColors.dark.beastHide,
+            darkTheme: ThemeData(
+              fontFamily: 'Montserrat',
+              useMaterial3: true,
               brightness: Brightness.dark,
-              primary: AppColors.dark.beastHide,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: AppColors.dark.beastHide,
+                brightness: Brightness.dark,
+                primary: AppColors.dark.beastHide,
+              ),
+              scaffoldBackgroundColor: AppColors.dark.deepBasalt,
+              textSelectionTheme: TextSelectionThemeData(
+                cursorColor: AppColors.dark.fishBone,
+                selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),
+                selectionHandleColor: AppColors.dark.beastHide,
+              ),
+              extensions: const [AppColors.dark],
             ),
-            scaffoldBackgroundColor: AppColors.dark.deepBasalt,
-            textSelectionTheme: TextSelectionThemeData(
-              cursorColor: AppColors.dark.fishBone,
-              selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),
-              selectionHandleColor: AppColors.dark.beastHide,
-            ),
-            extensions: const [AppColors.dark],
-          ),
-          // Banner global para modo experimental/editor que persiste em todas as telas
-          builder: (context, child) {
-            Widget effectiveChild = child!;
+            // Banner global para modo experimental/editor que persiste em todas as telas
+            builder: (context, child) {
+              Widget effectiveChild = child!;
 
-            if (_needsMigration && _hasAcceptedTerms) {
-              effectiveChild = DatabaseMigrationScreen(
-                syncService: widget.syncService,
-                onMigrationComplete: () {
-                  setState(() {
-                    _needsMigration = false;
-                  });
-                },
-              );
-            }
+              if (_needsMigration && _hasAcceptedTerms) {
+                effectiveChild = DatabaseMigrationScreen(
+                  syncService: widget.syncService,
+                  onMigrationComplete: () {
+                    setState(() {
+                      _needsMigration = false;
+                    });
+                  },
+                );
+              }
 
-            return AppVersionChecker(
-              remoteConfigService: widget.remoteConfigService,
-              child: Stack(
-                children: [
-                  effectiveChild,
-                  ValueListenableBuilder<bool>(
-                  valueListenable:
-                      widget.datasetRepo.editorDeCroqui.isExperimentalMode,
-                  builder: (context, isExperimental, _) {
-                    return ValueListenableBuilder<String?>(
+              return AppVersionChecker(
+                remoteConfigService: widget.remoteConfigService,
+                child: Stack(
+                  children: [
+                    effectiveChild,
+                    ValueListenableBuilder<bool>(
                       valueListenable:
-                          widget.datasetRepo.editorDeCroqui.editorUrl,
-                      builder: (context, editorUrl, _) {
-                        final isEditor = isExperimental;
-                        if (!isEditor) return const SizedBox.shrink();
+                          widget.datasetRepo.editorDeCroqui.isExperimentalMode,
+                      builder: (context, isExperimental, _) {
+                        return ValueListenableBuilder<String?>(
+                          valueListenable:
+                              widget.datasetRepo.editorDeCroqui.editorUrl,
+                          builder: (context, editorUrl, _) {
+                            final isEditor = isExperimental;
+                            if (!isEditor) return const SizedBox.shrink();
 
-                        String bannerText = 'MODO EXPERIMENTAL ATIVO (LOCAL)';
+                            String bannerText =
+                                'MODO EXPERIMENTAL ATIVO (LOCAL)';
 
-                        return Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: ValueListenableBuilder<Duration?>(
-                              valueListenable: widget
-                                  .datasetRepo
-                                  .editorDeCroqui
-                                  .timeRemaining,
-                              builder: (context, remaining, _) {
-                                String timerText = '';
-                                if (remaining != null) {
-                                  final minutes = remaining.inMinutes
-                                      .toString()
-                                      .padLeft(2, '0');
-                                  final seconds = (remaining.inSeconds % 60)
-                                      .toString()
-                                      .padLeft(2, '0');
-                                  timerText = ' ($minutes:$seconds)';
-                                }
+                            return Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: ValueListenableBuilder<Duration?>(
+                                  valueListenable: widget
+                                      .datasetRepo
+                                      .editorDeCroqui
+                                      .timeRemaining,
+                                  builder: (context, remaining, _) {
+                                    String timerText = '';
+                                    if (remaining != null) {
+                                      final minutes = remaining.inMinutes
+                                          .toString()
+                                          .padLeft(2, '0');
+                                      final seconds = (remaining.inSeconds % 60)
+                                          .toString()
+                                          .padLeft(2, '0');
+                                      timerText = ' ($minutes:$seconds)';
+                                    }
 
-                                return Container(
-                                  padding: EdgeInsets.only(
-                                    top: MediaQuery.of(context).padding.top + 2,
-                                    bottom: 4,
-                                  ),
-                                  color: Colors.red.withValues(alpha: 0.7),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: Colors.white,
-                                        size: 14,
+                                    return Container(
+                                      padding: EdgeInsets.only(
+                                        top:
+                                            MediaQuery.of(context).padding.top +
+                                            2,
+                                        bottom: 4,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '$bannerText$timerText',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                          letterSpacing: 1.2,
-                                        ),
+                                      color: Colors.red.withValues(alpha: 0.7),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.warning_amber_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '$bannerText$timerText',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                              letterSpacing: 1.2,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ],
-            ));
-          },
-          home: _hasAcceptedTerms
-              ? TreeNavigationWrapper(
-                  datasetRepo: widget.datasetRepo,
-                  syncService: widget.syncService,
-                  key: TreeNavigationWrapper.navKey,
-                )
-              : TermsOfUsePage(
-                  onAccepted: _onTermsAccepted,
-                  isUpdatingTerms: _isUpdatingTerms,
-                  assetBundle: widget.assetBundle,
-                ),
+              );
+            },
+            home: _hasAcceptedTerms
+                ? TreeNavigationWrapper(
+                    datasetRepo: widget.datasetRepo,
+                    syncService: widget.syncService,
+                    key: TreeNavigationWrapper.navKey,
+                  )
+                : TermsOfUsePage(
+                    onAccepted: _onTermsAccepted,
+                    isUpdatingTerms: _isUpdatingTerms,
+                    assetBundle: widget.assetBundle,
+                  ),
           ),
         );
       },
@@ -406,7 +415,7 @@ class TreeNavigationWrapper extends StatefulWidget {
 
 class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
-  
+
   SyncService get syncService => widget.syncService;
 
   @override
@@ -445,7 +454,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   void _onNodeChanged() {
     final path = treeController.currentNode.path;
     String? currentCragId;
-    
+
     // Procura na ordem do mais interno (ativo) para o mais externo
     for (final node in path.reversed) {
       if (node is PicoContextNode) {
@@ -461,7 +470,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         break;
       }
     }
-    
+
     widget.syncService.pico_aberto_id.value = currentCragId;
 
     setState(() {});
@@ -490,12 +499,12 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   }
 
   /// Constrói o alicerce principal do aplicativo (Tabs).
-  /// Esta tela fica perpetuamente na base do Navigator para preservar o estado de rolagem 
+  /// Esta tela fica perpetuamente na base do Navigator para preservar o estado de rolagem
   /// (scroll) e navegação entre abas usando um `IndexedStack`.
   Widget _buildTabsWidget(NavNode node) {
     int tabIndex = 0;
     if (node is BrowseNode) tabIndex = 1;
-    if (node is MeusCroquisNode) tabIndex = 2; 
+    if (node is MeusCroquisNode) tabIndex = 2;
     if (node is ComunidadeNode) tabIndex = 3;
 
     return Scaffold(
@@ -511,7 +520,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             datasetRepo: widget.datasetRepo,
             syncService: widget.syncService,
           ),
-          MeusCroquisPage(datasetRepo: widget.datasetRepo, syncService: widget.syncService),
+          MeusCroquisPage(
+            datasetRepo: widget.datasetRepo,
+            syncService: widget.syncService,
+          ),
           const ComunidadePage(), // Pass dependencies if needed in the future
         ],
       ),
@@ -567,7 +579,11 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             if (node.returnToSetorNome != null) {
               try {
                 returnToSetor = pico.setoresOuGrupos
-                    .where((sg) => sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo())
+                    .where(
+                      (sg) =>
+                          sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+                          sg.setor.hasConteudo(),
+                    )
                     .map((sg) => sg.setor.conteudo)
                     .firstWhere((s) => s.nome == node.returnToSetorNome);
               } catch (_) {}
@@ -580,14 +596,26 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               scrollToMapaGeral: node.scrollToMapaGeral,
               returnToSetor: returnToSetor,
             );
-                    } else if (node is SetoresNode) {
+          } else if (node is SetoresNode) {
             return SetoresPage(pico: pico, cragId: cragId);
           } else if (node is ExplorarLocalNode) {
-            return ExplorarLocalPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
+            return ExplorarLocalPage(
+              pico: pico,
+              cragId: cragId,
+              categories: PicoCategorizedData(croqui),
+            );
           } else if (node is ComunidadePicoNode) {
-            return ComunidadePicoPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
+            return ComunidadePicoPage(
+              pico: pico,
+              cragId: cragId,
+              categories: PicoCategorizedData(croqui),
+            );
           } else if (node is ApoiePicoNode) {
-            return ApoiePicoPage(pico: pico, cragId: cragId, categories: PicoCategorizedData(croqui));
+            return ApoiePicoPage(
+              pico: pico,
+              cragId: cragId,
+              categories: PicoCategorizedData(croqui),
+            );
           } else if (node is MapasCarrosselNode) {
             return MapasCarrosselPage(
               pico: pico,
@@ -611,7 +639,8 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                     return e.boulder.nome == node.scrollToEscaladaNome;
                   }
                   if (e.hasViaMultiplasEnfiadas()) {
-                    return e.viaMultiplasEnfiadas.nome == node.scrollToEscaladaNome;
+                    return e.viaMultiplasEnfiadas.nome ==
+                        node.scrollToEscaladaNome;
                   }
                   if (e.hasHighline()) {
                     return e.highline.nome == node.scrollToEscaladaNome;
@@ -654,8 +683,6 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       );
     }
 
-
-
     if (node is GPSNode) {
       return GPSPage(datasetRepo: widget.datasetRepo);
     }
@@ -671,22 +698,36 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   Widget build(BuildContext context) {
     // 1. Extraímos o caminho completo da raiz até o nó atual
     final fullPath = treeController.currentNode.path;
-    
-    // 2. A página base é estritamente a nossa aba (Home, Settings, Browse). 
+
+    // 2. A página base é estritamente a nossa aba (Home, Settings, Browse).
     // Como ela contém um IndexedStack, evitamos desmontá-la para preservar scrolls infinitos e abas de usuário.
     final baseNode = fullPath.lastWhere(
-      (n) => n is HomeNode || n is MeusCroquisNode || n is BrowseNode || n is ComunidadeNode, 
-      orElse: () => const HomeNode()
+      (n) =>
+          n is HomeNode ||
+          n is MeusCroquisNode ||
+          n is BrowseNode ||
+          n is ComunidadeNode,
+      orElse: () => const HomeNode(),
     );
 
     // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
     // Agora INCLUÍMOS o TextNode, pois ele mapeia para um ModalBottomSheetPage!
-    final pushedNodes = fullPath.where((n) => !(n is HomeNode || n is MeusCroquisNode || n is BrowseNode || n is ComunidadeNode)).toList();
+    final pushedNodes = fullPath
+        .where(
+          (n) =>
+              !(n is HomeNode ||
+                  n is MeusCroquisNode ||
+                  n is BrowseNode ||
+                  n is ComunidadeNode),
+        )
+        .toList();
 
     // 4. ... e magicamente empilhados por cima da aba base de forma declarativa!
     final pages = <Page>[
       MaterialPage(
-        key: const ValueKey('TabsPage'), // Chave constante: Impede que o Flutter reconstrua a base desnecessariamente!
+        key: const ValueKey(
+          'TabsPage',
+        ), // Chave constante: Impede que o Flutter reconstrua a base desnecessariamente!
         child: _buildTabsWidget(baseNode),
       ),
       ...pushedNodes.map((node) {
@@ -718,7 +759,11 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                           Expanded(
                             child: Text(
                               node.title,
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: beastHide),
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: beastHide,
+                              ),
                             ),
                           ),
                           buildFeedbackButton(context, color: beastHide),
@@ -727,9 +772,15 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
-                          final content = MarkdownUtils.cleanModalContent(node.content, node.title);
-                          return OfflineMarkdown(data: content, cragId: node.cragId);
-                        }
+                          final content = MarkdownUtils.cleanModalContent(
+                            node.content,
+                            node.title,
+                          );
+                          return OfflineMarkdown(
+                            data: content,
+                            cragId: node.cragId,
+                          );
+                        },
                       ),
                     ],
                   );
@@ -742,7 +793,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
           key: ValueKey(node.toString()), // Identificação estrita dos nós
           child: _buildNodeAsWidget(node),
         );
-      })
+      }),
     ];
 
     return PopScope(

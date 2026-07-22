@@ -77,7 +77,7 @@ Set<Marker> buildMapMarkers({
       final double lat = crag['latitude'];
       final double lng = crag['longitude'];
       final String id = crag['id'];
-      
+
       BitmapDescriptor iconToUse = customIcon ?? BitmapDescriptor.defaultMarker;
       if (showText && textIcons != null && textIcons.containsKey(id)) {
         iconToUse = textIcons[id]!;
@@ -111,10 +111,7 @@ Widget buildMapaGlobalMap({
   required Set<Marker> markers,
 }) {
   return GoogleMap(
-    initialCameraPosition: CameraPosition(
-      target: initialTarget,
-      zoom: 4.0,
-    ),
+    initialCameraPosition: CameraPosition(target: initialTarget, zoom: 4.0),
     markers: markers,
     myLocationEnabled: true,
     myLocationButtonEnabled: true,

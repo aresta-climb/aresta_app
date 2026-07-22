@@ -7,7 +7,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 /// Esta tela é exibida imediatamente ao iniciar o app, interceptando a navegação
 /// normal, quando uma "breaking change" na versão da base de dados é detectada
 /// (ex: o backend de croquis mudou de /v14/ para /v15/).
-/// 
+///
 /// Ela impede que o usuário interaja com dados antigos/corrompidos e força
 /// um novo download do Índice `syncIndex()` antes de liberar o aplicativo via
 /// callback `onMigrationComplete`. Se houver erro de conexão, ela fica em
@@ -16,10 +16,15 @@ class DatabaseMigrationScreen extends StatefulWidget {
   final SyncService syncService;
   final VoidCallback onMigrationComplete;
 
-  const DatabaseMigrationScreen({super.key, required this.syncService, required this.onMigrationComplete});
+  const DatabaseMigrationScreen({
+    super.key,
+    required this.syncService,
+    required this.onMigrationComplete,
+  });
 
   @override
-  State<DatabaseMigrationScreen> createState() => _DatabaseMigrationScreenState();
+  State<DatabaseMigrationScreen> createState() =>
+      _DatabaseMigrationScreenState();
 }
 
 class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
@@ -45,11 +50,11 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
     });
 
     final syncService = widget.syncService;
-    
+
     try {
       final failed = await syncService.syncIndex(auto: false);
-      if (syncService.syncStatus.value == SyncStatus.error || 
-          syncService.syncStatus.value == SyncStatus.offline || 
+      if (syncService.syncStatus.value == SyncStatus.error ||
+          syncService.syncStatus.value == SyncStatus.offline ||
           failed.isNotEmpty) {
         if (mounted) {
           setState(() {

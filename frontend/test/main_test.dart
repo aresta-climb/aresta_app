@@ -30,9 +30,6 @@ class MockAssetBundle extends Fake implements AssetBundle {
   }
 }
 
-
-
-
 class FakeRemoteConfigService implements RemoteConfigService {
   @override
   int get hardMinVersion => 0;
@@ -49,9 +46,10 @@ class FakeRemoteConfigService implements RemoteConfigService {
   bool getBool(String key) => false;
   @override
   String getString(String key) => "";
-  
+
   final String _iosUrl = "";
-  @override String get storeUrlIos => _iosUrl;
+  @override
+  String get storeUrlIos => _iosUrl;
 
   @override
   void clearInitFuture() {}
@@ -64,6 +62,7 @@ class FakeRemoteConfigService implements RemoteConfigService {
 }
 
 class MockDatasetRepository extends Mock implements DatasetRepository {}
+
 class MockSyncService extends Mock implements SyncService {}
 
 void main() {
@@ -77,7 +76,7 @@ void main() {
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
     mockSync = SyncService(datasetRepository: mockRepo);
     mockSync.syncStatus.value = SyncStatus.updated;
-    
+
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
 
@@ -92,91 +91,123 @@ void main() {
     );
   });
 
-  testWidgets('MyApp shows TermsOfUsePage when acceptedLegalVersion is 0 (first launch)', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: 0,
-    ));
-    await tester.pump();
-    debugDumpApp();
-    expect(find.byType(TermsOfUsePage), findsOneWidget);
-    expect(find.byType(TreeNavigationWrapper), findsNothing);
-  });
+  testWidgets(
+    'MyApp shows TermsOfUsePage when acceptedLegalVersion is 0 (first launch)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: 0,
+        ),
+      );
+      await tester.pump();
+      debugDumpApp();
+      expect(find.byType(TermsOfUsePage), findsOneWidget);
+      expect(find.byType(TreeNavigationWrapper), findsNothing);
+    },
+  );
 
+  test(
+    'setupAppServices awaits datasetRepo.init() before calling syncIndex',
+    () async {
+      final mockRepo = MockDatasetRepository();
+      final mockSync = MockSyncService();
 
+      // The order of calls is important
+      bool initCalled = false;
 
-  test('setupAppServices awaits datasetRepo.init() before calling syncIndex', () async {
-    final mockRepo = MockDatasetRepository();
-    final mockSync = MockSyncService();
+      when(() => mockRepo.init()).thenAnswer((_) async {
+        await Future.delayed(const Duration(milliseconds: 100));
+        initCalled = true;
+      });
 
-    // The order of calls is important
-    bool initCalled = false;
-    
-    when(() => mockRepo.init()).thenAnswer((_) async {
-      await Future.delayed(const Duration(milliseconds: 100));
-      initCalled = true;
-    });
+      when(() => mockSync.checkNeedsMigration()).thenAnswer((_) async => false);
+      when(() => mockSync.syncIndex()).thenAnswer((_) async {
+        expect(
+          initCalled,
+          isTrue,
+          reason: 'init() should be awaited before syncIndex()',
+        );
+        return [];
+      });
 
-    when(() => mockSync.checkNeedsMigration()).thenAnswer((_) async => false);
-    when(() => mockSync.syncIndex()).thenAnswer((_) async {
-      expect(initCalled, isTrue, reason: 'init() should be awaited before syncIndex()');
-      return [];
-    });
+      final result = await setupAppServices(mockRepo, mockSync);
 
-    final result = await setupAppServices(mockRepo, mockSync);
-    
-    expect(result, isFalse);
-    verify(() => mockRepo.init()).called(1);
-    verify(() => mockSync.syncIndex()).called(1);
-  });
+      expect(result, isFalse);
+      verify(() => mockRepo.init()).called(1);
+      verify(() => mockSync.syncIndex()).called(1);
+    },
+  );
 
-  testWidgets('MyApp shows TreeNavigationWrapper when acceptedLegalVersion matches kLegalVersion', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: kLegalVersion,
-    ));
-    await tester.pump();
+  testWidgets(
+    'MyApp shows TreeNavigationWrapper when acceptedLegalVersion matches kLegalVersion',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
 
-    expect(find.byType(TermsOfUsePage), findsNothing);
-    expect(find.byType(TreeNavigationWrapper), findsOneWidget);
-  });
+      expect(find.byType(TermsOfUsePage), findsNothing);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    },
+  );
 
-  testWidgets('MyApp shows TermsOfUsePage with update flag when acceptedLegalVersion is > 0 but < kLegalVersion', (WidgetTester tester) async {
-    // If kLegalVersion is 1, an accepted version of 1 would mean it's up to date.
-    // For this test, we must mock a scenario where it's outdated, but we can't change kLegalVersion dynamically.
-    // We can simulate acceptedLegalVersion = -1 to pretend it's > 0 if kLegalVersion is 1, or we just pass kLegalVersion - 1
-    // if kLegalVersion > 1. Let's just pass kLegalVersion - 1 (but ensure it's > 0 or at least valid).
-    // Actually, if kLegalVersion == 1, then the first update hasn't happened. We can test this by passing acceptedLegalVersion = 1, but then it's not outdated!
-    // Since we know kLegalVersion is at least 1, if it's 1, we can't test isUpdatingTerms = true perfectly without a hack.
-    // But since the actual generated kLegalVersion is currently 2, this will pass gracefully.
-    final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 1; 
-    
-    // If kLegalVersion is 1, skip test because we can't have an accepted version that is > 0 AND < 1
-    if (kLegalVersion == 1) return;
+  testWidgets(
+    'MyApp shows TermsOfUsePage with update flag when acceptedLegalVersion is > 0 but < kLegalVersion',
+    (WidgetTester tester) async {
+      // If kLegalVersion is 1, an accepted version of 1 would mean it's up to date.
+      // For this test, we must mock a scenario where it's outdated, but we can't change kLegalVersion dynamically.
+      // We can simulate acceptedLegalVersion = -1 to pretend it's > 0 if kLegalVersion is 1, or we just pass kLegalVersion - 1
+      // if kLegalVersion > 1. Let's just pass kLegalVersion - 1 (but ensure it's > 0 or at least valid).
+      // Actually, if kLegalVersion == 1, then the first update hasn't happened. We can test this by passing acceptedLegalVersion = 1, but then it's not outdated!
+      // Since we know kLegalVersion is at least 1, if it's 1, we can't test isUpdatingTerms = true perfectly without a hack.
+      // But since the actual generated kLegalVersion is currently 2, this will pass gracefully.
+      final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 1;
 
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: outdatedVersion,
-    ));
-    await tester.pump();
+      // If kLegalVersion is 1, skip test because we can't have an accepted version that is > 0 AND < 1
+      if (kLegalVersion == 1) return;
 
-    final termsFinder = find.byType(TermsOfUsePage);
-    expect(termsFinder, findsOneWidget);
-    expect(find.byType(TreeNavigationWrapper), findsNothing);
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: outdatedVersion,
+        ),
+      );
+      await tester.pump();
 
-    final TermsOfUsePage termsPage = tester.widget(termsFinder);
-    expect(termsPage.isUpdatingTerms, isTrue);
-  });
+      final termsFinder = find.byType(TermsOfUsePage);
+      expect(termsFinder, findsOneWidget);
+      expect(find.byType(TreeNavigationWrapper), findsNothing);
 
-  testWidgets('MyApp shows SnackBar when background sync fails', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: kLegalVersion,
-    ));
+      final TermsOfUsePage termsPage = tester.widget(termsFinder);
+      expect(termsPage.isUpdatingTerms, isTrue);
+    },
+  );
+
+  testWidgets('MyApp shows SnackBar when background sync fails', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MyApp(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        needsMigration: false,
+        remoteConfigService: FakeRemoteConfigService(),
+        acceptedLegalVersion: kLegalVersion,
+      ),
+    );
     await tester.pump();
 
     // Finish building the initial frame
@@ -191,38 +222,56 @@ void main() {
 
     // The SnackBar should appear
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.text('Erro ao sincronizar os dados. Tente novamente mais tarde.'), findsOneWidget);
+    expect(
+      find.text('Erro ao sincronizar os dados. Tente novamente mais tarde.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('MyApp registers AppColors extension in both light and dark themes', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: kLegalVersion,
-    ));
-    await tester.pump();
+  testWidgets(
+    'MyApp registers AppColors extension in both light and dark themes',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
 
-    // Finish building
-    await tester.pump(const Duration(seconds: 1));
+      // Finish building
+      await tester.pump(const Duration(seconds: 1));
 
-    final BuildContext context = tester.element(find.byType(TreeNavigationWrapper));
+      final BuildContext context = tester.element(
+        find.byType(TreeNavigationWrapper),
+      );
 
-    final theme = Theme.of(context);
-    expect(theme.extension<AppColors>(), isNotNull);
-  });
+      final theme = Theme.of(context);
+      expect(theme.extension<AppColors>(), isNotNull);
+    },
+  );
 
-  testWidgets('MyApp saves timestamp and version when terms are accepted', (WidgetTester tester) async {
+  testWidgets('MyApp saves timestamp and version when terms are accepted', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({}); // Initialize empty mock
-    
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: 0,
-      assetBundle: MockAssetBundle({
-        'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
-        'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
-      }),
-    ));
+
+    await tester.pumpWidget(
+      MyApp(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        needsMigration: false,
+        remoteConfigService: FakeRemoteConfigService(),
+        acceptedLegalVersion: 0,
+        assetBundle: MockAssetBundle({
+          'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
+          'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+        }),
+      ),
+    );
     await tester.pump();
 
     await tester.pump();
@@ -236,7 +285,9 @@ void main() {
     await tester.pump();
 
     // Tap accept button
-    await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'),
+    );
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
@@ -249,110 +300,143 @@ void main() {
     expect(find.byType(TreeNavigationWrapper), findsOneWidget);
   });
 
-  testWidgets('MyApp updates timestamp and version when terms are updated and accepted again', (WidgetTester tester) async {
-    final oldTimestamp = DateTime(2025, 1, 1).toIso8601String();
-    final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 0;
-    SharedPreferences.setMockInitialValues({
-      'accepted_legal_version': outdatedVersion,
-      'accepted_legal_timestamp': oldTimestamp,
-    });
-    
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync, needsMigration: false, remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: outdatedVersion,
-      assetBundle: MockAssetBundle({
-        'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
-        'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
-      }),
-    ));
-    await tester.pump();
+  testWidgets(
+    'MyApp updates timestamp and version when terms are updated and accepted again',
+    (WidgetTester tester) async {
+      final oldTimestamp = DateTime(2025, 1, 1).toIso8601String();
+      final outdatedVersion = kLegalVersion > 1 ? kLegalVersion - 1 : 0;
+      SharedPreferences.setMockInitialValues({
+        'accepted_legal_version': outdatedVersion,
+        'accepted_legal_timestamp': oldTimestamp,
+      });
 
-    await tester.pump();
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: outdatedVersion,
+          assetBundle: MockAssetBundle({
+            'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
+            'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+          }),
+        ),
+      );
+      await tester.pump();
 
-    final termsFinder = find.byType(TermsOfUsePage);
-    expect(termsFinder, findsOneWidget);
+      await tester.pump();
 
-    // Verify update banner is visible
-    expect(find.textContaining('Atualizamos nossos documentos legais'), findsOneWidget);
+      final termsFinder = find.byType(TermsOfUsePage);
+      expect(termsFinder, findsOneWidget);
 
-    // Tap checkbox
-    await tester.ensureVisible(find.byType(CheckboxListTile));
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
+      // Verify update banner is visible
+      expect(
+        find.textContaining('Atualizamos nossos documentos legais'),
+        findsOneWidget,
+      );
 
-    // Tap accept button
-    await tester.tap(find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      // Tap checkbox
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
 
-    // Verify SharedPreferences updated
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getInt('accepted_legal_version'), kLegalVersion);
-    final newTimestamp = prefs.getString('accepted_legal_timestamp');
-    expect(newTimestamp, isNotNull);
-    expect(newTimestamp, isNot(equals(oldTimestamp)));
+      // Tap accept button
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    // Verify TreeNavigationWrapper is now shown
-    expect(find.byType(TreeNavigationWrapper), findsOneWidget);
-  });
+      // Verify SharedPreferences updated
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('accepted_legal_version'), kLegalVersion);
+      final newTimestamp = prefs.getString('accepted_legal_timestamp');
+      expect(newTimestamp, isNotNull);
+      expect(newTimestamp, isNot(equals(oldTimestamp)));
 
-  testWidgets('MyApp shows DatabaseMigrationScreen when needsMigration is true AND terms are accepted', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync,
-      needsMigration: true,
-      remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: kLegalVersion,
-    ));
-    await tester.pump();
+      // Verify TreeNavigationWrapper is now shown
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    },
+  );
 
-    // Since terms are accepted (kLegalVersion matches) and needsMigration is true,
-    // DatabaseMigrationScreen should be shown instead of TreeNavigationWrapper.
-    expect(find.byType(DatabaseMigrationScreen), findsOneWidget); 
-    expect(find.byType(TermsOfUsePage), findsNothing);
-  });
+  testWidgets(
+    'MyApp shows DatabaseMigrationScreen when needsMigration is true AND terms are accepted',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: true,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
 
-  testWidgets('MyApp shows TermsOfUsePage even if needsMigration is true BUT terms are NOT accepted', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(
-      datasetRepo: mockRepo,
-      syncService: mockSync,
-      needsMigration: true,
-      remoteConfigService: FakeRemoteConfigService(),
-      acceptedLegalVersion: 0, // Not accepted yet
-    ));
-    await tester.pump();
+      // Since terms are accepted (kLegalVersion matches) and needsMigration is true,
+      // DatabaseMigrationScreen should be shown instead of TreeNavigationWrapper.
+      expect(find.byType(DatabaseMigrationScreen), findsOneWidget);
+      expect(find.byType(TermsOfUsePage), findsNothing);
+    },
+  );
 
-    // terms are NOT accepted, so TermsOfUsePage must show up first
-    expect(find.byType(TermsOfUsePage), findsOneWidget);
-    // DatabaseMigrationScreen should NOT be shown yet
-    expect(find.byType(DatabaseMigrationScreen), findsNothing);
-  });
-  testWidgets('TreeNavigationWrapper atualiza pico_aberto_id quando a rota muda', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: TreeNavigationWrapper(
-        datasetRepo: mockRepo,
-        syncService: mockSync,
-      ),
-    ));
-    
-    await tester.pump(const Duration(milliseconds: 500));
-    
-    final wrapperState = tester.state<State<TreeNavigationWrapper>>(find.byType(TreeNavigationWrapper)) as dynamic;
-    final treeController = wrapperState.treeController;
+  testWidgets(
+    'MyApp shows TermsOfUsePage even if needsMigration is true BUT terms are NOT accepted',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: true,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: 0, // Not accepted yet
+        ),
+      );
+      await tester.pump();
 
-    expect(mockSync.pico_aberto_id.value, isNull);
+      // terms are NOT accepted, so TermsOfUsePage must show up first
+      expect(find.byType(TermsOfUsePage), findsOneWidget);
+      // DatabaseMigrationScreen should NOT be shown yet
+      expect(find.byType(DatabaseMigrationScreen), findsNothing);
+    },
+  );
+  testWidgets(
+    'TreeNavigationWrapper atualiza pico_aberto_id quando a rota muda',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
+        ),
+      );
 
-    // Navega para um Pico
-    treeController.navigateTo(PicoNode(cragId: 'pico_99', parent: const HomeNode()));
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(mockSync.pico_aberto_id.value, 'pico_99');
+      final wrapperState =
+          tester.state<State<TreeNavigationWrapper>>(
+                find.byType(TreeNavigationWrapper),
+              )
+              as dynamic;
+      final treeController = wrapperState.treeController;
 
-    // Volta para Home
-    treeController.navigateTo(const HomeNode());
-    await tester.pump(const Duration(milliseconds: 500));
+      expect(mockSync.pico_aberto_id.value, isNull);
 
-    expect(mockSync.pico_aberto_id.value, isNull);
-  });
+      // Navega para um Pico
+      treeController.navigateTo(
+        PicoNode(cragId: 'pico_99', parent: const HomeNode()),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(mockSync.pico_aberto_id.value, 'pico_99');
+
+      // Volta para Home
+      treeController.navigateTo(const HomeNode());
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(mockSync.pico_aberto_id.value, isNull);
+    },
+  );
 }

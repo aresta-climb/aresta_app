@@ -9,7 +9,6 @@ class MockTelemetryService implements TelemetryService {
     recordedParams.clear();
   }
 
-
   @override
   Future<void> logAcaoExplorar(String idCroqui, String acao) async {
     recordedEvents.add('acao_explorar');
@@ -22,14 +21,25 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
-  Future<void> logAtualizarCroqui(String idCroqui, String versao, String timestampAtualizacao) async {
+  Future<void> logAtualizarCroqui(
+    String idCroqui,
+    String versao,
+    String timestampAtualizacao,
+  ) async {
     recordedEvents.add('atualizar_croqui');
-    recordedParams['atualizar_croqui'] = {'id_croqui': idCroqui, 'versao': versao, 'timestamp_atualizacao': timestampAtualizacao};
+    recordedParams['atualizar_croqui'] = {
+      'id_croqui': idCroqui,
+      'versao': versao,
+      'timestamp_atualizacao': timestampAtualizacao,
+    };
   }
 
-
   @override
-  Future<void> logAcaoCroqui(String idCroqui, String acao, {String? origem}) async {
+  Future<void> logAcaoCroqui(
+    String idCroqui,
+    String acao, {
+    String? origem,
+  }) async {
     recordedEvents.add('acao_croqui');
     final params = <String, dynamic>{'id_croqui': idCroqui, 'acao': acao};
     if (origem != null) {
@@ -41,25 +51,46 @@ class MockTelemetryService implements TelemetryService {
   @override
   Future<void> logAbrirSetor(String idCroqui, String nomeSetor) async {
     recordedEvents.add('abrir_setor');
-    recordedParams['abrir_setor'] = {'id_croqui': idCroqui, 'nome_setor': nomeSetor};
+    recordedParams['abrir_setor'] = {
+      'id_croqui': idCroqui,
+      'nome_setor': nomeSetor,
+    };
   }
 
   @override
   Future<void> logAbrirGrupo(String idCroqui, String nomeGrupo) async {
     recordedEvents.add('abrir_grupo');
-    recordedParams['abrir_grupo'] = {'id_croqui': idCroqui, 'nome_grupo': nomeGrupo};
+    recordedParams['abrir_grupo'] = {
+      'id_croqui': idCroqui,
+      'nome_grupo': nomeGrupo,
+    };
   }
 
   @override
   Future<void> logAbrirMapa(String idCroqui, String nomeSetor) async {
     recordedEvents.add('abrir_mapa');
-    recordedParams['abrir_mapa'] = {'id_croqui': idCroqui, 'nome_setor': nomeSetor};
+    recordedParams['abrir_mapa'] = {
+      'id_croqui': idCroqui,
+      'nome_setor': nomeSetor,
+    };
   }
 
   @override
-  Future<void> logAcaoEscalada(String idCroqui, String nomeSetor, String nomeEscalada, String acao, String origem) async {
+  Future<void> logAcaoEscalada(
+    String idCroqui,
+    String nomeSetor,
+    String nomeEscalada,
+    String acao,
+    String origem,
+  ) async {
     recordedEvents.add('acao_escalada');
-    recordedParams['acao_escalada'] = {'id_croqui': idCroqui, 'nome_setor': nomeSetor, 'nome_escalada': nomeEscalada, 'acao': acao, 'origem': origem};
+    recordedParams['acao_escalada'] = {
+      'id_croqui': idCroqui,
+      'nome_setor': nomeSetor,
+      'nome_escalada': nomeEscalada,
+      'acao': acao,
+      'origem': origem,
+    };
   }
 
   @override
@@ -71,13 +102,24 @@ class MockTelemetryService implements TelemetryService {
   @override
   Future<void> logBuscaCroquis(String query, int numeroResultados) async {
     recordedEvents.add('busca_croquis');
-    recordedParams['busca_croquis'] = {'query': query, 'numero_resultados': numeroResultados};
+    recordedParams['busca_croquis'] = {
+      'query': query,
+      'numero_resultados': numeroResultados,
+    };
   }
 
   @override
-  Future<void> logBuscaEscaladas(String query, int numeroResultados, String idCroqui) async {
+  Future<void> logBuscaEscaladas(
+    String query,
+    int numeroResultados,
+    String idCroqui,
+  ) async {
     recordedEvents.add('busca_escaladas');
-    recordedParams['busca_escaladas'] = {'query': query, 'numero_resultados': numeroResultados, 'id_croqui': idCroqui};
+    recordedParams['busca_escaladas'] = {
+      'query': query,
+      'numero_resultados': numeroResultados,
+      'id_croqui': idCroqui,
+    };
   }
 
   @override
@@ -95,7 +137,10 @@ class MockTelemetryService implements TelemetryService {
   @override
   Future<void> logNavegacaoHierarquica(String idCroqui, String destino) async {
     recordedEvents.add('navegacao_hierarquica_mapa');
-    recordedParams['navegacao_hierarquica_mapa'] = {'id_croqui': idCroqui, 'acao': destino};
+    recordedParams['navegacao_hierarquica_mapa'] = {
+      'id_croqui': idCroqui,
+      'acao': destino,
+    };
   }
 
   @override
@@ -125,7 +170,9 @@ class MockTelemetryService implements TelemetryService {
   @override
   Future<void> logDatabaseMigrationTryAgain() async {
     recordedEvents.add('migracao_db');
-    recordedParams['migracao_db'] = {'acao': 'tentar_novamente_clicado_tela_migracao'};
+    recordedParams['migracao_db'] = {
+      'acao': 'tentar_novamente_clicado_tela_migracao',
+    };
   }
 
   @override
@@ -143,6 +190,8 @@ class MockTelemetryService implements TelemetryService {
   @override
   Future<void> logAppVersionRecommendedUpdate() async {
     recordedEvents.add('migracao_db');
-    recordedParams['migracao_db'] = {'acao': 'banner_versao_recomendada_mostrado'};
+    recordedParams['migracao_db'] = {
+      'acao': 'banner_versao_recomendada_mostrado',
+    };
   }
 }

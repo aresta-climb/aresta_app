@@ -62,19 +62,20 @@ class AppNav {
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
-    
+
     final ctx = _picoCtx(ctrl.currentNode);
     final finalCragId = cragId ?? (ctx?.cragId);
     if (finalCragId == null) return;
-    
-    ctrl.navigateTo(PicoNode(
-      cragId: finalCragId,
-      scrollToMapaGeral: scrollToMapaGeral,
-      returnToSetorNome: returnToSetor?.nome,
-      parent: ctrl.currentNode,
-    ));
-  }
 
+    ctrl.navigateTo(
+      PicoNode(
+        cragId: finalCragId,
+        scrollToMapaGeral: scrollToMapaGeral,
+        returnToSetorNome: returnToSetor?.nome,
+        parent: ctrl.currentNode,
+      ),
+    );
+  }
 
   /// Helper de navegação unificado para mapas.
   /// Recebe uma lista de [mapas] e delega a renderização para [MapasCarrosselNode].
@@ -89,14 +90,16 @@ class AppNav {
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
-    
-    ctrl.navigateTo(MapasCarrosselNode(
-      cragId: cragId,
-      initialIndex: initialIndex,
-      mapas: mapas,
-      imageProviderOverride: imageProviderOverride,
-      parent: ctrl.currentNode,
-    ));
+
+    ctrl.navigateTo(
+      MapasCarrosselNode(
+        cragId: cragId,
+        initialIndex: initialIndex,
+        mapas: mapas,
+        imageProviderOverride: imageProviderOverride,
+        parent: ctrl.currentNode,
+      ),
+    );
   }
 
   /// Navega para o Mapa Global.
@@ -106,11 +109,8 @@ class AppNav {
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
-    
-    ctrl.navigateTo(MapaGlobalNode(
-      crags: crags,
-      parent: ctrl.currentNode,
-    ));
+
+    ctrl.navigateTo(MapaGlobalNode(crags: crags, parent: ctrl.currentNode));
   }
 
   /// Navega para a página de um Setor.
@@ -127,18 +127,22 @@ class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
-    
+
     final finalCragId = cragId ?? (ctx?.cragId);
 
     if (finalCragId == null) return;
-    
-    ctrl.navigateTo(SetorNode(
-      setorNome: setor.nome,
-      grupoNome: grupoContext?.nome,
-      scrollToEscaladaNome: scrollToEscalada != null ? _getNomeEscalada(scrollToEscalada) : null,
-      cragId: finalCragId,
-      parent: ctrl.currentNode,
-    ));
+
+    ctrl.navigateTo(
+      SetorNode(
+        setorNome: setor.nome,
+        grupoNome: grupoContext?.nome,
+        scrollToEscaladaNome: scrollToEscalada != null
+            ? _getNomeEscalada(scrollToEscalada)
+            : null,
+        cragId: finalCragId,
+        parent: ctrl.currentNode,
+      ),
+    );
   }
 
   /// Navega para a página de um Grupo.
@@ -153,16 +157,18 @@ class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
-    
+
     final finalCragId = cragId ?? (ctx?.cragId);
 
     if (finalCragId == null) return;
 
-    ctrl.navigateTo(GrupoNode(
-      grupoNome: grupo.nome,
-      cragId: finalCragId,
-      parent: ctrl.currentNode,
-    ));
+    ctrl.navigateTo(
+      GrupoNode(
+        grupoNome: grupo.nome,
+        cragId: finalCragId,
+        parent: ctrl.currentNode,
+      ),
+    );
   }
 
   /// Navega para a página de uma Via (Escalada).
@@ -179,18 +185,20 @@ class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
-    
+
     final finalCragId = cragId ?? (ctx?.cragId);
 
     if (finalCragId == null) return;
 
-    ctrl.navigateTo(ViaNode(
-      escaladaNome: _getNomeEscalada(escalada),
-      setorNome: setor?.nome,
-      grupoNome: grupo?.nome,
-      cragId: finalCragId,
-      parent: ctrl.currentNode,
-    ));
+    ctrl.navigateTo(
+      ViaNode(
+        escaladaNome: _getNomeEscalada(escalada),
+        setorNome: setor?.nome,
+        grupoNome: grupo?.nome,
+        cragId: finalCragId,
+        parent: ctrl.currentNode,
+      ),
+    );
   }
 
   /// Navega para a página de GPS do pico atual.
@@ -199,14 +207,11 @@ class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     final ctx = _picoCtx(ctrl.currentNode);
-    
+
     if (ctx == null) return;
     if (ctrl.currentNode is GPSNode) return; // Já está aqui
-    
-    ctrl.navigateTo(GPSNode(
-      cragId: ctx.cragId,
-      parent: ctrl.currentNode,
-    ));
+
+    ctrl.navigateTo(GPSNode(cragId: ctx.cragId, parent: ctrl.currentNode));
   }
 
   /// Volta um nível na árvore de navegação.

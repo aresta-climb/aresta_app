@@ -14,13 +14,13 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('legal_test_');
-    
+
     dartFile = File('${tempDir.path}/legal_version.g.dart');
-    
+
     // Create fake markdown files
     termos = File('${tempDir.path}/TERMOS_DE_USO_ARESTA_CLIMB.md');
     politica = File('${tempDir.path}/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md');
-    
+
     await termos.writeAsString('Conteudo termos');
     await politica.writeAsString('Conteudo politica');
   });
@@ -31,9 +31,13 @@ void main() {
     }
   });
 
-  test('Deve retornar false e nao alterar arquivo quando não há mudanças nos textos', () async {
-    final termosHash = sha256.convert(utf8.encode('Conteudo termos')).toString();
-    final politicaHash = sha256.convert(utf8.encode('Conteudo politica')).toString();
+  test(
+      'Deve retornar false e nao alterar arquivo quando não há mudanças nos textos',
+      () async {
+    final termosHash =
+        sha256.convert(utf8.encode('Conteudo termos')).toString();
+    final politicaHash =
+        sha256.convert(utf8.encode('Conteudo politica')).toString();
 
     // Create initial dart file
     final initialDart = '''
@@ -53,9 +57,12 @@ const Map<String, String> kLegalHashes = {
     expect(wasUpdated, isFalse);
   });
 
-  test('Deve retornar true e alterar versão para 2 se um dos textos mudar', () async {
-    final termosHash = sha256.convert(utf8.encode('Conteudo termos antigo')).toString();
-    final politicaHash = sha256.convert(utf8.encode('Conteudo politica')).toString();
+  test('Deve retornar true e alterar versão para 2 se um dos textos mudar',
+      () async {
+    final termosHash =
+        sha256.convert(utf8.encode('Conteudo termos antigo')).toString();
+    final politicaHash =
+        sha256.convert(utf8.encode('Conteudo politica')).toString();
 
     final initialDart = '''
 const int kLegalVersion = 1;
@@ -76,12 +83,18 @@ const Map<String, String> kLegalHashes = {
     final currentDart = await dartFile.readAsString();
 
     expect(currentDart.contains('const int kLegalVersion = 2;'), isTrue);
-    
-    final newTermosHash = sha256.convert(utf8.encode('Conteudo termos')).toString();
-    expect(currentDart.contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"), isTrue);
+
+    final newTermosHash =
+        sha256.convert(utf8.encode('Conteudo termos')).toString();
+    expect(
+        currentDart
+            .contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"),
+        isTrue);
   });
 
-  test('Deve criar arquivo dart com versão 1 se ele não existir, e gravar os hashes atuais', () async {
+  test(
+      'Deve criar arquivo dart com versão 1 se ele não existir, e gravar os hashes atuais',
+      () async {
     final updater = LegalVersionUpdater(tempDir.path, dartFile.path);
     final wasUpdated = await updater.checkAndUpdate();
 
@@ -91,8 +104,12 @@ const Map<String, String> kLegalHashes = {
     final currentDart = await dartFile.readAsString();
 
     expect(currentDart.contains('const int kLegalVersion = 1;'), isTrue);
-    final newTermosHash = sha256.convert(utf8.encode('Conteudo termos')).toString();
-    expect(currentDart.contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"), isTrue);
+    final newTermosHash =
+        sha256.convert(utf8.encode('Conteudo termos')).toString();
+    expect(
+        currentDart
+            .contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"),
+        isTrue);
   });
 
   test('Deve recriar o arquivo dart se ele estiver corrompido', () async {

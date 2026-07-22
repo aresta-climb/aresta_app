@@ -73,10 +73,7 @@ Widget _buildCragList(
             ),
             _AnimatedMapButton(
               onPressed: () {
-                AppNav.toMapaGlobal(
-                  context,
-                  crags: availableCrags,
-                );
+                AppNav.toMapaGlobal(context, crags: availableCrags);
               },
             ),
           ],
@@ -89,7 +86,11 @@ Widget _buildCragList(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: onAddExperimental,
-              icon: Icon(Icons.add_circle_outline, color: context.colors.beastHide, size: 20),
+              icon: Icon(
+                Icons.add_circle_outline,
+                color: context.colors.beastHide,
+                size: 20,
+              ),
               label: Text(
                 'TROCAR SERVING',
                 style: TextStyle(
@@ -147,7 +148,8 @@ class _AnimatedMapButton extends StatefulWidget {
   State<_AnimatedMapButton> createState() => _AnimatedMapButtonState();
 }
 
-class _AnimatedMapButtonState extends State<_AnimatedMapButton> with SingleTickerProviderStateMixin {
+class _AnimatedMapButtonState extends State<_AnimatedMapButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -159,9 +161,10 @@ class _AnimatedMapButtonState extends State<_AnimatedMapButton> with SingleTicke
       duration: const Duration(milliseconds: 100),
       reverseDuration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -189,7 +192,10 @@ class _AnimatedMapButtonState extends State<_AnimatedMapButton> with SingleTicke
               onTap: widget.onPressed,
               borderRadius: BorderRadius.circular(16),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -241,7 +247,8 @@ class CragCard extends StatelessWidget {
   final VoidCallback? onOpen;
   final String? distanceStr;
 
-  const CragCard({super.key, 
+  const CragCard({
+    super.key,
     required this.crag,
     required this.downloadingCrags,
     required this.onDownload,
@@ -252,11 +259,17 @@ class CragCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDownloaded = crag['isDownloaded'] == true;
-    final String nome = safeString(crag['nome'], fallback: 'Sem Nome').toUpperCase();
-    final String local = safeString(crag['local'], fallback: 'Local Desconhecido').toUpperCase();
-    
-    // Attempt to extract sectors/routes count if available in description or another field, 
-    // for now placeholder since the current model might not have them natively as int fields 
+    final String nome = safeString(
+      crag['nome'],
+      fallback: 'Sem Nome',
+    ).toUpperCase();
+    final String local = safeString(
+      crag['local'],
+      fallback: 'Local Desconhecido',
+    ).toUpperCase();
+
+    // Attempt to extract sectors/routes count if available in description or another field,
+    // for now placeholder since the current model might not have them natively as int fields
     // without parsing 'estatisticas'
     String statsText = '0 setores • 0 vias';
     if (crag['estatisticas'] != null) {
@@ -271,7 +284,13 @@ class CragCard extends StatelessWidget {
         if (isDownloaded) {
           onOpen?.call();
         } else {
-          showDownloadBottomSheet(context, crag, onDownload, downloadingCrags, onOpen: onOpen);
+          showDownloadBottomSheet(
+            context,
+            crag,
+            onDownload,
+            downloadingCrags,
+            onOpen: onOpen,
+          );
         }
       },
       child: Container(
@@ -293,8 +312,11 @@ class CragCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background Image
-            buildCragBackground(safeString(crag['thumbnailUrl']), cragId: safeString(crag['id'])),
-            
+            buildCragBackground(
+              safeString(crag['thumbnailUrl']),
+              cragId: safeString(crag['id']),
+            ),
+
             // Gradient Overlay for readability
             Container(
               decoration: BoxDecoration(
@@ -310,7 +332,7 @@ class CragCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Content
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -325,16 +347,25 @@ class CragCard extends StatelessWidget {
                       if (distanceStr != null)
                         Container(
                           margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.brandColor,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.place, color: Colors.white, size: 12),
+                              const Icon(
+                                Icons.place,
+                                color: Colors.white,
+                                size: 12,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 distanceStr!,
@@ -349,15 +380,24 @@ class CragCard extends StatelessWidget {
                         ),
                       if (isDownloaded)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7B8B6F).withValues(alpha: 0.9), // Greenish Olive badge
+                            color: const Color(
+                              0xFF7B8B6F,
+                            ).withValues(alpha: 0.9), // Greenish Olive badge
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.check, color: Colors.white, size: 12),
+                              const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 12,
+                              ),
                               const SizedBox(width: 4),
                               const Text(
                                 'SALVO OFFLINE',
@@ -378,7 +418,10 @@ class CragCard extends StatelessWidget {
                           if (progress != null) {
                             return Container(
                               margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(12),
@@ -413,7 +456,7 @@ class CragCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   // Bottom Left Info
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +514,8 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   @override
   void didUpdateWidget(covariant _CragBackgroundWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.thumbnailUrl != widget.thumbnailUrl || oldWidget.cragId != widget.cragId) {
+    if (oldWidget.thumbnailUrl != widget.thumbnailUrl ||
+        oldWidget.cragId != widget.cragId) {
       _initFutures();
     }
   }
@@ -480,7 +524,8 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     _zipFuture = null;
     _dirFuture = null;
 
-    if (widget.thumbnailUrl.isNotEmpty && widget.thumbnailUrl.startsWith('aresta-zip://')) {
+    if (widget.thumbnailUrl.isNotEmpty &&
+        widget.thumbnailUrl.startsWith('aresta-zip://')) {
       _zipFuture = ZipInterceptorClient().get(Uri.parse(widget.thumbnailUrl));
     } else if (widget.cragId != null && widget.cragId!.isNotEmpty) {
       _dirFuture = getApplicationDocumentsDirectory();
@@ -491,7 +536,11 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     return Container(
       color: const Color(0xFF2C332A),
       child: Center(
-        child: Icon(Icons.terrain, color: Colors.white.withValues(alpha: 0.1), size: 64),
+        child: Icon(
+          Icons.terrain,
+          color: Colors.white.withValues(alpha: 0.1),
+          size: 64,
+        ),
       ),
     );
   }
@@ -500,8 +549,12 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     return FutureBuilder<http.Response>(
       future: _zipFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return _buildPlaceholder();
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) return _buildPlaceholder();
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return _buildPlaceholder();
+        if (snapshot.hasError ||
+            !snapshot.hasData ||
+            snapshot.data!.statusCode != 200)
+          return _buildPlaceholder();
         return Image.memory(
           snapshot.data!.bodyBytes,
           fit: BoxFit.cover,
@@ -515,9 +568,12 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     return FutureBuilder<Directory>(
       future: _dirFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return _buildPlaceholder();
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return _buildPlaceholder();
         if (snapshot.hasData) {
-          final file = File('${snapshot.data!.path}/thumbnails/${widget.cragId}.webp');
+          final file = File(
+            '${snapshot.data!.path}/thumbnails/${widget.cragId}.webp',
+          );
           if (file.existsSync()) {
             return Image.file(
               file,
@@ -591,13 +647,11 @@ void showDownloadBottomSheet(
               const SizedBox(height: 8),
               Text(
                 safeString(crag['local'], fallback: 'Local Desconhecido'),
-                style: TextStyle(
-                  color: context.colors.ashGrey,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: context.colors.ashGrey, fontSize: 14),
               ),
               const SizedBox(height: 16),
-              if (crag['descricao'] != null && crag['descricao'].toString().isNotEmpty) ...[
+              if (crag['descricao'] != null &&
+                  crag['descricao'].toString().isNotEmpty) ...[
                 Text(
                   crag['descricao'],
                   style: TextStyle(
@@ -637,7 +691,9 @@ void showDownloadBottomSheet(
                           ),
                           const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24.0,
+                            ),
                             child: LinearProgressIndicator(
                               value: progress,
                               backgroundColor: context.colors.graniteEdge,
@@ -654,7 +710,9 @@ void showDownloadBottomSheet(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(bottomSheetContext); // Close sheet first
+                          Navigator.pop(
+                            bottomSheetContext,
+                          ); // Close sheet first
                           onOpen();
                         },
                         style: ElevatedButton.styleFrom(
@@ -683,7 +741,9 @@ void showDownloadBottomSheet(
                     child: ElevatedButton(
                       onPressed: () {
                         onDownload();
-                        Navigator.pop(bottomSheetContext); // Close sheet after triggering download
+                        Navigator.pop(
+                          bottomSheetContext,
+                        ); // Close sheet after triggering download
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC05244), // Red button
