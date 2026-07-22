@@ -20,11 +20,36 @@ class SetoresPage extends StatefulWidget {
 
 class _SetoresPageState extends State<SetoresPage> {
   GrupoSortMode _sortMode = GrupoSortMode.original;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<SetorOuGrupo> get _sortedSetoresOuGrupos {
-    if (_sortMode == GrupoSortMode.original) return widget.pico.setoresOuGrupos;
+    List<SetorOuGrupo> list = List<SetorOuGrupo>.from(
+      widget.pico.setoresOuGrupos,
+    );
 
-    final list = List<SetorOuGrupo>.from(widget.pico.setoresOuGrupos);
+    if (_searchQuery.isNotEmpty) {
+      list = list.where((sg) {
+        String nome = '';
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
+          nome = sg.setor.conteudo.nome;
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
+          nome = sg.grupo.conteudo.nome;
+        }
+        return nome.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    if (_sortMode == GrupoSortMode.original) return list;
+
     list.sort((a, b) {
       String nomeA = '';
       String nomeB = '';

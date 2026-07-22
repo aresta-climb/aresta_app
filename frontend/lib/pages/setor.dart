@@ -31,7 +31,7 @@ class SetorPage extends StatefulWidget {
 }
 
 class _SetorPageState extends State<SetorPage> {
-  final EscaladaSortMode _sortMode = EscaladaSortMode.original;
+  EscaladaSortMode _sortMode = EscaladaSortMode.original;
   Future<ImageProvider?>? _coverProviderFuture;
   String? _coverImagePath;
   GlobalKey? _targetKey;
@@ -354,7 +354,11 @@ class _SetorPageState extends State<SetorPage> {
                 _sortedEscaladas,
                 widget.scrollToEscalada,
                 _targetKey,
-                null, // botão de ordenação (se houver)
+                buildEscaladaSortGrid(context, _sortMode, (mode) {
+                  setState(() {
+                    _sortMode = mode;
+                  });
+                }),
                 widget.grupoContext,
               ),
             ),
