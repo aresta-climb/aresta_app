@@ -194,7 +194,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       // Anima a margem esquerda de 20 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
                       left: 20 + (52 * (1 - t)),
                       // Anima a margem direita para dar espaço aos botões de share e feedback.
-                      right: 20 + (84 * (1 - t)), // Make room for share and feedback buttons
+                      right: 20 + (104 * (1 - t)), // Make room for share and feedback buttons
                       bottom: 20,
                       child: Text(
                         widget.pico.nome.toUpperCase(),

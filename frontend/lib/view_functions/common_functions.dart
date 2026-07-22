@@ -220,13 +220,14 @@ Widget buildSearchBar({
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.caveShadow,
+                  border: Border.all(color: context.colors.graniteEdge),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: TextField(
                   onChanged: onChanged,
-                  style: TextStyle(color: context.colors.slateBlue),
-                  cursorColor: context.colors.slateBlue,
+                  style: TextStyle(color: context.colors.textPrimary),
+                  cursorColor: const Color(0xFFC04F34),
                   decoration: InputDecoration(
                     hintText: hintText,
                     hintStyle: TextStyle(
@@ -244,13 +245,14 @@ Widget buildSearchBar({
               height: 52,
               width: 52,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colors.caveShadow,
+                border: Border.all(color: context.colors.graniteEdge),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.tune_rounded, // Filter icon similar to mockup
-                  color: const Color(0xFFC05244), // Red matching mock
+                  color: Color(0xFFC04F34), // Brand color
                 ),
                 onPressed: onFilterPressed ?? () {},
               ),

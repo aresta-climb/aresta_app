@@ -7,6 +7,7 @@ import '../view_functions/via_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../theme/app_colors.dart';
 
 class GlobalSearchResult {
   final String title;
@@ -304,9 +305,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final caveShadowColor = isDark ? fishBone : obsidianBrown;
-    final searchTextColor = isDark ? Colors.black : fishBone;
+    final caveShadowColor = context.colors.caveShadow;
+    final searchTextColor = context.colors.textPrimary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
@@ -318,7 +318,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
             height: 50,
             decoration: BoxDecoration(
               color: caveShadowColor,
-              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: context.colors.graniteEdge),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
@@ -335,7 +336,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     focusNode: _searchFocusNode,
                     onChanged: _onSearchChanged,
                     style: TextStyle(color: searchTextColor),
-                    cursorColor: searchTextColor,
+                    cursorColor: const Color(0xFFC04F34),
                     decoration: InputDecoration(
                       hintText: 'Pesquisar em seus guias baixados...',
                       hintStyle: TextStyle(color: searchTextColor.withValues(alpha: 0.6)),
