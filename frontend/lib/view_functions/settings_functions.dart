@@ -203,6 +203,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
   // Inicia vazio, pois a URL atual já é exibida na interface de configurações
   final TextEditingController urlController = TextEditingController();
   bool isLoading = false;
+  final brandColor = const Color(0xFFC04F34);
 
   showDialog(
     context: context,
@@ -217,11 +218,11 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
             ),
             title: Column(
               children: [
-                Icon(Icons.link, color: context.colors.beastHide, size: 32),
+                Icon(Icons.link, color: brandColor, size: 32),
                 const SizedBox(height: 8),
                 Text(
                   titulo ?? 'Conectar Editor', 
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -229,7 +230,8 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
               ],
             ),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            content: Column(
+            content: SingleChildScrollView(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                 Text(
@@ -244,7 +246,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    hintText: 'ex: aresta-climb.github.io/aresta_serving',
+                    hintText: 'ex: serving.arestaclimb.com/v4',
                     hintStyle: TextStyle(color: context.colors.ashGrey.withValues(alpha: 0.5), fontSize: 13),
                     filled: true,
                     fillColor: context.colors.deepBasalt,
@@ -253,7 +255,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: context.colors.beastHide),
+                      borderSide: BorderSide(color: brandColor),
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
@@ -263,10 +265,10 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton.icon(
-                    icon: Icon(Icons.qr_code_scanner, color: context.colors.beastHide, size: 20),
-                    label: Text('ESCANEAR QR CODE', style: TextStyle(color: context.colors.beastHide, fontWeight: FontWeight.bold, fontSize: 12)),
+                    icon: Icon(Icons.qr_code_scanner, color: brandColor, size: 20),
+                    label: Text('ESCANEAR QR CODE', style: TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: context.colors.beastHide.withValues(alpha: 0.5)),
+                      side: BorderSide(color: brandColor.withValues(alpha: 0.5)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
@@ -299,6 +301,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                   ),
                 ),
               ],
+            ),
             ),
             actions: [
               Padding(
@@ -354,7 +357,7 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                     padding: const EdgeInsets.only(bottom: 8, right: 8),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: context.colors.beastHide,
+                        backgroundColor: brandColor,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
