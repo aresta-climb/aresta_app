@@ -52,7 +52,7 @@ Widget buildGrupoBody(
           }),
         ],
         const SizedBox(height: 20),
-        _buildGrupoSortGrid(context, currentSortMode, onSortChanged),
+        buildGrupoSortGrid(context, currentSortMode, onSortChanged),
         const SizedBox(height: 16),
         if (sortedSetores.isEmpty)
           Text('Nenhum setor disponível.', style: TextStyle(color: fishBone))
@@ -88,7 +88,7 @@ Widget _buildHeader(String title) {
   );
 }
 
-Widget _buildGrupoSortGrid(
+Widget buildGrupoSortGrid(
   BuildContext context,
   GrupoSortMode currentMode,
   Function(GrupoSortMode)? onSortChanged,
