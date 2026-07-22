@@ -51,7 +51,7 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
 /// Constrói o corpo principal da página inicial refatorada.
 Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int) onSwitchTab) {
   return SingleChildScrollView(
-    physics: const BouncingScrollPhysics(),
+    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
