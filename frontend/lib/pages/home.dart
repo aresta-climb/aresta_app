@@ -62,16 +62,27 @@ class HomePage extends StatelessWidget {
             final failed = await syncService.syncIndex(auto: false);
             
             if (context.mounted) {
+              final status = syncService.syncStatus.value;
+              String message = '';
+              Color bgColor = context.colors.dryMoss;
+
+              if (failed.isNotEmpty) {
+                message = 'Concluído com falhas: ${failed.join(', ')}';
+                bgColor = Theme.of(context).colorScheme.error;
+              } else if (status == SyncStatus.noNewUpdates || status == SyncStatus.updated) {
+                message = 'Nenhum croqui precisava ser atualizado.';
+                bgColor = context.colors.ashGrey;
+              } else {
+                message = 'Croquis atualizados com sucesso!';
+                bgColor = context.colors.dryMoss;
+              }
+
               ScaffoldMessenger.of(context)
                 ..clearSnackBars()
                 ..showSnackBar(
                   SnackBar(
-                    content: Text(
-                      failed.isEmpty 
-                        ? 'Tudo atualizado!' 
-                        : 'Concluído com falhas: ${failed.join(', ')}'
-                    ),
-                    backgroundColor: failed.isEmpty ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
+                    content: Text(message),
+                    backgroundColor: bgColor,
                   ),
                 );
             }

@@ -60,7 +60,7 @@ void main() {
     when(() => mockRepo.activeDataset).thenReturn(activeDataset);
     when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
     when(() => mockSync.syncIndex(auto: false)).thenAnswer((_) async => <String>[]);
-    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.updated));
+    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.justUpdated));
     when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
 
     await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
@@ -73,7 +73,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); 
 
-    expect(find.text('Tudo atualizado!'), findsOneWidget);
+    expect(find.text('Croquis atualizados com sucesso!'), findsOneWidget);
     verify(() => mockSync.syncIndex(auto: false)).called(1);
   });
 }
