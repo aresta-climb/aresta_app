@@ -555,6 +555,7 @@ void showDownloadBottomSheet(
 }) {
   showModalBottomSheet(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.colors.deepBasalt,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
