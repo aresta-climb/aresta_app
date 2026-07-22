@@ -866,7 +866,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 color: Colors.black,
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: beastHide.withValues(alpha: 0.5),
+                                  color: rustIron.withValues(alpha: 0.5),
                                 ),
                               ),
                               child: Text(
@@ -883,7 +883,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             Text(
                               title,
                               style: TextStyle(
-                                color: beastHide,
+                                color: rustIron,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1012,7 +1012,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
                     color: _focusedItemIndex > 0
-                        ? beastHide
+                        ? rustIron
                         : fishBone.withValues(alpha: 0.3),
                     onPressed: _focusedItemIndex > 0
                         ? () => changeItem(_focusedItemIndex - 1)
@@ -1026,7 +1026,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: index == _focusedItemIndex
-                            ? beastHide
+                            ? rustIron
                             : fishBone.withValues(alpha: 0.3),
                       ),
                     );
@@ -1034,7 +1034,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     color: _focusedItemIndex < refs.length - 1
-                        ? beastHide
+                        ? rustIron
                         : fishBone.withValues(alpha: 0.3),
                     onPressed: _focusedItemIndex < refs.length - 1
                         ? () => changeItem(_focusedItemIndex + 1)
@@ -1098,7 +1098,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           future: _imageProviderFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator(color: beastHide));
+              return Center(child: CircularProgressIndicator(color: rustIron));
             }
 
             if (!snapshot.hasData || snapshot.data == null) {
@@ -1218,7 +1218,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               ? Icons.gps_fixed
                               : Icons.gps_not_fixed,
                           color: _autoZoomEnabled
-                              ? beastHide
+                              ? rustIron
                               : fishBone.withValues(alpha: 0.5),
                         ),
                         tooltip: _autoZoomEnabled
@@ -1677,13 +1677,13 @@ class MarkerPainter extends CustomPainter {
 
     if (isSelected) {
       final fillPaint = Paint()
-        ..color = beastHide.withValues(alpha: 0.5)
+        ..color = rustIron.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
       canvas.drawPath(path, fillPaint);
 
       final borderPaint = Paint()
-        ..color = beastHide.withValues(alpha: 0.7)
+        ..color = rustIron.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeJoin = StrokeJoin.round
