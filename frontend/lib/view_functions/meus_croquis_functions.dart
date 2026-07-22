@@ -146,39 +146,6 @@ class OfflineCragCard extends StatelessWidget {
               const SizedBox(width: 12),
               _buildIconButton(
                 context,
-                icon: Icons.sync,
-                onPressed: () async {
-                  if (await syncService.isNetworkDisabled()) {
-                    if (context.mounted) {
-                      showDeprecatedAppVersionSnackBar(context);
-                    }
-                    return;
-                  }
-                  ScaffoldMessenger.of(context)
-                    ..clearSnackBars()
-                    ..showSnackBar(
-                      const SnackBar(content: Text('Verificando atualizações...')),
-                    );
-                  final failed = await syncService.syncIndex(auto: false);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context)
-                      ..clearSnackBars()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            failed.isEmpty 
-                              ? 'Tudo atualizado!' 
-                              : 'Concluído com falhas: ${failed.join(', ')}'
-                          ),
-                          backgroundColor: failed.isEmpty ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                  }
-                },
-              ),
-              const SizedBox(width: 12),
-              _buildIconButton(
-                context,
                 icon: Icons.delete_outline,
                 onPressed: () => _handleDelete(context, id, nome),
               ),
