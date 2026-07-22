@@ -60,62 +60,7 @@ class MeusCroquisPage extends StatelessWidget {
                       IconButton(
                         icon: Icon(Icons.sync, color: context.colors.ashGrey),
                         onPressed: () async {
-                          final dataset = datasetRepo.activeDataset.value;
-                          final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
-
-                          if (!hasDownloaded) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context)
-                                ..clearSnackBars()
-                                ..showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Nenhum croqui baixado para atualizar.'),
-                                    backgroundColor: context.colors.ashGrey,
-                                  ),
-                                );
-                            }
-                            return;
-                          }
-
-                          if (await syncService.isNetworkDisabled()) {
-                            if (context.mounted) {
-                              showDeprecatedAppVersionSnackBar(context);
-                            }
-                            return;
-                          }
-                          ScaffoldMessenger.of(context)
-                            ..clearSnackBars()
-                            ..showSnackBar(
-                              const SnackBar(content: Text('Verificando atualizações...')),
-                            );
-                          
-                          final failed = await syncService.syncIndex(auto: false);
-                          
-                          if (context.mounted) {
-                            final status = syncService.syncStatus.value;
-                            String message = '';
-                            Color bgColor = context.colors.dryMoss;
-
-                            if (failed.isNotEmpty) {
-                              message = 'Concluído com falhas: ${failed.join(', ')}';
-                              bgColor = Theme.of(context).colorScheme.error;
-                            } else if (status == SyncStatus.noNewUpdates || status == SyncStatus.updated) {
-                              message = 'Nenhum croqui precisava ser atualizado.';
-                              bgColor = context.colors.ashGrey;
-                            } else {
-                              message = 'Croquis foram atualizados!';
-                              bgColor = context.colors.dryMoss;
-                            }
-
-                            ScaffoldMessenger.of(context)
-                              ..clearSnackBars()
-                              ..showSnackBar(
-                                SnackBar(
-                                  content: Text(message),
-                                  backgroundColor: bgColor,
-                                ),
-                              );
-                          }
+                          await handleManualSync(context, datasetRepo, syncService);
                         },
                       ),
                       const SizedBox(width: 8),
