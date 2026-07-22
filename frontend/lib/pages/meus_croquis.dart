@@ -53,7 +53,43 @@ class MeusCroquisPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  buildFeedbackButton(context, color: context.colors.ashGrey),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.sync, color: context.colors.ashGrey),
+                        onPressed: () async {
+                          if (await syncService.isNetworkDisabled()) {
+                            if (context.mounted) {
+                              showDeprecatedAppVersionSnackBar(context);
+                            }
+                            return;
+                          }
+                          ScaffoldMessenger.of(context)
+                            ..clearSnackBars()
+                            ..showSnackBar(
+                              const SnackBar(content: Text('Verificando atualizações...')),
+                            );
+                          final failed = await syncService.syncIndex(auto: false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context)
+                              ..clearSnackBars()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    failed.isEmpty 
+                                      ? 'Tudo atualizado!' 
+                                      : 'Concluído com falhas: ${failed.join(', ')}'
+                                  ),
+                                  backgroundColor: failed.isEmpty ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
+                                ),
+                              );
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      buildFeedbackButton(context, color: context.colors.ashGrey),
+                    ],
+                  ),
                 ],
               ),
             ),
