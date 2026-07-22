@@ -93,8 +93,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
 
   Future<void> _onTapLink(String text, String? href, String title) async {
     if (href != null) {
-      if (href == 'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html' || 
-          href.endsWith('POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md')) {
+      if (href.toUpperCase().contains('PRIVACIDADE')) {
         _showPrivacyPolicy();
         return;
       }
@@ -102,12 +101,48 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       TelemetryService.instance.logLinkExterno(href, 'termos_uso');
       final url = Uri.parse(href);
       try {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
+        final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+        if (!launched) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
       } catch (e) {
         AppLogger.instance.logError('abrir_link_termos', error: e.toString());
         debugPrint('Erro ao abrir link: $e');
       }
     }
+  }
+
+  MarkdownStyleSheet _getSharedMarkdownStyle() {
+    return MarkdownStyleSheet(
+      p: TextStyle(
+        color: Colors.white.withValues(alpha: 0.9),
+        fontSize: 16,
+        height: 1.6,
+      ),
+      h1: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 22,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      h2: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 20,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      h3: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      strong: const TextStyle(
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      blockSpacing: 16.0,
+    );
   }
 
   void _showPrivacyPolicy() {
@@ -142,24 +177,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                 ? MarkdownBody(
                     data: _privacyMarkdown!,
                     onTapLink: _onTapLink,
-                    styleSheet: MarkdownStyleSheet(
-                      p: TextStyle(
-                        fontSize: 16, 
-                        height: 1.6, 
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      h3: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      h3Align: WrapAlignment.center,
-                      strong: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      blockSpacing: 16.0,
-                    ),
+                    styleSheet: _getSharedMarkdownStyle(),
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),
@@ -272,36 +290,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                     MarkdownBody(
                       data: _termsMarkdown!,
                       onTapLink: _onTapLink,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 16,
-                          height: 1.6,
-                        ),
-                        h1: TextStyle(
-                          color: context.colors.rustIron,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                        h2: TextStyle(
-                          color: context.colors.rustIron,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                        h3: TextStyle(
-                          color: context.colors.rustIron,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                        strong: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                        blockSpacing: 16.0,
-                      ),
+                      styleSheet: _getSharedMarkdownStyle(),
                     ),
                   const SizedBox(height: 16),
                   if (widget.showAcceptButton)
