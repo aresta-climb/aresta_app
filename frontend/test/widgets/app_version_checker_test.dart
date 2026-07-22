@@ -91,7 +91,7 @@ void main() {
 
         await tester.pumpAndSettle();
         expect(find.text('App Normal'), findsNothing);
-        expect(find.text('Atualização Necessária'), findsOneWidget);
+        expect(find.text('ATUALIZAÇÃO\nNECESSÁRIA'), findsOneWidget);
 
         final mockTelemetry = TelemetryService.instance as MockTelemetryService;
         expect(mockTelemetry.recordedEvents.contains('migracao_db'), isTrue);
