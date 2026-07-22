@@ -76,7 +76,7 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.asset('assets/logo_in_app.jpg', width: 28, height: 28, fit: BoxFit.cover),
+              child: Image.asset('assets/logo_app.png', width: 28, height: 28, fit: BoxFit.cover),
             ),
             const SizedBox(width: 8),
             Container(
@@ -85,24 +85,14 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
                 color: Colors.grey.shade800, // Darker grey background
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontFamily: 'BebasNeue',
-                    fontSize: 26,
-                    letterSpacing: 1.5,
-                    height: 1.2, // Tweak line height for new text font
-                  ),
-                  children: [
-                    const TextSpan(
-                      text: 'AREST',
-                      style: TextStyle(color: Colors.black),
-                    ),
-                    TextSpan(
-                      text: 'A',
-                      style: TextStyle(color: AppColors.brandColor),
-                    ),
-                  ],
+              child: const Text(
+                'ARESTA',
+                style: TextStyle(
+                  fontFamily: 'BebasNeue',
+                  fontSize: 26,
+                  letterSpacing: 1.5,
+                  height: 1.2,
+                  color: Colors.black,
                 ),
               ),
             ),
