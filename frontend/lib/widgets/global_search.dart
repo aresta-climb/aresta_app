@@ -306,7 +306,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   Widget build(BuildContext context) {
     final caveShadowColor = context.colors.caveShadow;
-    final searchTextColor = context.colors.textPrimary;
+    final searchTextColor = context.colors.chalkWhite;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
