@@ -439,7 +439,7 @@ Widget buildEscaladaSortGrid(
     physics: const NeverScrollableScrollPhysics(),
     crossAxisSpacing: 10,
     mainAxisSpacing: 10,
-    childAspectRatio: 2.0,
+    childAspectRatio: 1.6,
     children: [
       _buildEscaladaSortCard(
         context: context,
@@ -508,21 +508,24 @@ Widget _buildEscaladaSortCard({
             width: 1.5,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: isActive ? activeColor : inactiveColor, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? activeColor : inactiveColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: isActive ? activeColor : inactiveColor, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive ? activeColor : inactiveColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
