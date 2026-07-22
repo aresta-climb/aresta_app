@@ -76,27 +76,6 @@ class ExplorarLocalPage extends StatelessWidget {
                 onTap: () => _pushTextNode(context, 'Como chegar', b.destino.secaoTextual.conteudo),
               )),
 
-            if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo() && pico.mapasGerais.conteudo.mapas.isNotEmpty)
-              PicoMenuCard(
-                title: 'Mapas gerais',
-                subtitle: 'Visualização cartográfica, setores físicos e panorama das paredes.',
-                icon: Icons.map,
-                iconColor: context.colors.rustIron,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () {
-                  AppNav.toMapas(
-                    context,
-                    cragId: cragId,
-                    mapas: pico.mapasGerais.conteudo.mapas.map((mapa) => CarrosselItemData(
-                      mapaCaminhoImagem: mapa.caminhoImagemMapa,
-                      setorContextNome: pico.nome,
-                    )).toList(),
-                  );
-                },
-              ),
-              
             if (categories.outros.isNotEmpty)
               ...categories.outros.map((b) => PicoMenuCard(
                 title: b.texto,
