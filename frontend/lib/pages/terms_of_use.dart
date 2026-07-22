@@ -275,24 +275,24 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                       styleSheet: MarkdownStyleSheet(
                         p: TextStyle(
                           color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 13,
-                          height: 1.5,
+                          fontSize: 16,
+                          height: 1.6,
                         ),
                         h1: TextStyle(
                           color: context.colors.rustIron,
-                          fontSize: 18,
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.5,
                         ),
                         h2: TextStyle(
                           color: context.colors.rustIron,
-                          fontSize: 16,
+                          fontSize: 20,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.5,
                         ),
                         h3: TextStyle(
                           color: context.colors.rustIron,
-                          fontSize: 12,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.5,
                         ),
