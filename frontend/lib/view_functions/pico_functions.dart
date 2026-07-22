@@ -187,6 +187,23 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
   ));
 }
 
+
+List<Setor> getAllSetoresFromPico(Pico pico) {
+  final List<Setor> allSetores = [];
+  for (final sg in pico.setoresOuGrupos) {
+    if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+      allSetores.add(sg.setor.conteudo);
+    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+      for (final s in sg.grupo.conteudo.setores) {
+        if (s.hasConteudo()) {
+          allSetores.add(s.conteudo);
+        }
+      }
+    }
+  }
+  return allSetores;
+}
+
 List<Escalada> getAllEscaladasFromPico(Pico pico) {
   final List<Escalada> allEscaladas = [];
   for (final sg in pico.setoresOuGrupos) {
@@ -221,13 +238,15 @@ bool isPicoBoulderArea(Pico pico) {
   return isBoulderArea(allEscaladas);
 }
 
-class ViaSearchDelegate extends SearchDelegate<Escalada?> {
+class PicoSearchDelegate extends SearchDelegate<Object?> {
   final Pico pico;
   final String cragId;
   late final List<Escalada> allEscaladas;
+  late final List<Setor> allSetores;
 
-  ViaSearchDelegate(this.pico, this.cragId) {
+  PicoSearchDelegate(this.pico, this.cragId) {
     allEscaladas = getAllEscaladasFromPico(pico);
+    allSetores = getAllSetoresFromPico(pico);
   }
 
   @override
@@ -250,11 +269,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
 
   @override
   String get searchFieldLabel {
-    if (isPicoBoulderArea(pico)) {
-      return 'Buscar boulder (ex: V4)...';
-    } else {
-      return 'Buscar via (ex: 7a)...';
-    }
+    return 'Buscar escalada ou setor...';
   }
 
   @override
@@ -296,7 +311,7 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
 
     final queryLower = normalizeSearchString(query);
 
-    final fuse = Fuzzy<Escalada>(
+    final fuseEscaladas = Fuzzy<Escalada>(
       allEscaladas,
       options: FuzzyOptions(
         keys: [
@@ -314,20 +329,31 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
         threshold: 0.4,
       ),
     );
+    
+    final fuseSetores = Fuzzy<Setor>(
+      allSetores,
+      options: FuzzyOptions(
+        keys: [
+          WeightedKey<Setor>(
+            name: 'nome',
+            getter: (s) => normalizeSearchString(s.nome),
+            weight: 1.0,
+          ),
+        ],
+        threshold: 0.4,
+      ),
+    );
 
-    final results = fuse.search(queryLower).map((r) => r.item).toList();
+    final resultsEscaladas = fuseEscaladas.search(queryLower).map((r) => r.item).toList();
+    final resultsSetores = fuseSetores.search(queryLower).map((r) => r.item).toList();
+    final results = [...resultsSetores, ...resultsEscaladas];
 
     if (results.isEmpty) {
-      String emptyText = 'Nenhuma via encontrada.';
-      if (isPicoBoulderArea(pico)) {
-        emptyText = 'Nenhum boulder encontrado.';
-      }
-      
       return Container(
         color: context.colors.deepBasalt,
         alignment: Alignment.center,
         child: Text(
-          emptyText,
+          'Nenhum resultado encontrado.',
           style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
         ),
       );
@@ -339,10 +365,22 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
       child: ListView.builder(
         itemCount: results.length,
         itemBuilder: (context, index) {
-          final escalada = results[index];
-          final nome = getEscaladaNome(escalada);
-          final grau = getGrauString(escalada);
-          final subtitle = grau.isNotEmpty ? 'Dificuldade: $grau' : null;
+          final item = results[index];
+          
+          String title = '';
+          String? subtitle;
+          IconData icon = Icons.terrain;
+          
+          if (item is Escalada) {
+            title = getEscaladaNome(item);
+            final grau = getGrauString(item);
+            subtitle = grau.isNotEmpty ? 'Dificuldade: $grau' : null;
+            icon = Icons.terrain;
+          } else if (item is Setor) {
+            title = item.nome;
+            subtitle = 'Setor';
+            icon = Icons.layers;
+          }
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -354,12 +392,12 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
               ),
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-              title: Text(nome, style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold)),
+              title: Text(title, style: TextStyle(color: context.colors.chalkWhite, fontWeight: FontWeight.bold)),
               subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: context.colors.ashGrey, fontSize: 12)) : null,
-              leading: const Icon(Icons.terrain, color: Color(0xFFC04F34)),
+              leading: Icon(icon, color: const Color(0xFFC04F34)),
               trailing: const Icon(Icons.chevron_right, color: Color(0xFFC04F34)),
               onTap: () {
-                close(context, escalada);
+                close(context, item);
               },
             ),
           ));
