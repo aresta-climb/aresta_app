@@ -6,6 +6,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/settings_functions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/theme/theme_controller.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 void main() {
@@ -100,6 +101,56 @@ void main() {
       
       await tester.pump();
       expect(find.text('Aviso: Arquivos .zip não são mais suportados. Use .croqui'), findsOneWidget);
+    });
+  });
+
+  group('buildEditorCard experimental mode tests', () {
+    late EditorDeCroqui configService;
+    late DatasetRepository datasetRepo;
+    late ThemeController themeController;
+
+    setUp(() {
+      configService = EditorDeCroqui();
+      datasetRepo = DatasetRepository(editorDeCroqui: configService);
+      themeController = ThemeController();
+      // Set to experimental mode
+      configService.isExperimentalMode.value = true;
+    });
+
+    testWidgets('Deve renderizar e acionar os botões de teste do AppVersionChecker', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(builder: (context) {
+            return buildEditorCard(
+              context: context, 
+              datasetRepo: datasetRepo, 
+              clickCount: 10,
+              onSetClickCount: (val) {},
+            );
+          }),
+        ),
+      ));
+
+      // As we are in experimental mode, the buttons should be present.
+      expect(find.text('TESTAR ALERTA DE OBSOLESCÊNCIA'), findsOneWidget);
+      expect(find.text('TESTAR TELA DE BLOQUEIO'), findsOneWidget);
+
+      // Testar Snackbar
+      await tester.tap(find.text('TESTAR ALERTA DE OBSOLESCÊNCIA'));
+      await tester.pump(); // flush microtask
+      await tester.pump(const Duration(milliseconds: 100)); // for animation
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining('desatualizada'), findsOneWidget);
+      
+      // Limpar snackbar pra nao atrapalhar o proximo test
+      ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      // Testar push da tela vermelha
+      await tester.tap(find.text('TESTAR TELA DE BLOQUEIO'));
+      await tester.pumpAndSettle();
+      
+      expect(find.text('ATUALIZAÇÃO\nNECESSÁRIA'), findsOneWidget);
     });
   });
 }
