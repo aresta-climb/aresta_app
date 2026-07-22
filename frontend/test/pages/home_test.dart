@@ -73,7 +73,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); 
 
-    expect(find.text('Croquis atualizados com sucesso!'), findsOneWidget);
+    expect(find.text('Croquis foram atualizados!'), findsOneWidget);
     verify(() => mockSync.syncIndex(auto: false)).called(1);
   });
 }

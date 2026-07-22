@@ -103,7 +103,7 @@ class MeusCroquisPage extends StatelessWidget {
                               message = 'Nenhum croqui precisava ser atualizado.';
                               bgColor = context.colors.ashGrey;
                             } else {
-                              message = 'Croquis atualizados com sucesso!';
+                              message = 'Croquis foram atualizados!';
                               bgColor = context.colors.dryMoss;
                             }
 
