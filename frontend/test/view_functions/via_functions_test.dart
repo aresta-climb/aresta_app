@@ -77,9 +77,25 @@ void main() {
       expect(valMedio < valDificil, isTrue);
     });
 
-    test('deve retornar 0 para tipos não suportados', () {
+    test('deve retornar 9998 (INDEFINIDO) para tipos não suportados ou sem grau', () {
       final escalada = Escalada()..highline = Highline();
-      expect(getGrauValue(escalada), 9999);
+      expect(getGrauValue(escalada), 9998);
+    });
+
+    test('deve ordenar PROJETO como a dificuldade máxima absoluta (acima de INDEFINIDO)', () {
+      final projetoVia = Escalada()..viaEsportiva = (ViaEsportiva()..dificuldade = GrauVia_GrauVia.PROJETO);
+      final indefinidoVia = Escalada()..viaEsportiva = (ViaEsportiva()..dificuldade = GrauVia_GrauVia.INDEFINIDO);
+      final normalVia = Escalada()..viaEsportiva = (ViaEsportiva()..dificuldade = GrauVia_GrauVia.BR_8C);
+
+      final valProjeto = getGrauValue(projetoVia);
+      final valIndefinido = getGrauValue(indefinidoVia);
+      final valNormal = getGrauValue(normalVia);
+
+      expect(valNormal < valIndefinido, isTrue, reason: "Normal deve ser menor que INDEFINIDO");
+      expect(valIndefinido < valProjeto, isTrue, reason: "INDEFINIDO deve ser menor que PROJETO");
+      
+      expect(valProjeto, 9999);
+      expect(valIndefinido, 9998);
     });
   });
 
