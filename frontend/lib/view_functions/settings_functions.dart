@@ -615,6 +615,38 @@ Widget buildEditorCard({
                               ),
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              showDeprecatedAppVersionSnackBar(context);
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.warning_amber_rounded, color: Colors.orange.withValues(alpha: 0.8), size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'TESTAR ALERTA DE OBSOLESCÊNCIA',
+                                    style: TextStyle(
+                                      color: Colors.orange.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ],
                     ],
