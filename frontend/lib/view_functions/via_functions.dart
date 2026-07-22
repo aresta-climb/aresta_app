@@ -54,23 +54,36 @@ String getGrauString(Escalada escalada) {
 /// Retorna um valor numérico representando a dificuldade para fins de ordenação.
 int getGrauValue(Escalada escalada) {
   int value = 0;
+  bool isProjeto = false;
+
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       value = escalada.viaEsportiva.dificuldade.value;
+      if (escalada.viaEsportiva.dificuldade == GrauVia_GrauVia.PROJETO)
+        isProjeto = true;
       break;
     case Escalada_Tipo.viaMovel:
       value = escalada.viaMovel.dificuldade.value;
+      if (escalada.viaMovel.dificuldade == GrauVia_GrauVia.PROJETO)
+        isProjeto = true;
       break;
     case Escalada_Tipo.boulder:
       value = escalada.boulder.dificuldade.value;
       break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
       value = escalada.viaMultiplasEnfiadas.dificuldadeMaxima.value;
+      if (escalada.viaMultiplasEnfiadas.dificuldadeMaxima ==
+          GrauVia_GrauVia.PROJETO)
+        isProjeto = true;
       break;
     default:
       value = 0;
   }
-  return value == 0 ? 9999 : value;
+
+  if (isProjeto) return 9999;
+  if (value == 0) return 9998; // INDEFINIDO
+
+  return value;
 }
 
 /// Retorna a quantidade de proteções (fixas + móveis) para fins de ordenação.
