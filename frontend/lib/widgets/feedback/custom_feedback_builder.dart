@@ -1,6 +1,7 @@
 import 'package:feedback/feedback.dart';
 import 'package:feedback/src/theme/feedback_theme.dart';
 import 'package:flutter/material.dart';
+import '../../main.dart';
 import '../../theme/app_colors.dart';
 
 /// Construtor customizado para a interface de feedback em texto.
@@ -45,9 +46,15 @@ class CustomStringFeedback extends StatefulWidget {
 class _CustomStringFeedbackState extends State<CustomStringFeedback> {
   /// Controlador do campo de texto de feedback.
   late TextEditingController controller;
+  Route? _backButtonRoute;
+  bool _isHiding = false;
 
   @override
   void dispose() {
+    _isHiding = true;
+    if (_backButtonRoute != null && _backButtonRoute!.isActive) {
+      appNavigatorKey.currentState?.removeRoute(_backButtonRoute!);
+    }
     controller.dispose();
     super.dispose();
   }
@@ -56,6 +63,25 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
   void initState() {
     super.initState();
     controller = TextEditingController();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _backButtonRoute = PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder: (routeContext, _, __) => PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (didPop || _isHiding) return;
+            _isHiding = true;
+            BetterFeedback.of(context).hide();
+            Navigator.of(routeContext).pop();
+          },
+          child: const SizedBox.expand(),
+        ),
+      );
+      appNavigatorKey.currentState?.push(_backButtonRoute!);
+    });
   }
 
   @override

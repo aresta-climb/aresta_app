@@ -139,6 +139,9 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+// Global navigator key to allow overlays to push routes for back button interception
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 class _MyAppState extends State<MyApp> {
   late int _acceptedLegalVersion;
   late bool _needsMigration;
@@ -192,41 +195,11 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController().themeMode,
       builder: (context, currentMode, _) {
-        return BetterFeedback(
-          feedbackBuilder: customFeedbackBuilder,
+        return MaterialApp(
+          navigatorKey: appNavigatorKey,
+          title: 'Aresta Climb',
+          debugShowCheckedModeBanner: false,
           themeMode: ThemeMode.dark, // Temporary: locked to dark mode
-          theme: FeedbackThemeData(
-            background: AppColors.light.slateStone,
-            feedbackSheetColor: AppColors.light.obsidianBrown,
-            activeFeedbackModeColor: AppColors.light.beastHide,
-            sheetIsDraggable: false,
-            drawColors: const [
-              AppColors.brandColor,
-              Colors.red,
-              Colors.green,
-              Colors.blue,
-              Colors.yellow,
-            ],
-          ),
-          darkTheme: FeedbackThemeData(
-            background: AppColors.dark.deepBasalt,
-            feedbackSheetColor: AppColors.dark.caveShadow,
-            activeFeedbackModeColor: AppColors.dark.rustIron,
-            sheetIsDraggable: false,
-            drawColors: const [
-              AppColors.brandColor,
-              Colors.red,
-              Colors.green,
-              Colors.blue,
-              Colors.yellow,
-            ],
-          ),
-          localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
-          localeOverride: const Locale('pt', 'BR'),
-          child: MaterialApp(
-            title: 'Aresta Climb',
-            debugShowCheckedModeBanner: false,
-            themeMode: ThemeMode.dark, // Temporary: locked to dark mode
             theme: ThemeData(
               fontFamily: 'Montserrat',
               useMaterial3: true,
@@ -277,6 +250,40 @@ class _MyAppState extends State<MyApp> {
                   },
                 );
               }
+
+              effectiveChild = BetterFeedback(
+                feedbackBuilder: customFeedbackBuilder,
+                themeMode: ThemeMode.dark,
+                theme: FeedbackThemeData(
+                  background: AppColors.light.slateStone,
+                  feedbackSheetColor: AppColors.light.obsidianBrown,
+                  activeFeedbackModeColor: AppColors.light.beastHide,
+                  sheetIsDraggable: false,
+                  drawColors: const [
+                    AppColors.brandColor,
+                    Colors.red,
+                    Colors.green,
+                    Colors.blue,
+                    Colors.yellow,
+                  ],
+                ),
+                darkTheme: FeedbackThemeData(
+                  background: AppColors.dark.deepBasalt,
+                  feedbackSheetColor: AppColors.dark.caveShadow,
+                  activeFeedbackModeColor: AppColors.dark.rustIron,
+                  sheetIsDraggable: false,
+                  drawColors: const [
+                    AppColors.brandColor,
+                    Colors.red,
+                    Colors.green,
+                    Colors.blue,
+                    Colors.yellow,
+                  ],
+                ),
+                localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
+                localeOverride: const Locale('pt', 'BR'),
+                child: effectiveChild,
+              );
 
               return AppVersionChecker(
                 remoteConfigService: widget.remoteConfigService,
@@ -373,8 +380,7 @@ class _MyAppState extends State<MyApp> {
                     isUpdatingTerms: _isUpdatingTerms,
                     assetBundle: widget.assetBundle,
                   ),
-          ),
-        );
+          );
       },
     );
   }
