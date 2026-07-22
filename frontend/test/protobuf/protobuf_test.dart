@@ -1,6 +1,7 @@
 /// Testes de serialização e desserialização Protobuf.
 /// Verifica que os objetos podem ser convertidos em bytes e recuperados com fidelidade.
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -26,16 +27,21 @@ void main() {
       expect(restored.croquis.length, 1);
       expect(restored.croquis.first.id, 'pedra_bonita');
       expect(restored.croquis.first.nome, 'Pedra Bonita');
-      expect(restored.croquis.first.caminhoRelativo, 'downloads/pedra_bonita/pedra_bonita.binarypb');
+      expect(
+        restored.croquis.first.caminhoRelativo,
+        'downloads/pedra_bonita/pedra_bonita.binarypb',
+      );
       expect(restored.croquis.first.checksumSha256Croqui, 'abc123checksum');
     });
 
     test('deve suportar múltiplos croquis no índice', () {
       final indice = Indice();
       for (int i = 0; i < 5; i++) {
-        indice.croquis.add(ResumoCroqui()
-          ..id = 'pico_$i'
-          ..nome = 'Pico $i');
+        indice.croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_$i'
+            ..nome = 'Pico $i',
+        );
       }
 
       final restored = Indice.fromBuffer(indice.writeToBuffer());
@@ -89,8 +95,7 @@ void main() {
     });
 
     test('deve serializar arquivo markdown corretamente', () {
-      final md = ArquivoMarkdown()
-        ..conteudo = '![foto](imagens/capa.webp)';
+      final md = ArquivoMarkdown()..conteudo = '![foto](imagens/capa.webp)';
       final botao = Botao()
         ..texto = 'Capa'
         ..destino = (DestinoBotao()..secaoTextual = md);
@@ -100,7 +105,10 @@ void main() {
 
       expect(restored.botoes.length, 1);
       expect(restored.botoes.first.texto, 'Capa');
-      expect(restored.botoes.first.destino.secaoTextual.conteudo, '![foto](imagens/capa.webp)');
+      expect(
+        restored.botoes.first.destino.secaoTextual.conteudo,
+        '![foto](imagens/capa.webp)',
+      );
     });
 
     test('deve serializar arquivo externo corretamente', () {
@@ -200,7 +208,10 @@ void main() {
         ..id = 'pico'
         ..checksumSha256Croqui = 'versao2';
 
-      expect(original.checksumSha256Croqui, isNot(atualizado.checksumSha256Croqui));
+      expect(
+        original.checksumSha256Croqui,
+        isNot(atualizado.checksumSha256Croqui),
+      );
     });
   });
 }

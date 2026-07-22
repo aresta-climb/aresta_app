@@ -1,6 +1,7 @@
 /// Suíte de testes de funções utilitárias.
 /// Cobre safeString e isBoulderArea.
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/view_functions/common_functions.dart';
@@ -113,7 +114,10 @@ void main() {
     test('deve remover acentos e diacríticos corretamente', () {
       expect(normalizeSearchString('Píco'), 'pico');
       expect(normalizeSearchString('Coração'), 'coracao');
-      expect(normalizeSearchString('Áéíóú Ãõ Âêîôû Àèìòù Çç Ññ'), 'aeiou ao aeiou aeiou cc nn');
+      expect(
+        normalizeSearchString('Áéíóú Ãõ Âêîôû Àèìòù Çç Ññ'),
+        'aeiou ao aeiou aeiou cc nn',
+      );
     });
 
     test('deve retornar string vazia caso o input seja vazio', () {
@@ -130,7 +134,9 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('buildCommonAppBar', () {
-    testWidgets('deve conter o botão de feedback (bug_report)', (WidgetTester tester) async {
+    testWidgets('deve conter o botão de feedback (bug_report)', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -148,31 +154,39 @@ void main() {
       expect(find.byIcon(Icons.bug_report), findsOneWidget);
     });
 
-    testWidgets('deve manter as actions passadas e adicionar o botão de feedback', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(kToolbarHeight),
-              child: Builder(
-                builder: (context) => buildCommonAppBar(
-                  context, 
-                  'Test Title',
-                  actions: [
-                    IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
-                  ],
+    testWidgets(
+      'deve manter as actions passadas e adicionar o botão de feedback',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight),
+                child: Builder(
+                  builder: (context) => buildCommonAppBar(
+                    context,
+                    'Test Title',
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byIcon(Icons.settings), findsOneWidget);
-      expect(find.byIcon(Icons.bug_report), findsOneWidget);
-    });
+        expect(find.byIcon(Icons.settings), findsOneWidget);
+        expect(find.byIcon(Icons.bug_report), findsOneWidget);
+      },
+    );
 
-    testWidgets('deve mostrar SnackBar de erro se não estiver configurado', (WidgetTester tester) async {
+    testWidgets('deve mostrar SnackBar de erro se não estiver configurado', (
+      WidgetTester tester,
+    ) async {
       BackgroundWorker.debugIsConfiguredOverride = false;
 
       await tester.pumpWidget(
@@ -192,44 +206,60 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text('Envio de feedback indisponível neste ambiente de desenvolvimento.'), findsOneWidget);
+      expect(
+        find.text(
+          'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+        ),
+        findsOneWidget,
+      );
 
       BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
     });
 
-    testWidgets('NÃO deve mostrar SnackBar de erro se ESTIVER configurado (abre a UI)', (WidgetTester tester) async {
-      BackgroundWorker.debugIsConfiguredOverride = true;
+    testWidgets(
+      'NÃO deve mostrar SnackBar de erro se ESTIVER configurado (abre a UI)',
+      (WidgetTester tester) async {
+        BackgroundWorker.debugIsConfiguredOverride = true;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: BetterFeedback( // <-- Adicionado wrapper BetterFeedback
-            child: Scaffold(
-              appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(kToolbarHeight),
-                child: Builder(
-                  builder: (context) => buildCommonAppBar(context, 'Test'),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BetterFeedback(
+              // <-- Adicionado wrapper BetterFeedback
+              child: Scaffold(
+                appBar: PreferredSize(
+                  preferredSize: const Size.fromHeight(kToolbarHeight),
+                  child: Builder(
+                    builder: (context) => buildCommonAppBar(context, 'Test'),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.byIcon(Icons.bug_report));
-      await tester.pumpAndSettle(); // Aguarda a animação de abertura do BetterFeedback terminar
+        await tester.tap(find.byIcon(Icons.bug_report));
+        await tester
+            .pumpAndSettle(); // Aguarda a animação de abertura do BetterFeedback terminar
 
-      // Apenas garantimos que o SnackBar de erro NÃO apareceu
-      expect(find.text('Envio de feedback indisponível neste ambiente de desenvolvimento.'), findsNothing);
+        // Apenas garantimos que o SnackBar de erro NÃO apareceu
+        expect(
+          find.text(
+            'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+          ),
+          findsNothing,
+        );
 
-      // Fecha o feedback para a animação de dismiss ocorrer e a árvore ser destruída limpa
-      // O plugin BetterFeedback coloca um botão de fechar, mas como estamos apenas testando,
-      // podemos destruir explicitamente passando null no override.
-      BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
-    });
-
+        // Fecha o feedback para a animação de dismiss ocorrer e a árvore ser destruída limpa
+        // O plugin BetterFeedback coloca um botão de fechar, mas como estamos apenas testando,
+        // podemos destruir explicitamente passando null no override.
+        BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+      },
+    );
 
     // Teste de telemetria
-    testWidgets('deve registrar telemetria ao clicar no botão de feedback', (WidgetTester tester) async {
+    testWidgets('deve registrar telemetria ao clicar no botão de feedback', (
+      WidgetTester tester,
+    ) async {
       BackgroundWorker.debugIsConfiguredOverride = true;
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
@@ -253,69 +283,81 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);
-      expect(mockTelemetry.recordedParams['acao_feedback']?['acao'], 'abrir_feedback');
+      expect(
+        mockTelemetry.recordedParams['acao_feedback']?['acao'],
+        'abrir_feedback',
+      );
 
       BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
     });
 
-    testWidgets('deve chamar hide() e logar telemetria em processFeedbackSubmission', (WidgetTester tester) async {
-      BackgroundWorker.debugIsConfiguredOverride = true;
-      final mockTelemetry = MockTelemetryService();
-      TelemetryService.instance = mockTelemetry;
+    testWidgets(
+      'deve chamar hide() e logar telemetria em processFeedbackSubmission',
+      (WidgetTester tester) async {
+        BackgroundWorker.debugIsConfiguredOverride = true;
+        final mockTelemetry = MockTelemetryService();
+        TelemetryService.instance = mockTelemetry;
 
-      // Mock method channels to prevent MissingPluginException
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/path_provider'),
-        (MethodCall methodCall) async => '.',
-      );
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        const MethodChannel('be.tramckrijte.workmanager/workmanager'),
-        (MethodCall methodCall) async => true,
-      );
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/package_info'),
-        (MethodCall methodCall) async => {
-          'appName': 'Aresta',
-          'packageName': 'com.aresta.app',
-          'version': '1.0.0',
-          'buildNumber': '1',
-        },
-      );
+        // Mock method channels to prevent MissingPluginException
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async => '.',
+        );
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('be.tramckrijte.workmanager/workmanager'),
+          (MethodCall methodCall) async => true,
+        );
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/package_info'),
+          (MethodCall methodCall) async => {
+            'appName': 'Aresta',
+            'packageName': 'com.aresta.app',
+            'version': '1.0.0',
+            'buildNumber': '1',
+          },
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: BetterFeedback(
-            child: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () async {
-                    // Open feedback first so we have the overlay
-                    BetterFeedback.of(context).show((_) {});
-                    
-                    final dummyFeedback = UserFeedback(text: 'Test text', screenshot: Uint8List(0));
-                    await processFeedbackSubmission(context, dummyFeedback);
-                  },
-                  child: const Text('Simulate'),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BetterFeedback(
+              child: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () async {
+                      // Open feedback first so we have the overlay
+                      BetterFeedback.of(context).show((_) {});
+
+                      final dummyFeedback = UserFeedback(
+                        text: 'Test text',
+                        screenshot: Uint8List(0),
+                      );
+                      await processFeedbackSubmission(context, dummyFeedback);
+                    },
+                    child: const Text('Simulate'),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Simulate'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Simulate'));
+        await tester.pumpAndSettle();
 
-      // Ensure Telemetry logged 'enviar_feedback'
-      expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);
-      expect(mockTelemetry.recordedParams['acao_feedback']?['acao'], 'enviar_feedback');
+        // Ensure Telemetry logged 'enviar_feedback'
+        expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);
+        expect(
+          mockTelemetry.recordedParams['acao_feedback']?['acao'],
+          'enviar_feedback',
+        );
 
-      // Ensure FeedbackUI is not visible anymore
-      final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
-      expect(BetterFeedback.of(scaffoldState.context).isVisible, isFalse);
+        // Ensure FeedbackUI is not visible anymore
+        final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
+        expect(BetterFeedback.of(scaffoldState.context).isVisible, isFalse);
 
-      BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
-    });
+        BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -323,19 +365,23 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('showDeprecatedAppVersionSnackBar', () {
-    testWidgets('deve exibir SnackBar com a mensagem de versão descontinuada', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () => showDeprecatedAppVersionSnackBar(context),
-                child: const Text('Show'),
-              );
-            },
+    testWidgets('deve exibir SnackBar com a mensagem de versão descontinuada', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () => showDeprecatedAppVersionSnackBar(context),
+                  child: const Text('Show'),
+                );
+              },
+            ),
           ),
         ),
-      ));
+      );
 
       await tester.tap(find.text('Show'));
       await tester.pump();
@@ -343,10 +389,11 @@ void main() {
 
       expect(find.byType(SnackBar), findsOneWidget);
       expect(
-        find.text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'),
+        find.text(
+          'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+        ),
         findsOneWidget,
       );
     });
   });
 }
-

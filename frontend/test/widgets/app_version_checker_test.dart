@@ -23,10 +23,12 @@ class FakeRemoteConfigService implements RemoteConfigService {
   int getInt(String key) => 0;
   @override
   bool getBool(String key) => false;
-  @override String getString(String key) => "";
-  
+  @override
+  String getString(String key) => "";
+
   String _iosUrl = "";
-  @override String get storeUrlIos => _iosUrl;
+  @override
+  String get storeUrlIos => _iosUrl;
 
   @override
   Future<void> initialize() async {}
@@ -205,18 +207,33 @@ void main() {
         expect(find.text('App Normal'), findsOneWidget);
       },
     );
-    test('getStoreUrl retorna a url correta baseada no Remote Config e Plataforma', () {
-      final fakeConfig = FakeRemoteConfigService();
-      
-      // Quando vazio, retorna padrão
-      fakeConfig._iosUrl = '';
-      expect(AppVersionChecker.getStoreUrl(fakeConfig, isIOS: false), 'market://details?id=app.escalada.croquis');
-      expect(AppVersionChecker.getStoreUrl(fakeConfig, isIOS: true), 'https://apps.apple.com/app/idXXXXXXXXX');
+    test(
+      'getStoreUrl retorna a url correta baseada no Remote Config e Plataforma',
+      () {
+        final fakeConfig = FakeRemoteConfigService();
 
-      // Quando preenchido, retorna o remote config
-      fakeConfig._iosUrl = 'https://testflight.apple.com/test';
-      expect(AppVersionChecker.getStoreUrl(fakeConfig, isIOS: false), 'market://details?id=app.escalada.croquis');
-      expect(AppVersionChecker.getStoreUrl(fakeConfig, isIOS: true), 'https://testflight.apple.com/test');
-    });
+        // Quando vazio, retorna padrão
+        fakeConfig._iosUrl = '';
+        expect(
+          AppVersionChecker.getStoreUrl(fakeConfig, isIOS: false),
+          'market://details?id=app.escalada.croquis',
+        );
+        expect(
+          AppVersionChecker.getStoreUrl(fakeConfig, isIOS: true),
+          'https://apps.apple.com/app/idXXXXXXXXX',
+        );
+
+        // Quando preenchido, retorna o remote config
+        fakeConfig._iosUrl = 'https://testflight.apple.com/test';
+        expect(
+          AppVersionChecker.getStoreUrl(fakeConfig, isIOS: false),
+          'market://details?id=app.escalada.croquis',
+        );
+        expect(
+          AppVersionChecker.getStoreUrl(fakeConfig, isIOS: true),
+          'https://testflight.apple.com/test',
+        );
+      },
+    );
   });
 }

@@ -28,9 +28,15 @@ class OfflineCragCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String id = _safeString(crag['id']);
-    final String nome = _safeString(crag['nome'], fallback: 'Sem Nome').toUpperCase();
-    final String local = _safeString(crag['local'], fallback: 'Local Desconhecido').toUpperCase();
-    
+    final String nome = _safeString(
+      crag['nome'],
+      fallback: 'Sem Nome',
+    ).toUpperCase();
+    final String local = _safeString(
+      crag['local'],
+      fallback: 'Local Desconhecido',
+    ).toUpperCase();
+
     String statsText = '0 setores • 0 vias';
     if (crag['estatisticas'] != null) {
       final stats = crag['estatisticas'];
@@ -62,12 +68,17 @@ class OfflineCragCard extends StatelessWidget {
                     future: getApplicationDocumentsDirectory(),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
-                        final file = File('${snapshot.data!.path}/thumbnails/$id.webp');
+                        final file = File(
+                          '${snapshot.data!.path}/thumbnails/$id.webp',
+                        );
                         if (file.existsSync()) {
                           return Image.file(
                             file,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(Icons.terrain, color: context.colors.ashGrey),
+                            errorBuilder: (_, _, _) => Icon(
+                              Icons.terrain,
+                              color: context.colors.ashGrey,
+                            ),
                           );
                         }
                       }
@@ -120,7 +131,11 @@ class OfflineCragCard extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: 'meus_croquis');
+                    TelemetryService.instance.logAcaoCroqui(
+                      id,
+                      'abrir_croqui',
+                      origem: 'meus_croquis',
+                    );
                     AppNav.toPico(context, cragId: id);
                     datasetRepo.updatePriorityAfterNavigation(id);
                   },
@@ -156,7 +171,11 @@ class OfflineCragCard extends StatelessWidget {
     );
   }
 
-  Widget _buildIconButton(BuildContext context, {required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildIconButton(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
     return Container(
       width: 48,
       height: 48,
@@ -172,17 +191,27 @@ class OfflineCragCard extends StatelessWidget {
     );
   }
 
-  Future<void> _handleDelete(BuildContext context, String cragId, String nome) async {
+  Future<void> _handleDelete(
+    BuildContext context,
+    String cragId,
+    String nome,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.colors.caveShadow,
         title: const Text('Excluir?', style: TextStyle(color: Colors.white)),
-        content: Text('Deseja excluir o guia de $nome?', style: TextStyle(color: context.colors.ashGrey)),
+        content: Text(
+          'Deseja excluir o guia de $nome?',
+          style: TextStyle(color: context.colors.ashGrey),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('CANCELAR', style: TextStyle(color: context.colors.ashGrey)),
+            child: Text(
+              'CANCELAR',
+              style: TextStyle(color: context.colors.ashGrey),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -198,11 +227,15 @@ class OfflineCragCard extends StatelessWidget {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
           ..showSnackBar(
-          SnackBar(
-            content: Text(success ? 'Guia excluído.' : 'Erro ao excluir guia.'),
-            backgroundColor: success ? context.colors.dryMoss : Theme.of(context).colorScheme.error,
-          ),
-        );
+            SnackBar(
+              content: Text(
+                success ? 'Guia excluído.' : 'Erro ao excluir guia.',
+              ),
+              backgroundColor: success
+                  ? context.colors.dryMoss
+                  : Theme.of(context).colorScheme.error,
+            ),
+          );
       }
     }
   }

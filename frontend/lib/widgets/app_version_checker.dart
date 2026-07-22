@@ -33,7 +33,10 @@ class AppVersionChecker extends StatefulWidget {
   State<AppVersionChecker> createState() => _AppVersionCheckerState();
 
   @visibleForTesting
-  static String getStoreUrl(RemoteConfigService remoteConfig, {required bool isIOS}) {
+  static String getStoreUrl(
+    RemoteConfigService remoteConfig, {
+    required bool isIOS,
+  }) {
     if (isIOS) {
       return remoteConfig.storeUrlIos.isNotEmpty
           ? remoteConfig.storeUrlIos
@@ -93,13 +96,15 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
     }
   }
 
-
-
   /// Abre a loja de aplicativos correta baseado no sistema operacional do dispositivo.
   /// Usuário é redirecionado para a App Store no iOS ou Play Store no Android.
   void _launchStore() {
-    final remoteConfig = widget.remoteConfigService ?? RemoteConfigService.instance;
-    final url = AppVersionChecker.getStoreUrl(remoteConfig, isIOS: Platform.isIOS);
+    final remoteConfig =
+        widget.remoteConfigService ?? RemoteConfigService.instance;
+    final url = AppVersionChecker.getStoreUrl(
+      remoteConfig,
+      isIOS: Platform.isIOS,
+    );
     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
@@ -116,9 +121,7 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
     final recommendedVersion = remoteConfig.recommendedVersion;
 
     if (hardMinVersion > 0 && _currentBuildNumber < hardMinVersion) {
-      return AppVersionHardBlockScreen(
-        onUpdatePressed: _launchStore,
-      );
+      return AppVersionHardBlockScreen(onUpdatePressed: _launchStore);
     }
 
     bool showSoftBanner =

@@ -38,7 +38,8 @@ class ComunidadePage extends StatelessWidget {
               buildActionCard(
                 context,
                 title: 'WHATSAPP DO PROJETO',
-                subtitle: 'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
+                subtitle:
+                    'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
                 onTap: () => showLinkOverlay(
@@ -53,7 +54,8 @@ class ComunidadePage extends StatelessWidget {
               buildActionCard(
                 context,
                 title: 'INSTAGRAM OFICIAL',
-                subtitle: 'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
+                subtitle:
+                    'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
                 onTap: () => showLinkOverlay(
@@ -68,7 +70,8 @@ class ComunidadePage extends StatelessWidget {
               buildActionCard(
                 context,
                 title: 'DISCORD DOS DESENVOLVEDORES',
-                subtitle: 'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
+                subtitle:
+                    'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
                 onTap: () => showLinkOverlay(

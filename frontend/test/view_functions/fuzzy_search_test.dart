@@ -41,12 +41,15 @@ void main() {
       );
     });
 
-    test('deve encontrar correspondência exata independentemente de acentos', () {
-      // "Pao" sem til deve encontrar "Pão"
-      final result = fuse.search(normalizeSearchString('Pao'));
-      expect(result.isNotEmpty, isTrue);
-      expect(result.first.item.title, 'Pão de Açúcar');
-    });
+    test(
+      'deve encontrar correspondência exata independentemente de acentos',
+      () {
+        // "Pao" sem til deve encontrar "Pão"
+        final result = fuse.search(normalizeSearchString('Pao'));
+        expect(result.isNotEmpty, isTrue);
+        expect(result.first.item.title, 'Pão de Açúcar');
+      },
+    );
 
     test('deve encontrar correspondência com erro de digitação (fuzzy)', () {
       // "corcqvado" em vez de "corcovado"
@@ -69,4 +72,3 @@ void main() {
     });
   });
 }
-

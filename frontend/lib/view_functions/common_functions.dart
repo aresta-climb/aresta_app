@@ -10,17 +10,18 @@ import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:frontend/services/feedback/background_worker.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
+
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
   final mode = ThemeController().themeMode.value;
   if (mode == ThemeMode.light) return true;
   if (mode == ThemeMode.dark) return false;
   // Fallback to system brightness
-  return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.light;
+  return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      Brightness.light;
 }
 
 AppColors get _currentColors => _isLight ? AppColors.light : AppColors.dark;
-
 
 Color get beastHide => _currentColors.beastHide;
 Color get fishBone => _currentColors.fishBone;
@@ -39,7 +40,9 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
       if (!BackgroundWorker.isConfigured) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Envio de feedback indisponível neste ambiente de desenvolvimento.'),
+            content: const Text(
+              'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+            ),
             backgroundColor: Colors.red.shade800,
           ),
         );
@@ -55,7 +58,12 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   );
 }
 
-Widget buildOutlineStatCard(BuildContext context, String title, String value, IconData icon) {
+Widget buildOutlineStatCard(
+  BuildContext context,
+  String title,
+  String value,
+  IconData icon,
+) {
   return Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
@@ -74,7 +82,12 @@ Widget buildOutlineStatCard(BuildContext context, String title, String value, Ic
             Expanded(
               child: Text(
                 title.toUpperCase(),
-                style: TextStyle(color: context.colors.slateStone, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                style: TextStyle(
+                  color: context.colors.slateStone,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -83,7 +96,11 @@ Widget buildOutlineStatCard(BuildContext context, String title, String value, Ic
         const SizedBox(height: 8),
         Text(
           value,
-          style: TextStyle(color: fishBone, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: fishBone,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
       ],
@@ -91,7 +108,12 @@ Widget buildOutlineStatCard(BuildContext context, String title, String value, Ic
   );
 }
 
-Widget buildInfoCard(BuildContext context, String title, String description, IconData icon) {
+Widget buildInfoCard(
+  BuildContext context,
+  String title,
+  String description,
+  IconData icon,
+) {
   return Container(
     width: double.infinity,
     padding: const EdgeInsets.all(16),
@@ -109,7 +131,11 @@ Widget buildInfoCard(BuildContext context, String title, String description, Ico
             const SizedBox(width: 8),
             Text(
               title.toUpperCase(),
-              style: TextStyle(color: AppColors.brandColor, fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.brandColor,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -124,7 +150,10 @@ Widget buildInfoCard(BuildContext context, String title, String description, Ico
 }
 
 @visibleForTesting
-Future<void> processFeedbackSubmission(BuildContext context, UserFeedback feedback) async {
+Future<void> processFeedbackSubmission(
+  BuildContext context,
+  UserFeedback feedback,
+) async {
   BetterFeedback.of(context).hide();
   TelemetryService.instance.logAcaoFeedback('enviar_feedback');
   final metadata = await FeedbackMetadataCollector().collect(context: context);
@@ -136,21 +165,31 @@ Future<void> processFeedbackSubmission(BuildContext context, UserFeedback feedba
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Feedback recebido! Muito obrigado por ajudar a melhorar o app.'),
+        content: const Text(
+          'Feedback recebido! Muito obrigado por ajudar a melhorar o app.',
+        ),
         backgroundColor: AppColors.light.beastHide,
       ),
     );
   }
 }
 
-PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<Widget>? actions, String? subtitle, VoidCallback? onBack}) {
+PreferredSizeWidget buildCommonAppBar(
+  BuildContext context,
+  String title, {
+  List<Widget>? actions,
+  String? subtitle,
+  VoidCallback? onBack,
+}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final bgColor = isDark ? context.colors.deepBasalt : beastHide;
   final fgColor = isDark ? Colors.white : Colors.black;
 
   final feedbackButton = buildFeedbackButton(context, color: fgColor);
 
-  final updatedActions = actions != null ? [...actions, feedbackButton] : [feedbackButton];
+  final updatedActions = actions != null
+      ? [...actions, feedbackButton]
+      : [feedbackButton];
 
   Widget titleWidget = Text(
     title,
@@ -178,7 +217,8 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
         Text(
           subtitle,
           style: TextStyle(
-            color: context.colors.dryMoss, // A nice subtle color for the subtitle
+            color:
+                context.colors.dryMoss, // A nice subtle color for the subtitle
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
@@ -199,7 +239,9 @@ PreferredSizeWidget buildCommonAppBar(BuildContext context, String title, {List<
     backgroundColor: bgColor,
     centerTitle: true,
     elevation: isDark ? 0 : 4,
-    shadowColor: isDark ? Colors.transparent : Colors.black.withValues(alpha: 0.5),
+    shadowColor: isDark
+        ? Colors.transparent
+        : Colors.black.withValues(alpha: 0.5),
     actions: updatedActions,
   );
 }
@@ -234,7 +276,10 @@ Widget buildSearchBar({
                       color: context.colors.ashGrey,
                       fontSize: 14,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     border: InputBorder.none,
                   ),
                 ),
@@ -264,16 +309,14 @@ Widget buildSearchBar({
           ],
         ),
       );
-    }
+    },
   );
 }
-
-
 
 /// Normaliza uma string de pesquisa convertendo para minúsculas e removendo acentos/diacríticos.
 String normalizeSearchString(String value) {
   const withDia = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÑñ';
-  const withoutDia = 'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuNn'; 
+  const withoutDia = 'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuNn';
 
   String str = value;
   for (int i = 0; i < withDia.length; i++) {
@@ -336,7 +379,7 @@ String formatTimeAgo(String? rawDate) {
 /// Se metade ou mais das escaladas forem boulders, retorna verdadeiro.
 bool isBoulderArea(List<Escalada> escaladas) {
   if (escaladas.isEmpty) return false;
-  
+
   int boulderCount = 0;
   for (var escalada in escaladas) {
     if (escalada.whichTipo() == Escalada_Tipo.boulder) {
@@ -347,11 +390,13 @@ bool isBoulderArea(List<Escalada> escaladas) {
 }
 
 /// A barra de navegação inferior principal usada no MainNavigationWrapper raiz.
-Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(int) onItemTapped) {
+Widget buildPrimaryBottomNav(
+  BuildContext context,
+  int selectedIndex,
+  Function(int) onItemTapped,
+) {
   return Theme(
-    data: Theme.of(context).copyWith(
-      canvasColor: context.colors.deepBasalt,
-    ),
+    data: Theme.of(context).copyWith(canvasColor: context.colors.deepBasalt),
     child: BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
@@ -386,8 +431,16 @@ Widget buildPrimaryBottomNav(BuildContext context, int selectedIndex, Function(i
         onItemTapped(index);
       },
       type: BottomNavigationBarType.fixed,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
-      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.5),
+      selectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.w900,
+        fontSize: 10,
+        letterSpacing: 0.5,
+      ),
+      unselectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 10,
+        letterSpacing: 0.5,
+      ),
     ),
   );
 }
@@ -461,7 +514,7 @@ Widget buildSecondaryBottomNav(BuildContext context) {
 }
 
 /// Um componente genérico para construir menus de ordenação.
-/// 
+///
 /// Aceita qualquer tipo enum [T] e um mapa de [options] ligando os valores do enum
 /// aos textos de exibição.
 Widget buildSortMenu<T>({
@@ -493,7 +546,12 @@ Widget buildSortMenu<T>({
         .toList(),
   );
 }
-Future<void> handleManualSync(BuildContext context, DatasetRepository datasetRepo, SyncService syncService) async {
+
+Future<void> handleManualSync(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+) async {
   final dataset = datasetRepo.activeDataset.value;
   final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
 
@@ -527,7 +585,7 @@ Future<void> handleManualSync(BuildContext context, DatasetRepository datasetRep
   }
 
   final failed = await syncService.syncIndex(auto: false);
-  
+
   if (context.mounted) {
     final status = syncService.syncStatus.value;
     String message = '';
@@ -536,7 +594,8 @@ Future<void> handleManualSync(BuildContext context, DatasetRepository datasetRep
     if (failed.isNotEmpty) {
       message = 'Concluído com falhas: ${failed.join(', ')}';
       bgColor = Theme.of(context).colorScheme.error;
-    } else if (status == SyncStatus.noNewUpdates || status == SyncStatus.updated) {
+    } else if (status == SyncStatus.noNewUpdates ||
+        status == SyncStatus.updated) {
       message = 'Nenhum croqui precisava ser atualizado.';
       bgColor = context.colors.ashGrey;
     } else {
@@ -547,10 +606,7 @@ Future<void> handleManualSync(BuildContext context, DatasetRepository datasetRep
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: bgColor,
-        ),
+        SnackBar(content: Text(message), backgroundColor: bgColor),
       );
   }
 }
@@ -558,7 +614,9 @@ Future<void> handleManualSync(BuildContext context, DatasetRepository datasetRep
 void showDeprecatedAppVersionSnackBar(BuildContext context) {
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
-      content: Text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'),
+      content: Text(
+        'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+      ),
       backgroundColor: Colors.red,
       duration: Duration(seconds: 4),
     ),
@@ -569,10 +627,16 @@ void showDeprecatedAppVersionSnackBar(BuildContext context) {
 String stripMarkdownForSubtitle(String markdown) {
   if (markdown.isEmpty) return markdown;
   // Remove imagens: ![alt](url)
-  String text = markdown.replaceAll(RegExp(r'!\[.*?\]\(.*?\)', dotAll: true), '');
+  String text = markdown.replaceAll(
+    RegExp(r'!\[.*?\]\(.*?\)', dotAll: true),
+    '',
+  );
   // Remove links: [text](url) -> text
-  text = text.replaceAllMapped(RegExp(r'\[(.*?)\]\(.*?\)', dotAll: true), (match) => match.group(1) ?? '');
-  
+  text = text.replaceAllMapped(
+    RegExp(r'\[(.*?)\]\(.*?\)', dotAll: true),
+    (match) => match.group(1) ?? '',
+  );
+
   // Remove markdown table alignment rows (e.g. |:---:|) before removing |
   text = text.replaceAll(RegExp(r'\|[-\s:]+\|'), ' ');
   // Remove table characters and dividers
@@ -580,7 +644,7 @@ String stripMarkdownForSubtitle(String markdown) {
   // Remove :--: or :-: or --- (leftover from tables)
   text = text.replaceAll(RegExp(r':?-{2,}:?'), ' ');
   text = text.replaceAll(RegExp(r':-+:'), ' ');
-  
+
   // Remove HTML tags se houver
   text = text.replaceAll(RegExp(r'<[^>]*>'), '');
   // Remove negrito e itálico

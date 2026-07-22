@@ -2,6 +2,7 @@
 /// desde o arquivo .croqui no disco até a leitura do Croqui em memória,
 /// incluindo múltiplos arquivos e imagens externas.
 library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:archive/archive.dart';
@@ -23,8 +24,7 @@ Future<File> _criarCroquiCompleto(Directory tempDir) async {
   final indice = Indice()..croquis.add(resumo);
 
   // --- Croqui / Pico ---
-  final md = ArquivoMarkdown()
-    ..conteudo = '![foto](imagens/thumbnail.webp)';
+  final md = ArquivoMarkdown()..conteudo = '![foto](imagens/thumbnail.webp)';
   final botao = Botao()
     ..texto = 'Capa'
     ..destino = (DestinoBotao()..secaoTextual = md);
@@ -48,9 +48,23 @@ Future<File> _criarCroquiCompleto(Directory tempDir) async {
   final indiceBytes = indice.writeToBuffer();
   final croquiBytes = croqui.writeToBuffer();
 
-  archive.addFile(ArchiveFile('compilado/indice.binarypb', indiceBytes.length, indiceBytes));
-  archive.addFile(ArchiveFile('compilado/$picoId/$picoId.binarypb', croquiBytes.length, croquiBytes));
-  archive.addFile(ArchiveFile('compilado/$picoId/imagens/thumbnail.webp', fakeImg.length, fakeImg));
+  archive.addFile(
+    ArchiveFile('compilado/indice.binarypb', indiceBytes.length, indiceBytes),
+  );
+  archive.addFile(
+    ArchiveFile(
+      'compilado/$picoId/$picoId.binarypb',
+      croquiBytes.length,
+      croquiBytes,
+    ),
+  );
+  archive.addFile(
+    ArchiveFile(
+      'compilado/$picoId/imagens/thumbnail.webp',
+      fakeImg.length,
+      fakeImg,
+    ),
+  );
 
   final zipData = ZipEncoder().encode(archive);
 
@@ -80,36 +94,42 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('Fluxo completo de leitura via aresta-zip', () {
-    test('deve ler indice, extrair id do pico e buscar o binarypb dele', () async {
-      final croquiFile = await _criarCroquiCompleto(tempDir);
+    test(
+      'deve ler indice, extrair id do pico e buscar o binarypb dele',
+      () async {
+        final croquiFile = await _criarCroquiCompleto(tempDir);
 
-      // 1. Lê o índice
-      final uriIndice = Uri(
-        scheme: 'aresta-zip',
-        path: '${croquiFile.path}/indice.binarypb',
-      );
-      final resIndice = await client.get(uriIndice);
-      expect(resIndice.statusCode, 200);
+        // 1. Lê o índice
+        final uriIndice = Uri(
+          scheme: 'aresta-zip',
+          path: '${croquiFile.path}/indice.binarypb',
+        );
+        final resIndice = await client.get(uriIndice);
+        expect(resIndice.statusCode, 200);
 
-      final indice = Indice.fromBuffer(resIndice.bodyBytes);
-      expect(indice.croquis.length, 1);
-      final picoId = indice.croquis.first.id;
-      expect(picoId, 'pedra_da_gavea');
+        final indice = Indice.fromBuffer(resIndice.bodyBytes);
+        expect(indice.croquis.length, 1);
+        final picoId = indice.croquis.first.id;
+        expect(picoId, 'pedra_da_gavea');
 
-      // 2. Usa a URL do índice para buscar o pico
-      final picoBinaryUrl = indice.croquis.first.caminhoRelativo; // downloads/pedra_da_gavea/pedra_da_gavea.binarypb
-      final picoRelPath = picoBinaryUrl.replaceFirst('downloads/', '');
+        // 2. Usa a URL do índice para buscar o pico
+        final picoBinaryUrl = indice
+            .croquis
+            .first
+            .caminhoRelativo; // downloads/pedra_da_gavea/pedra_da_gavea.binarypb
+        final picoRelPath = picoBinaryUrl.replaceFirst('downloads/', '');
 
-      final uriPico = Uri(
-        scheme: 'aresta-zip',
-        path: '${croquiFile.path}/$picoRelPath',
-      );
-      final resPico = await client.get(uriPico);
-      expect(resPico.statusCode, 200);
+        final uriPico = Uri(
+          scheme: 'aresta-zip',
+          path: '${croquiFile.path}/$picoRelPath',
+        );
+        final resPico = await client.get(uriPico);
+        expect(resPico.statusCode, 200);
 
-      final croqui = Croqui.fromBuffer(resPico.bodyBytes);
-      expect(croqui.nome, 'Pedra da Gávea');
-    });
+        final croqui = Croqui.fromBuffer(resPico.bodyBytes);
+        expect(croqui.nome, 'Pedra da Gávea');
+      },
+    );
 
     test('deve ler o arquivo de imagem thumbnail do .croqui', () async {
       final croquiFile = await _criarCroquiCompleto(tempDir);
@@ -136,7 +156,10 @@ void main() {
 
       expect(croqui.botoes.length, 1);
       expect(croqui.botoes.first.texto, 'Capa');
-      expect(croqui.botoes.first.destino.secaoTextual.conteudo, contains('thumbnail.webp'));
+      expect(
+        croqui.botoes.first.destino.secaoTextual.conteudo,
+        contains('thumbnail.webp'),
+      );
     });
 
     test('deve retornar ArquivoExterno com checksum correto', () async {
@@ -165,15 +188,23 @@ void main() {
 
       final indice = Indice();
       for (int i = 0; i < 3; i++) {
-        indice.croquis.add(ResumoCroqui()
-          ..id = 'pico_$i'
-          ..nome = 'Pico $i'
-          ..caminhoRelativo = 'downloads/pico_$i/pico_$i.binarypb'
-          ..checksumSha256Croqui = 'check_$i');
+        indice.croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_$i'
+            ..nome = 'Pico $i'
+            ..caminhoRelativo = 'downloads/pico_$i/pico_$i.binarypb'
+            ..checksumSha256Croqui = 'check_$i',
+        );
       }
 
       final indiceBytes = indice.writeToBuffer();
-      archive.addFile(ArchiveFile('compilado/indice.binarypb', indiceBytes.length, indiceBytes));
+      archive.addFile(
+        ArchiveFile(
+          'compilado/indice.binarypb',
+          indiceBytes.length,
+          indiceBytes,
+        ),
+      );
 
       final zipData = ZipEncoder().encode(archive);
       if (zipData.isNotEmpty) zipData[0] = zipData[0] ^ 0xFF;
@@ -181,12 +212,18 @@ void main() {
       final file = File('${tempDir.path}/multi.croqui');
       await file.writeAsBytes(zipData);
 
-      final uri = Uri(scheme: 'aresta-zip', path: '${file.path}/indice.binarypb');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${file.path}/indice.binarypb',
+      );
       final response = await client.get(uri);
 
       final restored = Indice.fromBuffer(response.bodyBytes);
       expect(restored.croquis.length, 3);
-      expect(restored.croquis.map((r) => r.id), containsAll(['pico_0', 'pico_1', 'pico_2']));
+      expect(
+        restored.croquis.map((r) => r.id),
+        containsAll(['pico_0', 'pico_1', 'pico_2']),
+      );
     });
   });
 
@@ -197,11 +234,17 @@ void main() {
   group('Compatibilidade com .zip padrão', () {
     test('deve ler .zip padrão sem precisar de de-ofuscação', () async {
       final indice = Indice()
-        ..croquis.add(ResumoCroqui()..id = 'zip_pico'..nome = 'Pico ZIP');
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'zip_pico'
+            ..nome = 'Pico ZIP',
+        );
 
       final archive = Archive();
       final bytes = indice.writeToBuffer();
-      archive.addFile(ArchiveFile('compilado/indice.binarypb', bytes.length, bytes));
+      archive.addFile(
+        ArchiveFile('compilado/indice.binarypb', bytes.length, bytes),
+      );
 
       final zipData = ZipEncoder().encode(archive);
       // NÃO ofusca
@@ -209,7 +252,10 @@ void main() {
       final file = File('${tempDir.path}/repo.zip');
       await file.writeAsBytes(zipData);
 
-      final uri = Uri(scheme: 'aresta-zip', path: '${file.path}/indice.binarypb');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${file.path}/indice.binarypb',
+      );
       final response = await client.get(uri);
 
       expect(response.statusCode, 200);

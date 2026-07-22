@@ -14,88 +14,117 @@ class FakeRemoteConfigService implements RemoteConfigService {
   int _soft = 0;
   final int _rec = 0;
 
-  @override int get hardMinVersion => _hard;
-  @override int get softMinVersion => _soft;
-  @override int get recommendedVersion => _rec;
-  @override int getInt(String key) => 0;
-  @override bool getBool(String key) => false;
-  @override String getString(String key) => "";
-  
+  @override
+  int get hardMinVersion => _hard;
+  @override
+  int get softMinVersion => _soft;
+  @override
+  int get recommendedVersion => _rec;
+  @override
+  int getInt(String key) => 0;
+  @override
+  bool getBool(String key) => false;
+  @override
+  String getString(String key) => "";
+
   final String _iosUrl = "";
-  @override String get storeUrlIos => _iosUrl;
-  @override Future<void> initialize() async {}
-  @override FirebaseRemoteConfig? debugRemoteConfig;
-  @override void clearInitFuture() {}
+  @override
+  String get storeUrlIos => _iosUrl;
+  @override
+  Future<void> initialize() async {}
+  @override
+  FirebaseRemoteConfig? debugRemoteConfig;
+  @override
+  void clearInitFuture() {}
 }
 
 void main() {
-  testWidgets('Teste de carregamento da Home page', (WidgetTester tester) async {
+  testWidgets('Teste de carregamento da Home page', (
+    WidgetTester tester,
+  ) async {
     // Cria instâncias do repositório e do serviço de sincronização para testes.
     final editorDeCroqui = EditorDeCroqui();
     final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
     final testSync = SyncService(datasetRepository: testRepo);
-    
+
     testRepo.activeDataset.value = TopoDataset(
       availablePicos: [],
       downloadedPicos: [],
     );
 
     // Fornece as dependências necessárias para o TreeNavigationWrapper
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: TreeNavigationWrapper(
-          key: TreeNavigationWrapper.navKey,
-          datasetRepo: testRepo,
-          syncService: testSync,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: testRepo,
+            syncService: testSync,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump();
 
     // Verifica se a página inicial está presente (o ícone de settings é renderizado pelo Header)
     expect(find.byIcon(Icons.settings), findsOneWidget);
   });
 
-  testWidgets('Botão de sync mostra aviso quando aplicativo está obsoleto (soft block)', (WidgetTester tester) async {
-    PackageInfo.setMockInitialValues(
-      appName: 'Aresta',
-      packageName: 'com.aresta.climb',
-      version: '1.0.0',
-      buildNumber: '10',
-      buildSignature: '',
-    );
-    
-    final fakeRemote = FakeRemoteConfigService();
-    fakeRemote._soft = 11; // isNetworkDisabled == true
+  testWidgets(
+    'Botão de sync mostra aviso quando aplicativo está obsoleto (soft block)',
+    (WidgetTester tester) async {
+      PackageInfo.setMockInitialValues(
+        appName: 'Aresta',
+        packageName: 'com.aresta.climb',
+        version: '1.0.0',
+        buildNumber: '10',
+        buildSignature: '',
+      );
 
-    final editorDeCroqui = EditorDeCroqui();
-    final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
-    final testSync = SyncService(datasetRepository: testRepo, remoteConfigService: fakeRemote);
-    testSync.syncStatus.value = SyncStatus.updated;
-    
-    testRepo.activeDataset.value = TopoDataset(
-      availablePicos: [],
-      downloadedPicos: [
-        {'id': 'pico_teste', 'nome': 'Pico Teste', 'local': 'Local Teste', 'imagem_capa': ''}
-      ],
-    );
+      final fakeRemote = FakeRemoteConfigService();
+      fakeRemote._soft = 11; // isNetworkDisabled == true
 
-    // Pump MeusCroquisPage to render OfflineCragCard which contains the sync button
-    await tester.pumpWidget(MaterialApp(
-      home: MeusCroquisPage(
-        datasetRepo: testRepo,
-        syncService: testSync,
-      ),
-    ));
-    await tester.pump();
+      final editorDeCroqui = EditorDeCroqui();
+      final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final testSync = SyncService(
+        datasetRepository: testRepo,
+        remoteConfigService: fakeRemote,
+      );
+      testSync.syncStatus.value = SyncStatus.updated;
 
-    final syncButton = find.byIcon(Icons.sync);
-    expect(syncButton, findsOneWidget);
+      testRepo.activeDataset.value = TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [
+          {
+            'id': 'pico_teste',
+            'nome': 'Pico Teste',
+            'local': 'Local Teste',
+            'imagem_capa': '',
+          },
+        ],
+      );
 
-    await tester.tap(syncButton);
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      // Pump MeusCroquisPage to render OfflineCragCard which contains the sync button
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MeusCroquisPage(datasetRepo: testRepo, syncService: testSync),
+        ),
+      );
+      await tester.pump();
 
-    expect(find.text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'), findsOneWidget);
-  });
+      final syncButton = find.byIcon(Icons.sync);
+      expect(syncButton, findsOneWidget);
+
+      await tester.tap(syncButton);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.text(
+          'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

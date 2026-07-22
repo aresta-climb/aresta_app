@@ -12,7 +12,16 @@ import '../services/firebase/telemetry_service.dart';
 ///
 /// Ele extrai a descrição e itera por todas as vias disponíveis
 /// ([Escalada]) e subsetores aninhados para renderizá-los.
-Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Escalada> sortedEscaladas, [Escalada? scrollToEscalada, GlobalKey? targetKey, Widget? sortButton, Grupo? grupoContext]) {
+Widget buildSetorBody(
+  BuildContext context,
+  Setor setor,
+  String cragId,
+  List<Escalada> sortedEscaladas, [
+  Escalada? scrollToEscalada,
+  GlobalKey? targetKey,
+  Widget? sortButton,
+  Grupo? grupoContext,
+]) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -26,7 +35,9 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Esc
 
         if (setor.mapas.isNotEmpty) ...[
           ...setor.mapas.map((mapa) {
-            if (mapa.caminhoImagemMapa.isNotEmpty && mapa.larguraMapa > 0 && mapa.alturaMapa > 0) {
+            if (mapa.caminhoImagemMapa.isNotEmpty &&
+                mapa.larguraMapa > 0 &&
+                mapa.alturaMapa > 0) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: ClipRRect(
@@ -51,7 +62,7 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Esc
           builder: (context) {
             // Use common function to check if area is predominantly boulders
             final bool boulderArea = isBoulderArea(sortedEscaladas);
-            
+
             String headerText = 'Vias';
             String emptyText = 'Nenhuma via disponível.';
             if (boulderArea) {
@@ -64,22 +75,25 @@ Widget buildSetorBody(BuildContext context, Setor setor, String cragId, List<Esc
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildHeader(headerText),
-                    ?sortButton,
-                  ],
+                  children: [_buildHeader(headerText), ?sortButton],
                 ),
                 if (sortedEscaladas.isEmpty)
                   Text(emptyText, style: TextStyle(color: fishBone))
                 else ...[
                   ...sortedEscaladas.map((escalada) {
-                    final bool isTarget = (scrollToEscalada != null && targetKey != null && escalada == scrollToEscalada);
-                    final tile = _buildRouteTile(context, escalada, cragId, setor, isTarget: isTarget);
+                    final bool isTarget =
+                        (scrollToEscalada != null &&
+                        targetKey != null &&
+                        escalada == scrollToEscalada);
+                    final tile = _buildRouteTile(
+                      context,
+                      escalada,
+                      cragId,
+                      setor,
+                      isTarget: isTarget,
+                    );
                     if (isTarget) {
-                      return KeyedSubtree(
-                        key: targetKey,
-                        child: tile,
-                      );
+                      return KeyedSubtree(key: targetKey, child: tile);
                     }
                     return tile;
                   }),
@@ -106,8 +120,6 @@ Widget _buildHeader(String title) {
     ),
   );
 }
-
-
 
 /// Resolve the map indicator and concatenated labels for a given Escalada.
 /// Returns a Map with 'mapIndicator' (e.g. 'M1') and 'resolvedLabel' (e.g. '1-X').
@@ -156,7 +168,7 @@ Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
 
     for (int i in searchOrder) {
       final mapa = setor.mapas[i];
-      
+
       Mapa_Referencia? matchingRef;
       for (final ref in mapa.referencias) {
         if (ref.escalada == escaladaNome) {
@@ -173,7 +185,9 @@ Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
               if (p.label.isNotEmpty) {
                 labels.add(p.label);
               } else {
-                labels.add(id); // Fallback to id if label is empty but requested
+                labels.add(
+                  id,
+                ); // Fallback to id if label is empty but requested
               }
               break;
             }
@@ -181,24 +195,27 @@ Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
         }
         resolvedLabel = labels.join('-');
         if (setor.mapas.length > 1) {
-          mapIndicator = 'M${i + 1}'; 
+          mapIndicator = 'M${i + 1}';
         }
         break;
       }
     }
   }
 
-  return {
-    'mapIndicator': mapIndicator,
-    'resolvedLabel': resolvedLabel,
-  };
+  return {'mapIndicator': mapIndicator, 'resolvedLabel': resolvedLabel};
 }
 
 /// Constrói um tile interativo para uma única via de escalada.
 ///
 /// Ele determina o tipo da via para buscar o nome e grau apropriados,
 /// e configura um botão de toque para navegar para a [ViaPage].
-Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, Setor setor, {bool isTarget = false}) {
+Widget _buildRouteTile(
+  BuildContext context,
+  Escalada escalada,
+  String cragId,
+  Setor setor, {
+  bool isTarget = false,
+}) {
   String nome = '';
   String info = '';
   bool destaque = false;
@@ -251,60 +268,72 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           ),
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-          leading: resolvedLabel.isNotEmpty 
-              ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  constraints: const BoxConstraints(minWidth: 40, maxWidth: 60),
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: context.colors.deepBasalt,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: beastHide.withValues(alpha: 0.5)),
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (mapIndicator.isNotEmpty)
-                          Text(
-                            mapIndicator,
-                            style: TextStyle(
-                              color: fishBone.withValues(alpha: 0.8),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        Text(
-                          resolvedLabel,
-                          style: TextStyle(
-                            color: fishBone, 
-                            fontWeight: FontWeight.bold,
-                            fontSize: resolvedLabel.length > 3 ? 12 : 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+            leading: resolvedLabel.isNotEmpty
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      maxWidth: 60,
                     ),
-                  ),
-                )
-              : Icon(Icons.terrain_outlined, color: beastHide),
-          title: Text(nome, style: TextStyle(color: fishBone, fontSize: 16)),
-          subtitle: Text(info, style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 12)),
-          trailing: Icon(Icons.chevron_right, color: beastHide),
-          onTap: () {
-            TelemetryService.instance.logAcaoEscalada(
-              cragId,
-              setor.nome,
-              nome,
-              'abrir_detalhes',
-              'lista_setor'
-            );
-            AppNav.toVia(context, escalada: escalada, setor: setor);
-          },
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: context.colors.deepBasalt,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: beastHide.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (mapIndicator.isNotEmpty)
+                            Text(
+                              mapIndicator,
+                              style: TextStyle(
+                                color: fishBone.withValues(alpha: 0.8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          Text(
+                            resolvedLabel,
+                            style: TextStyle(
+                              color: fishBone,
+                              fontWeight: FontWeight.bold,
+                              fontSize: resolvedLabel.length > 3 ? 12 : 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Icon(Icons.terrain_outlined, color: beastHide),
+            title: Text(nome, style: TextStyle(color: fishBone, fontSize: 16)),
+            subtitle: Text(
+              info,
+              style: TextStyle(
+                color: fishBone.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+            trailing: Icon(Icons.chevron_right, color: beastHide),
+            onTap: () {
+              TelemetryService.instance.logAcaoEscalada(
+                cragId,
+                setor.nome,
+                nome,
+                'abrir_detalhes',
+                'lista_setor',
+              );
+              AppNav.toVia(context, escalada: escalada, setor: setor);
+            },
+          ),
         ),
-      )),
+      ),
       if (destaque)
         Positioned(
           top: -6,
@@ -330,7 +359,9 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
   if (isTarget) {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 2500), // 1000ms scroll delay + 1500ms fade
+      duration: const Duration(
+        milliseconds: 2500,
+      ), // 1000ms scroll delay + 1500ms fade
       builder: (context, value, child) {
         Color color;
         double fadeProgress = 0.0;
@@ -339,7 +370,9 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
           color = Colors.transparent;
         } else {
           fadeProgress = (value - 0.40) / 0.60;
-          color = AppColors.brandColor.withValues(alpha: 0.3 * (1.0 - fadeProgress));
+          color = AppColors.brandColor.withValues(
+            alpha: 0.3 * (1.0 - fadeProgress),
+          );
         }
 
         return Stack(
@@ -356,13 +389,17 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(10),
-                    boxShadow: color.alpha == 0 ? null : [
-                      BoxShadow(
-                        color: AppColors.brandColor.withValues(alpha: 0.6 * (1.0 - fadeProgress)),
-                        blurRadius: 15 * (1.0 - fadeProgress),
-                        spreadRadius: 2 * (1.0 - fadeProgress),
-                      )
-                    ],
+                    boxShadow: color.alpha == 0
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: AppColors.brandColor.withValues(
+                                alpha: 0.6 * (1.0 - fadeProgress),
+                              ),
+                              blurRadius: 15 * (1.0 - fadeProgress),
+                              spreadRadius: 2 * (1.0 - fadeProgress),
+                            ),
+                          ],
                   ),
                 ),
               ),
@@ -377,4 +414,12 @@ Widget _buildRouteTile(BuildContext context, Escalada escalada, String cragId, S
   return card;
 }
 
-enum EscaladaSortMode { original, alphaAsc, alphaDesc, gradeAsc, gradeDesc, protectionsAsc, protectionsDesc }
+enum EscaladaSortMode {
+  original,
+  alphaAsc,
+  alphaDesc,
+  gradeAsc,
+  gradeDesc,
+  protectionsAsc,
+  protectionsDesc,
+}

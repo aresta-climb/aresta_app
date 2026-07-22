@@ -23,133 +23,239 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('Deve falhar ao tentar baixar indice.binarypb se a rede falhar', () async {
-    when(() => mockClient.get(any(), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response('Error', 500));
+  test(
+    'Deve falhar ao tentar baixar indice.binarypb se a rede falhar',
+    () async {
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('Error', 500));
 
-    final runner = SyncPreloadRunner(
-      client: mockClient,
-      baseUrl: NetworkConstants.officialServerUrl,
-      outputDir: tempDir.path,
-    );
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.officialServerUrl,
+        outputDir: tempDir.path,
+      );
 
-    expect(() => runner.run(), throwsException);
-  });
+      expect(() => runner.run(), throwsException);
+    },
+  );
 
-  test('Deve baixar indice.binarypb, salvar no disco e baixar thumbnails', () async {
-    final fakeIndice = Indice(
-      croquis: [
-        ResumoCroqui(id: 'crag1', caminhoRelativo: 'crag1/compilado.binarypb', checksumSha256Croqui: 'hash1'),
-        ResumoCroqui(id: 'crag2', caminhoRelativo: 'crag2/compilado.binarypb', checksumSha256Croqui: 'hash2'),
-      ]
-    );
-    final bytes = fakeIndice.writeToBuffer();
+  test(
+    'Deve baixar indice.binarypb, salvar no disco e baixar thumbnails',
+    () async {
+      final fakeIndice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'crag1',
+            caminhoRelativo: 'crag1/compilado.binarypb',
+            checksumSha256Croqui: 'hash1',
+          ),
+          ResumoCroqui(
+            id: 'crag2',
+            caminhoRelativo: 'crag2/compilado.binarypb',
+            checksumSha256Croqui: 'hash2',
+          ),
+        ],
+      );
+      final bytes = fakeIndice.writeToBuffer();
 
-    // Mock indice download
-    when(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response.bytes(bytes, 200, headers: {'etag': '123'}));
+      // Mock indice download
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response.bytes(bytes, 200, headers: {'etag': '123'}),
+      );
 
-    // Mock thumbnails downloads
-    when(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp'), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response.bytes([1, 2, 3], 200));
+      // Mock thumbnails downloads
+      when(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp',
+          ),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer((_) async => http.Response.bytes([1, 2, 3], 200));
 
-    when(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag2/imagens/thumbnail.webp'), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response.bytes([4, 5, 6], 200));
+      when(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag2/imagens/thumbnail.webp',
+          ),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer((_) async => http.Response.bytes([4, 5, 6], 200));
 
-    final runner = SyncPreloadRunner(
-      client: mockClient,
-      baseUrl: NetworkConstants.officialServerUrl,
-      outputDir: tempDir.path,
-    );
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.officialServerUrl,
+        outputDir: tempDir.path,
+      );
 
-    await runner.run();
+      await runner.run();
 
-    final indiceFile = File('${tempDir.path}/indice.binarypb');
-    expect(indiceFile.existsSync(), isTrue);
-    
-    // ETag test
-    final etagFile = File('${tempDir.path}/indice.etag');
-    expect(etagFile.existsSync(), isTrue);
-    expect(etagFile.readAsStringSync(), '123');
+      final indiceFile = File('${tempDir.path}/indice.binarypb');
+      expect(indiceFile.existsSync(), isTrue);
 
-    // Thumbnails tests
-    final thumb1 = File('${tempDir.path}/thumbnails/crag1.webp');
-    final thumb2 = File('${tempDir.path}/thumbnails/crag2.webp');
-    expect(thumb1.existsSync(), isTrue);
-    expect(thumb2.existsSync(), isTrue);
-    expect(thumb1.readAsBytesSync(), [1, 2, 3]);
-    expect(thumb2.readAsBytesSync(), [4, 5, 6]);
-  });
+      // ETag test
+      final etagFile = File('${tempDir.path}/indice.etag');
+      expect(etagFile.existsSync(), isTrue);
+      expect(etagFile.readAsStringSync(), '123');
 
-  test('Deve mandar ETag se existir localmente e parar se retornar 304', () async {
-    File('${tempDir.path}/indice.etag').writeAsStringSync('old_etag');
+      // Thumbnails tests
+      final thumb1 = File('${tempDir.path}/thumbnails/crag1.webp');
+      final thumb2 = File('${tempDir.path}/thumbnails/crag2.webp');
+      expect(thumb1.existsSync(), isTrue);
+      expect(thumb2.existsSync(), isTrue);
+      expect(thumb1.readAsBytesSync(), [1, 2, 3]);
+      expect(thumb2.readAsBytesSync(), [4, 5, 6]);
+    },
+  );
 
-    when(() => mockClient.get(
+  test(
+    'Deve mandar ETag se existir localmente e parar se retornar 304',
+    () async {
+      File('${tempDir.path}/indice.etag').writeAsStringSync('old_etag');
+
+      when(
+        () => mockClient.get(
           Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
           headers: {'If-None-Match': 'old_etag'},
-        )).thenAnswer((_) async => http.Response('', 304));
+        ),
+      ).thenAnswer((_) async => http.Response('', 304));
 
-    final runner = SyncPreloadRunner(
-      client: mockClient,
-      baseUrl: NetworkConstants.officialServerUrl,
-      outputDir: tempDir.path,
-    );
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.officialServerUrl,
+        outputDir: tempDir.path,
+      );
 
-    await runner.run();
+      await runner.run();
 
-    verify(() => mockClient.get(
-      Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
-      headers: {'If-None-Match': 'old_etag'}
-    )).called(1);
-    
-    verifyNever(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp')));
-  });
+      verify(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          headers: {'If-None-Match': 'old_etag'},
+        ),
+      ).called(1);
 
-  test('Deve comparar hashes antigos com novos e apenas baixar thumbnails que mudaram', () async {
-    // 1. Setup local old indice and thumbnails
-    final oldIndice = Indice(
-      croquis: [
-        ResumoCroqui(id: 'crag1', caminhoRelativo: 'crag1/compilado.binarypb', checksumSha256Croqui: 'hash1_old'), // Mudou
-        ResumoCroqui(id: 'crag2', caminhoRelativo: 'crag2/compilado.binarypb', checksumSha256Croqui: 'hash2_same'), // Não mudou
-      ]
-    );
-    File('${tempDir.path}/indice.binarypb').writeAsBytesSync(oldIndice.writeToBuffer());
-    
-    final thumbsDir = Directory('${tempDir.path}/thumbnails');
-    thumbsDir.createSync(recursive: true);
-    File('${thumbsDir.path}/crag1.webp').writeAsBytesSync([1, 1]);
-    File('${thumbsDir.path}/crag2.webp').writeAsBytesSync([2, 2]);
+      verifyNever(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp',
+          ),
+        ),
+      );
+    },
+  );
 
-    // 2. Setup mock for new indice
-    final newIndice = Indice(
-      croquis: [
-        ResumoCroqui(id: 'crag1', caminhoRelativo: 'crag1/compilado.binarypb', checksumSha256Croqui: 'hash1_new'),
-        ResumoCroqui(id: 'crag2', caminhoRelativo: 'crag2/compilado.binarypb', checksumSha256Croqui: 'hash2_same'),
-      ]
-    );
-    
-    when(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response.bytes(newIndice.writeToBuffer(), 200, headers: {'etag': 'new_etag'}));
+  test(
+    'Deve comparar hashes antigos com novos e apenas baixar thumbnails que mudaram',
+    () async {
+      // 1. Setup local old indice and thumbnails
+      final oldIndice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'crag1',
+            caminhoRelativo: 'crag1/compilado.binarypb',
+            checksumSha256Croqui: 'hash1_old',
+          ), // Mudou
+          ResumoCroqui(
+            id: 'crag2',
+            caminhoRelativo: 'crag2/compilado.binarypb',
+            checksumSha256Croqui: 'hash2_same',
+          ), // Não mudou
+        ],
+      );
+      File(
+        '${tempDir.path}/indice.binarypb',
+      ).writeAsBytesSync(oldIndice.writeToBuffer());
 
-    // Mock only crag1 thumbnail since crag2 shouldn't be downloaded
-    when(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp'), headers: any(named: 'headers')))
-        .thenAnswer((_) async => http.Response.bytes([9, 9], 200));
+      final thumbsDir = Directory('${tempDir.path}/thumbnails');
+      thumbsDir.createSync(recursive: true);
+      File('${thumbsDir.path}/crag1.webp').writeAsBytesSync([1, 1]);
+      File('${thumbsDir.path}/crag2.webp').writeAsBytesSync([2, 2]);
 
-    final runner = SyncPreloadRunner(
-      client: mockClient,
-      baseUrl: NetworkConstants.officialServerUrl,
-      outputDir: tempDir.path,
-    );
+      // 2. Setup mock for new indice
+      final newIndice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'crag1',
+            caminhoRelativo: 'crag1/compilado.binarypb',
+            checksumSha256Croqui: 'hash1_new',
+          ),
+          ResumoCroqui(
+            id: 'crag2',
+            caminhoRelativo: 'crag2/compilado.binarypb',
+            checksumSha256Croqui: 'hash2_same',
+          ),
+        ],
+      );
 
-    await runner.run();
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response.bytes(
+          newIndice.writeToBuffer(),
+          200,
+          headers: {'etag': 'new_etag'},
+        ),
+      );
 
-    // Verify only crag1 was requested
-    verify(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp'), headers: any(named: 'headers'))).called(1);
-    verifyNever(() => mockClient.get(Uri.parse('${NetworkConstants.officialServerUrl}/crag2/imagens/thumbnail.webp'), headers: any(named: 'headers')));
+      // Mock only crag1 thumbnail since crag2 shouldn't be downloaded
+      when(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp',
+          ),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer((_) async => http.Response.bytes([9, 9], 200));
 
-    // Verify files
-    expect(File('${tempDir.path}/thumbnails/crag1.webp').readAsBytesSync(), [9, 9]); // Atualizado
-    expect(File('${tempDir.path}/thumbnails/crag2.webp').readAsBytesSync(), [2, 2]); // Mantido
-    expect(File('${tempDir.path}/indice.etag').readAsStringSync(), 'new_etag');
-  });
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.officialServerUrl,
+        outputDir: tempDir.path,
+      );
+
+      await runner.run();
+
+      // Verify only crag1 was requested
+      verify(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag1/imagens/thumbnail.webp',
+          ),
+          headers: any(named: 'headers'),
+        ),
+      ).called(1);
+      verifyNever(
+        () => mockClient.get(
+          Uri.parse(
+            '${NetworkConstants.officialServerUrl}/crag2/imagens/thumbnail.webp',
+          ),
+          headers: any(named: 'headers'),
+        ),
+      );
+
+      // Verify files
+      expect(File('${tempDir.path}/thumbnails/crag1.webp').readAsBytesSync(), [
+        9,
+        9,
+      ]); // Atualizado
+      expect(File('${tempDir.path}/thumbnails/crag2.webp').readAsBytesSync(), [
+        2,
+        2,
+      ]); // Mantido
+      expect(
+        File('${tempDir.path}/indice.etag').readAsStringSync(),
+        'new_etag',
+      );
+    },
+  );
 }

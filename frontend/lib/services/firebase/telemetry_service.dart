@@ -187,7 +187,9 @@ class TelemetryService {
 
   /// Registra cliques no botão de tentar novamente durante falhas de update
   Future<void> logDatabaseMigrationTryAgain() {
-    return _logEvent('migracao_db', {'acao': 'tentar_novamente_clicado_tela_migracao'});
+    return _logEvent('migracao_db', {
+      'acao': 'tentar_novamente_clicado_tela_migracao',
+    });
   }
 
   /// Registra quando o aplicativo é bloqueado devido à hardMinVersion
@@ -202,6 +204,8 @@ class TelemetryService {
 
   /// Registra quando o banner de atualização recomendada é exibido
   Future<void> logAppVersionRecommendedUpdate() {
-    return _logEvent('migracao_db', {'acao': 'banner_versao_recomendada_mostrado'});
+    return _logEvent('migracao_db', {
+      'acao': 'banner_versao_recomendada_mostrado',
+    });
   }
 }

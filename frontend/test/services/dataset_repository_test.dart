@@ -96,114 +96,139 @@ void main() {
       expect(notified, isTrue);
     });
 
-    test('init deve descompactar indice.binarypb e thumbnails do preload quando o indice local nao existe', () async {
-      final mockBundle = MockAssetBundle();
-      
-      final fakeIndice = Indice(
-        croquis: [
-          ResumoCroqui(id: 'crag1', caminhoRelativo: 'crag1/compilado.binarypb'),
-        ]
-      );
-      final indiceBytes = fakeIndice.writeToBuffer();
-      
-      // Mock para indice.binarypb
-      when(() => mockBundle.load('assets/preload/indice.binarypb'))
-          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
-          
-      // Mock para thumbnail
-      when(() => mockBundle.load('assets/preload/thumbnails/crag1.webp'))
-          .thenAnswer((_) async => ByteData.view(Uint8List.fromList([1,2,3]).buffer));
-          
-      // Injeta o mockBundle (adicionaremos no DatasetRepository depois)
-      repo.assetBundle = mockBundle;
-      SharedPreferences.setMockInitialValues({});
-      await repo.init();
+    test(
+      'init deve descompactar indice.binarypb e thumbnails do preload quando o indice local nao existe',
+      () async {
+        final mockBundle = MockAssetBundle();
 
-      final docsPath = tempDir.path;
-      final localIndiceFile = File(editor.indicePath(docsPath));
-      expect(localIndiceFile.existsSync(), isTrue);
-      
-      final thumbFile = File('$docsPath/thumbnails/crag1.webp');
-      expect(thumbFile.existsSync(), isTrue);
-      
-      // Deve ter carregado na memoria
-      expect(repo.activeDataset.value!.availablePicos.length, 1);
-    });
+        final fakeIndice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'crag1',
+              caminhoRelativo: 'crag1/compilado.binarypb',
+            ),
+          ],
+        );
+        final indiceBytes = fakeIndice.writeToBuffer();
 
-    test('updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos e preencher data', () async {
-      repo.activeDataset.value = TopoDataset(
-        availablePicos: [{'id': 'pico_1', 'isDownloaded': false}],
-        downloadedPicos: [],
-      );
+        // Mock para indice.binarypb
+        when(
+          () => mockBundle.load('assets/preload/indice.binarypb'),
+        ).thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
 
-      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/pico_1');
-      await picoDir.create(recursive: true);
-      final picoFile = File('${picoDir.path}/pico_1.binarypb');
-      
-      final dummyPico = Pico()..nome = 'Pico Teste';
-      final dummyCroqui = Croqui()..picos.add(dummyPico);
-      await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
+        // Mock para thumbnail
+        when(
+          () => mockBundle.load('assets/preload/thumbnails/crag1.webp'),
+        ).thenAnswer(
+          (_) async => ByteData.view(Uint8List.fromList([1, 2, 3]).buffer),
+        );
 
-      await repo.updateDatasetAfterDownload('pico_1');
+        // Injeta o mockBundle (adicionaremos no DatasetRepository depois)
+        repo.assetBundle = mockBundle;
+        SharedPreferences.setMockInitialValues({});
+        await repo.init();
 
-      final updatedAvailable = repo.activeDataset.value!.availablePicos;
-      expect(updatedAvailable.first['isDownloaded'], isTrue);
-      
-      final downloaded = repo.activeDataset.value!.downloadedPicos;
-      expect(downloaded.length, 1);
-      expect(downloaded.first['data'], isNotNull);
-      expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
-      expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
-    });
+        final docsPath = tempDir.path;
+        final localIndiceFile = File(editor.indicePath(docsPath));
+        expect(localIndiceFile.existsSync(), isTrue);
 
-    test('loadIndiceToMemory mapeia o campo descricao do ResumoCroqui', () async {
-      final indice = Indice(
-        croquis: [
-          ResumoCroqui(
-            id: 'pico_desc',
-            nome: 'Nome',
-            descricao: 'Uma descrição curta muito legal',
-            caminhoRelativo: 'pico_desc.zip',
-          )
-        ]
-      );
-      repo.indiceData.value = indice;
-      await repo.loadIndiceToMemory(indice);
-      
-      final available = repo.activeDataset.value!.availablePicos;
-      expect(available.length, 1);
-      expect(available.first['descricao'], 'Uma descrição curta muito legal');
-    });
+        final thumbFile = File('$docsPath/thumbnails/crag1.webp');
+        expect(thumbFile.existsSync(), isTrue);
 
-    test('loadIndiceToMemory deve preencher a chave [data] na inicializacao se o pico ja estiver baixado', () async {
-      // Simula um pico já baixado no disco antes de carregar o índice
-      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/pico_boot');
-      await picoDir.create(recursive: true);
-      final picoFile = File('${picoDir.path}/pico_boot.binarypb');
-      
-      final dummyPico = Pico()..nome = 'Pico de Boot Teste';
-      final dummyCroqui = Croqui()..picos.add(dummyPico);
-      await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
+        // Deve ter carregado na memoria
+        expect(repo.activeDataset.value!.availablePicos.length, 1);
+      },
+    );
 
-      final indice = Indice(
-        croquis: [
-          ResumoCroqui(
-            id: 'pico_boot',
-            nome: 'Nome',
-            caminhoRelativo: 'pico_boot.zip',
-          )
-        ]
-      );
-      
-      await repo.loadIndiceToMemory(indice);
-      
-      final downloaded = repo.activeDataset.value!.downloadedPicos;
-      expect(downloaded.length, 1);
-      expect(downloaded.first['isDownloaded'], isTrue);
-      expect(downloaded.first['data'], isNotNull);
-      expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
-      expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
-    });
+    test(
+      'updateDatasetAfterDownload deve atualizar isDownloaded flag no availablePicos e preencher data',
+      () async {
+        repo.activeDataset.value = TopoDataset(
+          availablePicos: [
+            {'id': 'pico_1', 'isDownloaded': false},
+          ],
+          downloadedPicos: [],
+        );
+
+        final picoDir = Directory(
+          '${editor.downloadsPath(tempDir.path)}/pico_1',
+        );
+        await picoDir.create(recursive: true);
+        final picoFile = File('${picoDir.path}/pico_1.binarypb');
+
+        final dummyPico = Pico()..nome = 'Pico Teste';
+        final dummyCroqui = Croqui()..picos.add(dummyPico);
+        await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
+
+        await repo.updateDatasetAfterDownload('pico_1');
+
+        final updatedAvailable = repo.activeDataset.value!.availablePicos;
+        expect(updatedAvailable.first['isDownloaded'], isTrue);
+
+        final downloaded = repo.activeDataset.value!.downloadedPicos;
+        expect(downloaded.length, 1);
+        expect(downloaded.first['data'], isNotNull);
+        expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
+        expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
+      },
+    );
+
+    test(
+      'loadIndiceToMemory mapeia o campo descricao do ResumoCroqui',
+      () async {
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'pico_desc',
+              nome: 'Nome',
+              descricao: 'Uma descrição curta muito legal',
+              caminhoRelativo: 'pico_desc.zip',
+            ),
+          ],
+        );
+        repo.indiceData.value = indice;
+        await repo.loadIndiceToMemory(indice);
+
+        final available = repo.activeDataset.value!.availablePicos;
+        expect(available.length, 1);
+        expect(available.first['descricao'], 'Uma descrição curta muito legal');
+      },
+    );
+
+    test(
+      'loadIndiceToMemory deve preencher a chave [data] na inicializacao se o pico ja estiver baixado',
+      () async {
+        // Simula um pico já baixado no disco antes de carregar o índice
+        final picoDir = Directory(
+          '${editor.downloadsPath(tempDir.path)}/pico_boot',
+        );
+        await picoDir.create(recursive: true);
+        final picoFile = File('${picoDir.path}/pico_boot.binarypb');
+
+        final dummyPico = Pico()..nome = 'Pico de Boot Teste';
+        final dummyCroqui = Croqui()..picos.add(dummyPico);
+        await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
+
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'pico_boot',
+              nome: 'Nome',
+              caminhoRelativo: 'pico_boot.zip',
+            ),
+          ],
+        );
+
+        await repo.loadIndiceToMemory(indice);
+
+        final downloaded = repo.activeDataset.value!.downloadedPicos;
+        expect(downloaded.length, 1);
+        expect(downloaded.first['isDownloaded'], isTrue);
+        expect(downloaded.first['data'], isNotNull);
+        expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
+        expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -246,65 +271,90 @@ void main() {
       AppLogger.instance = mockLogger;
     });
 
-    test('deve logar erro se falhar ao carregar o indice do bundle (ex: pasta não existe)', () async {
-      final mockBundle = MockAssetBundle();
-      when(() => mockBundle.load('assets/preload/indice.binarypb'))
-          .thenThrow(Exception('Bundle não encontrado'));
-      
-      repo.assetBundle = mockBundle;
-      
-      // Chamamos init que por sua vez chama _unpackPreloadedAssets na ausência de diretórios
-      await repo.init();
+    test(
+      'deve logar erro se falhar ao carregar o indice do bundle (ex: pasta não existe)',
+      () async {
+        final mockBundle = MockAssetBundle();
+        when(
+          () => mockBundle.load('assets/preload/indice.binarypb'),
+        ).thenThrow(Exception('Bundle não encontrado'));
 
-      expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
-      expect(
-        mockLogger.recordedErrors.any((e) => e['contextMessage'].contains('Preload de indice.binarypb')),
-        isTrue,
-      );
-    });
+        repo.assetBundle = mockBundle;
 
-    test('deve logar erro se falhar ao carregar uma thumbnail específica', () async {
-      final mockBundle = MockAssetBundle();
-      
-      final mockIndice = Indice()..croquis.add(ResumoCroqui()
-        ..id = 'pico_sem_thumb'
-        ..caminhoRelativo = 'picos/pico_sem_thumb.binarypb'
-      );
-      final indiceBytes = mockIndice.writeToBuffer();
-      
-      when(() => mockBundle.load('assets/preload/indice.binarypb'))
-          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
-          
-      when(() => mockBundle.load('assets/preload/thumbnails/pico_sem_thumb.webp'))
-          .thenThrow(Exception('Thumbnail missing in bundle'));
-      
-      repo.assetBundle = mockBundle;
-      
-      await repo.init();
+        // Chamamos init que por sua vez chama _unpackPreloadedAssets na ausência de diretórios
+        await repo.init();
 
-      // O índice foi carregado com sucesso, mas a thumbnail falhou
-      expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
-      expect(
-        mockLogger.recordedErrors.any((e) => e['contextMessage'].contains('Erro ao carregar thumbnail pico_sem_thumb')),
-        isTrue,
-      );
-    });
+        expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
+        expect(
+          mockLogger.recordedErrors.any(
+            (e) => e['contextMessage'].contains('Preload de indice.binarypb'),
+          ),
+          isTrue,
+        );
+      },
+    );
 
-    test('deve definir a cached_data_version para evitar tela de migração na primeira instalação', () async {
-      SharedPreferences.setMockInitialValues({});
-      final mockBundle = MockAssetBundle();
-      final mockIndice = Indice();
-      final indiceBytes = mockIndice.writeToBuffer();
-      
-      when(() => mockBundle.load('assets/preload/indice.binarypb'))
-          .thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
-          
-      repo.assetBundle = mockBundle;
-      
-      await repo.init();
+    test(
+      'deve logar erro se falhar ao carregar uma thumbnail específica',
+      () async {
+        final mockBundle = MockAssetBundle();
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getInt('cached_data_version'), equals(NetworkConstants.kDataVersion));
-    });
+        final mockIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_sem_thumb'
+              ..caminhoRelativo = 'picos/pico_sem_thumb.binarypb',
+          );
+        final indiceBytes = mockIndice.writeToBuffer();
+
+        when(
+          () => mockBundle.load('assets/preload/indice.binarypb'),
+        ).thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
+
+        when(
+          () =>
+              mockBundle.load('assets/preload/thumbnails/pico_sem_thumb.webp'),
+        ).thenThrow(Exception('Thumbnail missing in bundle'));
+
+        repo.assetBundle = mockBundle;
+
+        await repo.init();
+
+        // O índice foi carregado com sucesso, mas a thumbnail falhou
+        expect(mockLogger.recordedErrors.isNotEmpty, isTrue);
+        expect(
+          mockLogger.recordedErrors.any(
+            (e) => e['contextMessage'].contains(
+              'Erro ao carregar thumbnail pico_sem_thumb',
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'deve definir a cached_data_version para evitar tela de migração na primeira instalação',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final mockBundle = MockAssetBundle();
+        final mockIndice = Indice();
+        final indiceBytes = mockIndice.writeToBuffer();
+
+        when(
+          () => mockBundle.load('assets/preload/indice.binarypb'),
+        ).thenAnswer((_) async => ByteData.view(indiceBytes.buffer));
+
+        repo.assetBundle = mockBundle;
+
+        await repo.init();
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getInt('cached_data_version'),
+          equals(NetworkConstants.kDataVersion),
+        );
+      },
+    );
   });
 }

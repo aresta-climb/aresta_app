@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
+
 /// Página de Configurações do aplicativo.
 class SettingsPage extends StatefulWidget {
   final DatasetRepository datasetRepo;
@@ -18,7 +19,8 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Maintain existing background appearance if any
+      backgroundColor:
+          Colors.transparent, // Maintain existing background appearance if any
       body: Column(
         children: [
           buildCommonAppBar(context, 'Configurações'),
@@ -44,4 +46,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-

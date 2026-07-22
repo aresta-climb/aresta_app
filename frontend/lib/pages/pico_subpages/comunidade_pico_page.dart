@@ -23,12 +23,14 @@ class ComunidadePicoPage extends StatelessWidget {
   void _pushTextNode(BuildContext context, String title, String content) {
     final treeNav = TreeNavigationWrapper.currentTreeController;
     if (treeNav != null) {
-      treeNav.navigateTo(TextNode(
-        title: title,
-        content: content,
-        cragId: cragId,
-        parent: treeNav.currentNode,
-      ));
+      treeNav.navigateTo(
+        TextNode(
+          title: title,
+          content: content,
+          cragId: cragId,
+          parent: treeNav.currentNode,
+        ),
+      );
     }
   }
 
@@ -42,18 +44,27 @@ class ComunidadePicoPage extends StatelessWidget {
         child: Column(
           children: [
             if (categories.comunidadeInfo.isNotEmpty)
-              ...categories.comunidadeInfo.map((b) => PicoMenuCard(
-                title: 'Informações',
-                subtitle: b.texto,
-                icon: Icons.info_outline,
-                iconColor: context.colors.dryMoss,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () => _pushTextNode(context, 'Informações', b.destino.secaoTextual.conteudo),
-              )),
+              ...categories.comunidadeInfo.map(
+                (b) => PicoMenuCard(
+                  title: 'Informações',
+                  subtitle: b.texto,
+                  icon: Icons.info_outline,
+                  iconColor: context.colors.dryMoss,
+                  backgroundColor: context.colors.caveShadow,
+                  titleColor: context.colors.chalkWhite,
+                  subtitleColor: context.colors.chalkWhite.withValues(
+                    alpha: 0.7,
+                  ),
+                  onTap: () => _pushTextNode(
+                    context,
+                    'Informações',
+                    b.destino.secaoTextual.conteudo,
+                  ),
+                ),
+              ),
 
-            if (pico.nomeAssociacao.isNotEmpty && pico.urlFiliacaoAssociacao.isNotEmpty)
+            if (pico.nomeAssociacao.isNotEmpty &&
+                pico.urlFiliacaoAssociacao.isNotEmpty)
               PicoMenuCard(
                 title: 'Associação Local',
                 subtitle: pico.nomeAssociacao,
@@ -64,30 +75,46 @@ class ComunidadePicoPage extends StatelessWidget {
                 subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
                 onTap: () => launchUrl(Uri.parse(pico.urlFiliacaoAssociacao)),
               ),
-              
+
             if (categories.comunidadeParceiros.isNotEmpty)
-              ...categories.comunidadeParceiros.map((b) => PicoMenuCard(
-                title: 'Parceiros',
-                subtitle: b.texto,
-                icon: Icons.handshake,
-                iconColor: context.colors.rustIron,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () => _pushTextNode(context, 'Parceiros', b.destino.secaoTextual.conteudo),
-              )),
+              ...categories.comunidadeParceiros.map(
+                (b) => PicoMenuCard(
+                  title: 'Parceiros',
+                  subtitle: b.texto,
+                  icon: Icons.handshake,
+                  iconColor: context.colors.rustIron,
+                  backgroundColor: context.colors.caveShadow,
+                  titleColor: context.colors.chalkWhite,
+                  subtitleColor: context.colors.chalkWhite.withValues(
+                    alpha: 0.7,
+                  ),
+                  onTap: () => _pushTextNode(
+                    context,
+                    'Parceiros',
+                    b.destino.secaoTextual.conteudo,
+                  ),
+                ),
+              ),
 
             if (categories.comunidadeComercio.isNotEmpty)
-              ...categories.comunidadeComercio.map((b) => PicoMenuCard(
-                title: 'Comércio local',
-                subtitle: b.texto,
-                icon: Icons.storefront,
-                iconColor: context.colors.clayEarth,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () => _pushTextNode(context, 'Comércio local', b.destino.secaoTextual.conteudo),
-              )),
+              ...categories.comunidadeComercio.map(
+                (b) => PicoMenuCard(
+                  title: 'Comércio local',
+                  subtitle: b.texto,
+                  icon: Icons.storefront,
+                  iconColor: context.colors.clayEarth,
+                  backgroundColor: context.colors.caveShadow,
+                  titleColor: context.colors.chalkWhite,
+                  subtitleColor: context.colors.chalkWhite.withValues(
+                    alpha: 0.7,
+                  ),
+                  onTap: () => _pushTextNode(
+                    context,
+                    'Comércio local',
+                    b.destino.secaoTextual.conteudo,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

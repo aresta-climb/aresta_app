@@ -11,7 +11,7 @@ import '../services/editor_croqui.dart';
 import 'common_functions.dart';
 
 /// Um widget que renderiza conteúdo Markdown com suporte a imagens offline locais.
-/// 
+///
 /// Ele resolve automaticamente caminhos de imagem relativos com o diretório
 /// 'downloads' local do aplicativo.
 class OfflineMarkdown extends StatefulWidget {
@@ -19,11 +19,7 @@ class OfflineMarkdown extends StatefulWidget {
   final String data;
   final String cragId;
 
-  const OfflineMarkdown({
-    super.key,
-    required this.data,
-    required this.cragId,
-  });
+  const OfflineMarkdown({super.key, required this.data, required this.cragId});
 
   @override
   State<OfflineMarkdown> createState() => _OfflineMarkdownState();
@@ -52,8 +48,9 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
         }
 
         final editor = EditorDeCroqui.instance;
-        final downloadsPath = '${editor.downloadsPath(snapshot.data!.path)}/${widget.cragId}';
-        
+        final downloadsPath =
+            '${editor.downloadsPath(snapshot.data!.path)}/${widget.cragId}';
+
         String markdownData = widget.data;
 
         return MarkdownBody(
@@ -61,17 +58,26 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
           extensionSet: md.ExtensionSet.gitHubFlavored,
           onTapLink: (text, href, title) async {
             if (href != null) {
-              TelemetryService.instance.logLinkExterno(href, 'markdown_offline');
+              TelemetryService.instance.logLinkExterno(
+                href,
+                'markdown_offline',
+              );
               try {
-                await launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+                await launchUrl(
+                  Uri.parse(href),
+                  mode: LaunchMode.externalApplication,
+                );
               } catch (e) {
-                AppLogger.instance.logError('abrir_link_markdown', error: e.toString());
+                AppLogger.instance.logError(
+                  'abrir_link_markdown',
+                  error: e.toString(),
+                );
               }
             }
           },
           imageBuilder: (Uri uri, String? title, String? alt) {
             String path = Uri.decodeFull(uri.toString());
-            
+
             String fileName = '';
             if (uri.pathSegments.isNotEmpty) {
               fileName = Uri.decodeFull(uri.pathSegments.last);
@@ -80,7 +86,7 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
             }
 
             File? localFile;
-            
+
             // 1. Tenta mapear a URL do servidor conhecida diretamente para o caminho baixado
             final baseUrl = '${NetworkConstants.officialServerUrl}/';
             String cleanUrl = Uri.decodeFull(uri.toString());
@@ -91,29 +97,32 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
                 localFile = directFile;
               }
             }
-            
+
             // 2. Tenta usar o caminho diretamente como um caminho relativo
             if (localFile == null) {
-               String cleanPath;
-               if (path.startsWith('/')) {
-                 cleanPath = path.substring(1);
-               } else {
-                 cleanPath = path;
-               }
-               
-               final directFile = File('$downloadsPath/$cleanPath');
-               if (directFile.existsSync()) {
-                 localFile = directFile;
-               }
+              String cleanPath;
+              if (path.startsWith('/')) {
+                cleanPath = path.substring(1);
+              } else {
+                cleanPath = path;
+              }
+
+              final directFile = File('$downloadsPath/$cleanPath');
+              if (directFile.existsSync()) {
+                localFile = directFile;
+              }
             }
 
             // 3. Fallback: Procura pelo nome do arquivo recursivamente no diretório de downloads
             if (localFile == null && fileName.isNotEmpty) {
               final searchName = Uri.decodeComponent(fileName).toLowerCase();
-              
+
               String searchBaseName;
               if (searchName.contains('.')) {
-                searchBaseName = searchName.substring(0, searchName.lastIndexOf('.'));
+                searchBaseName = searchName.substring(
+                  0,
+                  searchName.lastIndexOf('.'),
+                );
               } else {
                 searchBaseName = searchName;
               }
@@ -126,22 +135,27 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
                     if (entity is File) {
                       final String ePath = entity.path.replaceAll('\\', '/');
                       final String eName = ePath.split('/').last;
-                      final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
-                      
+                      final String eNameLower = Uri.decodeComponent(
+                        eName,
+                      ).toLowerCase();
+
                       // Correspondência exata
                       if (eNameLower == searchName) {
                         localFile = entity;
                         break;
                       }
-                      
+
                       // Corresponde ao nome base sem extensão (lida com incompatibilidades .webp vs .jpg)
                       String eBaseName;
                       if (eNameLower.contains('.')) {
-                        eBaseName = eNameLower.substring(0, eNameLower.lastIndexOf('.'));
+                        eBaseName = eNameLower.substring(
+                          0,
+                          eNameLower.lastIndexOf('.'),
+                        );
                       } else {
                         eBaseName = eNameLower;
                       }
-                      
+
                       if (eBaseName == searchBaseName) {
                         localFile = entity;
                         break;
@@ -180,10 +194,17 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                buildFeedbackButton(context, color: Colors.white),
+                                buildFeedbackButton(
+                                  context,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 8),
                                 IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
                                   onPressed: () => Navigator.of(context).pop(),
                                 ),
                               ],
@@ -202,31 +223,53 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
             if (localFile != null && localFile.existsSync()) {
               final provider = FileImage(localFile);
               _imageProviders.add(provider);
-              return buildZoomableImage(Image(
-                image: provider,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-              ));
+              return buildZoomableImage(
+                Image(
+                  image: provider,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                ),
+              );
             }
-            
+
             // Fallback para a rede se for uma URL absoluta (apenas caso não tenha sido baixada)
             if (path.startsWith('http://') || path.startsWith('https://')) {
               final provider = NetworkImage(path);
               _imageProviders.add(provider);
-              return buildZoomableImage(Image(
-                image: provider,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-              ));
+              return buildZoomableImage(
+                Image(
+                  image: provider,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
+                ),
+              );
             }
-            
+
             return const Icon(Icons.broken_image, color: Colors.grey);
           },
           styleSheet: MarkdownStyleSheet(
             p: TextStyle(color: fishBone.withValues(alpha: 0.8), fontSize: 16),
-            h1: TextStyle(color: fishBone, fontSize: 24, fontWeight: FontWeight.bold),
-            h2: TextStyle(color: fishBone, fontSize: 22, fontWeight: FontWeight.bold),
-            h3: TextStyle(color: fishBone, fontSize: 20, fontWeight: FontWeight.bold),
+            h1: TextStyle(
+              color: fishBone,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            h2: TextStyle(
+              color: fishBone,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+            h3: TextStyle(
+              color: fishBone,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         );
       },

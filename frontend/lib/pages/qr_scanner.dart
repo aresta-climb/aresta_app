@@ -32,7 +32,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
             controller: cameraController,
             onDetect: (BarcodeCapture capture) {
               if (_isScanned) return;
-              
+
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
                 final String? rawValue = barcode.rawValue;
@@ -68,11 +68,16 @@ class _QRScannerPageState extends State<QRScannerPage> {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: const Text(
                   'Aponte a câmera para o QR Code\ndo repositório',
@@ -91,4 +96,3 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 }
-

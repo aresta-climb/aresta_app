@@ -50,10 +50,7 @@ Widget buildActionCard(
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: context.colors.ashGrey,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: context.colors.ashGrey, fontSize: 12),
                 ),
               ],
             ),
@@ -113,7 +110,10 @@ Widget buildTermsCard(BuildContext context) {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: context.colors.slateBlue.withValues(alpha: 0.5)),
+          Icon(
+            Icons.chevron_right,
+            color: context.colors.slateBlue.withValues(alpha: 0.5),
+          ),
         ],
       ),
     ),
@@ -175,9 +175,9 @@ Future<void> launchURL(BuildContext context, String url) async {
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao abrir o link.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o link.')));
     }
   }
 }
@@ -202,7 +202,8 @@ class _TermsBottomSheetContent extends StatefulWidget {
   const _TermsBottomSheetContent();
 
   @override
-  State<_TermsBottomSheetContent> createState() => _TermsBottomSheetContentState();
+  State<_TermsBottomSheetContent> createState() =>
+      _TermsBottomSheetContentState();
 }
 
 class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
@@ -213,7 +214,7 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    
+
     // Verifica se já está no final caso o texto caiba na tela sem scroll
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkIfAtBottom();
@@ -222,11 +223,12 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
 
   void _checkIfAtBottom() {
     if (!_scrollController.hasClients) return;
-    
+
     // Se o maxScrollExtent for pequeno ou 0, significa que não precisa de scroll
     // ou se já rolou até o fim
     if (_scrollController.position.maxScrollExtent <= 0 ||
-        _scrollController.offset >= _scrollController.position.maxScrollExtent - 10) {
+        _scrollController.offset >=
+            _scrollController.position.maxScrollExtent - 10) {
       if (!_isAtBottom) {
         setState(() {
           _isAtBottom = true;
@@ -294,12 +296,14 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
           // Scrollable Content
           Flexible(
             child: FutureBuilder<String>(
-              future: DefaultAssetBundle.of(context).loadString('legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md'),
+              future: DefaultAssetBundle.of(
+                context,
+              ).loadString('legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md'),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 // Dispara a verificação após o conteúdo ser carregado
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _checkIfAtBottom();
@@ -385,27 +389,27 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
               ),
             ),
           ] else ...[
-             Center(
-               child: GestureDetector(
-                 onTap: () {
-                   if (_scrollController.hasClients) {
-                     _scrollController.animateTo(
-                       _scrollController.position.maxScrollExtent,
-                       duration: const Duration(milliseconds: 300),
-                       curve: Curves.easeOut,
-                     );
-                   }
-                 },
-                 child: Padding(
-                   padding: const EdgeInsets.symmetric(vertical: 16),
-                   child: Icon(
-                     Icons.keyboard_arrow_down,
-                     color: context.colors.rustIron.withValues(alpha: 0.5),
-                     size: 32,
-                   ),
-                 ),
-               ),
-             ),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    color: context.colors.rustIron.withValues(alpha: 0.5),
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
           ],
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
@@ -475,7 +479,9 @@ void showLinkOverlay(
               child: Text(
                 link.isNotEmpty ? link : 'link faltando',
                 style: TextStyle(
-                  color: link.isNotEmpty ? context.colors.dryMoss : context.colors.rustIron,
+                  color: link.isNotEmpty
+                      ? context.colors.dryMoss
+                      : context.colors.rustIron,
                   fontSize: 14,
                   fontFamily: 'monospace',
                 ),
@@ -524,7 +530,9 @@ void showLinkOverlay(
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
-                        color: link.isNotEmpty ? context.colors.slateBlue : Colors.grey.withValues(alpha: 0.5),
+                        color: link.isNotEmpty
+                            ? context.colors.slateBlue
+                            : Colors.grey.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
@@ -569,10 +577,12 @@ class _PrivacyBottomSheetContent extends StatefulWidget {
   const _PrivacyBottomSheetContent();
 
   @override
-  State<_PrivacyBottomSheetContent> createState() => _PrivacyBottomSheetContentState();
+  State<_PrivacyBottomSheetContent> createState() =>
+      _PrivacyBottomSheetContentState();
 }
 
-class _PrivacyBottomSheetContentState extends State<_PrivacyBottomSheetContent> {
+class _PrivacyBottomSheetContentState
+    extends State<_PrivacyBottomSheetContent> {
   final ScrollController _scrollController = ScrollController();
   bool _isAtBottom = false;
 
@@ -588,7 +598,8 @@ class _PrivacyBottomSheetContentState extends State<_PrivacyBottomSheetContent> 
   void _checkIfAtBottom() {
     if (!_scrollController.hasClients) return;
     if (_scrollController.position.maxScrollExtent <= 0 ||
-        _scrollController.offset >= _scrollController.position.maxScrollExtent - 10) {
+        _scrollController.offset >=
+            _scrollController.position.maxScrollExtent - 10) {
       if (!_isAtBottom) {
         setState(() {
           _isAtBottom = true;
@@ -656,7 +667,9 @@ class _PrivacyBottomSheetContentState extends State<_PrivacyBottomSheetContent> 
           // Scrollable Content
           Flexible(
             child: FutureBuilder<String>(
-              future: DefaultAssetBundle.of(context).loadString('legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md'),
+              future: DefaultAssetBundle.of(context).loadString(
+                'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
+              ),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -739,27 +752,27 @@ class _PrivacyBottomSheetContentState extends State<_PrivacyBottomSheetContent> 
               ),
             ),
           ] else ...[
-             Center(
-               child: GestureDetector(
-                 onTap: () {
-                   if (_scrollController.hasClients) {
-                     _scrollController.animateTo(
-                       _scrollController.position.maxScrollExtent,
-                       duration: const Duration(milliseconds: 300),
-                       curve: Curves.easeOut,
-                     );
-                   }
-                 },
-                 child: Padding(
-                   padding: const EdgeInsets.symmetric(vertical: 16),
-                   child: Icon(
-                     Icons.keyboard_arrow_down,
-                     color: context.colors.rustIron.withValues(alpha: 0.5),
-                     size: 32,
-                   ),
-                 ),
-               ),
-             ),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    color: context.colors.rustIron.withValues(alpha: 0.5),
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
           ],
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],

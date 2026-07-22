@@ -16,7 +16,10 @@ class FakeSyncService extends Fake implements SyncService {
   ValueNotifier<SyncStatus> get syncStatus => status;
 
   @override
-  Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
+  Future<List<String>> syncIndex({
+    bool auto = true,
+    bool forceBypassCache = false,
+  }) async {
     didSync = true;
     if (shouldBeOffline) {
       status.value = SyncStatus.offline;
@@ -40,7 +43,9 @@ void main() {
       TelemetryService.instance = MockTelemetryService();
     });
 
-    testWidgets('Deve mostrar loader inicialmente e chamar syncIndex', (WidgetTester tester) async {
+    testWidgets('Deve mostrar loader inicialmente e chamar syncIndex', (
+      WidgetTester tester,
+    ) async {
       final fakeSyncService = FakeSyncService();
 
       await tester.pumpWidget(
@@ -54,70 +59,95 @@ void main() {
 
       // Deve mostrar CircularProgressIndicator inicialmente
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Atualizando o banco de dados. Isso exigirá internet.'), findsOneWidget);
-      
+      expect(
+        find.text('Atualizando o banco de dados. Isso exigirá internet.'),
+        findsOneWidget,
+      );
+
       // Deve ter chamado syncIndex
       expect(fakeSyncService.didSync, isTrue);
 
       final mockTelemetry = TelemetryService.instance as MockTelemetryService;
       expect(mockTelemetry.recordedEvents.contains('migracao_db'), isTrue);
-      expect(mockTelemetry.recordedParams['migracao_db']?['acao'], 'aberta_tela_migracao');
-    });
-
-    testWidgets('Deve mostrar erro se syncIndex falhar e permitir Tentar Novamente', (WidgetTester tester) async {
-      final fakeSyncService = FakeSyncService()..shouldFail = true;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DatabaseMigrationScreen(
-            syncService: fakeSyncService,
-            onMigrationComplete: () {},
-          ),
-        ),
+      expect(
+        mockTelemetry.recordedParams['migracao_db']?['acao'],
+        'aberta_tela_migracao',
       );
-
-      // Aguarda a execução do Future no initState
-      await tester.pumpAndSettle();
-
-      // Deve mostrar erro
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
-      expect(find.text('Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.'), findsOneWidget);
-      expect(find.text('Tentar Novamente'), findsOneWidget);
-
-      // Reset para sucesso
-      fakeSyncService.shouldFail = false;
-      fakeSyncService.didSync = false;
-
-      // Clica em tentar novamente
-      await tester.tap(find.text('Tentar Novamente'));
-      await tester.pump(); // Inicia a troca de state
-      
-      // Pula a animação do Future de sync
-      await tester.pump(const Duration(milliseconds: 100));
-
-      final mockTelemetry = TelemetryService.instance as MockTelemetryService;
-      expect(mockTelemetry.recordedEvents.contains('migracao_db'), isTrue);
-      expect(mockTelemetry.recordedParams['migracao_db']?['acao'], 'tentar_novamente_clicado_tela_migracao');
     });
 
-    testWidgets('Deve mostrar erro se syncIndex retornar SyncStatus.offline (falta de internet)', (WidgetTester tester) async {
-      final fakeSyncService = FakeSyncService();
-      fakeSyncService.shouldBeOffline = true;
+    testWidgets(
+      'Deve mostrar erro se syncIndex falhar e permitir Tentar Novamente',
+      (WidgetTester tester) async {
+        final fakeSyncService = FakeSyncService()..shouldFail = true;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DatabaseMigrationScreen(
-            syncService: fakeSyncService,
-            onMigrationComplete: () {},
+        await tester.pumpWidget(
+          MaterialApp(
+            home: DatabaseMigrationScreen(
+              syncService: fakeSyncService,
+              onMigrationComplete: () {},
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        // Aguarda a execução do Future no initState
+        await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
-      expect(find.text('Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.'), findsOneWidget);
-      expect(find.text('Tentar Novamente'), findsOneWidget);
-    });
+        // Deve mostrar erro
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(
+          find.text(
+            'Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Tentar Novamente'), findsOneWidget);
+
+        // Reset para sucesso
+        fakeSyncService.shouldFail = false;
+        fakeSyncService.didSync = false;
+
+        // Clica em tentar novamente
+        await tester.tap(find.text('Tentar Novamente'));
+        await tester.pump(); // Inicia a troca de state
+
+        // Pula a animação do Future de sync
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final mockTelemetry = TelemetryService.instance as MockTelemetryService;
+        expect(mockTelemetry.recordedEvents.contains('migracao_db'), isTrue);
+        expect(
+          mockTelemetry.recordedParams['migracao_db']?['acao'],
+          'tentar_novamente_clicado_tela_migracao',
+        );
+      },
+    );
+
+    testWidgets(
+      'Deve mostrar erro se syncIndex retornar SyncStatus.offline (falta de internet)',
+      (WidgetTester tester) async {
+        final fakeSyncService = FakeSyncService();
+        fakeSyncService.shouldBeOffline = true;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: DatabaseMigrationScreen(
+              syncService: fakeSyncService,
+              onMigrationComplete: () {},
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(
+          find.text(
+            'Não foi possível atualizar o banco de dados. Verifique sua conexão com a internet.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Tentar Novamente'), findsOneWidget);
+      },
+    );
   });
 }

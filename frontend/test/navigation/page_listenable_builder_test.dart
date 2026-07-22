@@ -29,128 +29,158 @@ void main() {
       repo = DatasetRepository(editorDeCroqui: editor);
     });
 
-    testWidgets('Deve injetar o Pico na UI e recarregar quando o dataset mudar', (WidgetTester tester) async {
-      final picoV1 = Pico()..nome = 'Pico Versão 1';
-      final picoV2 = Pico()..nome = 'Pico Versão 2';
-      final croqui = Croqui();
+    testWidgets(
+      'Deve injetar o Pico na UI e recarregar quando o dataset mudar',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Versão 1';
+        final picoV2 = Pico()..nome = 'Pico Versão 2';
+        final croqui = Croqui();
 
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': picoV1, 'croqui': croqui}}
-        ],
-        availablePicos: [],
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PageListenableBuilder(
-            datasetRepo: repo,
-            cragId: 'pico_1',
-            builder: (context, pico, croqui, setor, grupo, escalada) {
-              return Text(pico.nome);
+        repo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
             },
+          ],
+          availablePicos: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_1',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump();
+        await tester.pump();
 
-      // Verifica se a Versão 1 foi renderizada
-      expect(find.text('Pico Versão 1'), findsOneWidget);
-      expect(find.text('Pico Versão 2'), findsNothing);
+        // Verifica se a Versão 1 foi renderizada
+        expect(find.text('Pico Versão 1'), findsOneWidget);
+        expect(find.text('Pico Versão 2'), findsNothing);
 
-      // Simula um Hot-Reload (Novo download do _checkForUpdates)
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': picoV2, 'croqui': croqui}}
-        ],
-        availablePicos: [],
-      );
+        // Simula um Hot-Reload (Novo download do _checkForUpdates)
+        repo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+            },
+          ],
+          availablePicos: [],
+        );
 
-      await tester.pump();
+        await tester.pump();
 
-      // Verifica se a UI se atualizou sozinha para a Versão 2
-      expect(find.text('Pico Versão 1'), findsNothing);
-      expect(find.text('Pico Versão 2'), findsOneWidget);
-    });
+        // Verifica se a UI se atualizou sozinha para a Versão 2
+        expect(find.text('Pico Versão 1'), findsNothing);
+        expect(find.text('Pico Versão 2'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Deve executar AppNav.back() se o Setor for deletado do Dataset', (WidgetTester tester) async {
-      final mockObserver = MockNavigatorObserver();
+    testWidgets(
+      'Deve executar AppNav.back() se o Setor for deletado do Dataset',
+      (WidgetTester tester) async {
+        final mockObserver = MockNavigatorObserver();
 
-      final setorV1 = Setor()..nome = 'Setor de Teste';
-      final arquivoSetor = ArquivoSetor()..conteudo = setorV1;
+        final setorV1 = Setor()..nome = 'Setor de Teste';
+        final arquivoSetor = ArquivoSetor()..conteudo = setorV1;
 
-      final picoV1 = Pico()..nome = 'Pico V1';
-      picoV1.setoresOuGrupos.add(SetorOuGrupo()..setor = arquivoSetor);
+        final picoV1 = Pico()..nome = 'Pico V1';
+        picoV1.setoresOuGrupos.add(SetorOuGrupo()..setor = arquivoSetor);
 
-      final croqui = Croqui();
+        final croqui = Croqui();
 
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': picoV1, 'croqui': croqui}}
-        ],
-        availablePicos: [],
-      );
+        repo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
+            },
+          ],
+          availablePicos: [],
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorObservers: [mockObserver],
-          home: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PageListenableBuilder(
-                          datasetRepo: repo,
-                          cragId: 'pico_1',
-                          setorNome: 'Setor de Teste',
-                          builder: (context, pico, croqui, setor, grupo, escalada) {
-                            return Scaffold(body: Text('View do ${setor?.nome}'));
-                          },
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [mockObserver],
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PageListenableBuilder(
+                            datasetRepo: repo,
+                            cragId: 'pico_1',
+                            setorNome: 'Setor de Teste',
+                            builder:
+                                (
+                                  context,
+                                  pico,
+                                  croqui,
+                                  setor,
+                                  grupo,
+                                  escalada,
+                                ) {
+                                  return Scaffold(
+                                    body: Text('View do ${setor?.nome}'),
+                                  );
+                                },
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  child: const Text('Go'),
-                ),
-              );
-            },
+                      );
+                    },
+                    child: const Text('Go'),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      // Entra na tela
-      await tester.tap(find.text('Go'));
-      await tester.pumpAndSettle();
+        // Entra na tela
+        await tester.tap(find.text('Go'));
+        await tester.pumpAndSettle();
 
-      // Verifica que o Setor de Teste carregou
-      expect(find.text('View do Setor de Teste'), findsOneWidget);
-      expect(mockObserver.hasPopped, isFalse);
+        // Verifica que o Setor de Teste carregou
+        expect(find.text('View do Setor de Teste'), findsOneWidget);
+        expect(mockObserver.hasPopped, isFalse);
 
-      // Hot-Reload: Um novo Pico entra, mas o "Setor de Teste" foi deletado no servidor!
-      final picoV2 = Pico()..nome = 'Pico V2 Sem Setores';
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': picoV2, 'croqui': croqui}}
-        ],
-        availablePicos: [],
-      );
+        // Hot-Reload: Um novo Pico entra, mas o "Setor de Teste" foi deletado no servidor!
+        final picoV2 = Pico()..nome = 'Pico V2 Sem Setores';
+        repo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+            },
+          ],
+          availablePicos: [],
+        );
 
-      // Pump para processar o builder
-      await tester.pump();
-      
-      // O PageListenableBuilder deve agendar um pop
-      await tester.pumpAndSettle();
+        // Pump para processar o builder
+        await tester.pump();
 
-      // Verifica se ele fez pop de volta para a primeira tela
-      expect(mockObserver.hasPopped, isTrue);
-      expect(find.text('Go'), findsOneWidget);
-    });
+        // O PageListenableBuilder deve agendar um pop
+        await tester.pumpAndSettle();
 
-    testWidgets('Deve encontrar Setor aninhado dentro de um Grupo', (WidgetTester tester) async {
+        // Verifica se ele fez pop de volta para a primeira tela
+        expect(mockObserver.hasPopped, isTrue);
+        expect(find.text('Go'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Deve encontrar Setor aninhado dentro de um Grupo', (
+      WidgetTester tester,
+    ) async {
       final mockObserver = MockNavigatorObserver();
 
       final subSetor = Setor()..nome = 'Sub-setor Teste';
@@ -158,7 +188,7 @@ void main() {
 
       final grupo = Grupo()..nome = 'Grupo Teste';
       grupo.setores.add(arquivoSubSetor);
-      
+
       final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
 
       final pico = Pico()..nome = 'Pico Teste';
@@ -168,7 +198,10 @@ void main() {
 
       repo.activeDataset.value = TopoDataset(
         downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': pico, 'croqui': croqui}}
+          {
+            'id': 'pico_1',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
         ],
         availablePicos: [],
       );
@@ -188,9 +221,12 @@ void main() {
                           datasetRepo: repo,
                           cragId: 'pico_1',
                           setorNome: 'Sub-setor Teste',
-                          builder: (context, pico, croqui, setor, grupo, escalada) {
-                            return Scaffold(body: Text('View do ${setor?.nome}'));
-                          },
+                          builder:
+                              (context, pico, croqui, setor, grupo, escalada) {
+                                return Scaffold(
+                                  body: Text('View do ${setor?.nome}'),
+                                );
+                              },
                         ),
                       ),
                     );
@@ -211,13 +247,19 @@ void main() {
       expect(find.text('View do Sub-setor Teste'), findsOneWidget);
       expect(mockObserver.hasPopped, isFalse);
     });
-    testWidgets('Deve exibir o popup bloqueante se houver recarga pendente', (WidgetTester tester) async {
+    testWidgets('Deve exibir o popup bloqueante se houver recarga pendente', (
+      WidgetTester tester,
+    ) async {
       final picoV1 = Pico()..nome = 'Pico Teste';
       final croqui = Croqui();
 
       repo.activeDataset.value = TopoDataset(
         downloadedPicos: [
-          {'id': 'pico_1', 'data': {'pico': picoV1, 'croqui': croqui}, 'isDownloaded': true}
+          {
+            'id': 'pico_1',
+            'data': {'pico': picoV1, 'croqui': croqui},
+            'isDownloaded': true,
+          },
         ],
         availablePicos: [],
       );
@@ -234,11 +276,17 @@ void main() {
       );
 
       await tester.pump(const Duration(milliseconds: 500));
-      
-      final wrapperState = tester.state<State<TreeNavigationWrapper>>(find.byType(TreeNavigationWrapper)) as dynamic;
+
+      final wrapperState =
+          tester.state<State<TreeNavigationWrapper>>(
+                find.byType(TreeNavigationWrapper),
+              )
+              as dynamic;
       final treeController = wrapperState.treeController;
 
-      treeController.navigateTo(PicoNode(cragId: 'pico_1', parent: const HomeNode()));
+      treeController.navigateTo(
+        PicoNode(cragId: 'pico_1', parent: const HomeNode()),
+      );
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Croqui Atualizado'), findsNothing);

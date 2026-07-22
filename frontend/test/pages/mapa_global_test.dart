@@ -4,6 +4,7 @@
 /// e renderizar a barra de navegação corretamente sem quebrar a árvore
 /// de widgets, utilizando uma carga simulada de picos.
 library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapa_global.dart';
@@ -21,7 +22,9 @@ class FakeSyncService extends SyncService {
 }
 
 void main() {
-  testWidgets('MapaGlobalPage renders correctly with crags', (WidgetTester tester) async {
+  testWidgets('MapaGlobalPage renders correctly with crags', (
+    WidgetTester tester,
+  ) async {
     final mockEditor = EditorDeCroqui();
     final mockRepo = FakeDatasetRepository(mockEditor);
     final mockSync = FakeSyncService(mockRepo);
@@ -36,17 +39,19 @@ void main() {
       },
     ];
 
-    await tester.pumpWidget(MaterialApp(
-      home: MapaGlobalPage(
-        crags: crags,
-        datasetRepo: mockRepo,
-        syncService: mockSync,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapaGlobalPage(
+          crags: crags,
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+        ),
       ),
-    ));
+    );
 
     // Verifica AppBar
     expect(find.text('Mapa Global'), findsOneWidget);
-    
+
     // Verifica se o GoogleMap é renderizado
     expect(find.byType(GoogleMap), findsOneWidget);
   });

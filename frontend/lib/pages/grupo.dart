@@ -37,7 +37,7 @@ class _GrupoPageState extends State<GrupoPage> {
     final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
     final matches = regex.allMatches(jsonString);
     List<String> paths = [];
-    
+
     for (var match in matches) {
       if (match.groupCount >= 1) {
         String path = match.group(1)!;
@@ -59,14 +59,14 @@ class _GrupoPageState extends State<GrupoPage> {
 
   List<ArquivoSetor> get _sortedSetores {
     if (_sortMode == GrupoSortMode.original) return widget.grupo.setores;
-    
+
     final list = List<ArquivoSetor>.from(widget.grupo.setores);
     list.sort((a, b) {
       if (!a.hasConteudo() || !b.hasConteudo()) return 0;
-      
+
       final nomeA = a.conteudo.nome.toLowerCase();
       final nomeB = b.conteudo.nome.toLowerCase();
-      
+
       switch (_sortMode) {
         case GrupoSortMode.alphaAsc:
           return nomeA.compareTo(nomeB);
@@ -97,23 +97,31 @@ class _GrupoPageState extends State<GrupoPage> {
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final top = constraints.biggest.height;
-                final collapsedHeight = MediaQuery.of(context).padding.top + kToolbarHeight;
+                final collapsedHeight =
+                    MediaQuery.of(context).padding.top + kToolbarHeight;
                 final expandedHeight = 300.0;
                 // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
                 // Usamos isso para animar manualmente o padding e o tamanho da fonte.
-                double t = (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+                double t =
+                    (top - collapsedHeight) /
+                    (expandedHeight - collapsedHeight);
                 t = t.clamp(0.0, 1.0);
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
                     FlexibleSpaceBar(
-                      background: widget.grupo.mapas.isNotEmpty && _coverProviderFuture != null
+                      background:
+                          widget.grupo.mapas.isNotEmpty &&
+                              _coverProviderFuture != null
                           ? FutureBuilder<ImageProvider?>(
                               future: _coverProviderFuture,
                               builder: (context, snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return Container(color: context.colors.deepBasalt);
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Container(
+                                    color: context.colors.deepBasalt,
+                                  );
                                 }
                                 if (snapshot.hasData && snapshot.data != null) {
                                   return Stack(
@@ -133,7 +141,13 @@ class _GrupoPageState extends State<GrupoPage> {
                                             gradient: LinearGradient(
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
-                                              colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
+                                              colors: [
+                                                Colors.black,
+                                                Colors.black.withValues(
+                                                  alpha: 0.7,
+                                                ),
+                                                Colors.transparent,
+                                              ],
                                               stops: const [0.0, 0.4, 1.0],
                                             ),
                                           ),
@@ -149,7 +163,15 @@ class _GrupoPageState extends State<GrupoPage> {
                                             gradient: LinearGradient(
                                               begin: Alignment.bottomCenter,
                                               end: Alignment.topCenter,
-                                              colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
+                                              colors: [
+                                                Colors.black.withValues(
+                                                  alpha: 0.9,
+                                                ),
+                                                Colors.black.withValues(
+                                                  alpha: 0.6,
+                                                ),
+                                                Colors.transparent,
+                                              ],
                                               stops: const [0.0, 0.4, 1.0],
                                             ),
                                           ),
@@ -161,7 +183,10 @@ class _GrupoPageState extends State<GrupoPage> {
                                 return Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    buildCragBackground('', cragId: widget.cragId),
+                                    buildCragBackground(
+                                      '',
+                                      cragId: widget.cragId,
+                                    ),
                                     Positioned(
                                       top: 0,
                                       left: 0,
@@ -172,7 +197,13 @@ class _GrupoPageState extends State<GrupoPage> {
                                           gradient: LinearGradient(
                                             begin: Alignment.topCenter,
                                             end: Alignment.bottomCenter,
-                                            colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
+                                            colors: [
+                                              Colors.black,
+                                              Colors.black.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                              Colors.transparent,
+                                            ],
                                             stops: const [0.0, 0.4, 1.0],
                                           ),
                                         ),
@@ -188,7 +219,15 @@ class _GrupoPageState extends State<GrupoPage> {
                                           gradient: LinearGradient(
                                             begin: Alignment.bottomCenter,
                                             end: Alignment.topCenter,
-                                            colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
+                                            colors: [
+                                              Colors.black.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                              Colors.black.withValues(
+                                                alpha: 0.6,
+                                              ),
+                                              Colors.transparent,
+                                            ],
                                             stops: const [0.0, 0.4, 1.0],
                                           ),
                                         ),
@@ -212,7 +251,11 @@ class _GrupoPageState extends State<GrupoPage> {
                                       gradient: LinearGradient(
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
-                                        colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
+                                        colors: [
+                                          Colors.black,
+                                          Colors.black.withValues(alpha: 0.7),
+                                          Colors.transparent,
+                                        ],
                                         stops: const [0.0, 0.4, 1.0],
                                       ),
                                     ),
@@ -228,7 +271,11 @@ class _GrupoPageState extends State<GrupoPage> {
                                       gradient: LinearGradient(
                                         begin: Alignment.bottomCenter,
                                         end: Alignment.topCenter,
-                                        colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.9),
+                                          Colors.black.withValues(alpha: 0.6),
+                                          Colors.transparent,
+                                        ],
                                         stops: const [0.0, 0.4, 1.0],
                                       ),
                                     ),
@@ -286,4 +333,3 @@ class _GrupoPageState extends State<GrupoPage> {
     );
   }
 }
-

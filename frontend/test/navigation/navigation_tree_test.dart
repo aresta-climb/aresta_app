@@ -6,9 +6,19 @@ void main() {
   group('NavNode path', () {
     test('copyWithMergedAncestor copies TextNode', () {
       final baseNode = HomeNode();
-      final textNode = TextNode(title: 'T', content: 'C', cragId: '1', parent: baseNode);
+      final textNode = TextNode(
+        title: 'T',
+        content: 'C',
+        cragId: '1',
+        parent: baseNode,
+      );
       final newBase = HomeNode();
-      final newTextNode = TextNode(title: 'T_old', content: 'C_old', cragId: '1', parent: newBase);
+      final newTextNode = TextNode(
+        title: 'T_old',
+        content: 'C_old',
+        cragId: '1',
+        parent: newBase,
+      );
 
       final copied = textNode.copyWithMergedAncestor(newTextNode) as TextNode;
       expect(copied.title, 'T');
@@ -21,7 +31,12 @@ void main() {
       final node1 = PicoNode(cragId: '123', parent: root);
       final node2 = GrupoNode(cragId: '123', grupoNome: 'Grupo', parent: node1);
       final node3 = SetorNode(cragId: '123', setorNome: 'Setor', parent: node2);
-      final node4 = ViaNode(cragId: '123', escaladaNome: 'Via', grupoNome: 'Grupo', parent: node3);
+      final node4 = ViaNode(
+        cragId: '123',
+        escaladaNome: 'Via',
+        grupoNome: 'Grupo',
+        parent: node3,
+      );
 
       final path = node4.path;
 
@@ -69,39 +84,45 @@ void main() {
   });
 
   group('TreeNavigationController - Infinite Loop Prevention', () {
-    test('Navigating between MapaGeral and MapaInterativo should not create an infinite loop', () {
-      final controller = TreeNavigationController();
-      
-      final pico = Pico()..nome = 'Pico Teste';
-      final mapa = Mapa();
-      
-      // Navigate to Home
-      expect(controller.currentNode, isA<HomeNode>());
-      
-      // Navigate to Pico
-      final picoNode = PicoNode(cragId: '123', parent: controller.currentNode);
-      controller.navigateTo(picoNode);
-      expect(controller.currentNode, isA<PicoNode>());
-    });
-    
+    test(
+      'Navigating between MapaGeral and MapaInterativo should not create an infinite loop',
+      () {
+        final controller = TreeNavigationController();
+
+        final pico = Pico()..nome = 'Pico Teste';
+        final mapa = Mapa();
+
+        // Navigate to Home
+        expect(controller.currentNode, isA<HomeNode>());
+
+        // Navigate to Pico
+        final picoNode = PicoNode(
+          cragId: '123',
+          parent: controller.currentNode,
+        );
+        controller.navigateTo(picoNode);
+        expect(controller.currentNode, isA<PicoNode>());
+      },
+    );
+
     test('Navigating to MapaGlobal should set BrowseNode as parent', () {
       final controller = TreeNavigationController();
-      
+
       // Navigate to Home
       expect(controller.currentNode, isA<HomeNode>());
-      
+
       // Navigate to Browse
       final browseNode = BrowseNode(controller.currentNode);
       controller.navigateTo(browseNode);
       expect(controller.currentNode, isA<BrowseNode>());
-      
+
       // Navigate to MapaGlobal
       final mapaGlobalNode = MapaGlobalNode(
         crags: [],
         parent: controller.currentNode,
       );
       controller.navigateTo(mapaGlobalNode);
-      
+
       expect(controller.currentNode, isA<MapaGlobalNode>());
       expect(controller.currentNode.parent, isA<BrowseNode>());
       expect(controller.currentNode.parent?.parent, isA<HomeNode>());
@@ -121,7 +142,10 @@ void main() {
 
     test('MapaGlobalNode toString()', () {
       const node = MapaGlobalNode(
-        crags: [{'id': 'pico1'}, {'id': 'pico2'}],
+        crags: [
+          {'id': 'pico1'},
+          {'id': 'pico2'},
+        ],
         parent: HomeNode(),
       );
       expect(node.toString(), 'MapaGlobalNode(2 picos)');
@@ -162,19 +186,24 @@ void main() {
         escaladaNome: 'Via Láctea',
         parent: HomeNode(),
       );
-      expect(nodeComSetor.toString(), 'ViaNode(pico_santuario, Clube da Luta, null, Via Láctea)');
+      expect(
+        nodeComSetor.toString(),
+        'ViaNode(pico_santuario, Clube da Luta, null, Via Láctea)',
+      );
 
       const nodeSemSetor = ViaNode(
         cragId: 'pico_santuario',
         escaladaNome: 'Via Láctea',
         parent: HomeNode(),
       );
-      expect(nodeSemSetor.toString(), 'ViaNode(pico_santuario, null, null, Via Láctea)');
+      expect(
+        nodeSemSetor.toString(),
+        'ViaNode(pico_santuario, null, null, Via Láctea)',
+      );
 
       // A chave (toString) deve ser diferente mesmo se o nome da escalada for igual
       expect(nodeComSetor.toString() != nodeSemSetor.toString(), isTrue);
     });
-
 
     test('CarrosselItemData armazena propriedades de contexto (TDD)', () {
       const data = CarrosselItemData(
@@ -184,7 +213,7 @@ void main() {
         escaladaContextNome: 'Via C',
         initialSelectedId: 'marker_1',
       );
-      
+
       expect(data.mapaCaminhoImagem, 'assets/map1.png');
       expect(data.setorContextNome, 'Setor A');
       expect(data.grupoContextNome, 'Grupo B');

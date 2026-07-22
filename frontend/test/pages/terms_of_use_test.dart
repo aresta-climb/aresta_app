@@ -39,7 +39,8 @@ void main() {
   }
 
   final defaultFiles = {
-    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': '### TERMOS DE USO E ACEITAÇÃO DE RISCOS\nConteúdo mockado dos termos.',
+    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md':
+        '### TERMOS DE USO E ACEITAÇÃO DE RISCOS\nConteúdo mockado dos termos.',
     'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Mocked Privacy',
   };
 
@@ -56,7 +57,10 @@ void main() {
         findsOneWidget,
       ); // Finds the terms markdown
 
-      final acceptButtonFinder = find.widgetWithText(FilledButton, 'Aceitar Termos e Continuar');
+      final acceptButtonFinder = find.widgetWithText(
+        FilledButton,
+        'Aceitar Termos e Continuar',
+      );
       expect(acceptButtonFinder, findsOneWidget);
 
       final FilledButton acceptButton = tester.widget(acceptButtonFinder);
@@ -102,41 +106,46 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('Data da atualização:'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Data da atualização:'), findsOneWidget);
   });
 
-  testWidgets('TermsOfUsePage logs telemetry and opens modal on privacy policy link tap', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'TermsOfUsePage logs telemetry and opens modal on privacy policy link tap',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+      );
+      await tester.pumpAndSettle();
 
-    final telemetry = TelemetryService.instance as MockTelemetryService;
-    telemetry.clear();
+      final telemetry = TelemetryService.instance as MockTelemetryService;
+      telemetry.clear();
 
-    final markdownWidget = tester.widget<MarkdownBody>(find.byType(MarkdownBody).first);
-    
-    // Simula o clique no link da política de privacidade no Markdown
-    markdownWidget.onTapLink!(
-      'Política de Privacidade', 
-      'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html', 
-      'title'
-    );
-    await tester.pumpAndSettle();
+      final markdownWidget = tester.widget<MarkdownBody>(
+        find.byType(MarkdownBody).first,
+      );
 
-    // Verifica se o modal abriu
-    expect(find.text('Política de Privacidade', skipOffstage: false), findsWidgets);
+      // Simula o clique no link da política de privacidade no Markdown
+      markdownWidget.onTapLink!(
+        'Política de Privacidade',
+        'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html',
+        'title',
+      );
+      await tester.pumpAndSettle();
 
-    // Verifica se a telemetria foi logada corretamente
-    expect(telemetry.recordedEvents.contains('acao_configuracoes'), isTrue);
-    expect(
-      telemetry.recordedParams['acao_configuracoes']?['acao'], 
-      'abrir_politica_privacidade'
-    );
-  });
+      // Verifica se o modal abriu
+      expect(
+        find.text('Política de Privacidade', skipOffstage: false),
+        findsWidgets,
+      );
+
+      // Verifica se a telemetria foi logada corretamente
+      expect(telemetry.recordedEvents.contains('acao_configuracoes'), isTrue);
+      expect(
+        telemetry.recordedParams['acao_configuracoes']?['acao'],
+        'abrir_politica_privacidade',
+      );
+    },
+  );
 
   test('formatLegalDate correctly formats ISO dates', () {
     expect(formatLegalDate('2026-06-04'), '04 de Junho de 2026');
@@ -144,64 +153,76 @@ void main() {
     expect(formatLegalDate('invalid-date'), 'invalid-date'); // fallback
   });
 
-  testWidgets('TermsOfUsePage displays accepted timestamp banner when in read-only mode', (
-    WidgetTester tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({
-      'accepted_legal_timestamp': '2026-06-07T21:50:00.000',
-    });
+  testWidgets(
+    'TermsOfUsePage displays accepted timestamp banner when in read-only mode',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({
+        'accepted_legal_timestamp': '2026-06-07T21:50:00.000',
+      });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TermsOfUsePage(
-          onAccepted: () {},
-          showAcceptButton: false, // Read-only mode
-          assetBundle: MockAssetBundle(defaultFiles),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TermsOfUsePage(
+            onAccepted: () {},
+            showAcceptButton: false, // Read-only mode
+            assetBundle: MockAssetBundle(defaultFiles),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('Aceito em 07 de Junho de 2026 às 21:50'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.textContaining('Aceito em 07 de Junho de 2026 às 21:50'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('TermsOfUsePage displays feedback button in the AppBar when in read-only mode', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TermsOfUsePage(
-          onAccepted: () {},
-          showAcceptButton: false, // AppBar só aparece no modo read-only
-          assetBundle: MockAssetBundle(defaultFiles),
+  testWidgets(
+    'TermsOfUsePage displays feedback button in the AppBar when in read-only mode',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TermsOfUsePage(
+            onAccepted: () {},
+            showAcceptButton: false, // AppBar só aparece no modo read-only
+            assetBundle: MockAssetBundle(defaultFiles),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Verifica se o ícone do botão de feedback existe na tela
-    expect(find.byIcon(Icons.bug_report), findsOneWidget);
-  });
+      // Verifica se o ícone do botão de feedback existe na tela
+      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+    },
+  );
 
-  testWidgets('TermsOfUsePage displays feedback button in the Privacy Policy bottom sheet', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      createTestWidget(isUpdatingTerms: false, files: defaultFiles),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'TermsOfUsePage displays feedback button in the Privacy Policy bottom sheet',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        createTestWidget(isUpdatingTerms: false, files: defaultFiles),
+      );
+      await tester.pumpAndSettle();
 
-    final markdownWidget = tester.widget<MarkdownBody>(find.byType(MarkdownBody).first);
-    markdownWidget.onTapLink!(
-      'Política de Privacidade', 
-      'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html', 
-      'title'
-    );
-    await tester.pumpAndSettle();
+      final markdownWidget = tester.widget<MarkdownBody>(
+        find.byType(MarkdownBody).first,
+      );
+      markdownWidget.onTapLink!(
+        'Política de Privacidade',
+        'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html',
+        'title',
+      );
+      await tester.pumpAndSettle();
 
-    // Verifica se o modal abriu
-    expect(find.text('Política de Privacidade', skipOffstage: false), findsWidgets);
-    
-    // Verifica se o ícone do botão de feedback existe na AppBar do modal
-    expect(find.byIcon(Icons.bug_report), findsOneWidget);
-  });
+      // Verifica se o modal abriu
+      expect(
+        find.text('Política de Privacidade', skipOffstage: false),
+        findsWidgets,
+      );
+
+      // Verifica se o ícone do botão de feedback existe na AppBar do modal
+      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+    },
+  );
 }

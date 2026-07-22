@@ -24,12 +24,14 @@ class ApoiePicoPage extends StatelessWidget {
   void _pushTextNode(BuildContext context, String title, String content) {
     final treeNav = TreeNavigationWrapper.currentTreeController;
     if (treeNav != null) {
-      treeNav.navigateTo(TextNode(
-        title: title,
-        content: content,
-        cragId: cragId,
-        parent: treeNav.currentNode,
-      ));
+      treeNav.navigateTo(
+        TextNode(
+          title: title,
+          content: content,
+          cragId: cragId,
+          parent: treeNav.currentNode,
+        ),
+      );
     }
   }
 
@@ -45,17 +47,22 @@ class ApoiePicoPage extends StatelessWidget {
             if (pico.chavePixManutencao.isNotEmpty)
               PicoMenuCard(
                 title: 'Doação via Pix',
-                subtitle: 'Ajude a comprar chapeletas e correntes de inox.\nChave: ${pico.chavePixManutencao}',
+                subtitle:
+                    'Ajude a comprar chapeletas e correntes de inox.\nChave: ${pico.chavePixManutencao}',
                 icon: Icons.attach_money,
                 iconColor: Colors.green,
                 backgroundColor: context.colors.caveShadow,
                 titleColor: context.colors.chalkWhite,
                 subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
                 onTap: () {
-                  Clipboard.setData(ClipboardData(text: pico.chavePixManutencao));
+                  Clipboard.setData(
+                    ClipboardData(text: pico.chavePixManutencao),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Chave PIX copiada para a área de transferência!'),
+                      content: const Text(
+                        'Chave PIX copiada para a área de transferência!',
+                      ),
                       backgroundColor: context.colors.mossRock,
                     ),
                   );
@@ -63,16 +70,24 @@ class ApoiePicoPage extends StatelessWidget {
               ),
 
             if (categories.apoioProdutos.isNotEmpty)
-              ...categories.apoioProdutos.map((b) => PicoMenuCard(
-                title: 'Produtos do pico',
-                subtitle: b.texto,
-                icon: Icons.layers,
-                iconColor: context.colors.beastHide,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () => _pushTextNode(context, 'Produtos do pico', b.destino.secaoTextual.conteudo),
-              )),
+              ...categories.apoioProdutos.map(
+                (b) => PicoMenuCard(
+                  title: 'Produtos do pico',
+                  subtitle: b.texto,
+                  icon: Icons.layers,
+                  iconColor: context.colors.beastHide,
+                  backgroundColor: context.colors.caveShadow,
+                  titleColor: context.colors.chalkWhite,
+                  subtitleColor: context.colors.chalkWhite.withValues(
+                    alpha: 0.7,
+                  ),
+                  onTap: () => _pushTextNode(
+                    context,
+                    'Produtos do pico',
+                    b.destino.secaoTextual.conteudo,
+                  ),
+                ),
+              ),
 
             if (pico.patrocinadores.isNotEmpty)
               PicoMenuCard(
@@ -85,10 +100,14 @@ class ApoiePicoPage extends StatelessWidget {
                 subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
                 onTap: () {
                   // If we had a specific page for sponsors we would push here, or we can just open a mailto link
-                  launchUrl(Uri.parse('mailto:contato@aresta.app?subject=Patrocinio ${pico.nome}'));
+                  launchUrl(
+                    Uri.parse(
+                      'mailto:contato@aresta.app?subject=Patrocinio ${pico.nome}',
+                    ),
+                  );
                 },
               ),
-              
+
             PicoMenuCard(
               title: 'Envie uma informação',
               subtitle: 'Contribuir sugerindo novas vias ou correções.',
@@ -98,7 +117,11 @@ class ApoiePicoPage extends StatelessWidget {
               titleColor: context.colors.chalkWhite,
               subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
               onTap: () {
-                launchUrl(Uri.parse('mailto:contato@aresta.app?subject=Sugestão/Correção ${pico.nome}'));
+                launchUrl(
+                  Uri.parse(
+                    'mailto:contato@aresta.app?subject=Sugestão/Correção ${pico.nome}',
+                  ),
+                );
               },
             ),
           ],

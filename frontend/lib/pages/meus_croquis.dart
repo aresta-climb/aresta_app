@@ -60,11 +60,18 @@ class MeusCroquisPage extends StatelessWidget {
                       IconButton(
                         icon: Icon(Icons.sync, color: context.colors.ashGrey),
                         onPressed: () async {
-                          await handleManualSync(context, datasetRepo, syncService);
+                          await handleManualSync(
+                            context,
+                            datasetRepo,
+                            syncService,
+                          );
                         },
                       ),
                       const SizedBox(width: 8),
-                      buildFeedbackButton(context, color: context.colors.ashGrey),
+                      buildFeedbackButton(
+                        context,
+                        color: context.colors.ashGrey,
+                      ),
                     ],
                   ),
                 ],

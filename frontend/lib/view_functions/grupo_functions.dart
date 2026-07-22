@@ -10,7 +10,14 @@ import '../theme/app_colors.dart';
 ///
 /// Ele exibe as informações do grupo e uma lista de todos os grupos de setores (setores)
 /// disponíveis dentro do pico.
-Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<ArquivoSetor> sortedSetores, GrupoSortMode currentSortMode, Function(GrupoSortMode) onSortChanged) {
+Widget buildGrupoBody(
+  BuildContext context,
+  Grupo grupo,
+  String cragId,
+  List<ArquivoSetor> sortedSetores,
+  GrupoSortMode currentSortMode,
+  Function(GrupoSortMode) onSortChanged,
+) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
@@ -22,7 +29,9 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<Arq
         ],
         if (grupo.mapas.isNotEmpty) ...[
           ...grupo.mapas.map((mapa) {
-            if (mapa.caminhoImagemMapa.isNotEmpty && mapa.larguraMapa > 0 && mapa.alturaMapa > 0) {
+            if (mapa.caminhoImagemMapa.isNotEmpty &&
+                mapa.larguraMapa > 0 &&
+                mapa.alturaMapa > 0) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: ClipRRect(
@@ -50,7 +59,12 @@ Widget buildGrupoBody(BuildContext context, Grupo grupo, String cragId, List<Arq
         else
           ...sortedSetores.map((arquivoSetor) {
             if (arquivoSetor.hasConteudo()) {
-              return buildSectorTile(context, arquivoSetor.conteudo, cragId, grupoContext: grupo);
+              return buildSectorTile(
+                context,
+                arquivoSetor.conteudo,
+                cragId,
+                grupoContext: grupo,
+              );
             }
             return const SizedBox.shrink();
           }),
@@ -74,9 +88,11 @@ Widget _buildHeader(String title) {
   );
 }
 
-
-
-Widget _buildGrupoSortGrid(BuildContext context, GrupoSortMode currentMode, Function(GrupoSortMode)? onSortChanged) {
+Widget _buildGrupoSortGrid(
+  BuildContext context,
+  GrupoSortMode currentMode,
+  Function(GrupoSortMode)? onSortChanged,
+) {
   return GridView.count(
     crossAxisCount: 2,
     shrinkWrap: true,
@@ -96,7 +112,9 @@ Widget _buildGrupoSortGrid(BuildContext context, GrupoSortMode currentMode, Func
         context: context,
         label: 'ALFABÉTICO',
         icon: Icons.sort_by_alpha,
-        isActive: currentMode == GrupoSortMode.alphaAsc || currentMode == GrupoSortMode.alphaDesc,
+        isActive:
+            currentMode == GrupoSortMode.alphaAsc ||
+            currentMode == GrupoSortMode.alphaDesc,
         onTap: () {
           if (currentMode == GrupoSortMode.alphaAsc) {
             onSortChanged?.call(GrupoSortMode.alphaDesc);

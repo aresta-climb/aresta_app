@@ -3,6 +3,7 @@
 /// Nota: testes de connect/disconnect/activateExperimental que precisam de
 /// acesso ao disco são cobertos nos testes de integração.
 library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/constants/network_constants.dart';
@@ -29,18 +30,23 @@ void main() {
       expect(editor.activeBaseUrl, 'http://meuservidor.local:8080');
     });
 
-    test('deve retornar a URL ghost aresta-zip no modo experimental com URL', () {
-      editor.isExperimentalMode.value = true;
-      editor.editorUrl.value = 'aresta-zip:///data/repo.croqui';
-      expect(editor.activeBaseUrl, 'aresta-zip:///data/repo.croqui');
-    });
+    test(
+      'deve retornar a URL ghost aresta-zip no modo experimental com URL',
+      () {
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value = 'aresta-zip:///data/repo.croqui';
+        expect(editor.activeBaseUrl, 'aresta-zip:///data/repo.croqui');
+      },
+    );
 
     test('deve normalizar URLs sem scheme adicionando https://', () {
       editor.isExperimentalMode.value = true;
       editor.editorUrl.value = 'aresta-climb.github.io/aresta_serving';
-      expect(editor.activeBaseUrl, 'https://aresta-climb.github.io/aresta_serving');
+      expect(
+        editor.activeBaseUrl,
+        'https://aresta-climb.github.io/aresta_serving',
+      );
     });
-
   });
 
   // ---------------------------------------------------------------------------

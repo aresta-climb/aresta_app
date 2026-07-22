@@ -16,10 +16,12 @@ class IndiceUpdated extends FetchIndiceResult {
   final Uint8List rawBytes;
   final String? newEtag;
 
-  IndiceUpdated({required this.newIndice, required this.rawBytes, this.newEtag});
+  IndiceUpdated({
+    required this.newIndice,
+    required this.rawBytes,
+    this.newEtag,
+  });
 }
-
-
 
 /// Gerencia as requisições de rede para sincronização,
 /// ocultando detalhes como retries, cabeçalhos HTTP e caminhos de fallback.
@@ -37,7 +39,10 @@ class SyncNetwork {
       try {
         return await action();
       } catch (e) {
-        AppLogger.instance.logError('[SyncNetwork] Erro na tentativa de fetch', error: e);
+        AppLogger.instance.logError(
+          '[SyncNetwork] Erro na tentativa de fetch',
+          error: e,
+        );
         retries--;
         if (retries > 0) {
           await Future.delayed(const Duration(seconds: 2));
@@ -91,7 +96,9 @@ class SyncNetwork {
     } else if (response.statusCode == 304) {
       return IndiceUnchanged();
     } else {
-      AppLogger.instance.logError('Server returned an error: ${response.statusCode}');
+      AppLogger.instance.logError(
+        'Server returned an error: ${response.statusCode}',
+      );
       return null;
     }
   }
@@ -115,9 +122,10 @@ class SyncNetwork {
     }
 
     if (response != null) {
-       AppLogger.instance.logError('[SyncNetwork] Failed to download $url, status: ${response.statusCode}');
+      AppLogger.instance.logError(
+        '[SyncNetwork] Failed to download $url, status: ${response.statusCode}',
+      );
     }
     return null;
   }
 }
-

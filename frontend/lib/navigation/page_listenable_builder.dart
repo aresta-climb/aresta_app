@@ -22,7 +22,8 @@ class PageListenableBuilder extends StatelessWidget {
     Setor? setor,
     Grupo? grupo,
     Escalada? escalada,
-  ) builder;
+  )
+  builder;
 
   const PageListenableBuilder({
     super.key,
@@ -49,7 +50,9 @@ class PageListenableBuilder extends StatelessWidget {
         // Encontra o crag nos picos baixados
         Map<String, dynamic>? cragData;
         try {
-          final crag = topoDataset.downloadedPicos.firstWhere((p) => p['id'] == cragId);
+          final crag = topoDataset.downloadedPicos.firstWhere(
+            (p) => p['id'] == cragId,
+          );
           cragData = crag['data'] as Map<String, dynamic>?;
         } catch (_) {}
 
@@ -83,7 +86,8 @@ class PageListenableBuilder extends StatelessWidget {
             res.escalada,
           );
 
-          final treeWrapper = context.findAncestorWidgetOfExactType<TreeNavigationWrapper>();
+          final treeWrapper = context
+              .findAncestorWidgetOfExactType<TreeNavigationWrapper>();
           final syncService = treeWrapper?.syncService;
 
           if (syncService == null) return pageContent;
@@ -110,11 +114,18 @@ class PageListenableBuilder extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.update, size: 48, color: Colors.amber),
+                                const Icon(
+                                  Icons.update,
+                                  size: 48,
+                                  color: Colors.amber,
+                                ),
                                 const SizedBox(height: 16),
                                 const Text(
                                   'Croqui Atualizado',
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 12),
@@ -128,13 +139,25 @@ class PageListenableBuilder extends StatelessWidget {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      syncService.commitPendenciasAtomaticas(cragId);
+                                      syncService.commitPendenciasAtomaticas(
+                                        cragId,
+                                      );
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     ),
-                                    child: const Text('RECARREGAR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                                    child: const Text(
+                                      'RECARREGAR',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -151,7 +174,9 @@ class PageListenableBuilder extends StatelessWidget {
             child: pageContent,
           );
         } catch (e, st) {
-          AppLogger.instance.logError('Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st');
+          AppLogger.instance.logError(
+            'Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st',
+          );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted && AppNav.canGoBack(context)) {
               AppNav.back(context);

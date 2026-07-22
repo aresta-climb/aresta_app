@@ -56,13 +56,22 @@ void main() {
       expect(categorizedData.regras.first.texto, 'Regras e Ética');
 
       expect(categorizedData.comunidadeParceiros.length, 1);
-      expect(categorizedData.comunidadeParceiros.first.texto, 'Patrocinador Oficial');
+      expect(
+        categorizedData.comunidadeParceiros.first.texto,
+        'Patrocinador Oficial',
+      );
 
       expect(categorizedData.comunidadeComercio.length, 1);
-      expect(categorizedData.comunidadeComercio.first.texto, 'Pousada da Montanha');
+      expect(
+        categorizedData.comunidadeComercio.first.texto,
+        'Pousada da Montanha',
+      );
 
       expect(categorizedData.comunidadeInfo.length, 1);
-      expect(categorizedData.comunidadeInfo.first.texto, 'Associação de Escalada');
+      expect(
+        categorizedData.comunidadeInfo.first.texto,
+        'Associação de Escalada',
+      );
 
       expect(categorizedData.apoioProdutos.length, 1);
       expect(categorizedData.apoioProdutos.first.texto, 'Comprar Guia Físico');

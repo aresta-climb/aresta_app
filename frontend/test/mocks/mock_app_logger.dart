@@ -9,10 +9,20 @@ class MockAppLogger implements AppLogger {
   bool? debugModeOverride;
 
   @override
-  Future<void> Function(dynamic, StackTrace?, {bool printDetails, dynamic reason})? crashlyticsOverride;
+  Future<void> Function(
+    dynamic,
+    StackTrace?, {
+    bool printDetails,
+    dynamic reason,
+  })?
+  crashlyticsOverride;
 
   @override
-  void logError(String contextMessage, {dynamic error, StackTrace? stackTrace}) {
+  void logError(
+    String contextMessage, {
+    dynamic error,
+    StackTrace? stackTrace,
+  }) {
     recordedErrors.add({
       'contextMessage': contextMessage,
       'error': error,

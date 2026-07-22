@@ -44,8 +44,11 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   @override
   void didUpdateWidget(MapaThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.mapa != oldWidget.mapa || widget.imageProviderOverride != oldWidget.imageProviderOverride) {
-      _imageProviderFuture?.then((provider) { provider?.evict(); });
+    if (widget.mapa != oldWidget.mapa ||
+        widget.imageProviderOverride != oldWidget.imageProviderOverride) {
+      _imageProviderFuture?.then((provider) {
+        provider?.evict();
+      });
       _imageProviderFuture = _resolveImageProvider();
     }
   }
@@ -85,8 +88,8 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
         return GestureDetector(
           onTap: () {
             TelemetryService.instance.logAbrirMapa(
-              widget.cragId, 
-              widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral'
+              widget.cragId,
+              widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral',
             );
             AppNav.toMapas(
               context,
@@ -96,7 +99,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                   mapaCaminhoImagem: widget.mapa.caminhoImagemMapa,
                   setorContextNome: widget.setorContext?.nome,
                   grupoContextNome: widget.grupoContext?.nome,
-                )
+                ),
               ],
               imageProviderOverride: widget.imageProviderOverride,
             );
@@ -109,10 +112,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                 borderRadius: BorderRadius.circular(10),
                 child: AspectRatio(
                   aspectRatio: widget.mapa.larguraMapa / widget.mapa.alturaMapa,
-                  child: Image(
-                    image: snapshot.data!,
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image(image: snapshot.data!, fit: BoxFit.cover),
                 ),
               ),
               // Overlay escuro
@@ -126,7 +126,10 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               ),
               // Botão Translúcido
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.brandColor.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(30),
@@ -156,12 +159,14 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   }
 }
 
-
 Future<ImageProvider?> resolveMapImageProvider(String cragId, Mapa mapa) async {
   return resolveImagePathProvider(cragId, mapa.caminhoImagemMapa);
 }
 
-Future<ImageProvider?> resolveImagePathProvider(String cragId, String path) async {
+Future<ImageProvider?> resolveImagePathProvider(
+  String cragId,
+  String path,
+) async {
   final dir = await getApplicationDocumentsDirectory();
   final editor = EditorDeCroqui.instance;
   final downloadsPath = '${editor.downloadsPath(dir.path)}/$cragId';
@@ -169,7 +174,7 @@ Future<ImageProvider?> resolveImagePathProvider(String cragId, String path) asyn
   String fileName = path.split('/').last;
 
   File? localFile;
-  
+
   final baseUrl = '${NetworkConstants.officialServerUrl}/';
   if (path.startsWith(baseUrl)) {
     final relativePath = path.replaceFirst(baseUrl, '');
@@ -189,7 +194,9 @@ Future<ImageProvider?> resolveImagePathProvider(String cragId, String path) asyn
 
   if (localFile == null && fileName.isNotEmpty) {
     final searchName = Uri.decodeComponent(fileName).toLowerCase();
-    String searchBaseName = searchName.contains('.') ? searchName.substring(0, searchName.lastIndexOf('.')) : searchName;
+    String searchBaseName = searchName.contains('.')
+        ? searchName.substring(0, searchName.lastIndexOf('.'))
+        : searchName;
 
     try {
       final downloadsDir = Directory(downloadsPath);
@@ -204,7 +211,9 @@ Future<ImageProvider?> resolveImagePathProvider(String cragId, String path) asyn
               localFile = entity;
               break;
             }
-            String eBaseName = eNameLower.contains('.') ? eNameLower.substring(0, eNameLower.lastIndexOf('.')) : eNameLower;
+            String eBaseName = eNameLower.contains('.')
+                ? eNameLower.substring(0, eNameLower.lastIndexOf('.'))
+                : eNameLower;
             if (eBaseName == searchBaseName) {
               localFile = entity;
               break;

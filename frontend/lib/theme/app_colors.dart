@@ -129,7 +129,7 @@ class AppColors extends ThemeExtension<AppColors> {
     mossRock: Color(0xFF5B614D),
     clayEarth: Color(0xFF7D4F43),
     weatheredIron: Color(0xFF3E4247),
-    
+
     // Novas cores da home
     deepBasalt: Color(0xFF161616),
     dryMoss: Color(0xFF7B8B6F),
@@ -162,5 +162,6 @@ class AppColors extends ThemeExtension<AppColors> {
 
 // Extensão auxiliar no BuildContext para acessar as cores rapidamente
 extension AppColorsExtension on BuildContext {
-  AppColors get colors => Theme.of(this).extension<AppColors>() ?? AppColors.dark;
+  AppColors get colors =>
+      Theme.of(this).extension<AppColors>() ?? AppColors.dark;
 }

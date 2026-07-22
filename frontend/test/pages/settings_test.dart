@@ -18,7 +18,7 @@ class FakePathProviderPlatform extends Fake
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  
+
   late DatasetRepository mockRepo;
   late EditorDeCroqui mockEditor;
   late SyncService mockSync;
@@ -26,11 +26,11 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     PathProviderPlatform.instance = FakePathProviderPlatform();
-    
+
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
     mockSync = SyncService(datasetRepository: mockRepo);
-    
+
     PackageInfo.setMockInitialValues(
       appName: 'Aresta Climb',
       packageName: 'com.aresta.app',
@@ -39,5 +39,4 @@ void main() {
       buildSignature: 'buildSignature',
     );
   });
-
 }

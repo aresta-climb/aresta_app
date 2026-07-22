@@ -19,8 +19,8 @@ class SetorPage extends StatefulWidget {
   final Escalada? scrollToEscalada;
 
   const SetorPage({
-    super.key, 
-    required this.setor, 
+    super.key,
+    required this.setor,
     this.grupoContext,
     required this.cragId,
     this.scrollToEscalada,
@@ -59,7 +59,8 @@ class _SetorPageState extends State<SetorPage> {
   @override
   void didUpdateWidget(SetorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.scrollToEscalada != oldWidget.scrollToEscalada && widget.scrollToEscalada != null) {
+    if (widget.scrollToEscalada != oldWidget.scrollToEscalada &&
+        widget.scrollToEscalada != null) {
       setState(() {
         _targetKey = GlobalKey();
       });
@@ -82,7 +83,7 @@ class _SetorPageState extends State<SetorPage> {
     final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
     final matches = regex.allMatches(jsonString);
     List<String> paths = [];
-    
+
     for (var match in matches) {
       if (match.groupCount >= 1) {
         String path = match.group(1)!;
@@ -104,14 +105,18 @@ class _SetorPageState extends State<SetorPage> {
 
   List<Escalada> get _sortedEscaladas {
     if (_sortMode == EscaladaSortMode.original) return widget.setor.escaladas;
-    
+
     final list = List<Escalada>.from(widget.setor.escaladas);
     list.sort((a, b) {
       switch (_sortMode) {
         case EscaladaSortMode.alphaAsc:
-          return getEscaladaNome(a).toLowerCase().compareTo(getEscaladaNome(b).toLowerCase());
+          return getEscaladaNome(
+            a,
+          ).toLowerCase().compareTo(getEscaladaNome(b).toLowerCase());
         case EscaladaSortMode.alphaDesc:
-          return getEscaladaNome(b).toLowerCase().compareTo(getEscaladaNome(a).toLowerCase());
+          return getEscaladaNome(
+            b,
+          ).toLowerCase().compareTo(getEscaladaNome(a).toLowerCase());
         case EscaladaSortMode.gradeAsc:
           return getGrauValue(a).compareTo(getGrauValue(b));
         case EscaladaSortMode.gradeDesc:
@@ -145,138 +150,178 @@ class _SetorPageState extends State<SetorPage> {
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final top = constraints.biggest.height;
-                final collapsedHeight = MediaQuery.of(context).padding.top + kToolbarHeight;
+                final collapsedHeight =
+                    MediaQuery.of(context).padding.top + kToolbarHeight;
                 final expandedHeight = 300.0;
                 // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
                 // Usamos isso para animar manualmente o padding e o tamanho da fonte.
-                double t = (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+                double t =
+                    (top - collapsedHeight) /
+                    (expandedHeight - collapsedHeight);
                 t = t.clamp(0.0, 1.0); // 1.0 = expanded, 0.0 = collapsed
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
                     FlexibleSpaceBar(
-                      background: widget.setor.mapas.isNotEmpty && _coverProviderFuture != null
+                      background:
+                          widget.setor.mapas.isNotEmpty &&
+                              _coverProviderFuture != null
                           ? FutureBuilder<ImageProvider?>(
-                      future: _coverProviderFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return Container(color: context.colors.deepBasalt);
-                        }
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image(
-                                image: snapshot.data!,
-                                fit: BoxFit.cover,
-                              ),
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 200,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
-                                      stops: const [0.0, 0.4, 1.0],
+                              future: _coverProviderFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Container(
+                                    color: context.colors.deepBasalt,
+                                  );
+                                }
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image(
+                                        image: snapshot.data!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Positioned(
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 200,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.black,
+                                                Colors.black.withValues(
+                                                  alpha: 0.7,
+                                                ),
+                                                Colors.transparent,
+                                              ],
+                                              stops: const [0.0, 0.4, 1.0],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 200,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.bottomCenter,
+                                              end: Alignment.topCenter,
+                                              colors: [
+                                                Colors.black.withValues(
+                                                  alpha: 0.9,
+                                                ),
+                                                Colors.black.withValues(
+                                                  alpha: 0.6,
+                                                ),
+                                                Colors.transparent,
+                                              ],
+                                              stops: const [0.0, 0.4, 1.0],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // Se não encontrou imagem local, exibe a capa do croqui
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    buildCragBackground(
+                                      '',
+                                      cragId: widget.cragId,
+                                    ),
+                                    Positioned(
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      height: 200,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.black,
+                                              Colors.black.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                              Colors.transparent,
+                                            ],
+                                            stops: const [0.0, 0.4, 1.0],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
+                                      height: 200,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.bottomCenter,
+                                            end: Alignment.topCenter,
+                                            colors: [
+                                              Colors.black.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                              Colors.black.withValues(
+                                                alpha: 0.6,
+                                              ),
+                                              Colors.transparent,
+                                            ],
+                                            stops: const [0.0, 0.4, 1.0],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            )
+                          : Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                buildCragBackground('', cragId: widget.cragId),
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 150,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.8),
+                                          Colors.transparent,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                height: 200,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
-                                      stops: const [0.0, 0.4, 1.0],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        // Se não encontrou imagem local, exibe a capa do croqui
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            buildCragBackground('', cragId: widget.cragId),
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 200,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [Colors.black, Colors.black.withValues(alpha: 0.7), Colors.transparent],
-                                    stops: const [0.0, 0.4, 1.0],
-                                  ),
-                                ),
-                              ),
+                              ],
                             ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              height: 200,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [Colors.black.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.6), Colors.transparent],
-                                    stops: const [0.0, 0.4, 1.0],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    )
-                  : Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        buildCragBackground('', cragId: widget.cragId),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: 150,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.8),
-                                  Colors.transparent,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
-                ),
                     Positioned(
                       // Anima a margem esquerda de 16 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
                       left: 16 + (56 * (1 - t)),
                       // Anima a margem direita para dar espaço ao botão de feedback.
-                      right: 16 + (72 * (1 - t)), // Make room for feedback button
+                      right:
+                          16 + (72 * (1 - t)), // Make room for feedback button
                       bottom: 16,
                       child: Text(
                         widget.setor.nome.toUpperCase(),

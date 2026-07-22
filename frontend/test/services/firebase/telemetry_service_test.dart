@@ -11,12 +11,13 @@ void main() {
       TelemetryService.instance = mockTelemetry;
     });
 
-
-
     test('logAcaoExplorar', () async {
       await TelemetryService.instance.logAcaoExplorar('crag1', 'baixar');
       expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
-      expect(mockTelemetry.recordedParams['acao_explorar']!['id_croqui'], 'crag1');
+      expect(
+        mockTelemetry.recordedParams['acao_explorar']!['id_croqui'],
+        'crag1',
+      );
       expect(mockTelemetry.recordedParams['acao_explorar']!['acao'], 'baixar');
     });
 
@@ -26,20 +27,42 @@ void main() {
     });
 
     test('logAtualizarCroqui', () async {
-      await TelemetryService.instance.logAtualizarCroqui('crag1', 'sha123', '2026-06-04T10:00:00.000Z');
+      await TelemetryService.instance.logAtualizarCroqui(
+        'crag1',
+        'sha123',
+        '2026-06-04T10:00:00.000Z',
+      );
       expect(mockTelemetry.recordedEvents, contains('atualizar_croqui'));
-      expect(mockTelemetry.recordedParams['atualizar_croqui']!['id_croqui'], 'crag1');
-      expect(mockTelemetry.recordedParams['atualizar_croqui']!['versao'], 'sha123');
-      expect(mockTelemetry.recordedParams['atualizar_croqui']!['timestamp_atualizacao'], '2026-06-04T10:00:00.000Z');
+      expect(
+        mockTelemetry.recordedParams['atualizar_croqui']!['id_croqui'],
+        'crag1',
+      );
+      expect(
+        mockTelemetry.recordedParams['atualizar_croqui']!['versao'],
+        'sha123',
+      );
+      expect(
+        mockTelemetry
+            .recordedParams['atualizar_croqui']!['timestamp_atualizacao'],
+        '2026-06-04T10:00:00.000Z',
+      );
     });
 
-
-
     test('logAcaoCroqui com origem', () async {
-      await TelemetryService.instance.logAcaoCroqui('crag1', 'abrir_croqui', origem: 'explorar');
+      await TelemetryService.instance.logAcaoCroqui(
+        'crag1',
+        'abrir_croqui',
+        origem: 'explorar',
+      );
       expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-      expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
-      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'explorar');
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['origem'],
+        'explorar',
+      );
     });
 
     test('logAbrirSetor', () async {
@@ -58,27 +81,42 @@ void main() {
     });
 
     test('logAcaoEscalada', () async {
-      await TelemetryService.instance.logAcaoEscalada('crag1', 'Setor 1', 'Via 1', 'abrir_detalhes', 'mapa');
+      await TelemetryService.instance.logAcaoEscalada(
+        'crag1',
+        'Setor 1',
+        'Via 1',
+        'abrir_detalhes',
+        'mapa',
+      );
       expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
-      expect(mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'], 'Via 1');
-      expect(mockTelemetry.recordedParams['acao_escalada']!['acao'], 'abrir_detalhes');
+      expect(
+        mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'],
+        'Via 1',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_escalada']!['acao'],
+        'abrir_detalhes',
+      );
       expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'mapa');
     });
   });
 
   group('TelemetryService Real Instance Tests', () {
-    test('Should not throw exception when logging events before Firebase is initialized', () async {
-      // Reseta para a instância real (que chamaria FirebaseAnalytics internamente)
-      TelemetryService.resetForTesting();
-      
-      try {
-        // Isso normalmente quebraria se Firebase.initializeApp() não tiver terminado,
-        // mas o nosso try-catch interno na _logEvent deve absorver graciosamente.
-        await TelemetryService.instance.logSincronizarApp(acao: 'automatica');
-        // Passou sem quebrar = sucesso
-      } catch (e) {
-        fail('Should not throw uncaught exception: $e');
-      }
-    });
+    test(
+      'Should not throw exception when logging events before Firebase is initialized',
+      () async {
+        // Reseta para a instância real (que chamaria FirebaseAnalytics internamente)
+        TelemetryService.resetForTesting();
+
+        try {
+          // Isso normalmente quebraria se Firebase.initializeApp() não tiver terminado,
+          // mas o nosso try-catch interno na _logEvent deve absorver graciosamente.
+          await TelemetryService.instance.logSincronizarApp(acao: 'automatica');
+          // Passou sem quebrar = sucesso
+        } catch (e) {
+          fail('Should not throw uncaught exception: $e');
+        }
+      },
+    );
   });
 }
