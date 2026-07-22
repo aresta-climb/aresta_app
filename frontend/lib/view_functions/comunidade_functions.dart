@@ -167,14 +167,11 @@ Widget buildFooter(BuildContext context) {
 Future<void> launchURL(BuildContext context, String url) async {
   final uri = Uri.parse(url);
   try {
-    if (await canLaunchUrl(uri)) {
+    // Tenta abrir direto. O url_launcher mais novo prefere essa abordagem.
+    final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    if (!launched && context.mounted) {
+      // Fallback para external
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível abrir o link.')),
-        );
-      }
     }
   } catch (e) {
     if (context.mounted) {
@@ -313,29 +310,35 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
                   child: MarkdownBody(
                     data: snapshot.data!,
                     onTapLink: (text, href, title) {
-                      if (href != null) launchURL(context, href);
+                      if (href != null) {
+                        if (href.toUpperCase().contains('PRIVACIDADE')) {
+                          showPrivacyPolicyBottomSheet(context);
+                        } else {
+                          launchURL(context, href);
+                        }
+                      }
                     },
                     styleSheet: MarkdownStyleSheet(
                       p: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
-                        height: 1.5,
+                        fontSize: 16,
+                        height: 1.6,
                       ),
                       h1: TextStyle(
                         color: context.colors.rustIron,
-                        fontSize: 18,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
                       ),
                       h2: TextStyle(
                         color: context.colors.rustIron,
-                        fontSize: 16,
+                        fontSize: 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
                       ),
                       h3: TextStyle(
                         color: context.colors.rustIron,
-                        fontSize: 12,
+                        fontSize: 18,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
                       ),
@@ -542,4 +545,222 @@ void showLinkOverlay(
       );
     },
   );
+}
+
+/// Exibe a Política de Privacidade em um bottom sheet customizado
+void showPrivacyPolicyBottomSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: context.colors.deepBasalt,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) {
+      return const _PrivacyBottomSheetContent();
+    },
+  );
+}
+
+class _PrivacyBottomSheetContent extends StatefulWidget {
+  const _PrivacyBottomSheetContent();
+
+  @override
+  State<_PrivacyBottomSheetContent> createState() => _PrivacyBottomSheetContentState();
+}
+
+class _PrivacyBottomSheetContentState extends State<_PrivacyBottomSheetContent> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isAtBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfAtBottom();
+    });
+  }
+
+  void _checkIfAtBottom() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.maxScrollExtent <= 0 ||
+        _scrollController.offset >= _scrollController.position.maxScrollExtent - 10) {
+      if (!_isAtBottom) {
+        setState(() {
+          _isAtBottom = true;
+        });
+      }
+    }
+  }
+
+  void _scrollListener() {
+    _checkIfAtBottom();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.colors.graniteEdge,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.privacy_tip_outlined,
+                color: context.colors.rustIron,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'POLÍTICA DE PRIVACIDADE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              buildFeedbackButton(context, color: context.colors.ashGrey),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Scrollable Content
+          Flexible(
+            child: FutureBuilder<String>(
+              future: DefaultAssetBundle.of(context).loadString('legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md'),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _checkIfAtBottom();
+                });
+
+                return SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  child: MarkdownBody(
+                    data: snapshot.data!,
+                    onTapLink: (text, href, title) {
+                      if (href != null) launchURL(context, href);
+                    },
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                        height: 1.6,
+                      ),
+                      h1: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      h2: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      h3: TextStyle(
+                        color: context.colors.rustIron,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                      strong: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      blockSpacing: 16.0,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Footer
+          if (_isAtBottom) ...[
+            Container(
+              width: double.infinity,
+              height: 1,
+              color: context.colors.graniteEdge,
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF232323),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'FECHAR',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+             Center(
+               child: GestureDetector(
+                 onTap: () {
+                   if (_scrollController.hasClients) {
+                     _scrollController.animateTo(
+                       _scrollController.position.maxScrollExtent,
+                       duration: const Duration(milliseconds: 300),
+                       curve: Curves.easeOut,
+                     );
+                   }
+                 },
+                 child: Padding(
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                   child: Icon(
+                     Icons.keyboard_arrow_down,
+                     color: context.colors.rustIron.withValues(alpha: 0.5),
+                     size: 32,
+                   ),
+                 ),
+               ),
+             ),
+          ],
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
+  }
 }
