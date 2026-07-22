@@ -285,6 +285,18 @@ class _MyAppState extends State<MyApp> {
                 child: effectiveChild,
               );
 
+              // BetterFeedback might strip Theme extensions. We explicitly re-inject them here.
+              effectiveChild = Theme(
+                data: Theme.of(context).copyWith(
+                  extensions: [
+                    Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.dark
+                        : AppColors.light,
+                  ],
+                ),
+                child: effectiveChild,
+              );
+
               return AppVersionChecker(
                 remoteConfigService: widget.remoteConfigService,
                 child: Stack(
