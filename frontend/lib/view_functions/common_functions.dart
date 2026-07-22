@@ -226,7 +226,7 @@ Widget buildSearchBar({
                 ),
                 child: TextField(
                   onChanged: onChanged,
-                  style: TextStyle(color: context.colors.textPrimary),
+                  style: TextStyle(color: context.colors.chalkWhite),
                   cursorColor: const Color(0xFFC04F34),
                   decoration: InputDecoration(
                     hintText: hintText,
