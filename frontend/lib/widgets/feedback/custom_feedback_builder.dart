@@ -60,17 +60,12 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = FeedbackTheme.of(context).brightness == Brightness.dark;
-    final appColors = isDark ? AppColors.dark : AppColors.light;
-
     // Determine colors for the text field and button
-    final textColor = isDark ? Colors.white : appColors.fishBone;
-    final hintColor = isDark
-        ? appColors.ashGrey
-        : appColors.fishBone.withValues(alpha: 0.6);
-    final fillColor = isDark ? appColors.deepBasalt : appColors.slateStone;
-    final borderColor = isDark ? appColors.graniteEdge : Colors.transparent;
-    final buttonColor = isDark ? appColors.rustIron : appColors.beastHide;
+    final textColor = context.colors.chalkWhite;
+    final hintColor = context.colors.ashGrey;
+    final fillColor = context.colors.caveShadow;
+    final borderColor = context.colors.graniteEdge;
+    final buttonColor = const Color(0xFFC04F34);
 
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
@@ -146,9 +141,9 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
                   key: const Key('submit_feedback_button'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: buttonColor,
-                    foregroundColor: appColors.fishBone,
+                    foregroundColor: context.colors.chalkWhite,
                     disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
-                    disabledForegroundColor: appColors.fishBone.withValues(
+                    disabledForegroundColor: context.colors.chalkWhite.withValues(
                       alpha: 0.5,
                     ),
                     minimumSize: const Size(double.infinity, 48),
