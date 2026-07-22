@@ -269,7 +269,11 @@ class PicoSearchDelegate extends SearchDelegate<Object?> {
 
   @override
   String get searchFieldLabel {
-    return 'Buscar escalada ou setor...';
+    if (isPicoBoulderArea(pico)) {
+      return 'Buscar boulder (ex: V4) ou setor...';
+    } else {
+      return 'Buscar escalada (ex: 7a) ou setor...';
+    }
   }
 
   @override
