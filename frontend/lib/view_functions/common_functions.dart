@@ -24,6 +24,7 @@ bool get _isLight {
 AppColors get _currentColors => _isLight ? AppColors.light : AppColors.dark;
 
 Color get beastHide => _currentColors.beastHide;
+Color get rustIron => _currentColors.rustIron;
 Color get fishBone => _currentColors.fishBone;
 Color get leatherWork => _currentColors.leatherWork;
 Color get obsidianBrown => _currentColors.obsidianBrown;
