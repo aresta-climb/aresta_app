@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:frontend/main.dart'; // for appNavigatorKey
+import 'package:feedback/feedback.dart';
 
 void main() {
   group('CustomStringFeedback Widget Tests', () {
@@ -203,5 +205,51 @@ void main() {
         expect(scrollOpen.padding, const EdgeInsets.fromLTRB(16, 12, 16, 12));
       },
     );
+
+    testWidgets('intercepts back button and hides feedback', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: appNavigatorKey,
+          home: Scaffold(
+            body: BetterFeedback(
+              feedbackBuilder: (context, onSubmit, scrollController) {
+                return customFeedbackBuilder(context, onSubmit, scrollController);
+              },
+              child: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      BetterFeedback.of(context).show((feedback) async {});
+                    },
+                    child: const Text('Show Feedback'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify feedback is not visible
+      expect(find.byType(CustomStringFeedback), findsNothing);
+
+      // Open feedback
+      await tester.tap(find.text('Show Feedback'));
+      await tester.pumpAndSettle();
+
+      // Verify feedback is visible
+      expect(find.byType(CustomStringFeedback), findsOneWidget);
+
+      // Simulate system back button (via Navigator pop on root navigator)
+      // The transparent route is on the root navigator, which intercepts the back button
+      final dynamic widgetsBinding = tester.binding;
+      await widgetsBinding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // Verify feedback is no longer visible
+      expect(find.byType(CustomStringFeedback), findsNothing);
+    });
   });
 }
