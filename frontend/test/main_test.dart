@@ -245,12 +245,9 @@ void main() {
       // Finish building
       await tester.pump(const Duration(seconds: 1));
 
-      final BuildContext context = tester.element(
-        find.byType(TreeNavigationWrapper),
-      );
-
-      final theme = Theme.of(context);
-      expect(theme.extension<AppColors>(), isNotNull);
+      final MaterialApp app = tester.widget(find.byType(MaterialApp));
+      expect(app.theme?.extensions.values.whereType<AppColors>(), isNotEmpty);
+      expect(app.darkTheme?.extensions.values.whereType<AppColors>(), isNotEmpty);
     },
   );
 
