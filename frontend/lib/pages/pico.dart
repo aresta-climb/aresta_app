@@ -254,7 +254,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       // Anima a margem direita para dar espaço aos botões de share e feedback.
                       right:
                           20 +
-                          (104 *
+                          (120 *
                               (1 -
                                   t)), // Make room for share and feedback buttons
                       bottom: 20,
