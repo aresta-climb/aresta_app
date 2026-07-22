@@ -12,7 +12,7 @@ class HomePage extends StatelessWidget {
   final Function(int) onSwitchTab;
 
   const HomePage({
-    super.key, 
+    super.key,
     required this.datasetRepo,
     required this.syncService,
     required this.onSwitchTab,
@@ -29,7 +29,7 @@ class HomePage extends StatelessWidget {
           onRefresh: () async {
             await handleManualSync(context, datasetRepo, syncService);
           },
-          child: buildHomeBody(context, syncService, onSwitchTab),
+          child: buildHomeBody(context, datasetRepo, syncService, onSwitchTab),
         ),
       ),
     );

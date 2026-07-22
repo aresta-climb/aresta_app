@@ -7,26 +7,34 @@ import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
 import '../widgets/nearby_crags_carousel.dart';
+import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
 
 /// Navega para a página de detalhes de um pico selecionado.
 /// (Mantido para compatibilidade com browse.dart e mapa_global.dart)
-void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Map<String, dynamic> pico, {String source = 'home'}) async {
+void handlePicoSelection(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  Map<String, dynamic> pico, {
+  String source = 'home',
+}) async {
   final id = pico['id'];
   if (id == null) return;
-  
+
   TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
 
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => Center(child: CircularProgressIndicator(color: context.colors.beastHide)),
+    builder: (context) => Center(
+      child: CircularProgressIndicator(color: context.colors.beastHide),
+    ),
   );
 
   final croqui = await datasetRepo.getCroqui(id);
 
   if (!context.mounted) return;
-  
+
   Navigator.of(context, rootNavigator: true).pop();
 
   if (croqui != null && croqui.picos.isNotEmpty) {
@@ -36,26 +44,33 @@ void handlePicoSelection(BuildContext context, DatasetRepository datasetRepo, Ma
       croqui: croqui,
       cragId: id,
     );
-    
+
     Future.delayed(const Duration(milliseconds: 300), () {
       datasetRepo.updatePriorityAfterNavigation(id);
       datasetRepo.triggerHomeReset();
     });
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Erro ao abrir o guia.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o guia.')));
   }
 }
 
 /// Constrói o corpo principal da página inicial refatorada.
-Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int) onSwitchTab) {
+Widget buildHomeBody(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+  Function(int) onSwitchTab,
+) {
   return SingleChildScrollView(
-    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+    physics: const AlwaysScrollableScrollPhysics(
+      parent: BouncingScrollPhysics(),
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(context, syncService),
+        _buildHeader(context, datasetRepo, syncService),
         _buildSearchBar(context, onSwitchTab),
         NearbyCragsCarousel(syncService: syncService),
         _buildGuiaRapido(context),
@@ -66,7 +81,11 @@ Widget buildHomeBody(BuildContext context, SyncService syncService, Function(int
   );
 }
 
-Widget _buildHeader(BuildContext context, SyncService syncService) {
+Widget _buildHeader(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
     child: Column(
@@ -76,7 +95,12 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.asset('assets/logo_app.png', width: 28, height: 28, fit: BoxFit.cover),
+              child: Image.asset(
+                'assets/logo_app.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(width: 8),
             Container(
@@ -97,11 +121,47 @@ Widget _buildHeader(BuildContext context, SyncService syncService) {
               ),
             ),
             const Spacer(),
+            ValueListenableBuilder<TopoDataset?>(
+              valueListenable: datasetRepo.activeDataset,
+              builder: (context, dataset, _) {
+                final hasDownloaded =
+                    dataset != null && dataset.downloadedPicos.isNotEmpty;
+                if (!hasDownloaded) return const SizedBox.shrink();
+
+                return IconButton(
+                  icon: Icon(Icons.search, color: context.colors.ashGrey),
+                  tooltip: 'Buscar nos guias baixados',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          backgroundColor: context.colors.deepBasalt,
+                          appBar: AppBar(
+                            backgroundColor: context.colors.deepBasalt,
+                            elevation: 0,
+                            iconTheme: IconThemeData(
+                              color: context.colors.chalkWhite,
+                            ),
+                          ),
+                          body: GlobalSearch(
+                            datasetRepo: datasetRepo,
+                            downloadedPicos: dataset.downloadedPicos,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
             buildFeedbackButton(context, color: context.colors.ashGrey),
             IconButton(
               icon: Icon(Icons.settings, color: context.colors.ashGrey),
               onPressed: () {
-                TreeNavigationWrapper.of(context).treeController.navigateTo(SettingsNode(const HomeNode()));
+                TreeNavigationWrapper.of(
+                  context,
+                ).treeController.navigateTo(SettingsNode(const HomeNode()));
               },
             ),
           ],
@@ -136,13 +196,13 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
     child: GestureDetector(
       onTap: () {
         // Redireciona para a aba de explorar para realizar buscas
-        onSwitchTab(1); 
+        onSwitchTab(1);
       },
       child: Container(
         height: 50,
         decoration: BoxDecoration(
           color: context.colors.caveShadow,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.colors.graniteEdge),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -152,10 +212,7 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
             const SizedBox(width: 12),
             Text(
               'Buscar picos para escalar...',
-              style: TextStyle(
-                color: context.colors.ashGrey,
-                fontSize: 15,
-              ),
+              style: TextStyle(color: context.colors.ashGrey, fontSize: 15),
             ),
           ],
         ),
@@ -163,8 +220,6 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
     ),
   );
 }
-
-
 
 Widget _buildGuiaRapido(BuildContext context) {
   return Padding(
@@ -219,7 +274,8 @@ Widget _buildGuiaRapido(BuildContext context) {
             num: '01',
             icon: Icons.search,
             title: 'ENCONTRE O PICO',
-            desc: 'Use a busca ou explore os picos próximos no carrossel superior da home.',
+            desc:
+                'Use a busca ou explore os picos próximos no carrossel superior da home.',
             iconColor: const Color(0xFFC05244),
             bgColor: const Color(0xFFFBECE9),
           ),
@@ -228,7 +284,8 @@ Widget _buildGuiaRapido(BuildContext context) {
             num: '02',
             icon: Icons.download_outlined,
             title: 'SALVE OFFLINE',
-            desc: 'Baixe os croquis e setores inteiros para continuar navegando sem sinal de internet.',
+            desc:
+                'Baixe os croquis e setores inteiros para continuar navegando sem sinal de internet.',
             iconColor: const Color(0xFF6D9578),
             bgColor: const Color(0xFFEAF2ED),
           ),
@@ -237,7 +294,8 @@ Widget _buildGuiaRapido(BuildContext context) {
             num: '03',
             icon: Icons.menu_book_outlined,
             title: 'CROQUI INTERATIVO',
-            desc: 'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
+            desc:
+                'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
             iconColor: const Color(0xFFBCA646),
             bgColor: const Color(0xFFF9F5DE),
           ),
@@ -246,7 +304,8 @@ Widget _buildGuiaRapido(BuildContext context) {
             num: '04',
             icon: Icons.people_outline,
             title: 'COMPARTILHE',
-            desc: 'Avise outros escaladores sobre restrições de fauna, chuva ou itens perdidos.',
+            desc:
+                'Avise outros escaladores sobre restrições de fauna, chuva ou itens perdidos.',
             iconColor: const Color(0xFF5B81A7),
             bgColor: const Color(0xFFEAF1F8),
             isLast: true,
@@ -295,7 +354,10 @@ Widget _buildStepItem(
                 top: -8,
                 right: -8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: bgColor,
                     borderRadius: BorderRadius.circular(6),
@@ -321,7 +383,7 @@ Widget _buildStepItem(
                 Text(
                   title,
                   style: TextStyle(
-                      color: AppColors.brandColor,
+                    color: AppColors.brandColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
