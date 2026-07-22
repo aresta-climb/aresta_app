@@ -448,47 +448,102 @@ class CragCard extends StatelessWidget {
   }
 }
 
-Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
-  Widget placeholder = Container(
-    color: const Color(0xFF2C332A),
-    child: Center(
-      child: Icon(Icons.terrain, color: Colors.white.withValues(alpha: 0.1), size: 64),
-    ),
-  );
+class _CragBackgroundWidget extends StatefulWidget {
+  final String thumbnailUrl;
+  final String? cragId;
 
-  if (thumbnailUrl.isNotEmpty && thumbnailUrl.startsWith('aresta-zip://')) {
+  const _CragBackgroundWidget({required this.thumbnailUrl, this.cragId});
+
+  @override
+  State<_CragBackgroundWidget> createState() => _CragBackgroundWidgetState();
+}
+
+class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
+  Future<http.Response>? _zipFuture;
+  Future<Directory>? _dirFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initFutures();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CragBackgroundWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.thumbnailUrl != widget.thumbnailUrl || oldWidget.cragId != widget.cragId) {
+      _initFutures();
+    }
+  }
+
+  void _initFutures() {
+    _zipFuture = null;
+    _dirFuture = null;
+
+    if (widget.thumbnailUrl.isNotEmpty && widget.thumbnailUrl.startsWith('aresta-zip://')) {
+      _zipFuture = ZipInterceptorClient().get(Uri.parse(widget.thumbnailUrl));
+    } else if (widget.cragId != null && widget.cragId!.isNotEmpty) {
+      _dirFuture = getApplicationDocumentsDirectory();
+    }
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: const Color(0xFF2C332A),
+      child: Center(
+        child: Icon(Icons.terrain, color: Colors.white.withValues(alpha: 0.1), size: 64),
+      ),
+    );
+  }
+
+  Widget _buildZipImage() {
     return FutureBuilder<http.Response>(
-      future: ZipInterceptorClient().get(Uri.parse(thumbnailUrl)),
+      future: _zipFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return placeholder;
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) return placeholder;
+        if (snapshot.connectionState == ConnectionState.waiting) return _buildPlaceholder();
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.statusCode != 200) return _buildPlaceholder();
         return Image.memory(
           snapshot.data!.bodyBytes,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => placeholder,
+          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
         );
       },
     );
-  } else if (cragId != null && cragId.isNotEmpty) {
-        return FutureBuilder<Directory>(
-          future: getApplicationDocumentsDirectory(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return placeholder;
-            if (snapshot.hasData) {
-              final file = File('${snapshot.data!.path}/thumbnails/$cragId.webp');
-              if (file.existsSync()) {
-                return Image.file(
-                  file,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => placeholder,
-                );
-              }
-            }
-            return placeholder;
-          },
-        );
-      }
-  return placeholder;
+  }
+
+  Widget _buildLocalFileImage() {
+    return FutureBuilder<Directory>(
+      future: _dirFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return _buildPlaceholder();
+        if (snapshot.hasData) {
+          final file = File('${snapshot.data!.path}/thumbnails/${widget.cragId}.webp');
+          if (file.existsSync()) {
+            return Image.file(
+              file,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+            );
+          }
+        }
+        return _buildPlaceholder();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_zipFuture != null) {
+      return _buildZipImage();
+    } else if (_dirFuture != null) {
+      return _buildLocalFileImage();
+    }
+    return _buildPlaceholder();
+  }
+}
+
+Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
+  return _CragBackgroundWidget(thumbnailUrl: thumbnailUrl, cragId: cragId);
 }
 
 void showDownloadBottomSheet(
