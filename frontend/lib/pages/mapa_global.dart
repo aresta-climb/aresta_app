@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../view_functions/mapa/mapa_global_functions.dart';
 import '../view_functions/common_functions.dart';
@@ -6,6 +7,7 @@ import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../view_functions/mapa/mapa_marker.dart';
 import '../view_functions/home_functions.dart';
+import '../theme/app_colors.dart';
 
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
 class MapaGlobalPage extends StatefulWidget {
@@ -44,9 +46,11 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
     final resumo = resumos.first;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
+    }
 
     final success = await widget.syncService.downloadCrag(resumo);
 
@@ -70,6 +74,39 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   void initState() {
     super.initState();
     _loadCustomIcons();
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: 8.0,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Ignora falhas ao pegar localização
+    }
   }
 
   Future<void> _loadCustomIcons() async {
@@ -131,6 +168,16 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         'Mapa Global',
         actions: [buildFeedbackButton(context)],
       ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? context.colors.caveShadow
+            : context.colors.chalkWhite,
+        foregroundColor: AppColors.brandColor,
+        mini: true,
+        onPressed: _initLocation,
+        child: const Icon(Icons.my_location),
+      ),
       body: GoogleMap(
         initialCameraPosition: CameraPosition(
           target: initialTarget,
@@ -147,7 +194,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           currentZoom: _currentZoom,
         ),
         myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+        myLocationButtonEnabled: false,
         mapToolbarEnabled: false,
         zoomControlsEnabled: false,
         onMapCreated: (controller) {

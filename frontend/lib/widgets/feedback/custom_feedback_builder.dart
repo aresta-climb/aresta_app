@@ -52,8 +52,13 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
   @override
   void dispose() {
     _isHiding = true;
-    if (_backButtonRoute != null && _backButtonRoute!.isActive) {
-      appNavigatorKey.currentState?.removeRoute(_backButtonRoute!);
+    final route = _backButtonRoute;
+    if (route != null && route.isActive) {
+      Future.microtask(() {
+        if (route.isActive) {
+          appNavigatorKey.currentState?.removeRoute(route);
+        }
+      });
     }
     controller.dispose();
     super.dispose();
@@ -179,7 +184,15 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
                   ),
                   onPressed: isEmpty
                       ? null
-                      : () => widget.onSubmit(controller.text),
+                      : () {
+                          _isHiding = true;
+                          final route = _backButtonRoute;
+                          if (route != null && route.isActive) {
+                            appNavigatorKey.currentState?.removeRoute(route);
+                            _backButtonRoute = null;
+                          }
+                          widget.onSubmit(controller.text);
+                        },
                   child: const Text(
                     'Enviar',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
