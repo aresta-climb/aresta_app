@@ -12,6 +12,38 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/theme/app_colors.dart';
+
+class MockDatasetRepository implements DatasetRepository {
+  final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
+    TopoDataset(availablePicos: [], downloadedPicos: [{}]),
+  );
+  
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockSyncService implements SyncService {
+  bool networkDisabled = false;
+  List<String> mockFailed = [];
+  ValueNotifier<SyncStatus> _status = ValueNotifier(SyncStatus.updated);
+
+  @override
+  Future<bool> isNetworkDisabled() async => networkDisabled;
+
+  @override
+  Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
+    return mockFailed;
+  }
+
+  @override
+  ValueNotifier<SyncStatus> get syncStatus => _status;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   // safeString
@@ -396,4 +428,101 @@ void main() {
       );
     });
   });
+
+
+
+group('handleManualSync', () {
+  testWidgets('deve exibir SnackBar de erro de rede se offline (isNetworkDisabled = true)', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockSync.networkDisabled = true;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pump(); // Inicia a snacbkbar
+
+    expect(find.text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'), findsOneWidget);
+  });
+
+  testWidgets('deve exibir SnackBar de offline se syncStatus for offline', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockSync._status.value = SyncStatus.offline;
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle(); // Aguarda os asyncs
+
+    expect(find.text('Sem conexão com a internet.'), findsOneWidget);
+  });
+
+  testWidgets('deve exibir SnackBar de falhas se failed.isNotEmpty', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockSync.mockFailed = ['Croqui 1'];
+    mockSync._status.value = SyncStatus.updated;
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Concluído com falhas: Croqui 1'), findsOneWidget);
+  });
+
+  testWidgets('deve exibir SnackBar de sucesso se status for updated', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockSync._status.value = SyncStatus.justUpdated; // Qualquer coisa diferente de noNewUpdates e updated
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Croquis foram atualizados!'), findsOneWidget);
+  });
+});
+
 }
