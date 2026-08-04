@@ -592,7 +592,13 @@ Future<void> handleManualSync(
     String message = '';
     Color bgColor = context.colors.dryMoss;
 
-    if (failed.isNotEmpty) {
+    if (status == SyncStatus.offline) {
+      message = 'Sem conexão com a internet.';
+      bgColor = Theme.of(context).colorScheme.error;
+    } else if (status == SyncStatus.error) {
+      message = 'Erro ao verificar atualizações. Tente novamente mais tarde.';
+      bgColor = Theme.of(context).colorScheme.error;
+    } else if (failed.isNotEmpty) {
       message = 'Concluído com falhas: ${failed.join(', ')}';
       bgColor = Theme.of(context).colorScheme.error;
     } else if (status == SyncStatus.noNewUpdates ||
