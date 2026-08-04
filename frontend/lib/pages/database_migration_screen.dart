@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/theme/app_colors.dart';
 
 /// Tela bloqueante de Migração de Banco de Dados.
 ///
@@ -86,7 +87,7 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (_isLoading) ...[
-                const CircularProgressIndicator(),
+                const CircularProgressIndicator(color: AppColors.brandColor),
                 const SizedBox(height: 24),
                 const Text(
                   'Atualizando o banco de dados. Isso exigirá internet.',
