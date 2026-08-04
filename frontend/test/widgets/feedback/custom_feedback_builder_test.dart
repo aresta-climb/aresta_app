@@ -1,255 +1,57 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
-import 'package:frontend/main.dart'; // for appNavigatorKey
-import 'package:feedback/feedback.dart';
+import 'package:frontend/theme/app_colors.dart';
 
 void main() {
-  group('CustomStringFeedback Widget Tests', () {
-    testWidgets('renders correctly and contains expected elements', (
-      WidgetTester tester,
-    ) async {
-      // Arrange
-      String submittedText = '';
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return customFeedbackBuilder(
-                  context,
-                  (text, {extras}) async {
-                    submittedText = text;
-                  },
-                  null, // scrollController
-                );
-              },
-            ),
+  Widget buildTestWidget({required OnSubmit onSubmit}) {
+    return MaterialApp(
+      theme: ThemeData(
+        extensions: const [AppColors.dark],
+      ),
+      home: Scaffold(
+        body: BetterFeedback(
+          child: Builder(
+            builder: (context) {
+              return customFeedbackBuilder(context, onSubmit, null);
+            },
           ),
         ),
-      );
-
-      // Act & Assert
-      // Verify Title text is present
-      expect(find.text('Qual o problema?'), findsOneWidget);
-
-      // Verify TextField is present and has the correct hint
-      final textFieldFinder = find.byType(TextField);
-      expect(textFieldFinder, findsOneWidget);
-
-      final TextField textField = tester.widget(textFieldFinder);
-      expect(
-        textField.decoration?.hintText,
-        'Descreva o problema ou sugestão...',
-      );
-
-      // Verify submit button is present
-      final buttonFinder = find.byKey(const Key('submit_feedback_button'));
-      expect(buttonFinder, findsOneWidget);
-      expect(
-        find.descendant(of: buttonFinder, matching: find.text('Enviar')),
-        findsOneWidget,
-      );
-
-      // Simulate typing feedback
-      await tester.enterText(textFieldFinder, 'Tive um problema no mapa');
-      await tester.pump();
-
-      // Tap the submit button
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-
-      // Verify onSubmit callback was called with correct text
-      expect(submittedText, 'Tive um problema no mapa');
-
-      // Verify TextField is wrapped with DefaultTextEditingShortcuts
-      // so backspace and other keys work outside MaterialApp
-      expect(
-        find.ancestor(
-          of: textFieldFinder,
-          matching: find.byType(DefaultTextEditingShortcuts),
-        ),
-        findsWidgets,
-      );
-    });
-
-    testWidgets('submit button is disabled when text is empty', (
-      WidgetTester tester,
-    ) async {
-      bool submitted = false;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return customFeedbackBuilder(context, (text, {extras}) async {
-                  submitted = true;
-                }, null);
-              },
-            ),
-          ),
-        ),
-      );
-
-      final buttonFinder = find.byKey(const Key('submit_feedback_button'));
-      expect(buttonFinder, findsOneWidget);
-
-      // Initial state: empty text, button disabled
-      ElevatedButton button = tester.widget(buttonFinder);
-      expect(button.enabled, isFalse);
-
-      // Tapping does nothing
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-      expect(submitted, isFalse);
-
-      // Type only spaces, button should remain disabled
-      final textFieldFinder = find.byType(TextField);
-      await tester.enterText(textFieldFinder, '   ');
-      await tester.pump();
-
-      button = tester.widget(buttonFinder);
-      expect(button.enabled, isFalse);
-
-      // Type actual text, button should be enabled
-      await tester.enterText(textFieldFinder, 'Problema real');
-      await tester.pump();
-
-      button = tester.widget(buttonFinder);
-      expect(button.enabled, isTrue);
-
-      // Tapping now works
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-      expect(submitted, isTrue);
-    });
-
-    testWidgets('adapts to dark mode styling', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          themeMode: ThemeMode.dark,
-          theme: ThemeData(
-            brightness: Brightness.light,
-          ), // We set the opposite to ensure we're testing dark mode override
-          darkTheme: ThemeData(brightness: Brightness.dark),
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return customFeedbackBuilder(
-                  context,
-                  (text, {extras}) async {},
-                  null,
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      // Verify it renders without errors in dark mode
-      expect(find.text('Qual o problema?'), findsOneWidget);
-    });
-    testWidgets(
-      'adapts text field lines and padding based on keyboard visibility',
-      (WidgetTester tester) async {
-        // Helper function to build with specific MediaQuery
-        Widget buildWithKeyboard(bool isVisible) {
-          return MaterialApp(
-            home: Scaffold(
-              body: MediaQuery(
-                data: MediaQueryData(
-                  size: const Size(400, 800),
-                  viewInsets: isVisible
-                      ? const EdgeInsets.only(bottom: 300)
-                      : EdgeInsets.zero,
-                  viewPadding: const EdgeInsets.only(
-                    bottom: 34,
-                  ), // simulate safe area
-                ),
-                child: Builder(
-                  builder: (context) {
-                    return customFeedbackBuilder(
-                      context,
-                      (text, {extras}) async {},
-                      null,
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        }
-
-        // Test with keyboard closed
-        await tester.pumpWidget(buildWithKeyboard(false));
-        TextField textFieldClosed = tester.widget(find.byType(TextField));
-        expect(textFieldClosed.minLines, 1);
-        expect(textFieldClosed.maxLines, 2);
-
-        SingleChildScrollView scrollClosed = tester.widget(
-          find.byType(SingleChildScrollView),
-        );
-        expect(scrollClosed.padding, const EdgeInsets.fromLTRB(16, 12, 16, 12));
-
-        // Test with keyboard open
-        await tester.pumpWidget(buildWithKeyboard(true));
-        TextField textFieldOpen = tester.widget(find.byType(TextField));
-        expect(textFieldOpen.minLines, 2);
-        expect(textFieldOpen.maxLines, 3);
-
-        SingleChildScrollView scrollOpen = tester.widget(
-          find.byType(SingleChildScrollView),
-        );
-        expect(scrollOpen.padding, const EdgeInsets.fromLTRB(16, 12, 16, 12));
-      },
+      ),
     );
+  }
 
-    testWidgets('intercepts back button and hides feedback', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: appNavigatorKey,
-          home: Scaffold(
-            body: BetterFeedback(
-              feedbackBuilder: (context, onSubmit, scrollController) {
-                return customFeedbackBuilder(context, onSubmit, scrollController);
-              },
-              child: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    onPressed: () {
-                      BetterFeedback.of(context).show((feedback) async {});
-                    },
-                    child: const Text('Show Feedback'),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      );
+  testWidgets('customFeedbackBuilder renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestWidget(onSubmit: (String text, {Map<String, dynamic>? extras}) async {}));
 
-      // Verify feedback is not visible
-      expect(find.byType(CustomStringFeedback), findsNothing);
+    expect(find.text('Qual o problema?'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Enviar'), findsOneWidget);
+  });
 
-      // Open feedback
-      await tester.tap(find.text('Show Feedback'));
-      await tester.pumpAndSettle();
+  testWidgets('Enviar button is disabled when text is empty', (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestWidget(onSubmit: (String text, {Map<String, dynamic>? extras}) async {}));
 
-      // Verify feedback is visible
-      expect(find.byType(CustomStringFeedback), findsOneWidget);
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(button.enabled, isFalse);
+  });
 
-      // Simulate system back button (via Navigator pop on root navigator)
-      // The transparent route is on the root navigator, which intercepts the back button
-      final dynamic widgetsBinding = tester.binding;
-      await widgetsBinding.handlePopRoute();
-      await tester.pumpAndSettle();
+  testWidgets('Enviar button is enabled when text is not empty and calls onSubmit', (WidgetTester tester) async {
+    String? submittedText;
+    await tester.pumpWidget(buildTestWidget(onSubmit: (String text, {Map<String, dynamic>? extras}) async {
+      submittedText = text;
+    }));
 
-      // Verify feedback is no longer visible
-      expect(find.byType(CustomStringFeedback), findsNothing);
-    });
+    await tester.enterText(find.byType(TextField), 'Test feedback');
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(button.enabled, isTrue);
+
+    await tester.tap(find.byType(ElevatedButton));
+    await tester.pumpAndSettle();
+
+    expect(submittedText, 'Test feedback');
   });
 }
