@@ -468,24 +468,40 @@ void showLinkOverlay(
             ),
             const SizedBox(height: 24),
             // Link container
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.colors.darkPine,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.colors.graniteEdge),
-              ),
-              child: Text(
-                link.isNotEmpty ? link : 'link faltando',
-                style: TextStyle(
-                  color: link.isNotEmpty
-                      ? context.colors.dryMoss
-                      : context.colors.rustIron,
-                  fontSize: 14,
-                  fontFamily: 'monospace',
+            GestureDetector(
+              onTap: () async {
+                if (link.isNotEmpty) {
+                  final Uri uri = Uri.parse(link);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  }
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: context.colors.darkPine,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.colors.graniteEdge),
                 ),
-                textAlign: TextAlign.center,
+                child: Text(
+                  link.isNotEmpty ? link : 'link faltando',
+                  style: TextStyle(
+                    color: link.isNotEmpty
+                        ? context.colors.dryMoss
+                        : context.colors.rustIron,
+                    fontSize: 14,
+                    fontFamily: 'monospace',
+                    decoration: link.isNotEmpty
+                        ? TextDecoration.underline
+                        : null,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -518,11 +534,21 @@ void showLinkOverlay(
                   child: GestureDetector(
                     onTap: () async {
                       if (link.isNotEmpty) {
-                        await Clipboard.setData(ClipboardData(text: link));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Link copiado!')),
+                        final Uri uri = Uri.parse(link);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
                           );
+                        } else {
+                          await Clipboard.setData(ClipboardData(text: link));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Link copiado!')),
+                            );
+                          }
+                        }
+                        if (context.mounted) {
                           Navigator.pop(context);
                         }
                       }
@@ -537,7 +563,7 @@ void showLinkOverlay(
                       ),
                       alignment: Alignment.center,
                       child: const Text(
-                        'COPIAR LINK',
+                        'ABRIR LINK',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
