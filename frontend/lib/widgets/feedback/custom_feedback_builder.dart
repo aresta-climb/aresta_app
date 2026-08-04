@@ -1,7 +1,5 @@
 import 'package:feedback/feedback.dart';
-import 'package:feedback/src/theme/feedback_theme.dart';
 import 'package:flutter/material.dart';
-import '../../main.dart';
 import '../../theme/app_colors.dart';
 
 /// Construtor customizado para a interface de feedback em texto.
@@ -43,50 +41,29 @@ class CustomStringFeedback extends StatefulWidget {
   State<CustomStringFeedback> createState() => _CustomStringFeedbackState();
 }
 
-class _CustomStringFeedbackState extends State<CustomStringFeedback> {
+class _CustomStringFeedbackState extends State<CustomStringFeedback>
+    with WidgetsBindingObserver {
   /// Controlador do campo de texto de feedback.
   late TextEditingController controller;
-  Route? _backButtonRoute;
-  bool _isHiding = false;
-
-  @override
-  void dispose() {
-    _isHiding = true;
-    final route = _backButtonRoute;
-    if (route != null && route.isActive) {
-      Future.microtask(() {
-        if (route.isActive) {
-          appNavigatorKey.currentState?.removeRoute(route);
-        }
-      });
-    }
-    controller.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
     super.initState();
     controller = TextEditingController();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _backButtonRoute = PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.transparent,
-        pageBuilder: (routeContext, _, __) => PopScope(
-          canPop: false,
-          onPopInvoked: (didPop) {
-            if (didPop || _isHiding) return;
-            _isHiding = true;
-            BetterFeedback.of(context).hide();
-            Navigator.of(routeContext).pop();
-          },
-          child: const SizedBox.expand(),
-        ),
-      );
-      appNavigatorKey.currentState?.push(_backButtonRoute!);
-    });
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Future<bool> didPopRoute() async {
+    BetterFeedback.of(context).hide();
+    return true; // Indica que o botão de voltar foi interceptado e tratado
   }
 
   @override
@@ -174,9 +151,8 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
                     backgroundColor: buttonColor,
                     foregroundColor: context.colors.chalkWhite,
                     disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
-                    disabledForegroundColor: context.colors.chalkWhite.withValues(
-                      alpha: 0.5,
-                    ),
+                    disabledForegroundColor: context.colors.chalkWhite
+                        .withValues(alpha: 0.5),
                     minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -185,12 +161,6 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback> {
                   onPressed: isEmpty
                       ? null
                       : () {
-                          _isHiding = true;
-                          final route = _backButtonRoute;
-                          if (route != null && route.isActive) {
-                            appNavigatorKey.currentState?.removeRoute(route);
-                            _backButtonRoute = null;
-                          }
                           widget.onSubmit(controller.text);
                         },
                   child: const Text(
