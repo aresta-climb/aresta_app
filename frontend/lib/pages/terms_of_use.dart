@@ -206,7 +206,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       margin: const EdgeInsets.only(bottom: 16.0),
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: context.colors.dryMoss,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -216,7 +216,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
             '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: context.colors.chalkWhite,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -225,9 +225,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
             'Data da atualização: ${formatLegalDate(kLegalLastUpdatedDate)}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+              color: context.colors.chalkWhite.withValues(alpha: 0.8),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
