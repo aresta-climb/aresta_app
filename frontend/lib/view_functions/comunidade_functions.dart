@@ -496,9 +496,6 @@ void showLinkOverlay(
                         : context.colors.rustIron,
                     fontSize: 14,
                     fontFamily: 'monospace',
-                    decoration: link.isNotEmpty
-                        ? TextDecoration.underline
-                        : null,
                   ),
                   textAlign: TextAlign.center,
                 ),
