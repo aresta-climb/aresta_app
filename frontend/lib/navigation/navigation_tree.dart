@@ -113,6 +113,18 @@ class ComunidadeNode extends NavNode {
   String toString() => 'ComunidadeNode';
 }
 
+class SobreTimeNode extends NavNode {
+  const SobreTimeNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant SobreTimeNode matchingAncestor) {
+    return SobreTimeNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'SobreTimeNode';
+}
+
 class MeusCroquisNode extends NavNode {
   const MeusCroquisNode(NavNode parent) : super(parent: parent);
 
@@ -379,6 +391,7 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is MapaGlobalNode && b is MapaGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
     if (a is ComunidadeNode && b is ComunidadeNode) return true;
+    if (a is SobreTimeNode && b is SobreTimeNode) return true;
     if (a is MeusCroquisNode && b is MeusCroquisNode) return true;
     if (a is MapasCarrosselNode && b is MapasCarrosselNode) {
       return a.cragId == b.cragId &&
