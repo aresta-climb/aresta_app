@@ -472,32 +472,39 @@ void showLinkOverlay(
               onTap: () async {
                 if (link.isNotEmpty) {
                   final Uri uri = Uri.parse(link);
-                  if (await canLaunchUrl(uri)) {
+                  try {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                     if (context.mounted) {
                       Navigator.pop(context);
                     }
+                  } catch (e) {
+                    print('Error launching url: ');
                   }
                 }
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                 decoration: BoxDecoration(
-                  color: context.colors.darkPine,
+                  color: context.colors.dryMoss,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: context.colors.graniteEdge),
                 ),
-                child: Text(
-                  link.isNotEmpty ? link : 'link faltando',
-                  style: TextStyle(
-                    color: link.isNotEmpty
-                        ? context.colors.dryMoss
-                        : context.colors.rustIron,
-                    fontSize: 14,
-                    fontFamily: 'monospace',
-                  ),
-                  textAlign: TextAlign.center,
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'ACESSAR ',
+                      style: TextStyle(
+                        color: context.colors.deepBasalt,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.open_in_new, color: context.colors.deepBasalt, size: 16),
+                  ],
                 ),
               ),
             ),
