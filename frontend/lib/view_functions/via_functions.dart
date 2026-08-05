@@ -51,6 +51,21 @@ String getGrauString(Escalada escalada) {
   }
 }
 
+/// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
+String formatGradeString(String name) {
+  String g = name
+      .replaceAll('BR_', '')
+      .replaceAll('_BARRA_', '/')
+      .replaceAll('_', ' ')
+      .toLowerCase();
+
+  return g.replaceAllMapped(RegExp(r'\b([1-9])\s?(sup)?\b'), (match) {
+    String num = match.group(1) ?? '';
+    String sup = match.group(2) != null ? 'sup' : '';
+    return '$numº$sup';
+  });
+}
+
 /// Retorna um valor numérico representando a dificuldade para fins de ordenação.
 int getGrauValue(Escalada escalada) {
   int value = 0;

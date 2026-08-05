@@ -40,6 +40,29 @@ void main() {
     });
   });
 
+  group('formatGradeString', () {
+    test('deve formatar grau puro sem sufixo', () {
+      expect(formatGradeString('BR_4'), '4º');
+      expect(formatGradeString('BR_7a'), '7a'); // Letras não ganham 'º'
+      expect(formatGradeString('BR_9c'), '9c');
+    });
+
+    test('deve formatar grau com sup', () {
+      expect(formatGradeString('BR_5sup'), '5ºsup');
+      expect(formatGradeString('BR_6_sup'), '6ºsup');
+    });
+
+    test('deve formatar graus com barra (divididos)', () {
+      expect(formatGradeString('BR_4_BARRA_5'), '4º/5º');
+      expect(formatGradeString('BR_5_BARRA_5sup'), '5º/5ºsup');
+      expect(formatGradeString('BR_6sup_BARRA_7a'), '6ºsup/7a');
+    });
+
+    test('deve retornar string vazia ou inalterada se não fizer match (ex: strings puras)', () {
+      expect(formatGradeString('lixo'), 'lixo');
+    });
+  });
+
   group('getGrauValue', () {
     test('deve retornar valores ordenáveis corretos para vias', () {
       final facil = Escalada()
