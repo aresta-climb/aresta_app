@@ -672,7 +672,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         }
       },
       secondaryActionLabel: foundMaps.length > 1
-          ? 'Ver nos mapas (${foundMaps.length})'
+          ? 'Explorar mapas do setor'
           : null,
       onSecondaryAction: foundMaps.length > 1
           ? () {
@@ -716,10 +716,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Setor',
       onAction: () => AppNav.toSetor(context, setor: setor),
-      secondaryActionLabel: setor.mapas.length > 1
-          ? 'Ver mapas (${setor.mapas.length})'
+      secondaryActionLabel: setor.mapas.isNotEmpty
+          ? 'Explorar mapas do setor'
           : null,
-      onSecondaryAction: setor.mapas.length > 1
+      onSecondaryAction: setor.mapas.isNotEmpty
           ? () {
               int indiceMapa = 0;
               if (ref.hasIndiceMapaAlvo()) {
@@ -780,10 +780,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Grupo',
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
-      secondaryActionLabel: grupo.mapas.length > 1
-          ? 'Ver mapas (${grupo.mapas.length})'
+      secondaryActionLabel: grupo.mapas.isNotEmpty
+          ? 'Explorar mapas do setor'
           : null,
-      onSecondaryAction: grupo.mapas.length > 1
+      onSecondaryAction: grupo.mapas.isNotEmpty
           ? () {
               int indiceMapa = 0;
               if (ref.hasIndiceMapaAlvo()) {
