@@ -33,8 +33,9 @@ class LegalVersionUpdater {
 
         final versionMatch =
             RegExp(r"const int kLegalVersion = (\d+);").firstMatch(content);
-        if (versionMatch != null)
+        if (versionMatch != null) {
           oldVersion = int.parse(versionMatch.group(1)!);
+        }
 
         final termosMatch =
             RegExp(r"'TERMOS_DE_USO_ARESTA_CLIMB\.md': '([^']+)'")

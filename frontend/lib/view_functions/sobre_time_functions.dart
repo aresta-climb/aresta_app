@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
-import '../view_functions/common_functions.dart';
 
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
   AlignmentGeometry align = Alignment.center;
-  if (index == 0) align = const Alignment(-0.5, -0.5);
-  else if (index == 1) align = const Alignment(0.5, -0.5);
+  if (index == 0) {
+    align = const Alignment(-0.5, -0.5);
+  } else if (index == 1) align = const Alignment(0.5, -0.5);
   else if (index == 2) align = const Alignment(-0.5, 0.5);
   else if (index == 3) align = const Alignment(0.5, 0.5);
 
@@ -104,16 +104,18 @@ Widget buildAnimatedQuadrant({
         opacity = 1.0 - animation.value;
         
         final double pushDist = 20.0 * animation.value;
-        if (index == 0) translate = Offset(-pushDist, -pushDist);
-        else if (index == 1) translate = Offset(pushDist, -pushDist);
+        if (index == 0) {
+          translate = Offset(-pushDist, -pushDist);
+        } else if (index == 1) translate = Offset(pushDist, -pushDist);
         else if (index == 2) translate = Offset(-pushDist, pushDist);
         else if (index == 3) translate = Offset(pushDist, pushDist);
       }
     } else {
       // Doritos separados
       const double gap = 2.0;
-      if (index == 0) translate = const Offset(-gap, -gap);
-      else if (index == 1) translate = const Offset(gap, -gap);
+      if (index == 0) {
+        translate = const Offset(-gap, -gap);
+      } else if (index == 1) translate = const Offset(gap, -gap);
       else if (index == 2) translate = const Offset(-gap, gap);
       else if (index == 3) translate = const Offset(gap, gap);
     }
@@ -277,8 +279,9 @@ Path getQuadrantPath(Size size, int index, double expand) {
   double startAngle = 0;
   double sweepAngle = math.pi / 2; 
 
-  if (index == 0) startAngle = math.pi; // Top-Left
-  else if (index == 1) startAngle = -math.pi / 2; // Top-Right
+  if (index == 0) {
+    startAngle = math.pi; // Top-Left
+  } else if (index == 1) startAngle = -math.pi / 2; // Top-Right
   else if (index == 2) startAngle = math.pi / 2; // Bottom-Left
   else if (index == 3) startAngle = 0; // Bottom-Right
 
