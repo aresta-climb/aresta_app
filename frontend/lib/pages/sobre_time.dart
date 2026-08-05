@@ -176,7 +176,7 @@ class _SobreTimePageState extends State<SobreTimePage>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tem interesse em contribuir e ter sua foto aqui? Entre no nosso Discord e nos envie uma mensagem!',
+                        'Tem interesse em contribuir e ter a sua foto aqui? Entre no nosso Discord e nos envie uma mensagem!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: context.colors.ashGrey,

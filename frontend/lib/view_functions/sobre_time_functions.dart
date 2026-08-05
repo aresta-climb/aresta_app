@@ -155,14 +155,23 @@ Widget buildAnimatedQuadrant({
 
 
 Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> data) {
+  final double canvasSize = MediaQuery.of(context).size.width - 32;
+  final double inscribedSquareSize = canvasSize * 0.707;
+
   return Center(
-    child: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+    child: SizedBox(
+      width: inscribedSquareSize,
+      height: inscribedSquareSize,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Container(
+          width: inscribedSquareSize,
+          padding: const EdgeInsets.all(8.0),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Container(
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
@@ -220,10 +229,10 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                       }
                     },
                     icon: const Icon(Icons.work_outline, size: 16, color: Colors.white),
-                    label: const Text('LinkedIn', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    label: const Text('LinkedIn', style: TextStyle(color: Colors.white, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0A66C2),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
@@ -233,14 +242,14 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                       try {
                         await launchUrl(Uri.parse(data['github']!), mode: LaunchMode.externalApplication);
                       } catch (e) {
-                        debugPrint('Error launching url: ');
+                        debugPrint('Error launching url: $e');
                       }
                     },
                     icon: const Icon(Icons.code, size: 16, color: Colors.black),
-                    label: const Text('GitHub', style: TextStyle(color: Colors.black, fontSize: 12)),
+                    label: const Text('GitHub', style: TextStyle(color: Colors.black, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
@@ -249,6 +258,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
           ],
         ),
       ),
+    ),
     ),
   );
 }
