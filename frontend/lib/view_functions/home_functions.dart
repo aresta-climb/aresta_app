@@ -128,9 +128,23 @@ Widget _buildHeader(
                     dataset != null && dataset.downloadedPicos.isNotEmpty;
                 if (!hasDownloaded) return const SizedBox.shrink();
 
-                return IconButton(
-                  icon: Icon(Icons.search, color: context.colors.ashGrey),
-                  tooltip: 'Buscar nos guias baixados',
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.sync, color: context.colors.ashGrey),
+                      tooltip: 'Atualizar croquis baixados',
+                      onPressed: () async {
+                        await handleManualSync(
+                          context,
+                          datasetRepo,
+                          syncService,
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.search, color: context.colors.ashGrey),
+                      tooltip: 'Buscar nos guias baixados',
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -152,6 +166,8 @@ Widget _buildHeader(
                       ),
                     );
                   },
+                ),
+              ],
                 );
               },
             ),
