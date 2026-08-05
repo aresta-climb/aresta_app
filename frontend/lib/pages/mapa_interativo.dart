@@ -563,40 +563,26 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     String title = '';
     String subtitle = '';
 
-    String formatGrade(dynamic dificuldade) {
-      String g = dificuldade.name
-          .replaceAll('BR_', '')
-          .replaceAll('_BARRA_', '/')
-          .replaceAll('_', ' ')
-          .toLowerCase();
-
-      return g.replaceAllMapped(RegExp(r'([1-6])(sup)?'), (match) {
-        if (match.group(2) == 'sup') {
-          return '${match.group(1)}ºsup';
-        } else {
-          return '${match.group(1)}º';
-        }
-      });
-    }
-
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
         title = escalada.viaEsportiva.nome;
         subtitle =
-            'Esportiva | ${formatGrade(escalada.viaEsportiva.dificuldade)}';
-        break;
-      case Escalada_Tipo.viaMovel:
-        title = escalada.viaMovel.nome;
-        subtitle = 'Móvel | ${formatGrade(escalada.viaMovel.dificuldade)}';
+            'Esportiva | ${formatGradeString(escalada.viaEsportiva.dificuldade.name)}';
         break;
       case Escalada_Tipo.boulder:
         title = escalada.boulder.nome;
-        subtitle = 'Boulder | ${formatGrade(escalada.boulder.dificuldade)}';
+        subtitle =
+            'Boulder | ${formatGradeString(escalada.boulder.dificuldade.name)}';
+        break;
+      case Escalada_Tipo.viaMovel:
+        title = escalada.viaMovel.nome;
+        subtitle =
+            'Móvel | ${formatGradeString(escalada.viaMovel.dificuldade.name)}';
         break;
       case Escalada_Tipo.viaMultiplasEnfiadas:
         title = escalada.viaMultiplasEnfiadas.nome;
         subtitle =
-            'Múltiplas Enfiadas | ${escalada.viaMultiplasEnfiadas.numeroEnfiadas} enfiadas';
+            'Tradicional | ${formatGradeString(escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name)}';
         break;
       case Escalada_Tipo.highline:
         title = escalada.highline.nome;
