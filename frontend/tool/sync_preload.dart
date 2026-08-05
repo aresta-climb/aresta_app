@@ -62,7 +62,8 @@ class SyncPreloadRunner {
     final newIndice = Indice.fromBuffer(response.bodyBytes);
 
     // Construir mapa de hashes antigos
-    final oldHashes = <String, String>{};
+    final oldCroquiHashes = <String, String>{};
+    final oldThumbnailHashes = <String, String>{};
     final indiceFile = File('$outputDir/indice.binarypb');
     if (indiceFile.existsSync()) {
       try {
@@ -74,7 +75,8 @@ class SyncPreloadRunner {
             final cragId = croqui.id.isNotEmpty
                 ? croqui.id
                 : baseDir.replaceAll('/', '_');
-            oldHashes[cragId] = croqui.checksumSha256Croqui;
+            oldCroquiHashes[cragId] = croqui.checksumSha256Croqui;
+            oldThumbnailHashes[cragId] = croqui.checksumSha256Thumbnail;
           }
         }
       } catch (_) {}
@@ -97,17 +99,26 @@ class SyncPreloadRunner {
 
         final thumbFile = File('${thumbnailsDir.path}/$cragId.webp');
         final bool thumbExists = thumbFile.existsSync();
-        final bool isChanged = oldHashes[cragId] != resumo.checksumSha256Croqui;
+        final bool isChanged =
+            oldThumbnailHashes[cragId] != resumo.checksumSha256Thumbnail;
+
+        if (resumo.checksumSha256Thumbnail.isEmpty) {
+          continue; // Não há thumbnail para baixar
+        }
 
         if (thumbExists && !isChanged) {
           continue; // Thumbnail já existe e não sofreu alterações
         }
 
-        final thumbUrl = '$baseUrl/$baseDir/imagens/thumbnail.webp';
+        final thumbUrl = '$baseUrl/thumbnails/$baseDir.webp';
         final thumbResponse = await client.get(Uri.parse(thumbUrl));
 
         if (thumbResponse.statusCode == 200) {
           thumbFile.writeAsBytesSync(thumbResponse.bodyBytes);
+        } else {
+          throw Exception(
+            'Falha em baixar thumbnail para $cragId: ${thumbResponse.statusCode}',
+          );
         }
       }
     }
