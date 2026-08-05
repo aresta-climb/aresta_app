@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+import 'package:url_launcher/url_launcher.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import '../theme/theme_controller.dart';
@@ -666,3 +668,7 @@ String stripMarkdownForSubtitle(String markdown) {
   text = text.replaceAll(RegExp(r'\s+'), ' ');
   return text.trim();
 }
+
+
+
+
