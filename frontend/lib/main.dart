@@ -8,6 +8,7 @@ import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/pages/settings.dart';
+import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/pico.dart';
@@ -701,6 +702,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
     if (node is SettingsNode) {
       return SettingsPage(datasetRepo: widget.datasetRepo);
+    }
+
+    if (node is SobreTimeNode) {
+      return const SobreTimePage();
     }
 
     return const Center(child: Text('Unknown Node'));
