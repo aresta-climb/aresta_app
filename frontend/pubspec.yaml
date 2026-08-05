@@ -54,6 +54,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/team/
     - legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md
     - legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md
     - assets/logo_app.png
