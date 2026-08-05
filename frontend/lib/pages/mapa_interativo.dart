@@ -704,9 +704,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }
 
   Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
+    int numEscaladas = setor.escaladas.length;
+    bool boulderArea = isBoulderArea(setor.escaladas);
+    String typeLabel = boulderArea ? 'boulder' : 'via';
+    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+
     return _buildBaseCard(
       title: setor.nome,
-      subtitle: '',
+      subtitle: subtitle,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -768,9 +773,21 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }
 
   Widget _buildGrupoCard(Mapa_Referencia ref, Grupo grupo) {
+    int numEscaladas = 0;
+    List<Escalada> allEscaladas = [];
+    for (var s in grupo.setores) {
+      if (s.hasConteudo()) {
+        numEscaladas += s.conteudo.escaladas.length;
+        allEscaladas.addAll(s.conteudo.escaladas);
+      }
+    }
+    bool boulderArea = isBoulderArea(allEscaladas);
+    String typeLabel = boulderArea ? 'boulder' : 'via';
+    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+
     return _buildBaseCard(
       title: grupo.nome,
-      subtitle: '',
+      subtitle: subtitle,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
