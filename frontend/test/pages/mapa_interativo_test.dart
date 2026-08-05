@@ -1100,12 +1100,12 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Ver nos mapas (2)'), findsOneWidget);
+        expect(find.text('Explorar mapas do setor'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'Setor Card with multiple maps displays "Ver Mapas do Setor (2)" and uses carousel',
+      'Setor Card with multiple maps displays "Explorar mapas do setor" and uses carousel',
       (WidgetTester tester) async {
         final ponto = Mapa_PontoDeInteresse(
           id: 'p1',
@@ -1150,12 +1150,12 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Ver mapas (2)'), findsOneWidget);
+        expect(find.text('Explorar mapas do setor'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'Grupo Card with multiple maps displays "Ver mapas (2)" and uses carousel',
+      'Grupo Card with multiple maps displays "Explorar mapas do setor" and uses carousel',
       (WidgetTester tester) async {
         final ponto = Mapa_PontoDeInteresse(
           id: 'p1',
@@ -1200,7 +1200,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Ver mapas (2)'), findsOneWidget);
+        expect(find.text('Explorar mapas do setor'), findsOneWidget);
       },
     );
 
@@ -1264,7 +1264,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Ver mapas (5)'), findsOneWidget);
+        expect(find.text('Explorar mapas do setor'), findsOneWidget);
       },
     );
 
