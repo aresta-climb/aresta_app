@@ -147,8 +147,9 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
           if (entity is File) {
             final filePath = entity.path;
             if (filePath.endsWith('.binarypb') ||
-                filePath.endsWith('.binarypb.tmp'))
+                filePath.endsWith('.binarypb.tmp')) {
               continue;
+            }
             bool isNeeded = false;
             for (var key in newContent.keys) {
               if (filePath

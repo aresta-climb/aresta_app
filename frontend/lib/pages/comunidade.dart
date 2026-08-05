@@ -5,7 +5,6 @@ import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
 import '../view_functions/common_functions.dart';
-import 'sobre_time.dart';
 
 class ComunidadePage extends StatelessWidget {
   const ComunidadePage({super.key});

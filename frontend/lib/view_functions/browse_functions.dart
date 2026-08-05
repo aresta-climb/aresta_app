@@ -549,12 +549,14 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     return FutureBuilder<http.Response>(
       future: _zipFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildPlaceholder();
+        }
         if (snapshot.hasError ||
             !snapshot.hasData ||
-            snapshot.data!.statusCode != 200)
+            snapshot.data!.statusCode != 200) {
           return _buildPlaceholder();
+        }
         return Image.memory(
           snapshot.data!.bodyBytes,
           fit: BoxFit.cover,
@@ -568,8 +570,9 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     return FutureBuilder<Directory>(
       future: _dirFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildPlaceholder();
+        }
         if (snapshot.hasData) {
           final file = File(
             '${snapshot.data!.path}/thumbnails/${widget.cragId}.webp',

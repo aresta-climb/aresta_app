@@ -236,8 +236,9 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   }
 
   Widget _buildAcceptedBanner() {
-    if (widget.showAcceptButton || _acceptedTimestamp == null)
+    if (widget.showAcceptButton || _acceptedTimestamp == null) {
       return const SizedBox.shrink();
+    }
 
     final dateTime = DateTime.tryParse(_acceptedTimestamp!);
     if (dateTime == null) return const SizedBox.shrink();

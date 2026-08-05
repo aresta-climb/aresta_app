@@ -21,7 +21,7 @@ class SetoresPage extends StatefulWidget {
 class _SetoresPageState extends State<SetoresPage> {
   GrupoSortMode _sortMode = GrupoSortMode.original;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final String _searchQuery = '';
 
   @override
   void dispose() {

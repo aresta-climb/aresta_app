@@ -352,23 +352,28 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     final typeFilteredData = _allData.where((item) {
       if (_selectedFilter != 'Todos') {
-        if (_selectedFilter == 'Setores' && item.originalItem is! Setor)
+        if (_selectedFilter == 'Setores' && item.originalItem is! Setor) {
           return false;
+        }
 
         if (item.originalItem is Escalada) {
           final esc = item.originalItem as Escalada;
           if (_selectedFilter == 'Esportivas' &&
-              esc.whichTipo() != Escalada_Tipo.viaEsportiva)
+              esc.whichTipo() != Escalada_Tipo.viaEsportiva) {
             return false;
+          }
           if (_selectedFilter == 'Móveis' &&
-              esc.whichTipo() != Escalada_Tipo.viaMovel)
+              esc.whichTipo() != Escalada_Tipo.viaMovel) {
             return false;
+          }
           if (_selectedFilter == 'Boulders' &&
-              esc.whichTipo() != Escalada_Tipo.boulder)
+              esc.whichTipo() != Escalada_Tipo.boulder) {
             return false;
+          }
           if (_selectedFilter == 'Highlines' &&
-              esc.whichTipo() != Escalada_Tipo.highline)
+              esc.whichTipo() != Escalada_Tipo.highline) {
             return false;
+          }
         } else if (_selectedFilter != 'Setores') {
           return false;
         }

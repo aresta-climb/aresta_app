@@ -11,12 +11,12 @@ import 'package:feedback/feedback.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/theme/app_colors.dart';
 
 class MockDatasetRepository implements DatasetRepository {
+  @override
   final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
     TopoDataset(availablePicos: [], downloadedPicos: [{}]),
   );
@@ -28,7 +28,7 @@ class MockDatasetRepository implements DatasetRepository {
 class MockSyncService implements SyncService {
   bool networkDisabled = false;
   List<String> mockFailed = [];
-  ValueNotifier<SyncStatus> _status = ValueNotifier(SyncStatus.updated);
+  final ValueNotifier<SyncStatus> _status = ValueNotifier(SyncStatus.updated);
 
   @override
   Future<bool> isNetworkDisabled() async => networkDisabled;

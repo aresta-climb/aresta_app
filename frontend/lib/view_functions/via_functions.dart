@@ -74,13 +74,15 @@ int getGrauValue(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       value = escalada.viaEsportiva.dificuldade.value;
-      if (escalada.viaEsportiva.dificuldade == GrauVia_GrauVia.PROJETO)
+      if (escalada.viaEsportiva.dificuldade == GrauVia_GrauVia.PROJETO) {
         isProjeto = true;
+      }
       break;
     case Escalada_Tipo.viaMovel:
       value = escalada.viaMovel.dificuldade.value;
-      if (escalada.viaMovel.dificuldade == GrauVia_GrauVia.PROJETO)
+      if (escalada.viaMovel.dificuldade == GrauVia_GrauVia.PROJETO) {
         isProjeto = true;
+      }
       break;
     case Escalada_Tipo.boulder:
       value = escalada.boulder.dificuldade.value;
@@ -88,8 +90,9 @@ int getGrauValue(Escalada escalada) {
     case Escalada_Tipo.viaMultiplasEnfiadas:
       value = escalada.viaMultiplasEnfiadas.dificuldadeMaxima.value;
       if (escalada.viaMultiplasEnfiadas.dificuldadeMaxima ==
-          GrauVia_GrauVia.PROJETO)
+          GrauVia_GrauVia.PROJETO) {
         isProjeto = true;
+      }
       break;
     default:
       value = 0;
@@ -279,7 +282,7 @@ Widget _buildViaEsportiva(
   bool fromMapaPage,
 ) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade())
+  if (via.hasDificuldade()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -288,11 +291,13 @@ Widget _buildViaEsportiva(
         Icons.trending_up,
       ),
     );
-  if (via.hasExtensao() && via.extensao > 0)
+  }
+  if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
       _buildStatCard(context, 'Extensão', '${via.extensao}m', Icons.height),
     );
-  if (via.hasTipoParede())
+  }
+  if (via.hasTipoParede()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -301,8 +306,9 @@ Widget _buildViaEsportiva(
         Icons.terrain,
       ),
     );
+  }
   if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0)
+      via.quantidadeProtecoesIntermediarias > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -311,7 +317,8 @@ Widget _buildViaEsportiva(
         Icons.shield_outlined,
       ),
     );
-  if (via.hasExposicao())
+  }
+  if (via.hasExposicao()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -320,7 +327,8 @@ Widget _buildViaEsportiva(
         Icons.warning_amber_rounded,
       ),
     );
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0)
+  }
+  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -329,7 +337,8 @@ Widget _buildViaEsportiva(
         Icons.anchor,
       ),
     );
-  if (via.hasDificuldadeArtificial())
+  }
+  if (via.hasDificuldadeArtificial()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -338,16 +347,20 @@ Widget _buildViaEsportiva(
         Icons.architecture,
       ),
     );
+  }
 
   List<Widget> historyRows = [];
-  if (via.conquistadores.isNotEmpty)
+  if (via.conquistadores.isNotEmpty) {
     historyRows.add(
       _buildHistoryRow('Conquistadores', via.conquistadores.join(', ')),
     );
-  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty)
+  }
+  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Abertura', via.dataAbertura));
-  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty)
+  }
+  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Manutenção', via.dataManutencao));
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +484,7 @@ Widget _buildViaMovel(
   bool fromMapaPage,
 ) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade())
+  if (via.hasDificuldade()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -480,11 +493,13 @@ Widget _buildViaMovel(
         Icons.trending_up,
       ),
     );
-  if (via.hasExtensao() && via.extensao > 0)
+  }
+  if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
       _buildStatCard(context, 'Extensão', '${via.extensao}m', Icons.height),
     );
-  if (via.hasTipoParede())
+  }
+  if (via.hasTipoParede()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -493,8 +508,9 @@ Widget _buildViaMovel(
         Icons.terrain,
       ),
     );
+  }
   if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0)
+      via.quantidadeProtecoesIntermediarias > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -503,7 +519,8 @@ Widget _buildViaMovel(
         Icons.shield_outlined,
       ),
     );
-  if (via.hasExposicao())
+  }
+  if (via.hasExposicao()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -512,7 +529,8 @@ Widget _buildViaMovel(
         Icons.warning_amber_rounded,
       ),
     );
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0)
+  }
+  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -521,7 +539,8 @@ Widget _buildViaMovel(
         Icons.anchor,
       ),
     );
-  if (via.hasDificuldadeArtificial())
+  }
+  if (via.hasDificuldadeArtificial()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -530,7 +549,8 @@ Widget _buildViaMovel(
         Icons.architecture,
       ),
     );
-  if (via.hasDificuldadeArtificialEmLivre())
+  }
+  if (via.hasDificuldadeArtificialEmLivre()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -539,16 +559,20 @@ Widget _buildViaMovel(
         Icons.back_hand,
       ),
     );
+  }
 
   List<Widget> historyRows = [];
-  if (via.conquistadores.isNotEmpty)
+  if (via.conquistadores.isNotEmpty) {
     historyRows.add(
       _buildHistoryRow('Conquistadores', via.conquistadores.join(', ')),
     );
-  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty)
+  }
+  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Abertura', via.dataAbertura));
-  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty)
+  }
+  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Manutenção', via.dataManutencao));
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,7 +705,7 @@ Widget _buildBoulder(
   bool fromMapaPage,
 ) {
   List<Widget> statCards = [];
-  if (via.hasDificuldade())
+  if (via.hasDificuldade()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -690,7 +714,8 @@ Widget _buildBoulder(
         Icons.trending_up,
       ),
     );
-  if (via.hasTipoParede())
+  }
+  if (via.hasTipoParede()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -699,14 +724,17 @@ Widget _buildBoulder(
         Icons.terrain,
       ),
     );
+  }
 
   List<Widget> historyRows = [];
-  if (via.conquistadores.isNotEmpty)
+  if (via.conquistadores.isNotEmpty) {
     historyRows.add(
       _buildHistoryRow('Conquistadores', via.conquistadores.join(', ')),
     );
-  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty)
+  }
+  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Abertura', via.dataAbertura));
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -822,7 +850,7 @@ Widget _buildMultipitch(
   bool fromMapaPage,
 ) {
   List<Widget> statCards = [];
-  if (via.hasDificuldadeMaxima())
+  if (via.hasDificuldadeMaxima()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -831,7 +859,8 @@ Widget _buildMultipitch(
         Icons.trending_up,
       ),
     );
-  if (via.hasDificuldadeMedia())
+  }
+  if (via.hasDificuldadeMedia()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -840,7 +869,8 @@ Widget _buildMultipitch(
         Icons.trending_flat,
       ),
     );
-  if (via.hasDificuldadeArtificial())
+  }
+  if (via.hasDificuldadeArtificial()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -849,7 +879,8 @@ Widget _buildMultipitch(
         Icons.architecture,
       ),
     );
-  if (via.hasDificuldadeArtificialEmLivre())
+  }
+  if (via.hasDificuldadeArtificialEmLivre()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -858,7 +889,8 @@ Widget _buildMultipitch(
         Icons.back_hand,
       ),
     );
-  if (via.hasExposicao())
+  }
+  if (via.hasExposicao()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -867,11 +899,13 @@ Widget _buildMultipitch(
         Icons.warning_amber_rounded,
       ),
     );
-  if (via.hasDuracao())
+  }
+  if (via.hasDuracao()) {
     statCards.add(
       _buildStatCard(context, 'Duração', _fmtEnum(via.duracao), Icons.timer),
     );
-  if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0)
+  }
+  if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -880,8 +914,9 @@ Widget _buildMultipitch(
         Icons.format_list_numbered,
       ),
     );
+  }
   if (via.hasQuantidadeEquipamentosParada() &&
-      via.quantidadeEquipamentosParada > 0)
+      via.quantidadeEquipamentosParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -890,7 +925,8 @@ Widget _buildMultipitch(
         Icons.anchor,
       ),
     );
-  if (via.hasComprimentoTotal() && via.comprimentoTotal > 0)
+  }
+  if (via.hasComprimentoTotal() && via.comprimentoTotal > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -899,7 +935,8 @@ Widget _buildMultipitch(
         Icons.height,
       ),
     );
-  if (via.hasComprimentoMaiorEnfiada() && via.comprimentoMaiorEnfiada > 0)
+  }
+  if (via.hasComprimentoMaiorEnfiada() && via.comprimentoMaiorEnfiada > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -908,7 +945,8 @@ Widget _buildMultipitch(
         Icons.straighten,
       ),
     );
-  if (via.hasTipoViaMultiplasEnfiadas())
+  }
+  if (via.hasTipoViaMultiplasEnfiadas()) {
     statCards.add(
       _buildStatCard(
         context,
@@ -917,16 +955,20 @@ Widget _buildMultipitch(
         Icons.merge_type,
       ),
     );
+  }
 
   List<Widget> historyRows = [];
-  if (via.conquistadores.isNotEmpty)
+  if (via.conquistadores.isNotEmpty) {
     historyRows.add(
       _buildHistoryRow('Conquistadores', via.conquistadores.join(', ')),
     );
-  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty)
+  }
+  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Abertura', via.dataAbertura));
-  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty)
+  }
+  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Manutenção', via.dataManutencao));
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1104,7 +1146,7 @@ Widget _buildHighline(
   bool fromMapaPage,
 ) {
   List<Widget> statCards = [];
-  if (via.hasDistancia() && via.distancia > 0)
+  if (via.hasDistancia() && via.distancia > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -1113,11 +1155,13 @@ Widget _buildHighline(
         Icons.straighten,
       ),
     );
-  if (via.hasAltura() && via.altura > 0)
+  }
+  if (via.hasAltura() && via.altura > 0) {
     statCards.add(
       _buildStatCard(context, 'Altura', '${via.altura}m', Icons.height),
     );
-  if (via.hasExposicao() && via.exposicao > 0)
+  }
+  if (via.hasExposicao() && via.exposicao > 0) {
     statCards.add(
       _buildStatCard(
         context,
@@ -1126,16 +1170,20 @@ Widget _buildHighline(
         Icons.warning_amber_rounded,
       ),
     );
+  }
 
   List<Widget> historyRows = [];
-  if (via.conquistadores.isNotEmpty)
+  if (via.conquistadores.isNotEmpty) {
     historyRows.add(
       _buildHistoryRow('Conquistadores', via.conquistadores.join(', ')),
     );
-  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty)
+  }
+  if (via.hasDataAbertura() && via.dataAbertura.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Abertura', via.dataAbertura));
-  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty)
+  }
+  if (via.hasDataManutencao() && via.dataManutencao.isNotEmpty) {
     historyRows.add(_buildHistoryRow('Manutenção', via.dataManutencao));
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,

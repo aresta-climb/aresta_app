@@ -403,10 +403,12 @@ class TreeNavigationController extends ChangeNotifier {
     }
 
     if (a is SetoresNode && b is SetoresNode) return a.cragId == b.cragId;
-    if (a is ExplorarLocalNode && b is ExplorarLocalNode)
+    if (a is ExplorarLocalNode && b is ExplorarLocalNode) {
       return a.cragId == b.cragId;
-    if (a is ComunidadePicoNode && b is ComunidadePicoNode)
+    }
+    if (a is ComunidadePicoNode && b is ComunidadePicoNode) {
       return a.cragId == b.cragId;
+    }
     if (a is ApoiePicoNode && b is ApoiePicoNode) return a.cragId == b.cragId;
     if (a is PicoNode && b is PicoNode) {
       return a.cragId == b.cragId;

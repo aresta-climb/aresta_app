@@ -718,8 +718,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               } else if (setor.hasIndiceMapaPadrao()) {
                 indiceMapa = setor.indiceMapaPadrao;
               }
-              if (indiceMapa < 0 || indiceMapa >= setor.mapas.length)
+              if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) {
                 indiceMapa = 0;
+              }
 
               final resolved = _refToResolved[ref];
               if (setor.mapas.length > 1) {
@@ -794,8 +795,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               } else if (grupo.hasIndiceMapaPadrao()) {
                 indiceMapa = grupo.indiceMapaPadrao;
               }
-              if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length)
+              if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) {
                 indiceMapa = 0;
+              }
 
               if (grupo.mapas.length > 1) {
                 final mapasData = grupo.mapas
@@ -1000,8 +1002,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           if (details.primaryVelocity! > 0) {
             if (_focusedItemIndex > 0) changeItem(_focusedItemIndex - 1);
           } else if (details.primaryVelocity! < 0) {
-            if (_focusedItemIndex < refs.length - 1)
+            if (_focusedItemIndex < refs.length - 1) {
               changeItem(_focusedItemIndex + 1);
+            }
           }
         },
         child: Column(

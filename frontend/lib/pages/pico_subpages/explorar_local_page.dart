@@ -6,7 +6,6 @@ import '../../utils/pico_categorization.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/app_colors.dart';
 import '../../navigation/navigation_tree.dart';
-import '../../navigation/navigation_functions.dart';
 
 class ExplorarLocalPage extends StatelessWidget {
   final Pico pico;

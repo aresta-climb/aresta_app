@@ -4,7 +4,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 

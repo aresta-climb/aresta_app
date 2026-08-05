@@ -256,13 +256,15 @@ List<Escalada> getAllEscaladasFromPico(Pico pico) {
 Setor? findSetorForEscalada(Pico pico, Escalada target) {
   for (final sg in pico.setoresOuGrupos) {
     if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-      if (sg.setor.conteudo.escaladas.contains(target))
+      if (sg.setor.conteudo.escaladas.contains(target)) {
         return sg.setor.conteudo;
+      }
     } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
         sg.grupo.hasConteudo()) {
       for (final s in sg.grupo.conteudo.setores) {
-        if (s.hasConteudo() && s.conteudo.escaladas.contains(target))
+        if (s.hasConteudo() && s.conteudo.escaladas.contains(target)) {
           return s.conteudo;
+        }
       }
     }
   }
