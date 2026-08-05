@@ -784,7 +784,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       actionLabel: 'Ir para Grupo',
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
       secondaryActionLabel: grupo.mapas.isNotEmpty
-          ? 'Explorar mapas do setor'
+          ? 'Explorar mapas do grupo de setores'
           : null,
       onSecondaryAction: grupo.mapas.isNotEmpty
           ? () {

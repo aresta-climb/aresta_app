@@ -1155,7 +1155,7 @@ void main() {
     );
 
     testWidgets(
-      'Grupo Card with multiple maps displays "Explorar mapas do setor" and uses carousel',
+      'Grupo Card with multiple maps displays "Explorar mapas do grupo de setores" and uses carousel',
       (WidgetTester tester) async {
         final ponto = Mapa_PontoDeInteresse(
           id: 'p1',
@@ -1200,7 +1200,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Explorar mapas do setor'), findsOneWidget);
+        expect(find.text('Explorar mapas do grupo de setores'), findsOneWidget);
       },
     );
 
