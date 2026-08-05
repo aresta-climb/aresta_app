@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../main.dart';
+import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
 import '../view_functions/common_functions.dart';
+import 'sobre_time.dart';
 
 class ComunidadePage extends StatelessWidget {
   const ComunidadePage({super.key});
@@ -42,13 +46,13 @@ class ComunidadePage extends StatelessWidget {
                     'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
-                onTap: () => showLinkOverlay(
-                  context,
-                  title: 'WhatsApp Oficial',
-                  link: 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv',
-                  iconData: Icons.chat_bubble_outline,
-                  iconColor: const Color(0xFF128C7E),
-                ),
+                onTap: () async {
+                  try {
+                    await launchUrl(Uri.parse('https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv'), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Error launching url: ');
+                  }
+                },
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -58,13 +62,9 @@ class ComunidadePage extends StatelessWidget {
                     'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
-                onTap: () => showLinkOverlay(
-                  context,
-                  title: 'Instagram',
-                  link: '', // No link yet, triggers fallback
-                  iconData: Icons.camera_alt_outlined,
-                  iconColor: const Color(0xFFE1306C),
-                ),
+                onTap: () async {
+                  // No link yet
+                },
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -74,13 +74,13 @@ class ComunidadePage extends StatelessWidget {
                     'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
-                onTap: () => showLinkOverlay(
-                  context,
-                  title: 'Discord do Projeto',
-                  link: 'https://discord.gg/3KDTwcxHK',
-                  iconData: Icons.discord,
-                  iconColor: const Color(0xFF5865F2),
-                ),
+                onTap: () async {
+                  try {
+                    await launchUrl(Uri.parse('https://discord.gg/3KDTwcxHK'), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Error launching url: ');
+                  }
+                },
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -89,13 +89,27 @@ class ComunidadePage extends StatelessWidget {
                 subtitle: 'Acesse o perfil com os repositórios do github.',
                 iconData: Icons.code,
                 iconBgColor: const Color(0xFF333333), // GitHub Dark Gray
-                onTap: () => showLinkOverlay(
-                  context,
-                  title: 'GitHub Oficial',
-                  link: 'https://github.com/aresta-climb',
-                  iconData: Icons.code,
-                  iconColor: const Color(0xFF333333),
-                ),
+                onTap: () async {
+                  try {
+                    await launchUrl(Uri.parse('https://github.com/aresta-climb'), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Error launching url: ');
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              buildActionCard(
+                context,
+                title: 'SOBRE O TIME',
+                subtitle: 'Conheça os desenvolvedores e colaboradores do projeto Aresta.',
+                iconData: Icons.groups_outlined,
+                iconBgColor: context.colors.dryMoss,
+                onTap: () {
+                  final treeNav = TreeNavigationWrapper.currentTreeController;
+                  if (treeNav != null) {
+                    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
+                  }
+                },
               ),
               const SizedBox(height: 16),
               buildTermsCard(context),
