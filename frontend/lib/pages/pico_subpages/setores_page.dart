@@ -94,7 +94,7 @@ class _SetoresPageState extends State<SetoresPage> {
                 widget.pico.mapasGerais.hasConteudo() &&
                 widget.pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
               PicoMenuCard(
-                title: 'Mapas gerais',
+                title: 'Mapa geral interativo',
                 subtitle:
                     'Visualização cartográfica, setores físicos e panorama das paredes.',
                 icon: Icons.map,
