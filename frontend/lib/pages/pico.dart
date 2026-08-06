@@ -81,8 +81,32 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     }
 
     final int setoresCount = _countTotalSetores();
+    
+    // Attempt to fetch detailed statistics from activeDataset
+    final picosList = widget.datasetRepo.activeDataset.value?.availablePicos ?? [];
+    final picoData = picosList.where((p) => p['id'] == widget.cragId).firstOrNull;
+    final estatisticas = picoData?['estatisticas'] as Map<String, dynamic>?;
+
+    String statsText = '';
+    if (estatisticas != null) {
+      final vias = estatisticas['totalVias'] ?? 0;
+      final List<String> modalidades = [];
+      if ((estatisticas['totalBoulders'] ?? 0) > 0) modalidades.add('${estatisticas['totalBoulders']} boulders');
+      if ((estatisticas['totalEsportivas'] ?? 0) > 0) modalidades.add('${estatisticas['totalEsportivas']} esportivas');
+      if ((estatisticas['totalMoveis'] ?? 0) > 0) modalidades.add('${estatisticas['totalMoveis']} móveis');
+      if ((estatisticas['totalMultiplasEnfiadas'] ?? 0) > 0) modalidades.add('${estatisticas['totalMultiplasEnfiadas']} múltiplas enfiadas');
+      if ((estatisticas['totalHighlines'] ?? 0) > 0) modalidades.add('${estatisticas['totalHighlines']} highlines');
+
+      if (vias > 0) {
+        statsText = ' • $vias escaladas';
+        if (modalidades.isNotEmpty) {
+          statsText += ' (${modalidades.join(', ')})';
+        }
+      }
+    }
+
     final String subtitleText =
-        "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES";
+        "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES$statsText";
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
