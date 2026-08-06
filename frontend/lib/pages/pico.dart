@@ -174,23 +174,21 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      backgroundColor:
-                          Theme.of(context).dialogTheme.backgroundColor ??
-                          Theme.of(context).scaffoldBackgroundColor,
-                      title: Text(
+                      backgroundColor: context.colors.caveShadow,
+                      title: const Text(
                         'Excluir?',
-                        style: TextStyle(color: context.colors.fishBone),
+                        style: TextStyle(color: Colors.white),
                       ),
                       content: Text(
                         'Deseja excluir o guia de ${widget.pico.nome}?',
-                        style: TextStyle(color: context.colors.fishBone),
+                        style: TextStyle(color: context.colors.ashGrey),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
                           child: Text(
                             'CANCELAR',
-                            style: TextStyle(color: context.colors.fishBone),
+                            style: TextStyle(color: context.colors.ashGrey),
                           ),
                         ),
                         TextButton(
@@ -218,7 +216,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                 : 'Erro ao excluir guia.',
                           ),
                           backgroundColor: success
-                              ? context.colors.mossRock
+                              ? context.colors.dryMoss
                               : Theme.of(context).colorScheme.error,
                         ),
                       );
