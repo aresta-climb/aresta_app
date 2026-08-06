@@ -4,47 +4,74 @@ import 'dart:math' as math;
 import '../theme/app_colors.dart';
 
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
+  // Place elements exactly at the geometric centroid of a quarter circle (4 / 3π ≈ 0.424)
   AlignmentGeometry align = Alignment.center;
   if (index == 0) {
-    align = const Alignment(-0.55, -0.65);
-  } else if (index == 1) align = const Alignment(0.55, -0.65);
-  else if (index == 2) align = const Alignment(-0.55, 0.65);
-  else if (index == 3) align = const Alignment(0.55, 0.65);
+    align = const Alignment(-0.424, -0.424);
+  } else if (index == 1) align = const Alignment(0.424, -0.424);
+  else if (index == 2) align = const Alignment(-0.424, 0.424);
+  else if (index == 3) align = const Alignment(0.424, 0.424);
+
+  final bool isTopQuadrant = index == 0 || index == 1;
+
+  final avatarWidget = Container(
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+    ),
+    child: CircleAvatar(
+      radius: 20,
+      backgroundColor: context.colors.slateBlue.withValues(alpha: 0.5),
+      backgroundImage: AssetImage(data['image']!),
+    ),
+  );
+
+  final textWidget = Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        data['role']!,
+        style: TextStyle(
+          color: context.colors.chalkWhite,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 4),
+      Icon(
+        Icons.touch_app,
+        size: 14,
+        color: context.colors.chalkWhite.withValues(alpha: 0.4),
+      ),
+    ],
+  );
 
   return Align(
     alignment: align,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-            ),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: context.colors.slateBlue.withValues(alpha: 0.5),
-              backgroundImage: AssetImage(data['image']!),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            data['role']!,
-            style: TextStyle(
-              color: context.colors.chalkWhite,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Icon(
-            Icons.touch_app,
-            size: 14,
-            color: context.colors.chalkWhite.withValues(alpha: 0.4),
-          ),
-        ],
+    child: SizedBox(
+      width: 0,
+      height: 0,
+      child: OverflowBox(
+        maxWidth: 200,
+        maxHeight: 200,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          // Avatar is always nearest to the outer curve.
+          children: isTopQuadrant
+              ? [
+                  avatarWidget,
+                  const SizedBox(height: 8),
+                  textWidget,
+                ]
+              : [
+                  textWidget,
+                  const SizedBox(height: 8),
+                  avatarWidget,
+                ],
+        ),
       ),
+    ),
   );
 }
 
