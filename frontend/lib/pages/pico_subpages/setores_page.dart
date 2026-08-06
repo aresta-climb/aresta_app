@@ -96,7 +96,7 @@ class _SetoresPageState extends State<SetoresPage> {
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
-              buildFeedbackButton(context),
+              buildFeedbackButton(context, color: Colors.white),
               const SizedBox(width: 8),
             ],
             flexibleSpace: hasMap
