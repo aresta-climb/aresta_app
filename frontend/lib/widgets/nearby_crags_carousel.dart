@@ -128,7 +128,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 5),
+            timeLimit: Duration(seconds: 3),
           ),
         );
       } catch (_) {
@@ -137,7 +137,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           position = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.low,
-              timeLimit: Duration(seconds: 5),
+              timeLimit: Duration(seconds: 2),
             ),
           );
         } catch (_) {
@@ -160,7 +160,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   Future<void> _fetchIpLocationFallback() async {
     try {
-      final response = await http.get(Uri.parse('http://ip-api.com/json/'));
+      final response = await http
+          .get(Uri.parse('http://ip-api.com/json/'))
+          .timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
