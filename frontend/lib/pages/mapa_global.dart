@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
 class MapaGlobalPage extends StatefulWidget {
+  static bool hasShownLocationWarning = false;
   final List<Map<String, dynamic>> crags;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -74,16 +75,18 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   void initState() {
     super.initState();
     _loadCustomIcons();
-    _initLocation();
+    _initLocation(fromButton: false);
   }
 
-  Future<void> _initLocation() async {
+  Future<void> _initLocation({bool fromButton = true}) async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (mounted) {
+      if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+        MapaGlobalPage.hasShownLocationWarning = true;
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ative o GPS para vermos sua localização.'),
@@ -99,7 +102,9 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        if (mounted) {
+        if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+          MapaGlobalPage.hasShownLocationWarning = true;
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Permissão de localização negada.'),
@@ -113,7 +118,9 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
+      if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+        MapaGlobalPage.hasShownLocationWarning = true;
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Permissão de localização bloqueada nas configurações.'),
@@ -146,13 +153,17 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           ),
         );
       } else if (position == null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível encontrar sua localização.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (fromButton || !MapaGlobalPage.hasShownLocationWarning) {
+          MapaGlobalPage.hasShownLocationWarning = true;
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível encontrar sua localização.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       // Ignora falhas ao pegar localização
