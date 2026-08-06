@@ -679,15 +679,17 @@ void showDownloadBottomSheet(
               const SizedBox(height: 16),
               if (crag['descricao'] != null &&
                   crag['descricao'].toString().isNotEmpty) ...[
-                Text(
-                  crag['descricao'],
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
-                    height: 1.4,
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      crag['descricao'],
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 24),
               ],
