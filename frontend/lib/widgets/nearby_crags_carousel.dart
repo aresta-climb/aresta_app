@@ -355,6 +355,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   crag: pico,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
+                  showDetailedStats: true,
                   onDownload: () => _handleDownload(pico),
                   onOpen: () {
                     final repo = DatasetRepository.instance;
