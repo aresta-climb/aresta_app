@@ -1233,6 +1233,19 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         onPressed: () {
                           setState(() {
                             _autoZoomEnabled = !_autoZoomEnabled;
+                            if (_autoZoomEnabled && _selectedId != null && _imageSize != null) {
+                              final refs = _poiToRefs[_selectedId];
+                              if (refs != null && refs.isNotEmpty) {
+                                final ref = refs[_focusedItemIndex];
+                                final pontos = _getPontosForRef(ref);
+                                _zoomToPoints(
+                                  pontos,
+                                  _imageSize!,
+                                  viewportSize,
+                                  ref: ref,
+                                );
+                              }
+                            }
                           });
                         },
                       ),
