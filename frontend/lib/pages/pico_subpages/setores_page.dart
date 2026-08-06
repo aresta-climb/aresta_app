@@ -85,91 +85,56 @@ class _SetoresPageState extends State<SetoresPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: hasMap ? 250.0 : null,
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            actions: [
-              buildFeedbackButton(context, color: Colors.white),
-              const SizedBox(width: 8),
+      appBar: buildCommonAppBar(context, 'SETORES', subtitle: widget.pico.nome),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasMap) ...[
+              MapaThumbnail(
+                mapa: widget.pico.mapasGerais.conteudo.mapas.first,
+                cragId: widget.cragId,
+                nomeContexto: widget.pico.nome,
+              ),
+              const SizedBox(height: 16),
             ],
-            flexibleSpace: hasMap
-                ? FlexibleSpaceBar(
-                    titlePadding: const EdgeInsets.only(left: 50, bottom: 16),
-                    title: Text(
-                      'SETORES',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        letterSpacing: 1.2,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                      ),
-                    ),
-                    background: MapaThumbnail(
-                      mapa: widget.pico.mapasGerais.conteudo.mapas.first,
-                      cragId: widget.cragId,
-                      nomeContexto: widget.pico.nome,
-                    ),
-                  )
-                : FlexibleSpaceBar(
-                    title: const Text(
-                      'SETORES',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(20),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                if (widget.pico.setoresOuGrupos.isEmpty)
-                  Text(
-                    'Nenhum elemento disponível.',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  )
-                else ...[
-                  buildGrupoSortGrid(context, _sortMode, (mode) {
-                    setState(() {
-                      _sortMode = mode;
-                    });
-                  }),
-                  const SizedBox(height: 16),
-                  ..._sortedSetoresOuGrupos.map((setorOuGrupo) {
-                    if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor &&
-                        setorOuGrupo.setor.hasConteudo()) {
-                      return buildSectorTile(
-                        context,
-                        setorOuGrupo.setor.conteudo,
-                        widget.cragId,
-                      );
-                    } else if (setorOuGrupo.whichTipo() ==
-                            SetorOuGrupo_Tipo.grupo &&
-                        setorOuGrupo.grupo.hasConteudo()) {
-                      return buildGrupoTile(
-                        context,
-                        setorOuGrupo.grupo.conteudo,
-                        widget.cragId,
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                ],
-              ]),
-            ),
-          ),
-        ],
+            if (widget.pico.setoresOuGrupos.isEmpty)
+              Text(
+                'Nenhum elemento disponível.',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              )
+            else ...[
+              buildGrupoSortGrid(context, _sortMode, (mode) {
+                setState(() {
+                  _sortMode = mode;
+                });
+              }),
+              const SizedBox(height: 16),
+              ..._sortedSetoresOuGrupos.map((setorOuGrupo) {
+                if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor &&
+                    setorOuGrupo.setor.hasConteudo()) {
+                  return buildSectorTile(
+                    context,
+                    setorOuGrupo.setor.conteudo,
+                    widget.cragId,
+                  );
+                } else if (setorOuGrupo.whichTipo() ==
+                        SetorOuGrupo_Tipo.grupo &&
+                    setorOuGrupo.grupo.hasConteudo()) {
+                  return buildGrupoTile(
+                    context,
+                    setorOuGrupo.grupo.conteudo,
+                    widget.cragId,
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+            ],
+          ],
+        ),
       ),
     );
   }
