@@ -36,12 +36,12 @@ class OfflineCragCard extends StatelessWidget {
       fallback: 'Local Desconhecido',
     ).toUpperCase();
 
-    String statsText = '0 setores • 0 vias';
+    String statsText = '0 setores • 0 escaladas';
     if (crag['estatisticas'] != null) {
       final stats = crag['estatisticas'];
       final setores = stats['totalSetores'] ?? 0;
       final vias = stats['totalVias'] ?? 0;
-      statsText = '$setores setores • $vias vias';
+      statsText = '$setores setores • $vias escaladas';
     }
 
     return Container(
