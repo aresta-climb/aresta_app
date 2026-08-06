@@ -246,6 +246,7 @@ class CragCard extends StatelessWidget {
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
   final String? distanceStr;
+  final bool showDetailedStats;
 
   const CragCard({
     super.key,
@@ -254,6 +255,7 @@ class CragCard extends StatelessWidget {
     required this.onDownload,
     this.onOpen,
     this.distanceStr,
+    this.showDetailedStats = false,
   });
 
   @override
@@ -268,15 +270,37 @@ class CragCard extends StatelessWidget {
       fallback: 'Local Desconhecido',
     ).toUpperCase();
 
-    // Attempt to extract sectors/routes count if available in description or another field,
-    // for now placeholder since the current model might not have them natively as int fields
-    // without parsing 'estatisticas'
-    String statsText = '0 setores • 0 vias';
+    // Attempt to extract sectors/routes count if available in description or another field
+    String statsText = '0 setores • 0 escaladas';
     if (crag['estatisticas'] != null) {
       final stats = crag['estatisticas'];
       final setores = stats['totalSetores'] ?? 0;
       final vias = stats['totalVias'] ?? 0;
-      statsText = '$setores setores • $vias vias';
+
+      statsText = '$setores setores • $vias escaladas';
+
+      if (showDetailedStats) {
+        final List<String> modalidades = [];
+        if ((stats['totalBoulders'] ?? 0) > 0) {
+          modalidades.add('${stats['totalBoulders']} boulders');
+        }
+        if ((stats['totalEsportivas'] ?? 0) > 0) {
+          modalidades.add('${stats['totalEsportivas']} esportivas');
+        }
+        if ((stats['totalMoveis'] ?? 0) > 0) {
+          modalidades.add('${stats['totalMoveis']} móveis');
+        }
+        if ((stats['totalMultiplasEnfiadas'] ?? 0) > 0) {
+          modalidades.add('${stats['totalMultiplasEnfiadas']} múltiplas enfiadas');
+        }
+        if ((stats['totalHighlines'] ?? 0) > 0) {
+          modalidades.add('${stats['totalHighlines']} highlines');
+        }
+
+        if (modalidades.isNotEmpty) {
+          statsText += ' (${modalidades.join(', ')})';
+        }
+      }
     }
 
     return GestureDetector(
