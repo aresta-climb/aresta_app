@@ -93,8 +93,17 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     if (permission == LocationPermission.deniedForever) return;
 
     try {
-      final position = await Geolocator.getCurrentPosition();
-      if (_mapController != null) {
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 3),
+        );
+      } catch (e) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position != null && _mapController != null) {
         _mapController!.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
