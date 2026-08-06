@@ -658,7 +658,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         }
       },
       secondaryActionLabel: foundMaps.length > 1
-          ? 'Explorar mapas do setor'
+          ? 'Ver mapas'
           : null,
       onSecondaryAction: foundMaps.length > 1
           ? () {
@@ -708,7 +708,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       actionLabel: 'Ir para Setor',
       onAction: () => AppNav.toSetor(context, setor: setor),
       secondaryActionLabel: setor.mapas.isNotEmpty
-          ? 'Explorar mapas do setor'
+          ? 'Ver mapas'
           : null,
       onSecondaryAction: setor.mapas.isNotEmpty
           ? () {
@@ -785,7 +785,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       actionLabel: 'Ir para Grupo',
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
       secondaryActionLabel: grupo.mapas.isNotEmpty
-          ? 'Mapa do grupo de setores'
+          ? 'Ver mapas'
           : null,
       onSecondaryAction: grupo.mapas.isNotEmpty
           ? () {
@@ -919,41 +919,42 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: Wrap(
-                alignment:
-                    (secondaryActionLabel != null && onSecondaryAction != null)
-                    ? WrapAlignment.spaceBetween
-                    : WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 4,
+              child: Row(
                 children: [
-                  if (secondaryActionLabel != null && onSecondaryAction != null)
-                    TextButton.icon(
-                      onPressed: onSecondaryAction,
-                      icon: Icon(Icons.map, color: Colors.white, size: 16),
-                      label: Text(
-                        secondaryActionLabel,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                  if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: onSecondaryAction,
+                        icon: Icon(Icons.map, color: Colors.white, size: 16),
+                        label: Text(
+                          secondaryActionLabel,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
-                  TextButton.icon(
-                    onPressed: onAction,
-                    icon: Icon(
-                      Icons.open_in_new,
-                      color: AppColors.brandColor,
-                      size: 16,
-                    ),
-                    label: Text(
-                      actionLabel,
-                      style: TextStyle(
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: onAction,
+                      icon: Icon(
+                        Icons.open_in_new,
                         color: AppColors.brandColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        size: 16,
+                      ),
+                      label: Text(
+                        actionLabel,
+                        style: TextStyle(
+                          color: AppColors.brandColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
