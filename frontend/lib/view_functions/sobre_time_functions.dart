@@ -39,6 +39,12 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 4),
+          Icon(
+            Icons.touch_app,
+            size: 14,
+            color: context.colors.chalkWhite.withValues(alpha: 0.4),
+          ),
         ],
       ),
     ),
@@ -112,7 +118,7 @@ Widget buildAnimatedQuadrant({
       }
     } else {
       // Doritos separados
-      const double gap = 2.0;
+      const double gap = 4.0;
       if (index == 0) {
         translate = const Offset(-gap, -gap);
       } else if (index == 1) translate = const Offset(gap, -gap);
@@ -340,6 +346,13 @@ class QuadrantPainter extends CustomPainter {
       ..color = fillColor
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
+
+    // 3. Subtle border to make it look clickable
+    final Paint borderPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawPath(path, borderPaint);
   }
 
   @override
