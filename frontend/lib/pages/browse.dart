@@ -231,57 +231,62 @@ class _BrowsePageState extends State<BrowsePage> {
                         showModalBottomSheet(
                           context: context,
                           useRootNavigator: true,
-                          backgroundColor: Colors.white,
+                          isScrollControlled: true,
+                          backgroundColor: context.colors.caveShadow,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(24),
                             ),
                           ),
                           builder: (context) {
-                            return SafeArea(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 24,
-                                  horizontal: 16,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      child: Text(
-                                        'ORDENAÇÃO DE PICOS',
-                                        style: TextStyle(
-                                          color: const Color(0xFFC05244),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          letterSpacing: 1.5,
+                            return StatefulBuilder(
+                              builder: (BuildContext context, StateSetter setModalState) {
+                                return SafeArea(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 24,
+                                      horizontal: 16,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                          child: Text(
+                                            'ORDENAÇÃO DE PICOS',
+                                            style: TextStyle(
+                                              color: context.colors.rustIron,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              letterSpacing: 1.5,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        Divider(color: context.colors.graniteEdge),
+                                        _buildSortOption(
+                                          context,
+                                          'Padrão',
+                                          SortOrder.padrao,
+                                        ),
+                                        _buildSortOption(
+                                          context,
+                                          'Alfabético (A-Z)',
+                                          SortOrder.alfabetico,
+                                        ),
+                                        _buildSortOption(
+                                          context,
+                                          'Por número de escaladas',
+                                          SortOrder.escaladas,
+                                        ),
+                                      ],
                                     ),
-                                    const Divider(),
-                                    _buildSortOption(
-                                      context,
-                                      'Padrão',
-                                      SortOrder.padrao,
-                                    ),
-                                    _buildSortOption(
-                                      context,
-                                      'Alfabético (A-Z)',
-                                      SortOrder.alfabetico,
-                                    ),
-                                    _buildSortOption(
-                                      context,
-                                      'Por número de escaladas',
-                                      SortOrder.escaladas,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              }
                             );
                           },
                         );
@@ -315,14 +320,14 @@ class _BrowsePageState extends State<BrowsePage> {
               title,
               style: TextStyle(
                 color: isSelected
-                    ? const Color(0xFFC05244)
-                    : context.colors.slateBlue,
+                    ? context.colors.rustIron
+                    : Colors.white,
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check, color: Color(0xFFC05244), size: 20),
+              Icon(Icons.check, color: context.colors.rustIron, size: 20),
           ],
         ),
       ),
