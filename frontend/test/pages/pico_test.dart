@@ -108,4 +108,51 @@ void main() {
     expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
     expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'busca');
   });
+
+  testWidgets('PicoDetailsPage shows detailed stats in subtitle', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    datasetRepo.activeDataset.value = TopoDataset(
+      availablePicos: [
+        {
+          'id': 'crag1',
+          'estatisticas': {
+            'totalVias': 10,
+            'totalBoulders': 5,
+            'totalEsportivas': 5,
+          }
+        }
+      ],
+      downloadedPicos: [],
+    );
+
+    final pico = Pico()
+      ..nome = 'Pico Teste'
+      ..estado = 'MG'
+      ..setoresOuGrupos.add(
+        SetorOuGrupo()..setor = ArquivoSetor(),
+      )
+      ..setoresOuGrupos.add(
+        SetorOuGrupo()..setor = ArquivoSetor(),
+      );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: pico,
+          croqui: Croqui(),
+          cragId: 'crag1',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    // The subtitle should read "MG • 2 SETORES • 10 escaladas (5 boulders, 5 esportivas)"
+    // Because state is "MG", 2 sectors, 10 vias (5 b, 5 e).
+    expect(
+      find.text('MG • 2 SETORES • 10 escaladas (5 boulders, 5 esportivas)'),
+      findsOneWidget,
+    );
+  });
 }

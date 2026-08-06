@@ -196,6 +196,41 @@ void main() {
     );
 
     test(
+      'loadIndiceToMemory mapeia estatísticas pré-computadas',
+      () async {
+        final precomputados = PrecomputadosResumoCroqui(
+          totalEscaladas: 50,
+          totalSetores: 5,
+          totalEsportivas: 30,
+          totalBoulders: 20,
+        );
+
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'pico_stats',
+              nome: 'Nome Stats',
+              caminhoRelativo: 'pico_stats.zip',
+              precomputados: precomputados,
+            ),
+          ],
+        );
+        repo.indiceData.value = indice;
+        await repo.loadIndiceToMemory(indice);
+
+        final available = repo.activeDataset.value!.availablePicos;
+        expect(available.length, 1);
+        final stats = available.first['estatisticas'];
+        expect(stats, isNotNull);
+        expect(stats['totalVias'], 50);
+        expect(stats['totalSetores'], 5);
+        expect(stats['totalEsportivas'], 30);
+        expect(stats['totalBoulders'], 20);
+        expect(stats['totalMoveis'], 0);
+      },
+    );
+
+    test(
       'loadIndiceToMemory deve preencher a chave [data] na inicializacao se o pico ja estiver baixado',
       () async {
         // Simula um pico já baixado no disco antes de carregar o índice
