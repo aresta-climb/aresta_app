@@ -6,17 +6,15 @@ import '../theme/app_colors.dart';
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
   AlignmentGeometry align = Alignment.center;
   if (index == 0) {
-    align = const Alignment(-0.5, -0.5);
-  } else if (index == 1) align = const Alignment(0.5, -0.5);
-  else if (index == 2) align = const Alignment(-0.5, 0.5);
-  else if (index == 3) align = const Alignment(0.5, 0.5);
+    align = const Alignment(-0.55, -0.65);
+  } else if (index == 1) align = const Alignment(0.55, -0.65);
+  else if (index == 2) align = const Alignment(-0.55, 0.65);
+  else if (index == 3) align = const Alignment(0.55, 0.65);
 
   return Align(
     alignment: align,
-    child: Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             decoration: const BoxDecoration(
@@ -47,7 +45,6 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
           ),
         ],
       ),
-    ),
   );
 }
 
