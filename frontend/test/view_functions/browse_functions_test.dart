@@ -152,4 +152,71 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('CragCard exibe estatísticas resumidas por padrão', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, dynamic> crag = {
+      'id': 'crag1',
+      'nome': 'Pico Teste',
+      'estatisticas': {
+        'totalSetores': 2,
+        'totalVias': 10,
+        'totalBoulders': 5,
+        'totalEsportivas': 5,
+      },
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard(
+            crag: crag,
+            downloadingCrags: ValueNotifier({}),
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir 2 setores • 10 escaladas
+    expect(find.text('2 setores • 10 escaladas'), findsOneWidget);
+    
+    // NÃO deve exibir a listagem de tipos (boulders, esportivas)
+    expect(find.textContaining('boulders'), findsNothing);
+  });
+
+  testWidgets('CragCard exibe estatísticas detalhadas se showDetailedStats for true', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, dynamic> crag = {
+      'id': 'crag1',
+      'nome': 'Pico Teste',
+      'estatisticas': {
+        'totalSetores': 3,
+        'totalVias': 15,
+        'totalBoulders': 10,
+        'totalEsportivas': 5,
+      },
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard(
+            crag: crag,
+            downloadingCrags: ValueNotifier({}),
+            showDetailedStats: true,
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir o texto completo com os tipos
+    expect(
+      find.text('3 setores • 15 escaladas (10 boulders, 5 esportivas)'),
+      findsOneWidget,
+    );
+  });
 }
