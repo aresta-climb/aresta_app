@@ -247,6 +247,16 @@ class DatasetRepository {
               'latitude': resumo.localizacao.latitude / 10000000.0,
             if (resumo.hasLocalizacao())
               'longitude': resumo.localizacao.longitude / 10000000.0,
+            if (resumo.hasPrecomputados())
+              'estatisticas': {
+                'totalVias': resumo.precomputados.totalEscaladas,
+                'totalSetores': resumo.precomputados.totalSetores,
+                'totalEsportivas': resumo.precomputados.totalEsportivas,
+                'totalMoveis': resumo.precomputados.totalMoveis,
+                'totalBoulders': resumo.precomputados.totalBoulders,
+                'totalMultiplasEnfiadas': resumo.precomputados.totalMultiplasEnfiadas,
+                'totalHighlines': resumo.precomputados.totalHighlines,
+              },
           };
 
           parsedPicos.add(picoMap);
