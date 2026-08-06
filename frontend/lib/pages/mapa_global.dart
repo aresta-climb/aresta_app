@@ -141,7 +141,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           CameraUpdate.newCameraPosition(
             CameraPosition(
               target: LatLng(position.latitude, position.longitude),
-              zoom: 8.0,
+              zoom: 7.0,
             ),
           ),
         );
