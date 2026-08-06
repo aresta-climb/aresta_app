@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../view_functions/pico_functions.dart';
 import '../../view_functions/common_functions.dart';
-import '../../widgets/pico_menu_card.dart';
-import '../../theme/app_colors.dart';
-import '../../navigation/navigation_functions.dart';
-import '../../navigation/navigation_tree.dart';
 import '../../view_functions/grupo_functions.dart';
+import '../../widgets/mapa_thumbnail.dart';
 
 class SetoresPage extends StatefulWidget {
   final Pico pico;
@@ -93,29 +90,10 @@ class _SetoresPageState extends State<SetoresPage> {
             if (widget.pico.hasMapasGerais() &&
                 widget.pico.mapasGerais.hasConteudo() &&
                 widget.pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
-              PicoMenuCard(
-                title: 'Mapa geral interativo',
-                subtitle:
-                    'Visualização cartográfica, setores físicos e panorama das paredes.',
-                icon: Icons.map,
-                iconColor: context.colors.rustIron,
-                backgroundColor: context.colors.caveShadow,
-                titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
-                onTap: () {
-                  AppNav.toMapas(
-                    context,
-                    cragId: widget.cragId,
-                    mapas: widget.pico.mapasGerais.conteudo.mapas
-                        .map(
-                          (mapa) => CarrosselItemData(
-                            mapaCaminhoImagem: mapa.caminhoImagemMapa,
-                            setorContextNome: widget.pico.nome,
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
+              MapaThumbnail(
+                mapa: widget.pico.mapasGerais.conteudo.mapas.first,
+                cragId: widget.cragId,
+                nomeContexto: widget.pico.nome,
               ),
               const SizedBox(height: 16),
             ],
