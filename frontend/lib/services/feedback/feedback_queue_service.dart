@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks
-/// antes deles serem despachados pelo `BackgroundWorker`.
+/// antes deles serem despachados pelo `FeedbackOrchestrator`.
 ///
 /// **Arquitetura (File-System Queue):**
 /// Ao invés de usar `SharedPreferences` que é propenso a falhas de concorrência e
