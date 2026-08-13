@@ -78,4 +78,23 @@ void main() {
     expect(find.text('GitHub'), findsNothing);
     expect(find.text('LinkedIn'), findsNothing);
   });
+  testWidgets('Pressing AppBar back button when expanded collapses the quadrant', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    // Expand Lorena
+    await tester.tap(find.text('Designer'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('LORENA CARLA'), findsWidgets);
+
+    // Tap AppBar back button
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    // Verify it collapsed instead of popping
+    expect(find.text('LORENA CARLA'), findsNothing);
+    expect(find.text('Designer'), findsOneWidget);
+  });
 }
