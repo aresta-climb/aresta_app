@@ -813,11 +813,20 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       }),
     ];
 
+    final isFeedbackVisible = BetterFeedback.of(context).isVisible;
+
     return PopScope(
-      // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o
-      canPop: treeController.currentNode.parent == null,
+      // Se feedback estiver aberto, não permite pop (para podermos interceptar e fechar).
+      // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o, desde que o feedback não esteja aberto.
+      canPop: treeController.currentNode.parent == null && !isFeedbackVisible,
       onPopInvoked: (didPop) {
         if (didPop) return;
+
+        if (BetterFeedback.of(context).isVisible) {
+          BetterFeedback.of(context).hide();
+          return;
+        }
+
         // Intercepta botões nativos de "Voltar" do Android/Gesto iOS, refletindo isso na nossa árvore de estados
         treeController.goBack();
       },
