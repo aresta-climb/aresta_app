@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/application/usecases/feedback/submit_feedback_usecase.dart';
 import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
 import 'package:frontend/pages/pico_subpages/comunidade_pico_page.dart';
@@ -440,8 +441,37 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
   }
 
+  FeedbackController? _feedbackController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    FeedbackController? controller;
+    try {
+      controller = BetterFeedback.of(context);
+    } catch (_) {
+      // Allow it to fail gracefully in tests where BetterFeedback is not in the widget tree.
+    }
+    
+    if (_feedbackController != controller) {
+      _feedbackController?.removeListener(_onFeedbackChanged);
+      _feedbackController = controller;
+      _feedbackController?.addListener(_onFeedbackChanged);
+    }
+  }
+
+  void _onFeedbackChanged() {
+    // Delay the state update by a microtask to prevent race conditions 
+    // with BetterFeedback's internal BackButtonInterceptor. This ensures 
+    // PopScope evaluates the *previous* state correctly during a back button event.
+    Future.microtask(() {
+      SubmitFeedbackUseCase.isFeedbackOpen.value = _feedbackController?.isVisible ?? false;
+    });
+  }
+
   @override
   void dispose() {
+    _feedbackController?.removeListener(_onFeedbackChanged);
     widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);
     treeController.removeListener(_onNodeChanged);
     treeController.dispose();
@@ -831,9 +861,11 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       onPopInvoked: (didPop) {
         if (didPop) return;
 
-        // BetterFeedback.of(context).isVisible is true during the entire feedback flow (drawing + text).
-        if (BetterFeedback.of(context).isVisible) {
+        // Use the usecase boolean instead of BetterFeedback.of(context).isVisible
+        // because BetterFeedback's internal interceptor might have already updated its state.
+        if (SubmitFeedbackUseCase.isFeedbackOpen.value) {
           BetterFeedback.of(context).hide();
+          SubmitFeedbackUseCase.isFeedbackOpen.value = false;
           return;
         }
 

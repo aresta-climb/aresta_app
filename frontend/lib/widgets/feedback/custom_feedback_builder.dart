@@ -1,7 +1,6 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
-
 /// Construtor customizado para a interface de feedback em texto.
 ///
 /// Este builder substitui a caixa de texto padrão do pacote `feedback`,
@@ -75,16 +74,10 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
     final minLines = isKeyboardVisible ? 2 : 1;
     final maxLines = isKeyboardVisible ? 3 : 2;
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        BetterFeedback.of(context).hide();
-      },
-      child: SafeArea(
-        bottom: true,
-        top: false,
-        child: SingleChildScrollView(
+    return SafeArea(
+      bottom: true,
+      top: false,
+      child: SingleChildScrollView(
         controller: widget.scrollController,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -173,7 +166,6 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
           ],
         ),
       ),
-    ),
     );
   }
 }
