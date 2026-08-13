@@ -127,10 +127,22 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     widget.cragId,
                     'buscar',
                   );
+                  final tree = TreeNavigationWrapper.currentTreeController;
+                  tree?.onBackInterceptor = () {
+                    // Tenta fechar o search
+                    Navigator.of(context).maybePop();
+                    return true;
+                  };
+
                   final result = await showSearch<Object?>(
                     context: context,
                     delegate: PicoSearchDelegate(widget.pico, widget.cragId),
                   );
+
+                  // Limpa o interceptor apenas se ele for exatamente a função que registramos.
+                  // Isso previne que zere um interceptor que possa ter sido registrado
+                  // por outra coisa se a navegação ficasse muito rápida.
+                  tree?.onBackInterceptor = null;
 
                   if (result != null && context.mounted) {
                     if (result is Escalada) {
