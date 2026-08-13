@@ -382,6 +382,10 @@ class TextNode extends NavNode {
 class TreeNavigationController extends ChangeNotifier {
   NavNode _currentNode = const HomeNode();
 
+  /// Permite que uma página intercepte o botão voltar do sistema.
+  /// Se retornar `true`, a navegação da árvore é cancelada pois a página já lidou com a ação.
+  bool Function()? onBackInterceptor;
+
   NavNode get currentNode => _currentNode;
 
   bool _isSameNode(NavNode a, NavNode b) {
@@ -459,6 +463,10 @@ class TreeNavigationController extends ChangeNotifier {
   }
 
   bool goBack() {
+    if (onBackInterceptor != null && onBackInterceptor!()) {
+      return true; // The current page intercepted and handled the back action.
+    }
+
     final parentNode = _currentNode.parent;
     if (parentNode != null) {
       if (parentNode is SetorNode && _currentNode is ViaNode) {
