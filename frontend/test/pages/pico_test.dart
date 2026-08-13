@@ -155,4 +155,42 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('PicoDetailsPage search overlay opens and closes correctly', (
+    tester,
+  ) async {
+    final mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
+
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico Teste',
+          croqui: Croqui(),
+          cragId: 'crag1',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    // Ensure we are on PicoDetailsPage
+    expect(find.byIcon(Icons.search), findsOneWidget);
+
+    // Tap search
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+
+    // Verify SearchPageRoute is open (SearchDelegate shows a clear icon or back icon)
+    expect(find.byType(TextField), findsOneWidget);
+    
+    // Tap the back button on the search app bar
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    // Verify we returned to PicoDetailsPage and SearchPageRoute is closed
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byIcon(Icons.search), findsOneWidget);
+  });
 }
