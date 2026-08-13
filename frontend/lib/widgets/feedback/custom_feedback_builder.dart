@@ -41,9 +41,6 @@ class CustomStringFeedback extends StatefulWidget {
   State<CustomStringFeedback> createState() => _CustomStringFeedbackState();
 }
 
-/// Notificador global usado para avisar o sistema de navegação quando o feedback está aberto.
-final ValueNotifier<bool> isFeedbackVisibleNotifier = ValueNotifier<bool>(false);
-
 class _CustomStringFeedbackState extends State<CustomStringFeedback>
     with WidgetsBindingObserver {
   /// Controlador do campo de texto de feedback.
@@ -54,18 +51,10 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
     super.initState();
     controller = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
-    // Avisa que o feedback abriu
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      isFeedbackVisibleNotifier.value = true;
-    });
   }
 
   @override
   void dispose() {
-    // Avisa que o feedback fechou
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      isFeedbackVisibleNotifier.value = false;
-    });
     WidgetsBinding.instance.removeObserver(this);
     controller.dispose();
     super.dispose();
@@ -86,10 +75,16 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
     final minLines = isKeyboardVisible ? 2 : 1;
     final maxLines = isKeyboardVisible ? 3 : 2;
 
-    return SafeArea(
-      bottom: true,
-      top: false,
-      child: SingleChildScrollView(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        BetterFeedback.of(context).hide();
+      },
+      child: SafeArea(
+        bottom: true,
+        top: false,
+        child: SingleChildScrollView(
         controller: widget.scrollController,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -178,6 +173,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
           ],
         ),
       ),
+    ),
     );
   }
 }
