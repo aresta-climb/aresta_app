@@ -37,24 +37,24 @@ void main() {
 
       final metadata = await collector.collect();
 
-      expect(metadata['appInstanceId'], 'test_instance_id');
-      expect(metadata['os'], 'android');
-      expect(metadata['osVersion'], '13');
-      expect(metadata['deviceModel'], 'Samsung SM-G991B');
-      expect(metadata['appVersion'], '1.2.3');
-      expect(metadata['navigationTree'], 'HomeNode -> SettingsNode');
-      expect(metadata['screenSize'], 'unknown'); // O teste não passa context
+      expect(metadata.appInstanceId, 'test_instance_id');
+      expect(metadata.os, 'android');
+      expect(metadata.osVersion, '13');
+      expect(metadata.deviceModel, 'Samsung SM-G991B');
+      expect(metadata.appVersion, '1.2.3');
+      expect(metadata.navigationTree, 'HomeNode -> SettingsNode');
+      expect(metadata.screenSize, 'unknown'); // O teste não passa context
       expect(
-        metadata['deviceOrientation'],
+        metadata.deviceOrientation,
         'unknown',
       ); // O teste não passa context
-      expect(metadata['isDarkMode'], 'unknown'); // O teste não passa context
-      expect(metadata['connectivity'], 'wifi');
+      expect(metadata.isDarkMode, 'unknown'); // O teste não passa context
+      expect(metadata.connectivity, 'wifi');
       expect(
-        metadata['submittedAt'],
+        metadata.submittedAt,
         '16 de junho de 2026 às 09:00:00 (GMT-3)',
       );
-      expect(metadata['submittedAtTimestamp'], '2026-06-16T09:00:00.000-03:00');
+      expect(metadata.submittedAtTimestamp, '2026-06-16T09:00:00.000-03:00');
     });
 
     test('usa valores padrão caso haja falha ou nulos na coleta', () async {
@@ -70,18 +70,18 @@ void main() {
 
       final metadata = await collector.collect();
 
-      expect(metadata['appInstanceId'], 'unknown');
-      expect(metadata['os'], '');
-      expect(metadata['osVersion'], 'unknown');
-      expect(metadata['deviceModel'], 'unknown');
-      expect(metadata['appVersion'], 'unknown');
-      expect(metadata['navigationTree'], 'unknown');
-      expect(metadata['screenSize'], 'unknown');
-      expect(metadata['deviceOrientation'], 'unknown');
-      expect(metadata['isDarkMode'], 'unknown');
-      expect(metadata['connectivity'], 'unknown');
-      expect(metadata['submittedAt'], 'unknown');
-      expect(metadata['submittedAtTimestamp'], 'unknown');
+      expect(metadata.appInstanceId, 'unknown');
+      expect(metadata.os, '');
+      expect(metadata.osVersion, 'unknown');
+      expect(metadata.deviceModel, 'unknown');
+      expect(metadata.appVersion, 'unknown');
+      expect(metadata.navigationTree, 'unknown');
+      expect(metadata.screenSize, 'unknown');
+      expect(metadata.deviceOrientation, 'unknown');
+      expect(metadata.isDarkMode, 'unknown');
+      expect(metadata.connectivity, 'unknown');
+      expect(metadata.submittedAt, 'unknown');
+      expect(metadata.submittedAtTimestamp, 'unknown');
     });
 
     test('aplica globalActiveNodeOverride corretamente', () async {
@@ -94,7 +94,7 @@ void main() {
 
       final metadata = await collector.collect();
       expect(
-        metadata['navigationTree'],
+        metadata.navigationTree,
         'HomeNode -> NodeSubstituto',
       ); // Como o node tree é uma string fixa, o nosso mock é simples
 
