@@ -460,12 +460,21 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
   }
 
+  DateTime? _lastFeedbackCloseTime;
+
   void _onFeedbackChanged() {
+    final isVisible = _feedbackController?.isVisible ?? false;
+    
+    // If the feedback just closed, record the timestamp to debounce the PopScope.
+    if (!isVisible && SubmitFeedbackUseCase.isFeedbackOpen.value) {
+      _lastFeedbackCloseTime = DateTime.now();
+    }
+    
     // Delay the state update by a microtask to prevent race conditions 
     // with BetterFeedback's internal BackButtonInterceptor. This ensures 
     // PopScope evaluates the *previous* state correctly during a back button event.
     Future.microtask(() {
-      SubmitFeedbackUseCase.isFeedbackOpen.value = _feedbackController?.isVisible ?? false;
+      SubmitFeedbackUseCase.isFeedbackOpen.value = isVisible;
     });
   }
 
@@ -861,18 +870,32 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       onPopInvoked: (didPop) {
         if (didPop) return;
 
-        // Use the usecase boolean instead of BetterFeedback.of(context).isVisible
-        // because BetterFeedback's internal interceptor might have already updated its state.
+        // Check if feedback is currently open
         if (SubmitFeedbackUseCase.isFeedbackOpen.value) {
           BetterFeedback.of(context).hide();
           SubmitFeedbackUseCase.isFeedbackOpen.value = false;
           return;
         }
 
+        // Check if feedback JUST closed (within the last 300ms)
+        // This handles the race condition where BetterFeedback's internal interceptor
+        // already closed it, but PopScope still gets called by the engine.
+        if (_lastFeedbackCloseTime != null && 
+            DateTime.now().difference(_lastFeedbackCloseTime!).inMilliseconds < 300) {
+          // Ignore this pop event because it was meant for the feedback overlay.
+          return;
+        }
+
         // Let the tree controller handle navigation back down the tree.
-        // If it returns false, it means we are at the absolute root (HomeNode).
+        // If it returns false, it means we are at the absolute root of the current tab.
         final handled = treeController.goBack();
         if (!handled) {
+          // If we are at the root of a tab that is NOT the Home tab, switch to the Home tab.
+          if (treeController.currentNode is! HomeNode) {
+            TreeNavigationWrapper.switchTab(0);
+            return;
+          }
+          
           // Now it is safe to exit the app.
           SystemNavigator.pop();
         }
