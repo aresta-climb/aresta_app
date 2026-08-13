@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:frontend/services/feedback/feedback_orchestrator.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 
@@ -17,7 +17,7 @@ void main() {
     registerFallbackValue(FakeBaseRequest());
   });
 
-  group('BackgroundWorker (Atomic File System Queue)', () {
+  group('FeedbackOrchestrator (Atomic File System Queue)', () {
     late MockHttpClient mockClient;
     late Directory tempDir;
     late Directory queueDir;
@@ -62,7 +62,7 @@ void main() {
 
         createFeedbackFiles('uuid-1');
 
-        final result = await BackgroundWorker.processFeedbackQueue(
+        final result = await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
           dispatcher: 'connectivity_plus',
@@ -96,7 +96,7 @@ void main() {
 
       // Deve dar throw de exceção para o Workmanager tentar de novo
       expect(
-        () => BackgroundWorker.processFeedbackQueue(
+        () => FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
           dispatcher: 'work_manager',
@@ -129,7 +129,7 @@ void main() {
         final pastTime = DateTime.now().subtract(const Duration(minutes: 20));
         oldProcessingFile.setLastModifiedSync(pastTime);
 
-        await BackgroundWorker.processFeedbackQueue(
+        await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
         );
@@ -154,7 +154,7 @@ void main() {
         final pastTime = DateTime.now().subtract(const Duration(minutes: 2));
         recentProcessingFile.setLastModifiedSync(pastTime);
 
-        await BackgroundWorker.processFeedbackQueue(
+        await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
         );
@@ -178,7 +178,7 @@ void main() {
         veryOldJson.setLastModifiedSync(pastTime);
         veryOldPng.setLastModifiedSync(pastTime);
 
-        await BackgroundWorker.processFeedbackQueue(
+        await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
         );
@@ -210,7 +210,7 @@ void main() {
           }),
         );
 
-        await BackgroundWorker.processFeedbackQueue(
+        await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
         );

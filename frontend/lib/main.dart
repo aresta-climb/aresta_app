@@ -38,7 +38,7 @@ import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
-import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:frontend/services/feedback/feedback_orchestrator.dart';
 import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
@@ -155,14 +155,14 @@ class _MyAppState extends State<MyApp> {
     _needsMigration = widget.needsMigration;
 
     // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
-    BackgroundWorker.processFeedbackQueue(dispatcher: 'app_startup');
+    FeedbackOrchestrator.processFeedbackQueue(dispatcher: 'app_startup');
 
     // Escuta transições de rede (ex: tirar do modo avião) para enviar feedbacks presos na fila,
     // sem depender da lentidão do agendamento do SO para o Workmanager.
     _networkFeedbackTrigger = NetworkFeedbackTrigger(
       connectivityStream: Connectivity().onConnectivityChanged,
       onNetworkRestored: () async {
-        await BackgroundWorker.processFeedbackQueue(
+        await FeedbackOrchestrator.processFeedbackQueue(
           dispatcher: 'connectivity_plus',
         );
       },

@@ -7,7 +7,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
-import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:frontend/services/feedback/feedback_orchestrator.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 
@@ -38,7 +38,7 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
     icon: Icon(Icons.bug_report, color: color ?? Colors.black),
     tooltip: 'Enviar Feedback/Bug',
     onPressed: () {
-      if (!BackgroundWorker.isConfigured) {
+      if (!FeedbackOrchestrator.isConfigured) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(

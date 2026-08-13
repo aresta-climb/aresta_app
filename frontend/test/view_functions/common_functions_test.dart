@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/feedback/background_worker.dart';
+import 'package:frontend/services/feedback/feedback_orchestrator.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -219,7 +219,7 @@ void main() {
     testWidgets('deve mostrar SnackBar de erro se não estiver configurado', (
       WidgetTester tester,
     ) async {
-      BackgroundWorker.debugIsConfiguredOverride = false;
+      FeedbackOrchestrator.debugIsConfiguredOverride = false;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -245,13 +245,13 @@ void main() {
         findsOneWidget,
       );
 
-      BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+      FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
     });
 
     testWidgets(
       'NÃO deve mostrar SnackBar de erro se ESTIVER configurado (abre a UI)',
       (WidgetTester tester) async {
-        BackgroundWorker.debugIsConfiguredOverride = true;
+        FeedbackOrchestrator.debugIsConfiguredOverride = true;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -284,7 +284,7 @@ void main() {
         // Fecha o feedback para a animação de dismiss ocorrer e a árvore ser destruída limpa
         // O plugin BetterFeedback coloca um botão de fechar, mas como estamos apenas testando,
         // podemos destruir explicitamente passando null no override.
-        BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+        FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
       },
     );
 
@@ -292,7 +292,7 @@ void main() {
     testWidgets('deve registrar telemetria ao clicar no botão de feedback', (
       WidgetTester tester,
     ) async {
-      BackgroundWorker.debugIsConfiguredOverride = true;
+      FeedbackOrchestrator.debugIsConfiguredOverride = true;
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
 
@@ -320,13 +320,13 @@ void main() {
         'abrir_feedback',
       );
 
-      BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+      FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
     });
 
     testWidgets(
       'deve chamar hide() e logar telemetria em processFeedbackSubmission',
       (WidgetTester tester) async {
-        BackgroundWorker.debugIsConfiguredOverride = true;
+        FeedbackOrchestrator.debugIsConfiguredOverride = true;
         final mockTelemetry = MockTelemetryService();
         TelemetryService.instance = mockTelemetry;
 
@@ -387,7 +387,7 @@ void main() {
         final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
         expect(BetterFeedback.of(scaffoldState.context).isVisible, isFalse);
 
-        BackgroundWorker.debugIsConfiguredOverride = null; // cleanup
+        FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
       },
     );
   });
