@@ -239,4 +239,55 @@ void main() {
       expect(node.toString(), 'GPSNode(pico_santuario)');
     });
   });
+
+  group('TreeNavigationController - onBackInterceptor', () {
+    test('goBack returns true and does not pop if interceptor returns true', () {
+      final controller = TreeNavigationController();
+      controller.navigateTo(const BrowseNode(HomeNode()));
+
+      expect(controller.currentNode, isA<BrowseNode>());
+
+      bool interceptorCalled = false;
+      controller.onBackInterceptor = () {
+        interceptorCalled = true;
+        return true; // handled
+      };
+
+      final result = controller.goBack();
+      expect(result, isTrue);
+      expect(interceptorCalled, isTrue);
+      expect(controller.currentNode, isA<BrowseNode>()); // Did not pop
+    });
+
+    test('goBack pops normally if interceptor returns false', () {
+      final controller = TreeNavigationController();
+      controller.navigateTo(const BrowseNode(HomeNode()));
+
+      expect(controller.currentNode, isA<BrowseNode>());
+
+      bool interceptorCalled = false;
+      controller.onBackInterceptor = () {
+        interceptorCalled = true;
+        return false; // not handled
+      };
+
+      final result = controller.goBack();
+      expect(result, isTrue); // normal goBack returned true
+      expect(interceptorCalled, isTrue);
+      expect(controller.currentNode, isA<HomeNode>()); // Popped normally
+    });
+
+    test('goBack pops normally if interceptor is null', () {
+      final controller = TreeNavigationController();
+      controller.navigateTo(const BrowseNode(HomeNode()));
+
+      expect(controller.currentNode, isA<BrowseNode>());
+
+      controller.onBackInterceptor = null;
+
+      final result = controller.goBack();
+      expect(result, isTrue);
+      expect(controller.currentNode, isA<HomeNode>());
+    });
+  });
 }
