@@ -20,6 +20,14 @@ class _SobreTimePageState extends State<SobreTimePage>
   late Animation<double> _animation;
 
 
+  bool _handleBack() {
+    if (_activeQuadrant != null) {
+      _onBackgroundTapped();
+      return true;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -31,10 +39,18 @@ class _SobreTimePageState extends State<SobreTimePage>
       parent: _animationController,
       curve: Curves.easeOutCubic,
     );
+    final tree = TreeNavigationWrapper.currentTreeController;
+    if (tree != null) {
+      tree.onBackInterceptor = _handleBack;
+    }
   }
 
   @override
   void dispose() {
+    final tree = TreeNavigationWrapper.currentTreeController;
+    if (tree?.onBackInterceptor == _handleBack) {
+      tree?.onBackInterceptor = null;
+    }
     _animationController.dispose();
     super.dispose();
   }
@@ -79,8 +95,12 @@ class _SobreTimePageState extends State<SobreTimePage>
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.colors.dryMoss),
           onPressed: () {
-            final tree = TreeNavigationWrapper.currentTreeController;
-            tree?.goBack();
+            if (_activeQuadrant != null) {
+              _onBackgroundTapped();
+            } else {
+              final tree = TreeNavigationWrapper.currentTreeController;
+              tree?.goBack();
+            }
           },
         ),
         title: Text(
