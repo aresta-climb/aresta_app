@@ -41,6 +41,9 @@ class CustomStringFeedback extends StatefulWidget {
   State<CustomStringFeedback> createState() => _CustomStringFeedbackState();
 }
 
+/// Notificador global usado para avisar o sistema de navegação quando o feedback está aberto.
+final ValueNotifier<bool> isFeedbackVisibleNotifier = ValueNotifier<bool>(false);
+
 class _CustomStringFeedbackState extends State<CustomStringFeedback>
     with WidgetsBindingObserver {
   /// Controlador do campo de texto de feedback.
@@ -51,10 +54,18 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
     super.initState();
     controller = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
+    // Avisa que o feedback abriu
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      isFeedbackVisibleNotifier.value = true;
+    });
   }
 
   @override
   void dispose() {
+    // Avisa que o feedback fechou
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      isFeedbackVisibleNotifier.value = false;
+    });
     WidgetsBinding.instance.removeObserver(this);
     controller.dispose();
     super.dispose();
