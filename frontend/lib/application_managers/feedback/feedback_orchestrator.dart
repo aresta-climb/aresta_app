@@ -1,3 +1,7 @@
+/// Este arquivo é o Gerente/Coordenador de background (Orchestrator).
+/// É acionado pelo Workmanager (em segundo plano) para varrer a fila local de feedbacks
+/// e tentar enviá-los à rede, coordenando o repositório local e o serviço de rede.
+
 import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -5,8 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
-import 'feedback_local_repository.dart';
-import 'feedback_network_service.dart';
+import '../../services/feedback/feedback_local_repository.dart';
+import '../../services/feedback/feedback_network_service.dart';
 
 // Constantes do Backend injetadas em tempo de compilação (CI/CD)
 const String _edgeFunctionUrl = String.fromEnvironment(

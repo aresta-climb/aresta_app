@@ -7,8 +7,8 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
-import 'package:frontend/services/feedback/feedback_orchestrator.dart';
-import 'package:frontend/application/usecases/feedback/submit_feedback_usecase.dart';
+import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 

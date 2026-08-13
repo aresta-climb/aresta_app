@@ -1,3 +1,6 @@
+/// Este arquivo atua como o 'Trabalhador' (Worker) de Sistema/Dispositivo.
+/// É responsável por vasculhar o SO do aparelho (versão, modelo, conectividade) para popular os metadados.
+
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -7,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../domain/models/feedback_metadata.dart';
+import '../../data/models/feedback_metadata.dart';
 
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
 /// em que o usuário decide enviar um feedback ou relatar um bug.

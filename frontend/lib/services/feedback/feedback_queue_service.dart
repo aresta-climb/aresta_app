@@ -1,3 +1,6 @@
+/// Este arquivo atua como o 'Trabalhador' (Worker) da Fila.
+/// Fornece uma API simplificada para adicionar novos feedbacks à fila de persistência local.
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -5,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
-import '../../domain/models/feedback_metadata.dart';
+import '../../data/models/feedback_metadata.dart';
 import '../../data/dtos/feedback_metadata_dto.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks

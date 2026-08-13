@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 

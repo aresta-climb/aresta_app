@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/application/usecases/feedback/submit_feedback_usecase.dart';
+import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
 import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
 import 'package:frontend/pages/pico_subpages/comunidade_pico_page.dart';
@@ -40,7 +40,7 @@ import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
-import 'package:frontend/services/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
 import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';

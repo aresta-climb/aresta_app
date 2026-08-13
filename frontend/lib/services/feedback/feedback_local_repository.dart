@@ -1,21 +1,12 @@
+/// Este arquivo atua como o "Trabalhador" (Worker) responsável pela persistência local dos feedbacks.
+/// Ele manipula a leitura, gravação, e sistema de travas (lock) no sistema de arquivos local.
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-class FeedbackTask {
-  final File processingFile;
-  final String id;
-  final Map<String, dynamic> jsonContent;
-  final File? pngFile;
-
-  FeedbackTask({
-    required this.processingFile,
-    required this.id,
-    required this.jsonContent,
-    this.pngFile,
-  });
-}
+import '../../data/dtos/feedback_task.dart';
 
 class FeedbackLocalRepository {
   final Future<Directory> Function()? getSupportDirectoryOverride;
