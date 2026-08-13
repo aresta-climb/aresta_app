@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:workmanager/workmanager.dart';
 
-import 'package:frontend/domain/models/feedback_metadata.dart';
+import 'package:frontend/data/models/feedback_metadata.dart';
 
 void main() {
   group('FeedbackQueueService', () {

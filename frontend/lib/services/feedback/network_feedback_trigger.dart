@@ -1,3 +1,6 @@
+/// Este arquivo atua como um gatilho (Trigger) reativo.
+/// Ouve mudanças na rede (Wi-Fi/Dados Móveis) e dispara a sincronização da fila quando a internet volta.
+
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 

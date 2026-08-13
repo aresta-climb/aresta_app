@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/dtos/feedback_metadata_dto.dart';
-import 'package:frontend/domain/models/feedback_metadata.dart';
+import 'package:frontend/data/models/feedback_metadata.dart';
 
 void main() {
   group('FeedbackMetadataDto', () {

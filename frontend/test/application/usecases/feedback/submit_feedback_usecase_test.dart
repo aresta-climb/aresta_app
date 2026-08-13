@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback/feedback.dart';
 
-import 'package:frontend/application/usecases/feedback/submit_feedback_usecase.dart';
-import 'package:frontend/domain/models/feedback_metadata.dart';
+import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
+import 'package:frontend/data/models/feedback_metadata.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';

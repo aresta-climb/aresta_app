@@ -1,3 +1,7 @@
+/// Este arquivo é o Gerente/Coordenador acionado por ações do Usuário (UseCase).
+/// Quando o usuário clica em 'Enviar', esta classe orquestra a coleta de metadados, 
+/// registro de telemetria e o enfileiramento do feedback, sem se importar como esses serviços são implementados.
+
 import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
 import '../../../services/firebase/telemetry_service.dart';

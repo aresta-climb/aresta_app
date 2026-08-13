@@ -1,3 +1,6 @@
+/// Este arquivo atua como o 'Trabalhador' (Worker) de Rede.
+/// É responsável estritamente por pegar um payload de feedback e fazer a requisição HTTP POST para o servidor.
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;

@@ -1,4 +1,7 @@
-import '../../domain/models/feedback_metadata.dart';
+/// Este arquivo atua como o serializador (DTO) dos metadados de feedback.
+/// Ele é responsável por converter a classe pura FeedbackMetadata de e para JSON.
+
+import '../../data/models/feedback_metadata.dart';
 
 class FeedbackMetadataDto {
   static FeedbackMetadata fromJson(Map<String, dynamic> json) {
