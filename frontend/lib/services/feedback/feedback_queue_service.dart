@@ -1,5 +1,6 @@
 /// Este arquivo atua como o 'Trabalhador' (Worker) da Fila.
 /// Fornece uma API simplificada para adicionar novos feedbacks à fila de persistência local.
+library;
 
 import 'dart:convert';
 import 'dart:io';

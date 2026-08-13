@@ -1,5 +1,6 @@
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Sistema/Dispositivo.
 /// É responsável por vasculhar o SO do aparelho (versão, modelo, conectividade) para popular os metadados.
+library;
 
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
