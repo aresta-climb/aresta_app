@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
 import 'package:frontend/pages/pico_subpages/comunidade_pico_page.dart';
@@ -828,26 +829,32 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
     return ValueListenableBuilder<bool>(
       valueListenable: isFeedbackVisibleNotifier,
-      child: navigator,
       builder: (context, isFeedbackVisible, child) {
         return PopScope(
-          // Se feedback estiver aberto, não permite pop (para podermos interceptar e fechar).
-          // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o, desde que o feedback não esteja aberto.
-          canPop: treeController.currentNode.parent == null && !isFeedbackVisible,
+          canPop: false, // Never let the OS exit directly; handle it explicitly in onPopInvoked
           onPopInvoked: (didPop) {
             if (didPop) return;
 
-            if (BetterFeedback.of(context).isVisible) {
+            // Use the notifier instead of BetterFeedback.of(context).isVisible
+            // because BetterFeedback might have already disposed or hidden the widget.
+            if (isFeedbackVisibleNotifier.value) {
               BetterFeedback.of(context).hide();
+              isFeedbackVisibleNotifier.value = false;
               return;
             }
 
-            // Intercepta botões nativos de "Voltar" do Android/Gesto iOS, refletindo isso na nossa árvore de estados
-            treeController.goBack();
+            // Let the tree controller handle navigation back down the tree.
+            // If it returns false, it means we are at the absolute root (HomeNode).
+            final handled = treeController.goBack();
+            if (!handled) {
+              // Now it is safe to exit the app.
+              SystemNavigator.pop();
+            }
           },
           child: child!,
         );
       },
+      child: navigator,
     );
   }
 }
