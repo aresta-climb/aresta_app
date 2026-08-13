@@ -6,6 +6,8 @@ import '../../../services/feedback/feedback_queue_service.dart';
 import '../../../theme/app_colors.dart';
 
 class SubmitFeedbackUseCase {
+  static final ValueNotifier<bool> isFeedbackOpen = ValueNotifier<bool>(false);
+
   final FeedbackMetadataCollector _metadataCollector;
   final FeedbackQueueService _queueService;
   final TelemetryService _telemetryService;
@@ -21,6 +23,7 @@ class SubmitFeedbackUseCase {
   Future<void> execute(BuildContext context, UserFeedback feedback) async {
     // 1. Hide the feedback UI
     BetterFeedback.of(context).hide();
+    isFeedbackOpen.value = false;
 
     // 2. Log telemetry
     _telemetryService.logAcaoFeedback('enviar_feedback');
