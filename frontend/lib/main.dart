@@ -826,33 +826,24 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         return true; // Sucesso, de acordo com as especificações do Flutter Navigator 2.0
       },
     );
+    return PopScope(
+      canPop: false, // Never let the OS exit directly; handle it explicitly in onPopInvoked
+      onPopInvoked: (didPop) {
+        if (didPop) return;
 
-    return ValueListenableBuilder<bool>(
-      valueListenable: isFeedbackVisibleNotifier,
-      builder: (context, isFeedbackVisible, child) {
-        return PopScope(
-          canPop: false, // Never let the OS exit directly; handle it explicitly in onPopInvoked
-          onPopInvoked: (didPop) {
-            if (didPop) return;
+        // BetterFeedback.of(context).isVisible is true during the entire feedback flow (drawing + text).
+        if (BetterFeedback.of(context).isVisible) {
+          BetterFeedback.of(context).hide();
+          return;
+        }
 
-            // Use the notifier instead of BetterFeedback.of(context).isVisible
-            // because BetterFeedback might have already disposed or hidden the widget.
-            if (isFeedbackVisibleNotifier.value) {
-              BetterFeedback.of(context).hide();
-              isFeedbackVisibleNotifier.value = false;
-              return;
-            }
-
-            // Let the tree controller handle navigation back down the tree.
-            // If it returns false, it means we are at the absolute root (HomeNode).
-            final handled = treeController.goBack();
-            if (!handled) {
-              // Now it is safe to exit the app.
-              SystemNavigator.pop();
-            }
-          },
-          child: child!,
-        );
+        // Let the tree controller handle navigation back down the tree.
+        // If it returns false, it means we are at the absolute root (HomeNode).
+        final handled = treeController.goBack();
+        if (!handled) {
+          // Now it is safe to exit the app.
+          SystemNavigator.pop();
+        }
       },
       child: navigator,
     );
