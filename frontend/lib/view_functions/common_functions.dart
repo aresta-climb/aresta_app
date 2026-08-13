@@ -8,6 +8,7 @@ import 'package:feedback/feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:frontend/services/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application/usecases/feedback/submit_feedback_usecase.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 
@@ -155,24 +156,7 @@ Future<void> processFeedbackSubmission(
   BuildContext context,
   UserFeedback feedback,
 ) async {
-  BetterFeedback.of(context).hide();
-  TelemetryService.instance.logAcaoFeedback('enviar_feedback');
-  final metadata = await FeedbackMetadataCollector().collect(context: context);
-  await FeedbackQueueService().enqueueFeedback(
-    description: feedback.text,
-    screenshot: feedback.screenshot,
-    metadata: metadata,
-  );
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Feedback recebido! Muito obrigado por ajudar a melhorar o app.',
-        ),
-        backgroundColor: AppColors.light.beastHide,
-      ),
-    );
-  }
+  await SubmitFeedbackUseCase().execute(context, feedback);
 }
 
 PreferredSizeWidget buildCommonAppBar(
