@@ -813,35 +813,41 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       }),
     ];
 
-    final isFeedbackVisible = BetterFeedback.of(context).isVisible;
-
-    return PopScope(
-      // Se feedback estiver aberto, não permite pop (para podermos interceptar e fechar).
-      // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o, desde que o feedback não esteja aberto.
-      canPop: treeController.currentNode.parent == null && !isFeedbackVisible,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-
-        if (BetterFeedback.of(context).isVisible) {
-          BetterFeedback.of(context).hide();
-          return;
+    final navigator = Navigator(
+      pages: pages,
+      // Define o comportamento de quando um comando imperativo como `Navigator.pop(context)` for chamado diretamente neste Navigator.
+      onPopPage: (route, result) {
+        if (!route.didPop(result)) {
+          return false; // Rejeitado
         }
-
-        // Intercepta botões nativos de "Voltar" do Android/Gesto iOS, refletindo isso na nossa árvore de estados
+        // Garante sincronia: a rota saiu da UI, devemos retirá-la da nossa Tree Controller
         treeController.goBack();
+        return true; // Sucesso, de acordo com as especificações do Flutter Navigator 2.0
       },
-      child: Navigator(
-        pages: pages,
-        // Define o comportamento de quando um comando imperativo como `Navigator.pop(context)` for chamado diretamente neste Navigator.
-        onPopPage: (route, result) {
-          if (!route.didPop(result)) {
-            return false; // Rejeitado
-          }
-          // Garante sincronia: a rota saiu da UI, devemos retirá-la da nossa Tree Controller
-          treeController.goBack();
-          return true; // Sucesso, de acordo com as especificações do Flutter Navigator 2.0
-        },
-      ),
+    );
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: isFeedbackVisibleNotifier,
+      child: navigator,
+      builder: (context, isFeedbackVisible, child) {
+        return PopScope(
+          // Se feedback estiver aberto, não permite pop (para podermos interceptar e fechar).
+          // Se não há nó pai (estamos na aba raiz), canPop = true -> Permite ao SO fechar o app minimizando-o, desde que o feedback não esteja aberto.
+          canPop: treeController.currentNode.parent == null && !isFeedbackVisible,
+          onPopInvoked: (didPop) {
+            if (didPop) return;
+
+            if (BetterFeedback.of(context).isVisible) {
+              BetterFeedback.of(context).hide();
+              return;
+            }
+
+            // Intercepta botões nativos de "Voltar" do Android/Gesto iOS, refletindo isso na nossa árvore de estados
+            treeController.goBack();
+          },
+          child: child!,
+        );
+      },
     );
   }
 }
