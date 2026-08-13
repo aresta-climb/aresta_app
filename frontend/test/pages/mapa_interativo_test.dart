@@ -1100,7 +1100,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Explorar mapas do setor'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsOneWidget);
       },
     );
 
@@ -1150,7 +1150,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Explorar mapas do setor'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsOneWidget);
       },
     );
 
@@ -1200,7 +1200,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Mapa do grupo de setores'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsOneWidget);
       },
     );
 
@@ -1264,7 +1264,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Explorar mapas do setor'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsOneWidget);
       },
     );
 
