@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../domain/models/feedback_metadata.dart';
+
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
 /// em que o usuário decide enviar um feedback ou relatar um bug.
 ///
@@ -63,9 +65,9 @@ class FeedbackMetadataCollector {
   /// Executa a coleta de todas as informações de metadados.
   /// Se um `context` for fornecido, coleta informações da árvore de Widgets (Tela e Tema).
   ///
-  /// Retorna um mapa contendo todas as propriedades.
+  /// Retorna um objeto [FeedbackMetadata] fortemente tipado.
   /// Variáveis que falharem durante a coleta adotarão o valor `'unknown'`.
-  Future<Map<String, dynamic>> collect({BuildContext? context}) async {
+  Future<FeedbackMetadata> collect({BuildContext? context}) async {
     String? appInstanceId;
     try {
       if (getAppInstanceIdOverride != null) {
@@ -212,23 +214,23 @@ class FeedbackMetadataCollector {
           '$day de $monthName de $year às $hour:$minute:$second (GMT-3)';
     } catch (_) {}
 
-    return {
-      'navigationTree': navigationTree.isEmpty ? 'unknown' : navigationTree,
-      'submittedAt': submittedAt,
-      'submittedAtTimestamp': submittedAtTimestamp,
-      'feedbackId': getUuidOverride != null
+    return FeedbackMetadata(
+      navigationTree: navigationTree.isEmpty ? 'unknown' : navigationTree,
+      submittedAt: submittedAt,
+      submittedAtTimestamp: submittedAtTimestamp,
+      feedbackId: getUuidOverride != null
           ? getUuidOverride!()
           : const Uuid().v4(),
-      'appInstanceId': appInstanceId ?? 'unknown',
-      'os': os,
-      'osVersion': osVersion,
-      'deviceModel': deviceModel,
-      'appVersion': packageInfo?.version ?? 'unknown',
-      'screenSize': screenSize,
-      'deviceOrientation': deviceOrientation,
-      'isDarkMode': isDarkMode,
-      'connectivity': connectivity,
-    };
+      appInstanceId: appInstanceId ?? 'unknown',
+      os: os,
+      osVersion: osVersion,
+      deviceModel: deviceModel,
+      appVersion: packageInfo?.version ?? 'unknown',
+      screenSize: screenSize,
+      deviceOrientation: deviceOrientation,
+      isDarkMode: isDarkMode,
+      connectivity: connectivity,
+    );
   }
 
   /// Constrói uma representação em string do caminho de nós percorrido na árvore.
