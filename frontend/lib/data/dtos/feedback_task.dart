@@ -1,5 +1,6 @@
 /// Este arquivo define o DTO (Data Transfer Object) de uma Tarefa de Feedback.
 /// É a planta baixa (blueprint) dos dados mantidos na fila local (SQLite/Arquivos) antes de serem enviados à rede.
+library;
 
 import 'dart:io';
 

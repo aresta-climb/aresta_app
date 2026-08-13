@@ -1,5 +1,6 @@
 /// Este arquivo define o Modelo de Domínio (Blueprint) principal dos metadados de feedback.
 /// Contém apenas as propriedades puras, sem lógica de formatação JSON (que fica no DTO).
+library;
 
 class FeedbackMetadata {
   final String navigationTree;

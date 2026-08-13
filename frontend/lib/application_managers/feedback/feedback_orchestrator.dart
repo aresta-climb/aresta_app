@@ -1,6 +1,7 @@
 /// Este arquivo é o Gerente/Coordenador de background (Orchestrator).
 /// É acionado pelo Workmanager (em segundo plano) para varrer a fila local de feedbacks
 /// e tentar enviá-los à rede, coordenando o repositório local e o serviço de rede.
+library;
 
 import 'dart:async';
 import 'dart:io';

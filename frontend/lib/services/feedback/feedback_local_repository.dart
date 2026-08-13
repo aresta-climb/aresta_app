@@ -1,5 +1,6 @@
 /// Este arquivo atua como o "Trabalhador" (Worker) responsável pela persistência local dos feedbacks.
 /// Ele manipula a leitura, gravação, e sistema de travas (lock) no sistema de arquivos local.
+library;
 
 import 'dart:convert';
 import 'dart:io';
