@@ -5,6 +5,7 @@
     <application
         android:label="Aresta"
         android:name="${applicationName}"
+        android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher">
         
         <meta-data android:name="com.google.android.geo.API_KEY"
