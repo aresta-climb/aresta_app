@@ -61,12 +61,6 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
   }
 
   @override
-  Future<bool> didPopRoute() async {
-    BetterFeedback.of(context).hide();
-    return true; // Indica que o botão de voltar foi interceptado e tratado
-  }
-
-  @override
   Widget build(BuildContext context) {
     // Determine colors for the text field and button
     final textColor = context.colors.chalkWhite;
