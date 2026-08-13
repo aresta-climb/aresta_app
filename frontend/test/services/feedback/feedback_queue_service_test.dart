@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'package:frontend/domain/models/feedback_metadata.dart';
+
 void main() {
   group('FeedbackQueueService', () {
     late Directory tempDir;
@@ -48,13 +50,21 @@ void main() {
         );
 
         final screenshot = Uint8List.fromList([1, 2, 3, 4, 5]);
-        final metadata = {
-          'os': 'ios',
-          'appVersion': '1.0.0',
-          'feedbackId': 'test-uuid',
-          'submittedAt': '16 de junho de 2026 às 21:00:00 (GMT-3)',
-          'submittedAtTimestamp': '2026-06-16T21:00:00.000-03:00',
-        };
+        final metadata = const FeedbackMetadata(
+          os: 'ios',
+          appVersion: '1.0.0',
+          feedbackId: 'test-uuid',
+          submittedAt: '16 de junho de 2026 às 21:00:00 (GMT-3)',
+          submittedAtTimestamp: '2026-06-16T21:00:00.000-03:00',
+          navigationTree: 'unknown',
+          appInstanceId: 'unknown',
+          osVersion: 'unknown',
+          deviceModel: 'unknown',
+          screenSize: 'unknown',
+          deviceOrientation: 'unknown',
+          isDarkMode: 'unknown',
+          connectivity: 'unknown',
+        );
 
         await service.enqueueFeedback(
           description: 'Test bug',
