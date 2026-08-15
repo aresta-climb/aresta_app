@@ -81,27 +81,62 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     }
 
     final int setoresCount = _countTotalSetores();
-    
-    // Attempt to fetch detailed statistics from activeDataset
-    final picosList = widget.datasetRepo.activeDataset.value?.availablePicos ?? [];
-    final picoData = picosList.where((p) => p['id'] == widget.cragId).firstOrNull;
-    final estatisticas = picoData?['estatisticas'] as Map<String, dynamic>?;
+    int totalVias = 0;
+    int totalBoulders = 0;
+    int totalEsportivas = 0;
+    int totalMoveis = 0;
+    int totalMultiplasEnfiadas = 0;
+    int totalHighlines = 0;
+
+    void processEscaladas(Iterable<dynamic> escaladas) {
+      for (var escalada in escaladas) {
+        totalVias++;
+        switch (escalada.whichTipo()) {
+          case Escalada_Tipo.boulder:
+            totalBoulders++;
+            break;
+          case Escalada_Tipo.viaEsportiva:
+            totalEsportivas++;
+            break;
+          case Escalada_Tipo.viaMovel:
+            totalMoveis++;
+            break;
+          case Escalada_Tipo.viaMultiplasEnfiadas:
+            totalMultiplasEnfiadas++;
+            break;
+          case Escalada_Tipo.highline:
+            totalHighlines++;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    for (var sg in widget.pico.setoresOuGrupos) {
+      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
+        processEscaladas(sg.setor.conteudo.escaladas);
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
+        for (var s in sg.grupo.conteudo.setores) {
+          processEscaladas(s.conteudo.escaladas);
+        }
+      }
+    }
 
     String statsText = '';
-    if (estatisticas != null) {
-      final vias = estatisticas['totalVias'] ?? 0;
+    if (totalVias > 0) {
       final List<String> modalidades = [];
-      if ((estatisticas['totalBoulders'] ?? 0) > 0) modalidades.add('${estatisticas['totalBoulders']} boulders');
-      if ((estatisticas['totalEsportivas'] ?? 0) > 0) modalidades.add('${estatisticas['totalEsportivas']} esportivas');
-      if ((estatisticas['totalMoveis'] ?? 0) > 0) modalidades.add('${estatisticas['totalMoveis']} móveis');
-      if ((estatisticas['totalMultiplasEnfiadas'] ?? 0) > 0) modalidades.add('${estatisticas['totalMultiplasEnfiadas']} múltiplas enfiadas');
-      if ((estatisticas['totalHighlines'] ?? 0) > 0) modalidades.add('${estatisticas['totalHighlines']} highlines');
+      if (totalEsportivas > 0) modalidades.add('$totalEsportivas esportivas');
+      if (totalBoulders > 0) modalidades.add('$totalBoulders boulders');
+      if (totalMoveis > 0) modalidades.add('$totalMoveis móveis');
+      if (totalMultiplasEnfiadas > 0) {
+        modalidades.add('$totalMultiplasEnfiadas múltiplas enfiadas');
+      }
+      if (totalHighlines > 0) modalidades.add('$totalHighlines highlines');
 
-      if (vias > 0) {
-        statsText = ' • $vias escaladas';
-        if (modalidades.isNotEmpty) {
-          statsText += ' (${modalidades.join(', ')})';
-        }
+      statsText = ' • $totalVias escaladas';
+      if (modalidades.isNotEmpty) {
+        statsText += ' (${modalidades.join(', ')})';
       }
     }
 
