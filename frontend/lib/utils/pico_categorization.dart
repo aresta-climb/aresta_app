@@ -8,6 +8,7 @@ enum TextCategory {
   comunidadeComercio,
   comunidadeInfo,
   apoioProdutos,
+  creditos,
   outros,
 }
 
@@ -50,6 +51,12 @@ TextCategory categorizeBotao(Botao b) {
       text.contains('guia físico')) {
     return TextCategory.apoioProdutos;
   }
+  if (text.contains('crédito') ||
+      text.contains('credito') ||
+      text.contains('autor') ||
+      text.contains('agradecimento')) {
+    return TextCategory.creditos;
+  }
 
   return TextCategory.outros;
 }
@@ -62,6 +69,7 @@ class PicoCategorizedData {
   final List<Botao> comunidadeComercio = [];
   final List<Botao> comunidadeInfo = [];
   final List<Botao> apoioProdutos = [];
+  final List<Botao> creditos = [];
   final List<Botao> outros = [];
 
   PicoCategorizedData(Croqui croqui) {
@@ -92,6 +100,9 @@ class PicoCategorizedData {
           break;
         case TextCategory.apoioProdutos:
           apoioProdutos.add(b);
+          break;
+        case TextCategory.creditos:
+          creditos.add(b);
           break;
         case TextCategory.outros:
           outros.add(b);
