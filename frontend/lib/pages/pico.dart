@@ -117,6 +117,16 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             pinned: true,
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                child: const BackButton(color: Colors.white),
+              ),
+            ),
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final top = constraints.biggest.height;
