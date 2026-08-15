@@ -480,6 +480,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     },
                   ),
 
+                  /*
                   PicoMenuCard(
                     title: 'Apoie o Pico',
                     subtitle:
@@ -502,6 +503,35 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       );
                     },
                   ),
+                  */
+
+                  if (_categories.creditos.isNotEmpty)
+                    ..._categories.creditos.map(
+                      (b) => PicoMenuCard(
+                        title: b.texto,
+                        subtitle:
+                            'Conheça os autores, colaboradores e agradecimentos.',
+                        icon: Icons.workspace_premium,
+                        iconColor: context.colors.ashGrey,
+                        backgroundColor: context.colors.caveShadow,
+                        titleColor: context.colors.chalkWhite,
+                        subtitleColor: context.colors.fishBone,
+                        onTap: () {
+                          TreeNavigationWrapper.of(
+                            context,
+                          ).treeController.navigateTo(
+                            TextNode(
+                              title: b.texto,
+                              content: b.destino.secaoTextual.conteudo,
+                              cragId: widget.cragId,
+                              parent: TreeNavigationWrapper.of(
+                                context,
+                              ).treeController.currentNode,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
 
                   const SizedBox(height: 24),
                   Center(
