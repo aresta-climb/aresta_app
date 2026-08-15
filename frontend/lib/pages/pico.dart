@@ -231,6 +231,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           ),
                         ),
                       ),
+                      /*
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
@@ -258,6 +259,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           ),
                         ),
                       ),
+                      */
                       const SizedBox(width: 8),
                       buildFeedbackButton(context, color: context.colors.chalkWhite),
                       IconButton(
