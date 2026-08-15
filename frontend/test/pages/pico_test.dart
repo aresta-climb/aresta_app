@@ -113,28 +113,23 @@ void main() {
     tester,
   ) async {
     final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-    datasetRepo.activeDataset.value = TopoDataset(
-      availablePicos: [
-        {
-          'id': 'crag1',
-          'estatisticas': {
-            'totalVias': 10,
-            'totalBoulders': 5,
-            'totalEsportivas': 5,
-          }
-        }
-      ],
-      downloadedPicos: [],
+
+    final setor1 = ArquivoSetor()..conteudo = (Setor()
+      ..escaladas.addAll(List.generate(5, (_) => Escalada()..boulder = Boulder()))
+    );
+
+    final setor2 = ArquivoSetor()..conteudo = (Setor()
+      ..escaladas.addAll(List.generate(5, (_) => Escalada()..viaEsportiva = ViaEsportiva()))
     );
 
     final pico = Pico()
       ..nome = 'Pico Teste'
       ..estado = 'MG'
       ..setoresOuGrupos.add(
-        SetorOuGrupo()..setor = ArquivoSetor(),
+        SetorOuGrupo()..setor = setor1,
       )
       ..setoresOuGrupos.add(
-        SetorOuGrupo()..setor = ArquivoSetor(),
+        SetorOuGrupo()..setor = setor2,
       );
 
     await tester.pumpWidget(
@@ -148,10 +143,11 @@ void main() {
       ),
     );
 
-    // The subtitle should read "MG • 2 SETORES • 10 escaladas (5 boulders, 5 esportivas)"
-    // Because state is "MG", 2 sectors, 10 vias (5 b, 5 e).
+    // The subtitle should read "MG • 2 SETORES • 10 escaladas (5 esportivas, 5 boulders)"
+    // Because state is "MG", 2 sectors, 10 vias (5 esportivas, 5 boulders).
+    // Note: the order in the string may be different if we added them in specific order: "5 esportivas, 5 boulders"
     expect(
-      find.text('MG • 2 SETORES • 10 escaladas (5 boulders, 5 esportivas)'),
+      find.text('MG • 2 SETORES • 10 escaladas (5 esportivas, 5 boulders)'),
       findsOneWidget,
     );
   });
