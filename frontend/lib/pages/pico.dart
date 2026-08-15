@@ -258,6 +258,125 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      buildFeedbackButton(context, color: context.colors.chalkWhite),
+                      IconButton(
+                        icon: Icon(Icons.search, color: context.colors.chalkWhite),
+                        tooltip: searchTooltip,
+                        onPressed: () async {
+                          TelemetryService.instance.logAcaoCroqui(
+                            widget.cragId,
+                            'buscar',
+                          );
+                          final tree = TreeNavigationWrapper.currentTreeController;
+                          tree?.onBackInterceptor = () {
+                            // Tenta fechar o search
+                            Navigator.of(context).maybePop();
+                            return true;
+                          };
+
+                          final result = await showSearch<Object?>(
+                            context: context,
+                            delegate: PicoSearchDelegate(widget.pico, widget.cragId),
+                          );
+
+                          // Limpa o interceptor apenas se ele for exatamente a função que registramos.
+                          // Isso previne que zere um interceptor que possa ter sido registrado
+                          // por outra coisa se a navegação ficasse muito rápida.
+                          tree?.onBackInterceptor = null;
+
+                          if (result != null && context.mounted) {
+                            if (result is Escalada) {
+                              final setor = findSetorForEscalada(widget.pico, result);
+                              if (setor != null) {
+                                AppNav.toSetor(
+                                  context,
+                                  setor: setor,
+                                  scrollToEscalada: result,
+                                );
+                              }
+                              TelemetryService.instance.logAcaoEscalada(
+                                widget.cragId,
+                                setor?.nome ?? 'Geral',
+                                getEscaladaNome(result),
+                                'abrir_detalhes',
+                                'busca',
+                              );
+                              AppNav.toVia(context, escalada: result, setor: setor);
+                            } else if (result is Setor) {
+                              TelemetryService.instance.logAbrirSetor(
+                                widget.cragId,
+                                result.nome,
+                              );
+                              AppNav.toSetor(context, setor: result);
+                            }
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: context.colors.chalkWhite,
+                        ),
+                        tooltip: 'Excluir guia',
+                        onPressed: () async {
+                          TelemetryService.instance.logAcaoCroqui(
+                            widget.cragId,
+                            'excluir',
+                          );
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: context.colors.caveShadow,
+                              title: const Text(
+                                'Excluir?',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              content: Text(
+                                'Deseja excluir o guia de ${widget.pico.nome}?',
+                                style: TextStyle(color: context.colors.ashGrey),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(
+                                    'CANCELAR',
+                                    style: TextStyle(color: context.colors.ashGrey),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text(
+                                    'EXCLUIR',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true && context.mounted) {
+                            final success = await widget.datasetRepo.deleteCrag(
+                              widget.cragId,
+                            );
+                            if (context.mounted) {
+                              AppNav.home(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success
+                                        ? 'Guia excluído.'
+                                        : 'Erro ao excluir guia.',
+                                  ),
+                                  backgroundColor: success
+                                      ? context.colors.dryMoss
+                                      : Theme.of(context).colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 32),
