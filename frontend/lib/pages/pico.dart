@@ -121,7 +121,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
               padding: const EdgeInsets.all(8.0),
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Colors.black45,
+                  color: Colors.black87,
                   shape: BoxShape.circle,
                 ),
                 child: const BackButton(color: Colors.white),
