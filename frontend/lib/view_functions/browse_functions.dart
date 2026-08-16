@@ -395,8 +395,9 @@ class CragCard extends StatelessWidget {
                                 distanceStr!,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
@@ -413,6 +414,9 @@ class CragCard extends StatelessWidget {
                               0xFF7B8B6F,
                             ).withValues(alpha: 0.9), // Greenish Olive badge
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -427,8 +431,8 @@ class CragCard extends StatelessWidget {
                                 'SALVO OFFLINE',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
                                 ),
                               ),
