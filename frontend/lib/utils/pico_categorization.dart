@@ -1,6 +1,7 @@
 import '../aresta_api/proto/generated/croqui.pb.dart';
 
 enum TextCategory {
+  capa,
   explorarSobre,
   explorarComoChegar,
   regras,
@@ -15,6 +16,9 @@ enum TextCategory {
 TextCategory categorizeBotao(Botao b) {
   final text = b.texto.toLowerCase();
 
+  if (text.contains('capa')) {
+    return TextCategory.capa;
+  }
   if (text.contains('sobre') ||
       text.contains('história') ||
       text.contains('historia')) {
@@ -62,6 +66,7 @@ TextCategory categorizeBotao(Botao b) {
 }
 
 class PicoCategorizedData {
+  final List<Botao> capa = [];
   final List<Botao> sobre = [];
   final List<Botao> comoChegar = [];
   final List<Botao> regras = [];
@@ -80,6 +85,9 @@ class PicoCategorizedData {
     for (var b in botoes) {
       final cat = categorizeBotao(b);
       switch (cat) {
+        case TextCategory.capa:
+          capa.add(b);
+          break;
         case TextCategory.explorarSobre:
           sobre.add(b);
           break;
