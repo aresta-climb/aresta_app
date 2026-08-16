@@ -1040,7 +1040,7 @@ void main() {
     );
 
     testWidgets(
-      'Tapping on a marker with multiple maps displays "Ver nos mapas (N)" button',
+      'Tapping on a marker with multiple maps DOES NOT display "Ver mapas" button for vias',
       (WidgetTester tester) async {
         final ponto = Mapa_PontoDeInteresse(
           id: 'p1',
@@ -1100,7 +1100,7 @@ void main() {
         await tester.tap(find.byKey(const Key('marker_p1')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Ver mapas'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsNothing);
       },
     );
 
