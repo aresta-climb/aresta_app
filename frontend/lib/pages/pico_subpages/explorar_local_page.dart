@@ -99,22 +99,31 @@ class ExplorarLocalPage extends StatelessWidget {
               ),
 
             if (categories.comoChegar.isNotEmpty)
-              ...categories.comoChegar.map(
-                (b) => PicoMenuCard(
-                  title: 'Como chegar',
-                  subtitle: b.texto,
-                  icon: Icons.near_me,
-                  iconColor: context.colors.rustIron,
-                  backgroundColor: context.colors.caveShadow,
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.fishBone,
-                  onTap: () => _pushTextNode(
+              PicoMenuCard(
+                title: 'Como chegar',
+                subtitle: categories.comoChegar.length == 1
+                    ? categories.comoChegar.first.texto
+                    : 'Instruções de acesso e navegação até a base da montanha.',
+                icon: Icons.near_me,
+                iconColor: context.colors.rustIron,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.fishBone,
+                onTap: () {
+                  final combinedContent = categories.comoChegar.map((b) {
+                    if (categories.comoChegar.length == 1) {
+                      return b.destino.secaoTextual.conteudo;
+                    }
+                    return '## ${b.texto}\n\n${b.destino.secaoTextual.conteudo}';
+                  }).join('\n\n');
+                  
+                  _pushTextNode(
                     context,
                     'Como chegar',
-                    b.destino.secaoTextual.conteudo,
+                    combinedContent,
                     icon: Icons.near_me,
-                  ),
-                ),
+                  );
+                },
               ),
 
             if (categories.outros.isNotEmpty)
