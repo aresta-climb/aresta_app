@@ -1517,32 +1517,22 @@ Widget _buildMapas(
   List<Escalada> escaladasDaVia,
   Setor? setorContext,
 ) {
-  if (mapas.isEmpty) return const SizedBox.shrink();
+  final validMapas = mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
+  if (validMapas.isEmpty) return const SizedBox.shrink();
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: mapas.map((mapa) {
-      if (mapa.caminhoImagemMapa.isNotEmpty &&
-          mapa.larguraMapa > 0 &&
-          mapa.alturaMapa > 0) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: AspectRatio(
-              aspectRatio: mapa.larguraMapa / mapa.alturaMapa,
-              child: MapaThumbnail(
-                mapa: mapa,
-                cragId: cragId,
-
-                setorContext: setorContext,
-              ),
-            ),
-          ),
-        );
-      }
-      return const SizedBox.shrink();
-    }).toList(),
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 20),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: AspectRatio(
+        aspectRatio: validMapas.first.larguraMapa / validMapas.first.alturaMapa,
+        child: MapaThumbnail(
+          mapas: validMapas,
+          cragId: cragId,
+          setorContext: setorContext,
+        ),
+      ),
+    ),
   );
 }
 
