@@ -657,35 +657,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           );
         }
       },
-      secondaryActionLabel: foundMaps.length > 1
-          ? 'Ver mapas'
-          : null,
-      onSecondaryAction: foundMaps.length > 1
-          ? () {
-              TelemetryService.instance.logAcaoEscalada(
-                widget.cragId,
-                widget.setorContext?.nome ?? 'Geral',
-                title,
-                'ver_nos_mapas_carrossel',
-                'mapa',
-              );
-              final mapasData = foundMaps
-                  .map(
-                    (fm) => CarrosselItemData(
-                      mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
-                      setorContextNome: fm.setorContext?.nome,
-                      // Repassado para garantir foco no polígono exato do grupo
-                      grupoContextNome: fm.grupoContext?.nome,
-                      // Repassado para resolver qual aba abrir quando múltiplas vias dividem a pedra
-                      escaladaContextNome: getEscaladaNome(resolved!.escalada!),
-                      initialSelectedId: fm.referencedId,
-                    ),
-                  )
-                  .toList();
-
-              AppNav.toMapas(context, cragId: widget.cragId, mapas: mapasData);
-            }
-          : null,
     );
   }
 
