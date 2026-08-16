@@ -270,6 +270,9 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
+            blockquoteDecoration: const BoxDecoration(),
+            codeblockDecoration: const BoxDecoration(),
+            horizontalRuleDecoration: const BoxDecoration(),
           ),
         );
       },
