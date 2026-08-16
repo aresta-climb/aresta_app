@@ -22,17 +22,14 @@ subprojects {
 
 subprojects {
     // Fix for older Flutter plugins breaking in AGP 8.0+ due to missing namespace
-    val fixNamespace = Action<Project> {
+    plugins.withId("com.android.library") {
         val extension = extensions.findByType<BaseExtension>()
-        if (extension != null && extension.namespace.isNullOrBlank()) {
-            val fallbackNamespace = "com.pkmnapps." + project.name.replace("-", "_")
-            extension.namespace = project.group.toString().ifBlank { fallbackNamespace }
+        if (extension != null) {
+            if (extension.namespace.isNullOrBlank()) {
+                val fallbackNamespace = "com.pkmnapps." + project.name.replace("-", "_")
+                extension.namespace = project.group.toString().ifBlank { fallbackNamespace }
+            }
         }
-    }
-    if (project.state.executed) {
-        fixNamespace.execute(project)
-    } else {
-        afterEvaluate(fixNamespace)
     }
     
 
@@ -40,6 +37,8 @@ subprojects {
 
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.add("-Xlint:-options")
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
