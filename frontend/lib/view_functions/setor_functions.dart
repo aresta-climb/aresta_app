@@ -34,18 +34,17 @@ Widget buildSetorBody(
         ],
 
         if (setor.mapas.isNotEmpty) ...[
-          ...setor.mapas.map((mapa) {
-            if (mapa.caminhoImagemMapa.isNotEmpty &&
-                mapa.larguraMapa > 0 &&
-                mapa.alturaMapa > 0) {
+          (() {
+            final validMapas = setor.mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
+            if (validMapas.isNotEmpty) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: AspectRatio(
-                    aspectRatio: mapa.larguraMapa / mapa.alturaMapa,
+                    aspectRatio: validMapas.first.larguraMapa / validMapas.first.alturaMapa,
                     child: MapaThumbnail(
-                      mapa: mapa,
+                      mapas: validMapas,
                       cragId: cragId,
                       setorContext: setor,
                       grupoContext: grupoContext,
@@ -55,7 +54,7 @@ Widget buildSetorBody(
               );
             }
             return const SizedBox.shrink();
-          }),
+          })(),
         ],
 
         Builder(
