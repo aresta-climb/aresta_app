@@ -85,7 +85,7 @@ const List<Map<String, String>> teamData = [
       'image': 'assets/team/lorena.webp',
     },
     {
-      'role': 'Produto',
+      'role': 'Produto/Marketing',
       'name': 'Evandro Jaconi',
       'desc': 'Faz as pesquisas de persona, definições de visão de negócio e marketing do projeto.',
       'linkedin': 'https://www.linkedin.com/in/evandrojaconi/',
