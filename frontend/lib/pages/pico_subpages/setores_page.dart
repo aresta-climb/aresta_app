@@ -93,7 +93,7 @@ class _SetoresPageState extends State<SetoresPage> {
           children: [
             if (hasMap) ...[
               MapaThumbnail(
-                mapa: widget.pico.mapasGerais.conteudo.mapas.first,
+                mapas: widget.pico.mapasGerais.conteudo.mapas,
                 cragId: widget.cragId,
                 nomeContexto: widget.pico.nome,
               ),
