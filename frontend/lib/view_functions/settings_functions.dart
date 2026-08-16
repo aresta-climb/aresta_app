@@ -167,12 +167,12 @@ Future<void> importarArquivoCroqui(
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
 
   try {
-    final fp.FilePickerResult? result = await fp.FilePicker.pickFiles(
+    final fp.PlatformFile? pickedFile = await fp.FilePicker.pickFile(
       type: fp.FileType.any,
     );
 
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    if (pickedFile != null && pickedFile.path != null) {
+      final path = pickedFile.path!;
       if (!path.toLowerCase().endsWith('.croqui')) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

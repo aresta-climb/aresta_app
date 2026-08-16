@@ -22,12 +22,17 @@ subprojects {
 
 subprojects {
     // Fix for older Flutter plugins breaking in AGP 8.0+ due to missing namespace
-    afterEvaluate {
+    val fixNamespace = Action<Project> {
         val extension = extensions.findByType<BaseExtension>()
         if (extension != null && extension.namespace.isNullOrBlank()) {
             val fallbackNamespace = "com.pkmnapps." + project.name.replace("-", "_")
             extension.namespace = project.group.toString().ifBlank { fallbackNamespace }
         }
+    }
+    if (project.state.executed) {
+        fixNamespace.execute(project)
+    } else {
+        afterEvaluate(fixNamespace)
     }
     
 
