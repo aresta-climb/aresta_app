@@ -9,21 +9,21 @@ void main() {
       final escalada = Escalada()
         ..viaEsportiva = (ViaEsportiva()..dificuldade = GrauVia_GrauVia.BR_7A);
 
-      expect(getGrauString(escalada), '7A');
+      expect(getGrauString(escalada), '7a');
     });
 
     test('deve formatar grau de via móvel', () {
       final escalada = Escalada()
         ..viaMovel = (ViaMovel()..dificuldade = GrauVia_GrauVia.BR_5SUP);
 
-      expect(getGrauString(escalada), '5SUP');
+      expect(getGrauString(escalada), '5ºsup');
     });
 
     test('deve formatar grau de boulder', () {
       final escalada = Escalada()
         ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.V4);
 
-      expect(getGrauString(escalada), 'V4');
+      expect(getGrauString(escalada), 'v4');
     });
 
     test('deve formatar grau de multipitch', () {
@@ -31,7 +31,7 @@ void main() {
         ..viaMultiplasEnfiadas = (ViaMultiplasEnfiadas()
           ..dificuldadeMaxima = GrauVia_GrauVia.BR_6SUP_BARRA_7A);
 
-      expect(getGrauString(escalada), '6SUP BARRA 7A');
+      expect(getGrauString(escalada), '6ºsup/7a');
     });
 
     test('deve retornar string vazia para tipos não suportados', () {

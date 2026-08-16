@@ -62,8 +62,8 @@ String formatGradeString(String name) {
 }
 
 int getGradeSortWeight(String gradeName) {
-  if (gradeName.contains('INDEFINIDO')) return 0;
-  if (gradeName.contains('PROJETO')) return 1;
+  if (gradeName.contains('INDEFINIDO')) return 9998;
+  if (gradeName.contains('PROJETO')) return 9999;
 
   String g = gradeName.replaceAll('BR_', '').replaceAll('V', '');
 
@@ -104,7 +104,7 @@ int getGrauValue(Escalada escalada) {
       return getGradeSortWeight(
           escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
     default:
-      return 0;
+      return 9998;
   }
 }
 
