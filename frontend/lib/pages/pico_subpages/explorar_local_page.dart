@@ -62,7 +62,7 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: 'Sobre o local',
                   subtitle: b.texto,
                   icon: Icons.menu_book,
-                  iconColor: context.colors.dryMoss,
+                  iconColor: AppColors.brandColor,
                   backgroundColor:
                       context.colors.caveShadow, // Bright generic container
                   titleColor: context.colors.chalkWhite,
@@ -80,7 +80,7 @@ class ExplorarLocalPage extends StatelessWidget {
                 subtitle:
                     'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
                 icon: Icons.menu_book,
-                iconColor: context.colors.dryMoss,
+                iconColor: AppColors.brandColor,
                 backgroundColor: context.colors.caveShadow,
                 titleColor: context.colors.chalkWhite,
                 subtitleColor: context.colors.fishBone,
@@ -94,7 +94,7 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: 'Como chegar',
                   subtitle: b.texto,
                   icon: Icons.near_me,
-                  iconColor: context.colors.rustIron,
+                  iconColor: AppColors.brandColor,
                   backgroundColor: context.colors.caveShadow,
                   titleColor: context.colors.chalkWhite,
                   subtitleColor: context.colors.fishBone,
@@ -112,7 +112,7 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: b.texto,
                   subtitle: 'Informações extras sobre o local.',
                   icon: Icons.info_outline,
-                  iconColor: context.colors.ashGrey,
+                  iconColor: AppColors.brandColor,
                   backgroundColor: context.colors.caveShadow,
                   titleColor: context.colors.chalkWhite,
                   subtitleColor: context.colors.fishBone,
