@@ -112,4 +112,34 @@ void main() {
       'Contexto Teste',
     );
   });
+
+  testWidgets('MapaThumbnail renders multiple maps text correctly', (tester) async {
+    final mapa1 = Mapa()
+      ..caminhoImagemMapa = 'teste1.png'
+      ..larguraMapa = 100
+      ..alturaMapa = 100;
+      
+    final mapa2 = Mapa()
+      ..caminhoImagemMapa = 'teste2.png'
+      ..larguraMapa = 100
+      ..alturaMapa = 100;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapaThumbnail(
+            mapas: [mapa1, mapa2],
+            cragId: 'crag1',
+            nomeContexto: 'Contexto Teste',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mapas Interativos (2)'), findsOneWidget);
+    expect(find.text('Abrir Mapa Interativo'), findsNothing);
+  });
 }
