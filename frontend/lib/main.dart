@@ -801,21 +801,46 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                       bottom: 20 + bottomPadding,
                     ),
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      Column(
                         children: [
-                          Expanded(
-                            child: Text(
-                              node.title,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.brandColor,
+                          Center(
+                            child: Container(
+                              width: 32,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandColor.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
                           ),
-                          buildFeedbackButton(context, color: AppColors.brandColor),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    if (node.icon != null) ...[
+                                      Icon(node.icon, color: AppColors.brandColor, size: 24),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        node.title.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              buildFeedbackButton(context, color: Colors.white),
+                            ],
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),

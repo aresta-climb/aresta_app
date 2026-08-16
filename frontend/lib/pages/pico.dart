@@ -559,6 +559,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                               title: b.texto,
                               content: b.destino.secaoTextual.conteudo,
                               cragId: widget.cragId,
+                              icon: Icons.workspace_premium,
                               parent: TreeNavigationWrapper.of(
                                 context,
                               ).treeController.currentNode,

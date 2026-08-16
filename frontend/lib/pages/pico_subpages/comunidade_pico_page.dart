@@ -20,7 +20,7 @@ class ComunidadePicoPage extends StatelessWidget {
     required this.categories,
   });
 
-  void _pushTextNode(BuildContext context, String title, String content) {
+  void _pushTextNode(BuildContext context, String title, String content, {IconData? icon}) {
     final treeNav = TreeNavigationWrapper.currentTreeController;
     if (treeNav != null) {
       treeNav.navigateTo(
@@ -28,6 +28,7 @@ class ComunidadePicoPage extends StatelessWidget {
           title: title,
           content: content,
           cragId: cragId,
+          icon: icon,
           parent: treeNav.currentNode,
         ),
       );
@@ -59,6 +60,7 @@ class ComunidadePicoPage extends StatelessWidget {
                     context,
                     'Informações',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.info_outline,
                   ),
                 ),
               ),
@@ -92,6 +94,7 @@ class ComunidadePicoPage extends StatelessWidget {
                     context,
                     'Parceiros',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.handshake,
                   ),
                 ),
               ),
@@ -112,6 +115,7 @@ class ComunidadePicoPage extends StatelessWidget {
                     context,
                     'Comércio local',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.storefront,
                   ),
                 ),
               ),
