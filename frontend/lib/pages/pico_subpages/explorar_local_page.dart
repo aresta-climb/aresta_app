@@ -37,11 +37,13 @@ class ExplorarLocalPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: context.colors.deepBasalt,
       appBar: buildCommonAppBar(
         context,
         'EXPLORAR O LOCAL',
         subtitle: pico.nome,
+        backgroundColor: context.colors.deepBasalt,
+        foregroundColor: context.colors.chalkWhite,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

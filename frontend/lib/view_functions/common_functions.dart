@@ -163,10 +163,12 @@ PreferredSizeWidget buildCommonAppBar(
   List<Widget>? actions,
   String? subtitle,
   VoidCallback? onBack,
+  Color? backgroundColor,
+  Color? foregroundColor,
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final bgColor = isDark ? context.colors.deepBasalt : beastHide;
-  final fgColor = isDark ? Colors.white : Colors.black;
+  final bgColor = backgroundColor ?? (isDark ? context.colors.deepBasalt : beastHide);
+  final fgColor = foregroundColor ?? (isDark ? Colors.white : Colors.black);
 
   final feedbackButton = buildFeedbackButton(context, color: fgColor);
 
