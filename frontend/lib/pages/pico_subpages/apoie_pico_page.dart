@@ -21,7 +21,7 @@ class ApoiePicoPage extends StatelessWidget {
     required this.categories,
   });
 
-  void _pushTextNode(BuildContext context, String title, String content) {
+  void _pushTextNode(BuildContext context, String title, String content, {IconData? icon}) {
     final treeNav = TreeNavigationWrapper.currentTreeController;
     if (treeNav != null) {
       treeNav.navigateTo(
@@ -29,6 +29,7 @@ class ApoiePicoPage extends StatelessWidget {
           title: title,
           content: content,
           cragId: cragId,
+          icon: icon,
           parent: treeNav.currentNode,
         ),
       );
@@ -85,6 +86,7 @@ class ApoiePicoPage extends StatelessWidget {
                     context,
                     'Produtos do pico',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.shopping_bag,
                   ),
                 ),
               ),

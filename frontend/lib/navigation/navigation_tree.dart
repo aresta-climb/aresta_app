@@ -354,12 +354,14 @@ class TextNode extends NavNode {
   final String title;
   final String content;
   final String cragId;
+  final IconData? icon;
 
   const TextNode({
     required this.title,
     required this.content,
     required this.cragId,
     required NavNode parent,
+    this.icon,
   }) : super(parent: parent);
 
   @override
@@ -368,6 +370,7 @@ class TextNode extends NavNode {
       title: title,
       content: content,
       cragId: cragId,
+      icon: icon,
       parent: matchingAncestor.parent!,
     );
   }

@@ -20,7 +20,7 @@ class ExplorarLocalPage extends StatelessWidget {
     required this.categories,
   });
 
-  void _pushTextNode(BuildContext context, String title, String content) {
+  void _pushTextNode(BuildContext context, String title, String content, {IconData? icon}) {
     final treeNav = TreeNavigationWrapper.currentTreeController;
     if (treeNav != null) {
       treeNav.navigateTo(
@@ -28,6 +28,7 @@ class ExplorarLocalPage extends StatelessWidget {
           title: title,
           content: content,
           cragId: cragId,
+          icon: icon,
           parent: treeNav.currentNode,
         ),
       );
@@ -71,6 +72,7 @@ class ExplorarLocalPage extends StatelessWidget {
                     context,
                     'Sobre o local',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.menu_book,
                   ),
                 ),
               ),
@@ -85,7 +87,7 @@ class ExplorarLocalPage extends StatelessWidget {
                 titleColor: context.colors.chalkWhite,
                 subtitleColor: context.colors.fishBone,
                 onTap: () =>
-                    _pushTextNode(context, 'Sobre o local', pico.descricao),
+                    _pushTextNode(context, 'Sobre o local', pico.descricao, icon: Icons.menu_book),
               ),
 
             if (categories.comoChegar.isNotEmpty)
@@ -102,6 +104,7 @@ class ExplorarLocalPage extends StatelessWidget {
                     context,
                     'Como chegar',
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.near_me,
                   ),
                 ),
               ),
@@ -120,6 +123,7 @@ class ExplorarLocalPage extends StatelessWidget {
                     context,
                     b.texto,
                     b.destino.secaoTextual.conteudo,
+                    icon: Icons.info_outline,
                   ),
                 ),
               ),
