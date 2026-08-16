@@ -68,6 +68,22 @@ class ComunidadePage extends StatelessWidget {
               const SizedBox(height: 16),
               buildActionCard(
                 context,
+                title: 'LINKEDIN DO PROJETO',
+                subtitle:
+                    'Acompanhe novidades, nosso crescimento e o lado corporativo do Aresta.',
+                iconData: Icons.work_outline,
+                iconBgColor: const Color(0xFF0A66C2), // LinkedIn Blue
+                onTap: () async {
+                  try {
+                    await launchUrl(Uri.parse('https://www.linkedin.com/company/arestaclimb/'), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Error launching url: ');
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              buildActionCard(
+                context,
                 title: 'DISCORD DOS DESENVOLVEDORES',
                 subtitle:
                     'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
