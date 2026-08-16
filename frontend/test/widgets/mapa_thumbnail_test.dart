@@ -90,7 +90,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: MapaThumbnail(
-            mapa: mapa,
+            mapas: [mapa],
             cragId: 'crag1',
             nomeContexto: 'Contexto Teste',
             imageProviderOverride: MemoryImage(kTransparentImage),

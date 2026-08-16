@@ -11,7 +11,7 @@ import '../services/firebase/telemetry_service.dart';
 import '../navigation/navigation_tree.dart';
 
 class MapaThumbnail extends StatefulWidget {
-  final Mapa mapa;
+  final List<Mapa> mapas;
   final String cragId;
   final Setor? setorContext;
   final Grupo? grupoContext;
@@ -20,7 +20,7 @@ class MapaThumbnail extends StatefulWidget {
 
   const MapaThumbnail({
     super.key,
-    required this.mapa,
+    required this.mapas,
     required this.cragId,
     this.setorContext,
     this.grupoContext,
@@ -44,7 +44,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   @override
   void didUpdateWidget(MapaThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.mapa != oldWidget.mapa ||
+    if (widget.mapas != oldWidget.mapas ||
         widget.imageProviderOverride != oldWidget.imageProviderOverride) {
       _imageProviderFuture?.then((provider) {
         provider?.evict();
@@ -57,12 +57,16 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
     if (widget.imageProviderOverride != null) {
       return widget.imageProviderOverride;
     }
-    return resolveMapImageProvider(widget.cragId, widget.mapa);
+    if (widget.mapas.isEmpty) return null;
+    return resolveMapImageProvider(widget.cragId, widget.mapas.first);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) {
+    if (widget.mapas.isEmpty) return const SizedBox.shrink();
+    final thumbnailMap = widget.mapas.first;
+
+    if (thumbnailMap.larguraMapa == 0 || thumbnailMap.alturaMapa == 0) {
       return const SizedBox.shrink();
     }
 
@@ -71,7 +75,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return AspectRatio(
-            aspectRatio: widget.mapa.larguraMapa / widget.mapa.alturaMapa,
+            aspectRatio: thumbnailMap.larguraMapa / thumbnailMap.alturaMapa,
             child: Center(
               child: Padding(
                 padding: EdgeInsets.all(20.0),
@@ -94,13 +98,11 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
             AppNav.toMapas(
               context,
               cragId: widget.cragId,
-              mapas: [
-                CarrosselItemData(
-                  mapaCaminhoImagem: widget.mapa.caminhoImagemMapa,
-                  setorContextNome: widget.setorContext?.nome,
-                  grupoContextNome: widget.grupoContext?.nome,
-                ),
-              ],
+              mapas: widget.mapas.map((m) => CarrosselItemData(
+                mapaCaminhoImagem: m.caminhoImagemMapa,
+                setorContextNome: widget.setorContext?.nome,
+                grupoContextNome: widget.grupoContext?.nome,
+              )).toList(),
               imageProviderOverride: widget.imageProviderOverride,
             );
           },
@@ -111,7 +113,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: AspectRatio(
-                  aspectRatio: widget.mapa.larguraMapa / widget.mapa.alturaMapa,
+                  aspectRatio: thumbnailMap.larguraMapa / thumbnailMap.alturaMapa,
                   child: Image(image: snapshot.data!, fit: BoxFit.cover),
                 ),
               ),
@@ -141,7 +143,9 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                     Icon(Icons.map, color: Colors.white),
                     SizedBox(width: 8),
                     Text(
-                      'Abrir Mapa Interativo',
+                      widget.mapas.length > 1
+                          ? 'Mapas Interativos (${widget.mapas.length})'
+                          : 'Abrir Mapa Interativo',
                       style: TextStyle(
                         color: fishBone,
                         fontWeight: FontWeight.bold,
