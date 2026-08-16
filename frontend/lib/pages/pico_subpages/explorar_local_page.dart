@@ -58,23 +58,31 @@ class ExplorarLocalPage extends StatelessWidget {
               const SizedBox(height: 24),
             ],
             if (categories.sobre.isNotEmpty)
-              ...categories.sobre.map(
-                (b) => PicoMenuCard(
-                  title: 'Sobre o local',
-                  subtitle: b.texto,
-                  icon: Icons.menu_book,
-                  iconColor: context.colors.dryMoss,
-                  backgroundColor:
-                      context.colors.caveShadow, // Bright generic container
-                  titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.fishBone,
-                  onTap: () => _pushTextNode(
+              PicoMenuCard(
+                title: 'Sobre o local',
+                subtitle: categories.sobre.length == 1
+                    ? categories.sobre.first.texto
+                    : 'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
+                icon: Icons.menu_book,
+                iconColor: context.colors.dryMoss,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.fishBone,
+                onTap: () {
+                  final combinedContent = categories.sobre.map((b) {
+                    if (categories.sobre.length == 1) {
+                      return b.destino.secaoTextual.conteudo;
+                    }
+                    return '## ${b.texto}\n\n${b.destino.secaoTextual.conteudo}';
+                  }).join('\n\n');
+                  
+                  _pushTextNode(
                     context,
                     'Sobre o local',
-                    b.destino.secaoTextual.conteudo,
+                    combinedContent,
                     icon: Icons.menu_book,
-                  ),
-                ),
+                  );
+                },
               ),
             if (categories.sobre.isEmpty && pico.descricao.isNotEmpty)
               PicoMenuCard(
