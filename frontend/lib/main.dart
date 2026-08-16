@@ -20,6 +20,7 @@ import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/view_functions/common_functions.dart';
+import 'widgets/text_carousel_modal_content.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -510,6 +511,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         currentCragId = node.cragId;
         break;
       }
+      if (node is TextCarouselNode) {
+        currentCragId = node.cragId;
+        break;
+      }
       if (node is MapasCarrosselNode) {
         currentCragId = node.cragId;
         break;
@@ -591,6 +596,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         node is GrupoNode ||
         node is ViaNode ||
         node is TextNode ||
+        node is TextCarouselNode ||
         node is MapasCarrosselNode) {
       String cragId = '';
       String? setorNome;
@@ -599,6 +605,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
       if (node is PicoContextNode) cragId = node.cragId;
       if (node is TextNode) cragId = node.cragId;
+      if (node is TextCarouselNode) cragId = node.cragId;
       if (node is MapasCarrosselNode) cragId = node.cragId;
 
       if (node is SetorNode) {
@@ -857,6 +864,26 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                         },
                       ),
                     ],
+                  );
+                },
+              );
+            },
+          );
+        }
+        if (node is TextCarouselNode) {
+          return ModalBottomSheetPage(
+            key: ValueKey(node.toString()),
+            isScrollControlled: true,
+            builder: (context) {
+              return DraggableScrollableSheet(
+                initialChildSize: 0.6,
+                minChildSize: 0.4,
+                maxChildSize: 0.9,
+                expand: false,
+                builder: (context, scrollController) {
+                  return TextCarouselModalContent(
+                    node: node,
+                    scrollController: scrollController,
                   );
                 },
               );
