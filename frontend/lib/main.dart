@@ -811,11 +811,11 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: beastHide,
+                                color: AppColors.brandColor,
                               ),
                             ),
                           ),
-                          buildFeedbackButton(context, color: beastHide),
+                          buildFeedbackButton(context, color: AppColors.brandColor),
                         ],
                       ),
                       const SizedBox(height: 16),
