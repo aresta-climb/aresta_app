@@ -33,19 +33,14 @@ String getEscaladaNome(Escalada escalada) {
 String getGrauString(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      return escalada.viaEsportiva.dificuldade.name
-          .replaceAll('BR_', '')
-          .replaceAll('_', ' ');
+      return formatGradeString(escalada.viaEsportiva.dificuldade.name);
     case Escalada_Tipo.viaMovel:
-      return escalada.viaMovel.dificuldade.name
-          .replaceAll('BR_', '')
-          .replaceAll('_', ' ');
+      return formatGradeString(escalada.viaMovel.dificuldade.name);
     case Escalada_Tipo.boulder:
-      return escalada.boulder.dificuldade.name.replaceAll('BR_', '');
+      return formatGradeString(escalada.boulder.dificuldade.name);
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name
-          .replaceAll('BR_', '')
-          .replaceAll('_', ' ');
+      return formatGradeString(
+          escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
     default:
       return '';
   }
@@ -66,42 +61,51 @@ String formatGradeString(String name) {
   });
 }
 
-/// Retorna um valor numérico representando a dificuldade para fins de ordenação.
-int getGrauValue(Escalada escalada) {
-  int value = 0;
-  bool isProjeto = false;
+int getGradeSortWeight(String gradeName) {
+  if (gradeName.contains('INDEFINIDO')) return 0;
+  if (gradeName.contains('PROJETO')) return 1;
 
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      value = escalada.viaEsportiva.dificuldade.value;
-      if (escalada.viaEsportiva.dificuldade == GrauVia_GrauVia.PROJETO) {
-        isProjeto = true;
-      }
-      break;
-    case Escalada_Tipo.viaMovel:
-      value = escalada.viaMovel.dificuldade.value;
-      if (escalada.viaMovel.dificuldade == GrauVia_GrauVia.PROJETO) {
-        isProjeto = true;
-      }
-      break;
-    case Escalada_Tipo.boulder:
-      value = escalada.boulder.dificuldade.value;
-      break;
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      value = escalada.viaMultiplasEnfiadas.dificuldadeMaxima.value;
-      if (escalada.viaMultiplasEnfiadas.dificuldadeMaxima ==
-          GrauVia_GrauVia.PROJETO) {
-        isProjeto = true;
-      }
-      break;
-    default:
-      value = 0;
+  String g = gradeName.replaceAll('BR_', '').replaceAll('V', '');
+
+  List<String> parts = g.split('_BARRA_');
+  String first = parts[0];
+
+  if (first == 'B') {
+    return 10 + (parts.length > 1 ? 2 : 0);
   }
 
-  if (isProjeto) return 9999;
-  if (value == 0) return 9998; // INDEFINIDO
+  int num = int.tryParse(first.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  int letterWeight = 0;
+  if (first.endsWith('A')) {
+    letterWeight = 10;
+  } else if (first.endsWith('B')) {
+    letterWeight = 20;
+  } else if (first.endsWith('C')) {
+    letterWeight = 30;
+  } else if (first.endsWith('SUP')) {
+    letterWeight = 5;
+  }
 
-  return value;
+  int barraWeight = parts.length > 1 ? 2 : 0;
+
+  return (num + 1) * 100 + letterWeight + barraWeight;
+}
+
+/// Retorna um valor numérico representando a dificuldade para fins de ordenação.
+int getGrauValue(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      return getGradeSortWeight(escalada.viaEsportiva.dificuldade.name);
+    case Escalada_Tipo.viaMovel:
+      return getGradeSortWeight(escalada.viaMovel.dificuldade.name);
+    case Escalada_Tipo.boulder:
+      return getGradeSortWeight(escalada.boulder.dificuldade.name);
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      return getGradeSortWeight(
+          escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
+    default:
+      return 0;
+  }
 }
 
 /// Retorna a quantidade de proteções (fixas + móveis) para fins de ordenação.
