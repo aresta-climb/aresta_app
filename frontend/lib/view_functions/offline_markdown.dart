@@ -273,6 +273,7 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
             blockquoteDecoration: const BoxDecoration(),
             codeblockDecoration: const BoxDecoration(),
             horizontalRuleDecoration: const BoxDecoration(),
+            tableBorder: TableBorder.all(color: Colors.transparent, width: 0),
           ),
         );
       },

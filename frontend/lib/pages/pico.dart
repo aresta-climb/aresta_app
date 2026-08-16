@@ -144,7 +144,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES$statsText";
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: context.colors.deepBasalt,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
