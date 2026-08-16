@@ -57,6 +57,25 @@ class ExplorarLocalPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
             ],
+            if (categories.introducao.isNotEmpty)
+              ...categories.introducao.map(
+                (b) => PicoMenuCard(
+                  title: b.texto,
+                  subtitle: 'Apresentação geral e introdução ao local.',
+                  icon: Icons.info_outline,
+                  iconColor: context.colors.ashGrey,
+                  backgroundColor: context.colors.caveShadow,
+                  titleColor: context.colors.chalkWhite,
+                  subtitleColor: context.colors.fishBone,
+                  onTap: () => _pushTextNode(
+                    context,
+                    b.texto,
+                    b.destino.secaoTextual.conteudo,
+                    icon: Icons.info_outline,
+                  ),
+                ),
+              ),
+
             if (categories.sobre.isNotEmpty)
               PicoMenuCard(
                 title: 'Sobre o local',
@@ -69,19 +88,30 @@ class ExplorarLocalPage extends StatelessWidget {
                 titleColor: context.colors.chalkWhite,
                 subtitleColor: context.colors.fishBone,
                 onTap: () {
-                  final combinedContent = categories.sobre.map((b) {
-                    if (categories.sobre.length == 1) {
-                      return b.destino.secaoTextual.conteudo;
+                  if (categories.sobre.length == 1) {
+                    _pushTextNode(
+                      context,
+                      'Sobre o local',
+                      categories.sobre.first.destino.secaoTextual.conteudo,
+                      icon: Icons.menu_book,
+                    );
+                  } else {
+                    final carouselData = categories.sobre.map((b) => TextCarouselData(
+                      title: b.texto,
+                      content: b.destino.secaoTextual.conteudo,
+                      icon: Icons.menu_book,
+                    )).toList();
+                    final treeNav = TreeNavigationWrapper.currentTreeController;
+                    if (treeNav != null) {
+                      treeNav.navigateTo(
+                        TextCarouselNode(
+                          cragId: cragId,
+                          texts: carouselData,
+                          parent: treeNav.currentNode,
+                        ),
+                      );
                     }
-                    return '## ${b.texto}\n\n${b.destino.secaoTextual.conteudo}';
-                  }).join('\n\n');
-                  
-                  _pushTextNode(
-                    context,
-                    'Sobre o local',
-                    combinedContent,
-                    icon: Icons.menu_book,
-                  );
+                  }
                 },
               ),
             if (categories.sobre.isEmpty && pico.descricao.isNotEmpty)
@@ -110,19 +140,30 @@ class ExplorarLocalPage extends StatelessWidget {
                 titleColor: context.colors.chalkWhite,
                 subtitleColor: context.colors.fishBone,
                 onTap: () {
-                  final combinedContent = categories.comoChegar.map((b) {
-                    if (categories.comoChegar.length == 1) {
-                      return b.destino.secaoTextual.conteudo;
+                  if (categories.comoChegar.length == 1) {
+                    _pushTextNode(
+                      context,
+                      'Como chegar',
+                      categories.comoChegar.first.destino.secaoTextual.conteudo,
+                      icon: Icons.near_me,
+                    );
+                  } else {
+                    final carouselData = categories.comoChegar.map((b) => TextCarouselData(
+                      title: b.texto,
+                      content: b.destino.secaoTextual.conteudo,
+                      icon: Icons.near_me,
+                    )).toList();
+                    final treeNav = TreeNavigationWrapper.currentTreeController;
+                    if (treeNav != null) {
+                      treeNav.navigateTo(
+                        TextCarouselNode(
+                          cragId: cragId,
+                          texts: carouselData,
+                          parent: treeNav.currentNode,
+                        ),
+                      );
                     }
-                    return '## ${b.texto}\n\n${b.destino.secaoTextual.conteudo}';
-                  }).join('\n\n');
-                  
-                  _pushTextNode(
-                    context,
-                    'Como chegar',
-                    combinedContent,
-                    icon: Icons.near_me,
-                  );
+                  }
                 },
               ),
 
