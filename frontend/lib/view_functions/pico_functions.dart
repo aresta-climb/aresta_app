@@ -77,21 +77,25 @@ Widget buildPicoBody(
         if (pico.hasMapasGerais() &&
             pico.mapasGerais.hasConteudo() &&
             pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
-          KeyedSubtree(
-            key: mapaKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader('Mapas Gerais'),
-                ...pico.mapasGerais.conteudo.mapas.map(
-                  (mapa) => Padding(
-                    padding: const EdgeInsets.only(bottom: 15),
-                    child: MapaThumbnail(mapa: mapa, cragId: cragId),
-                  ),
+          (() {
+            final validMapas = pico.mapasGerais.conteudo.mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
+            if (validMapas.isNotEmpty) {
+              return KeyedSubtree(
+                key: mapaKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader('Mapas Gerais'),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: MapaThumbnail(mapas: validMapas, cragId: cragId),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              );
+            }
+            return const SizedBox.shrink();
+          })(),
           const SizedBox(height: 10),
         ],
         _buildHeader('Setores'),
