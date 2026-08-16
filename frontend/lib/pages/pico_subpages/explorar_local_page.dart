@@ -2,6 +2,7 @@ import '../../main.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../view_functions/common_functions.dart';
+import '../../view_functions/offline_markdown.dart';
 import '../../utils/pico_categorization.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/app_colors.dart';
@@ -46,6 +47,13 @@ class ExplorarLocalPage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            if (categories.capa.isNotEmpty) ...[
+              OfflineMarkdown(
+                data: categories.capa.first.destino.secaoTextual.conteudo,
+                cragId: cragId,
+              ),
+              const SizedBox(height: 24),
+            ],
             if (categories.sobre.isNotEmpty)
               ...categories.sobre.map(
                 (b) => PicoMenuCard(
