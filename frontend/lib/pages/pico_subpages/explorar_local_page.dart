@@ -60,13 +60,11 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: 'Sobre o local',
                   subtitle: b.texto,
                   icon: Icons.menu_book,
-                  iconColor: context.colors.beastHide,
+                  iconColor: context.colors.dryMoss,
                   backgroundColor:
                       context.colors.caveShadow, // Bright generic container
                   titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
-                  ),
+                  subtitleColor: context.colors.fishBone,
                   onTap: () => _pushTextNode(
                     context,
                     'Sobre o local',
@@ -80,10 +78,10 @@ class ExplorarLocalPage extends StatelessWidget {
                 subtitle:
                     'História do complexo de montanha, conquistas pioneiras e curiosidades locais.',
                 icon: Icons.menu_book,
-                iconColor: context.colors.beastHide,
+                iconColor: context.colors.dryMoss,
                 backgroundColor: context.colors.caveShadow,
                 titleColor: context.colors.chalkWhite,
-                subtitleColor: context.colors.chalkWhite.withValues(alpha: 0.7),
+                subtitleColor: context.colors.fishBone,
                 onTap: () =>
                     _pushTextNode(context, 'Sobre o local', pico.descricao),
               ),
@@ -94,12 +92,10 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: 'Como chegar',
                   subtitle: b.texto,
                   icon: Icons.near_me,
-                  iconColor: context.colors.beastHide,
+                  iconColor: context.colors.rustIron,
                   backgroundColor: context.colors.caveShadow,
                   titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
-                  ),
+                  subtitleColor: context.colors.fishBone,
                   onTap: () => _pushTextNode(
                     context,
                     'Como chegar',
@@ -114,12 +110,10 @@ class ExplorarLocalPage extends StatelessWidget {
                   title: b.texto,
                   subtitle: 'Informações extras sobre o local.',
                   icon: Icons.info_outline,
-                  iconColor: context.colors.dryMoss,
+                  iconColor: context.colors.ashGrey,
                   backgroundColor: context.colors.caveShadow,
                   titleColor: context.colors.chalkWhite,
-                  subtitleColor: context.colors.chalkWhite.withValues(
-                    alpha: 0.7,
-                  ),
+                  subtitleColor: context.colors.fishBone,
                   onTap: () => _pushTextNode(
                     context,
                     b.texto,
