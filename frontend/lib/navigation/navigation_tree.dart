@@ -379,6 +379,44 @@ class TextNode extends NavNode {
   String toString() => 'TextNode($title)';
 }
 
+class TextCarouselData {
+  final String title;
+  final String content;
+  final IconData? icon;
+
+  const TextCarouselData({
+    required this.title,
+    required this.content,
+    this.icon,
+  });
+}
+
+class TextCarouselNode extends NavNode {
+  final String cragId;
+  final List<TextCarouselData> texts;
+  final int initialIndex;
+
+  const TextCarouselNode({
+    required this.cragId,
+    required this.texts,
+    this.initialIndex = 0,
+    required super.parent,
+  });
+
+  @override
+  NavNode copyWithMergedAncestor(covariant TextCarouselNode matchingAncestor) {
+    return TextCarouselNode(
+      cragId: cragId,
+      texts: texts,
+      initialIndex: initialIndex,
+      parent: matchingAncestor.parent!,
+    );
+  }
+
+  @override
+  String toString() => 'TextCarouselNode(${texts.map((e) => e.title).join(',')})';
+}
+
 // --- CONTROLADOR ---
 
 /// Controlador de estado de navegação que gerencia a árvore de nós.
@@ -439,6 +477,11 @@ class TreeNavigationController extends ChangeNotifier {
     }
     if (a is TextNode && b is TextNode) {
       return a.title == b.title;
+    }
+    if (a is TextCarouselNode && b is TextCarouselNode) {
+      return a.cragId == b.cragId &&
+          a.texts.length == b.texts.length &&
+          (a.texts.isNotEmpty ? a.texts.first.title == b.texts.first.title : true);
     }
     return false;
   }
