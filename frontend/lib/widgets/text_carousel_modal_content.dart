@@ -21,18 +21,19 @@ class TextCarouselModalContent extends StatefulWidget {
 
 class _TextCarouselModalContentState extends State<TextCarouselModalContent> {
   late PageController _pageController;
-  late int _currentIndex;
+  late ValueNotifier<int> _currentIndexNotifier;
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.node.initialIndex;
-    _pageController = PageController(initialPage: _currentIndex);
+    _currentIndexNotifier = ValueNotifier<int>(widget.node.initialIndex);
+    _pageController = PageController(initialPage: widget.node.initialIndex);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _currentIndexNotifier.dispose();
     super.dispose();
   }
 
@@ -40,103 +41,116 @@ class _TextCarouselModalContentState extends State<TextCarouselModalContent> {
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     
-    return PageView.builder(
-      controller: _pageController,
-      onPageChanged: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      itemCount: widget.node.texts.length,
-      itemBuilder: (context, index) {
-        final textData = widget.node.texts[index];
-        final isCurrentPage = index == _currentIndex;
-        
-        return ListView(
-          controller: isCurrentPage ? widget.scrollController : null,
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 20,
-            right: 20,
-            bottom: 20 + bottomPadding,
-          ),
-          children: [
-            Column(
-              children: [
-                Center(
-                  child: Container(
-                    width: 32,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.brandColor.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (textData.icon != null) ...[
-                            Icon(textData.icon, color: AppColors.brandColor, size: 24),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(
-                            child: Text(
-                              textData.title.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    buildFeedbackButton(context, color: Colors.white),
-                  ],
-                ),
-                if (widget.node.texts.length > 1) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(widget.node.texts.length, (dotIndex) {
-                      final active = dotIndex == _currentIndex;
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: active ? 8 : 6,
-                        height: active ? 8 : 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: active ? AppColors.brandColor : AppColors.brandColor.withValues(alpha: 0.3),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 16),
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.brandColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: 16),
-            Builder(
-              builder: (context) {
-                final content = MarkdownUtils.cleanModalContent(
-                  textData.content,
-                  textData.title,
-                );
-                return OfflineMarkdown(
-                  data: content,
-                  cragId: widget.node.cragId,
+          ),
+        ),
+        if (widget.node.texts.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ValueListenableBuilder<int>(
+              valueListenable: _currentIndexNotifier,
+              builder: (context, currentIndex, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(widget.node.texts.length, (dotIndex) {
+                    final active = dotIndex == currentIndex;
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: active ? 8 : 6,
+                      height: active ? 8 : 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: active
+                            ? AppColors.brandColor
+                            : AppColors.brandColor.withValues(alpha: 0.3),
+                      ),
+                    );
+                  }),
                 );
               },
             ),
-          ],
-        );
-      },
+          ),
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              _currentIndexNotifier.value = index;
+            },
+            itemCount: widget.node.texts.length,
+            itemBuilder: (context, index) {
+              final textData = widget.node.texts[index];
+
+              return ValueListenableBuilder<int>(
+                valueListenable: _currentIndexNotifier,
+                builder: (context, currentIndex, child) {
+                  final isCurrentPage = index == currentIndex;
+
+                  return ListView(
+                    key: ValueKey(index),
+                    controller: isCurrentPage ? widget.scrollController : null,
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      bottom: 20 + bottomPadding,
+                    ),
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (textData.icon != null) ...[
+                                  Icon(textData.icon,
+                                      color: AppColors.brandColor, size: 24),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    textData.title.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          buildFeedbackButton(context, color: Colors.white),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      child!,
+                    ],
+                  );
+                },
+                child: OfflineMarkdown(
+                  data: MarkdownUtils.cleanModalContent(
+                    textData.content,
+                    textData.title,
+                  ),
+                  cragId: widget.node.cragId,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
