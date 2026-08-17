@@ -12,7 +12,9 @@ class MockFirebaseCrashlytics implements FirebaseCrashlytics {
   }
 
   @override
-  Future<void> recordFlutterFatalError(FlutterErrorDetails flutterErrorDetails) async {}
+  Future<void> recordFlutterFatalError(
+    FlutterErrorDetails flutterErrorDetails,
+  ) async {}
 
   @override
   Future<void> recordError(
@@ -30,28 +32,34 @@ class MockFirebaseCrashlytics implements FirebaseCrashlytics {
 
 void main() {
   group('initCrashlytics', () {
-    test('should disable Crashlytics collection if isDebugMode is true', () async {
-      final mockCrashlytics = MockFirebaseCrashlytics();
+    test(
+      'should disable Crashlytics collection if isDebugMode is true',
+      () async {
+        final mockCrashlytics = MockFirebaseCrashlytics();
 
-      await initCrashlytics(
-        isDebugMode: true,
-        crashlyticsInstance: mockCrashlytics,
-      );
+        await initCrashlytics(
+          isDebugMode: true,
+          crashlyticsInstance: mockCrashlytics,
+        );
 
-      expect(mockCrashlytics.collectionEnabled, false);
-    });
+        expect(mockCrashlytics.collectionEnabled, false);
+      },
+    );
 
-    test('should not disable Crashlytics collection if isDebugMode is false', () async {
-      final mockCrashlytics = MockFirebaseCrashlytics();
-      mockCrashlytics.collectionEnabled = true;
+    test(
+      'should not disable Crashlytics collection if isDebugMode is false',
+      () async {
+        final mockCrashlytics = MockFirebaseCrashlytics();
+        mockCrashlytics.collectionEnabled = true;
 
-      await initCrashlytics(
-        isDebugMode: false,
-        crashlyticsInstance: mockCrashlytics,
-      );
+        await initCrashlytics(
+          isDebugMode: false,
+          crashlyticsInstance: mockCrashlytics,
+        );
 
-      // Verify that it remains true (since we don't explicitly call setCrashlyticsCollectionEnabled(true))
-      expect(mockCrashlytics.collectionEnabled, true);
-    });
+        // Verify that it remains true (since we don't explicitly call setCrashlyticsCollectionEnabled(true))
+        expect(mockCrashlytics.collectionEnabled, true);
+      },
+    );
   });
 }

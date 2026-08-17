@@ -15,6 +15,7 @@ import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
+import '../theme/app_colors.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -24,11 +25,11 @@ import '../navigation/map_hierarchy_resolver.dart';
 ///
 /// **Principais Funcionalidades:**
 /// - **Resolução Dinâmica Offline**: Localiza e carrega autonomamente a imagem de fundo dentro do diretório do pico local.
-/// - **Auto-Zoom (Foco Automático)**: Se acessado através de uma `ViaPage` com a intenção de visualizar um ponto 
-///   específico (`initialSelectedId`), o mapa usará uma animação com matriz de transformação (`Matrix4Tween`) 
+/// - **Auto-Zoom (Foco Automático)**: Se acessado através de uma `ViaPage` com a intenção de visualizar um ponto
+///   específico (`initialSelectedId`), o mapa usará uma animação com matriz de transformação (`Matrix4Tween`)
 ///   para focar e dar zoom exatamente na rota desejada assim que for renderizado.
 /// - **Navegação Circular Segura**: O cartão flutuante exibido na seleção de um marcador permite ir diretamente
-///   para a `ViaPage` dele. O mapa repassa o `setorContext` para garantir que a navegação do botão 
+///   para a `ViaPage` dele. O mapa repassa o `setorContext` para garantir que a navegação do botão
 ///   "Ver no mapa" continue funcionando e inteligentemente executa um `Navigator.pop` caso a via clicada
 ///   seja a mesma que abriu o mapa, prevenindo um loop infinito na pilha de telas.
 class MapaInterativoPage extends StatefulWidget {
@@ -41,7 +42,7 @@ class MapaInterativoPage extends StatefulWidget {
   final Setor? setorContext;
   final Grupo? grupoContext;
   final String? escaladaContextNome;
-  
+
   /// Quando `true`, esta página não desenhará o seu próprio `Scaffold` com `AppBar`.
   /// Isso é essencial quando o mapa é embutido dentro de um Carrossel (`MapasCarrosselPage`),
   /// onde a navegação superior (AppBar) é delegada ao container pai para evitar "clipping" visual
@@ -50,7 +51,7 @@ class MapaInterativoPage extends StatefulWidget {
 
   /// Define se a ação principal do cartão flutuante ("Mais Info") deve realizar
   /// um `Navigator.pop` quando o mapa foi aberto inicialmente para focar neste exato item.
-  /// 
+  ///
   /// Por padrão (`true`), se o usuário abre o mapa a partir da tela de Detalhes da Via
   /// (passando `initialSelectedId`), ao clicar "Mais Info", o app apenas volta
   /// para a tela anterior (para não empilhar telas duplicadas).
@@ -83,13 +84,12 @@ class MapaInterativoPage extends StatefulWidget {
 /// O estado da página [MapaInterativoPage].
 ///
 /// Utiliza o [AutomaticKeepAliveClientMixin] para preservar o estado visual
-/// (nível de zoom, posição de pan, e status de animações já tocadas) quando 
+/// (nível de zoom, posição de pan, e status de animações já tocadas) quando
 /// este widget é embutido dentro de listas sob demanda como o [PageView]
 /// (usado na `MapasCarrosselPage`). Isso evita o recarregamento do zero da
 /// imagem do mapa e das animações.
 class _MapaInterativoPageState extends State<MapaInterativoPage>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  
   @override
   bool get wantKeepAlive => true;
   String? _selectedId;
@@ -121,10 +121,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     });
 
     _buildReferenceMaps();
-    
+
     if (widget.initialSelectedId != null) {
       _selectedId = widget.initialSelectedId;
-      
+
       // Se um contexto de escalada foi fornecido, tentamos focar automaticamente
       // na aba do carrossel correspondente a essa escalada.
       // Isso previne o bug onde múltiplos pontos (ex: 2-A e 2-B) compartilham o mesmo
@@ -135,7 +135,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         if (refs != null) {
           for (int i = 0; i < refs.length; i++) {
             final resolved = _refToResolved[refs[i]];
-            if (resolved?.escalada != null && getEscaladaNome(resolved!.escalada!) == widget.escaladaContextNome) {
+            if (resolved?.escalada != null &&
+                getEscaladaNome(resolved!.escalada!) ==
+                    widget.escaladaContextNome) {
               _focusedItemIndex = i;
               break;
             }
@@ -156,13 +158,16 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (widget.mapa != oldWidget.mapa || widget.pico != oldWidget.pico) {
       _buildReferenceMaps();
     }
-    
-    if (widget.mapa != oldWidget.mapa || widget.imageProviderOverride != oldWidget.imageProviderOverride) {
+
+    if (widget.mapa != oldWidget.mapa ||
+        widget.imageProviderOverride != oldWidget.imageProviderOverride) {
       // The map object changed (either experimental mode update or a new downloaded update)
       // The file on disk might have been overwritten without path changes.
       // We evict the image from the cache to force a reload from disk.
-      _imageProviderFuture?.then((provider) { provider?.evict(); });
-      
+      _imageProviderFuture?.then((provider) {
+        provider?.evict();
+      });
+
       _imageProviderFuture = widget.imageProviderOverride != null
           ? Future.value(widget.imageProviderOverride)
           : _resolveImageProvider();
@@ -184,9 +189,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           defaultGrupoNome: defaultGrupoNome,
           defaultSetorNome: defaultSetorNome,
         );
-        
+
         _refToResolved[ref] = resolved;
-        
+
         for (var id in ref.ids) {
           if (id.isNotEmpty) {
             _poiToRefs.putIfAbsent(id, () => []).add(ref);
@@ -206,7 +211,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       final ref = refs != null && refs.isNotEmpty ? refs.first : null;
       final viaName = ref?.nome ?? _selectedId;
       final fileName = widget.mapa.caminhoImagemMapa.split('/').last;
-      FeedbackMetadataCollector.globalActiveNodeOverride = 'MapaInterativoNode($fileName, Ref: $viaName)';
+      FeedbackMetadataCollector.globalActiveNodeOverride =
+          'MapaInterativoNode($fileName, Ref: $viaName)';
     }
   }
 
@@ -219,7 +225,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     String fileName = path.split('/').last;
 
     File? localFile;
-    
+
     // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
     final baseUrl = '${NetworkConstants.officialServerUrl}/';
     if (path.startsWith(baseUrl)) {
@@ -280,7 +286,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       return FileImage(localFile);
     }
 
-    AppLogger.instance.logError('Erro: Imagem do mapa não encontrada localmente: $path');
+    AppLogger.instance.logError(
+      'Erro: Imagem do mapa não encontrada localmente: $path',
+    );
     return null;
   }
 
@@ -295,7 +303,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   List<Mapa_PontoDeInteresse> _getPontosForRef(Mapa_Referencia? ref) {
     if (ref == null) return [];
     final ids = ref.ids.where((id) => id.isNotEmpty).toList();
-    return widget.mapa.pontosDeInteresse.where((p) => ids.contains(p.id)).toList();
+    return widget.mapa.pontosDeInteresse
+        .where((p) => ids.contains(p.id))
+        .toList();
   }
 
   void _onMarkerTap(
@@ -306,26 +316,28 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }) {
     setState(() {
       _selectedId = marker.id;
-      
+
       int targetIndex = 0;
-      
-      // Durante o carregamento inicial (isUserInteraction = false), se houver um 
+
+      // Durante o carregamento inicial (isUserInteraction = false), se houver um
       // contexto de escalada, localizamos a aba correta deste ponto de interesse.
-      // Evita focar erroneamente no primeiro item do carrossel caso vários itens 
+      // Evita focar erroneamente no primeiro item do carrossel caso vários itens
       // compartilhem o mesmo marcador no croqui.
       if (!isUserInteraction && widget.escaladaContextNome != null) {
         final refs = _poiToRefs[marker.id];
         if (refs != null) {
           for (int i = 0; i < refs.length; i++) {
             final resolved = _refToResolved[refs[i]];
-            if (resolved?.escalada != null && getEscaladaNome(resolved!.escalada!) == widget.escaladaContextNome) {
+            if (resolved?.escalada != null &&
+                getEscaladaNome(resolved!.escalada!) ==
+                    widget.escaladaContextNome) {
               targetIndex = i;
               break;
             }
           }
         }
       }
-      
+
       _focusedItemIndex = targetIndex;
       _updateFeedbackNode();
     });
@@ -340,13 +352,18 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           widget.setorContext?.nome ?? 'Geral',
           getEscaladaNome(resolved!.escalada!),
           'selecionar_no_mapa',
-          'mapa'
+          'mapa',
         );
       }
 
       if (_autoZoomEnabled) {
         final pontos = _getPontosForRef(ref);
-        _zoomToPoints(pontos, Size(constraints.maxWidth, constraints.maxHeight), viewportSize, ref: ref);
+        _zoomToPoints(
+          pontos,
+          Size(constraints.maxWidth, constraints.maxHeight),
+          viewportSize,
+          ref: ref,
+        );
       }
     }
   }
@@ -391,16 +408,18 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     bool hasMultiplePoints = pontos.length > 1;
 
-    if (ref != null && ref.hasAjusteDeCamera() && ref.ajusteDeCamera.hasZoom()) {
+    if (ref != null &&
+        ref.hasAjusteDeCamera() &&
+        ref.ajusteDeCamera.hasZoom()) {
       targetScale = ref.ajusteDeCamera.zoom;
     } else if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
       // Usa lógica de Bounding Box para qualquer rota com múltiplos pontos (início/fim, meio, boulders, etc)
       final double availableHeight = viewportSize.height * 0.55;
       final double availableWidth = viewportSize.width * 0.85;
-      
+
       final double scaleX = availableWidth / (boxWidthRel * childSize.width);
       final double scaleY = availableHeight / (boxHeightRel * childSize.height);
-      
+
       if (scaleX.isFinite && scaleY.isFinite) {
         final calculatedScale = math.min(scaleX, scaleY);
         double maxAutoZoom = 2.5;
@@ -420,7 +439,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     // Centro visual do mapa padrão é 35% do topo (área livre acima do card)
     double visualCenterY = viewportSize.height * 0.35;
 
-    if (pontos.length == 1 && ref != null && _refToResolved[ref]?.escalada != null) {
+    if (pontos.length == 1 &&
+        ref != null &&
+        _refToResolved[ref]?.escalada != null) {
       final ids = ref.ids;
       bool hasInicio = ids.isNotEmpty && ids[0].isNotEmpty;
       bool hasMeio = ids.length > 1 && ids[1].isNotEmpty;
@@ -440,8 +461,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     final double targetX =
         (viewportSize.width / 2) - (actualMarkerX * targetScale);
-    final double targetY =
-        visualCenterY - (actualMarkerY * targetScale);
+    final double targetY = visualCenterY - (actualMarkerY * targetScale);
 
     final Matrix4 targetMatrix = Matrix4.identity()
       ..translate(targetX, targetY)
@@ -487,7 +507,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       bool isSelected = false;
       if (_selectedId != null) {
         final refs = _poiToRefs[_selectedId!];
-        if (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length) {
+        if (refs != null &&
+            refs.isNotEmpty &&
+            _focusedItemIndex < refs.length) {
           final focusedRef = refs[_focusedItemIndex];
           isSelected = focusedRef.ids.contains(ponto.id);
         }
@@ -522,8 +544,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }).toList();
   }
 
-
-  Widget _buildCardContentForResolved(Mapa_Referencia ref, ResolvedDataset resolved) {
+  Widget _buildCardContentForResolved(
+    Mapa_Referencia ref,
+    ResolvedDataset resolved,
+  ) {
     if (resolved.escalada != null) {
       return _buildEscaladaCard(ref, resolved.escalada!);
     } else if (resolved.setor != null) {
@@ -538,39 +562,27 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   Widget _buildEscaladaCard(Mapa_Referencia ref, Escalada escalada) {
     String title = '';
     String subtitle = '';
-    
-    String formatGrade(dynamic dificuldade) {
-      String g = dificuldade.name
-          .replaceAll('BR_', '')
-          .replaceAll('_BARRA_', '/')
-          .replaceAll('_', ' ')
-          .toLowerCase();
-
-      return g.replaceAllMapped(RegExp(r'([1-6])(sup)?'), (match) {
-        if (match.group(2) == 'sup') {
-          return '${match.group(1)}ºsup';
-        } else {
-          return '${match.group(1)}º';
-        }
-      });
-    }
 
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
         title = escalada.viaEsportiva.nome;
-        subtitle = 'Esportiva | ${formatGrade(escalada.viaEsportiva.dificuldade)}';
-        break;
-      case Escalada_Tipo.viaMovel:
-        title = escalada.viaMovel.nome;
-        subtitle = 'Móvel | ${formatGrade(escalada.viaMovel.dificuldade)}';
+        subtitle =
+            'Esportiva | ${formatGradeString(escalada.viaEsportiva.dificuldade.name)}';
         break;
       case Escalada_Tipo.boulder:
         title = escalada.boulder.nome;
-        subtitle = 'Boulder | ${formatGrade(escalada.boulder.dificuldade)}';
+        subtitle =
+            'Boulder | ${formatGradeString(escalada.boulder.dificuldade.name)}';
+        break;
+      case Escalada_Tipo.viaMovel:
+        title = escalada.viaMovel.nome;
+        subtitle =
+            'Móvel | ${formatGradeString(escalada.viaMovel.dificuldade.name)}';
         break;
       case Escalada_Tipo.viaMultiplasEnfiadas:
         title = escalada.viaMultiplasEnfiadas.nome;
-        subtitle = 'Múltiplas Enfiadas | ${escalada.viaMultiplasEnfiadas.numeroEnfiadas} enfiadas';
+        subtitle =
+            'Tradicional | ${formatGradeString(escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name)}';
         break;
       case Escalada_Tipo.highline:
         title = escalada.highline.nome;
@@ -618,7 +630,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       actionLabel: 'Mais Info',
       onAction: () {
         bool isOriginal = false;
-        if (widget.initialSelectedId != null && ref.ids.contains(widget.initialSelectedId)) {
+        if (widget.initialSelectedId != null &&
+            ref.ids.contains(widget.initialSelectedId)) {
           isOriginal = true;
         }
 
@@ -633,7 +646,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             widget.setorContext?.nome ?? 'Geral',
             title,
             'abrir_detalhes',
-            'mapa'
+            'mapa',
           );
           AppNav.toVia(
             context,
@@ -644,38 +657,18 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           );
         }
       },
-      secondaryActionLabel: foundMaps.length > 1 ? 'Ver nos mapas (${foundMaps.length})' : null,
-      onSecondaryAction: foundMaps.length > 1 ? () {
-        TelemetryService.instance.logAcaoEscalada(
-          widget.cragId,
-          widget.setorContext?.nome ?? 'Geral',
-          title,
-          'ver_nos_mapas_carrossel',
-          'mapa'
-        );
-        final mapasData = foundMaps.map((fm) => CarrosselItemData(
-          mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
-          setorContextNome: fm.setorContext?.nome,
-          // Repassado para garantir foco no polígono exato do grupo
-          grupoContextNome: fm.grupoContext?.nome,
-          // Repassado para resolver qual aba abrir quando múltiplas vias dividem a pedra
-          escaladaContextNome: getEscaladaNome(resolved!.escalada!),
-          initialSelectedId: fm.referencedId,
-        )).toList();
-        
-        AppNav.toMapas(
-          context,
-          cragId: widget.cragId,
-          mapas: mapasData,
-        );
-      } : null,
     );
   }
 
   Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
+    int numEscaladas = setor.escaladas.length;
+    bool boulderArea = isBoulderArea(setor.escaladas);
+    String typeLabel = boulderArea ? 'boulder' : 'via';
+    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+
     return _buildBaseCard(
       title: setor.nome,
-      subtitle: 'Setor',
+      subtitle: subtitle,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -685,52 +678,74 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Setor',
       onAction: () => AppNav.toSetor(context, setor: setor),
-      secondaryActionLabel: setor.mapas.length > 1 ? 'Ver mapas (${setor.mapas.length})' : (setor.mapas.isNotEmpty ? 'Ver mapa' : null),
-      onSecondaryAction: setor.mapas.isNotEmpty ? () {
-        int indiceMapa = 0;
-        if (ref.hasIndiceMapaAlvo()) {
-          indiceMapa = ref.indiceMapaAlvo;
-        } else if (setor.hasIndiceMapaPadrao()) {
-          indiceMapa = setor.indiceMapaPadrao;
-        }
-        if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) indiceMapa = 0;
-        
-        final resolved = _refToResolved[ref];
-        if (setor.mapas.length > 1) {
-          final mapasData = setor.mapas.map((m) => CarrosselItemData(
-            mapaCaminhoImagem: m.caminhoImagemMapa,
-            setorContextNome: setor.nome,
-            // Mantém contexto hierárquico se estiver aninhado
-            grupoContextNome: resolved?.grupo?.nome,
-          )).toList();
-          
-          AppNav.toMapas(
-            context,
-            cragId: widget.cragId,
-            mapas: mapasData,
-            initialIndex: indiceMapa,
-          );
-        } else {
-          AppNav.toMapas(
-            context,
-            cragId: widget.cragId,
-            mapas: [
-              CarrosselItemData(
-                mapaCaminhoImagem: setor.mapas[0].caminhoImagemMapa,
-                setorContextNome: setor.nome,
-                grupoContextNome: resolved?.grupo?.nome,
-              )
-            ],
-          );
-        }
-      } : null,
+      secondaryActionLabel: setor.mapas.isNotEmpty
+          ? 'Ver mapas'
+          : null,
+      onSecondaryAction: setor.mapas.isNotEmpty
+          ? () {
+              int indiceMapa = 0;
+              if (ref.hasIndiceMapaAlvo()) {
+                indiceMapa = ref.indiceMapaAlvo;
+              } else if (setor.hasIndiceMapaPadrao()) {
+                indiceMapa = setor.indiceMapaPadrao;
+              }
+              if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) {
+                indiceMapa = 0;
+              }
+
+              final resolved = _refToResolved[ref];
+              if (setor.mapas.length > 1) {
+                final mapasData = setor.mapas
+                    .map(
+                      (m) => CarrosselItemData(
+                        mapaCaminhoImagem: m.caminhoImagemMapa,
+                        setorContextNome: setor.nome,
+                        // Mantém contexto hierárquico se estiver aninhado
+                        grupoContextNome: resolved?.grupo?.nome,
+                      ),
+                    )
+                    .toList();
+
+                AppNav.toMapas(
+                  context,
+                  cragId: widget.cragId,
+                  mapas: mapasData,
+                  initialIndex: indiceMapa,
+                );
+              } else {
+                AppNav.toMapas(
+                  context,
+                  cragId: widget.cragId,
+                  mapas: [
+                    CarrosselItemData(
+                      mapaCaminhoImagem: setor.mapas[0].caminhoImagemMapa,
+                      setorContextNome: setor.nome,
+                      grupoContextNome: resolved?.grupo?.nome,
+                    ),
+                  ],
+                );
+              }
+            }
+          : null,
     );
   }
 
   Widget _buildGrupoCard(Mapa_Referencia ref, Grupo grupo) {
+    int numEscaladas = 0;
+    List<Escalada> allEscaladas = [];
+    for (var s in grupo.setores) {
+      if (s.hasConteudo()) {
+        numEscaladas += s.conteudo.escaladas.length;
+        allEscaladas.addAll(s.conteudo.escaladas);
+      }
+    }
+    bool boulderArea = isBoulderArea(allEscaladas);
+    String typeLabel = boulderArea ? 'boulder' : 'via';
+    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+
     return _buildBaseCard(
       title: grupo.nome,
-      subtitle: 'Grupo',
+      subtitle: subtitle,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -740,41 +755,51 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       },
       actionLabel: 'Ir para Grupo',
       onAction: () => AppNav.toGrupo(context, grupo: grupo),
-      secondaryActionLabel: grupo.mapas.length > 1 ? 'Ver mapas (${grupo.mapas.length})' : (grupo.mapas.isNotEmpty ? 'Ver mapa' : null),
-      onSecondaryAction: grupo.mapas.isNotEmpty ? () {
-        int indiceMapa = 0;
-        if (ref.hasIndiceMapaAlvo()) {
-          indiceMapa = ref.indiceMapaAlvo;
-        } else if (grupo.hasIndiceMapaPadrao()) {
-          indiceMapa = grupo.indiceMapaPadrao;
-        }
-        if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) indiceMapa = 0;
-        
-        if (grupo.mapas.length > 1) {
-          final mapasData = grupo.mapas.map((m) => CarrosselItemData(
-            mapaCaminhoImagem: m.caminhoImagemMapa,
-            grupoContextNome: grupo.nome,
-          )).toList();
-          
-          AppNav.toMapas(
-            context,
-            cragId: widget.cragId,
-            mapas: mapasData,
-            initialIndex: indiceMapa,
-          );
-        } else {
-          AppNav.toMapas(
-            context,
-            cragId: widget.cragId,
-            mapas: [
-              CarrosselItemData(
-                mapaCaminhoImagem: grupo.mapas[0].caminhoImagemMapa,
-                grupoContextNome: grupo.nome,
-              )
-            ],
-          );
-        }
-      } : null,
+      secondaryActionLabel: grupo.mapas.isNotEmpty
+          ? 'Ver mapas'
+          : null,
+      onSecondaryAction: grupo.mapas.isNotEmpty
+          ? () {
+              int indiceMapa = 0;
+              if (ref.hasIndiceMapaAlvo()) {
+                indiceMapa = ref.indiceMapaAlvo;
+              } else if (grupo.hasIndiceMapaPadrao()) {
+                indiceMapa = grupo.indiceMapaPadrao;
+              }
+              if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) {
+                indiceMapa = 0;
+              }
+
+              if (grupo.mapas.length > 1) {
+                final mapasData = grupo.mapas
+                    .map(
+                      (m) => CarrosselItemData(
+                        mapaCaminhoImagem: m.caminhoImagemMapa,
+                        grupoContextNome: grupo.nome,
+                      ),
+                    )
+                    .toList();
+
+                AppNav.toMapas(
+                  context,
+                  cragId: widget.cragId,
+                  mapas: mapasData,
+                  initialIndex: indiceMapa,
+                );
+              } else {
+                AppNav.toMapas(
+                  context,
+                  cragId: widget.cragId,
+                  mapas: [
+                    CarrosselItemData(
+                      mapaCaminhoImagem: grupo.mapas[0].caminhoImagemMapa,
+                      grupoContextNome: grupo.nome,
+                    ),
+                  ],
+                );
+              }
+            }
+          : null,
     );
   }
 
@@ -809,29 +834,36 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         children: [
                           if (resolvedLabel.isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: nobleBlack,
+                                color: Colors.black,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+                                border: Border.all(
+                                  color: rustIron.withValues(alpha: 0.5),
+                                ),
                               ),
                               child: Text(
                                 resolvedLabel,
                                 style: TextStyle(
-                                  color: fishBone,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
                               ),
                             ),
-                          Text(
-                            title,
-                            style: TextStyle(
-                              color: beastHide,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                          if (title.toUpperCase() !=
+                              resolvedLabel.toUpperCase())
+                            Text(
+                              title,
+                              style: TextStyle(
+                                color: rustIron,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                       if (subtitle.isNotEmpty) ...[
@@ -839,7 +871,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         Text(
                           subtitle,
                           style: TextStyle(
-                            color: fishBone.withValues(alpha: 0.7),
+                            color: context.colors.ashGrey,
                             fontSize: 14,
                           ),
                         ),
@@ -848,7 +880,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: fishBone),
+                  icon: Icon(Icons.close, color: Colors.white),
                   onPressed: onClose,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -858,33 +890,47 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: Wrap(
-                alignment: (secondaryActionLabel != null && onSecondaryAction != null)
-                    ? WrapAlignment.spaceBetween
-                    : WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-              runSpacing: 4,
-              children: [
-                if (secondaryActionLabel != null && onSecondaryAction != null)
-                  TextButton.icon(
-                    onPressed: onSecondaryAction,
-                    icon: Icon(Icons.map, color: fishBone, size: 16),
-                    label: Text(
-                      secondaryActionLabel,
-                      style: TextStyle(color: fishBone, fontWeight: FontWeight.bold, fontSize: 13),
+              child: Row(
+                children: [
+                  if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: onSecondaryAction,
+                        icon: Icon(Icons.map, color: Colors.white, size: 16),
+                        label: Text(
+                          secondaryActionLabel,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: onAction,
+                      icon: Icon(
+                        Icons.open_in_new,
+                        color: AppColors.brandColor,
+                        size: 16,
+                      ),
+                      label: Text(
+                        actionLabel,
+                        style: TextStyle(
+                          color: AppColors.brandColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                TextButton.icon(
-                  onPressed: onAction,
-                  icon: Icon(Icons.open_in_new, color: beastHide, size: 16),
-                  label: Text(
-                    actionLabel,
-                    style: TextStyle(color: beastHide, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ),
           ],
         ),
@@ -904,7 +950,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         setState(() {
           _focusedItemIndex = newIndex;
         });
-        
+
         final newRef = refs[newIndex];
         final newResolved = _refToResolved[newRef];
         if (newResolved?.escalada != null) {
@@ -913,7 +959,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             widget.setorContext?.nome ?? 'Geral',
             getEscaladaNome(newResolved!.escalada!),
             'selecionar_no_mapa',
-            'mapa_swipe'
+            'mapa_swipe',
           );
         }
 
@@ -923,14 +969,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         }
       }
 
-
-
       content = GestureDetector(
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity! > 0) {
             if (_focusedItemIndex > 0) changeItem(_focusedItemIndex - 1);
           } else if (details.primaryVelocity! < 0) {
-            if (_focusedItemIndex < refs.length - 1) changeItem(_focusedItemIndex + 1);
+            if (_focusedItemIndex < refs.length - 1) {
+              changeItem(_focusedItemIndex + 1);
+            }
           }
         },
         child: Column(
@@ -943,8 +989,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
-                    color: _focusedItemIndex > 0 ? beastHide : fishBone.withValues(alpha: 0.3),
-                    onPressed: _focusedItemIndex > 0 ? () => changeItem(_focusedItemIndex - 1) : null,
+                    color: _focusedItemIndex > 0
+                        ? rustIron
+                        : fishBone.withValues(alpha: 0.3),
+                    onPressed: _focusedItemIndex > 0
+                        ? () => changeItem(_focusedItemIndex - 1)
+                        : null,
                   ),
                   ...List.generate(refs.length, (index) {
                     return Container(
@@ -953,14 +1003,20 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       height: 8,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: index == _focusedItemIndex ? beastHide : fishBone.withValues(alpha: 0.3),
+                        color: index == _focusedItemIndex
+                            ? rustIron
+                            : fishBone.withValues(alpha: 0.3),
                       ),
                     );
                   }),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
-                    color: _focusedItemIndex < refs.length - 1 ? beastHide : fishBone.withValues(alpha: 0.3),
-                    onPressed: _focusedItemIndex < refs.length - 1 ? () => changeItem(_focusedItemIndex + 1) : null,
+                    color: _focusedItemIndex < refs.length - 1
+                        ? rustIron
+                        : fishBone.withValues(alpha: 0.3),
+                    onPressed: _focusedItemIndex < refs.length - 1
+                        ? () => changeItem(_focusedItemIndex + 1)
+                        : null,
                   ),
                 ],
               ),
@@ -969,23 +1025,29 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               duration: const Duration(milliseconds: 300),
               child: KeyedSubtree(
                 key: ValueKey(_focusedItemIndex),
-                child: _buildCardContentForResolved(refs[_focusedItemIndex], _refToResolved[refs[_focusedItemIndex]]!),
+                child: _buildCardContentForResolved(
+                  refs[_focusedItemIndex],
+                  _refToResolved[refs[_focusedItemIndex]]!,
+                ),
               ),
             ),
           ],
         ),
       );
     } else {
-      content = _buildCardContentForResolved(refs.first, _refToResolved[refs.first]!);
+      content = _buildCardContentForResolved(
+        refs.first,
+        _refToResolved[refs.first]!,
+      );
     }
 
     return Card(
-      color: obsidianBrown,
+      color: context.colors.caveShadow,
       elevation: 8,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: beastHide.withValues(alpha: 0.3), width: 1),
+        side: BorderSide(color: context.colors.graniteEdge, width: 1),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -999,43 +1061,41 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) {
       return const SizedBox.shrink(); // Mapa inválido
     }
 
     final bodyContent = LayoutBuilder(
       builder: (context, viewportConstraints) {
-          final viewportSize = Size(
-            viewportConstraints.maxWidth,
-            viewportConstraints.maxHeight,
-          );
-          return FutureBuilder<ImageProvider?>(
-            future: _imageProviderFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(color: beastHide),
-                );
-              }
+        final viewportSize = Size(
+          viewportConstraints.maxWidth,
+          viewportConstraints.maxHeight,
+        );
+        return FutureBuilder<ImageProvider?>(
+          future: _imageProviderFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator(color: rustIron));
+            }
 
-              if (!snapshot.hasData || snapshot.data == null) {
-                return const SizedBox.shrink();
-              }
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const SizedBox.shrink();
+            }
 
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  if (_selectedId != null) {
-                    setState(() {
-                      _selectedId = null;
-                      _updateFeedbackNode();
-                    });
-                  }
-                },
-                child: Stack(
-                  children: [
-                    // Camada 1: Mapa e Marcadores
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (_selectedId != null) {
+                  setState(() {
+                    _selectedId = null;
+                    _updateFeedbackNode();
+                  });
+                }
+              },
+              child: Stack(
+                children: [
+                  // Camada 1: Mapa e Marcadores
                   InteractiveViewer(
                     transformationController: _transformationController,
                     boundaryMargin: EdgeInsets.symmetric(
@@ -1051,8 +1111,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             widget.mapa.larguraMapa / widget.mapa.alturaMapa,
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            _imageSize = Size(constraints.maxWidth, constraints.maxHeight);
-                            if (!_initialZoom && _selectedId != null && _autoZoomEnabled) {
+                            _imageSize = Size(
+                              constraints.maxWidth,
+                              constraints.maxHeight,
+                            );
+                            if (!_initialZoom &&
+                                _selectedId != null &&
+                                _autoZoomEnabled) {
                               _initialZoom = true;
                               Mapa_PontoDeInteresse? targetMarker;
                               for (var p in widget.mapa.pontosDeInteresse) {
@@ -1062,35 +1127,41 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 }
                               }
                               if (targetMarker != null) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
                                   if (mounted) {
-                                    _onMarkerTap(targetMarker!, constraints, viewportSize, isUserInteraction: false);
+                                    _onMarkerTap(
+                                      targetMarker!,
+                                      constraints,
+                                      viewportSize,
+                                      isUserInteraction: false,
+                                    );
                                   }
                                 });
                               }
                             }
 
                             return Stack(
-                                  children: [
-                                  Image(
-                                    image: snapshot.data!,
-                                    fit: BoxFit.contain,
-                                    width: constraints.maxWidth,
-                                    height: constraints.maxHeight,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Center(
-                                              child: Icon(
-                                                Icons.broken_image,
-                                                color: Colors.grey,
-                                                size: 50,
-                                              ),
-                                            ),
-                                  ),
-                                  ..._buildMarkers(constraints, viewportSize),
-                                ],
-                              );
-                            },
+                              children: [
+                                Image(
+                                  image: snapshot.data!,
+                                  fit: BoxFit.contain,
+                                  width: constraints.maxWidth,
+                                  height: constraints.maxHeight,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Center(
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          color: Colors.grey,
+                                          size: 50,
+                                        ),
+                                      ),
+                                ),
+                                ..._buildMarkers(constraints, viewportSize),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -1105,7 +1176,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         : -150,
                     left: 20,
                     right: 20,
-                    child: _buildFloatingCard(viewportConstraints, viewportSize),
+                    child: _buildFloatingCard(
+                      viewportConstraints,
+                      viewportSize,
+                    ),
                   ),
                   // Camada 3: Toggle Auto-Zoom
                   Positioned(
@@ -1113,7 +1187,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                     right: 10,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: nobleBlack.withValues(alpha: 0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
@@ -1122,7 +1196,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                               ? Icons.gps_fixed
                               : Icons.gps_not_fixed,
                           color: _autoZoomEnabled
-                              ? beastHide
+                              ? rustIron
                               : fishBone.withValues(alpha: 0.5),
                         ),
                         tooltip: _autoZoomEnabled
@@ -1131,6 +1205,19 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         onPressed: () {
                           setState(() {
                             _autoZoomEnabled = !_autoZoomEnabled;
+                            if (_autoZoomEnabled && _selectedId != null && _imageSize != null) {
+                              final refs = _poiToRefs[_selectedId];
+                              if (refs != null && refs.isNotEmpty) {
+                                final ref = refs[_focusedItemIndex];
+                                final pontos = _getPontosForRef(ref);
+                                _zoomToPoints(
+                                  pontos,
+                                  _imageSize!,
+                                  viewportSize,
+                                  ref: ref,
+                                );
+                              }
+                            }
                           });
                         },
                       ),
@@ -1146,7 +1233,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         setorContext: widget.setorContext,
                         grupoContext: widget.grupoContext,
                       );
-                      
+
                       if (upDest == null) {
                         return const SizedBox.shrink();
                       }
@@ -1157,22 +1244,31 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                         child: SafeArea(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.45,
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.45,
                             ),
                             child: ActionChip(
                               side: BorderSide.none,
-                              backgroundColor: beastHide,
-                              avatar: Icon(Icons.turn_left_outlined, color: nobleBlack, size: 18),
+                              backgroundColor: AppColors.brandColor,
+                              avatar: Icon(
+                                Icons.turn_left_outlined,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                               label: Text(
                                 upDest.label,
-                                style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               onPressed: () {
-                                TelemetryService.instance.logNavegacaoHierarquica(
-                                  widget.cragId,
-                                  upDest.label,
-                                );
+                                TelemetryService.instance
+                                    .logNavegacaoHierarquica(
+                                      widget.cragId,
+                                      upDest.label,
+                                    );
                                 AppNav.toMapas(
                                   context,
                                   cragId: widget.cragId,
@@ -1183,14 +1279,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                           ),
                         ),
                       );
-                    }
+                    },
                   ),
                 ],
               ),
             );
-            },
-          );
-        },
+          },
+        );
+      },
     );
 
     // Se hideAppBar for true, retornamos apenas o corpo embrulhado em um SafeArea
@@ -1314,7 +1410,10 @@ class AreaHelper {
         if (al.coordenadas.length < 2) return null;
         for (int i = 0; i < al.coordenadas.length; i += 2) {
           polygon.add(
-            Offset(al.coordenadas[i].toDouble(), al.coordenadas[i + 1].toDouble()),
+            Offset(
+              al.coordenadas[i].toDouble(),
+              al.coordenadas[i + 1].toDouble(),
+            ),
           );
         }
         minX = polygon.map((p) => p.dx).reduce(math.min);
@@ -1367,43 +1466,46 @@ class MapHelper {
 
     if (mapa == null) {
       for (var sg in pico.setoresOuGrupos) {
-      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-        for (var m in sg.setor.conteudo.mapas) {
-          if (m.caminhoImagemMapa == mapaCaminhoImagem) {
-            mapa = m;
-            break;
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
+          for (var m in sg.setor.conteudo.mapas) {
+            if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+              mapa = m;
+              break;
+            }
           }
-        }
-      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
-        for (var m in sg.grupo.conteudo.mapas) {
-          if (m.caminhoImagemMapa == mapaCaminhoImagem) {
-            mapa = m;
-            break;
-          }
-        }
-        if (mapa != null) break;
-
-        // Busca nos sub-setores do grupo
-        for (var s in sg.grupo.conteudo.setores) {
-          if (s.hasConteudo()) {
-            for (var m in s.conteudo.mapas) {
-              if (m.caminhoImagemMapa == mapaCaminhoImagem) {
-                mapa = m;
-                break;
-              }
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
+          for (var m in sg.grupo.conteudo.mapas) {
+            if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+              mapa = m;
+              break;
             }
           }
           if (mapa != null) break;
+
+          // Busca nos sub-setores do grupo
+          for (var s in sg.grupo.conteudo.setores) {
+            if (s.hasConteudo()) {
+              for (var m in s.conteudo.mapas) {
+                if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+                  mapa = m;
+                  break;
+                }
+              }
+            }
+            if (mapa != null) break;
+          }
         }
+        if (mapa != null) break;
       }
-      if (mapa != null) break;
-    }
     }
 
     if (mapa == null) {
       // Map might be in a via (Multipitch etc)
       for (var sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
           for (var esc in sg.setor.conteudo.escaladas) {
             if (esc.hasViaMultiplasEnfiadas()) {
               for (var m in esc.viaMultiplasEnfiadas.mapas) {
@@ -1415,7 +1517,8 @@ class MapHelper {
             }
             if (mapa != null) break;
           }
-        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
           for (var s in sg.grupo.conteudo.setores) {
             if (s.hasConteudo()) {
               for (var esc in s.conteudo.escaladas) {
@@ -1443,12 +1546,14 @@ class MapHelper {
 
     if (setorContextNome != null) {
       for (var sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
           if (sg.setor.conteudo.nome == setorContextNome) {
             matchedSetor = sg.setor.conteudo;
             break;
           }
-        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
           for (var s in sg.grupo.conteudo.setores) {
             if (s.hasConteudo() && s.conteudo.nome == setorContextNome) {
               matchedSetor = s.conteudo;
@@ -1462,7 +1567,8 @@ class MapHelper {
 
     if (grupoContextNome != null) {
       for (var sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
           if (sg.grupo.conteudo.nome == grupoContextNome) {
             matchedGrupo = sg.grupo.conteudo;
             break;
@@ -1488,12 +1594,14 @@ class MapHelper {
       setores = matchedGrupo.setores;
     } else {
       for (var sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
+            sg.setor.hasConteudo()) {
           if (sg.setor.conteudo.mapas.isEmpty) {
             escaladas.addAll(sg.setor.conteudo.escaladas);
           }
           setores.add(sg.setor);
-        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+            sg.grupo.hasConteudo()) {
           if (sg.grupo.conteudo.mapas.isEmpty) {
             for (var s in sg.grupo.conteudo.setores) {
               if (s.hasConteudo() && s.conteudo.mapas.isEmpty) {
@@ -1511,8 +1619,6 @@ class MapHelper {
       setores: setores,
     );
   }
-
-
 }
 
 /// A `CustomPainter` responsible for drawing map markers and precisely detecting taps.
@@ -1562,13 +1668,13 @@ class MarkerPainter extends CustomPainter {
 
     if (isSelected) {
       final fillPaint = Paint()
-        ..color = beastHide.withValues(alpha: 0.5)
+        ..color = rustIron.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
       canvas.drawPath(path, fillPaint);
 
       final borderPaint = Paint()
-        ..color = beastHide.withValues(alpha: 0.7)
+        ..color = rustIron.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeJoin = StrokeJoin.round
@@ -1593,7 +1699,7 @@ class MarkerPainter extends CustomPainter {
           ((p.dx - minX) / mapWidth * constraints.maxWidth) + padding;
       final localY =
           ((p.dy - minY) / mapHeight * constraints.maxHeight) + padding;
-      
+
       final localOffset = Offset(localX, localY);
       localPolygon.add(localOffset);
 
@@ -1616,16 +1722,27 @@ class MarkerPainter extends CustomPainter {
     for (int i = 0; i < localPolygon.length; i++) {
       final p1 = localPolygon[i];
       final p2 = localPolygon[(i + 1) % localPolygon.length];
-      
-      final l2 = (p1.dx - p2.dx) * (p1.dx - p2.dx) + (p1.dy - p2.dy) * (p1.dy - p2.dy);
+
+      final l2 =
+          (p1.dx - p2.dx) * (p1.dx - p2.dx) + (p1.dy - p2.dy) * (p1.dy - p2.dy);
       double distSq;
       if (l2 == 0) {
-        distSq = (position.dx - p1.dx) * (position.dx - p1.dx) + (position.dy - p1.dy) * (position.dy - p1.dy);
+        distSq =
+            (position.dx - p1.dx) * (position.dx - p1.dx) +
+            (position.dy - p1.dy) * (position.dy - p1.dy);
       } else {
-        var t = ((position.dx - p1.dx) * (p2.dx - p1.dx) + (position.dy - p1.dy) * (p2.dy - p1.dy)) / l2;
+        var t =
+            ((position.dx - p1.dx) * (p2.dx - p1.dx) +
+                (position.dy - p1.dy) * (p2.dy - p1.dy)) /
+            l2;
         t = t < 0 ? 0 : (t > 1 ? 1 : t);
-        final proj = Offset(p1.dx + t * (p2.dx - p1.dx), p1.dy + t * (p2.dy - p1.dy));
-        distSq = (position.dx - proj.dx) * (position.dx - proj.dx) + (position.dy - proj.dy) * (position.dy - proj.dy);
+        final proj = Offset(
+          p1.dx + t * (p2.dx - p1.dx),
+          p1.dy + t * (p2.dy - p1.dy),
+        );
+        distSq =
+            (position.dx - proj.dx) * (position.dx - proj.dx) +
+            (position.dy - proj.dy) * (position.dy - proj.dy);
       }
 
       if (distSq <= toleranceSq) return true;
@@ -1640,4 +1757,3 @@ class MarkerPainter extends CustomPainter {
         oldDelegate.constraints != constraints;
   }
 }
-

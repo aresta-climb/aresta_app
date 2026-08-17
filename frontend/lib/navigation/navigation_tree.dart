@@ -25,7 +25,7 @@ abstract class NavNode {
   /// Cria uma cópia deste nó, anexando-o ao pai do ancestral correspondente.
   /// Subclasses devem sobrescrever isso para mesclar estado da interface (como alvos de rolagem).
   NavNode copyWithMergedAncestor(covariant NavNode matchingAncestor) {
-    return this; 
+    return this;
   }
 
   /// Retorna a lista de nós desde a raiz até este nó.
@@ -44,16 +44,13 @@ abstract class NavNode {
 abstract class PicoContextNode extends NavNode {
   final String cragId;
 
-  const PicoContextNode({
-    required this.cragId,
-    super.parent,
-  });
+  const PicoContextNode({required this.cragId, super.parent});
 }
 
 /// O nó raiz da navegação do aplicativo. Representa a tela inicial (HomeView).
 class HomeNode extends NavNode {
   const HomeNode() : super(parent: null);
-  
+
   @override
   NavNode copyWithMergedAncestor(covariant HomeNode matchingAncestor) {
     return const HomeNode();
@@ -66,7 +63,7 @@ class HomeNode extends NavNode {
 /// Nó que representa a tela de busca de picos novos (BrowseView).
 class BrowseNode extends NavNode {
   const BrowseNode(NavNode parent) : super(parent: parent);
-  
+
   @override
   NavNode copyWithMergedAncestor(covariant BrowseNode matchingAncestor) {
     return BrowseNode(matchingAncestor.parent!);
@@ -80,17 +77,11 @@ class BrowseNode extends NavNode {
 class MapaGlobalNode extends NavNode {
   final List<Map<String, dynamic>> crags;
 
-  const MapaGlobalNode({
-    required this.crags,
-    required super.parent,
-  });
+  const MapaGlobalNode({required this.crags, required super.parent});
 
   @override
   NavNode copyWithMergedAncestor(covariant MapaGlobalNode matchingAncestor) {
-    return MapaGlobalNode(
-      crags: crags,
-      parent: matchingAncestor.parent,
-    );
+    return MapaGlobalNode(crags: crags, parent: matchingAncestor.parent);
   }
 
   @override
@@ -100,7 +91,7 @@ class MapaGlobalNode extends NavNode {
 /// Nó que representa a tela de configurações do aplicativo (SettingsView).
 class SettingsNode extends NavNode {
   const SettingsNode(NavNode parent) : super(parent: parent);
-  
+
   @override
   NavNode copyWithMergedAncestor(covariant SettingsNode matchingAncestor) {
     return SettingsNode(matchingAncestor.parent!);
@@ -108,6 +99,42 @@ class SettingsNode extends NavNode {
 
   @override
   String toString() => 'SettingsNode';
+}
+
+class ComunidadeNode extends NavNode {
+  const ComunidadeNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant ComunidadeNode matchingAncestor) {
+    return ComunidadeNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'ComunidadeNode';
+}
+
+class SobreTimeNode extends NavNode {
+  const SobreTimeNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant SobreTimeNode matchingAncestor) {
+    return SobreTimeNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'SobreTimeNode';
+}
+
+class MeusCroquisNode extends NavNode {
+  const MeusCroquisNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant MeusCroquisNode matchingAncestor) {
+    return MeusCroquisNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String toString() => 'MeusCroquisNode';
 }
 
 /// Nó que representa a tela de detalhes de um Pico específico (PicoView).
@@ -156,19 +183,21 @@ class SetorNode extends PicoContextNode {
     return SetorNode(
       setorNome: setorNome,
       grupoNome: grupoNome ?? matchingAncestor.grupoNome,
-      scrollToEscaladaNome: hasScroll ? scrollToEscaladaNome : matchingAncestor.scrollToEscaladaNome,
+      scrollToEscaladaNome: hasScroll
+          ? scrollToEscaladaNome
+          : matchingAncestor.scrollToEscaladaNome,
       cragId: cragId,
       parent: matchingAncestor.parent!,
     );
   }
 
   /// Retorna uma representação em string deste nó.
-  /// 
-  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  ///
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`)
   /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
-  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
-  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
-  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`.
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará
   /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
   String toString() => 'SetorNode($cragId, $setorNome, $grupoNome)';
@@ -194,12 +223,12 @@ class GrupoNode extends PicoContextNode {
   }
 
   /// Retorna uma representação em string deste nó.
-  /// 
-  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  ///
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`)
   /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
-  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
-  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
-  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`.
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará
   /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
   String toString() => 'GrupoNode($cragId, $grupoNome)';
@@ -231,32 +260,32 @@ class ViaNode extends PicoContextNode {
   }
 
   /// Retorna uma representação em string deste nó.
-  /// 
-  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`) 
+  ///
+  /// **Importante**: O resultado deste método é utilizado como chave base (`ValueKey`)
   /// para o `MaterialPage` gerado no `Navigator` do Flutter em `main.dart`.
-  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis 
-  /// que determinam a igualdade lógica deste nó em `_isSameNode`. 
-  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará 
+  /// Portanto, a string retornada DEVE refletir perfeitamente todas as variáveis
+  /// que determinam a igualdade lógica deste nó em `_isSameNode`.
+  /// Se nós estruturalmente distintos gerarem a mesma string, o Flutter lançará
   /// a exceção de chave duplicada (`!keyReservation.contains(key)`).
   @override
-  String toString() => 'ViaNode($cragId, $setorNome, $grupoNome, $escaladaNome)';
+  String toString() =>
+      'ViaNode($cragId, $setorNome, $grupoNome, $escaladaNome)';
 }
-
 
 /// Dados necessários para renderizar um item de mapa dentro do carrossel.
 class CarrosselItemData {
   /// Caminho da imagem (asset ou arquivo local) do mapa/croqui.
   final String mapaCaminhoImagem;
-  
+
   /// Nome do Setor ao qual este mapa pertence (se houver), usado para resolver SVG aninhado.
   final String? setorContextNome;
-  
+
   /// Nome do Grupo ao qual este mapa pertence (se houver), usado para resolver SVG aninhado.
   final String? grupoContextNome;
-  
+
   /// Nome da via/escalada que motivou a abertura deste mapa, usado para desambiguação de rotas que compartilham o mesmo marcador.
   final String? escaladaContextNome;
-  
+
   /// ID opcional (Ponto de Interesse) que deve receber o auto-zoom inicial.
   final String? initialSelectedId;
 
@@ -285,33 +314,32 @@ class MapasCarrosselNode extends NavNode {
   });
 
   @override
-  NavNode copyWithMergedAncestor(covariant MapasCarrosselNode matchingAncestor) {
+  NavNode copyWithMergedAncestor(
+    covariant MapasCarrosselNode matchingAncestor,
+  ) {
     return MapasCarrosselNode(
       cragId: cragId,
       initialIndex: initialIndex,
       mapas: mapas,
-      imageProviderOverride: imageProviderOverride ?? matchingAncestor.imageProviderOverride,
+      imageProviderOverride:
+          imageProviderOverride ?? matchingAncestor.imageProviderOverride,
       parent: matchingAncestor.parent!,
     );
   }
 
   @override
-  String toString() => 'MapasCarrosselNode(${mapas.map((m) => m.mapaCaminhoImagem.split('/').last).join(',')})';
+  String toString() =>
+      'MapasCarrosselNode(${mapas.map((m) => m.mapaCaminhoImagem.split('/').last).join(',')})';
 }
 
 /// Nó que representa a tela de rotas de GPS/localização.
 class GPSNode extends PicoContextNode {
-  const GPSNode({
-    required super.cragId,
-    required NavNode parent,
-  }) : super(parent: parent);
+  const GPSNode({required super.cragId, required NavNode parent})
+    : super(parent: parent);
 
   @override
   NavNode copyWithMergedAncestor(covariant GPSNode matchingAncestor) {
-    return GPSNode(
-      cragId: cragId,
-      parent: matchingAncestor.parent!,
-    );
+    return GPSNode(cragId: cragId, parent: matchingAncestor.parent!);
   }
 
   @override
@@ -326,12 +354,14 @@ class TextNode extends NavNode {
   final String title;
   final String content;
   final String cragId;
+  final IconData? icon;
 
   const TextNode({
     required this.title,
     required this.content,
     required this.cragId,
     required NavNode parent,
+    this.icon,
   }) : super(parent: parent);
 
   @override
@@ -340,6 +370,7 @@ class TextNode extends NavNode {
       title: title,
       content: content,
       cragId: cragId,
+      icon: icon,
       parent: matchingAncestor.parent!,
     );
   }
@@ -348,11 +379,53 @@ class TextNode extends NavNode {
   String toString() => 'TextNode($title)';
 }
 
+class TextCarouselData {
+  final String title;
+  final String content;
+  final IconData? icon;
+
+  const TextCarouselData({
+    required this.title,
+    required this.content,
+    this.icon,
+  });
+}
+
+class TextCarouselNode extends NavNode {
+  final String cragId;
+  final List<TextCarouselData> texts;
+  final int initialIndex;
+
+  const TextCarouselNode({
+    required this.cragId,
+    required this.texts,
+    this.initialIndex = 0,
+    required super.parent,
+  });
+
+  @override
+  NavNode copyWithMergedAncestor(covariant TextCarouselNode matchingAncestor) {
+    return TextCarouselNode(
+      cragId: cragId,
+      texts: texts,
+      initialIndex: initialIndex,
+      parent: matchingAncestor.parent!,
+    );
+  }
+
+  @override
+  String toString() => 'TextCarouselNode(${texts.map((e) => e.title).join(',')})';
+}
+
 // --- CONTROLADOR ---
 
 /// Controlador de estado de navegação que gerencia a árvore de nós.
 class TreeNavigationController extends ChangeNotifier {
   NavNode _currentNode = const HomeNode();
+
+  /// Permite que uma página intercepte o botão voltar do sistema.
+  /// Se retornar `true`, a navegação da árvore é cancelada pois a página já lidou com a ação.
+  bool Function()? onBackInterceptor;
 
   NavNode get currentNode => _currentNode;
 
@@ -362,29 +435,53 @@ class TreeNavigationController extends ChangeNotifier {
     if (a is BrowseNode && b is BrowseNode) return true;
     if (a is MapaGlobalNode && b is MapaGlobalNode) return true;
     if (a is SettingsNode && b is SettingsNode) return true;
+    if (a is ComunidadeNode && b is ComunidadeNode) return true;
+    if (a is SobreTimeNode && b is SobreTimeNode) return true;
+    if (a is MeusCroquisNode && b is MeusCroquisNode) return true;
     if (a is MapasCarrosselNode && b is MapasCarrosselNode) {
-      return a.cragId == b.cragId && 
-             a.mapas.length == b.mapas.length && 
-             (a.mapas.isNotEmpty ? a.mapas.first.mapaCaminhoImagem == b.mapas.first.mapaCaminhoImagem : true);
+      return a.cragId == b.cragId &&
+          a.mapas.length == b.mapas.length &&
+          (a.mapas.isNotEmpty
+              ? a.mapas.first.mapaCaminhoImagem ==
+                    b.mapas.first.mapaCaminhoImagem
+              : true);
     }
 
+    if (a is SetoresNode && b is SetoresNode) return a.cragId == b.cragId;
+    if (a is ExplorarLocalNode && b is ExplorarLocalNode) {
+      return a.cragId == b.cragId;
+    }
+    if (a is ComunidadePicoNode && b is ComunidadePicoNode) {
+      return a.cragId == b.cragId;
+    }
+    if (a is ApoiePicoNode && b is ApoiePicoNode) return a.cragId == b.cragId;
     if (a is PicoNode && b is PicoNode) {
       return a.cragId == b.cragId;
     }
     if (a is SetorNode && b is SetorNode) {
-      return a.cragId == b.cragId && a.setorNome == b.setorNome && a.grupoNome == b.grupoNome;
+      return a.cragId == b.cragId &&
+          a.setorNome == b.setorNome &&
+          a.grupoNome == b.grupoNome;
     }
     if (a is GrupoNode && b is GrupoNode) {
       return a.cragId == b.cragId && a.grupoNome == b.grupoNome;
     }
     if (a is ViaNode && b is ViaNode) {
-      return a.cragId == b.cragId && a.escaladaNome == b.escaladaNome && a.setorNome == b.setorNome && a.grupoNome == b.grupoNome;
+      return a.cragId == b.cragId &&
+          a.escaladaNome == b.escaladaNome &&
+          a.setorNome == b.setorNome &&
+          a.grupoNome == b.grupoNome;
     }
     if (a is GPSNode && b is GPSNode) {
       return a.cragId == b.cragId;
     }
     if (a is TextNode && b is TextNode) {
       return a.title == b.title;
+    }
+    if (a is TextCarouselNode && b is TextCarouselNode) {
+      return a.cragId == b.cragId &&
+          a.texts.length == b.texts.length &&
+          (a.texts.isNotEmpty ? a.texts.first.title == b.texts.first.title : true);
     }
     return false;
   }
@@ -412,6 +509,10 @@ class TreeNavigationController extends ChangeNotifier {
   }
 
   bool goBack() {
+    if (onBackInterceptor != null && onBackInterceptor!()) {
+      return true; // The current page intercepted and handled the back action.
+    }
+
     final parentNode = _currentNode.parent;
     if (parentNode != null) {
       _currentNode = parentNode;
@@ -428,10 +529,48 @@ class TreeNavigationController extends ChangeNotifier {
       if (parentNode == null) break;
       node = parentNode;
     }
-    
+
     if (_currentNode != node) {
       _currentNode = node;
       notifyListeners();
     }
   }
+}
+
+class SetoresNode extends PicoContextNode {
+  const SetoresNode({required super.cragId, required super.parent});
+  @override
+  NavNode copyWithMergedAncestor(covariant SetoresNode matchingAncestor) =>
+      SetoresNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override
+  String toString() => 'SetoresNode';
+}
+
+class ExplorarLocalNode extends PicoContextNode {
+  const ExplorarLocalNode({required super.cragId, required super.parent});
+  @override
+  NavNode copyWithMergedAncestor(
+    covariant ExplorarLocalNode matchingAncestor,
+  ) => ExplorarLocalNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override
+  String toString() => 'ExplorarLocalNode';
+}
+
+class ComunidadePicoNode extends PicoContextNode {
+  const ComunidadePicoNode({required super.cragId, required super.parent});
+  @override
+  NavNode copyWithMergedAncestor(
+    covariant ComunidadePicoNode matchingAncestor,
+  ) => ComunidadePicoNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override
+  String toString() => 'ComunidadePicoNode';
+}
+
+class ApoiePicoNode extends PicoContextNode {
+  const ApoiePicoNode({required super.cragId, required super.parent});
+  @override
+  NavNode copyWithMergedAncestor(covariant ApoiePicoNode matchingAncestor) =>
+      ApoiePicoNode(cragId: cragId, parent: matchingAncestor.parent);
+  @override
+  String toString() => 'ApoiePicoNode';
 }

@@ -32,11 +32,13 @@ dependencies:
   yaml: ^3.1.3
   google_maps_flutter: ^2.17.1
   feedback: ^3.2.0
-  workmanager: ^0.9.0+3
+  workmanager: ^0.10.0
   uuid: ^4.5.3
   path: ^1.9.1
   device_info_plus: ^13.1.0
   connectivity_plus: ^7.1.1
+  google_fonts: ^8.1.0
+  geolocator: ^14.0.3
 
 dev_dependencies:
   flutter_test:
@@ -52,13 +54,19 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/team/
     - legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md
     - legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md
     - assets/logo_app.png
+    - assets/logo_in_app.jpg
+    - assets/logo_splash.png
     - assets/preload/
     - assets/preload/thumbnails/
 
   fonts:
+    - family: BebasNeue
+      fonts:
+        - asset: fonts/BebasNeue-Regular.ttf
     - family: Montserrat
       fonts:
         - asset: fonts/Montserrat-Bold.ttf

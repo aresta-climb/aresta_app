@@ -16,7 +16,7 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 | `sync_service_test.dart` | `SyncService` | Testes complexos de sincronização atômica, checagem de hashes SHA-256 e extração de imagens Markdown |
 
 | `feedback/feedback_queue_service_test.dart` | `FeedbackQueueService` | Testa o enfileiramento local (SharedPreferences) e a chamada agendada do Workmanager |
-| `feedback/background_worker_test.dart` | `BackgroundWorker` | Testa a execução da fila de feedback em background, requests HTTP multipart e lógica de retry (Backoff) |
+| `feedback/background_worker_test.dart` | `FeedbackOrchestrator` | Testa a execução da fila de feedback em background, requests HTTP multipart e lógica de retry (Backoff) |
 | `feedback/feedback_metadata_collector_test.dart` | `FeedbackMetadataCollector` | Testa a coleta correta dos metadados de telemetria do dispositivo na hora do envio do reporte |
 
 ## Como executar

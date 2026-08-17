@@ -58,7 +58,8 @@ frontend/
 │   │   ├── app_colors.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
 │   │   └── theme_controller.dart        - Gerenciamento de estado do tema
 │   ├── utils/
-│   │   └── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
+│   │   ├── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
+│   │   └── pico_categorization.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
 │   ├── view_functions/                  - Builders de UI, callbacks e funções por página
 │   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
@@ -80,7 +81,9 @@ frontend/
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
 │   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
-│   │   ├── pico.dart                    - Nó raiz de um guia
+│   │   ├── pico.dart                    - Nó raiz de um guia, atua como hub distribuindo para as sub-páginas
+│   │   ├── pico_subpages/               - Views tabulares do guia (Comunidade Local, Setores, Explorar Local, etc)
+│   │   ├── comunidade.dart              - Hub global de redes sociais (Discord, WhatsApp, GitHub)
 │   │   ├── grupo.dart                   - Agrupamento de setores
 │   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
 │   │   ├── via.dart                     - Nó folha: beta, croqui e imagens
@@ -108,8 +111,10 @@ frontend/
 │   │   ├── dataset_repository.dart      - Estado central: downloads e metadados
 │   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
 │   └── widgets/
+│       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa
 │       ├── feedback/
 │       │   └── custom_feedback_builder.dart - Construtor de interface customizada para formulário de in-app feedback
+│       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
 │       ├── global_search.dart           - Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/

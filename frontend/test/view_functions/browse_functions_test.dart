@@ -5,95 +5,109 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 void main() {
-  testWidgets('buildBrowseBody passa onOpen corretamente e permite acionar telemetria', (WidgetTester tester) async {
-    final mockTelemetry = MockTelemetryService();
-    TelemetryService.instance = mockTelemetry;
+  testWidgets(
+    'buildBrowseBody passa onOpen corretamente e permite acionar telemetria',
+    (WidgetTester tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
 
-    final List<Map<String, dynamic>> availableCrags = [
-      {
-        'id': 'crag1',
-        'nome': 'Pico Teste',
-        'local': 'Local Teste',
-        'isDownloaded': true, // Para mostrar o botão Abrir Croqui
-      }
-    ];
+      final List<Map<String, dynamic>> availableCrags = [
+        {
+          'id': 'crag1',
+          'nome': 'Pico Teste',
+          'local': 'Local Teste',
+          'isDownloaded': true, // Para mostrar o botão Abrir Croqui
+        },
+      ];
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) {
-            return buildBrowseBody(
-              context,
-              availableCrags,
-              ValueNotifier<Map<String, double>>({}),
-              onSearchChanged: (_) {},
-              onDownload: (_) {},
-              onOpen: (crag) {
-                // Simulando o comportamento definido na page browse.dart
-                TelemetryService.instance.logAcaoCroqui(crag['id'], 'abrir_croqui', origem: 'explorar');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return buildBrowseBody(
+                  context,
+                  availableCrags,
+                  ValueNotifier<Map<String, double>>({}),
+                  onSearchChanged: (_) {},
+                  onDownload: (_) {},
+                  onOpen: (crag) {
+                    // Simulando o comportamento definido na page browse.dart
+                    TelemetryService.instance.logAcaoCroqui(
+                      crag['id'],
+                      'abrir_croqui',
+                      origem: 'explorar',
+                    );
+                  },
+                );
               },
-            );
-          }
+            ),
+          ),
         ),
-      ),
-    ));
+      );
 
-    // O card precisa ser expandido para ver o botão "ABRIR CROQUI"
-    await tester.tap(find.text('Pico Teste'));
-    await tester.pumpAndSettle();
+      // Agora o tap no card já chama onOpen diretamente se estiver baixado!
+      await tester.tap(find.text('PICO TESTE'));
+      await tester.pumpAndSettle();
 
-    // Encontra e toca no botão
-    final openBtn = find.text('ABRIR CROQUI');
-    expect(openBtn, findsOneWidget);
-    await tester.tap(openBtn);
-    
-    // Verifica a telemetria disparada pelo onOpen
-    expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-    expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
-    expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'explorar');
-  });
+      // Verifica a telemetria disparada pelo onOpen
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['origem'],
+        'explorar',
+      );
+    },
+  );
 
-  testWidgets('buildBrowseBody exibe animação de download quando o pico está em downloadingCrags', (WidgetTester tester) async {
-    final List<Map<String, dynamic>> availableCrags = [
-      {
-        'id': 'crag_dl',
-        'nome': 'Pico Baixando',
-        'local': 'Local DL',
-        'isDownloaded': false,
-      }
-    ];
+  testWidgets(
+    'buildBrowseBody exibe animação de download quando o pico está em downloadingCrags',
+    (WidgetTester tester) async {
+      final List<Map<String, dynamic>> availableCrags = [
+        {
+          'id': 'crag_dl',
+          'nome': 'Pico Baixando',
+          'local': 'Local DL',
+          'isDownloaded': false,
+        },
+      ];
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) {
-            return buildBrowseBody(
-              context,
-              availableCrags,
-              ValueNotifier<Map<String, double>>({'crag_dl': 0.5}), // Simula que está baixando com 50%
-              onSearchChanged: (_) {},
-              onDownload: (_) {},
-            );
-          }
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return buildBrowseBody(
+                  context,
+                  availableCrags,
+                  ValueNotifier<Map<String, double>>({
+                    'crag_dl': 0.5,
+                  }), // Simula que está baixando com 50%
+                  onSearchChanged: (_) {},
+                  onDownload: (_) {},
+                );
+              },
+            ),
+          ),
         ),
-      ),
-    ));
+      );
 
-    await tester.tap(find.text('Pico Baixando'));
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('PICO BAIXANDO'));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
-    // Como trocamos o conteúdo do botão, vamos procurar o CircularProgressIndicator.
-    // Existem vários, então vamos focar no ElevatedButton.
-    final loadingIndicator = find.descendant(
-      of: find.byType(ElevatedButton),
-      matching: find.byType(LinearProgressIndicator),
-    );
+      // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
+      // Como trocamos o conteúdo do botão, vamos procurar o CircularProgressIndicator.
+      // Existem vários, então    // Verifica se a barra de progresso (LinearProgressIndicator) está presente.
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    },
+  );
 
-    expect(loadingIndicator, findsOneWidget);
-  });
-
-  testWidgets('buildBrowseBody exibe a descrição curta do pico caso exista', (WidgetTester tester) async {
+  testWidgets('buildBrowseBody exibe a descrição curta do pico caso exista', (
+    WidgetTester tester,
+  ) async {
     final List<Map<String, dynamic>> availableCrags = [
       {
         'id': 'crag_desc',
@@ -101,33 +115,108 @@ void main() {
         'local': 'Local Desc',
         'descricao': 'Esta é a descrição curta e bacana do pico.',
         'isDownloaded': false,
-      }
+      },
     ];
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: Builder(
-          builder: (context) {
-            return buildBrowseBody(
-              context,
-              availableCrags,
-              ValueNotifier<Map<String, double>>({}),
-              onSearchChanged: (_) {},
-              onDownload: (_) {},
-            );
-          }
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return buildBrowseBody(
+                context,
+                availableCrags,
+                ValueNotifier<Map<String, double>>({}),
+                onSearchChanged: (_) {},
+                onDownload: (_) {},
+              );
+            },
+          ),
         ),
       ),
-    ));
+    );
 
-    // A descrição fica dentro do expanded (segundo filho do AnimatedCrossFade)
-    // Logo, o texto já existe na árvore.
-    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
+    // A descrição não é mais renderizada no CragCard diretamente.
+    // Ela aparece no Modal após o clique.
+    expect(
+      find.text('Esta é a descrição curta e bacana do pico.'),
+      findsNothing,
+    );
 
-    await tester.tap(find.text('Pico Descrição'));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('PICO DESCRIÇÃO')); // Note the uppercase name!
+    await tester.pumpAndSettle();
 
-    // Ainda deve existir após a expansão
-    expect(find.text('Esta é a descrição curta e bacana do pico.'), findsOneWidget);
+    // Deve existir após abrir o modal
+    expect(
+      find.text('Esta é a descrição curta e bacana do pico.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('CragCard exibe estatísticas resumidas por padrão', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, dynamic> crag = {
+      'id': 'crag1',
+      'nome': 'Pico Teste',
+      'estatisticas': {
+        'totalSetores': 2,
+        'totalVias': 10,
+        'totalBoulders': 5,
+        'totalEsportivas': 5,
+      },
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard(
+            crag: crag,
+            downloadingCrags: ValueNotifier({}),
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir 2 setores • 10 escaladas
+    expect(find.text('2 setores • 10 escaladas'), findsOneWidget);
+    
+    // NÃO deve exibir a listagem de tipos (boulders, esportivas)
+    expect(find.textContaining('boulders'), findsNothing);
+  });
+
+  testWidgets('CragCard exibe estatísticas detalhadas se showDetailedStats for true', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, dynamic> crag = {
+      'id': 'crag1',
+      'nome': 'Pico Teste',
+      'estatisticas': {
+        'totalSetores': 3,
+        'totalVias': 15,
+        'totalBoulders': 10,
+        'totalEsportivas': 5,
+      },
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard(
+            crag: crag,
+            downloadingCrags: ValueNotifier({}),
+            showDetailedStats: true,
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir o texto completo com os tipos
+    expect(
+      find.text('3 setores • 15 escaladas (10 boulders, 5 esportivas)'),
+      findsOneWidget,
+    );
   });
 }

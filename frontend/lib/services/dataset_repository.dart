@@ -8,7 +8,6 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 
-
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/constants/network_constants.dart';
 
@@ -88,7 +87,7 @@ class DatasetRepository {
 
   /// Extrai os assets pré-baixados (pre-bundled) do pacote do aplicativo (bundle)
   /// e os copia para o diretório de documentos do dispositivo.
-  /// 
+  ///
   /// Isso é feito apenas na primeira vez que o app é inicializado sem cache local,
   /// garantindo que o usuário tenha um 'indice.binarypb' e as thumbnails iniciais
   /// sem precisar de internet para o primeiro acesso.
@@ -96,22 +95,35 @@ class DatasetRepository {
   Future<void> _unpackPreloadedAssets(String docsPath) async {
     try {
       final bundle = assetBundle ?? rootBundle;
-      
+
       ByteData? indiceData;
       try {
         // Tenta carregar o índice principal pré-empacotado.
         indiceData = await bundle.load('assets/preload/indice.binarypb');
       } catch (e) {
         // Se falhar (por exemplo, pasta preload não existe no build), loga o erro e aborta o unpack
-        AppLogger.instance.logError('[DatasetRepo] Preload de indice.binarypb não encontrado ou erro ao carregar', error: e);
+        AppLogger.instance.logError(
+          '[DatasetRepo] Preload de indice.binarypb não encontrado ou erro ao carregar',
+          error: e,
+        );
         return;
       }
-      
+
       // Escreve o índice localmente para uso imediato pelo app
       final indiceFile = File(editorDeCroqui.indicePath(docsPath));
-      await indiceFile.writeAsBytes(indiceData.buffer.asUint8List(indiceData.offsetInBytes, indiceData.lengthInBytes));
-      
-      final indice = Indice.fromBuffer(indiceData.buffer.asUint8List(indiceData.offsetInBytes, indiceData.lengthInBytes));
+      await indiceFile.writeAsBytes(
+        indiceData.buffer.asUint8List(
+          indiceData.offsetInBytes,
+          indiceData.lengthInBytes,
+        ),
+      );
+
+      final indice = Indice.fromBuffer(
+        indiceData.buffer.asUint8List(
+          indiceData.offsetInBytes,
+          indiceData.lengthInBytes,
+        ),
+      );
       final thumbnailsDir = Directory('$docsPath/thumbnails');
       if (!thumbnailsDir.existsSync()) {
         thumbnailsDir.createSync(recursive: true);
@@ -123,16 +135,28 @@ class DatasetRepository {
         final lastSlash = urlRelativa.lastIndexOf('/');
         if (lastSlash != -1) {
           final baseDir = urlRelativa.substring(0, lastSlash);
-          final String cragId = resumo.id.isNotEmpty ? resumo.id : baseDir.replaceAll('/', '_');
-          
+          final String cragId = resumo.id.isNotEmpty
+              ? resumo.id
+              : baseDir.replaceAll('/', '_');
+
           try {
             // Extrai a thumbnail do bundle e salva na pasta local de thumbnails do aplicativo
-            final thumbData = await bundle.load('assets/preload/thumbnails/$cragId.webp');
+            final thumbData = await bundle.load(
+              'assets/preload/thumbnails/$cragId.webp',
+            );
             final thumbFile = File('${thumbnailsDir.path}/$cragId.webp');
-            await thumbFile.writeAsBytes(thumbData.buffer.asUint8List(thumbData.offsetInBytes, thumbData.lengthInBytes));
+            await thumbFile.writeAsBytes(
+              thumbData.buffer.asUint8List(
+                thumbData.offsetInBytes,
+                thumbData.lengthInBytes,
+              ),
+            );
           } catch (e) {
             // Em vez de ignorar silenciosamente as falhas de thumbnail, registramos o erro no log
-            AppLogger.instance.logError('[DatasetRepo] Erro ao carregar thumbnail $cragId do preload', error: e);
+            AppLogger.instance.logError(
+              '[DatasetRepo] Erro ao carregar thumbnail $cragId do preload',
+              error: e,
+            );
           }
         }
       }
@@ -141,9 +165,11 @@ class DatasetRepository {
       // registrando a versão dos dados recém pré-carregados.
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
-
     } catch (e) {
-      AppLogger.instance.logError('[DatasetRepo] Erro geral ao descompactar assets', error: e);
+      AppLogger.instance.logError(
+        '[DatasetRepo] Erro geral ao descompactar assets',
+        error: e,
+      );
     }
   }
 
@@ -217,8 +243,20 @@ class DatasetRepository {
             'dataUpdate': resumo.hasTimestampUpdate()
                 ? resumo.timestampUpdate.toDateTime().toIso8601String()
                 : null,
-            if (resumo.hasLocalizacao()) 'latitude': resumo.localizacao.latitude / 10000000.0,
-            if (resumo.hasLocalizacao()) 'longitude': resumo.localizacao.longitude / 10000000.0,
+            if (resumo.hasLocalizacao())
+              'latitude': resumo.localizacao.latitude / 10000000.0,
+            if (resumo.hasLocalizacao())
+              'longitude': resumo.localizacao.longitude / 10000000.0,
+            if (resumo.hasPrecomputados())
+              'estatisticas': {
+                'totalVias': resumo.precomputados.totalEscaladas,
+                'totalSetores': resumo.precomputados.totalSetores,
+                'totalEsportivas': resumo.precomputados.totalEsportivas,
+                'totalMoveis': resumo.precomputados.totalMoveis,
+                'totalBoulders': resumo.precomputados.totalBoulders,
+                'totalMultiplasEnfiadas': resumo.precomputados.totalMultiplasEnfiadas,
+                'totalHighlines': resumo.precomputados.totalHighlines,
+              },
           };
 
           parsedPicos.add(picoMap);
@@ -570,10 +608,7 @@ class DatasetRepository {
       }
 
       if (croqui.picos.isNotEmpty) {
-        picoData['data'] = {
-          'pico': croqui.picos.first,
-          'croqui': croqui,
-        };
+        picoData['data'] = {'pico': croqui.picos.first, 'croqui': croqui};
       }
 
       String baseDir = '';

@@ -20,7 +20,9 @@ class MockPathProviderPlatform extends PathProviderPlatform
   @override
   Future<List<String>?> getExternalCachePaths() async => [];
   @override
-  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async => [];
+  Future<List<String>?> getExternalStoragePaths({
+    StorageDirectory? type,
+  }) async => [];
   @override
   Future<String?> getDownloadsPath() async => '.';
 }
@@ -32,15 +34,20 @@ void main() {
   });
 
   group('OfflineMarkdown Tests', () {
-    testWidgets('Tocar em imagem deve abrir um modal com o botão de bug_report', (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: OfflineMarkdown(
-            data: '![Imagem de teste](https://aresta-climb.github.io/aresta_serving/fake_image.png)',
-            cragId: 'test_crag',
+    testWidgets('Tocar em imagem deve abrir um modal com o botão de bug_report', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineMarkdown(
+              data:
+                  '![Imagem de teste](https://aresta-climb.github.io/aresta_serving/fake_image.png)',
+              cragId: 'test_crag',
+            ),
           ),
         ),
-      ));
+      );
 
       await tester.pumpAndSettle();
 

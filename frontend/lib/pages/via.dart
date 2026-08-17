@@ -13,13 +13,15 @@ class ViaPage extends StatelessWidget {
   final Pico? pico;
   final Setor? setor;
   final Grupo? grupo;
-  final bool fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
-  final bool fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
+  final bool
+  fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
+  final bool
+  fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
 
   const ViaPage({
-    super.key, 
-    required this.escalada, 
-    required this.cragId, 
+    super.key,
+    required this.escalada,
+    required this.cragId,
     this.pico,
     this.setor,
     this.grupo,
@@ -34,8 +36,20 @@ class ViaPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, nome),
-      body: SafeArea(bottom: true, child: buildViaBody(context, escalada, cragId, pico: pico, setor: setor, grupo: grupo, fromSetorPage: fromSetorPage, fromMapaPage: fromMapaPage)),
+      appBar: buildCommonAppBar(context, nome.toUpperCase()),
+      body: SafeArea(
+        bottom: true,
+        child: buildViaBody(
+          context,
+          escalada,
+          cragId,
+          pico: pico,
+          setor: setor,
+          grupo: grupo,
+          fromSetorPage: fromSetorPage,
+          fromMapaPage: fromMapaPage,
+        ),
+      ),
       // bottomNavigationBar: buildSecondaryBottomNav(context),
     );
   }

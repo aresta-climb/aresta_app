@@ -33,7 +33,10 @@ class AppVersionChecker extends StatefulWidget {
   State<AppVersionChecker> createState() => _AppVersionCheckerState();
 
   @visibleForTesting
-  static String getStoreUrl(RemoteConfigService remoteConfig, {required bool isIOS}) {
+  static String getStoreUrl(
+    RemoteConfigService remoteConfig, {
+    required bool isIOS,
+  }) {
     if (isIOS) {
       return remoteConfig.storeUrlIos.isNotEmpty
           ? remoteConfig.storeUrlIos
@@ -93,13 +96,15 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
     }
   }
 
-
-
   /// Abre a loja de aplicativos correta baseado no sistema operacional do dispositivo.
   /// Usuário é redirecionado para a App Store no iOS ou Play Store no Android.
   void _launchStore() {
-    final remoteConfig = widget.remoteConfigService ?? RemoteConfigService.instance;
-    final url = AppVersionChecker.getStoreUrl(remoteConfig, isIOS: Platform.isIOS);
+    final remoteConfig =
+        widget.remoteConfigService ?? RemoteConfigService.instance;
+    final url = AppVersionChecker.getStoreUrl(
+      remoteConfig,
+      isIOS: Platform.isIOS,
+    );
     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
@@ -116,49 +121,7 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
     final recommendedVersion = remoteConfig.recommendedVersion;
 
     if (hardMinVersion > 0 && _currentBuildNumber < hardMinVersion) {
-      return Scaffold(
-        backgroundColor: Colors.red.shade900,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Atualização Necessária',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Sua versão do aplicativo é muito antiga e não é mais suportada. Por favor, atualize para continuar.',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _launchStore,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.red.shade900,
-                    backgroundColor: Colors.white,
-                  ),
-                  child: const Text('Atualizar Agora'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return AppVersionHardBlockScreen(onUpdatePressed: _launchStore);
     }
 
     bool showSoftBanner =
@@ -237,5 +200,89 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
     }
 
     return content;
+  }
+}
+
+/// Widget standalone da tela de bloqueio duro, extraído para permitir testes manuais no modo experimental.
+class AppVersionHardBlockScreen extends StatelessWidget {
+  final VoidCallback onUpdatePressed;
+
+  const AppVersionHardBlockScreen({super.key, required this.onUpdatePressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.red.shade900,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.system_update_rounded,
+                    size: 80,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'ATUALIZAÇÃO\nNECESSÁRIA',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    height: 1.2,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Sua versão do Aresta é muito antiga e não é mais suportada. Para continuar usando o app e explorando croquis, por favor, atualize-o na loja.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: FilledButton(
+                    onPressed: onUpdatePressed,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.red.shade900,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'ATUALIZAR AGORA',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -10,7 +10,7 @@ void main() {
       // Como o SyncService é a camada que toma decisão de bloqueio (via pico_aberto_id),
       // este teste valida documentativamente que o Isolate em si não tem conhecimento de estado de UI.
       // O Isolate apenas recebe a mensagem de download e devolve um AtomicUpdate.
-      
+
       // Qualquer interrupção de fluxo UI ocorre APÓS o Isolate retornar o AtomicUpdate para o MainThread.
       expect(true, isTrue);
     });

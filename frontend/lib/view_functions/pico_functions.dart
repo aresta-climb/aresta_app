@@ -9,6 +9,7 @@ import 'via_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../theme/app_colors.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {
@@ -30,7 +31,13 @@ List<Botao> getOtherBotoes(List<Botao> botoes) {
 /// Constrói o corpo rolável principal da página do Pico.
 ///
 /// Ele extrai a descrição e itera por todos os setores disponíveis para renderizá-los.
-Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String cragId, [GlobalKey? mapaKey]) {
+Widget buildPicoBody(
+  BuildContext context,
+  Pico pico,
+  Croqui croqui,
+  String cragId, [
+  GlobalKey? mapaKey,
+]) {
   final secaoBotoes = getSecaoBotoes(croqui);
   final capaBotoes = getCapaBotoes(secaoBotoes);
   final otherBotoes = getOtherBotoes(secaoBotoes);
@@ -49,7 +56,7 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String crag
         ],
         if (pico.estado.isNotEmpty) _buildInfoRow('Estado', pico.estado),
         const SizedBox(height: 20),
-        
+
         if (capaBotoes.isNotEmpty) ...[
           ...capaBotoes.map((b) {
             final md = b.destino.secaoTextual;
@@ -66,24 +73,29 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String crag
           ...otherBotoes.map((b) => buildBotaoTile(context, b, cragId)),
           const SizedBox(height: 20),
         ],
-        
-        if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo() && pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
-          KeyedSubtree(
-            key: mapaKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader('Mapas Gerais'),
-                ...pico.mapasGerais.conteudo.mapas.map((mapa) => Padding(
-                  padding: const EdgeInsets.only(bottom: 15),
-                  child: MapaThumbnail(
-                    mapa: mapa,
-                    cragId: cragId,
-                  ),
-                )),
-              ],
-            ),
-          ),
+
+        if (pico.hasMapasGerais() &&
+            pico.mapasGerais.hasConteudo() &&
+            pico.mapasGerais.conteudo.mapas.isNotEmpty) ...[
+          (() {
+            final validMapas = pico.mapasGerais.conteudo.mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
+            if (validMapas.isNotEmpty) {
+              return KeyedSubtree(
+                key: mapaKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader('Mapas Gerais'),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: MapaThumbnail(mapas: validMapas, cragId: cragId),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          })(),
           const SizedBox(height: 10),
         ],
         _buildHeader('Setores'),
@@ -91,10 +103,20 @@ Widget buildPicoBody(BuildContext context, Pico pico, Croqui croqui, String crag
           Text('Nenhum elemento disponível.', style: TextStyle(color: fishBone))
         else
           ...pico.setoresOuGrupos.map((setorOuGrupo) {
-            if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor && setorOuGrupo.setor.hasConteudo()) {
-              return buildSectorTile(context, setorOuGrupo.setor.conteudo, cragId);
-            } else if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.grupo && setorOuGrupo.grupo.hasConteudo()) {
-              return buildGrupoTile(context, setorOuGrupo.grupo.conteudo, cragId);
+            if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.setor &&
+                setorOuGrupo.setor.hasConteudo()) {
+              return buildSectorTile(
+                context,
+                setorOuGrupo.setor.conteudo,
+                cragId,
+              );
+            } else if (setorOuGrupo.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+                setorOuGrupo.grupo.hasConteudo()) {
+              return buildGrupoTile(
+                context,
+                setorOuGrupo.grupo.conteudo,
+                cragId,
+              );
             }
             return const SizedBox.shrink();
           }),
@@ -138,7 +160,12 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
-Widget buildSectorTile(BuildContext context, Setor setor, String cragId, {Grupo? grupoContext}) {
+Widget buildSectorTile(
+  BuildContext context,
+  Setor setor,
+  String cragId, {
+  Grupo? grupoContext,
+}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 15),
     child: Material(
@@ -149,21 +176,22 @@ Widget buildSectorTile(BuildContext context, Setor setor, String cragId, {Grupo?
       ),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-      title: Text(
-        setor.nome,
-        style: TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          setor.nome,
+          style: TextStyle(
+            color: fishBone,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: Icon(Icons.chevron_right, color: beastHide),
+        onTap: () {
+          TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
+          AppNav.toSetor(context, setor: setor, grupoContext: grupoContext);
+        },
       ),
-      subtitle: setor.descricao.isNotEmpty
-          ? Text(setor.descricao, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
-          : null,
-      trailing: Icon(Icons.chevron_right, color: beastHide),
-      onTap: () {
-        TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
-        AppNav.toSetor(context, setor: setor, grupoContext: grupoContext);
-      },
     ),
-  ));
+  );
 }
 
 Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
@@ -177,21 +205,39 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
       ),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-      title: Text(
-        grupo.nome,
-        style: TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          grupo.nome,
+          style: TextStyle(
+            color: fishBone,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: Icon(Icons.folder, color: beastHide),
+        onTap: () {
+          TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
+          AppNav.toGrupo(context, grupo: grupo);
+        },
       ),
-      subtitle: grupo.descricao.isNotEmpty
-          ? Text(grupo.descricao, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: fishBone.withValues(alpha: 0.6), fontSize: 13))
-          : null,
-      trailing: Icon(Icons.folder, color: beastHide),
-      onTap: () {
-        TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
-        AppNav.toGrupo(context, grupo: grupo);
-      },
     ),
-  ));
+  );
+}
+
+List<Setor> getAllSetoresFromPico(Pico pico) {
+  final List<Setor> allSetores = [];
+  for (final sg in pico.setoresOuGrupos) {
+    if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+      allSetores.add(sg.setor.conteudo);
+    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+        sg.grupo.hasConteudo()) {
+      for (final s in sg.grupo.conteudo.setores) {
+        if (s.hasConteudo()) {
+          allSetores.add(s.conteudo);
+        }
+      }
+    }
+  }
+  return allSetores;
 }
 
 List<Escalada> getAllEscaladasFromPico(Pico pico) {
@@ -199,7 +245,8 @@ List<Escalada> getAllEscaladasFromPico(Pico pico) {
   for (final sg in pico.setoresOuGrupos) {
     if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
       allEscaladas.addAll(sg.setor.conteudo.escaladas);
-    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+        sg.grupo.hasConteudo()) {
       for (final s in sg.grupo.conteudo.setores) {
         if (s.hasConteudo()) {
           allEscaladas.addAll(s.conteudo.escaladas);
@@ -213,10 +260,15 @@ List<Escalada> getAllEscaladasFromPico(Pico pico) {
 Setor? findSetorForEscalada(Pico pico, Escalada target) {
   for (final sg in pico.setoresOuGrupos) {
     if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-      if (sg.setor.conteudo.escaladas.contains(target)) return sg.setor.conteudo;
-    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo && sg.grupo.hasConteudo()) {
+      if (sg.setor.conteudo.escaladas.contains(target)) {
+        return sg.setor.conteudo;
+      }
+    } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+        sg.grupo.hasConteudo()) {
       for (final s in sg.grupo.conteudo.setores) {
-        if (s.hasConteudo() && s.conteudo.escaladas.contains(target)) return s.conteudo;
+        if (s.hasConteudo() && s.conteudo.escaladas.contains(target)) {
+          return s.conteudo;
+        }
       }
     }
   }
@@ -228,13 +280,15 @@ bool isPicoBoulderArea(Pico pico) {
   return isBoulderArea(allEscaladas);
 }
 
-class ViaSearchDelegate extends SearchDelegate<Escalada?> {
+class PicoSearchDelegate extends SearchDelegate<Object?> {
   final Pico pico;
   final String cragId;
   late final List<Escalada> allEscaladas;
+  late final List<Setor> allSetores;
 
-  ViaSearchDelegate(this.pico, this.cragId) {
+  PicoSearchDelegate(this.pico, this.cragId) {
     allEscaladas = getAllEscaladasFromPico(pico);
+    allSetores = getAllSetoresFromPico(pico);
   }
 
   @override
@@ -242,15 +296,15 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     final theme = Theme.of(context);
     return theme.copyWith(
       appBarTheme: AppBarTheme(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        iconTheme: IconThemeData(color: beastHide),
+        backgroundColor: context.colors.deepBasalt,
+        iconTheme: const IconThemeData(color: Color(0xFFC04F34)),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        hintStyle: TextStyle(color: fishBone, fontSize: 14),
+        hintStyle: TextStyle(color: context.colors.ashGrey, fontSize: 14),
         border: InputBorder.none,
       ),
       textTheme: theme.textTheme.copyWith(
-        titleLarge: TextStyle(color: beastHide, fontSize: 16),
+        titleLarge: TextStyle(color: context.colors.chalkWhite, fontSize: 16),
       ),
     );
   }
@@ -258,9 +312,9 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
   @override
   String get searchFieldLabel {
     if (isPicoBoulderArea(pico)) {
-      return 'Buscar boulder (ex: V4)...';
+      return 'Buscar boulder (ex: V4) ou setor...';
     } else {
-      return 'Buscar via (ex: 7a)...';
+      return 'Buscar escalada (ex: 7a) ou setor...';
     }
   }
 
@@ -269,41 +323,41 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
     return [
       if (query.isNotEmpty)
         IconButton(
-          icon: Icon(Icons.clear, color: beastHide),
+          icon: const Icon(Icons.clear, color: Color(0xFFC04F34)),
           onPressed: () {
             query = '';
             showSuggestions(context);
           },
-        )
+        ),
     ];
   }
 
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: beastHide),
+      icon: const Icon(Icons.arrow_back, color: Color(0xFFC04F34)),
       onPressed: () => close(context, null),
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    return _buildList();
+    return _buildList(context);
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return _buildList();
+    return _buildList(context);
   }
 
-  Widget _buildList() {
+  Widget _buildList(BuildContext context) {
     if (query.isEmpty) {
-      return Container(color: nobleBlack);
+      return Container(color: context.colors.deepBasalt);
     }
 
     final queryLower = normalizeSearchString(query);
 
-    final fuse = Fuzzy<Escalada>(
+    final fuseEscaladas = Fuzzy<Escalada>(
       allEscaladas,
       options: FuzzyOptions(
         keys: [
@@ -322,54 +376,101 @@ class ViaSearchDelegate extends SearchDelegate<Escalada?> {
       ),
     );
 
-    final results = fuse.search(queryLower).map((r) => r.item).toList();
+    final fuseSetores = Fuzzy<Setor>(
+      allSetores,
+      options: FuzzyOptions(
+        keys: [
+          WeightedKey<Setor>(
+            name: 'nome',
+            getter: (s) => normalizeSearchString(s.nome),
+            weight: 1.0,
+          ),
+        ],
+        threshold: 0.4,
+      ),
+    );
+
+    final resultsEscaladas = fuseEscaladas
+        .search(queryLower)
+        .map((r) => r.item)
+        .toList();
+    final resultsSetores = fuseSetores
+        .search(queryLower)
+        .map((r) => r.item)
+        .toList();
+    final results = [...resultsSetores, ...resultsEscaladas];
 
     if (results.isEmpty) {
-      String emptyText = 'Nenhuma via encontrada.';
-      if (isPicoBoulderArea(pico)) {
-        emptyText = 'Nenhum boulder encontrado.';
-      }
-      
       return Container(
-        color: nobleBlack,
+        color: context.colors.deepBasalt,
         alignment: Alignment.center,
         child: Text(
-          emptyText,
-          style: TextStyle(color: fishBone, fontSize: 16),
+          'Nenhum resultado encontrado.',
+          style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
         ),
       );
     }
 
     return Container(
-      color: nobleBlack,
+      color: context.colors.deepBasalt,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: ListView.builder(
         itemCount: results.length,
         itemBuilder: (context, index) {
-          final escalada = results[index];
-          final nome = getEscaladaNome(escalada);
-          final grau = getGrauString(escalada);
-          final subtitle = grau.isNotEmpty ? 'Dificuldade: $grau' : null;
+          final item = results[index];
+
+          String title = '';
+          String? subtitle;
+          IconData icon = Icons.terrain;
+
+          if (item is Escalada) {
+            title = getEscaladaNome(item);
+            final grau = getGrauString(item);
+            subtitle = grau.isNotEmpty ? 'Dificuldade: $grau' : null;
+            icon = Icons.terrain;
+          } else if (item is Setor) {
+            title = item.nome;
+            subtitle = 'Setor';
+            icon = Icons.layers;
+          }
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Material(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: context.colors.caveShadow,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: beastHide.withValues(alpha: 0.2)),
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: context.colors.graniteEdge),
               ),
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-              title: Text(nome, style: TextStyle(color: fishBone, fontWeight: FontWeight.bold)),
-              subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: fishBone.withValues(alpha: 0.7), fontSize: 12)) : null,
-              leading: Icon(Icons.terrain, color: beastHide),
-              trailing: Icon(Icons.chevron_right, color: beastHide),
-              onTap: () {
-                close(context, escalada);
-              },
+                title: Text(
+                  title,
+                  style: TextStyle(
+                    color: context.colors.chalkWhite,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: subtitle != null
+                    ? Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: context.colors.ashGrey,
+                          fontSize: 12,
+                        ),
+                      )
+                    : null,
+                leading: Icon(icon, color: const Color(0xFFC04F34)),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFFC04F34),
+                ),
+                onTap: () {
+                  close(context, item);
+                },
+              ),
             ),
-          ));
+          );
         },
       ),
     );
@@ -390,7 +491,11 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
         leading: Icon(Icons.info_outline, color: beastHide),
         title: Text(
           botao.texto,
-          style: TextStyle(color: fishBone, fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: fishBone,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         trailing: Icon(Icons.chevron_right, color: beastHide),
         onTap: () {
@@ -398,12 +503,14 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
             final md = botao.destino.secaoTextual;
             final treeNav = TreeNavigationWrapper.currentTreeController;
             if (treeNav != null) {
-              treeNav.navigateTo(TextNode(
-                title: botao.texto,
-                content: md.conteudo,
-                cragId: cragId,
-                parent: treeNav.currentNode,
-              ));
+              treeNav.navigateTo(
+                TextNode(
+                  title: botao.texto,
+                  content: md.conteudo,
+                  cragId: cragId,
+                  parent: treeNav.currentNode,
+                ),
+              );
             }
           }
         },

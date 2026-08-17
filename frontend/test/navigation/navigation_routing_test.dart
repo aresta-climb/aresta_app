@@ -11,149 +11,342 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 void main() {
-  testWidgets('MapaInterativoPage is built with empty setores when a setorContext is provided', (WidgetTester tester) async {
-    // 1. Prepare Mock Data
-    final editorDeCroqui = EditorDeCroqui();
-    final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
-    final syncService = SyncService(datasetRepository: datasetRepo);
+  testWidgets(
+    'MapaInterativoPage is built with empty setores when a setorContext is provided',
+    (WidgetTester tester) async {
+      // 1. Prepare Mock Data
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
 
-    final croqui = Croqui();
-    final pico = Pico()..nome = 'Pico Teste';
-    
-    final setor1 = Setor()..nome = 'Setor 1';
-    final setor2 = Setor()..nome = 'Setor 2';
+      final croqui = Croqui();
+      final pico = Pico()..nome = 'Pico Teste';
 
-    pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor1));
-    pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor2));
+      final setor1 = Setor()..nome = 'Setor 1';
+      final setor2 = Setor()..nome = 'Setor 2';
 
-    final topoDataset = TopoDataset(
-      downloadedPicos: [
-        {
-          'id': 'crag123',
-          'data': {
-            'pico': pico,
-            'croqui': croqui,
-          }
-        }
-      ],
-      availablePicos: [],
-    );
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor1),
+      );
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor2),
+      );
 
-    // Inject data
-    datasetRepo.activeDataset.value = topoDataset;
+      final topoDataset = TopoDataset(
+        downloadedPicos: [
+          {
+            'id': 'crag123',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+        availablePicos: [],
+      );
 
-    // 2. Build the app
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TreeNavigationWrapper(
-          datasetRepo: datasetRepo,
-          syncService: syncService,
-          key: TreeNavigationWrapper.navKey,
+      // Inject data
+      datasetRepo.activeDataset.value = topoDataset;
+
+      // 2. Build the app
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
         ),
-      ),
-    );
+      );
 
-    // Wait for the home page to build
-    await tester.pump(const Duration(seconds: 1));
+      // Wait for the home page to build
+      await tester.pump(const Duration(seconds: 1));
 
-    // 3. Navigate to MapasCarrosselNode
-    final treeController = TreeNavigationWrapper.currentTreeController!;
-    
-    treeController.navigateTo(MapasCarrosselNode(
-      cragId: 'crag123',
-      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png', setorContextNome: 'Setor 1')],
-      initialIndex: 0,
-      parent: treeController.currentNode,
-    ));
+      // 3. Navigate to MapasCarrosselNode
+      final treeController = TreeNavigationWrapper.currentTreeController!;
 
-    // Wait for navigation and rebuild
-    await tester.pump(const Duration(seconds: 1));
-
-    // 4. Verify MapaInterativoPage is present
-    final mapaInterativoFinder = find.byType(MapaInterativoPage);
-    expect(mapaInterativoFinder, findsOneWidget);
-
-    // 5. Verify the injected properties
-    final MapaInterativoPage page = tester.widget(mapaInterativoFinder);
-    
-    // As it was navigated WITH a setorContextNome, `setorContext` MUST be injected.
-    expect(page.setorContext?.nome, 'Setor 1');
-  });
-
-  testWidgets('MapaInterativoPage is built with ALL setores when NO setorContext is provided', (WidgetTester tester) async {
-    // 1. Prepare Mock Data
-    final editorDeCroqui = EditorDeCroqui();
-    final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
-    final syncService = SyncService(datasetRepository: datasetRepo);
-
-    final croqui = Croqui();
-    final pico = Pico()..nome = 'Pico Teste';
-    
-    final setor1 = Setor()..nome = 'Setor 1';
-    final setor2 = Setor()..nome = 'Setor 2';
-
-    pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor1));
-    pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor2));
-
-    final topoDataset = TopoDataset(
-      downloadedPicos: [
-        {
-          'id': 'crag123',
-          'data': {
-            'pico': pico,
-            'croqui': croqui,
-          }
-        }
-      ],
-      availablePicos: [],
-    );
-
-    datasetRepo.activeDataset.value = topoDataset;
-
-    // 2. Build the app
-    await tester.pumpWidget(
-      MaterialApp(
-        home: TreeNavigationWrapper(
-          datasetRepo: datasetRepo,
-          syncService: syncService,
-          key: TreeNavigationWrapper.navKey,
+      treeController.navigateTo(
+        MapasCarrosselNode(
+          cragId: 'crag123',
+          mapas: [
+            CarrosselItemData(
+              mapaCaminhoImagem: 'test.png',
+              setorContextNome: 'Setor 1',
+            ),
+          ],
+          initialIndex: 0,
+          parent: treeController.currentNode,
         ),
-      ),
-    );
+      );
 
-    await tester.pump(const Duration(seconds: 1));
+      // Wait for navigation and rebuild
+      await tester.pump(const Duration(seconds: 1));
 
-    // 3. Navigate to MapasCarrosselNode WITHOUT a setorContextNome
-    final treeController = TreeNavigationWrapper.currentTreeController!;
-    
-    treeController.navigateTo(MapasCarrosselNode(
-      cragId: 'crag123',
-      mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png')],
-      initialIndex: 0,
-      parent: treeController.currentNode,
-    ));
+      // 4. Verify MapaInterativoPage is present
+      final mapaInterativoFinder = find.byType(MapaInterativoPage);
+      expect(mapaInterativoFinder, findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 1));
+      // 5. Verify the injected properties
+      final MapaInterativoPage page = tester.widget(mapaInterativoFinder);
 
-    // 4. Verify MapaInterativoPage is present inside Carrossel
-    final mapaInterativoFinder = find.byType(MapaInterativoPage);
-    expect(mapaInterativoFinder, findsWidgets);
+      // As it was navigated WITH a setorContextNome, `setorContext` MUST be injected.
+      expect(page.setorContext?.nome, 'Setor 1');
+    },
+  );
 
-    // 5. Verify the injected properties on the first page
-    final MapaInterativoPage page = tester.widget(mapaInterativoFinder.first);
-    
-    // As it was navigated WITHOUT a setorContextNome (i.e. Mapa Geral), 
-    // `setorContext` MUST be null.
-    expect(page.setorContext, isNull);
-  });
+  testWidgets(
+    'MapaInterativoPage is built with ALL setores when NO setorContext is provided',
+    (WidgetTester tester) async {
+      // 1. Prepare Mock Data
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+
+      final croqui = Croqui();
+      final pico = Pico()..nome = 'Pico Teste';
+
+      final setor1 = Setor()..nome = 'Setor 1';
+      final setor2 = Setor()..nome = 'Setor 2';
+
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor1),
+      );
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor2),
+      );
+
+      final topoDataset = TopoDataset(
+        downloadedPicos: [
+          {
+            'id': 'crag123',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+        availablePicos: [],
+      );
+
+      datasetRepo.activeDataset.value = topoDataset;
+
+      // 2. Build the app
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            key: TreeNavigationWrapper.navKey,
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      // 3. Navigate to MapasCarrosselNode WITHOUT a setorContextNome
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+
+      treeController.navigateTo(
+        MapasCarrosselNode(
+          cragId: 'crag123',
+          mapas: [CarrosselItemData(mapaCaminhoImagem: 'test.png')],
+          initialIndex: 0,
+          parent: treeController.currentNode,
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      // 4. Verify MapaInterativoPage is present inside Carrossel
+      final mapaInterativoFinder = find.byType(MapaInterativoPage);
+      expect(mapaInterativoFinder, findsWidgets);
+
+      // 5. Verify the injected properties on the first page
+      final MapaInterativoPage page = tester.widget(mapaInterativoFinder.first);
+
+      // As it was navigated WITHOUT a setorContextNome (i.e. Mapa Geral),
+      // `setorContext` MUST be null.
+      expect(page.setorContext, isNull);
+    },
+  );
 
   group('Declarative Navigator TDD', () {
-    testWidgets('AppRouter renders Navigator with multiple pages based on tree history', (WidgetTester tester) async {
+    testWidgets(
+      'AppRouter renders Navigator with multiple pages based on tree history',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final pico = Pico()..nome = 'Pico Teste';
+        datasetRepo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': '123',
+              'data': {'pico': pico, 'croqui': Croqui()},
+            },
+          ],
+          availablePicos: [],
+        );
+        final syncService = SyncService(datasetRepository: datasetRepo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final treeController = TreeNavigationWrapper.currentTreeController!;
+
+        // Navigate to a deeper node
+        treeController.navigateTo(
+          PicoNode(cragId: '123', parent: treeController.currentNode),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        treeController.navigateTo(
+          SetorNode(
+            cragId: '123',
+            setorNome: 'S1',
+            parent: treeController.currentNode,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        // Find Navigator directly rendered by TreeNavigationWrapper
+        final navigatorFinder = find.descendant(
+          of: find.byType(TreeNavigationWrapper),
+          matching: find.byType(Navigator),
+        );
+
+        expect(navigatorFinder, findsOneWidget);
+        final navigator = tester.widget<Navigator>(navigatorFinder);
+
+        // Should have 3 pages: Home, Pico, Setor
+        expect(navigator.pages.length, 3);
+        expect(navigator.pages[0].key, const ValueKey('TabsPage'));
+        expect(navigator.pages[1].key, const ValueKey('PicoNode(123)'));
+        expect(
+          navigator.pages[2].key,
+          const ValueKey('SetorNode(123, S1, null)'),
+        );
+      },
+    );
+
+    testWidgets(
+      'System back button or Navigator pop triggers treeController.goBack()',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final pico = Pico()..nome = 'Pico Teste';
+        datasetRepo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': '123',
+              'data': {'pico': pico, 'croqui': Croqui()},
+            },
+          ],
+          availablePicos: [],
+        );
+        final syncService = SyncService(datasetRepository: datasetRepo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final treeController = TreeNavigationWrapper.currentTreeController!;
+
+        // Navigate deeper
+        treeController.navigateTo(
+          PicoNode(cragId: '123', parent: treeController.currentNode),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(treeController.currentNode, isA<PicoNode>());
+
+        // Simulate a Navigator pop (e.g., from an AppBar back button)
+        final BuildContext navContext = tester.element(
+          find.descendant(
+            of: find.byType(TreeNavigationWrapper),
+            matching: find.byType(Navigator),
+          ),
+        );
+
+        Navigator.maybePop(navContext);
+        await tester.pump(const Duration(seconds: 1));
+
+        // The treeController should have gone back to HomeNode
+        expect(treeController.currentNode, isA<HomeNode>());
+      },
+    );
+
+    testWidgets(
+      'TextNode generates a ModalBottomSheetPage in the Navigator declaratively',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final pico = Pico()..nome = 'Pico Teste';
+        datasetRepo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': '123',
+              'data': {'pico': pico, 'croqui': Croqui()},
+            },
+          ],
+          availablePicos: [],
+        );
+        final syncService = SyncService(datasetRepository: datasetRepo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final treeController = TreeNavigationWrapper.currentTreeController!;
+
+        // Navigate deeper
+        treeController.navigateTo(
+          PicoNode(cragId: '123', parent: treeController.currentNode),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final navigatorFinder = find.descendant(
+          of: find.byType(TreeNavigationWrapper),
+          matching: find.byType(Navigator),
+        );
+        var navigator = tester.widget<Navigator>(navigatorFinder);
+        expect(navigator.pages.length, 2);
+
+        // Navigate to TextNode (Modal)
+        treeController.navigateTo(
+          TextNode(
+            title: 'Modal',
+            content: 'Markdown',
+            cragId: '123',
+            parent: treeController.currentNode,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        navigator = tester.widget<Navigator>(navigatorFinder);
+
+        // Should now have pushed a new page (TabsPage, PicoNode, ModalBottomSheetPage for TextNode)
+        expect(navigator.pages.length, 3);
+        expect(navigator.pages[2].key, const ValueKey('TextNode(Modal)'));
+      },
+    );
+
+    testWidgets('MapaGlobalNode generates MapaGlobalPage directly', (
+      WidgetTester tester,
+    ) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final pico = Pico()..nome = 'Pico Teste';
-      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
-        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
-      ], availablePicos: []);
       final syncService = SyncService(datasetRepository: datasetRepo);
 
       await tester.pumpWidget(
@@ -169,213 +362,117 @@ void main() {
 
       final treeController = TreeNavigationWrapper.currentTreeController!;
 
-      // Navigate to a deeper node
-      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
-      await tester.pump(const Duration(seconds: 1));
-
-      treeController.navigateTo(SetorNode(cragId: '123', setorNome: 'S1', parent: treeController.currentNode));
-      await tester.pump(const Duration(seconds: 1));
-
-      // Find Navigator directly rendered by TreeNavigationWrapper
-      final navigatorFinder = find.descendant(
-        of: find.byType(TreeNavigationWrapper),
-        matching: find.byType(Navigator),
+      treeController.navigateTo(
+        MapaGlobalNode(crags: [], parent: treeController.currentNode),
       );
-
-      expect(navigatorFinder, findsOneWidget);
-      final navigator = tester.widget<Navigator>(navigatorFinder);
-      
-      // Should have 3 pages: Home, Pico, Setor
-      expect(navigator.pages.length, 3);
-      expect(navigator.pages[0].key, const ValueKey('TabsPage'));
-      expect(navigator.pages[1].key, const ValueKey('PicoNode(123)'));
-      expect(navigator.pages[2].key, const ValueKey('SetorNode(123, S1, null)'));
-    });
-
-    testWidgets('System back button or Navigator pop triggers treeController.goBack()', (WidgetTester tester) async {
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final pico = Pico()..nome = 'Pico Teste';
-      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
-        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
-      ], availablePicos: []);
-      final syncService = SyncService(datasetRepository: datasetRepo);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            key: TreeNavigationWrapper.navKey,
-          ),
-        ),
-      );
-      await tester.pump(const Duration(seconds: 1));
-
-      final treeController = TreeNavigationWrapper.currentTreeController!;
-
-      // Navigate deeper
-      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
-      await tester.pump(const Duration(seconds: 1));
-      
-      expect(treeController.currentNode, isA<PicoNode>());
-
-      // Simulate a Navigator pop (e.g., from an AppBar back button)
-      final BuildContext navContext = tester.element(find.descendant(
-        of: find.byType(TreeNavigationWrapper),
-        matching: find.byType(Navigator),
-      ));
-      
-      Navigator.maybePop(navContext);
-      await tester.pump(const Duration(seconds: 1));
-
-      // The treeController should have gone back to HomeNode
-      expect(treeController.currentNode, isA<HomeNode>());
-    });
-
-    testWidgets('TextNode generates a ModalBottomSheetPage in the Navigator declaratively', (WidgetTester tester) async {
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final pico = Pico()..nome = 'Pico Teste';
-      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
-        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
-      ], availablePicos: []);
-      final syncService = SyncService(datasetRepository: datasetRepo);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            key: TreeNavigationWrapper.navKey,
-          ),
-        ),
-      );
-      await tester.pump(const Duration(seconds: 1));
-
-      final treeController = TreeNavigationWrapper.currentTreeController!;
-
-      // Navigate deeper
-      treeController.navigateTo(PicoNode(cragId: '123', parent: treeController.currentNode));
-      await tester.pump(const Duration(seconds: 1));
-      
-      final navigatorFinder = find.descendant(
-        of: find.byType(TreeNavigationWrapper),
-        matching: find.byType(Navigator),
-      );
-      var navigator = tester.widget<Navigator>(navigatorFinder);
-      expect(navigator.pages.length, 2);
-
-      // Navigate to TextNode (Modal)
-      treeController.navigateTo(TextNode(title: 'Modal', content: 'Markdown', cragId: '123', parent: treeController.currentNode));
-      await tester.pump(const Duration(seconds: 1));
-
-      navigator = tester.widget<Navigator>(navigatorFinder);
-      
-      // Should now have pushed a new page (TabsPage, PicoNode, ModalBottomSheetPage for TextNode)
-      expect(navigator.pages.length, 3);
-      expect(navigator.pages[2].key, const ValueKey('TextNode(Modal)'));
-    });
-
-    testWidgets('MapaGlobalNode generates MapaGlobalPage directly', (WidgetTester tester) async {
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final syncService = SyncService(datasetRepository: datasetRepo);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            key: TreeNavigationWrapper.navKey,
-          ),
-        ),
-      );
-      await tester.pump(const Duration(seconds: 1));
-
-      final treeController = TreeNavigationWrapper.currentTreeController!;
-      
-      treeController.navigateTo(MapaGlobalNode(
-        crags: [],
-        parent: treeController.currentNode,
-      ));
       await tester.pump(const Duration(seconds: 1));
 
       expect(treeController.currentNode, isA<MapaGlobalNode>());
       expect(find.byType(MapaGlobalPage), findsOneWidget);
     });
 
-    testWidgets('MapasCarrosselNode generates MapasCarrosselPage and passes cragId', (WidgetTester tester) async {
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final pico = Pico()..nome = 'Pico Teste';
-      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
-        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
-      ], availablePicos: []);
-      final syncService = SyncService(datasetRepository: datasetRepo);
+    testWidgets(
+      'MapasCarrosselNode generates MapasCarrosselPage and passes cragId',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final pico = Pico()..nome = 'Pico Teste';
+        datasetRepo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': '123',
+              'data': {'pico': pico, 'croqui': Croqui()},
+            },
+          ],
+          availablePicos: [],
+        );
+        final syncService = SyncService(datasetRepository: datasetRepo);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            key: TreeNavigationWrapper.navKey,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
           ),
-        ),
-      );
-      await tester.pump(const Duration(seconds: 1));
+        );
+        await tester.pump(const Duration(seconds: 1));
 
-      final treeController = TreeNavigationWrapper.currentTreeController!;
-      
-      treeController.navigateTo(MapasCarrosselNode(
-        cragId: '123',
-        initialIndex: 0,
-        mapas: [],
-        parent: treeController.currentNode,
-      ));
-      await tester.pump(const Duration(seconds: 1));
+        final treeController = TreeNavigationWrapper.currentTreeController!;
 
-      expect(treeController.currentNode, isA<MapasCarrosselNode>());
-      expect(find.byType(MapasCarrosselPage), findsOneWidget);
-      expect(find.text('Unknown Node'), findsNothing);
-    });
-
-    testWidgets('MapasCarrosselNode receives grupoContext when passing grupoContextNome in CarrosselItemData', (WidgetTester tester) async {
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final pico = Pico()..nome = 'Pico Teste';
-      final grupo = Grupo()..nome = 'Grupo Teste';
-      final mapa = Mapa()..caminhoImagemMapa = 'mapa_setor.png';
-      final setor = Setor()..nome = 'Setor Teste'..mapas.add(mapa);
-      grupo.setores.add(ArquivoSetor()..conteudo = setor);
-      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo));
-      
-      datasetRepo.activeDataset.value = TopoDataset(downloadedPicos: [
-        {'id': '123', 'data': {'pico': pico, 'croqui': Croqui()}}
-      ], availablePicos: []);
-      final syncService = SyncService(datasetRepository: datasetRepo);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: datasetRepo,
-            syncService: syncService,
-            key: TreeNavigationWrapper.navKey,
+        treeController.navigateTo(
+          MapasCarrosselNode(
+            cragId: '123',
+            initialIndex: 0,
+            mapas: [],
+            parent: treeController.currentNode,
           ),
-        ),
-      );
-      await tester.pump(const Duration(seconds: 1));
+        );
+        await tester.pump(const Duration(seconds: 1));
 
-      final treeController = TreeNavigationWrapper.currentTreeController!;
-      
-      treeController.navigateTo(MapasCarrosselNode(
-        cragId: '123',
-        mapas: [CarrosselItemData(
-          mapaCaminhoImagem: 'mapa_setor.png',
-          setorContextNome: 'Setor Teste',
-          grupoContextNome: 'Grupo Teste',
-        )],
-        initialIndex: 0,
-        parent: treeController.currentNode,
-      ));
-      await tester.pump(const Duration(seconds: 1));
+        expect(treeController.currentNode, isA<MapasCarrosselNode>());
+        expect(find.byType(MapasCarrosselPage), findsOneWidget);
+        expect(find.text('Unknown Node'), findsNothing);
+      },
+    );
 
-      expect(find.byType(MapasCarrosselPage), findsOneWidget);
-    });
+    testWidgets(
+      'MapasCarrosselNode receives grupoContext when passing grupoContextNome in CarrosselItemData',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final pico = Pico()..nome = 'Pico Teste';
+        final grupo = Grupo()..nome = 'Grupo Teste';
+        final mapa = Mapa()..caminhoImagemMapa = 'mapa_setor.png';
+        final setor = Setor()
+          ..nome = 'Setor Teste'
+          ..mapas.add(mapa);
+        grupo.setores.add(ArquivoSetor()..conteudo = setor);
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo),
+        );
+
+        datasetRepo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': '123',
+              'data': {'pico': pico, 'croqui': Croqui()},
+            },
+          ],
+          availablePicos: [],
+        );
+        final syncService = SyncService(datasetRepository: datasetRepo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final treeController = TreeNavigationWrapper.currentTreeController!;
+
+        treeController.navigateTo(
+          MapasCarrosselNode(
+            cragId: '123',
+            mapas: [
+              CarrosselItemData(
+                mapaCaminhoImagem: 'mapa_setor.png',
+                setorContextNome: 'Setor Teste',
+                grupoContextNome: 'Grupo Teste',
+              ),
+            ],
+            initialIndex: 0,
+            parent: treeController.currentNode,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byType(MapasCarrosselPage), findsOneWidget);
+      },
+    );
   });
 }

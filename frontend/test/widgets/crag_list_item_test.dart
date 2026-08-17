@@ -5,7 +5,8 @@ import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockPathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
   final String tempPath;
   MockPathProviderPlatform(this.tempPath);
 
@@ -22,101 +23,68 @@ void main() {
     final Map<String, dynamic> sampleCrag = {
       'nome': 'Pedra do Baú',
       'local': 'São Bento do Sapucaí, SP',
-      'dataUpdate': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+      'dataUpdate': DateTime.now()
+          .subtract(const Duration(days: 2))
+          .toIso8601String(),
       'isDownloaded': false,
       'thumbnailUrl': '',
     };
 
-    testWidgets('Deve renderizar inicialmente em estado colapsado', (WidgetTester tester) async {
+    testWidgets('Deve renderizar os dados do pico no card', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {}),
+            body: buildCragListItem(
+              sampleCrag,
+              ValueNotifier<Map<String, double>>({}),
+              () {},
+            ),
           ),
         ),
       );
 
       // Verifica elementos básicos
-      expect(find.text('Pedra do Baú'), findsOneWidget);
-      expect(find.text('São Bento do Sapucaí, SP'), findsOneWidget);
-      
-      // Verifica se o AnimatedCrossFade está no estado colapsado
-      final crossFade = tester.widget<AnimatedCrossFade>(find.byType(AnimatedCrossFade));
-      expect(crossFade.crossFadeState, equals(CrossFadeState.showFirst));
-      
-      // Deve mostrar o ícone de localização
-      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.text('PEDRA DO BAÚ'), findsOneWidget); // UPPER CASE NOW
     });
 
-    testWidgets('Deve expandir ao ser tocado e mostrar informações extras', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {}),
+    testWidgets(
+      'Deve abrir bottom sheet de download ao clicar se nao baixado',
+      (WidgetTester tester) async {
+        bool downloadChamado = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: buildCragListItem(
+                sampleCrag,
+                ValueNotifier<Map<String, double>>({}),
+                () {
+                  downloadChamado = true;
+                },
+              ),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Toca no card para expandir
-      await tester.tap(find.text('Pedra do Baú'));
-      await tester.pumpAndSettle(); // Aguarda as animações
+        // Clicar no card
+        await tester.tap(find.text('PEDRA DO BAÚ'));
+        await tester.pumpAndSettle();
 
-      // Agora deve mostrar o botão de download
-      expect(find.text('BAIXAR'), findsOneWidget);
-      
-      // O subtítulo deve ter mudado para o tempo relativo (AnimatedSwitcher)
-      expect(find.textContaining('atualizado há 2 dias'), findsOneWidget);
-      expect(find.byIcon(Icons.access_time_rounded), findsOneWidget);
-      
-      // Deve mostrar os detalhes extras na área expandida
-      expect(find.text('Localização'), findsOneWidget);
-      expect(find.text('Última atualização'), findsOneWidget);
-    });
+        // Verifica se abriu o bottom sheet com botão BAIXAR CROQUI
+        expect(find.text('BAIXAR CROQUI'), findsOneWidget);
 
-    testWidgets('Deve chamar o callback onDownload ao clicar no botão', (WidgetTester tester) async {
-      bool downloadChamado = false;
+        // Clicar no botão de baixar no bottom sheet
+        await tester.tap(find.text('BAIXAR CROQUI'));
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(sampleCrag, ValueNotifier<Map<String, double>>({}), () {
-              downloadChamado = true;
-            }),
-          ),
-        ),
-      );
+        expect(downloadChamado, isTrue);
+      },
+    );
 
-      // Expandir primeiro
-      await tester.tap(find.text('Pedra do Baú'));
-      await tester.pumpAndSettle();
-
-      // Clicar no botão de baixar
-      await tester.tap(find.text('BAIXAR'));
-      
-      expect(downloadChamado, isTrue);
-    });
-
-    testWidgets('Deve mostrar botão para abrir se já estiver baixado', (WidgetTester tester) async {
-      final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
-      downloadedCrag['isDownloaded'] = true;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(downloadedCrag, ValueNotifier<Map<String, double>>({}), () {}),
-          ),
-        ),
-      );
-
-      // Expandir
-      await tester.tap(find.text('Pedra do Baú'));
-      await tester.pumpAndSettle();
-
-      // Verifica se o texto do botão mudou
-      expect(find.text('ABRIR CROQUI'), findsOneWidget);
-      expect(find.byIcon(Icons.folder_open_rounded), findsOneWidget);
-    });
-    testWidgets('Deve chamar o callback onOpen ao clicar no botão ABRIR CROQUI se já baixado', (WidgetTester tester) async {
+    testWidgets('Deve chamar onOpen ao clicar no card se ja baixado', (
+      WidgetTester tester,
+    ) async {
       final downloadedCrag = Map<String, dynamic>.from(sampleCrag);
       downloadedCrag['isDownloaded'] = true;
 
@@ -125,66 +93,84 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragListItem(downloadedCrag, ValueNotifier<Map<String, double>>({}), () {}, onOpen: () {
-              openChamado = true;
-            }),
+            body: buildCragListItem(
+              downloadedCrag,
+              ValueNotifier<Map<String, double>>({}),
+              () {},
+              onOpen: () {
+                openChamado = true;
+              },
+            ),
           ),
         ),
       );
 
-      // Expandir primeiro
-      await tester.tap(find.text('Pedra do Baú'));
+      // Clicar no card
+      await tester.tap(find.text('PEDRA DO BAÚ'));
       await tester.pumpAndSettle();
 
-      // Clicar no botão de abrir
-      await tester.tap(find.text('ABRIR CROQUI'));
-      
       expect(openChamado, isTrue);
     });
   });
 
   group('_buildCragIcon Tests', () {
-    testWidgets('Deve usar FutureBuilder<Directory> (tenta carregar arquivo local) se cragId existir', (WidgetTester tester) async {
-      final Map<String, dynamic> crag = {
-        'id': 'pico_offline',
-        'nome': 'Pico Local',
-        'thumbnailUrl': 'https://serving.arestaclimb.com/v3/thumbnails/pico_offline.webp',
-      };
+    testWidgets(
+      'Deve usar FutureBuilder<Directory> (tenta carregar arquivo local) se cragId existir',
+      (WidgetTester tester) async {
+        final Map<String, dynamic> crag = {
+          'id': 'pico_offline',
+          'nome': 'Pico Local',
+          'thumbnailUrl':
+              'https://serving.arestaclimb.com/v3/thumbnails/pico_offline.webp',
+        };
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(crag, ValueNotifier<Map<String, double>>({}), () {}),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: buildCragListItem(
+                crag,
+                ValueNotifier<Map<String, double>>({}),
+                () {},
+              ),
+            ),
           ),
-        ),
-      );
+        );
 
-      final finder = find.byType(FutureBuilder<Directory>);
-      expect(finder, findsOneWidget);
-    });
+        final finder = find.byType(FutureBuilder<Directory>);
+        expect(finder, findsOneWidget);
+      },
+    );
 
-    testWidgets('Deve usar icone de fallback se cragId NAO existir (sem imagens de rede)', (WidgetTester tester) async {
-      final Map<String, dynamic> crag = {
-        'nome': 'Pico Sem ID',
-        'thumbnailUrl': 'https://serving.arestaclimb.com/v3/thumbnails/pico_network.webp',
-      };
+    testWidgets(
+      'Deve usar icone de fallback se cragId NAO existir (sem imagens de rede)',
+      (WidgetTester tester) async {
+        final Map<String, dynamic> crag = {
+          'nome': 'Pico Sem ID',
+          'thumbnailUrl':
+              'https://serving.arestaclimb.com/v3/thumbnails/pico_network.webp',
+        };
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: buildCragListItem(crag, ValueNotifier<Map<String, double>>({}), () {}),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: buildCragListItem(
+                crag,
+                ValueNotifier<Map<String, double>>({}),
+                () {},
+              ),
+            ),
           ),
-        ),
-      );
+        );
 
-      final futureBuilderFinder = find.byType(FutureBuilder<Directory>);
-      expect(futureBuilderFinder, findsNothing);
-      
-      final imageFinder = find.byType(Image);
-      expect(imageFinder, findsNothing);
+        final futureBuilderFinder = find.byType(FutureBuilder<Directory>);
+        expect(futureBuilderFinder, findsNothing);
 
-      final iconFinder = find.byIcon(Icons.terrain);
-      expect(iconFinder, findsOneWidget);
-    });
+        final imageFinder = find.byType(Image);
+        expect(imageFinder, findsNothing);
+
+        final iconFinder = find.byIcon(Icons.terrain);
+        expect(iconFinder, findsOneWidget);
+      },
+    );
   });
 }

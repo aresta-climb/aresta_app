@@ -11,36 +11,40 @@ import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
-import '../pages/terms_of_use.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:frontend/widgets/app_version_checker.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
 String normalizeEditorUrl(String rawUrl) {
   String checkUrl = rawUrl.trim();
   if (checkUrl.isEmpty) return checkUrl;
-  
+
   final lowerUrl = checkUrl.toLowerCase();
-  if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://') && !lowerUrl.startsWith('aresta-zip://')) {
-    if (lowerUrl.startsWith('192.168.') || lowerUrl.startsWith('10.') || lowerUrl.startsWith('127.') || lowerUrl.startsWith('localhost')) {
+  if (!lowerUrl.startsWith('http://') &&
+      !lowerUrl.startsWith('https://') &&
+      !lowerUrl.startsWith('aresta-zip://')) {
+    if (lowerUrl.startsWith('192.168.') ||
+        lowerUrl.startsWith('10.') ||
+        lowerUrl.startsWith('127.') ||
+        lowerUrl.startsWith('localhost')) {
       checkUrl = 'http://$checkUrl';
     } else {
       checkUrl = 'https://$checkUrl';
     }
   }
-  
+
   if (checkUrl.endsWith('/')) {
     checkUrl = checkUrl.substring(0, checkUrl.length - 1);
   }
-  
+
   return checkUrl;
 }
 
 /// Tenta conectar ao repositório do editor validando a URL fornecida.
 Future<bool> conectarEditor(
-  BuildContext context, 
+  BuildContext context,
   DatasetRepository datasetRepo,
-  EditorDeCroqui configService, 
+  EditorDeCroqui configService,
   String url,
 ) async {
   if (url.isEmpty) return false;
@@ -48,18 +52,22 @@ Future<bool> conectarEditor(
   try {
     // Valida se o índice está acessível na URL fornecida
     String checkUrl = normalizeEditorUrl(url);
-    
+
     if (checkUrl.toLowerCase().endsWith('.zip')) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aviso: Arquivos .zip não são mais suportados. Use .croqui')),
+          const SnackBar(
+            content: Text(
+              'Aviso: Arquivos .zip não são mais suportados. Use .croqui',
+            ),
+          ),
         );
       }
       return false;
     }
-    
+
     final client = ZipInterceptorClient();
-    
+
     // Se for um arquivo Croqui, precisamos baixar o arquivo inteiro primeiro
     if (checkUrl.toLowerCase().endsWith('.croqui')) {
       final directory = await getApplicationDocumentsDirectory();
@@ -67,30 +75,45 @@ Future<bool> conectarEditor(
       if (!await editedDir.exists()) {
         await editedDir.create(recursive: true);
       }
-      
+
       final safeName = 'imported_repo.croqui';
       final savedFile = File('${editedDir.path}/$safeName');
-      
+
       // Busca o binário zip real se for uma URL remota
       if (!checkUrl.startsWith('aresta-zip')) {
-         // Opcional: mostrar um SnackBar de "Baixando croqui..." aqui seria bom
-         final zipResponse = await client.get(Uri.parse(checkUrl)).timeout(const Duration(seconds: 30));
-         if (zipResponse.statusCode != 200) {
-           throw Exception('Falha ao baixar arquivo .croqui (Status ${zipResponse.statusCode})');
-         }
-         await savedFile.writeAsBytes(zipResponse.bodyBytes);
+        // Opcional: mostrar um SnackBar de "Baixando croqui..." aqui seria bom
+        final zipResponse = await client
+            .get(Uri.parse(checkUrl))
+            .timeout(const Duration(seconds: 30));
+        if (zipResponse.statusCode != 200) {
+          throw Exception(
+            'Falha ao baixar arquivo .croqui (Status ${zipResponse.statusCode})',
+          );
+        }
+        await savedFile.writeAsBytes(zipResponse.bodyBytes);
       }
-      
-      final ghostUrl = checkUrl.startsWith('aresta-zip') ? checkUrl : Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
-      
+
+      final ghostUrl = checkUrl.startsWith('aresta-zip')
+          ? checkUrl
+          : Uri.file(
+              savedFile.path,
+            ).toString().replaceFirst('file://', 'aresta-zip://');
+
       // Agora validamos se o zip que baixamos tem um índice válido dentro dele!
-      final zipTestResponse = await client.get(Uri.parse('$ghostUrl/indice.binarypb')).timeout(const Duration(seconds: 5));
+      final zipTestResponse = await client
+          .get(Uri.parse('$ghostUrl/indice.binarypb'))
+          .timeout(const Duration(seconds: 5));
       if (zipTestResponse.statusCode != 200) {
-         throw Exception('O arquivo .croqui baixado é inválido ou está corrompido.');
+        throw Exception(
+          'O arquivo .croqui baixado é inválido ou está corrompido.',
+        );
       }
-      
-      await configService.activateExperimental(url: ghostUrl, forceResetTimer: false);
-      
+
+      await configService.activateExperimental(
+        url: ghostUrl,
+        forceResetTimer: false,
+      );
+
       final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncIndex();
       await datasetRepo.init();
@@ -102,10 +125,12 @@ Future<bool> conectarEditor(
       final response = await client
           .get(Uri.parse('$resolvedUrl/indice.binarypb'))
           .timeout(const Duration(seconds: 5));
-          
+
       if (response.statusCode == 200) {
-        
-        await configService.activateExperimental(url: resolvedUrl, forceResetTimer: false);
+        await configService.activateExperimental(
+          url: resolvedUrl,
+          forceResetTimer: false,
+        );
         final syncService = SyncService(datasetRepository: datasetRepo);
         await syncService.syncIndex();
         await datasetRepo.init();
@@ -114,7 +139,11 @@ Future<bool> conectarEditor(
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro: Não foi possível acessar o índice (Status ${response.statusCode})')),
+            SnackBar(
+              content: Text(
+                'Erro: Não foi possível acessar o índice (Status ${response.statusCode})',
+              ),
+            ),
           );
         }
         return false;
@@ -131,31 +160,41 @@ Future<bool> conectarEditor(
 }
 
 /// Permite ao usuário selecionar e importar um arquivo .croqui local.
-Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datasetRepo) async {
+Future<void> importarArquivoCroqui(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+) async {
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
-  
+
   try {
-    final fp.FilePickerResult? result = await fp.FilePicker.pickFiles(
+    final fp.PlatformFile? pickedFile = await fp.FilePicker.pickFile(
       type: fp.FileType.any,
     );
 
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    if (pickedFile != null && pickedFile.path != null) {
+      final path = pickedFile.path!;
       if (!path.toLowerCase().endsWith('.croqui')) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aviso: O arquivo selecionado não tem a extensão .croqui')),
+            const SnackBar(
+              content: Text(
+                'Aviso: O arquivo selecionado não tem a extensão .croqui',
+              ),
+            ),
           );
         }
         return;
       }
       final file = File(path);
       final directory = await getApplicationDocumentsDirectory();
-      
+
       // Feedback visual de processamento
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Processando arquivo...'), duration: Duration(seconds: 1)),
+          const SnackBar(
+            content: Text('Processando arquivo...'),
+            duration: Duration(seconds: 1),
+          ),
         );
       }
 
@@ -165,23 +204,34 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
       }
       final safeName = 'imported_repo.croqui';
       final savedFile = await file.copy('${editedDir.path}/$safeName');
-      
-      final ghostUrl = Uri.file(savedFile.path).toString().replaceFirst('file://', 'aresta-zip://');
-      
+
+      final ghostUrl = Uri.file(
+        savedFile.path,
+      ).toString().replaceFirst('file://', 'aresta-zip://');
+
       // Valida se o croqui que importamos é válido e pode ser lido
       final client = ZipInterceptorClient();
-      final zipTestResponse = await client.get(Uri.parse('$ghostUrl/indice.binarypb')).timeout(const Duration(seconds: 5));
+      final zipTestResponse = await client
+          .get(Uri.parse('$ghostUrl/indice.binarypb'))
+          .timeout(const Duration(seconds: 5));
       if (zipTestResponse.statusCode != 200) {
-         if (context.mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Erro: O arquivo .croqui importado não é válido ou está corrompido.')),
-           );
-         }
-         return;
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Erro: O arquivo .croqui importado não é válido ou está corrompido.',
+              ),
+            ),
+          );
+        }
+        return;
       }
-      
-      await configService.activateExperimental(url: ghostUrl, forceResetTimer: false);
-      
+
+      await configService.activateExperimental(
+        url: ghostUrl,
+        forceResetTimer: false,
+      );
+
       // Tenta sincronizar o índice usando o interceptor
       final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncIndex();
@@ -191,7 +241,9 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Croqui experimental importado!')),
         );
-        TelemetryService.instance.logAcaoConfiguracoes('importar_arquivo_croqui');
+        TelemetryService.instance.logAcaoConfiguracoes(
+          'importar_arquivo_croqui',
+        );
       }
     }
   } catch (e) {
@@ -200,11 +252,16 @@ Future<void> importarArquivoCroqui(BuildContext context, DatasetRepository datas
 }
 
 /// Exibe o diálogo para inserir a URL do repositório do editor.
-void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {String? titulo}) {
+void mostrarDialogConexao(
+  BuildContext context,
+  DatasetRepository datasetRepo, {
+  String? titulo,
+}) {
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
   // Inicia vazio, pois a URL atual já é exibida na interface de configurações
   final TextEditingController urlController = TextEditingController();
   bool isLoading = false;
+  final brandColor = const Color(0xFFC04F34);
 
   showDialog(
     context: context,
@@ -212,87 +269,164 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
       return StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: Theme.of(context).dialogTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-            title: Text(
-              titulo ?? 'Conectar como editor', 
-              style: TextStyle(color: beastHide, fontSize: 18),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            backgroundColor: context.colors.caveShadow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: context.colors.graniteEdge),
             ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                Text(
-                  'Insira a URL do repositório experimental para testar novos croquis.',
-                  style: TextStyle(color: fishBone, fontSize: 13),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: urlController,
-                  style: TextStyle(color: fishBone, fontSize: 14),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    hintText: 'ex: aresta-climb.github.io/aresta_serving',
-                    hintStyle: TextStyle(color: fishBone.withValues(alpha: 0.5), fontSize: 13),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: mossRock),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: beastHide),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.qr_code_scanner, color: beastHide),
-                    label: Text('Escanear QR Code', style: TextStyle(color: beastHide)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: beastHide),
-                    ),
-                    onPressed: () async {
-                      TelemetryService.instance.logAcaoConfiguracoes('abrir_qr_scanner');
-                      final scannedUrl = await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const QRScannerPage()),
-                      );
-                      if (scannedUrl != null && scannedUrl is String) {
-                        urlController.text = scannedUrl;
-                      }
-                    },
-                  ),
-                ),
+            title: Column(
+              children: [
+                Icon(Icons.link, color: brandColor, size: 32),
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.file_present, color: beastHide),
-                    label: Text('Importar .croqui local', style: TextStyle(color: beastHide)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: beastHide),
-                    ),
-                    onPressed: () async {
-                      Navigator.of(context).pop(); // Fecha o diálogo antes
-                      await importarArquivoCroqui(context, datasetRepo);
-                    },
+                Text(
+                  titulo ?? 'Conectar Editor',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Insira a URL do repositório experimental para testar novos croquis.',
+                    style: TextStyle(
+                      color: context.colors.ashGrey,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: urlController,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      hintText: 'ex: serving.arestaclimb.com/v4',
+                      hintStyle: TextStyle(
+                        color: context.colors.ashGrey.withValues(alpha: 0.5),
+                        fontSize: 13,
+                      ),
+                      filled: true,
+                      fillColor: context.colors.deepBasalt,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: context.colors.graniteEdge,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: brandColor),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      icon: Icon(
+                        Icons.qr_code_scanner,
+                        color: brandColor,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'ESCANEAR QR CODE',
+                        style: TextStyle(
+                          color: brandColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: brandColor.withValues(alpha: 0.5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        TelemetryService.instance.logAcaoConfiguracoes(
+                          'abrir_qr_scanner',
+                        );
+                        final scannedUrl = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const QRScannerPage(),
+                          ),
+                        );
+                        if (scannedUrl != null && scannedUrl is String) {
+                          urlController.text = scannedUrl;
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      icon: Icon(
+                        Icons.file_present,
+                        color: context.colors.ashGrey,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'IMPORTAR .CROQUI',
+                        style: TextStyle(
+                          color: context.colors.ashGrey,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: context.colors.graniteEdge),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        Navigator.of(context).pop(); // Fecha o diálogo antes
+                        await importarArquivoCroqui(context, datasetRepo);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
             actions: [
-            TextButton(
-                onPressed: () {
-                  if (isLoading) {
-                    return;
-                  }
-                  Navigator.of(context).pop();
-                },
-                child: Text('Cancelar', style: TextStyle(color: fishBone.withValues(alpha: 0.7))),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8, right: 8),
+                child: TextButton(
+                  onPressed: () {
+                    if (isLoading) {
+                      return;
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'CANCELAR',
+                    style: TextStyle(
+                      color: context.colors.ashGrey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               ),
               Builder(
                 builder: (context) {
@@ -305,15 +439,22 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
                       if (url.isEmpty) return;
 
                       setDialogState(() => isLoading = true);
-                      
-                      final success = await conectarEditor(context, datasetRepo, configService, url);
-                      
+
+                      final success = await conectarEditor(
+                        context,
+                        datasetRepo,
+                        configService,
+                        url,
+                      );
+
                       if (context.mounted) {
                         setDialogState(() => isLoading = false);
                         if (success) {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Conectado ao repositório editor!')),
+                            const SnackBar(
+                              content: Text('Conectado ao repositório editor!'),
+                            ),
                           );
                         }
                       }
@@ -322,24 +463,44 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
 
                   Widget buttonChild;
                   if (isLoading) {
-                    buttonChild = SizedBox(
-                      height: 20, 
-                      width: 20, 
-                      child: CircularProgressIndicator(color: nobleBlack, strokeWidth: 2)
+                    buttonChild = const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     );
                   } else {
-                    buttonChild = Text('Conectar', style: TextStyle(color: nobleBlack, fontWeight: FontWeight.bold));
+                    buttonChild = const Text(
+                      'CONECTAR',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
                   }
 
-                  return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: beastHide,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8, right: 8),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: brandColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: onConnect,
+                      child: buttonChild,
                     ),
-                    onPressed: onConnect,
-                    child: buttonChild,
                   );
-                }
+                },
               ),
             ],
           );
@@ -348,7 +509,6 @@ void mostrarDialogConexao(BuildContext context, DatasetRepository datasetRepo, {
     },
   );
 }
-
 
 Widget buildEditorCard({
   required BuildContext context,
@@ -369,37 +529,32 @@ Widget buildEditorCard({
           return ValueListenableBuilder<bool>(
             valueListenable: configService.isDevModeEnabled,
             builder: (context, isDevMode, _) {
-              Color cardColor;
               IconData statusIcon;
               String statusLabel;
               String description;
-              Color buttonBgColor;
               String buttonText;
-              Color buttonTextColor;
-
-              final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
               if (isEditor) {
-                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.science;
-                statusLabel = 'Modo Experimental Ativo';
-                description = 'O aplicativo está em modo de teste. Os dados são carregados de uma fonte externa ou local e mantidos isolados.';
-                buttonBgColor = Colors.blueGrey.shade700;
-                buttonText = 'Voltar para oficial';
-                buttonTextColor = Colors.white;
+                statusLabel = 'MODO EXPERIMENTAL';
+                description =
+                    'O aplicativo está em modo de teste e isolado da base oficial.';
+                buttonText = 'VOLTAR PARA OFICIAL';
               } else {
-                cardColor = isDark ? context.colors.slateStone : context.colors.obsidianBrown;
                 statusIcon = Icons.verified;
-                statusLabel = 'Modo Oficial Ativo';
-                description = 'O aplicativo está conectado ao repositório oficial da Aresta Climb.';
-                buttonBgColor = context.colors.beastHide;
-                buttonText = 'Conectar como editor';
-                buttonTextColor = context.colors.nobleBlack;
+                statusLabel = 'MODO OFICIAL';
+                description =
+                    'Conectado ao repositório oficial da Aresta Climb.';
+                buttonText = 'CONECTAR COMO EDITOR';
               }
 
               return Card(
-                color: cardColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                color: context.colors.caveShadow,
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -414,108 +569,183 @@ Widget buildEditorCard({
                               if (clickCount + 1 >= 7) {
                                 configService.setDevMode(true);
                                 onSetClickCount(0);
-                                TelemetryService.instance.logAcaoConfiguracoes('ativar_modo_desenvolvedor');
+                                TelemetryService.instance.logAcaoConfiguracoes(
+                                  'ativar_modo_desenvolvedor',
+                                );
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Modo Desenvolvedor Ativado! 🛠️')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Modo Desenvolvedor Ativado! 🛠️',
+                                    ),
+                                  ),
                                 );
                               }
                             },
-                            child: Icon(statusIcon, color: context.colors.fishBone),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colors.graniteEdge,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                statusIcon,
+                                color: context.colors.ashGrey,
+                                size: 24,
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            statusLabel,
-                            style: TextStyle(
-                              color: context.colors.fishBone,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  statusLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  description,
+                                  style: TextStyle(
+                                    color: context.colors.ashGrey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        description,
-                        style: TextStyle(color: context.colors.fishBone),
-                      ),
                       if (isExperimental && activeUrl != null) ...[
                         const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: context.colors.nobleBlack, // Inset background (Beige in light, Black in dark)
+                            color: context.colors.deepBasalt,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: context.colors.graniteEdge,
+                            ),
                           ),
                           child: Text(
                             activeUrl,
-                            style: TextStyle(color: context.colors.fishBone, fontFamily: 'monospace'), // High contrast text
+                            style: TextStyle(
+                              color: context.colors.ashGrey,
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
                       if (isDevMode || isEditor) ...[
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonBgColor,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onPressed: () async {
-                              if (isEditor) {
-                                TelemetryService.instance.logAcaoConfiguracoes('desconectar_editor');
-                                await configService.disconnect();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Voltando ao repositório oficial...')),
-                                  );
-                                }
-                              } else {
-                                mostrarDialogConexao(context, datasetRepo);
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () async {
+                            if (isEditor) {
+                              TelemetryService.instance.logAcaoConfiguracoes(
+                                'desconectar_editor',
+                              );
+                              await configService.disconnect();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Voltando ao repositório oficial...',
+                                    ),
+                                  ),
+                                );
                               }
-                            },
+                            } else {
+                              mostrarDialogConexao(context, datasetRepo);
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC04F34),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
                             child: Text(
                               buttonText,
-                              style: TextStyle(
-                                color: buttonTextColor,
-                                fontWeight: FontWeight.bold,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
                         ),
-                        if (!isEditor) 
+                        if (!isEditor)
                           FutureBuilder<bool>(
                             future: configService.hasExperimentalData(),
                             builder: (context, snapshot) {
                               if (snapshot.data == true) {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 12.0),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        side: BorderSide(color: context.colors.beastHide, width: 1.2),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      icon: Icon(Icons.history_rounded, color: context.colors.beastHide, size: 18),
-                                      label: Text(
-                                        'Reativar modo experimental',
-                                        style: TextStyle(
-                                          color: context.colors.beastHide, 
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      onPressed: () async {
-                                        TelemetryService.instance.logAcaoConfiguracoes('reativar_experimental');
-                                        await configService.activateExperimental();
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Reativando dados experimentais locais...')),
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      TelemetryService.instance
+                                          .logAcaoConfiguracoes(
+                                            'reativar_experimental',
                                           );
-                                        }
-                                      },
+                                      await configService
+                                          .activateExperimental();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Reativando dados experimentais locais...',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.transparent,
+                                        border: Border.all(
+                                          color: context.colors.graniteEdge,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.history_rounded,
+                                            color: context.colors.ashGrey,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'REATIVAR MODO EXPERIMENTAL',
+                                            style: TextStyle(
+                                              color: context.colors.ashGrey,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
@@ -525,52 +755,201 @@ Widget buildEditorCard({
                           ),
                         if (isEditor) ...[
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              icon: const Icon(Icons.delete_forever, color: Colors.red),
-                              label: const Text(
-                                'LIMPAR DADOS EXPERIMENTAIS',
-                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: context.colors.nobleBlack,
-                                    title: const Text('Nuke It?', style: TextStyle(color: Colors.red)),
-                                    content: Text(
-                                      'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
-                                      style: TextStyle(color: context.colors.fishBone),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: Text('Cancelar', style: TextStyle(color: context.colors.fishBone)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: const Text('APAGAR TUDO', style: TextStyle(color: Colors.red)),
-                                      ),
-                                    ],
+                          GestureDetector(
+                            onTap: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: context.colors.caveShadow,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                );
+                                  title: const Text(
+                                    'Apagar Tudo?',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  content: Text(
+                                    'Isso apagará permanentemente todo o índice experimental e todos os picos baixados nesse modo. Deseja continuar?',
+                                    style: TextStyle(
+                                      color: context.colors.ashGrey,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: Text(
+                                        'CANCELAR',
+                                        style: TextStyle(
+                                          color: context.colors.ashGrey,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text(
+                                        'APAGAR TUDO',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
 
-                                if (confirm == true) {
-                                  TelemetryService.instance.logAcaoConfiguracoes('limpar_dados_experimentais');
-                                  await configService.nukeExperimentalData();
-                                  datasetRepo.loadEmpty(); 
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Ambiente experimental limpo.')),
-                                    );
-                                  }
+                              if (confirm == true) {
+                                TelemetryService.instance.logAcaoConfiguracoes(
+                                  'limpar_dados_experimentais',
+                                );
+                                await configService.nukeExperimentalData();
+                                datasetRepo.loadEmpty();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Ambiente experimental limpo.',
+                                      ),
+                                    ),
+                                  );
                                 }
-                              },
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(
+                                  color: Colors.red.withValues(alpha: 0.5),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.delete_forever,
+                                    color: Colors.red.withValues(alpha: 0.8),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'LIMPAR DADOS EXPERIMENTAIS',
+                                    style: TextStyle(
+                                      color: Colors.red.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              Future.microtask(() {
+                                if (context.mounted) {
+                                  showDeprecatedAppVersionSnackBar(context);
+                                }
+                              });
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(
+                                  color: Colors.orange.withValues(alpha: 0.5),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.orange.withValues(alpha: 0.8),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'TESTAR ALERTA DE OBSOLESCÊNCIA',
+                                    style: TextStyle(
+                                      color: Colors.orange.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      AppVersionHardBlockScreen(
+                                        onUpdatePressed: () =>
+                                            Navigator.pop(context),
+                                      ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                border: Border.all(
+                                  color: Colors.red.shade900.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.system_update_rounded,
+                                    color: Colors.red.shade900.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'TESTAR TELA DE BLOQUEIO',
+                                    style: TextStyle(
+                                      color: Colors.red.shade900.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -588,10 +967,11 @@ Widget buildEditorCard({
 }
 
 Widget buildThemeSelectionCard(BuildContext context) {
-  final bool isDark = Theme.of(context).brightness == Brightness.dark;
   return Card(
-    color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 0,
+    color: context.colors.caveShadow,
+    margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -599,14 +979,42 @@ Widget buildThemeSelectionCard(BuildContext context) {
         children: [
           Row(
             children: [
-              Icon(Icons.palette, color: context.colors.fishBone),
-              const SizedBox(width: 8),
-              Text(
-                'Aparência (Tema)',
-                style: TextStyle(
-                  color: context.colors.fishBone,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: context.colors.graniteEdge,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.palette,
+                  color: context.colors.ashGrey,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'APARÊNCIA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Personalize o tema do aplicativo.',
+                      style: TextStyle(
+                        color: context.colors.ashGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -621,13 +1029,12 @@ Widget buildThemeSelectionCard(BuildContext context) {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Escolher tema manualmente',
-                          style: TextStyle(
-                            color: context.colors.fishBone,
-                            fontSize: 16,
-                          ),
+                      const Text(
+                        'Escolher tema manualmente',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       Switch(
@@ -639,7 +1046,10 @@ Widget buildThemeSelectionCard(BuildContext context) {
                             ThemeController().setThemeMode(ThemeMode.system);
                           }
                         },
-                        activeThumbColor: context.colors.beastHide,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: Colors.white.withValues(alpha: 0.5),
+                        inactiveThumbColor: context.colors.ashGrey,
+                        inactiveTrackColor: context.colors.graniteEdge,
                       ),
                     ],
                   ),
@@ -647,10 +1057,10 @@ Widget buildThemeSelectionCard(BuildContext context) {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(
+                        /* Expanded(
                           child: buildThemeOption(
                             context: context,
-                            title: 'Claro',
+                            title: 'CLARO',
                             icon: Icons.light_mode,
                             isSelected: currentMode == ThemeMode.light,
                             onTap: () {
@@ -659,15 +1069,17 @@ Widget buildThemeSelectionCard(BuildContext context) {
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12), */
                         Expanded(
                           child: buildThemeOption(
                             context: context,
-                            title: 'Escuro',
+                            title: 'ESCURO',
                             icon: Icons.dark_mode,
                             isSelected: currentMode == ThemeMode.dark,
                             onTap: () {
-                              TelemetryService.instance.logAcaoConfiguracoes('tema_escuro');
+                              TelemetryService.instance.logAcaoConfiguracoes(
+                                'tema_escuro',
+                              );
                               ThemeController().setThemeMode(ThemeMode.dark);
                             },
                           ),
@@ -692,28 +1104,35 @@ Widget buildThemeOption({
   required bool isSelected,
   required VoidCallback onTap,
 }) {
-  return InkWell(
+  return GestureDetector(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(8),
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: isSelected ? context.colors.beastHide.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected
+            ? Colors.white.withValues(alpha: 0.1)
+            : Colors.transparent,
         border: Border.all(
-          color: isSelected ? context.colors.beastHide : context.colors.weatheredIron,
+          color: isSelected ? Colors.white : context.colors.graniteEdge,
           width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Icon(icon, color: isSelected ? context.colors.beastHide : context.colors.fishBone),
+          Icon(
+            icon,
+            color: isSelected ? Colors.white : context.colors.ashGrey,
+            size: 24,
+          ),
           const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              color: isSelected ? context.colors.beastHide : context.colors.fishBone,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.white : context.colors.ashGrey,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -722,77 +1141,23 @@ Widget buildThemeOption({
   );
 }
 
-Widget buildAppVersionCard(BuildContext context) {
-  return FutureBuilder<PackageInfo>(
-    future: PackageInfo.fromPlatform(),
-    builder: (context, snapshot) {
-      if (snapshot.hasData) {
-        final version = snapshot.data!.version;
-        final bool isDark = Theme.of(context).brightness == Brightness.dark;
-        return Card(
-          color: isDark ? context.colors.slateStone : context.colors.obsidianBrown,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: context.colors.fishBone),
-                const SizedBox(width: 8),
-                Text(
-                  'Versão do app',
-                  style: TextStyle(
-                    color: context.colors.fishBone,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  version,
-                  style: TextStyle(
-                    color: context.colors.beastHide,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-      return const SizedBox.shrink();
-    },
-  );
-}
-
+/*
 Widget buildLegalLinks(BuildContext context) {
   return Center(
     child: TextButton(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TermsOfUsePage(
-              onAccepted: () {},
-              showAcceptButton: false,
-            ),
-          ),
-        );
-      },
+      onPressed: () => showTermsBottomSheet(context),
       child: Text(
         'Termos de Uso e Privacidade',
         style: TextStyle(
-          color: context.colors.beastHide,
+          color: context.colors.ashGrey,
           fontSize: 14,
-          decoration: TextDecoration.underline,
+          fontWeight: FontWeight.bold,
         ),
       ),
     ),
   );
 }
-
+*/

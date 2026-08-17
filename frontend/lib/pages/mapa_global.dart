@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../view_functions/mapa/mapa_global_functions.dart';
 import '../view_functions/common_functions.dart';
@@ -6,9 +7,11 @@ import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../view_functions/mapa/mapa_marker.dart';
 import '../view_functions/home_functions.dart';
+import '../theme/app_colors.dart';
 
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
 class MapaGlobalPage extends StatefulWidget {
+  static bool hasShownLocationWarning = false;
   final List<Map<String, dynamic>> crags;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -41,12 +44,14 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
     final resumos = indice.croquis.where((r) => r.id == id).toList();
     if (resumos.isEmpty) return;
-    
+
     final resumo = resumos.first;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Baixando $name...')),
-    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
+    }
 
     final success = await widget.syncService.downloadCrag(resumo);
 
@@ -62,20 +67,134 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   }
 
   BitmapDescriptor? _customIcon;
+  final Map<String, BitmapDescriptor> _textIcons = {};
+  double _currentZoom = 4.0;
+  GoogleMapController? _mapController;
 
   @override
   void initState() {
     super.initState();
-    _loadCustomIcon();
+    _loadCustomIcons();
+    _initLocation(fromButton: false);
   }
 
-  Future<void> _loadCustomIcon() async {
+  Future<void> _initLocation({bool fromButton = true}) async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+        MapaGlobalPage.hasShownLocationWarning = true;
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ative o GPS para vermos sua localização.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+          MapaGlobalPage.hasShownLocationWarning = true;
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Permissão de localização negada.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted && (fromButton || !MapaGlobalPage.hasShownLocationWarning)) {
+        MapaGlobalPage.hasShownLocationWarning = true;
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permissão de localização bloqueada nas configurações.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      final icon = await createCustomMarkerBitmap('assets/logo_app.png', size: 120);
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 3),
+        );
+      } catch (e) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position != null && _mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: 7.0,
+            ),
+          ),
+        );
+      } else if (position == null && mounted) {
+        if (fromButton || !MapaGlobalPage.hasShownLocationWarning) {
+          MapaGlobalPage.hasShownLocationWarning = true;
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível encontrar sua localização.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Ignora falhas ao pegar localização
+    }
+  }
+
+  Future<void> _loadCustomIcons() async {
+    try {
+      final icon = await createCustomMarkerBitmap(
+        'assets/logo_app.png',
+        size: 120,
+      );
       if (mounted) {
         setState(() {
           _customIcon = icon;
         });
+      }
+
+      // Generate text icons for each crag in background
+      for (final crag in widget.crags) {
+        final name = crag['nome'] ?? 'Pico';
+        final textIcon = await createCustomMarkerBitmapWithText(
+          'assets/logo_app.png',
+          name,
+          size: 120,
+        );
+        if (mounted) {
+          setState(() {
+            _textIcons[crag['id']] = textIcon;
+          });
+        }
       }
     } catch (e) {
       // Silently fall back to default marker
@@ -83,38 +202,80 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   }
 
   void _handleOpen(Map<String, dynamic> crag) {
-    handlePicoSelection(context, widget.datasetRepo, crag, source: 'mapa_global');
+    handlePicoSelection(
+      context,
+      widget.datasetRepo,
+      crag,
+      source: 'mapa_global',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final markers = buildMapMarkers(
-      context: context,
-      crags: widget.crags,
-      downloadingCrags: widget.syncService.downloadingCrags,
-      onDownload: _handleDownload,
-      onOpen: _handleOpen,
-      customIcon: _customIcon,
+    // Removed markers generation from here since it needs to be inside body for zoom reactivity
+
+    LatLng initialTarget = const LatLng(-14.2350, -51.9253);
+    if (widget.crags.isNotEmpty) {
+      final firstCrag = widget.crags.first;
+      if (firstCrag['latitude'] != null && firstCrag['longitude'] != null) {
+        initialTarget = LatLng(firstCrag['latitude'], firstCrag['longitude']);
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: buildCommonAppBar(
+        context,
+        'Mapa Global',
+        actions: [buildFeedbackButton(context)],
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? context.colors.caveShadow
+            : context.colors.chalkWhite,
+        foregroundColor: AppColors.brandColor,
+        mini: true,
+        onPressed: _initLocation,
+        child: const Icon(Icons.my_location),
+      ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: initialTarget,
+          zoom: _currentZoom,
+        ),
+        markers: buildMapMarkers(
+          context: context,
+          crags: widget.crags,
+          downloadingCrags: widget.syncService.downloadingCrags,
+          onDownload: _handleDownload,
+          onOpen: _handleOpen,
+          customIcon: _customIcon,
+          textIcons: _textIcons,
+          currentZoom: _currentZoom,
+        ),
+        myLocationEnabled: true,
+        myLocationButtonEnabled: false,
+        mapToolbarEnabled: false,
+        zoomControlsEnabled: false,
+        onMapCreated: (controller) {
+          _mapController = controller;
+        },
+        onCameraMove: (CameraPosition position) {
+          if (mounted) {
+            // Only rebuild if we cross the zoom threshold (e.g., 4.0)
+            final bool wasZoomedIn = _currentZoom >= 4.0;
+            final bool isZoomedIn = position.zoom >= 4.0;
+            if (wasZoomedIn != isZoomedIn) {
+              setState(() {
+                _currentZoom = position.zoom;
+              });
+            } else {
+              _currentZoom = position.zoom;
+            }
+          }
+        },
+      ),
     );
-
-        LatLng initialTarget = const LatLng(-14.2350, -51.9253);
-        if (markers.isNotEmpty) {
-          initialTarget = markers.first.position;
-        }
-
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: buildCommonAppBar(
-            context,
-            'Mapa Global',
-            actions: [
-              buildFeedbackButton(context),
-            ],
-          ),
-          body: buildMapaGlobalMap(
-            initialTarget: initialTarget,
-            markers: markers,
-          ),
-        );
   }
 }

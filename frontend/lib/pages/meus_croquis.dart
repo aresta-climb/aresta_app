@@ -1,0 +1,119 @@
+import 'package:flutter/material.dart';
+import '../services/dataset_repository.dart';
+import '../services/http/sync_service.dart';
+import '../theme/app_colors.dart';
+import '../view_functions/meus_croquis_functions.dart';
+import '../view_functions/common_functions.dart';
+
+class MeusCroquisPage extends StatelessWidget {
+  final DatasetRepository datasetRepo;
+  final SyncService syncService;
+
+  const MeusCroquisPage({
+    super.key,
+    required this.datasetRepo,
+    required this.syncService,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.colors.deepBasalt,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'MEUS CROQUIS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ARMAZENAMENTO OFFLINE',
+                          style: TextStyle(
+                            color: context.colors.dryMoss,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.sync, color: context.colors.ashGrey),
+                        onPressed: () async {
+                          await handleManualSync(
+                            context,
+                            datasetRepo,
+                            syncService,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      buildFeedbackButton(
+                        context,
+                        color: context.colors.ashGrey,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ValueListenableBuilder<TopoDataset?>(
+                valueListenable: datasetRepo.activeDataset,
+                builder: (context, dataset, _) {
+                  if (dataset == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final downloadedCrags = dataset.downloadedPicos;
+
+                  if (downloadedCrags.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'Nenhum croqui salvo offline ainda.',
+                        style: TextStyle(color: context.colors.ashGrey),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: downloadedCrags.length,
+                    itemBuilder: (context, index) {
+                      final crag = downloadedCrags[index];
+                      return OfflineCragCard(
+                        crag: crag,
+                        datasetRepo: datasetRepo,
+                        syncService: syncService,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

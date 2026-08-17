@@ -10,7 +10,7 @@ import 'dart:typed_data';
 class DummyMapaInterativo extends StatelessWidget {
   final int index;
   const DummyMapaInterativo(this.index, {super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Text('MapaInterativo $index');
@@ -21,22 +21,24 @@ void main() {
   group('MapasCarrosselPage Tests', () {
     testWidgets('Renders properly with multiple maps', (tester) async {
       final pico = Pico()..nome = 'Pico Teste';
-      
+
       final mapas = [
         const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
         const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
         const CarrosselItemData(mapaCaminhoImagem: 'map3.png'),
       ];
 
-      await tester.pumpWidget(MaterialApp(
-        home: MapasCarrosselPage(
-          pico: pico,
-          cragId: '1',
-          mapas: mapas,
-          initialIndex: 0,
-          mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapasCarrosselPage(
+            pico: pico,
+            cragId: '1',
+            mapas: mapas,
+            initialIndex: 0,
+            mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+          ),
         ),
-      ));
+      );
 
       // Should render the first map
       expect(find.text('MapaInterativo 0'), findsOneWidget);
@@ -57,15 +59,17 @@ void main() {
         const CarrosselItemData(mapaCaminhoImagem: 'map3.png'),
       ];
 
-      await tester.pumpWidget(MaterialApp(
-        home: MapasCarrosselPage(
-          pico: pico,
-          cragId: '1',
-          mapas: mapas,
-          initialIndex: 1, // Start in the middle
-          mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapasCarrosselPage(
+            pico: pico,
+            cragId: '1',
+            mapas: mapas,
+            initialIndex: 1, // Start in the middle
+            mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+          ),
         ),
-      ));
+      );
 
       expect(find.text('02 de 03'), findsOneWidget);
       expect(find.text('MapaInterativo 1'), findsOneWidget);
@@ -76,7 +80,7 @@ void main() {
 
       expect(find.text('03 de 03'), findsOneWidget);
       expect(find.text('MapaInterativo 2'), findsOneWidget);
-      
+
       // Click Right again (should do nothing because we are at the end)
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
@@ -90,7 +94,7 @@ void main() {
 
       expect(find.text('01 de 03'), findsOneWidget);
       expect(find.text('MapaInterativo 0'), findsOneWidget);
-      
+
       // Click Left again (should do nothing because we are at the beginning)
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pumpAndSettle();
@@ -98,7 +102,9 @@ void main() {
       expect(find.text('01 de 03'), findsOneWidget);
     });
 
-    testWidgets('Updates page when initialIndex changes in didUpdateWidget', (tester) async {
+    testWidgets('Updates page when initialIndex changes in didUpdateWidget', (
+      tester,
+    ) async {
       final pico = Pico()..nome = 'Pico Teste';
       final mapas = [
         const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
@@ -130,89 +136,111 @@ void main() {
       expect(find.text('MapaInterativo 2'), findsOneWidget);
     });
 
-    testWidgets('Renders simple map properly without carousel UI when only 1 map is provided', (tester) async {
-      final pico = Pico()..nome = 'Pico Teste';
-      final mapas = [
-        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
-      ];
+    testWidgets(
+      'Renders simple map properly without carousel UI when only 1 map is provided',
+      (tester) async {
+        final pico = Pico()..nome = 'Pico Teste';
+        final mapas = [const CarrosselItemData(mapaCaminhoImagem: 'map1.png')];
 
-      await tester.pumpWidget(MaterialApp(
-        home: MapasCarrosselPage(
-          pico: pico,
-          cragId: '1',
-          mapas: mapas,
-          initialIndex: 0,
-          mapBuilder: (context, index, item) => DummyMapaInterativo(index),
-        ),
-      ));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+            ),
+          ),
+        );
 
-      // Should render the first map
-      expect(find.text('MapaInterativo 0'), findsOneWidget);
+        // Should render the first map
+        expect(find.text('MapaInterativo 0'), findsOneWidget);
 
-      // Should NOT render any pagination text
-      expect(find.text('01 de 01'), findsNothing);
-      expect(find.text('01 de 03'), findsNothing);
+        // Should NOT render any pagination text
+        expect(find.text('01 de 01'), findsNothing);
+        expect(find.text('01 de 03'), findsNothing);
 
-      // Should NOT render chevron buttons
-      expect(find.byIcon(Icons.chevron_left), findsNothing);
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
-      
-      // Should NOT have a PageView (since we just return the builder)
-      expect(find.byType(PageView), findsNothing);
-    });
-    testWidgets('Renders single map with hideAppBar=false when only 1 map is provided (using default builder)', (tester) async {
-      final mapa = Mapa()..caminhoImagemMapa = 'map1.png';
-      final pico = Pico()..nome = 'Pico Teste'..mapasGerais = (ArquivoMapas()..conteudo = (ColecaoDeMapas()..mapas.add(mapa)));
-      final mapas = [
-        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
-      ];
+        // Should NOT render chevron buttons
+        expect(find.byIcon(Icons.chevron_left), findsNothing);
+        expect(find.byIcon(Icons.chevron_right), findsNothing);
 
-      await tester.pumpWidget(MaterialApp(
-        home: MapasCarrosselPage(
-          pico: pico,
-          cragId: '1',
-          mapas: mapas,
-          initialIndex: 0,
-          // Not providing mapBuilder so it uses _defaultMapBuilder
-          imageProviderOverride: MemoryImage(Uint8List(0)), // Avoid real image loading
-        ),
-      ));
+        // Should NOT have a PageView (since we just return the builder)
+        expect(find.byType(PageView), findsNothing);
+      },
+    );
+    testWidgets(
+      'Renders single map with hideAppBar=false when only 1 map is provided (using default builder)',
+      (tester) async {
+        final mapa = Mapa()..caminhoImagemMapa = 'map1.png';
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..mapasGerais = (ArquivoMapas()
+            ..conteudo = (ColecaoDeMapas()..mapas.add(mapa)));
+        final mapas = [const CarrosselItemData(mapaCaminhoImagem: 'map1.png')];
 
-      // Should render the first map using MapaInterativoPage
-      expect(find.byType(MapaInterativoPage), findsOneWidget);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              // Not providing mapBuilder so it uses _defaultMapBuilder
+              imageProviderOverride: MemoryImage(
+                Uint8List(0),
+              ), // Avoid real image loading
+            ),
+          ),
+        );
 
-      final mapaPage = tester.widget<MapaInterativoPage>(find.byType(MapaInterativoPage));
-      
-      // hideAppBar should be false because there is only 1 map and no carousel UI is wrapping it
-      expect(mapaPage.hideAppBar, isFalse);
-    });
+        // Should render the first map using MapaInterativoPage
+        expect(find.byType(MapaInterativoPage), findsOneWidget);
 
-    testWidgets('TDD 1.3: _defaultMapBuilder passes popOnActionIfOriginal: false to MapaInterativoPage', (tester) async {
-      final mapa1 = Mapa()..caminhoImagemMapa = 'map1.png';
-      final mapa2 = Mapa()..caminhoImagemMapa = 'map2.png';
-      final pico = Pico()..nome = 'Pico Teste'..mapasGerais = (ArquivoMapas()..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
-      final mapas = [
-        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
-        const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
-      ];
+        final mapaPage = tester.widget<MapaInterativoPage>(
+          find.byType(MapaInterativoPage),
+        );
 
-      await tester.pumpWidget(MaterialApp(
-        home: MapasCarrosselPage(
-          pico: pico,
-          cragId: '1',
-          mapas: mapas,
-          initialIndex: 0,
-          imageProviderOverride: MemoryImage(Uint8List(0)), 
-        ),
-      ));
+        // hideAppBar should be false because there is only 1 map and no carousel UI is wrapping it
+        expect(mapaPage.hideAppBar, isFalse);
+      },
+    );
 
-      // Should render the first map using MapaInterativoPage
-      expect(find.byType(MapaInterativoPage), findsOneWidget);
+    testWidgets(
+      'TDD 1.3: _defaultMapBuilder passes popOnActionIfOriginal: false to MapaInterativoPage',
+      (tester) async {
+        final mapa1 = Mapa()..caminhoImagemMapa = 'map1.png';
+        final mapa2 = Mapa()..caminhoImagemMapa = 'map2.png';
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..mapasGerais = (ArquivoMapas()
+            ..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
+        final mapas = [
+          const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
+        ];
 
-      final mapaPage = tester.widget<MapaInterativoPage>(find.byType(MapaInterativoPage));
-      
-      expect(mapaPage.popOnActionIfOriginal, isFalse);
-    });
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+            ),
+          ),
+        );
+
+        // Should render the first map using MapaInterativoPage
+        expect(find.byType(MapaInterativoPage), findsOneWidget);
+
+        final mapaPage = tester.widget<MapaInterativoPage>(
+          find.byType(MapaInterativoPage),
+        );
+
+        expect(mapaPage.popOnActionIfOriginal, isFalse);
+      },
+    );
   });
 }
-

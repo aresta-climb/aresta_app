@@ -16,15 +16,15 @@ class IndexEntry {
 }
 
 /// Uma classe utilitária para baixar e verificar arquivos.
-/// 
-/// Ela garante que os arquivos baixados correspondam aos seus checksums esperados 
+///
+/// Ela garante que os arquivos baixados correspondam aos seus checksums esperados
 /// antes de serem considerados válidos e armazenados no diretório de preparação (staging).
 class UpdateDownloader {
   /// Um cliente HTTP reutilizável para baixar arquivos.
   final http.Client _client = http.Client();
 
   /// Baixa atualizações, verifica-as e as coloca no diretório de preparação.
-  /// 
+  ///
   /// Lança uma [Exception] se um download falhar ou se uma incompatibilidade de checksum for detectada.
   Future<void> downloadAndVerifyUpdates({
     required List<IndexEntry> filesToUpdate,
@@ -39,7 +39,9 @@ class UpdateDownloader {
       final response = await _client.get(Uri.parse(fileEntry.downloadUrl));
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to download ${fileEntry.filename}: HTTP ${response.statusCode}');
+        throw Exception(
+          'Failed to download ${fileEntry.filename}: HTTP ${response.statusCode}',
+        );
       }
 
       await targetFile.writeAsBytes(response.bodyBytes);
@@ -55,7 +57,9 @@ class UpdateDownloader {
       if (!isChecksumValid) {
         // Se estiver corrompido ou adulterado, exclua o arquivo ruim
         await targetFile.delete();
-        throw Exception('Checksum mismatch for ${fileEntry.filename}. Download corrupted.');
+        throw Exception(
+          'Checksum mismatch for ${fileEntry.filename}. Download corrupted.',
+        );
       }
 
       print('Verified ${fileEntry.filename} successfully.');

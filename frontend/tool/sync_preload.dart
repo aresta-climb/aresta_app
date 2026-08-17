@@ -1,5 +1,5 @@
 /// Script `sync_preload.dart`
-/// 
+///
 /// Realiza o pre-bundling do arquivo `indice.binarypb` e todas as thumbnails.
 /// Utilizado principalmente via GitHub Actions no momento do version bump (build).
 /// Como rodar localmente:
@@ -8,6 +8,7 @@
 /// Isso fará com que o aplicativo embuta (via assets/preload) uma versão inicial
 /// que será descompactada na primeira abertura do app pelo usuário offline.
 library;
+
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
@@ -53,13 +54,16 @@ class SyncPreloadRunner {
     }
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to download indice.binarypb: ${response.statusCode}');
+      throw Exception(
+        'Failed to download indice.binarypb: ${response.statusCode}',
+      );
     }
 
     final newIndice = Indice.fromBuffer(response.bodyBytes);
-    
+
     // Construir mapa de hashes antigos
-    final oldHashes = <String, String>{};
+    final oldCroquiHashes = <String, String>{};
+    final oldThumbnailHashes = <String, String>{};
     final indiceFile = File('$outputDir/indice.binarypb');
     if (indiceFile.existsSync()) {
       try {
@@ -68,8 +72,11 @@ class SyncPreloadRunner {
           final lastSlash = croqui.caminhoRelativo.lastIndexOf('/');
           if (lastSlash != -1) {
             final baseDir = croqui.caminhoRelativo.substring(0, lastSlash);
-            final cragId = croqui.id.isNotEmpty ? croqui.id : baseDir.replaceAll('/', '_');
-            oldHashes[cragId] = croqui.checksumSha256Croqui;
+            final cragId = croqui.id.isNotEmpty
+                ? croqui.id
+                : baseDir.replaceAll('/', '_');
+            oldCroquiHashes[cragId] = croqui.checksumSha256Croqui;
+            oldThumbnailHashes[cragId] = croqui.checksumSha256Thumbnail;
           }
         }
       } catch (_) {}
@@ -86,21 +93,32 @@ class SyncPreloadRunner {
       final lastSlash = urlRelativa.lastIndexOf('/');
       if (lastSlash != -1) {
         final baseDir = urlRelativa.substring(0, lastSlash);
-        final String cragId = resumo.id.isNotEmpty ? resumo.id : baseDir.replaceAll('/', '_');
-        
+        final String cragId = resumo.id.isNotEmpty
+            ? resumo.id
+            : baseDir.replaceAll('/', '_');
+
         final thumbFile = File('${thumbnailsDir.path}/$cragId.webp');
         final bool thumbExists = thumbFile.existsSync();
-        final bool isChanged = oldHashes[cragId] != resumo.checksumSha256Croqui;
+        final bool isChanged =
+            oldThumbnailHashes[cragId] != resumo.checksumSha256Thumbnail;
+
+        if (resumo.checksumSha256Thumbnail.isEmpty) {
+          continue; // Não há thumbnail para baixar
+        }
 
         if (thumbExists && !isChanged) {
           continue; // Thumbnail já existe e não sofreu alterações
         }
 
-        final thumbUrl = '$baseUrl/$baseDir/imagens/thumbnail.webp';
+        final thumbUrl = '$baseUrl/thumbnails/$baseDir.webp';
         final thumbResponse = await client.get(Uri.parse(thumbUrl));
-        
+
         if (thumbResponse.statusCode == 200) {
           thumbFile.writeAsBytesSync(thumbResponse.bodyBytes);
+        } else {
+          throw Exception(
+            'Falha em baixar thumbnail para $cragId: ${thumbResponse.statusCode}',
+          );
         }
       }
     }

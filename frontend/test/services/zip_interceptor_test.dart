@@ -1,6 +1,7 @@
 /// Suíte de testes do ZipInterceptorClient.
 /// Testa o protocolo aresta-zip para leitura de arquivos locais.
 library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:archive/archive.dart';
@@ -27,7 +28,9 @@ void main() {
     test('deve extrair arquivo de .zip (não ofuscado)', () async {
       final archive = Archive();
       final content = 'Olá ZIP World';
-      archive.addFile(ArchiveFile('compilado/hello.txt', content.length, content.codeUnits));
+      archive.addFile(
+        ArchiveFile('compilado/hello.txt', content.length, content.codeUnits),
+      );
 
       final zipData = ZipEncoder().encode(archive);
       final zipFile = File('${tempDir.path}/test.zip');
@@ -43,7 +46,9 @@ void main() {
     test('deve extrair arquivo de .croqui (ofuscado com XOR)', () async {
       final archive = Archive();
       final content = 'Dados do Croqui';
-      archive.addFile(ArchiveFile('compilado/secret.txt', content.length, content.codeUnits));
+      archive.addFile(
+        ArchiveFile('compilado/secret.txt', content.length, content.codeUnits),
+      );
 
       final zipData = ZipEncoder().encode(archive);
 
@@ -55,40 +60,60 @@ void main() {
       final croquiFile = File('${tempDir.path}/test.croqui');
       await croquiFile.writeAsBytes(zipData);
 
-      final uri = Uri(scheme: 'aresta-zip', path: '${croquiFile.path}/secret.txt');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${croquiFile.path}/secret.txt',
+      );
       final response = await client.get(uri);
 
       expect(response.statusCode, 200);
       expect(response.body, content);
     });
 
-    test('deve adicionar prefixo "compilado/" automaticamente se não fornecido', () async {
-      final archive = Archive();
-      final content = 'Conteúdo sem prefixo';
-      archive.addFile(ArchiveFile('compilado/dados.txt', content.length, content.codeUnits));
+    test(
+      'deve adicionar prefixo "compilado/" automaticamente se não fornecido',
+      () async {
+        final archive = Archive();
+        final content = 'Conteúdo sem prefixo';
+        archive.addFile(
+          ArchiveFile('compilado/dados.txt', content.length, content.codeUnits),
+        );
 
-      final zipData = ZipEncoder().encode(archive);
-      final zipFile = File('${tempDir.path}/prefixo.zip');
-      await zipFile.writeAsBytes(zipData);
+        final zipData = ZipEncoder().encode(archive);
+        final zipFile = File('${tempDir.path}/prefixo.zip');
+        await zipFile.writeAsBytes(zipData);
 
-      // Solicita sem o prefixo "compilado/"
-      final uri = Uri(scheme: 'aresta-zip', path: '${zipFile.path}/dados.txt');
-      final response = await client.get(uri);
+        // Solicita sem o prefixo "compilado/"
+        final uri = Uri(
+          scheme: 'aresta-zip',
+          path: '${zipFile.path}/dados.txt',
+        );
+        final response = await client.get(uri);
 
-      expect(response.statusCode, 200);
-      expect(response.body, content);
-    });
+        expect(response.statusCode, 200);
+        expect(response.body, content);
+      },
+    );
 
     test('deve extrair arquivo binário (bytes) corretamente', () async {
       final archive = Archive();
       final binaryContent = [0x50, 0x72, 0x6F, 0x74, 0x6F]; // "Proto"
-      archive.addFile(ArchiveFile('compilado/data.binarypb', binaryContent.length, binaryContent));
+      archive.addFile(
+        ArchiveFile(
+          'compilado/data.binarypb',
+          binaryContent.length,
+          binaryContent,
+        ),
+      );
 
       final zipData = ZipEncoder().encode(archive);
       final zipFile = File('${tempDir.path}/binary.zip');
       await zipFile.writeAsBytes(zipData);
 
-      final uri = Uri(scheme: 'aresta-zip', path: '${zipFile.path}/data.binarypb');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${zipFile.path}/data.binarypb',
+      );
       final response = await client.get(uri);
 
       expect(response.statusCode, 200);
@@ -103,19 +128,27 @@ void main() {
   group('Tratamento de erros', () {
     test('deve retornar 404 para arquivo ausente dentro do zip', () async {
       final archive = Archive();
-      archive.addFile(ArchiveFile('compilado/existe.txt', 5, 'hello'.codeUnits));
+      archive.addFile(
+        ArchiveFile('compilado/existe.txt', 5, 'hello'.codeUnits),
+      );
       final zipData = ZipEncoder().encode(archive);
       final zipFile = File('${tempDir.path}/erro_test.zip');
       await zipFile.writeAsBytes(zipData);
 
-      final uri = Uri(scheme: 'aresta-zip', path: '${zipFile.path}/nao_existe.txt');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${zipFile.path}/nao_existe.txt',
+      );
       final response = await client.get(uri);
 
       expect(response.statusCode, 404);
     });
 
     test('deve retornar 404 para arquivo zip inexistente no disco', () async {
-      final uri = Uri(scheme: 'aresta-zip', path: '${tempDir.path}/fantasma.zip/algo.txt');
+      final uri = Uri(
+        scheme: 'aresta-zip',
+        path: '${tempDir.path}/fantasma.zip/algo.txt',
+      );
       final response = await client.get(uri);
 
       expect(response.statusCode, 404);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import '../theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -7,23 +8,35 @@ import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 /// Formata a data ISO (YYYY-MM-DD) para "DIA de MÊS de ANO"
 String formatLegalDate(String isoDate) {
   final parts = isoDate.split('-');
   if (parts.length != 3) return isoDate;
-  
+
   final day = parts[2];
   final year = parts[0];
   final monthInt = int.tryParse(parts[1]) ?? 1;
-  
+
   const months = [
-    '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    '',
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
   ];
-  
-  final monthName = (monthInt >= 1 && monthInt <= 12) ? months[monthInt] : parts[1];
-  
+
+  final monthName = (monthInt >= 1 && monthInt <= 12)
+      ? months[monthInt]
+      : parts[1];
+
   return '$day de $monthName de $year';
 }
 
@@ -69,7 +82,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       final terms = await bundle.loadString(
         'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md',
       );
-      
+
       final privacy = await bundle.loadString(
         'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
       );
@@ -92,8 +105,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
 
   Future<void> _onTapLink(String text, String? href, String title) async {
     if (href != null) {
-      if (href == 'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html' || 
-          href.endsWith('POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md')) {
+      if (href.toUpperCase().contains('PRIVACIDADE')) {
         _showPrivacyPolicy();
         return;
       }
@@ -101,7 +113,10 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       TelemetryService.instance.logLinkExterno(href, 'termos_uso');
       final url = Uri.parse(href);
       try {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
+        final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+        if (!launched) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
       } catch (e) {
         AppLogger.instance.logError('abrir_link_termos', error: e.toString());
         debugPrint('Erro ao abrir link: $e');
@@ -109,10 +124,43 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
     }
   }
 
+  MarkdownStyleSheet _getSharedMarkdownStyle() {
+    return MarkdownStyleSheet(
+      p: TextStyle(
+        color: Colors.white.withValues(alpha: 0.9),
+        fontSize: 16,
+        height: 1.6,
+      ),
+      h1: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 22,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      h2: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 20,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      h3: TextStyle(
+        color: context.colors.rustIron,
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0.5,
+      ),
+      strong: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+      blockSpacing: 16.0,
+    );
+  }
+
   void _showPrivacyPolicy() {
-    TelemetryService.instance.logAcaoConfiguracoes('abrir_politica_privacidade');
+    TelemetryService.instance.logAcaoConfiguracoes(
+      'abrir_politica_privacidade',
+    );
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) {
@@ -126,39 +174,22 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [
-              buildFeedbackButton(context),
-            ],
+            actions: [buildFeedbackButton(context)],
           ),
           body: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
               16.0,
               16.0,
               16.0,
-              MediaQuery.paddingOf(context).bottom > 0 ? MediaQuery.paddingOf(context).bottom + 16.0 : 32.0,
+              MediaQuery.paddingOf(context).bottom > 0
+                  ? MediaQuery.paddingOf(context).bottom + 16.0
+                  : 32.0,
             ),
             child: _privacyMarkdown != null
                 ? MarkdownBody(
                     data: _privacyMarkdown!,
                     onTapLink: _onTapLink,
-                    styleSheet: MarkdownStyleSheet(
-                      p: TextStyle(
-                        fontSize: 16, 
-                        height: 1.6, 
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      h3: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      h3Align: WrapAlignment.center,
-                      strong: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      blockSpacing: 16.0,
-                    ),
+                    styleSheet: _getSharedMarkdownStyle(),
                   )
                 : const Center(child: CircularProgressIndicator()),
           ),
@@ -175,7 +206,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       margin: const EdgeInsets.only(bottom: 16.0),
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: context.colors.dryMoss,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -185,7 +216,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
             '🌟 Atualizamos nossos documentos legais. Por favor, revise-os e confirme seu aceite.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: context.colors.chalkWhite,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -194,7 +225,7 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
             'Data da atualização: ${formatLegalDate(kLegalLastUpdatedDate)}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+              color: context.colors.chalkWhite.withValues(alpha: 0.8),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -205,28 +236,34 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   }
 
   Widget _buildAcceptedBanner() {
-    if (widget.showAcceptButton || _acceptedTimestamp == null) return const SizedBox.shrink();
+    if (widget.showAcceptButton || _acceptedTimestamp == null) {
+      return const SizedBox.shrink();
+    }
 
     final dateTime = DateTime.tryParse(_acceptedTimestamp!);
     if (dateTime == null) return const SizedBox.shrink();
 
     final dateStr = formatLegalDate(_acceptedTimestamp!.substring(0, 10));
-    final timeStr = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16.0),
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+          Icon(
+            Icons.check_circle,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -246,18 +283,19 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: widget.showAcceptButton 
-        ? null 
-        : AppBar(
-            title: const Text('Termos de Uso', style: TextStyle(fontSize: 16)),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+      appBar: widget.showAcceptButton
+          ? null
+          : AppBar(
+              title: const Text(
+                'Termos de Uso',
+                style: TextStyle(fontSize: 16),
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+              actions: [buildFeedbackButton(context)],
             ),
-            actions: [
-              buildFeedbackButton(context),
-            ],
-          ),
       body: SafeArea(
         child: _termsMarkdown == null
             ? const Center(child: CircularProgressIndicator())
@@ -271,85 +309,67 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
                     MarkdownBody(
                       data: _termsMarkdown!,
                       onTapLink: _onTapLink,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(
-                          fontSize: 16, 
-                          height: 1.6, 
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        h3: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        h3Align: WrapAlignment.center,
-                        strong: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        blockSpacing: 16.0,
-                      ),
+                      styleSheet: _getSharedMarkdownStyle(),
                     ),
-                  const SizedBox(height: 16),
-                  if (widget.showAcceptButton)
-                    Card(
-                      elevation: 0,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
+                    const SizedBox(height: 16),
+                    if (widget.showAcceptButton)
+                      Column(
                         children: [
                           CheckboxListTile(
-                              title: const Text(
-                                'Li e concordo com os Termos de Uso e a Política de Privacidade.',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                              value: _isChecked,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  _isChecked = value ?? false;
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 50,
-                              child: FilledButton(
-                                onPressed: _isChecked
-                                    ? () {
-                                        TelemetryService.instance.logAcaoConfiguracoes(
-                                          'aceitar_termos_uso',
-                                        );
-                                        widget.onAccepted();
-                                      }
-                                    : null,
-                                style: FilledButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Aceitar Termos e Continuar',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            title: const Text(
+                              'Li e concordo com os Termos de Uso e a Política de Privacidade.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
                               ),
                             ),
-                          ],
-                        ),
+                            value: _isChecked,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                _isChecked = value ?? false;
+                              });
+                            },
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: AppColors.brandColor,
+                            checkColor: Colors.white,
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: FilledButton(
+                              onPressed: _isChecked
+                                  ? () {
+                                      TelemetryService.instance
+                                          .logAcaoConfiguracoes(
+                                            'aceitar_termos_uso',
+                                          );
+                                      widget.onAccepted();
+                                    }
+                                  : null,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.brandColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Aceitar Termos e Continuar',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
       ),
     );
   }
