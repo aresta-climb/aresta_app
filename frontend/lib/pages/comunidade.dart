@@ -40,7 +40,21 @@ class ComunidadePage extends StatelessWidget {
               const SizedBox(height: 24),
               buildActionCard(
                 context,
-                title: 'WHATSAPP DO PROJETO',
+                title: 'SOBRE O TIME',
+                subtitle: 'Conheça os desenvolvedores e colaboradores do projeto Aresta.',
+                iconData: Icons.groups_outlined,
+                iconBgColor: context.colors.dryMoss,
+                onTap: () {
+                  final treeNav = TreeNavigationWrapper.currentTreeController;
+                  if (treeNav != null) {
+                    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              buildActionCard(
+                context,
+                title: 'GRUPO DO WHATSAPP',
                 subtitle:
                     'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
@@ -116,20 +130,7 @@ class ComunidadePage extends StatelessWidget {
                   }
                 },
               ),
-              const SizedBox(height: 16),
-              buildActionCard(
-                context,
-                title: 'SOBRE O TIME',
-                subtitle: 'Conheça os desenvolvedores e colaboradores do projeto Aresta.',
-                iconData: Icons.groups_outlined,
-                iconBgColor: context.colors.dryMoss,
-                onTap: () {
-                  final treeNav = TreeNavigationWrapper.currentTreeController;
-                  if (treeNav != null) {
-                    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
-                  }
-                },
-              ),
+
               const SizedBox(height: 16),
               buildTermsCard(context),
               const SizedBox(height: 32),
