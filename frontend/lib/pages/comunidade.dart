@@ -62,7 +62,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
                 onTap: () async {
-                  // No link yet
+                  try {
+                    await launchUrl(Uri.parse('https://www.instagram.com/arestaclimb/'), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Error launching url: ');
+                  }
                 },
               ),
               const SizedBox(height: 16),
