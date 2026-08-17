@@ -56,7 +56,7 @@ class ComunidadePage extends StatelessWidget {
                 context,
                 title: 'GRUPO DO WHATSAPP',
                 subtitle:
-                    'Participe do grupo para tirar dúvidas, dar ideias e receber avisos do Aresta.',
+                    'Participe para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
                 onTap: () async {
