@@ -34,7 +34,7 @@ void main() {
 
     // Initial state: collapsed content should be visible
     expect(find.text('Designer'), findsOneWidget);
-    expect(find.text('Produto'), findsOneWidget);
+    expect(find.text('Produto/Marketing'), findsOneWidget);
     expect(find.text('Backend'), findsOneWidget);
     expect(find.text('Frontend'), findsOneWidget);
   });
