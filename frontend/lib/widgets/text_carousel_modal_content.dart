@@ -99,7 +99,7 @@ class _TextCarouselModalContentState extends State<TextCarouselModalContent> {
 
                   return ListView(
                     key: ValueKey(index),
-                    controller: isCurrentPage ? widget.scrollController : null,
+                    primary: false,
                     padding: EdgeInsets.only(
                       left: 20,
                       right: 20,
