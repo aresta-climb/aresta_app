@@ -2,7 +2,7 @@ name: frontend
 description: "Aplicativo de escalada para centralizar informações de picos"
 publish_to: 'none'
 
-version: 0.1.0-dev+51
+version: 0.1.1+52
 
 environment:
   sdk: ^3.11.3
