@@ -96,7 +96,7 @@ const List<Map<String, String>> teamData = [
       'role': 'Backend',
       'name': 'Renato Utsch',
       'desc': 'Desenvolvimento de APIs, banco de dados, infraestrutura do servidor e auxilia a equipe de frontend.',
-      'linkedin': 'https://www.linkedin.com/in/renatoutsch/',
+      'linkedin': '',
       'github': 'https://github.com/renatoutsch',
       'image': 'assets/team/renato.webp',
     },
