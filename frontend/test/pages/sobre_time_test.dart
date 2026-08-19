@@ -61,8 +61,8 @@ void main() {
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
-    // Expand Renato
-    await tester.tap(find.text('Backend'));
+    // Expand Eduardo
+    await tester.tap(find.text('Frontend'));
     await tester.pumpAndSettle();
 
     // Verify it expanded (GitHub/LinkedIn buttons visible)

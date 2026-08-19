@@ -145,7 +145,7 @@ void main() {
     );
 
     test(
-      'Deve persistir escaladaNome em SetorNode ao retornar (goBack) de ViaNode',
+      'NÃO deve persistir escaladaNome em SetorNode ao retornar (goBack padrão) de ViaNode',
       () {
         final home = controller.currentNode;
 
@@ -180,11 +180,11 @@ void main() {
         // Deve ter retornado para o SetorNode
         expect(controller.currentNode, isA<SetorNode>());
 
-        // O SetorNode deve ter recebido o escaladaNome do ViaNode para fazer a animação de scroll
+        // O SetorNode NÃO deve receber o escaladaNome (highlight automático desabilitado)
         final updatedSetorNode = controller.currentNode as SetorNode;
         expect(
           updatedSetorNode.scrollToEscaladaNome,
-          escalada.viaEsportiva.nome,
+          isNull,
         );
       },
     );
