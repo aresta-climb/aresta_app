@@ -1504,4 +1504,106 @@ void main() {
       },
     );
   });
+
+  group('MapaInterativoPage Overlay Navigation Tests', () {
+    Widget buildNavApp(List<Escalada> escaladas, Mapa mapa) {
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Teste';
+      setor.escaladas.addAll(escaladas);
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+      );
+
+      return MaterialApp(
+        home: Scaffold(
+          body: MapaInterativoPage(
+            mapa: mapa,
+            pico: pico,
+            cragId: 'test_crag',
+            autoZoomEnabled: false,
+            imageProviderOverride: MemoryImage(kTransparentImage),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('Tapping disabled right chevron does not close overlay', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'start_abc',
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 10),
+      );
+      final mapa = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+
+      // Add two routes starting at the same point
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route A', ids: ['start_abc']));
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route B', ids: ['start_abc']));
+
+      final escA = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route A'));
+      final escB = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route B'));
+
+      await tester.pumpWidget(buildNavApp([escA, escB], mapa));
+      await tester.pumpAndSettle();
+
+      // Tap marker to open overlay
+      await tester.tap(find.byKey(const Key('marker_start_abc')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Route A'), findsOneWidget);
+
+      // Tap active right chevron to go to Route B
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Route B'), findsOneWidget);
+
+      // Tap disabled right chevron (should do nothing, and definitely not close overlay)
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+
+      // Overlay should still be open on Route B
+      expect(find.text('Route B'), findsOneWidget);
+    });
+
+    testWidgets('Swiping at bounds does not crash or close overlay', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'start_abc',
+        circulo: BoundingCirculo(x: 50, y: 50, raio: 10),
+      );
+      final mapa = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route A', ids: ['start_abc']));
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route B', ids: ['start_abc']));
+
+      final escA = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route A'));
+      final escB = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route B'));
+
+      await tester.pumpWidget(buildNavApp([escA, escB], mapa));
+      await tester.pumpAndSettle();
+
+      // Tap marker to open overlay
+      await tester.tap(find.byKey(const Key('marker_start_abc')));
+      await tester.pumpAndSettle();
+
+      // Swipe left (which navigates right to Route B)
+      await tester.fling(find.text('Route A'), const Offset(-500, 0), 1000);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Route B'), findsOneWidget);
+
+      // Swipe left again on Route B (at bounds)
+      await tester.fling(find.text('Route B'), const Offset(-500, 0), 1000);
+      await tester.pumpAndSettle();
+
+      // Should not crash and should remain on Route B
+      expect(find.text('Route B'), findsOneWidget);
+    });
+  });
 }
