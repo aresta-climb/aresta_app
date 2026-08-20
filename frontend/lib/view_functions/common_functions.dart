@@ -12,12 +12,9 @@ import 'package:frontend/services/http/sync_service.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
-  final mode = ThemeController().themeMode.value;
-  if (mode == ThemeMode.light) return true;
-  if (mode == ThemeMode.dark) return false;
-  // Fallback to system brightness
-  return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-      Brightness.light;
+  // Temporary: locked to dark mode to match MaterialApp in main.dart
+  // This prevents global getters from returning light colors on dark backgrounds.
+  return false;
 }
 
 AppColors get _currentColors => _isLight ? AppColors.light : AppColors.dark;
