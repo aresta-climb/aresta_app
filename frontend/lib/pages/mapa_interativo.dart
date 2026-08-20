@@ -1641,6 +1641,7 @@ class MarkerPainter extends CustomPainter {
   final double mapHeight;
   final BoxConstraints constraints;
   final bool isSelected;
+  final double highlightIntensity;
   final double padding;
 
   MarkerPainter({
@@ -1651,6 +1652,7 @@ class MarkerPainter extends CustomPainter {
     required this.mapHeight,
     required this.constraints,
     required this.isSelected,
+    this.highlightIntensity = 0.0,
     required this.padding,
   });
 
@@ -1687,11 +1689,25 @@ class MarkerPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.5);
       canvas.drawPath(path, borderPaint);
     } else {
+      // Base faint glow for clickable areas (or highlighted glow if intensity > 0)
+      final baseAlpha = 0.25;
+      final highlightAlpha = 0.5;
+      final effectiveAlpha = baseAlpha + ((highlightAlpha - baseAlpha) * highlightIntensity);
+
       final glowPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.25)
+        ..color = Colors.white.withValues(alpha: effectiveAlpha)
         ..style = PaintingStyle.fill
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
       canvas.drawPath(path, glowPaint);
+      
+      if (highlightIntensity > 0.0) {
+        final highlightBorderPaint = Paint()
+          ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 * highlightIntensity
+          ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.0);
+        canvas.drawPath(path, highlightBorderPaint);
+      }
     }
   }
 
