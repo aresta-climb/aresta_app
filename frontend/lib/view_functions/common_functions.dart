@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
-import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:feedback/feedback.dart';
