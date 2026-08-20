@@ -89,13 +89,16 @@ class MapaInterativoPage extends StatefulWidget {
 /// (usado na `MapasCarrosselPage`). Isso evita o recarregamento do zero da
 /// imagem do mapa e das animações.
 class _MapaInterativoPageState extends State<MapaInterativoPage>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   String? _selectedId;
   late TransformationController _transformationController;
   late AnimationController _animationController;
   Animation<Matrix4>? _zoomAnimation;
+
+  late AnimationController _highlightController;
+  late Animation<double> _highlightAnimation;
 
   final Map<String, List<Mapa_Referencia>> _poiToRefs = {};
   final Map<Mapa_Referencia, ResolvedDataset> _refToResolved = {};
@@ -118,6 +121,20 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       if (_zoomAnimation != null) {
         _transformationController.value = _zoomAnimation!.value;
       }
+    });
+
+    _highlightController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _highlightAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _highlightController,
+        curve: Curves.elasticOut,
+      ),
+    );
+    _highlightController.addListener(() {
+      setState(() {});
     });
 
     _buildReferenceMaps();
@@ -296,6 +313,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   void dispose() {
     FeedbackMetadataCollector.globalActiveNodeOverride = null;
     _animationController.dispose();
+    _highlightController.dispose();
     _transformationController.dispose();
     super.dispose();
   }
@@ -536,6 +554,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               mapHeight: widget.mapa.alturaMapa.toDouble(),
               constraints: constraints,
               isSelected: isSelected,
+              highlightIntensity: _highlightAnimation.value,
               padding: hitBoxPadding,
             ),
           ),
@@ -1096,6 +1115,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   setState(() {
                     _selectedId = null;
                     _updateFeedbackNode();
+                  });
+                } else {
+                  _highlightController.forward(from: 0.0).then((_) {
+                    _highlightController.reverse();
                   });
                 }
               },
