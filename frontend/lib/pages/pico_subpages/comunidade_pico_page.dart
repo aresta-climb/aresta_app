@@ -41,7 +41,12 @@ class ComunidadePicoPage extends StatelessWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, 'COMUNIDADE', subtitle: pico.nome),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           children: [
             if (categories.comunidadeInfo.isNotEmpty)
