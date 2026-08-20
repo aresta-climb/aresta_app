@@ -947,6 +947,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     Widget content;
     if (refs.length > 1) {
       void changeItem(int newIndex) {
+        if (newIndex < 0 || newIndex >= refs.length) return;
+
         setState(() {
           _focusedItemIndex = newIndex;
         });
