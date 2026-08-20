@@ -1044,19 +1044,22 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       );
     }
 
-    return Card(
-      color: context.colors.caveShadow,
-      elevation: 8,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: context.colors.graniteEdge, width: 1),
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.5,
+    return GestureDetector(
+      onTap: () {}, // Consome toques para não fechar o overlay
+      child: Card(
+        color: context.colors.caveShadow,
+        elevation: 8,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: context.colors.graniteEdge, width: 1),
         ),
-        child: content,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: content,
+        ),
       ),
     );
   }
