@@ -47,7 +47,12 @@ class ExplorarLocalPage extends StatelessWidget {
         foregroundColor: context.colors.chalkWhite,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           children: [
             if (categories.capa.isNotEmpty) ...[
