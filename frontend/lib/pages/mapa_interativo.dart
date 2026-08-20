@@ -973,9 +973,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
       content = GestureDetector(
         onHorizontalDragEnd: (details) {
-          if (details.primaryVelocity! > 0) {
+          final velocity = details.primaryVelocity ?? 0.0;
+          if (velocity > 0) {
             if (_focusedItemIndex > 0) changeItem(_focusedItemIndex - 1);
-          } else if (details.primaryVelocity! < 0) {
+          } else if (velocity < 0) {
             if (_focusedItemIndex < refs.length - 1) {
               changeItem(_focusedItemIndex + 1);
             }
