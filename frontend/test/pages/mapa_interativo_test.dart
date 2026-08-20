@@ -1605,5 +1605,59 @@ void main() {
       // Should not crash and should remain on Route B
       expect(find.text('Route B'), findsOneWidget);
     });
+    testWidgets('Tapping empty map background triggers highlight animation on all markers', (WidgetTester tester) async {
+      final ponto1 = Mapa_PontoDeInteresse(
+        id: 'start_a',
+        circulo: BoundingCirculo(x: 20, y: 20, raio: 10),
+      );
+      final ponto2 = Mapa_PontoDeInteresse(
+        id: 'start_b',
+        circulo: BoundingCirculo(x: 80, y: 80, raio: 10),
+      );
+      final mapa = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto1, ponto2],
+      );
+
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route A', ids: ['start_a']));
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Route B', ids: ['start_b']));
+
+      final escA = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route A'));
+      final escB = Escalada(viaEsportiva: ViaEsportiva(nome: 'Route B'));
+
+      await tester.pumpWidget(buildNavApp([escA, escB], mapa));
+      await tester.pumpAndSettle();
+
+      // Ensure no overlay is open
+      expect(find.text('Route A'), findsNothing);
+
+      // Get initial MarkerPainter (highlightIntensity should be 0.0)
+      final initialPaint1 = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_start_a')), matching: find.byType(CustomPaint))
+      );
+      expect((initialPaint1.painter as MarkerPainter).highlightIntensity, 0.0);
+
+      // Tap on empty space (middle of InteractiveViewer)
+      await tester.tap(find.byType(InteractiveViewer)); 
+      await tester.pump();
+
+      // Pump a few frames to advance the animation
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Check if highlightIntensity has increased (it animates 0 to 1 over 400ms)
+      final animatingPaint1 = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_start_a')), matching: find.byType(CustomPaint))
+      );
+      expect((animatingPaint1.painter as MarkerPainter).highlightIntensity, greaterThan(0.0));
+      
+      final animatingPaint2 = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_start_b')), matching: find.byType(CustomPaint))
+      );
+      expect((animatingPaint2.painter as MarkerPainter).highlightIntensity, greaterThan(0.0));
+      
+      // Let animation finish
+      await tester.pumpAndSettle();
+    });
   });
 }
