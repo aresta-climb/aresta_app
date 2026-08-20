@@ -42,7 +42,12 @@ class ApoiePicoPage extends StatelessWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: buildCommonAppBar(context, 'APOIE O PICO', subtitle: pico.nome),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           children: [
             if (pico.chavePixManutencao.isNotEmpty)
