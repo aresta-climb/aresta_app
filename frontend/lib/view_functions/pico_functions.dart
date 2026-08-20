@@ -213,7 +213,7 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: Icon(Icons.folder, color: beastHide),
+        trailing: Icon(Icons.format_list_bulleted, color: beastHide),
         onTap: () {
           TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
           AppNav.toGrupo(context, grupo: grupo);
