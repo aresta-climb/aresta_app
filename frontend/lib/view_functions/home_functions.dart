@@ -277,7 +277,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           ),
           const SizedBox(height: 12),
           Text(
-            'Quatro passos pra você sair do app direto pro paredão.',
+            'Três passos pra você sair do app direto pro paredão.',
             style: TextStyle(
               color: context.colors.slateBlue.withValues(alpha: 0.7),
               fontSize: 14,
@@ -314,7 +314,9 @@ Widget _buildGuiaRapido(BuildContext context) {
                 'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
             iconColor: const Color(0xFFBCA646),
             bgColor: const Color(0xFFF9F5DE),
+            isLast: true,
           ),
+          /*
           _buildStepItem(
             context,
             num: '04',
@@ -326,6 +328,7 @@ Widget _buildGuiaRapido(BuildContext context) {
             bgColor: const Color(0xFFEAF1F8),
             isLast: true,
           ),
+          */
         ],
       ),
     ),
