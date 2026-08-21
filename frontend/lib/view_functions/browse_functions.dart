@@ -265,10 +265,6 @@ class CragCard extends StatelessWidget {
       crag['nome'],
       fallback: 'Sem Nome',
     ).toUpperCase();
-    final String local = safeString(
-      crag['local'],
-      fallback: 'Local Desconhecido',
-    ).toUpperCase();
 
     // Attempt to extract sectors/routes count if available in description or another field
     String statsText = '0 setores • 0 escaladas';
@@ -365,12 +361,13 @@ class CragCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Top Right Badges
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       if (distanceStr != null)
                         Container(
-                          margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 6,
@@ -445,7 +442,6 @@ class CragCard extends StatelessWidget {
                           final progress = downloadingMap[crag['id']];
                           if (progress != null) {
                             return Container(
-                              margin: const EdgeInsets.only(left: 8),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
                                 vertical: 6,

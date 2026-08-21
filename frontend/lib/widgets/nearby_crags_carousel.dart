@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -19,10 +18,11 @@ class NearbyCragsCarousel extends StatefulWidget {
 }
 
 class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
+  static const String _kLastKnownLatKey = 'last_known_latitude';
+  static const String _kLastKnownLonKey = 'last_known_longitude';
+
   bool _isLoading = true;
   bool _permissionDenied = false;
-  Position? _currentPosition;
-  Map<String, dynamic>? _ipLocation;
   List<Map<String, dynamic>> _closestCrags = [];
 
   @override
@@ -53,6 +53,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     final resumo = resumos.first;
 
+    if (!mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
@@ -78,16 +79,14 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      await _fetchIpLocationFallback();
+      await _fallbackToCachedLocationOrFinish();
       return;
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      // Don't request immediately, wait for user interaction
       setState(() {
         _isLoading = false;
         _permissionDenied = true;
@@ -96,11 +95,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      await _fetchIpLocationFallback();
+      await _fallbackToCachedLocationOrFinish();
       return;
     }
 
-    // Permission already granted
     await _fetchGpsLocation();
   }
 
@@ -113,18 +111,19 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      await _fetchIpLocationFallback();
+      await _fallbackToCachedLocationOrFinish();
     } else {
       await _fetchGpsLocation();
     }
   }
 
+  /// Tenta resolver a localização por satélite com degradação progressiva de precisão.
   Future<void> _fetchGpsLocation() async {
     try {
       Position? position;
 
       try {
-        // 1. First try high accuracy (GPS) which works offline in airplane mode
+        // 1. Tenta GPS de alta precisão (funciona offline via satélites)
         position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
@@ -132,7 +131,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           ),
         );
       } catch (_) {
-        // 2. If it times out or fails, fallback to low accuracy (Network/Cell)
+        // 2. Se demorar ou falhar, tenta precisão baixa
         try {
           position = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
@@ -141,46 +140,58 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
             ),
           );
         } catch (_) {
-          // 3. If that also fails, try grabbing the last known cached position
+          // 3. Fallback para última posição conhecida do SO
           position = await Geolocator.getLastKnownPosition();
         }
       }
 
       if (position != null) {
-        _currentPosition = position;
+        _saveLocationToCache(position.latitude, position.longitude);
         _calculateDistances(position.latitude, position.longitude);
-      } else {
-        // 4. If all local methods fail, fallback to IP location
-        await _fetchIpLocationFallback();
+        return;
       }
-    } catch (e) {
-      await _fetchIpLocationFallback();
+    } catch (_) {
+      // Falhas no GPS ativo direcionam para o cache local
     }
+
+    // 4. Se todas as tentativas ativas falharem, usa coordenadas salvas em disco
+    await _fallbackToCachedLocationOrFinish();
   }
 
-  Future<void> _fetchIpLocationFallback() async {
+  /// Salva coordenadas de sucesso em disco local (SharedPreferences).
+  Future<void> _saveLocationToCache(double lat, double lon) async {
     try {
-      final response = await http
-          .get(Uri.parse('http://ip-api.com/json/'))
-          .timeout(const Duration(seconds: 3));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          _ipLocation = data;
-          _calculateDistances(data['lat'], data['lon']);
-          return;
-        }
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_kLastKnownLatKey, lat);
+      await prefs.setDouble(_kLastKnownLonKey, lon);
     } catch (e) {
-      debugPrint('Erro ao obter IP location: $e');
+      debugPrint('Erro ao persistir localização em cache: $e');
     }
-
-    // Total failure
-    setState(() {
-      _isLoading = false;
-    });
   }
 
+  /// Lê as coordenadas salvas em cache local ou conclui o carregamento graciosamente.
+  Future<void> _fallbackToCachedLocationOrFinish() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedLat = prefs.getDouble(_kLastKnownLatKey);
+      final cachedLon = prefs.getDouble(_kLastKnownLonKey);
+
+      if (cachedLat != null && cachedLon != null) {
+        _calculateDistances(cachedLat, cachedLon);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Erro ao ler localização do cache: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  /// Calcula as distâncias geodésicas entre o usuário e todos os picos do índice local.
   void _calculateDistances(double userLat, double userLon) {
     final datasetRepo = DatasetRepository.instance;
     final availablePicos =
@@ -190,8 +201,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     for (var pico in availablePicos) {
       if (pico.containsKey('latitude') && pico.containsKey('longitude')) {
-        double picoLat = pico['latitude'];
-        double picoLon = pico['longitude'];
+        double picoLat = (pico['latitude'] as num).toDouble();
+        double picoLon = (pico['longitude'] as num).toDouble();
 
         double distanceInMeters = Geolocator.distanceBetween(
           userLat,
@@ -200,31 +211,33 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           picoLon,
         );
 
-        // Cópia do mapa para poder adicionar a distância sem mutar o original
-        Map<String, dynamic> picoComDistancia = Map.from(pico);
-        picoComDistancia['distanceMeters'] = distanceInMeters;
-        cragsWithDistance.add(picoComDistancia);
+        var picoCopy = Map<String, dynamic>.from(pico);
+        picoCopy['distanceMeters'] = distanceInMeters;
+        cragsWithDistance.add(picoCopy);
       }
     }
 
     cragsWithDistance.sort(
-      (a, b) => (a['distanceMeters'] as double).compareTo(
-        b['distanceMeters'] as double,
-      ),
+      (a, b) =>
+          (a['distanceMeters'] as double).compareTo(b['distanceMeters'] as double),
     );
 
-    setState(() {
-      _closestCrags = cragsWithDistance.take(5).toList();
-      _isLoading = false;
-      _permissionDenied = false;
-    });
+    if (mounted) {
+      setState(() {
+        _closestCrags = cragsWithDistance;
+        _isLoading = false;
+        _permissionDenied = false;
+      });
+    }
   }
 
   String _formatDistance(double meters) {
     if (meters < 1000) {
-      return '${meters.toInt()} m';
+      return '${meters.round()}m';
+    } else {
+      double km = meters / 1000;
+      return '${km.toStringAsFixed(1)}km';
     }
-    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
   @override
@@ -245,11 +258,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   letterSpacing: 1.1,
                 ),
               ),
-              if (_ipLocation != null && _closestCrags.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Icon(Icons.wifi, color: context.colors.ashGrey, size: 14),
-              ] else if (_currentPosition != null &&
-                  _closestCrags.isNotEmpty) ...[
+              if (_closestCrags.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Icon(
                   Icons.location_on,
@@ -340,7 +349,6 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               picoBase['distanceMeters'] as double,
             );
 
-            // Re-evaluate isDownloaded from the active dataset
             final isDownloaded =
                 dataset?.downloadedPicos.any(
                   (p) => p['id'] == picoBase['id'],
@@ -352,7 +360,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: SizedBox(
-                width: 320,
+                width: 340,
                 child: CragCard(
                   crag: pico,
                   distanceStr: distanceStr,
