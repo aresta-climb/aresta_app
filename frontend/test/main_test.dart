@@ -30,7 +30,7 @@ class MockAssetBundle extends Fake implements AssetBundle {
   }
 }
 
-class FakeRemoteConfigService implements RemoteConfigService {
+class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {
   @override
   int get hardMinVersion => 0;
 

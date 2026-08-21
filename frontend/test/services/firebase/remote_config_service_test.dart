@@ -24,9 +24,8 @@ void main() {
     });
 
     test(
-      'initialize deve configurar defaults, baixar com fetchInterval=0, e depois restaurar fetchInterval=12h',
+      'initialize deve configurar defaults e rodar fetch sem bloquear o chamador, notificando ouvintes ao concluir',
       () async {
-        // Setup
         when(
           () => mockFirebaseRemoteConfig.setDefaults(any()),
         ).thenAnswer((_) async {});
@@ -37,52 +36,93 @@ void main() {
           () => mockFirebaseRemoteConfig.fetchAndActivate(),
         ).thenAnswer((_) async => true);
 
-        // Act
-        // Usar uma nova instância private se houver problema com _initFuture.
-        // Como _initFuture trava o initialize() pra rodar 1 vez, a gente limpa recriando a service ou limpando o future se não for null
-
-        // Porém, como _initFuture não é acessível, a melhor forma de forçar re-execução
-        // é usar reflection ou chamar num app fresh. No teste, como instanciamos a global,
-        // ele pode já estar preenchido.
-        // Se não passar, depois ajustamos isso. Mas a primeira vez que roda no teste vai funcionar.
+        bool notified = false;
+        service.addListener(() {
+          notified = true;
+        });
 
         await service.initialize();
 
-        // Assert:
-        // 1. setDefaults called
+        // 1. setDefaults chamado
         verify(() => mockFirebaseRemoteConfig.setDefaults(any())).called(1);
 
-        // 2. setConfigSettings called twice
+        // 2. setConfigSettings chamado com intervalo saudável de cache (12 horas)
         final capturedSettings = verify(
           () => mockFirebaseRemoteConfig.setConfigSettings(captureAny()),
         ).captured;
-        expect(capturedSettings.length, 2);
+        expect(capturedSettings.isNotEmpty, isTrue);
+        final settings = capturedSettings.first as RemoteConfigSettings;
+        expect(settings.minimumFetchInterval, const Duration(hours: 12));
+        expect(settings.fetchTimeout, const Duration(seconds: 10));
 
-        // First call should have Duration.zero
-        final firstSettings = capturedSettings[0] as RemoteConfigSettings;
-        expect(firstSettings.minimumFetchInterval, Duration.zero);
-        expect(firstSettings.fetchTimeout, const Duration(seconds: 10));
-
-        // Second call should have Duration(hours: 12)
-        final secondSettings = capturedSettings[1] as RemoteConfigSettings;
-        expect(secondSettings.minimumFetchInterval, const Duration(hours: 12));
-        expect(secondSettings.fetchTimeout, const Duration(seconds: 10));
-
-        // 3. fetchAndActivate called exactly once
+        // 3. fetchAndActivate chamado
         verify(() => mockFirebaseRemoteConfig.fetchAndActivate()).called(1);
+
+        // 4. Ouvintes notificados
+        expect(notified, isTrue);
       },
     );
+
+    test('initialize deve capturar erros de rede silenciosamente sem quebrar', () async {
+      when(
+        () => mockFirebaseRemoteConfig.setDefaults(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirebaseRemoteConfig.setConfigSettings(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirebaseRemoteConfig.fetchAndActivate(),
+      ).thenThrow(Exception('Simulated network timeout'));
+
+      // Não deve lançar exceção
+      await expectLater(service.initialize(), completes);
+    });
   });
 
   group('Feature Flags Getters', () {
-    test('Acessar recommendedVersion retorna valor do mock', () {
-      final mockFirebaseRemoteConfig = MockFirebaseRemoteConfig();
-      RemoteConfigService.instance.debugRemoteConfig = mockFirebaseRemoteConfig;
+    late MockFirebaseRemoteConfig mockFirebaseRemoteConfig;
 
+    setUp(() {
+      mockFirebaseRemoteConfig = MockFirebaseRemoteConfig();
+      RemoteConfigService.instance.debugRemoteConfig = mockFirebaseRemoteConfig;
+    });
+
+    test('Acessar recommendedVersion retorna valor do mock', () {
       when(
         () => mockFirebaseRemoteConfig.getInt('recommended_version'),
       ).thenReturn(42);
       expect(RemoteConfigService.instance.recommendedVersion, 42);
+    });
+
+    test('Acessar softMinVersion retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getInt('soft_min_version'),
+      ).thenReturn(15);
+      expect(RemoteConfigService.instance.softMinVersion, 15);
+    });
+
+    test('Acessar hardMinVersion retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getInt('hard_min_version'),
+      ).thenReturn(20);
+      expect(RemoteConfigService.instance.hardMinVersion, 20);
+    });
+
+    test('Acessar storeUrlIos retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('store_url_ios'),
+      ).thenReturn('https://custom.app.store');
+      expect(RemoteConfigService.instance.storeUrlIos, 'https://custom.app.store');
+    });
+
+    test('Getters tratam exceções retornando valores padrão seguros', () {
+      when(() => mockFirebaseRemoteConfig.getBool(any())).thenThrow(Exception('Error'));
+      when(() => mockFirebaseRemoteConfig.getInt(any())).thenThrow(Exception('Error'));
+      when(() => mockFirebaseRemoteConfig.getString(any())).thenThrow(Exception('Error'));
+
+      expect(RemoteConfigService.instance.getBool('qualquer_bool'), isFalse);
+      expect(RemoteConfigService.instance.getInt('qualquer_int'), 0);
+      expect(RemoteConfigService.instance.getString('qualquer_string'), '');
     });
   });
 }

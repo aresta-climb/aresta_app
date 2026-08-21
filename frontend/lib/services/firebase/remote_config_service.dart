@@ -1,33 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
-/// Serviço responsável por gerenciar o Firebase Remote Config.
+/// Serviço responsável por gerenciar o Firebase Remote Config de forma reativa e não-bloqueante.
 ///
 /// O Remote Config permite alterar o comportamento e a aparência do aplicativo
 /// sem precisar publicar uma nova atualização nas lojas (App Store/Google Play).
 /// É ideal para:
 /// - Feature Flags (ativar/desativar novas funcionalidades).
-/// - Testes A/B (entregar configurações diferentes para grupos de usuários).
-/// - Mensagens de aviso globais.
+/// - Version Enforcement (bloqueio de versões defasadas ou aviso de atualização).
+/// - Mensagens e avisos globais.
 ///
-/// ## Como adicionar uma nova flag (Nova Configuração):
-/// 1. Adicione a chave e o valor padrão no mapa `setDefaults` dentro do método `initialize()`.
-///    Exemplo: `"nova_funcionalidade": false`
-/// 2. Crie um novo `getter` tipado no final desta classe para facilitar o acesso na UI.
-///    Exemplo: `bool get novaFuncionalidade => getBool('nova_funcionalidade');`
-/// 3. No painel do Firebase Console, vá em "Remote Config" e crie um parâmetro com a MESMA chave.
-///
-/// ## Como usar no código:
-/// Acesse a instância global (singleton) do serviço em qualquer lugar:
-/// ```dart
-/// if (RemoteConfigService.instance.novaFuncionalidade) {
-///   // Código da nova funcionalidade
-/// }
-/// ```
-class RemoteConfigService {
+/// Como o aplicativo adota uma arquitetura estritamente *offline-first*, este serviço:
+/// 1. Carrega valores padrão locais imediatamente no dispositivo.
+/// 2. Executa a sincronização de rede em segundo plano (`fetchAndActivate`).
+/// 3. Notifica ouvintes registrados via [ChangeNotifier] quando novos parâmetros são baixados.
+class RemoteConfigService extends ChangeNotifier {
   RemoteConfigService._privateConstructor();
 
-  /// Instância singleton global mutável para facilitar injeção de mock nos testes.
+  /// Instância singleton global mutável para permitir injeção de dependência/mocks nos testes.
   static RemoteConfigService instance =
       RemoteConfigService._privateConstructor();
 
@@ -42,15 +32,18 @@ class RemoteConfigService {
   @visibleForTesting
   void clearInitFuture() => _initFuture = null;
 
-  /// Inicializa o serviço definindo os padrões (defaults) e tentando buscar configurações do servidor.
+  /// Inicializa o serviço definindo os padrões (defaults) e buscando atualizações em segundo plano.
+  ///
+  /// Retorna um [Future] que conclui após a definição dos defaults e tentativa de fetch.
   Future<void> initialize() {
     _initFuture ??= _initializeInternal();
     return _initFuture!;
   }
 
+  /// Executa o fluxo interno de inicialização e sincronização com o Firebase Remote Config.
   Future<void> _initializeInternal() async {
     try {
-      // 1. Definimos os defaults inquebráveis locais (fallback para offline)
+      // 1. Define os padrões locais seguros para garantir funcionamento offline imediato
       await _remoteConfig.setDefaults(const {
         "recommended_version": 0,
         "soft_min_version": 0,
@@ -58,18 +51,7 @@ class RemoteConfigService {
         "store_url_ios": "",
       });
 
-      // 2. Configurações iniciais com cache ZERO para forçar o download na abertura do app
-      await _remoteConfig.setConfigSettings(
-        RemoteConfigSettings(
-          fetchTimeout: const Duration(seconds: 10),
-          minimumFetchInterval: Duration.zero, // Força a buscar da rede
-        ),
-      );
-
-      // 3. Tenta buscar no fundo sem travar a interface
-      await _remoteConfig.fetchAndActivate();
-
-      // 4. Volta o cache para 12 horas para proteger a cota do Firebase caso haja fetches subsequentes
+      // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
       await _remoteConfig.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 10),
@@ -77,19 +59,25 @@ class RemoteConfigService {
         ),
       );
 
+      // 3. Tenta buscar e ativar novas configurações do servidor
+      final updated = await _remoteConfig.fetchAndActivate();
+
       if (kDebugMode) {
-        print('🔧 [RemoteConfig] Configuração atualizada com sucesso.');
+        print('🔧 [RemoteConfig] Configuração atualizada com sucesso (novo valor: $updated).');
       }
+
+      // 4. Notifica widgets ouvintes para atualizarem seu estado reativamente
+      notifyListeners();
     } catch (e) {
       if (kDebugMode) {
         print(
-          '🔧 [RemoteConfig] Falha ao atualizar (offline?). Usando cache/defaults. Erro: $e',
+          '🔧 [RemoteConfig] Falha ao atualizar (offline/timeout). Usando cache e defaults. Erro: $e',
         );
       }
     }
   }
 
-  /// Retorna um valor booleano do Remote Config.
+  /// Retorna um valor booleano do Remote Config ou [false] em caso de erro.
   bool getBool(String key) {
     try {
       return _remoteConfig.getBool(key);
@@ -98,7 +86,7 @@ class RemoteConfigService {
     }
   }
 
-  /// Retorna um valor inteiro do Remote Config.
+  /// Retorna um valor inteiro do Remote Config ou `0` em caso de erro.
   int getInt(String key) {
     try {
       return _remoteConfig.getInt(key);
@@ -107,7 +95,7 @@ class RemoteConfigService {
     }
   }
 
-  /// Retorna uma string do Remote Config.
+  /// Retorna uma string do Remote Config ou `""` em caso de erro.
   String getString(String key) {
     try {
       return _remoteConfig.getString(key);
@@ -117,19 +105,18 @@ class RemoteConfigService {
   }
 
   // ===========================================================================
-  // GETTERS TIPADOS (FEATURE FLAGS)
-  // Adicione novas flags aqui seguindo o padrão abaixo.
+  // GETTERS TIPADOS (FEATURE FLAGS & VERSÕES)
   // ===========================================================================
 
-  /// Versão recomendada para apresentar banner leve.
+  /// Versão recomendada para apresentar banner leve azul.
   int get recommendedVersion => getInt('recommended_version');
 
-  /// Versão mínima para apresentar banner fixo e bloquear navegação (soft block).
+  /// Versão mínima para apresentar banner fixo laranja e bloquear downloads (soft block).
   int get softMinVersion => getInt('soft_min_version');
 
-  /// Versão mínima absoluta para o app funcionar (bloqueia o app inteiro).
+  /// Versão mínima absoluta para o app funcionar (bloqueia o app com tela vermelha).
   int get hardMinVersion => getInt('hard_min_version');
 
-  /// URL personalizada para a loja de aplicativos no iOS (útil para beta fechado).
+  /// URL personalizada para a loja de aplicativos no iOS (útil para beta fechado/TestFlight).
   String get storeUrlIos => getString('store_url_ios');
 }

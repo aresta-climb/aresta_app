@@ -5,20 +5,21 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
-/// Widget de controle mestre (Wrapper) de versão do aplicativo.
+/// Widget de controle mestre e não-bloqueante de versão do aplicativo.
 ///
-/// Este widget deve englobar a raiz da aplicação (geralmente abaixo de `MaterialApp`).
-/// Sua função é consultar a versão atual do build via `PackageInfo` e checar contra os
-/// requisitos do Firebase `RemoteConfigService`.
+/// Este widget engloba a raiz da aplicação (abaixo de `MaterialApp`).
+/// Sua função é consultar a versão local instalada via `PackageInfo` e checar contra os
+/// requisitos do Firebase `RemoteConfigService` de forma totalmente assíncrona e reativa.
+///
+/// Seguindo os princípios de engenharia *offline-first*:
+/// - A interface gráfica (`child`) é renderizada imediatamente no primeiro frame sem bloqueio de rede.
+/// - O `RemoteConfigService` é ouvido de forma reativa (`ChangeNotifier`); quando novas regras chegam em
+///   segundo plano, o widget atualiza a UI sem travar o aplicativo.
 ///
 /// Baseado na versão atual, ele pode:
-/// - Bloquear toda a UI exibindo uma tela crítica de interrupção (Hard Block) se
-///   a versão for menor que a `hard_min_version`.
-/// - Mostrar um banner permanente laranja (Soft Block UI) recomendando fortemente
-///   a atualização, se a versão for menor que a `soft_min_version` (sendo que as lógicas
-///   de background também bloquearão os downloads na camada de rede).
-/// - Mostrar um banner permanente azul sugerindo atualização caso exista uma
-///   `recommended_version`.
+/// - Bloquear a UI exibindo uma tela crítica de interrupção (Hard Block) se a versão for menor que a `hard_min_version`.
+/// - Mostrar um banner permanente laranja (Soft Block UI) recomendando a atualização se a versão for menor que `soft_min_version`.
+/// - Mostrar um banner azul sugerindo atualização caso exista uma `recommended_version`.
 class AppVersionChecker extends StatefulWidget {
   final Widget child;
   final RemoteConfigService? remoteConfigService;
@@ -49,58 +50,87 @@ class AppVersionChecker extends StatefulWidget {
 
 class _AppVersionCheckerState extends State<AppVersionChecker> {
   int _currentBuildNumber = 0;
-  bool _isLoading = true;
   bool _isRecommendedBannerClosed = false;
+  RemoteConfigService? _effectiveRemoteConfig;
 
   @override
   void initState() {
     super.initState();
+    _effectiveRemoteConfig =
+        widget.remoteConfigService ?? RemoteConfigService.instance;
+    _effectiveRemoteConfig?.addListener(_onRemoteConfigChanged);
+
+    // Dispara a inicialização/fetch em segundo plano sem travar a interface
+    _effectiveRemoteConfig?.initialize();
+
+    // Carrega o build number local de forma assíncrona
     _loadPackageInfo();
   }
 
-  /// Carrega as informações do pacote do aplicativo instaladas localmente para
-  /// descobrir o número de versão/build real do usuário. Se falhar, assume build 0.
+  @override
+  void didUpdateWidget(covariant AppVersionChecker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newRemoteConfig =
+        widget.remoteConfigService ?? RemoteConfigService.instance;
+    if (_effectiveRemoteConfig != newRemoteConfig) {
+      _effectiveRemoteConfig?.removeListener(_onRemoteConfigChanged);
+      _effectiveRemoteConfig = newRemoteConfig;
+      _effectiveRemoteConfig?.addListener(_onRemoteConfigChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _effectiveRemoteConfig?.removeListener(_onRemoteConfigChanged);
+    super.dispose();
+  }
+
+  void _onRemoteConfigChanged() {
+    if (mounted) {
+      _checkAndLogTelemetry();
+      setState(() {});
+    }
+  }
+
+  /// Carrega as informações do pacote instaladas localmente no SO.
   Future<void> _loadPackageInfo() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final buildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-      final remoteConfig =
-          widget.remoteConfigService ?? RemoteConfigService.instance;
-      await remoteConfig.initialize();
-
-      final hardMinVersion = remoteConfig.hardMinVersion;
-      final softMinVersion = remoteConfig.softMinVersion;
-      final recommendedVersion = remoteConfig.recommendedVersion;
-
-      if (hardMinVersion > 0 && buildNumber < hardMinVersion) {
-        TelemetryService.instance.logAppVersionHardBlock();
-      } else if (softMinVersion > 0 && buildNumber < softMinVersion) {
-        TelemetryService.instance.logAppVersionSoftBlock();
-      } else if (recommendedVersion > 0 && buildNumber < recommendedVersion) {
-        TelemetryService.instance.logAppVersionRecommendedUpdate();
-      }
-
       if (mounted) {
         setState(() {
           _currentBuildNumber = buildNumber;
-          _isLoading = false;
         });
+        _checkAndLogTelemetry();
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } catch (_) {
+      // Falhas ao ler PackageInfo mantêm buildNumber como 0 de forma segura
+    }
+  }
+
+  void _checkAndLogTelemetry() {
+    if (_currentBuildNumber <= 0) return;
+
+    final remoteConfig =
+        _effectiveRemoteConfig ?? RemoteConfigService.instance;
+    final hardMinVersion = remoteConfig.hardMinVersion;
+    final softMinVersion = remoteConfig.softMinVersion;
+    final recommendedVersion = remoteConfig.recommendedVersion;
+
+    if (hardMinVersion > 0 && _currentBuildNumber < hardMinVersion) {
+      TelemetryService.instance.logAppVersionHardBlock();
+    } else if (softMinVersion > 0 && _currentBuildNumber < softMinVersion) {
+      TelemetryService.instance.logAppVersionSoftBlock();
+    } else if (recommendedVersion > 0 && _currentBuildNumber < recommendedVersion) {
+      TelemetryService.instance.logAppVersionRecommendedUpdate();
     }
   }
 
   /// Abre a loja de aplicativos correta baseado no sistema operacional do dispositivo.
-  /// Usuário é redirecionado para a App Store no iOS ou Play Store no Android.
   void _launchStore() {
     final remoteConfig =
-        widget.remoteConfigService ?? RemoteConfigService.instance;
+        _effectiveRemoteConfig ?? RemoteConfigService.instance;
     final url = AppVersionChecker.getStoreUrl(
       remoteConfig,
       isIOS: Platform.isIOS,
@@ -110,25 +140,28 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const ColoredBox(color: Colors.black);
-    }
-
     final remoteConfig =
-        widget.remoteConfigService ?? RemoteConfigService.instance;
+        _effectiveRemoteConfig ?? RemoteConfigService.instance;
     final hardMinVersion = remoteConfig.hardMinVersion;
     final softMinVersion = remoteConfig.softMinVersion;
     final recommendedVersion = remoteConfig.recommendedVersion;
 
-    if (hardMinVersion > 0 && _currentBuildNumber < hardMinVersion) {
+    // Se for exigida atualização crítica (Hard Block), substitui a visualização pelo bloqueio total
+    if (hardMinVersion > 0 &&
+        _currentBuildNumber > 0 &&
+        _currentBuildNumber < hardMinVersion) {
       return AppVersionHardBlockScreen(onUpdatePressed: _launchStore);
     }
 
-    bool showSoftBanner =
-        softMinVersion > 0 && _currentBuildNumber < softMinVersion;
-    bool showRecBanner =
+    final bool showSoftBanner =
+        softMinVersion > 0 &&
+        _currentBuildNumber > 0 &&
+        _currentBuildNumber < softMinVersion;
+
+    final bool showRecBanner =
         !showSoftBanner &&
         recommendedVersion > 0 &&
+        _currentBuildNumber > 0 &&
         _currentBuildNumber < recommendedVersion &&
         !_isRecommendedBannerClosed;
 
@@ -203,7 +236,7 @@ class _AppVersionCheckerState extends State<AppVersionChecker> {
   }
 }
 
-/// Widget standalone da tela de bloqueio duro, extraído para permitir testes manuais no modo experimental.
+/// Widget standalone da tela de bloqueio duro, extraído para permitir testes manuais e modularidade.
 class AppVersionHardBlockScreen extends StatelessWidget {
   final VoidCallback onUpdatePressed;
 
