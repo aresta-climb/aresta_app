@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:flutter/material.dart';
@@ -9,10 +10,15 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/constants/legal_version.g.dart';
+import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'mocks/mock_telemetry_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -30,7 +36,9 @@ class MockAssetBundle extends Fake implements AssetBundle {
   }
 }
 
-class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {
+class FakeRemoteConfigService extends Fake
+    with ChangeNotifier
+    implements RemoteConfigService {
   @override
   int get hardMinVersion => 0;
 
@@ -55,23 +63,38 @@ class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigServ
   void clearInitFuture() {}
 
   @override
-  var debugRemoteConfig;
+  Future<void> initialize() async {}
+}
+
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
 
   @override
-  Future<void> initialize() async {}
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
 }
 
 class MockDatasetRepository extends Mock implements DatasetRepository {}
 
 class MockSyncService extends Mock implements SyncService {}
 
+class MockWorkmanager extends Mock implements Workmanager {}
+
 void main() {
+  late Directory tempDir;
   late DatasetRepository mockRepo;
   late SyncService mockSync;
   late EditorDeCroqui mockEditor;
   late MockTelemetryService mockTelemetry;
 
-  setUp(() {
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('main_test_');
+    PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
     mockSync = SyncService(datasetRepository: mockRepo);
@@ -89,6 +112,12 @@ void main() {
       buildNumber: '10',
       buildSignature: '',
     );
+  });
+
+  tearDown(() async {
+    if (tempDir.existsSync()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   testWidgets(
@@ -436,4 +465,49 @@ void main() {
       expect(mockSync.pico_aberto_id.value, isNull);
     },
   );
+
+  group('setupAppServices & Foreground Takeover Tests', () {
+    late MockWorkmanager mockWorkmanager;
+
+    setUp(() {
+      mockWorkmanager = MockWorkmanager();
+    });
+
+    test('setupAppServices deve cancelar tarefa de segundo plano e sincronizar se não precisa de migração', () async {
+      SharedPreferences.setMockInitialValues({
+        'cached_data_version': NetworkConstants.kDataVersion,
+      });
+      when(() => mockWorkmanager.cancelByUniqueName(any())).thenAnswer((_) async {});
+
+      final result = await setupAppServices(
+        mockRepo,
+        mockSync,
+        workmanager: mockWorkmanager,
+      );
+
+      verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
+      expect(result, isFalse);
+    });
+
+    test('setupAppServices deve cancelar tarefa de segundo plano e indicar necessidade de migração', () async {
+      final indiceFile = File(mockEditor.indicePath(tempDir.path));
+      indiceFile.parent.createSync(recursive: true);
+      indiceFile.writeAsBytesSync(Indice().writeToBuffer());
+
+      SharedPreferences.setMockInitialValues({
+        'cached_data_version': 0,
+      });
+      when(() => mockWorkmanager.cancelByUniqueName(any())).thenAnswer((_) async {});
+
+      final result = await setupAppServices(
+        mockRepo,
+        mockSync,
+        workmanager: mockWorkmanager,
+      );
+
+      verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
+      expect(result, isTrue);
+    });
+  });
 }
+

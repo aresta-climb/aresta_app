@@ -148,9 +148,10 @@ Widget buildInfoCard(
 @visibleForTesting
 Future<void> processFeedbackSubmission(
   BuildContext context,
-  UserFeedback feedback,
-) async {
-  await SubmitFeedbackUseCase().execute(context, feedback);
+  UserFeedback feedback, {
+  SubmitFeedbackUseCase? useCase,
+}) async {
+  await (useCase ?? SubmitFeedbackUseCase()).execute(context, feedback);
 }
 
 PreferredSizeWidget buildCommonAppBar(

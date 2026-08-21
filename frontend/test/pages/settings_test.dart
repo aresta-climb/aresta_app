@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,22 +11,27 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
+  final String tempPath;
+  FakePathProviderPlatform(this.tempPath);
+
   @override
   Future<String?> getApplicationDocumentsPath() async {
-    return 'fake_path';
+    return tempPath;
   }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late Directory tempDir;
   late DatasetRepository mockRepo;
   late EditorDeCroqui mockEditor;
   late SyncService mockSync;
 
-  setUp(() {
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('settings_test_');
     SharedPreferences.setMockInitialValues({});
-    PathProviderPlatform.instance = FakePathProviderPlatform();
+    PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
 
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
@@ -38,5 +44,11 @@ void main() {
       buildNumber: '42',
       buildSignature: 'buildSignature',
     );
+  });
+
+  tearDown(() async {
+    if (tempDir.existsSync()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 }

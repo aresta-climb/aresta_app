@@ -72,6 +72,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   Future<void> _initLocation() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -80,12 +81,14 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!mounted) return;
     if (!serviceEnabled) {
       await _fallbackToCachedLocationOrFinish();
       return;
     }
 
     permission = await Geolocator.checkPermission();
+    if (!mounted) return;
     if (permission == LocationPermission.denied) {
       setState(() {
         _isLoading = false;
@@ -103,11 +106,13 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   Future<void> _requestPermission() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
 
     LocationPermission permission = await Geolocator.requestPermission();
+    if (!mounted) return;
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
@@ -119,6 +124,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   /// Tenta resolver a localização por satélite com degradação progressiva de precisão.
   Future<void> _fetchGpsLocation() async {
+    if (!mounted) return;
     try {
       Position? position;
 
@@ -145,6 +151,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         }
       }
 
+      if (!mounted) return;
+
       if (position != null) {
         _saveLocationToCache(position.latitude, position.longitude);
         _calculateDistances(position.latitude, position.longitude);
@@ -154,6 +162,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       // Falhas no GPS ativo direcionam para o cache local
     }
 
+    if (!mounted) return;
     // 4. Se todas as tentativas ativas falharem, usa coordenadas salvas em disco
     await _fallbackToCachedLocationOrFinish();
   }
@@ -175,6 +184,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       final prefs = await SharedPreferences.getInstance();
       final cachedLat = prefs.getDouble(_kLastKnownLatKey);
       final cachedLon = prefs.getDouble(_kLastKnownLonKey);
+
+      if (!mounted) return;
 
       if (cachedLat != null && cachedLon != null) {
         _calculateDistances(cachedLat, cachedLon);

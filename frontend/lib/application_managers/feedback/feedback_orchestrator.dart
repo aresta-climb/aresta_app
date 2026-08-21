@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:workmanager/workmanager.dart';
 
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
@@ -24,31 +23,6 @@ const String _edgeFunctionApiKey = String.fromEnvironment(
   'FEEDBACK_EDGE_FUNCTION_API_KEY',
   defaultValue: '',
 );
-
-/// Função de callback exigida pelo Workmanager para executar tarefas em background.
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    try {
-      if (task == 'send_feedback_task') {
-        await FeedbackOrchestrator.processFeedbackQueue(dispatcher: 'work_manager');
-      }
-      return true; // Sucesso, finaliza a task
-    } catch (e, stackTrace) {
-      print(
-        '=============================================\n'
-        '❌ ERRO NO WORKMANAGER (FeedbackOrchestrator) ❌\n'
-        '$e\n'
-        '$stackTrace\n'
-        '=============================================',
-      );
-
-      // Retornar throw faz o Workmanager acionar a política de Backoff
-      // e reagendar a task para o futuro.
-      throw Exception('Falha ao processar fila de feedback: $e');
-    }
-  });
-}
 
 /// Worker responsável por varrer a fila de feedbacks persistentes
 /// e despachá-los de forma segura utilizando Travas Atômicas de Arquivos.

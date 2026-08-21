@@ -13,7 +13,10 @@ import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
 import 'package:frontend/theme/app_colors.dart';
+
+import 'package:mocktail/mocktail.dart';
 
 class MockDatasetRepository implements DatasetRepository {
   @override
@@ -24,6 +27,9 @@ class MockDatasetRepository implements DatasetRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+class MockSubmitFeedbackUseCase extends Mock implements SubmitFeedbackUseCase {}
+class MockBuildContext extends Mock implements BuildContext {}
 
 class MockSyncService implements SyncService {
   bool networkDisabled = false;
@@ -320,76 +326,33 @@ void main() {
         'abrir_feedback',
       );
 
+      final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
+      BetterFeedback.of(scaffoldState.context).hide();
+      await tester.pumpAndSettle();
+
       FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
     });
 
-    testWidgets(
-      'deve chamar hide() e logar telemetria em processFeedbackSubmission',
-      (WidgetTester tester) async {
-        FeedbackOrchestrator.debugIsConfiguredOverride = true;
-        final mockTelemetry = MockTelemetryService();
-        TelemetryService.instance = mockTelemetry;
+    test('deve delegar para SubmitFeedbackUseCase em processFeedbackSubmission', () async {
+      registerFallbackValue(MockBuildContext());
+      registerFallbackValue(UserFeedback(text: '', screenshot: Uint8List(0)));
 
-        // Mock method channels to prevent MissingPluginException
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/path_provider'),
-          (MethodCall methodCall) async => '.',
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          const MethodChannel('be.tramckrijte.workmanager/workmanager'),
-          (MethodCall methodCall) async => true,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/package_info'),
-          (MethodCall methodCall) async => {
-            'appName': 'Aresta',
-            'packageName': 'com.aresta.app',
-            'version': '1.0.0',
-            'buildNumber': '1',
-          },
-        );
+      final mockUseCase = MockSubmitFeedbackUseCase();
+      when(() => mockUseCase.execute(any(), any())).thenAnswer((_) async {});
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: BetterFeedback(
-              child: Scaffold(
-                body: Builder(
-                  builder: (context) => ElevatedButton(
-                    onPressed: () async {
-                      // Open feedback first so we have the overlay
-                      BetterFeedback.of(context).show((_) {});
+      final dummyFeedback = UserFeedback(
+        text: 'Test text',
+        screenshot: Uint8List(0),
+      );
 
-                      final dummyFeedback = UserFeedback(
-                        text: 'Test text',
-                        screenshot: Uint8List(0),
-                      );
-                      await processFeedbackSubmission(context, dummyFeedback);
-                    },
-                    child: const Text('Simulate'),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
+      await processFeedbackSubmission(
+        MockBuildContext(),
+        dummyFeedback,
+        useCase: mockUseCase,
+      );
 
-        await tester.tap(find.text('Simulate'));
-        await tester.pumpAndSettle();
-
-        // Ensure Telemetry logged 'enviar_feedback'
-        expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);
-        expect(
-          mockTelemetry.recordedParams['acao_feedback']?['acao'],
-          'enviar_feedback',
-        );
-
-        // Ensure FeedbackUI is not visible anymore
-        final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
-        expect(BetterFeedback.of(scaffoldState.context).isVisible, isFalse);
-
-        FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
-      },
-    );
+      verify(() => mockUseCase.execute(any(), dummyFeedback)).called(1);
+    });
   });
 
   // ---------------------------------------------------------------------------

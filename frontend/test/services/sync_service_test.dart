@@ -4,10 +4,12 @@
 library;
 
 import 'dart:io';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
@@ -1896,4 +1898,104 @@ void main() {
       },
     );
   });
+
+  // ---------------------------------------------------------------------------
+  // Migração de Dados (checkNeedsMigration, confirmMigrationComplete, executarMigracao)
+  // ---------------------------------------------------------------------------
+
+  group('Migração de Dados no SyncService', () {
+    late Directory tempDir;
+    late EditorDeCroqui editor;
+    late DatasetRepository repo;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      tempDir = await Directory.systemTemp.createTemp('sync_migracao_test_');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      SharedPreferences.setMockInitialValues({});
+
+      editor = EditorDeCroqui();
+      repo = DatasetRepository(editorDeCroqui: editor);
+    });
+
+    tearDown(() async {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    test('checkNeedsMigration deve retornar true se cached_data_version for menor que kDataVersion', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('cached_data_version', 0);
+
+      final syncService = SyncService(datasetRepository: repo);
+      final result = await syncService.checkNeedsMigration();
+      expect(result, isTrue);
+    });
+
+    test('checkNeedsMigration deve retornar false se cached_data_version for igual ou maior que kDataVersion', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
+
+      final syncService = SyncService(datasetRepository: repo);
+      final result = await syncService.checkNeedsMigration();
+      expect(result, isFalse);
+    });
+
+    test('confirmMigrationComplete deve persistir kDataVersion no SharedPreferences', () async {
+      final syncService = SyncService(datasetRepository: repo);
+      await syncService.confirmMigrationComplete();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('cached_data_version'), NetworkConstants.kDataVersion);
+    });
+
+    test('executarMigracao deve sincronizar índice, rebaixar picos salvos e confirmar versão com sucesso', () async {
+      final indice = Indice();
+      final picoId = 'pico_salvo_migracao';
+      final croquiBytes = utf8.encode('croqui_salvo_content');
+      final correctHash = sha256.convert(croquiBytes).toString();
+
+      indice.croquis.add(
+        ResumoCroqui()
+          ..id = picoId
+          ..nome = 'Pico Salvo Migração'
+          ..caminhoRelativo = 'picos/$picoId.binarypb'
+          ..checksumSha256Croqui = correctHash,
+      );
+
+      final client = FakeClient(indice, {
+        'picos/$picoId.binarypb': croquiBytes,
+      });
+
+      final syncService = SyncService(datasetRepository: repo, client: client)
+        ..mockIsolateSpawn = (mainFunc, args) async {
+          await downloadIsolateMain(args);
+        };
+
+      repo.indiceData.value = indice;
+      repo.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {'id': picoId, 'nome': 'Pico Salvo Migração', 'isDownloaded': true},
+        ],
+        downloadedPicos: [
+          {'id': picoId, 'nome': 'Pico Salvo Migração', 'isDownloaded': true},
+        ],
+      );
+
+      final result = await syncService.executarMigracao();
+
+      expect(result, isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('cached_data_version'), NetworkConstants.kDataVersion);
+    });
+
+    test('executarMigracao deve retornar false se syncIndex encontrar erros', () async {
+      final syncService = SyncService(datasetRepository: repo);
+      // Sem mock client ou servidor ativo, syncIndex falhará e mudará status para offline ou error
+      final result = await syncService.executarMigracao();
+      expect(result, isFalse);
+    });
+  });
 }
+

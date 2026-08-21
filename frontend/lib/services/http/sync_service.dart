@@ -187,6 +187,56 @@ class SyncService {
     );
   }
 
+  /// Executa o fluxo completo e unificado de migração da base de dados:
+  /// 1. Sincroniza o novo catálogo/índice remoto (`syncIndex(auto: false)`).
+  /// 2. Rebaixa silenciosamente os croquis que o usuário já havia baixado localmente.
+  /// 3. Confirma a conclusão da migração gravando `cached_data_version`.
+  ///
+  /// Retorna [true] se a migração for concluída com sucesso, ou [false] em caso de falha de rede/erros.
+  Future<bool> executarMigracao({bool rebaixarCroquisSalvos = true}) async {
+    try {
+      final falhas = await syncIndex(auto: false);
+      if (falhas.isNotEmpty ||
+          syncStatus.value == SyncStatus.error ||
+          syncStatus.value == SyncStatus.offline) {
+        AppLogger.instance.logError(
+          '[SyncService] Falha ao sincronizar índice durante a migração',
+        );
+        return false;
+      }
+
+      if (rebaixarCroquisSalvos) {
+        final picosSalvos =
+            datasetRepository.activeDataset.value?.downloadedPicos ?? [];
+        final indice = datasetRepository.indiceData.value;
+
+        if (indice != null && picosSalvos.isNotEmpty) {
+          debugPrint(
+            '[SyncService] Rebaixando ${picosSalvos.length} croquis salvos...',
+          );
+          for (final pico in picosSalvos) {
+            final String id = pico['id'] ?? '';
+            final resumos = indice.croquis.where((r) => r.id == id).toList();
+            if (resumos.isNotEmpty) {
+              await downloadCrag(resumos.first);
+            }
+          }
+        }
+      }
+
+      await confirmMigrationComplete();
+      debugPrint('[SyncService] Migração executada com sucesso.');
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[SyncService] Erro inesperado ao executar migração',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
   /// Realiza o download completo de um Crag e seus arquivos associados para o armazenamento local.
   ///
   /// Retorna [true] se as operações de download e salvamento forem bem-sucedidas.

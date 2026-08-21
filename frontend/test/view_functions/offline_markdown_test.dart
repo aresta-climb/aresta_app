@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/view_functions/offline_markdown.dart';
@@ -7,16 +8,19 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
   @override
-  Future<String?> getApplicationDocumentsPath() async => '.';
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
   @override
-  Future<String?> getApplicationSupportPath() async => '.';
+  Future<String?> getApplicationSupportPath() async => tempPath;
   @override
-  Future<String?> getLibraryPath() async => '.';
+  Future<String?> getLibraryPath() async => tempPath;
   @override
-  Future<String?> getTemporaryPath() async => '.';
+  Future<String?> getTemporaryPath() async => tempPath;
   @override
-  Future<String?> getExternalStoragePath() async => '.';
+  Future<String?> getExternalStoragePath() async => tempPath;
   @override
   Future<List<String>?> getExternalCachePaths() async => [];
   @override
@@ -24,13 +28,22 @@ class MockPathProviderPlatform extends PathProviderPlatform
     StorageDirectory? type,
   }) async => [];
   @override
-  Future<String?> getDownloadsPath() async => '.';
+  Future<String?> getDownloadsPath() async => tempPath;
 }
 
 void main() {
-  setUpAll(() {
-    PathProviderPlatform.instance = MockPathProviderPlatform();
+  late Directory tempDir;
+
+  setUpAll(() async {
+    tempDir = await Directory.systemTemp.createTemp('offline_md_test_');
+    PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
     EditorDeCroqui(); // Inicializa o singleton
+  });
+
+  tearDownAll(() async {
+    if (tempDir.existsSync()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   group('OfflineMarkdown Tests', () {

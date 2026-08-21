@@ -87,28 +87,21 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
       });
     }
 
-    final syncService = widget.syncService;
-
     try {
-      final failed = await syncService.syncIndex(auto: false);
-      if (syncService.syncStatus.value == SyncStatus.error ||
-          syncService.syncStatus.value == SyncStatus.offline ||
-          failed.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _etapa = EtapaMigracao.erro;
-          });
-        }
-      } else {
-        await syncService.confirmMigrationComplete();
-        if (mounted) {
+      final sucesso = await widget.syncService.executarMigracao();
+      if (mounted) {
+        if (sucesso) {
           setState(() {
             _etapa = EtapaMigracao.concluido;
           });
           widget.onMigrationComplete();
+        } else {
+          setState(() {
+            _etapa = EtapaMigracao.erro;
+          });
         }
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _etapa = EtapaMigracao.erro;

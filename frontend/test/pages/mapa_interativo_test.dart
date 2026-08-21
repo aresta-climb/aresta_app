@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -81,16 +82,19 @@ final Uint8List kTransparentImage = Uint8List.fromList([
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
   @override
-  Future<String?> getApplicationDocumentsPath() async => '.';
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
   @override
-  Future<String?> getApplicationSupportPath() async => '.';
+  Future<String?> getApplicationSupportPath() async => tempPath;
   @override
-  Future<String?> getLibraryPath() async => '.';
+  Future<String?> getLibraryPath() async => tempPath;
   @override
-  Future<String?> getTemporaryPath() async => '.';
+  Future<String?> getTemporaryPath() async => tempPath;
   @override
-  Future<String?> getExternalStoragePath() async => '.';
+  Future<String?> getExternalStoragePath() async => tempPath;
   @override
   Future<List<String>?> getExternalCachePaths() async => [];
   @override
@@ -98,7 +102,7 @@ class MockPathProviderPlatform extends PathProviderPlatform
     StorageDirectory? type,
   }) async => [];
   @override
-  Future<String?> getDownloadsPath() async => '.';
+  Future<String?> getDownloadsPath() async => tempPath;
 }
 
 void main() {
@@ -343,13 +347,21 @@ void main() {
   });
 
   group('MapaInterativoPage Widget Tests', () {
+    late Directory tempDir;
     late Mapa mockMapa;
     late MemoryImage mockImage;
     late MockTelemetryService mockTelemetry;
 
-    setUpAll(() {
+    setUpAll(() async {
+      tempDir = await Directory.systemTemp.createTemp('mapa_interativo_test_');
       EditorDeCroqui(); // Instancia o singleton
-      PathProviderPlatform.instance = MockPathProviderPlatform();
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    });
+
+    tearDownAll(() async {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
     setUp(() {

@@ -8,40 +8,20 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class FakeSyncService extends Fake implements SyncService {
-  int syncCallCount = 0;
+  int migrationCallCount = 0;
   bool shouldFail = false;
   bool shouldThrow = false;
-  bool shouldBeOffline = false;
-  bool migrationConfirmed = false;
-  ValueNotifier<SyncStatus> status = ValueNotifier(SyncStatus.updating);
 
   @override
-  ValueNotifier<SyncStatus> get syncStatus => status;
-
-  @override
-  Future<List<String>> syncIndex({
-    bool auto = true,
-    bool forceBypassCache = false,
-  }) async {
-    syncCallCount++;
+  Future<bool> executarMigracao({bool rebaixarCroquisSalvos = true}) async {
+    migrationCallCount++;
     if (shouldThrow) {
-      throw Exception('Falha inesperada no sync');
+      throw Exception('Falha inesperada na migração');
     }
-    if (shouldBeOffline) {
-      status.value = SyncStatus.offline;
-      return [];
-    } else if (shouldFail) {
-      status.value = SyncStatus.error;
-      return ['fake_error'];
-    } else {
-      status.value = SyncStatus.updated;
-      return [];
+    if (shouldFail) {
+      return false;
     }
-  }
-
-  @override
-  Future<void> confirmMigrationComplete() async {
-    migrationConfirmed = true;
+    return true;
   }
 }
 
@@ -79,10 +59,9 @@ void main() {
           findsOneWidget,
         );
 
-        // Deve ter executado syncIndex e completado com sucesso
+        // Deve ter executado a migração e completado com sucesso
         await tester.pumpAndSettle();
-        expect(fakeSyncService.syncCallCount, 1);
-        expect(fakeSyncService.migrationConfirmed, isTrue);
+        expect(fakeSyncService.migrationCallCount, 1);
       },
     );
 
@@ -106,15 +85,14 @@ void main() {
         // Deve mostrar ícone de erro e botão Tentar Novamente
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
         expect(find.text('Tentar Novamente'), findsOneWidget);
-        expect(fakeSyncService.syncCallCount, 1);
+        expect(fakeSyncService.migrationCallCount, 1);
 
         // Ao clicar no botão, tenta novamente com sucesso
         fakeSyncService.shouldFail = false;
         await tester.tap(find.text('Tentar Novamente'));
         await tester.pumpAndSettle();
 
-        expect(fakeSyncService.syncCallCount, 2);
-        expect(fakeSyncService.migrationConfirmed, isTrue);
+        expect(fakeSyncService.migrationCallCount, 2);
       },
     );
 
@@ -143,7 +121,7 @@ void main() {
     testWidgets(
       'Deve executar auto-retry reativo quando a conexão for restabelecida pelo Connectivity stream',
       (WidgetTester tester) async {
-        fakeSyncService.shouldBeOffline = true;
+        fakeSyncService.shouldFail = true;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -156,11 +134,11 @@ void main() {
         );
 
         await tester.pumpAndSettle();
-        expect(fakeSyncService.syncCallCount, 1);
+        expect(fakeSyncService.migrationCallCount, 1);
         expect(find.text('Tentar Novamente'), findsOneWidget);
 
         // Restabelece a conexão de internet via stream
-        fakeSyncService.shouldBeOffline = false;
+        fakeSyncService.shouldFail = false;
         connectivityController.add([ConnectivityResult.wifi]);
 
         // Aguarda debounce / execução automática da retentativa
@@ -169,8 +147,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // O auto-retry deve ter disparado nova tentativa automaticamente
-        expect(fakeSyncService.syncCallCount, 2);
-        expect(fakeSyncService.migrationConfirmed, isTrue);
+        expect(fakeSyncService.migrationCallCount, 2);
       },
     );
   });

@@ -49,14 +49,28 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted && _mapaKey.currentContext != null) {
-          Scrollable.ensureVisible(
-            _mapaKey.currentContext!,
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeInOut,
-            alignment: 0.1,
-          );
-        }
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final targetContext = _mapaKey.currentContext;
+          if (targetContext != null) {
+            final renderObject = targetContext.findRenderObject();
+            if (renderObject is RenderBox &&
+                renderObject.attached &&
+                renderObject.hasSize) {
+              try {
+                Scrollable.ensureVisible(
+                  targetContext,
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
+                  alignment: 0.1,
+                );
+              } catch (e) {
+                debugPrint('[PicoDetailsPage] Falha ao rolar para mapa geral: $e');
+              }
+            }
+          }
+        });
       });
     }
   }

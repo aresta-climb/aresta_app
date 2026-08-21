@@ -41,7 +41,9 @@ import 'package:frontend/services/firebase/init_firebase.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
+import 'package:frontend/application_managers/background/background_dispatcher.dart';
 import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/migracao/migracao_background_orchestrator.dart';
 import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
@@ -109,8 +111,14 @@ void main() async {
 @visibleForTesting
 Future<bool> setupAppServices(
   DatasetRepository datasetRepo,
-  SyncService syncService,
-) async {
+  SyncService syncService, {
+  Workmanager? workmanager,
+}) async {
+  // Cancela com segurança qualquer migração em segundo plano ativa (Foreground Takeover)
+  await MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
+    workmanager: workmanager,
+  );
+
   await datasetRepo.init();
 
   final needsMigration = await syncService.checkNeedsMigration();

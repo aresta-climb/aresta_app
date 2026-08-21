@@ -43,16 +43,7 @@ class _SetorPageState extends State<SetorPage> {
 
     if (widget.scrollToEscalada != null) {
       _targetKey = GlobalKey();
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted && _targetKey?.currentContext != null) {
-          Scrollable.ensureVisible(
-            _targetKey!.currentContext!,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOut,
-            alignment: 0.5, // Alinha bem no meio da tela
-          );
-        }
-      });
+      _scheduleScrollToTarget();
     }
   }
 
@@ -64,17 +55,35 @@ class _SetorPageState extends State<SetorPage> {
       setState(() {
         _targetKey = GlobalKey();
       });
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted && _targetKey?.currentContext != null) {
-          Scrollable.ensureVisible(
-            _targetKey!.currentContext!,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOut,
-            alignment: 0.5,
-          );
+      _scheduleScrollToTarget();
+    }
+  }
+
+  void _scheduleScrollToTarget() {
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final targetContext = _targetKey?.currentContext;
+        if (targetContext != null) {
+          final renderObject = targetContext.findRenderObject();
+          if (renderObject is RenderBox &&
+              renderObject.attached &&
+              renderObject.hasSize) {
+            try {
+              Scrollable.ensureVisible(
+                targetContext,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOut,
+                alignment: 0.5,
+              );
+            } catch (e) {
+              debugPrint('[SetorPage] Falha ao rolar para via alvo: $e');
+            }
+          }
         }
       });
-    }
+    });
   }
 
   Future<ImageProvider?> _resolveCoverImage() async {
