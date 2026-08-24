@@ -4,6 +4,7 @@ import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/meus_croquis_functions.dart';
 import '../view_functions/common_functions.dart';
+import '../widgets/global_search.dart';
 
 class MeusCroquisPage extends StatelessWidget {
   final DatasetRepository datasetRepo;
@@ -64,6 +65,39 @@ class MeusCroquisPage extends StatelessWidget {
                             context,
                             datasetRepo,
                             syncService,
+                          );
+                        },
+                      ),
+                      ValueListenableBuilder<TopoDataset?>(
+                        valueListenable: datasetRepo.activeDataset,
+                        builder: (context, dataset, _) {
+                          if (dataset == null || dataset.downloadedPicos.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: Icon(Icons.search, color: context.colors.ashGrey),
+                            tooltip: 'Buscar nos guias baixados',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => Scaffold(
+                                    backgroundColor: context.colors.deepBasalt,
+                                    appBar: AppBar(
+                                      backgroundColor: context.colors.deepBasalt,
+                                      elevation: 0,
+                                      iconTheme: IconThemeData(
+                                        color: context.colors.chalkWhite,
+                                      ),
+                                    ),
+                                    body: GlobalSearch(
+                                      datasetRepo: datasetRepo,
+                                      downloadedPicos: dataset.downloadedPicos,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
