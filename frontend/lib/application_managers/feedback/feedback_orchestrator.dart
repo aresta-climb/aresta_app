@@ -1,47 +1,38 @@
-/// Este arquivo é o Gerente/Coordenador de background (Orchestrator).
-/// É acionado pelo Workmanager (em segundo plano) para varrer a fila local de feedbacks
-/// e tentar enviá-los à rede, coordenando o repositório local e o serviço de rede.
+/// Este arquivo é o Gerente/Coordenador de background (Orchestrator) de Feedback.
+/// É acionado pelo Workmanager (em segundo plano) ou por gatilhos de conectividade para varrer
+/// a fila local de feedbacks persistentes e despachá-los para o servidor seguro.
 library;
 
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import '../../constants/network_constants.dart';
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
+import '../../services/firebase/app_check_service.dart';
 
-// Constantes do Backend injetadas em tempo de compilação (CI/CD)
-const String _edgeFunctionUrl = String.fromEnvironment(
-  'FEEDBACK_EDGE_FUNCTION_URL',
-  defaultValue:
-      'https://sua-url-do-supabase.supabase.co/functions/v1/discord-feedback',
-);
-
-const String _edgeFunctionApiKey = String.fromEnvironment(
-  'FEEDBACK_EDGE_FUNCTION_API_KEY',
-  defaultValue: '',
-);
-
-/// Worker responsável por varrer a fila de feedbacks persistentes
-/// e despachá-los de forma segura utilizando Travas Atômicas de Arquivos.
+/// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
+/// das tarefas de feedback salvas no disco local do dispositivo.
 class FeedbackOrchestrator {
+  /// Permite forçar o estado de configuração durante testes unitários.
   static bool? debugIsConfiguredOverride;
 
-  /// In-memory lock para evitar que o connectivity_plus chame a função múltiplas
-  /// vezes concorrentemente dentro da MESMA isolate.
+  /// In-memory lock para evitar que múltiplos gatilhos simultâneos (ex: ConnectivityPlus)
+  /// disparem processamentos concorrentes dentro da mesma isolate do Flutter.
   static bool _isProcessing = false;
 
+  /// Indica se o serviço de feedback está apto a operar.
+  /// Com o Firebase App Check e Remote Config, o serviço é autoconfigurado por padrão.
   static bool get isConfigured {
     if (debugIsConfiguredOverride != null) return debugIsConfiguredOverride!;
-
-    return _edgeFunctionApiKey.isNotEmpty &&
-        _edgeFunctionUrl !=
-            'https://sua-url-do-supabase.supabase.co/functions/v1/discord-feedback';
+    return true;
   }
 
-  /// Recupera o diretório da fila.
+  /// Recupera o diretório da fila persistente de feedbacks.
   static Future<Directory> _getQueueDirectory(
     Future<Directory> Function()? override,
   ) async {
@@ -54,51 +45,77 @@ class FeedbackOrchestrator {
 
   /// Processa a fila de feedbacks utilizando Clean Architecture.
   ///
-  /// **1. Cleanup & Crash Recovery:** Delega para o [FeedbackLocalRepository].
-  /// **2. Lock Atômico:** Busca as tarefas pendentes através de rename atômico.
-  /// **3. Upload:** Despacha para o [FeedbackNetworkService].
+  /// **1. Cleanup & Crash Recovery:** Remove arquivos antigos e destrava itens zumbis via [FeedbackLocalRepository].
+  /// **2. Lock Atômico:** Busca e trava as tarefas pendentes através de renomeação atômica no sistema de arquivos.
+  /// **3. Atestação de Integridade:** Obtém o token JWT dinâmico do [AppCheckService].
+  /// **4. Mock Gracioso em Debug:** Se estiver em modo de desenvolvimento (`kDebugMode`) e não houver token cadastrado,
+  ///    imprime os dados amigavelmente no console e finaliza a tarefa sem travar o aplicativo.
+  /// **5. Despacho de Rede:** Envia o payload via [FeedbackNetworkService] para a Edge Function `app-feedback`.
   static Future<bool> processFeedbackQueue({
     http.Client? client,
     Future<Directory> Function()? getSupportDirectoryOverride,
+    Future<String?> Function()? getAppCheckTokenOverride,
     String dispatcher = 'unknown',
+    bool? isDebugModeOverride,
   }) async {
-    if (_isProcessing) return true; // Impede spam pelo connectivity_plus
+    if (_isProcessing) return true;
     _isProcessing = true;
 
     final httpClient = client ?? http.Client();
     final localRepository = FeedbackLocalRepository(
       getSupportDirectoryOverride: getSupportDirectoryOverride,
     );
-    final networkService = FeedbackNetworkService(
-      httpClient: httpClient,
-      edgeFunctionUrl: _edgeFunctionUrl,
-      apiKey: _edgeFunctionApiKey,
-    );
+
+    final isDebug = isDebugModeOverride ?? kDebugMode;
+    final edgeFunctionUrl = NetworkConstants.feedbackEdgeFunctionUrl;
 
     try {
-      // 1. Limpeza e destravamento
+      // 1. Limpeza de lixo e destravamento de crashes anteriores
       await localRepository.performGarbageCollection();
 
-      // 2. Busca e travamento
+      // 2. Busca e travamento atômico das tarefas pendentes
       final pendingTasks = await localRepository.lockAndGetPendingTasks();
+      if (pendingTasks.isEmpty) return true;
 
-      // 3. Processamento
+      // 3. Obtenção do token de atestação do App Check
+      final appCheckToken = getAppCheckTokenOverride != null
+          ? await getAppCheckTokenOverride()
+          : await AppCheckService.instance.getToken();
+
+      final networkService = FeedbackNetworkService(
+        httpClient: httpClient,
+        edgeFunctionUrl: edgeFunctionUrl,
+        appCheckToken: appCheckToken,
+      );
+
+      // 4. Processamento sequencial de cada tarefa travada
       for (final task in pendingTasks) {
         try {
-          await networkService.sendFeedback(
-            description: task.jsonContent['description'] ?? '',
-            metadata: task.jsonContent['metadata'] ?? {},
-            dispatcher: dispatcher,
-            pngFile: task.pngFile,
-          );
+          // Em modo de depuração sem token do App Check registrado no Firebase Console,
+          // realizamos um mock gracioso para não impedir contribuidores externos de testar o app.
+          if (isDebug && (appCheckToken == null || appCheckToken.isEmpty)) {
+            debugPrint(
+              '📝 [DEBUG MOCK] Feedback concluído localmente (App Check não registrado em dev):\n'
+              '   Descrição: ${task.jsonContent['description']}\n'
+              '   Metadados: ${task.jsonContent['metadata']}\n'
+              '   Dispatcher: $dispatcher',
+            );
+          } else {
+            await networkService.sendFeedback(
+              description: task.jsonContent['description'] ?? '',
+              metadata: task.jsonContent['metadata'] ?? {},
+              dispatcher: dispatcher,
+              pngFile: task.pngFile,
+            );
+          }
 
-          // Se sucesso, limpa os arquivos
+          // Se a entrega foi confirmada (status 2xx), limpa os arquivos locais da tarefa
           localRepository.completeTask(task);
         } catch (e) {
-          // Se falhou (rede fraca, timeout, 500 do servidor), devolve para a fila
+          // Se falhou (timeout, rate limit 429 ou erro 503), destrava o arquivo para retentativa posterior
           localRepository.unlockTask(task.processingFile);
-          
-          // Relança a exceção para que o Workmanager aplique sua política de Backoff
+
+          // Relança a exceção para que o Workmanager aplique sua política de Backoff exponencial
           rethrow;
         }
       }
@@ -112,4 +129,3 @@ class FeedbackOrchestrator {
     }
   }
 }
-

@@ -115,6 +115,26 @@ void main() {
       expect(RemoteConfigService.instance.storeUrlIos, 'https://custom.app.store');
     });
 
+    test('Acessar feedbackEdgeFunctionUrl retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('feedback_edge_function_url'),
+      ).thenReturn('https://remote.supabase.co/functions/v1/app-feedback');
+      expect(
+        RemoteConfigService.instance.feedbackEdgeFunctionUrl,
+        'https://remote.supabase.co/functions/v1/app-feedback',
+      );
+    });
+
+    test('Acessar servingBaseUrl retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('serving_base_url'),
+      ).thenReturn('https://remote.serving.arestaclimb.com');
+      expect(
+        RemoteConfigService.instance.servingBaseUrl,
+        'https://remote.serving.arestaclimb.com',
+      );
+    });
+
     test('Getters tratam exceções retornando valores padrão seguros', () {
       when(() => mockFirebaseRemoteConfig.getBool(any())).thenThrow(Exception('Error'));
       when(() => mockFirebaseRemoteConfig.getInt(any())).thenThrow(Exception('Error'));

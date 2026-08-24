@@ -80,11 +80,11 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
       }
 
       final terms = await bundle.loadString(
-        'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md',
+        'legal/repo/public/docs/termos-de-uso.md',
       );
 
       final privacy = await bundle.loadString(
-        'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
+        'legal/repo/public/docs/politica-de-privacidade.md',
       );
       setState(() {
         _termsMarkdown = terms;

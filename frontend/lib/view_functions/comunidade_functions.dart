@@ -298,7 +298,7 @@ class _TermsBottomSheetContentState extends State<_TermsBottomSheetContent> {
             child: FutureBuilder<String>(
               future: DefaultAssetBundle.of(
                 context,
-              ).loadString('legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md'),
+              ).loadString('legal/repo/public/docs/termos-de-uso.md'),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -698,7 +698,7 @@ class _PrivacyBottomSheetContentState
           Flexible(
             child: FutureBuilder<String>(
               future: DefaultAssetBundle.of(context).loadString(
-                'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md',
+                'legal/repo/public/docs/politica-de-privacidade.md',
               ),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {

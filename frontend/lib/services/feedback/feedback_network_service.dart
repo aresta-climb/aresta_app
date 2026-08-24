@@ -1,22 +1,35 @@
-/// Este arquivo atua como o 'Trabalhador' (Worker) de Rede.
-/// É responsável estritamente por pegar um payload de feedback e fazer a requisição HTTP POST para o servidor.
+/// Este arquivo atua como o 'Trabalhador' (Worker) de Rede de Feedback.
+/// É responsável estritamente por pegar um payload de feedback e fazer a requisição HTTP POST para o endpoint seguro do Supabase.
 library;
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
+/// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
+///
+/// Encapsula a construção do formulário multipart (`description`, `metadata`, `screenshot`),
+/// a anexação do token criptográfico do Firebase App Check e a validação do status code de resposta.
 class FeedbackNetworkService {
+  /// Cliente HTTP injetável para permitir cancelamento, timeouts e mocks em testes.
   final http.Client httpClient;
+
+  /// URL absoluta da Edge Function do Supabase (ex: `https://.../functions/v1/app-feedback`).
   final String edgeFunctionUrl;
-  final String apiKey;
+
+  /// Token JWT dinâmico de atestação gerado pelo Firebase App Check.
+  final String? appCheckToken;
 
   FeedbackNetworkService({
     required this.httpClient,
     required this.edgeFunctionUrl,
-    required this.apiKey,
+    this.appCheckToken,
   });
 
+  /// Envia o feedback através de uma requisição HTTP multipart/form-data.
+  ///
+  /// Lança [Exception] caso o servidor retorne um status code fora da faixa 2xx (ex: 403, 429, 503),
+  /// permitindo que a fila persistente local e o Workmanager apliquem a política de retentativa com backoff.
   Future<void> sendFeedback({
     required String description,
     required Map<String, dynamic> metadata,
@@ -24,7 +37,11 @@ class FeedbackNetworkService {
     File? pngFile,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse(edgeFunctionUrl));
-    request.headers['x-api-key'] = apiKey;
+
+    // Anexa o token de atestação do Firebase App Check se disponível
+    if (appCheckToken != null && appCheckToken!.isNotEmpty) {
+      request.headers['X-Firebase-AppCheck'] = appCheckToken!;
+    }
 
     request.fields['description'] = description;
 
@@ -39,7 +56,7 @@ class FeedbackNetworkService {
     }
 
     // Envia a requisição com Timeout longo (120s) para não gerar falsos-positivos
-    // (timeouts) em conexões muito lentas, o que causaria reenvio duplicado.
+    // (timeouts) em conexões muito lentas de montanha, o que causaria reenvio duplicado.
     final response = await httpClient.send(request).timeout(
       const Duration(seconds: 120),
     );

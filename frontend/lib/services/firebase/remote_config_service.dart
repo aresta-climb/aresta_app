@@ -11,7 +11,7 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 /// - Mensagens e avisos globais.
 ///
 /// Como o aplicativo adota uma arquitetura estritamente *offline-first*, este serviço:
-/// 1. Carrega valores padrão locais imediatamente no dispositivo.
+/// 1. Carrega valores padrão locais imediatamente no dispositivo via [setDefaults].
 /// 2. Executa a sincronização de rede em segundo plano (`fetchAndActivate`).
 /// 3. Notifica ouvintes registrados via [ChangeNotifier] quando novos parâmetros são baixados.
 class RemoteConfigService extends ChangeNotifier {
@@ -49,6 +49,9 @@ class RemoteConfigService extends ChangeNotifier {
         "soft_min_version": 0,
         "hard_min_version": 0,
         "store_url_ios": "",
+        "feedback_edge_function_url":
+            "https://gawgqiqzptckwghgqypt.supabase.co/functions/v1/app-feedback",
+        "serving_base_url": "https://serving.arestaclimb.com",
       });
 
       // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
@@ -119,4 +122,10 @@ class RemoteConfigService extends ChangeNotifier {
 
   /// URL personalizada para a loja de aplicativos no iOS (útil para beta fechado/TestFlight).
   String get storeUrlIos => getString('store_url_ios');
+
+  /// URL do endpoint seguro de feedback do aplicativo (Edge Function Supabase).
+  String get feedbackEdgeFunctionUrl => getString('feedback_edge_function_url');
+
+  /// URL base do servidor de dados de escalada (Cloudflare Serving).
+  String get servingBaseUrl => getString('serving_base_url');
 }

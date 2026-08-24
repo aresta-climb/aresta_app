@@ -3,4 +3,4 @@
 	url = https://github.com/aresta-climb/aresta_api.git
 [submodule "frontend/legal/repo"]
 	path = frontend/legal/repo
-	url = https://github.com/aresta-climb/aresta-climb.github.io.git
+	url = https://github.com/aresta-climb/arestaclimb.com.git

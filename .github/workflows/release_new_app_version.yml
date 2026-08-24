@@ -85,6 +85,13 @@ jobs:
           flutter pub get
           dart tool/sync_preload.dart
           cd ..
+
+          # Atualiza os termos legais e recalcula a versão dos termos
+          git submodule update --remote frontend/legal/repo
+          cd frontend/tool/legal_updater
+          dart pub get
+          dart run bin/update_legal_version.dart ../../legal/repo ../../lib/constants/legal_version.g.dart
+          cd ../../..
           
           # Configura a identidade do robô no git
           git config --global user.name "aresta-climb-bot[bot]"
@@ -102,7 +109,7 @@ jobs:
           fi
           
           # Commita as alterações
-          git add $PUBSPEC frontend/assets/preload/
+          git add $PUBSPEC frontend/assets/preload/ frontend/legal/repo frontend/lib/constants/legal_version.g.dart
           git commit -m "Lançar versão $FINAL_VERSION nas lojas de aplicativo ($DEPLOY_MSG)"
           
           # Cria a tag apontando para este exato commit

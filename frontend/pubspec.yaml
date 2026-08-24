@@ -39,6 +39,7 @@ dependencies:
   connectivity_plus: ^7.1.1
   google_fonts: ^8.1.0
   geolocator: ^14.0.3
+  firebase_app_check: ^0.4.6
 
 dev_dependencies:
   flutter_test:
@@ -55,8 +56,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/team/
-    - legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md
-    - legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md
+    - legal/repo/public/docs/termos-de-uso.md
+    - legal/repo/public/docs/politica-de-privacidade.md
     - assets/logo_app.png
     - assets/logo_in_app.jpg
     - assets/logo_splash.png

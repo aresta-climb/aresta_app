@@ -39,9 +39,9 @@ void main() {
   }
 
   final defaultFiles = {
-    'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md':
+    'legal/repo/public/docs/termos-de-uso.md':
         '### TERMOS DE USO E ACEITAÇÃO DE RISCOS\nConteúdo mockado dos termos.',
-    'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Mocked Privacy',
+    'legal/repo/public/docs/politica-de-privacidade.md': 'Mocked Privacy',
   };
 
   testWidgets(
@@ -127,7 +127,7 @@ void main() {
       // Simula o clique no link da política de privacidade no Markdown
       markdownWidget.onTapLink!(
         'Política de Privacidade',
-        'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html',
+        '/politica-de-privacidade',
         'title',
       );
       await tester.pumpAndSettle();
@@ -210,7 +210,7 @@ void main() {
       );
       markdownWidget.onTapLink!(
         'Política de Privacidade',
-        'https://aresta-climb.github.io/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html',
+        '/politica-de-privacidade',
         'title',
       );
       await tester.pumpAndSettle();

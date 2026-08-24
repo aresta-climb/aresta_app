@@ -17,21 +17,17 @@ class MockFeedbackQueueService extends Mock implements FeedbackQueueService {}
 
 class MockTelemetryService extends Mock implements TelemetryService {}
 
-class MockBuildContext extends Mock implements BuildContext {}
-
 void main() {
   group('SubmitFeedbackUseCase', () {
     late MockFeedbackMetadataCollector mockMetadataCollector;
     late MockFeedbackQueueService mockQueueService;
     late MockTelemetryService mockTelemetryService;
     late SubmitFeedbackUseCase useCase;
-    late MockBuildContext mockContext;
 
     setUp(() {
       mockMetadataCollector = MockFeedbackMetadataCollector();
       mockQueueService = MockFeedbackQueueService();
       mockTelemetryService = MockTelemetryService();
-      mockContext = MockBuildContext();
 
       useCase = SubmitFeedbackUseCase(
         metadataCollector: mockMetadataCollector,
@@ -69,7 +65,7 @@ void main() {
       ).thenAnswer((_) async {});
 
       // Mock da coleta de metadados
-      final fakeMetadata = const FeedbackMetadata(
+      const fakeMetadata = FeedbackMetadata(
         navigationTree: 'Home',
         submittedAt: 'test',
         submittedAtTimestamp: 'test-ts',

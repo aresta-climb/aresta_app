@@ -7,19 +7,35 @@ library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../feedback/feedback_orchestrator.dart';
 import '../migracao/migracao_background_orchestrator.dart';
 import '../../services/firebase/app_logger.dart';
+import '../../services/firebase/init_firebase.dart';
 
 /// Função de callback exigida pelo Workmanager como ponto de entrada em segundo plano.
 ///
 /// Roteia a execução para o orquestrador apropriado baseado no nome da tarefa ([task]).
 @pragma('vm:entry-point')
-void callbackDispatcher({Workmanager? workmanager}) {
+void callbackDispatcher({
+  Workmanager? workmanager,
+  Future<void> Function()? initFirebaseOverride,
+}) {
+  WidgetsFlutterBinding.ensureInitialized();
   final wm = workmanager ?? Workmanager();
   wm.executeTask((task, inputData) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    try {
+      if (initFirebaseOverride != null) {
+        await initFirebaseOverride();
+      } else {
+        await initFirebase();
+      }
+    } catch (e) {
+      debugPrint('[BackgroundDispatcher] Falha ao inicializar Firebase no background: $e');
+    }
     return await BackgroundDispatcher.executarTarefa(
       task,
       inputData: inputData,

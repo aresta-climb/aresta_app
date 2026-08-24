@@ -12,12 +12,14 @@ class FakeUri extends Fake implements Uri {}
 class FakeBaseRequest extends Fake implements http.BaseRequest {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() {
     registerFallbackValue(FakeUri());
     registerFallbackValue(FakeBaseRequest());
   });
 
-  group('FeedbackOrchestrator (Atomic File System Queue)', () {
+  group('FeedbackOrchestrator (Atomic File System Queue & App Check)', () {
     late MockHttpClient mockClient;
     late Directory tempDir;
     late Directory queueDir;
@@ -53,8 +55,21 @@ void main() {
       return jsonFile;
     }
 
+    test('isConfigured retorna true por padrão e respeita debugIsConfiguredOverride', () {
+      expect(FeedbackOrchestrator.isConfigured, isTrue);
+
+      FeedbackOrchestrator.debugIsConfiguredOverride = false;
+      expect(FeedbackOrchestrator.isConfigured, isFalse);
+
+      FeedbackOrchestrator.debugIsConfiguredOverride = true;
+      expect(FeedbackOrchestrator.isConfigured, isTrue);
+
+      FeedbackOrchestrator.debugIsConfiguredOverride = null;
+      expect(FeedbackOrchestrator.isConfigured, isTrue);
+    });
+
     test(
-      'processa fila com sucesso e deleta arquivos injetando o dispatcher',
+      'processa fila com sucesso e anexa token do App Check e dispatcher',
       () async {
         when(
           () => mockClient.send(any()),
@@ -65,46 +80,74 @@ void main() {
         final result = await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'test-app-check-jwt',
           dispatcher: 'connectivity_plus',
+          isDebugModeOverride: false,
         );
 
         expect(result, isTrue);
 
-        // Verify files deleted
+        // Verifica se os arquivos foram deletados da fila após sucesso
         final files = queueDir.listSync();
         expect(files.isEmpty, isTrue);
 
-        // Verify metadata injection
+        // Verifica injeção do cabeçalho do App Check e metadados
         final captured = verify(() => mockClient.send(captureAny())).captured;
         final request = captured.first as http.MultipartRequest;
 
+        expect(request.headers['X-Firebase-AppCheck'], 'test-app-check-jwt');
         final metadataStr = request.fields['metadata'];
         expect(metadataStr, isNotNull);
         final metadata = jsonDecode(metadataStr!);
         expect(metadata['dispatcher'], 'connectivity_plus');
         expect(metadata['feedbackId'], 'uuid-1');
-        expect(metadata['os'], 'ios'); // Mantém o metadata original
+        expect(metadata['os'], 'ios');
       },
     );
 
-    test('renomeia de volta para .json em caso de falha HTTP (500)', () async {
+    test(
+      'em modo debug sem token do App Check, executa mock gracioso e completa a tarefa',
+      () async {
+        createFeedbackFiles('uuid-dev');
+
+        final result = await FeedbackOrchestrator.processFeedbackQueue(
+          client: mockClient,
+          getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => null, // Sem token (dev não cadastrado)
+          dispatcher: 'manual_debug',
+          isDebugModeOverride: true, // Modo debug ativo
+        );
+
+        expect(result, isTrue);
+
+        // Não deve disparar chamada HTTP externa para a Edge Function
+        verifyNever(() => mockClient.send(any()));
+
+        // Os arquivos devem ter sido limpos da fila normalmente
+        expect(queueDir.listSync().isEmpty, isTrue);
+      },
+    );
+
+    test('renomeia de volta para .json em caso de falha HTTP (500/503)', () async {
       when(
         () => mockClient.send(any()),
       ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 500));
 
       createFeedbackFiles('uuid-3');
 
-      // Deve dar throw de exceção para o Workmanager tentar de novo
+      // Deve lançar exceção para o Workmanager aplicar retry com backoff
       expect(
         () => FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'valid-token',
           dispatcher: 'work_manager',
+          isDebugModeOverride: false,
         ),
         throwsException,
       );
 
-      // Os arquivos devem voltar a ser .json
+      // Os arquivos devem voltar a ser .json desbloqueados
       final jsonFile = File('${queueDir.path}/uuid-3.json');
       final pngFile = File('${queueDir.path}/uuid-3.png');
 
@@ -115,7 +158,6 @@ void main() {
     test(
       'recupera arquivos .processing travados há mais de 15 minutos (Crash Recovery)',
       () async {
-        // Simula sucesso quando finalmente enviar
         when(
           () => mockClient.send(any()),
         ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
@@ -125,13 +167,14 @@ void main() {
           isProcessing: true,
         );
 
-        // Muda a data de modificação para 20 minutos atrás
         final pastTime = DateTime.now().subtract(const Duration(minutes: 20));
         oldProcessingFile.setLastModifiedSync(pastTime);
 
         await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'valid-token',
+          isDebugModeOverride: false,
         );
 
         expect(queueDir.listSync().isEmpty, isTrue);
@@ -157,6 +200,8 @@ void main() {
         await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'valid-token',
+          isDebugModeOverride: false,
         );
 
         verifyNever(() => mockClient.send(any()));
@@ -181,6 +226,8 @@ void main() {
         await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'valid-token',
+          isDebugModeOverride: false,
         );
 
         verifyNever(() => mockClient.send(any()));
@@ -195,7 +242,6 @@ void main() {
           () => mockClient.send(any()),
         ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
 
-        // Cria um feedback velho, onde não havia feedbackId dentro do metadata
         final id = 'uuid-old-format';
         final pngFile = File('${queueDir.path}/$id.png');
         pngFile.writeAsBytesSync([1, 2, 3]);
@@ -205,7 +251,7 @@ void main() {
           jsonEncode({
             'id': id,
             'description': 'bug velho',
-            'metadata': {'os': 'ios'}, // sem feedbackId
+            'metadata': {'os': 'ios'},
             'timestamp': DateTime.now().toIso8601String(),
           }),
         );
@@ -213,12 +259,11 @@ void main() {
         await FeedbackOrchestrator.processFeedbackQueue(
           client: mockClient,
           getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'valid-token',
+          isDebugModeOverride: false,
         );
 
-        // Não deve tentar enviar para a nuvem
         verifyNever(() => mockClient.send(any()));
-
-        // Deve ter apagado tanto o .json quanto o .png da fila
         expect(queueDir.listSync().isEmpty, isTrue);
       },
     );

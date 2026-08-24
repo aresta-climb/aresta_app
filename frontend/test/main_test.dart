@@ -293,8 +293,8 @@ void main() {
         remoteConfigService: FakeRemoteConfigService(),
         acceptedLegalVersion: 0,
         assetBundle: MockAssetBundle({
-          'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
-          'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+          'legal/repo/public/docs/termos-de-uso.md': 'Terms',
+          'legal/repo/public/docs/politica-de-privacidade.md': 'Privacy',
         }),
       ),
     );
@@ -344,8 +344,8 @@ void main() {
           remoteConfigService: FakeRemoteConfigService(),
           acceptedLegalVersion: outdatedVersion,
           assetBundle: MockAssetBundle({
-            'legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md': 'Terms',
-            'legal/repo/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': 'Privacy',
+            'legal/repo/public/docs/termos-de-uso.md': 'Terms',
+            'legal/repo/public/docs/politica-de-privacidade.md': 'Privacy',
           }),
         ),
       );

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 
+/// Utilitário responsável por monitorar alterações nos documentos legais
+/// em `public/docs/` e atualizar a versão compilada em `legal_version.g.dart`.
 class LegalVersionUpdater {
   final String repoPath;
   final String outputPath;
@@ -9,12 +11,12 @@ class LegalVersionUpdater {
 
   Future<bool> checkAndUpdate() async {
     final File dartFile = File(outputPath);
-    final File termosFile = File('$repoPath/TERMOS_DE_USO_ARESTA_CLIMB.md');
+    final File termosFile = File('$repoPath/public/docs/termos-de-uso.md');
     final File politicaFile =
-        File('$repoPath/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md');
+        File('$repoPath/public/docs/politica-de-privacidade.md');
 
     if (!await termosFile.exists() || !await politicaFile.exists()) {
-      print('Erro: Arquivos Markdown não encontrados em $repoPath.');
+      print('Erro: Arquivos Markdown não encontrados em $repoPath/public/docs/.');
       return false;
     }
 
@@ -38,12 +40,11 @@ class LegalVersionUpdater {
         }
 
         final termosMatch =
-            RegExp(r"'TERMOS_DE_USO_ARESTA_CLIMB\.md': '([^']+)'")
-                .firstMatch(content);
+            RegExp(r"'termos-de-uso\.md': '([^']+)'").firstMatch(content);
         if (termosMatch != null) oldTermosHash = termosMatch.group(1)!;
 
         final politicaMatch =
-            RegExp(r"'POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB\.md': '([^']+)'")
+            RegExp(r"'politica-de-privacidade\.md': '([^']+)'")
                 .firstMatch(content);
         if (politicaMatch != null) oldPoliticaHash = politicaMatch.group(1)!;
       } catch (e) {
@@ -66,12 +67,12 @@ const int kLegalVersion = $newVersion;
 const String kLegalLastUpdatedDate = '$dateStr';
 
 const Map<String, String> kLegalHashes = {
-  'TERMOS_DE_USO_ARESTA_CLIMB.md': '$currentTermosHash',
-  'POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': '$currentPoliticaHash',
+  'termos-de-uso.md': '$currentTermosHash',
+  'politica-de-privacidade.md': '$currentPoliticaHash',
 };
 ''';
 
-      // Ensure directory exists
+      // Garante que o diretório de destino existe
       if (!dartFile.parent.existsSync()) {
         dartFile.parent.createSync(recursive: true);
       }

@@ -3,23 +3,24 @@ import 'package:test/test.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
-// Import the class we are about to test
 import '../bin/update_legal_version.dart';
 
 void main() {
   late Directory tempDir;
+  late Directory docsDir;
   late File dartFile;
   late File termos;
   late File politica;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('legal_test_');
+    docsDir = Directory('${tempDir.path}/public/docs');
+    await docsDir.create(recursive: true);
 
     dartFile = File('${tempDir.path}/legal_version.g.dart');
 
-    // Create fake markdown files
-    termos = File('${tempDir.path}/TERMOS_DE_USO_ARESTA_CLIMB.md');
-    politica = File('${tempDir.path}/POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md');
+    termos = File('${docsDir.path}/termos-de-uso.md');
+    politica = File('${docsDir.path}/politica-de-privacidade.md');
 
     await termos.writeAsString('Conteudo termos');
     await politica.writeAsString('Conteudo politica');
@@ -39,14 +40,13 @@ void main() {
     final politicaHash =
         sha256.convert(utf8.encode('Conteudo politica')).toString();
 
-    // Create initial dart file
     final initialDart = '''
 const int kLegalVersion = 1;
 const String kLegalLastUpdatedDate = '2026-06-04';
 
 const Map<String, String> kLegalHashes = {
-  'TERMOS_DE_USO_ARESTA_CLIMB.md': '$termosHash',
-  'POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': '$politicaHash',
+  'termos-de-uso.md': '$termosHash',
+  'politica-de-privacidade.md': '$politicaHash',
 };
 ''';
     await dartFile.writeAsString(initialDart);
@@ -69,8 +69,8 @@ const int kLegalVersion = 1;
 const String kLegalLastUpdatedDate = '2026-06-04';
 
 const Map<String, String> kLegalHashes = {
-  'TERMOS_DE_USO_ARESTA_CLIMB.md': '$termosHash',
-  'POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.md': '$politicaHash',
+  'termos-de-uso.md': '$termosHash',
+  'politica-de-privacidade.md': '$politicaHash',
 };
 ''';
     await dartFile.writeAsString(initialDart);
@@ -87,8 +87,7 @@ const Map<String, String> kLegalHashes = {
     final newTermosHash =
         sha256.convert(utf8.encode('Conteudo termos')).toString();
     expect(
-        currentDart
-            .contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"),
+        currentDart.contains("'termos-de-uso.md': '$newTermosHash'"),
         isTrue);
   });
 
@@ -98,7 +97,7 @@ const Map<String, String> kLegalHashes = {
     final updater = LegalVersionUpdater(tempDir.path, dartFile.path);
     final wasUpdated = await updater.checkAndUpdate();
 
-    expect(wasUpdated, isTrue); // Creation is an update
+    expect(wasUpdated, isTrue);
     expect(await dartFile.exists(), isTrue);
 
     final currentDart = await dartFile.readAsString();
@@ -107,8 +106,7 @@ const Map<String, String> kLegalHashes = {
     final newTermosHash =
         sha256.convert(utf8.encode('Conteudo termos')).toString();
     expect(
-        currentDart
-            .contains("'TERMOS_DE_USO_ARESTA_CLIMB.md': '$newTermosHash'"),
+        currentDart.contains("'termos-de-uso.md': '$newTermosHash'"),
         isTrue);
   });
 

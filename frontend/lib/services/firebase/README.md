@@ -26,4 +26,12 @@ Abstração do `firebase_remote_config`.
 Ele funciona mantendo uma tabela de _feature flags_ ou valores remotos de configuração.
 - **Valores Padrão**: Toda flag invocada neste app deve ter um fallback inquebrável caso o dispositivo não tenha internet.
 - **Cache**: Valores são armazenados localmente e atualizados com cache para evitar excesso de banda.
+- **URLs Dinâmicas**: Permite alterar dinamicamente a URL do endpoint de feedback (`feedback_edge_function_url`) e a URL base do servidor de dados (`serving_base_url`) sem necessidade de nova compilação do app.
 - **Como expandir**: Para adicionar uma nova flag, declare-a nos fallbacks internos e crie um _getter_ tipado para a UI ler de forma nativa e simples.
+
+### 4. `app_check_service.dart`
+Abstração do `firebase_app_check`.
+Responsável pela atestação de integridade de hardware e software da aplicação.
+- **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
+- **Desenvolvimento (Debug)**: Utiliza o Provedor de Depuração com suporte a UUIDs cadastrados no Firebase Console, permitindo que os desenvolvedores testem a rota real, ou realiza fallback silencioso em ambiente de desenvolvimento sem bloquear a interface.
+

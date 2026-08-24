@@ -2,13 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../../firebase_options.dart';
+import 'app_check_service.dart';
 import 'remote_config_service.dart';
 
 /// Inicializa os serviços do Firebase e os configura globalmente.
 /// Esta função encapsula todo o contato direto com a API core do Firebase.
 Future<void> initFirebase() async {
-  // Inicialização básica
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Inicialização básica (seguro para isolates secundários)
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
+
+  // Ativação da atestação de integridade de aplicativo (Firebase App Check)
+  await AppCheckService.instance.activate();
 
   await initCrashlytics();
 

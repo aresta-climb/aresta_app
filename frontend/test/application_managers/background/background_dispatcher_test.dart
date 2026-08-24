@@ -45,16 +45,24 @@ void main() {
       }
     });
 
-    test('callbackDispatcher deve registrar executeTask no Workmanager', () async {
+    test('callbackDispatcher deve registrar executeTask no Workmanager e inicializar Firebase', () async {
       final mockWm = MockWorkmanager();
-      when(() => mockWm.executeTask(any())).thenAnswer((invocation) {
+      bool firebaseInicializado = false;
+
+      when(() => mockWm.executeTask(any())).thenAnswer((invocation) async {
         final handler = invocation.positionalArguments[0] as dynamic;
-        handler('send_feedback_task', null);
+        await handler('send_feedback_task', null);
       });
 
-      callbackDispatcher(workmanager: mockWm);
+      callbackDispatcher(
+        workmanager: mockWm,
+        initFirebaseOverride: () async {
+          firebaseInicializado = true;
+        },
+      );
 
       verify(() => mockWm.executeTask(any())).called(1);
+      expect(firebaseInicializado, isTrue);
     });
 
     test('callbackDispatcher sem argumentos utiliza instância padrão', () async {

@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Legal Markdown Verification', () {
-    test('TERMOS_DE_USO_ARESTA_CLIMB.md contains link to privacy policy', () {
-      final file = File('legal/repo/TERMOS_DE_USO_ARESTA_CLIMB.md');
+    test('termos-de-uso.md contains link to privacy policy', () {
+      final file = File('legal/repo/public/docs/termos-de-uso.md');
       expect(
         file.existsSync(),
         isTrue,
-        reason: 'Arquivo de termos não encontrado',
+        reason: 'Arquivo de termos não encontrado em legal/repo/public/docs/termos-de-uso.md',
       );
 
       final content = file.readAsStringSync();
@@ -21,7 +21,7 @@ void main() {
       );
 
       expect(
-        content.contains('POLITICA_DE_PRIVACIDADE_ARESTA_CLIMB.html'),
+        content.contains('/politica-de-privacidade'),
         isTrue,
         reason:
             'A URL do link da Política de Privacidade foi removida ou alterada. Ela precisa estar presente para manter a estrutura do Markdown correta.',
