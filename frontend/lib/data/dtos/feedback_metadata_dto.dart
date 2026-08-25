@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo atua como o serializador (DTO) dos metadados de feedback.
 /// Ele é responsável por converter a classe pura FeedbackMetadata de e para JSON.
 library;

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Despachante global e centralizado de tarefas em segundo plano (WorkManager).
 ///
 /// Este arquivo atua como o Ponto de Entrada (Entry Point) único para todas as

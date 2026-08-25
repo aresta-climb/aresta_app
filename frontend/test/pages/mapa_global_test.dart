@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Testes de widget para a tela principal do Mapa Global.
 ///
 /// Assegura que a página [MapaGlobalPage] seja capaz de instanciar o mapa

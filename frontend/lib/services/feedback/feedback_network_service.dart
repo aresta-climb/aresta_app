@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Rede de Feedback.
 /// É responsável estritamente por pegar um payload de feedback e fazer a requisição HTTP POST para o endpoint seguro do Supabase.
 library;

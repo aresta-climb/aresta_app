@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Sistema/Dispositivo.
 /// É responsável por vasculhar o SO do aparelho (versão, modelo, conectividade) para popular os metadados.
 library;

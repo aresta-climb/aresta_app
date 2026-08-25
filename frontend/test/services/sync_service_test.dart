@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Testes do SyncService: lógica de extração de imagens markdown e SyncStatus.
 /// Como _extractMarkdownImages é privada da biblioteca, testamos seu comportamento
 /// indiretamente via regex equivalente aplicada a JSONs de Croqui.

@@ -22,14 +22,18 @@ O repositório DEVE fornecer um guia de contribuição em `CONTRIBUTING.md` deta
 - **ENTÃO** encontra instruções claras de como assinar commits com `-s`, o fluxo de PRs e o link para o `PRINCIPIOS.md`
 
 ### Requirement: Identificadores SPDX em Arquivos de Código
-Todos os arquivos de código-fonte Dart (`.dart`) presentes no projeto (em `frontend/lib/`, `frontend/test/` e scripts de `frontend/tool/`) DEVEM conter no topo do arquivo o identificador SPDX padronizado e a nota de direitos autorais em português.
+Todos os arquivos de código-fonte Dart (`.dart`) presentes no projeto (em `frontend/lib/`, `frontend/test/` e scripts de `frontend/tool/`) DEVEM conter no topo do arquivo o identificador SPDX e o aviso de direitos autorais padronizados.
 
 #### Scenario: Estrutura do cabeçalho SPDX
 - **QUANDO** qualquer arquivo `.dart` de autoria do projeto é lido
-- **ENTÃO** as primeiras linhas contêm `// SPDX-License-Identifier: MPL-2.0` e `// Copyright (c) 2026 Aresta Climb`
+- **ENTÃO** as primeiras linhas contêm exatamente:
+  ```dart
+  // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Authors
+  // SPDX-License-Identifier: MPL-2.0
+  ```
 
 ### Requirement: Teste Automatizado de Conformidade SPDX
-A suíte de testes de unidade do projeto DEVE conter um teste automatizado (`frontend/test/legal/conformidade_spdx_test.dart`) que varre todos os arquivos `.dart` do projeto e falha se algum arquivo não contiver o identificador SPDX válido.
+A suíte de testes de unidade do projeto DEVE conter um teste automatizado (`frontend/test/legal/conformidade_spdx_test.dart`) que varre todos os arquivos `.dart` do projeto e falha se algum arquivo não contiver o identificador SPDX e copyright válidos.
 
 #### Scenario: Execução do teste de conformidade de licença
 - **QUANDO** o comando de teste de conformidade (`flutter test test/legal/conformidade_spdx_test.dart`) é executado

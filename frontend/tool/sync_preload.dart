@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Script `sync_preload.dart`
 ///
 /// Realiza o pre-bundling do arquivo `indice.binarypb` e todas as thumbnails.

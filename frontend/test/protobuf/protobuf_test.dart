@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Testes de serialização e desserialização Protobuf.
 /// Verifica que os objetos podem ser convertidos em bytes e recuperados com fidelidade.
 library;

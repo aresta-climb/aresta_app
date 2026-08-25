@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo é o Gerente/Coordenador acionado por ações do Usuário (UseCase).
 /// Quando o usuário clica em 'Enviar', esta classe orquestra a coleta de metadados, 
 /// registro de telemetria e o enfileiramento do feedback, sem se importar como esses serviços são implementados.

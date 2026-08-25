@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 import '../services/firebase/remote_config_service.dart';
 
 /// Constantes globais de rede e servidores do Aresta Climb.

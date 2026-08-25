@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo atua como o 'Trabalhador' (Worker) da Fila.
 /// Fornece uma API simplificada para adicionar novos feedbacks à fila de persistência local.
 library;

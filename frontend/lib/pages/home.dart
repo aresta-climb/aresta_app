@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 import 'package:flutter/material.dart';
 import '../view_functions/home_functions.dart';
 import '../services/dataset_repository.dart';

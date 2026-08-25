@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo atua como um gatilho (Trigger) reativo.
 /// Ouve mudanças na rede (Wi-Fi/Dados Móveis) e dispara a sincronização da fila quando a internet volta.
 library;

@@ -194,3 +194,12 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 | [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`test/README.md`](test/README.md) | Estrutura dos testes, como executar e convenções adotadas |
 | [`test/navigation/README.md`](test/navigation/README.md) | Cobertura dos testes da árvore de navegação e validação de loop prevention |
+
+---
+
+## Licença e Contribuição
+
+- **Código-Fonte**: Licenciado sob a [Mozilla Public License 2.0 (MPL 2.0)](../LICENSE).
+- **Diretrizes de Contribuição**: Adotamos o Developer Certificate of Origin (DCO com `git commit -s`). Veja detalhes em [CONTRIBUTING.md](../CONTRIBUTING.md).
+- **Princípios de Engenharia**: Desenvolvimento orientado a testes (TDD), 100% de cobertura e tudo em português brasileiro. Consulte [PRINCIPIOS.md](../PRINCIPIOS.md).
+

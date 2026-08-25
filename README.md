@@ -48,3 +48,28 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 - [Protocol Buffers — Especificando tipos](https://protobuf.dev/programming-guides/proto3/#specifying-types)
 - [Protocol Buffers — Tipos escalares](https://protobuf.dev/programming-guides/proto3/#scalar)
 - [flutter.dev — Instalação](https://flutter.dev/docs/get-started/install)
+
+---
+
+## Licença, Marca e Termos de Uso
+
+### Código-Fonte
+O código-fonte deste projeto é distribuído sob a licença **Mozilla Public License 2.0 (MPL 2.0)**. 
+Consulte o arquivo [LICENSE](LICENSE) para obter o texto integral dos termos da licença.
+
+### Marca e Identidade Visual
+O nome **"Aresta"**, **"Aresta Climb"**, bem como os logotipos, ícones e identidades visuais associadas são marcas registradas e de propriedade exclusiva dos mantenedores do projeto. O uso da licença MPL 2.0 aplica-se exclusivamente ao código-fonte e **não concede direitos de uso comercial das marcas ou logotipos** para produtos derivados. Caso crie um fork ou distribuição independente, altere o nome e os elementos visuais.
+
+### Conteúdo dos Guias e Croquis
+Os dados de escalada, croquis, betas, imagens e traçados de vias distribuídos através dos servidores oficiais ou comercializados no aplicativo são de propriedade de seus respectivos autores/conquistadores e da Aresta, sendo protegidos pela legislação de direitos autorais de conteúdo. O acesso ao código-fonte do aplicativo não concede licença sobre a base de dados comercial de croquis.
+
+---
+
+## Contribuindo
+
+Contribuições da comunidade são muito bem-vindas!
+
+Adotamos o **Developer Certificate of Origin (DCO v1.1)** para gerenciar as contribuições de forma ágil e sem a necessidade de contratos burocráticos de CLA. Ao enviar um Pull Request, você certifica que tem o direito de disponibilizar o código sob a licença MPL 2.0 assinando seus commits com a flag `-s` (`Signed-off-by`).
+
+Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md) e nossos [Princípios de Engenharia](PRINCIPIOS.md).
+

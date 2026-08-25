@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Testes do DatasetRepository: lógica de estado público, busca recursiva de
 /// arquivos (testada via sistema de arquivos), e extração de capa markdown
 /// (testada indiretamente via regex local equivalente).

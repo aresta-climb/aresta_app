@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Suíte de testes do EditorDeCroqui.
 /// Testa lógica de modos (oficial, editor, experimental) e caminhos.
 /// Nota: testes de connect/disconnect/activateExperimental que precisam de

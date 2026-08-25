@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 class MarkdownUtils {
   /// Limpa o conteúdo markdown antes de exibi-lo em um modal.
   /// - Remove blocos de frontmatter delimitados por `---` no início do texto.

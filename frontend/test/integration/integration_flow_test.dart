@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Testes de integração do fluxo completo aresta-zip:
 /// desde o arquivo .croqui no disco até a leitura do Croqui em memória,
 /// incluindo múltiplos arquivos e imagens externas.

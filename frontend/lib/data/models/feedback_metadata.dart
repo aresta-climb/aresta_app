@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo define o Modelo de Domínio (Blueprint) principal dos metadados de feedback.
 /// Contém apenas as propriedades puras, sem lógica de formatação JSON (que fica no DTO).
 library;

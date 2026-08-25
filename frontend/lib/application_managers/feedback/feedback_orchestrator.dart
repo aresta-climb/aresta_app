@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 /// Este arquivo é o Gerente/Coordenador de background (Orchestrator) de Feedback.
 /// É acionado pelo Workmanager (em segundo plano) ou por gatilhos de conectividade para varrer
 /// a fila local de feedbacks persistentes e despachá-los para o servidor seguro.

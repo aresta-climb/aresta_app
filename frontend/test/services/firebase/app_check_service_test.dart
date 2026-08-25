@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter_test/flutter_test.dart';

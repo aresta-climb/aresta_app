@@ -11,7 +11,11 @@ A migração unificada para a Mozilla Public License 2.0 (MPL 2.0), a padroniza�
   - Atualização do `README.md` raiz com cláusulas explícitas separando o código-fonte livre (MPL 2.0), a proteção da marca registrada ("Aresta", "Aresta Climb" e logotipos) e os direitos autorais dos dados/croquis de escalada.
   - Criação do documento `CONTRIBUTING.md` em português brasileiro estabelecendo o fluxo de contribuições via DCO (sign-off com `git commit -s`) e referenciando os Princípios de Engenharia do projeto (`PRINCIPIOS.md`).
   - Atualização de menções no `frontend/README.md`.
-- **Identificadores SPDX nos Arquivos**: Adição do cabeçalho padronizado de licença (`// SPDX-License-Identifier: MPL-2.0` e Copyright) no topo de todos os arquivos de código Dart em `frontend/lib/`, `frontend/test/` e scripts de `frontend/tool/`.
+- **Identificadores SPDX nos Arquivos**: Adição do cabeçalho padronizado de licença e copyright no topo de todos os arquivos de código Dart em `frontend/lib/`, `frontend/test/` e scripts de `frontend/tool/`:
+  ```dart
+  // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Authors
+  // SPDX-License-Identifier: MPL-2.0
+  ```
 - **Automação de Conformidade por Teste (TDD)**: Criação de suíte de testes de unidade automatizada em `frontend/test/legal/conformidade_spdx_test.dart` que valida recursivamente se todo e qualquer arquivo `.dart` do projeto possui o cabeçalho SPDX correto, falhando o pipeline caso um novo arquivo seja inserido sem a marcação.
 - **Conformidade Estrita com PRINCIPIOS.md**: Manutenção de 100% de cobertura de testes, ciclo TDD (Red-Green-Refactor) e documentação contínua abrangente em português brasileiro com docstrings explicativas.
 

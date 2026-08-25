@@ -10,11 +10,15 @@ Toda a concepção e implementação desta proposta seguem estritamente os prece
 - Substituir o arquivo `LICENSE` existente pela íntegra oficial da Mozilla Public License 2.0 (MPL 2.0).
 - Adicionar no `README.md` raiz cláusulas de governança separando código-fonte (MPL 2.0), marcas registradas ("Aresta", "Aresta Climb" e logotipos) e direitos autorais dos dados/croquis.
 - Criar o `CONTRIBUTING.md` oficial documentando o Developer Certificate of Origin (DCO) via `git commit -s` e integrando com o `PRINCIPIOS.md`.
-- Inserir o cabeçalho padronizado SPDX (`// SPDX-License-Identifier: MPL-2.0` / `// Copyright (c) 2026 Aresta Climb`) em todos os arquivos de código Dart (`frontend/lib/`, `frontend/test/`, `frontend/tool/`).
+- Inserir o cabeçalho padronizado SPDX no topo de todos os arquivos de código Dart (`frontend/lib/`, `frontend/test/`, `frontend/tool/`):
+  ```dart
+  // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Authors
+  // SPDX-License-Identifier: MPL-2.0
+  ```
 - Implementar um teste de unidade automatizado em `frontend/test/legal/conformidade_spdx_test.dart` (seguindo rigorosamente o TDD e 100% de cobertura) para auditar recursivamente todos os arquivos Dart e impedir regressões de conformidade no CI/CD.
 
 **Não-Objetivos:**
-- Reescrita do histórico antigo do Git com `git-filter-repo` (esta etapa de reescrita retroativa do histórico será executada pelo mantenedor do projeto em seu ambiente local antes da publicação).
+- Reescrita do histórico antigo do Git com `git-filter-repo` (esta etapa de reescrita retroativa do histórico já foi executada pelo mantenedor do projeto em seu ambiente local antes da publicação).
 - Alteração da lógica de negócios do aplicativo, DRM ou integração de pagamentos (que permanecem desacoplados na arquitetura de backend).
 
 ## Decisões Arquiteturais e Conformidade com PRINCIPIOS.md
@@ -34,16 +38,16 @@ Toda a concepção e implementação desta proposta seguem estritamente os prece
 - **Justificativa**: A MPL 2.0 foi desenhada para aceitar contribuições diretas sem necessidade de cessão de direitos autorais (CLA). O DCO simplifica o onboarding de desenvolvedores da comunidade de escalada e pode ser validado automaticamente por bots de CI no GitHub.
 
 ### 4. Padrão de Cabeçalho SPDX e TDD (Princípios III, IV e VI)
-- **Decisão**: Adicionar o formato padrão SPDX no topo dos arquivos:
+- **Decisão**: Adicionar o formato padrão SPDX e Copyright no topo dos arquivos:
   ```dart
+  // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Authors
   // SPDX-License-Identifier: MPL-2.0
-  // Copyright (c) 2026 Aresta Climb
   ```
 - **Ciclo TDD**:
   1. *Red*: Escrever `frontend/test/legal/conformidade_spdx_test.dart` e rodar `flutter test test/legal/conformidade_spdx_test.dart`, constatando a falha antes da modificação dos arquivos de código.
   2. *Green*: Aplicar o cabeçalho SPDX a todos os arquivos Dart e reexecutar o teste até obter 100% de sucesso.
   3. *Refactor*: Garantir docstrings explicativas e código limpo sem abstrações prematuras ou complexidade desnecessária.
-- **Implementação do Teste**: O teste inspeciona os diretórios `lib/`, `test/` e `tool/`, ignorando arquivos autogerados (`.g.dart`, `.pb.dart`, submódulos como `aresta_api` e `.dart_tool`), e assevera que todos os arquivos `.dart` de autoria do projeto contêm a linha `SPDX-License-Identifier: MPL-2.0`.
+- **Implementação do Teste**: O teste inspeciona os diretórios `lib/`, `test/` e `tool/`, ignorando arquivos autogerados (`.g.dart`, `.pb.dart`, submódulos como `aresta_api`, `frontend/legal/repo` e `.dart_tool`), e assevera que todos os arquivos `.dart` de autoria do projeto contêm as duas linhas obrigatórias do cabeçalho SPDX.
 
 ## Riscos / Trade-offs
 
