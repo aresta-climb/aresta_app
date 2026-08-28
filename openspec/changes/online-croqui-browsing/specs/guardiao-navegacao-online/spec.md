@@ -12,15 +12,15 @@ Ao visualizar as telas de um croqui que não se encontra salvo localmente, a int
 - **THEN** o download em background é iniciado
 - **AND** o botão passa a exibir o estado de download em andamento com porcentagem.
 
-### Requirement: Exit Guard (Confirmação ao Sair sem Salvar)
-Ao tentar sair (voltar) das telas de um pico visualizado em modo online onde o usuário teve interação significativa (navegou por setores/vias ou permaneceu por mais de 10 segundos), o sistema DEVE (MUST) interceptar a navegação de retorno e exibir um modal de confirmação ("Exit Guard"). O modal DEVE alertar sobre a falta de sinal de internet na montanha e oferecer as opções de "Salvar Offline" ou "Sair sem Salvar".
+### Requirement: Guardião de Saída (Confirmação ao Sair sem Salvar)
+Ao tentar sair (voltar) das telas de um pico visualizado em modo online onde o usuário teve interação significativa (navegou por setores/vias ou permaneceu por mais de 10 segundos), o sistema DEVE (MUST) interceptar a navegação de retorno e exibir um modal de confirmação ("Guardião de Saída"). O modal DEVE alertar sobre a falta de sinal de internet na montanha e oferecer as opções de "Salvar Offline" ou "Sair sem Salvar".
 
 #### Scenario: Intercepção de saída após exploração online
 - **WHEN** o usuário navega por setores ou vias de um croqui online por mais de 10 segundos
 - **AND** aciona o comando de voltar para a página inicial ou explorador
-- **THEN** o sistema bloqueia o pop imediato e exibe o modal de confirmação do Exit Guard.
+- **THEN** o sistema bloqueia o pop imediato e exibe o modal de confirmação do Guardião de Saída.
 
-#### Scenario: Usuário opta por salvar no Exit Guard
+#### Scenario: Usuário opta por salvar no Guardião de Saída
 - **WHEN** o usuário escolhe "Salvar Offline" no modal de confirmação
 - **THEN** o sistema despacha o download para o serviço de background
 - **AND** prossegue com a navegação de retorno.
@@ -29,8 +29,8 @@ Ao tentar sair (voltar) das telas de um pico visualizado em modo online onde o u
 - **WHEN** o usuário escolhe "Sair sem Salvar" no modal de confirmação
 - **THEN** o modal é fechado e a navegação de retorno é concluída imediatamente sem iniciar downloads.
 
-### Requirement: Indicador de Atualização em Tempo Real (Live Update Pill)
-Quando o polling de ETag detectar uma nova versão do `.binarypb` no servidor remoto enquanto a tela estiver aberta, a interface DEVE (MUST) exibir uma notificação visual não intrusiva (pílula flutuante ou snackbar de topo) informando sobre as atualizações. Tocar na notificação DEVE recarregar a tela com os novos dados sem perder o contexto de navegação.
+### Requirement: Indicador de Atualização em Tempo Real (Pílula de Atualização)
+Quando o polling de ETag detectar uma nova versão do `.binarypb` no servidor remoto enquanto a tela estiver aberta, a interface DEVE (MUST) exibir uma notificação visual não intrusiva (pílula flutuante ou barra superior) informando sobre as atualizações. Tocar na notificação DEVE recarregar a tela com os novos dados sem perder o contexto de navegação.
 
 #### Scenario: Notificação de atualização durante leitura
 - **WHEN** o servidor remoto emite status 200 para a verificação de ETag de um pico aberto

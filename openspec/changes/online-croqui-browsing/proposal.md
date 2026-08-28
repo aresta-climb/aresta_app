@@ -1,33 +1,36 @@
-## Why
+## Por que
 
-Currently, users must fully download an entire crag package (binary data + all high-resolution images/maps) before they can view its sectors, routes, and topos. This creates high friction for exploration, wastes storage and mobile data, and slows down users who just want to check a single route grade or compare areas while at home.
+Atualmente, os usuários precisam baixar compulsoriamente todo o pacote do pico (dados binários e todas as imagens/mapas em alta resolução) antes de poderem visualizar seus setores, vias e croquis. Isso cria fricção desnecessária na exploração, desperdiça armazenamento e franquia de dados móveis, além de frustrar quem deseja apenas consultar o grau de uma via ou comparar picos em casa.
 
-Allowing instant online croqui browsing unlocks friction-free exploration while maintaining Aresta's core promise: 100% reliable offline access when climbing at the crag without cellular signal.
+Permitir a navegação instantânea online viabiliza uma exploração fluida e sem atritos, mantendo inalterada a promessa fundamental do Aresta: acesso 100% garantido e confiável na rocha, sem qualquer sinal de internet.
 
-## What Changes
+## O que muda
 
-- **Instant Online Navigation**: Tapping a crag in Explore, Global Map, or Search opens `PicoDetailsPage` immediately without requiring a prior download.
-- **On-Demand Streaming & Volatile Media Cache**: The crag's lightweight `.binarypb` (~tens of KB) is fetched on demand and parsed in memory/temp cache. Media images and map tiles are streamed on demand and cached in volatile temporary storage using SHA-256 query parameters (`?v=hash`) for cache busting.
-- **Live ETag Polling**: While viewing an online crag, lightweight periodic requests (`If-None-Match: <etag>`) check for backend updates every 30-60s, showing an unobtrusive update banner if a newer version is published.
-- **Pre-Computed Download Size in Protobuf**: Extend `ResumoCroqui`/`PrecomputadosResumoCroqui` in `indice.proto` with `tamanho_download_bytes` (populated by `aresta_db`) so the UI displays exact download sizes instantly.
-- **Conscious Offline UX (Banner & Exit Guard)**: Display a prominent floating Online Mode banner with a 1-tap "Salvar pra Pedra" CTA, plus an Exit Guard confirmation prompt when navigating away after exploring online without saving.
-- **Resilient Background Downloads**: When "Salvar" is triggered, downloads run as a Foreground Service on Android with an ongoing system notification (and background URLSession on iOS) so the bundle finishes downloading and moving to permanent storage even if the user exits the app.
+- **Navegação Direta Online**: Tocar em um pico no Explorar, Mapa Global ou Busca abre `PicoDetailsPage` imediatamente em modo online sem exigir download prévio.
+- **Transmissão Sob Demanda e Cache Volátil**: O `.binarypb` do croqui (~dezenas de KB) é baixado sob demanda e processado em memória/cache temporário volátil. Imagens e mapas são carregados sob demanda com parâmetros de quebra de cache SHA-256 (`?v=hash`) e armazenados no cache volátil do sistema operacional (`getTemporaryDirectory()`).
+- **Verificação Periódica de ETag**: Durante a visualização de um croqui online ativo, requisições leves periódicas (`If-None-Match: <etag>`) a cada 30-60 segundos verificam atualizações remotas, exibindo um aviso não intrusivo para recarga caso uma versão mais recente seja publicada.
+- **Tamanho de Download Pré-Computado no Protobuf**: Extensão do `ResumoCroqui`/`PrecomputadosResumoCroqui` no `indice.proto` com o campo `tamanho_download_bytes` (calculado pelo `aresta_db`) para exibição imediata do tamanho formatado na interface.
+- **Conscientização Visual (Banner e Guardião de Saída)**: Exibição de um banner flutuante indicando "Modo Online" com ação direta "Salvar pra Pedra", acompanhado do Guardião de Saída (modal de confirmação antes de sair do croqui explorado sem salvar).
+- **Download Resiliente em Segundo Plano**: Ao acionar o salvamento, o download é executado através de um serviço em primeiro plano no Android com notificação contínua do sistema operacional (`ongoing: true`) e `URLSession` em segundo plano no iOS, garantindo que o download termine mesmo se o app for minimizado ou encerrado.
 
-## Capabilities
+## Capacidades
 
-### New Capabilities
-- `online-croqui-streaming`: On-demand fetching and parsing of `.binarypb`, volatile media caching with cache busting, and active ETag polling for live online updates.
-- `online-browsing-guard`: Visual indicators and guards (floating Online Mode Banner, dynamic size badges, and Exit Guard modal upon popping navigation) to prevent users from inadvertently heading to the crag without offline data.
-- `persistent-background-download`: Background download manager with OS-level persistent ongoing notifications ensuring downloads complete reliably even when the app is minimized or terminated.
+### Novas Capacidades
+- `transmissao-croqui-online`: Carregamento sob demanda do `.binarypb`, cache volátil de mídias com quebra de cache e verificação periódica de ETag para atualizações em tempo real.
+- `guardiao-navegacao-online`: Componentes de conscientização visual (banner flutuante de modo online, exibição do tamanho pré-computado e modal de confirmação ao sair sem salvar).
+- `download-segundo-plano-persistente`: Serviço de download em segundo plano acoplado a notificações persistentes do sistema operacional, garantindo integridade e conclusão das transferências.
 
-### Modified Capabilities
-- `navigation`: Update crag selection flows across Explore (`browse.dart`), Home, and Global Map (`mapa_global.dart`) to immediately navigate into `PicoDetailsPage` in online mode instead of displaying a mandatory download bottom sheet.
+### Capacidades Modificadas
+- `navigation`: Atualização dos fluxos de seleção de picos no Explorar (`browse.dart`), Home e Mapa Global para navegar imediatamente para `PicoContextNode` em modo online sem exibir modais de bloqueio de download.
 
-## Impact
+## Impacto
 
-- **Protobuf / API**: Add `tamanho_download_bytes` to `indice.proto` (and coordinate with `aresta_db` builder).
-- **Frontend Architecture**:
-  - `DatasetRepository`: Support loading online croquis into state alongside downloaded crags.
-  - Image Resolution: Introduce unified image provider supporting local permanent -> volatile cache -> CDN stream.
-  - HTTP / Sync: Add `OnlineCroquiService` with ETag polling and `BackgroundDownloadService` with native notification channels.
-- **Dependencies**: Add/configure foreground service or background downloader plugin with native notification permissions on Android/iOS.
+- **Protobuf e Modelos de Dados**: Adição do campo `tamanho_download_bytes` no `indice.proto` e geração dos arquivos Dart correspondentes.
+- **Arquitetura Frontend**:
+  - `DatasetRepository`: Suporte a croquis em sessão online juntamente com os picos baixados.
+  - Resolução de Mídia: `ProvedorImagemAresta` unificando `/downloads` permanente, cache volátil `/temp_cache` e streaming da CDN.
+  - Serviços de Rede: `ServicoCroquiOnline` (ETag) e `ServicoDownloadSegundoPlano` (Foreground Service).
+- **Princípios e Qualidade**:
+  - Nomenclatura 100% em português brasileiro em todas as classes, métodos, widgets, variáveis e testes.
+  - TDD estrito com testes de widget e unidade espelhados em `test/`, visando 100% de cobertura.
+  - Documentação contínua com docstrings (`///`) em todos os componentes e atualização dos arquivos `README.md`.
