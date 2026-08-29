@@ -261,6 +261,118 @@ void main() {
   });
 
   testWidgets(
+    'MyApp shows SnackBar when background sync updates downloaded croquis',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // Configura sincronização automática com 1 croqui baixado atualizado
+      mockSync.lastSyncWasAuto.value = true;
+      mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 1;
+      mockSync.syncStatus.value = SyncStatus.justUpdated;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('Seus croquis baixados foram atualizados!'),
+        findsOneWidget,
+      );
+
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final BuildContext context = tester.element(find.byType(TreeNavigationWrapper));
+      expect(snackBar.backgroundColor, context.colors.dryMoss);
+    },
+  );
+
+  testWidgets(
+    'MyApp remains silent when background sync has only index/catalog updates (0 downloaded croquis updated)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // Sincronização automática com 0 croquis baixados atualizados
+      mockSync.lastSyncWasAuto.value = true;
+      mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
+      mockSync.syncStatus.value = SyncStatus.justUpdated;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MyApp remains silent when background sync has no new updates (HTTP 304)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // Sincronização automática sem atualizações
+      mockSync.lastSyncWasAuto.value = true;
+      mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
+      mockSync.syncStatus.value = SyncStatus.noNewUpdates;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'TreeNavigationWrapper does not show auto-update SnackBar when sync is manual',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // Sincronização manual não deve disparar SnackBar no TreeNavigationWrapper
+      mockSync.lastSyncWasAuto.value = false;
+      mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 2;
+      mockSync.syncStatus.value = SyncStatus.justUpdated;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
     'MyApp registers AppColors extension in both light and dark themes',
     (WidgetTester tester) async {
       await tester.pumpWidget(

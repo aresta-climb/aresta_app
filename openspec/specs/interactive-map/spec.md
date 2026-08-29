@@ -1,5 +1,7 @@
-## ADDED Requirements
+## Purpose
 
+Visualização interativa e navegação em croquis topográficos (mapas) offline com suporte a pan, zoom fluido, seleção de pontos de interesse e enquadramento automático de vias.
+## Requirements
 ### Requirement: Cross-linking navigation in interactive map
 The interactive map SHALL support tapping POIs that refer to sectors or groups, not just climbs.
 
@@ -52,15 +54,13 @@ When presenting multiple maps, the Carousel SHALL manage its own fixed Top Bar t
 - **THEN** the carousel pagination indicator (e.g., `< 01 de 02 >`) is rendered within the fixed Top Bar, avoiding overlap with map elements.
 
 ### Requirement: Estado Visual do Mapa Interativo
-
-O sistema DEVE preservar o estado visual do mapa interativo (incluindo nível de zoom, posição de movimentação/pan e estado inicial de animação) quando o usuário navega entre múltiplos mapas em um carrossel.
+The system SHALL preservar o estado visual do mapa interativo (incluindo nível de zoom, posição de movimentação/pan e estado inicial de animação) quando o usuário navega entre múltiplos mapas em um carrossel.
 
 #### Scenario: Deslizando de volta para um mapa visualizado anteriormente
 - **WHEN** o usuário está visualizando múltiplos mapas interativos em um carrossel
 - **AND** o usuário desliza para um novo mapa, e então desliza de volta para o mapa anterior
 - **THEN** o mapa anterior retém sua posição exata de zoom e movimentação
 - **AND** a animação inicial de zoom não é reproduzida novamente
-## ADDED Requirements
 
 ### Requirement: O parser de áreas deve usar a nomenclatura da v4
 The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circulo, retangulo, poligono, quadrado.
@@ -80,3 +80,46 @@ The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circ
 #### Scenario: Parsing quadrado
 - **WHEN** point type is quadrado
 - **THEN** it generates a square polygon based on x, y and lado without rotation
+
+### Requirement: Auto-Zoom Monotônico para Pontos Únicos
+The system SHALL centralizar a câmera no ponto de interesse selecionado sem jamais reduzir a escala de zoom atual caso o usuário já esteja com um nível de zoom superior à escala padrão.
+
+#### Scenario: Seleção de ponto único quando o zoom atual é inferior ao alvo padrão
+- **WHEN** o usuário está com o zoom do mapa em 1.0x (ou inferior a 2.5x)
+- **AND** o usuário toca em um marcador de ponto único
+- **THEN** a câmera amplia suavemente para a escala padrão de 2.5x (ou zoom customizado da referência)
+- **AND** centraliza a área visível no ponto com o deslocamento vertical correspondente
+
+#### Scenario: Seleção de ponto único quando o usuário já aplicou zoom manual elevado
+- **WHEN** o usuário aplicou zoom manual para uma escala de 4.5x
+- **AND** o usuário toca em um marcador de ponto único
+- **THEN** a escala da câmera é mantida em 4.5x (sem redução de zoom)
+- **AND** a câmera translada suavemente para centralizar o ponto selecionado
+
+### Requirement: Enquadramento de Rotas com Múltiplos Pontos (Caixa Delimitadora)
+The system SHALL calcular a escala necessária para enquadrar simultaneamente todos os marcadores associados (início e fim) no viewport visível com margens confortáveis ao selecionar uma via com múltiplos pontos.
+
+#### Scenario: Seleção de via com múltiplos pontos distantes
+- **WHEN** o usuário seleciona uma via composta por múltiplos marcadores (início e fim)
+- **THEN** o sistema calcula a caixa delimitadora englobando todos os pontos
+- **THEN** a câmera ajusta o zoom e a posição para que todos os pontos da via fiquem visíveis na tela
+
+### Requirement: Zoom Dinâmico por Dimensão Confortável na Tela
+The system SHALL calcular uma escala alvo proporcional ao tamanho do polígono do ponto na tela para garantir uma dimensão física mínima confortável (~20dp) em mapas de grandes dimensões ou alta resolução, sem nunca reduzir o zoom atual.
+
+#### Scenario: Marcador de tamanho reduzido em croqui panorâmico
+- **WHEN** o usuário toca em um marcador de dimensões físicas muito pequenas na escala 1.0
+- **THEN** o sistema calcula a escala dinâmica para que o elemento atinja dimensão confortável de visualização e toque
+- **THEN** o sistema aplica `max(escalaAtual, escalaDinamica)` para garantir que não ocorra redução de zoom
+
+### Requirement: Limite de Zoom Expandido e Gesto de Duplo Toque
+The interactive map SHALL suportar ampliações profundas de até 10.0x e permitir aproximação ágil via gesto de duplo toque.
+
+#### Scenario: Ampliação máxima em imagem de alta resolução
+- **WHEN** o usuário realiza o gesto de pinça para aproximar a imagem
+- **THEN** o componente permite ampliação contínua até o limite máximo de 10.0x
+
+#### Scenario: Duplo toque no mapa
+- **WHEN** o usuário realiza um duplo toque em uma área do mapa
+- **THEN** a câmera aproxima suavemente com foco nas coordenadas do toque
+

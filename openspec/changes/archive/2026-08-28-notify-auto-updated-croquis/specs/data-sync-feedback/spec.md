@@ -1,6 +1,4 @@
-# data-sync-feedback Specification
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Feedback Contextual de Sincronização
 O sistema MUST informar visualmente ao usuário o resultado preciso da verificação de atualizações no servidor, diferenciando sincronizações manuais/explícitas (botão nas configurações ou *pull-to-refresh* na Home) de sincronizações automáticas de abertura do aplicativo.
@@ -47,6 +45,8 @@ O sistema MUST registrar na telemetria o resultado exato do término do fluxo gl
 #### Scenario: Falha na Sincronização
 - **WHEN** a sincronização global resulta em erro para o usuário (status: error)
 - **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'erro'
+
+## ADDED Requirements
 
 ### Requirement: Código e Documentação em Português Brasileiro
 Todo o código, nomes de variáveis, métodos, comentários e documentações MUST ser redigidos em português brasileiro, acompanhados de docstrings explicativas e atualização dos arquivos README.md.

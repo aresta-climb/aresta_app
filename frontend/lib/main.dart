@@ -492,8 +492,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   }
 
   void _onSyncStatusChanged() {
-    if (widget.syncService.syncStatus.value == SyncStatus.error &&
-        widget.syncService.lastSyncWasAuto.value) {
+    final status = widget.syncService.syncStatus.value;
+    final isAuto = widget.syncService.lastSyncWasAuto.value;
+
+    if (status == SyncStatus.error && isAuto) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -501,6 +503,20 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               'Erro ao sincronizar os dados. Tente novamente mais tarde.',
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } else if (status == SyncStatus.justUpdated && isAuto) {
+      final croquisAtualizados = widget
+          .syncService
+          .quantidadeCroquisBaixadosAtualizadosNoUltimoSync
+          .value;
+      if (croquisAtualizados > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Seus croquis baixados foram atualizados!'),
+            backgroundColor: context.colors.dryMoss,
             duration: const Duration(seconds: 4),
           ),
         );

@@ -1012,6 +1012,194 @@ void main() {
     );
 
     testWidgets(
+      'Single point marker when map is already at higher zoom (4.5x) preserves scale and does not reduce zoom',
+      (WidgetTester tester) async {
+        final ponto = Mapa_PontoDeInteresse(
+          id: 'p1',
+          circulo: BoundingCirculo(x: 50, y: 50, raio: 5),
+        );
+        final mapa = Mapa(
+          larguraMapa: 100,
+          alturaMapa: 100,
+          pontosDeInteresse: [ponto],
+        );
+
+        mapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via Unica',
+            ids: ['p1'],
+          ),
+        );
+
+        final esc = Escalada(boulder: Boulder(nome: 'Via Unica'));
+
+        await tester.pumpWidget(buildApp([esc], mapa));
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        // Simulando que o usuário aplicou zoom manual de 4.5x centrado na tela (800x600)
+        // x' = -1400 + 400 * 4.5 = 400, y' = -1050 + 300 * 4.5 = 300
+        interactiveViewer.transformationController!.value = Matrix4.identity()
+          ..translate(-1400.0, -1050.0)
+          ..scale(4.5);
+        await tester.pump();
+
+        // Toca no marcador do ponto único
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        final matrix = interactiveViewer.transformationController!.value;
+
+        // O zoom DEVE ser mantido em 4.5x (regra monotônica: não reduz para 2.5x)
+        expect(matrix.storage[0], closeTo(4.5, 0.01));
+      },
+    );
+
+    testWidgets(
+      'InteractiveViewer configuration should have maxScale set to 10.0',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(buildApp([], mockMapa));
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+
+        expect(interactiveViewer.maxScale, equals(10.0));
+      },
+    );
+
+    testWidgets(
+      'Single tiny marker on large map should dynamically calculate comfortable zoom higher than 2.5',
+      (WidgetTester tester) async {
+        final pontoPequeno = Mapa_PontoDeInteresse(
+          id: 'p_pequeno',
+          circulo: BoundingCirculo(x: 500, y: 500, raio: 2), // 4px num mapa de 1000px
+        );
+        final mapaGrande = Mapa(
+          larguraMapa: 1000,
+          alturaMapa: 1000,
+          pontosDeInteresse: [pontoPequeno],
+        );
+        mapaGrande.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via Pequena',
+            ids: ['p_pequeno'],
+          ),
+        );
+
+        final esc = Escalada(boulder: Boulder(nome: 'Via Pequena'));
+
+        await tester.pumpWidget(buildApp([esc], mapaGrande));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('marker_p_pequeno')));
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final matrix = interactiveViewer.transformationController!.value;
+
+        // Elemento muito pequeno deve receber zoom dinâmico confortável > 2.5 (limitado a 10.0)
+        expect(matrix.storage[0], greaterThan(2.5));
+        expect(matrix.storage[0], lessThanOrEqualTo(10.0));
+      },
+    );
+
+    testWidgets(
+      'Double tap on map toggles zoom in and zoom out smoothly',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(buildApp([], mockMapa));
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        expect(interactiveViewer.transformationController!.value.storage[0], closeTo(1.0, 0.01));
+
+        // Primeiro duplo toque: amplia para escala de detalhe (~3.5x)
+        await tester.tap(find.byType(InteractiveViewer));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(find.byType(InteractiveViewer));
+        await tester.pumpAndSettle();
+
+        expect(
+          interactiveViewer.transformationController!.value.storage[0],
+          closeTo(3.5, 0.01),
+        );
+
+        // Segundo duplo toque: reseta para visão geral (1.0x)
+        await tester.tap(find.byType(InteractiveViewer));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(find.byType(InteractiveViewer));
+        await tester.pumpAndSettle();
+
+        expect(
+          interactiveViewer.transformationController!.value.storage[0],
+          closeTo(1.0, 0.01),
+        );
+      },
+    );
+
+    testWidgets(
+      'User manual zoom adjustment sets sticky zoom preserving manual scale on single point clicks',
+      (WidgetTester tester) async {
+        final ponto = Mapa_PontoDeInteresse(
+          id: 'p1',
+          circulo: BoundingCirculo(x: 500, y: 500, raio: 2), // minúsculo num mapa de 1000px
+        );
+        final mapa = Mapa(
+          larguraMapa: 1000,
+          alturaMapa: 1000,
+          pontosDeInteresse: [ponto],
+        );
+        mapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via Manual',
+            ids: ['p1'],
+          ),
+        );
+
+        final esc = Escalada(boulder: Boulder(nome: 'Via Manual'));
+
+        await tester.pumpWidget(buildApp([esc], mapa));
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+
+        // Simula o gesto de pinça do usuário que ajustou o zoom para 3.8x
+        interactiveViewer.onInteractionStart?.call(
+          ScaleStartDetails(focalPoint: const Offset(400, 300)),
+        );
+        interactiveViewer.transformationController!.value = Matrix4.identity()
+          ..translate(-1120.0, -840.0) // centrado: 400 - 400 * 3.8 = -1120, 300 - 300 * 3.8 = -840
+          ..scale(3.8);
+        interactiveViewer.onInteractionEnd?.call(
+          ScaleEndDetails(velocity: Velocity.zero),
+        );
+        await tester.pump();
+
+        // Toca no marcador
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        final matrix = interactiveViewer.transformationController!.value;
+
+        // O zoom DEVE respeitar estritamente a escala 3.8x definida pelo usuário
+        // (sem sticky zoom, o cálculo dinâmico tentaria forçar ~10.0x)
+        expect(matrix.storage[0], closeTo(3.8, 0.01));
+      },
+    );
+
+    testWidgets(
       'didUpdateWidget in experimental mode successfully re-resolves references for hot reload',
       (WidgetTester tester) async {
         EditorDeCroqui.instance.isExperimentalMode.value = true;

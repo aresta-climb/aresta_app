@@ -102,6 +102,7 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - Orquestra toda a checagem Delta via API.
 - Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates.
 - Reflete o progresso percentual diretamente via `DatasetRepository.instance!.downloadingCrags`.
+- Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para controle fino de notificações de atualização de dados offline na abertura do aplicativo.
 
 
 ### Módulo de In-App Feedback (`feedback/`)

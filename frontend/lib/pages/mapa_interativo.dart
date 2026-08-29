@@ -110,6 +110,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   bool _initialZoom = false;
   Size? _imageSize;
   int _focusedItemIndex = 0;
+  bool _usuarioAjustouZoomManualmente = false;
+  double _escalaNoInicioDoGesto = 1.0;
+  DateTime? _ultimoToqueTimestamp;
+  Offset? _ultimaPosicaoToque;
 
   @override
   void initState() {
@@ -389,6 +393,22 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
   }
 
+  /// Calcula e anima a matriz de transformação da câmera para focar nos [pontos] selecionados.
+  ///
+  /// **Regra de Zoom Monotônico (Ponto Único):**
+  /// Para pontos individuais (ou rotas sem múltiplos marcadores espalhados), o zoom automático
+  /// nunca reduzirá a escala atual caso o usuário já esteja com um nível de zoom elevado (ex: > 2.5x).
+  /// Nesses casos, a câmera apenas transladará suavemente para centralizar o ponto, preservando
+  /// a ampliação e os detalhes que o usuário escolheu.
+  ///
+  /// **Zoom Dinâmico Adaptativo (~20dp):**
+  /// Para elementos com dimensões físicas muito reduzidas em mapas de alta resolução, calcula
+  /// uma escala proporcional para que o marcador atinja um tamanho confortável de visualização
+  /// e toque na tela física (~20dp), com piso mínimo de 2.5x e teto de 10.0x.
+  ///
+  /// **Enquadramento de Múltiplos Pontos:**
+  /// Para vias com múltiplos marcadores (início, meio e fim), utiliza a caixa delimitadora
+  /// (bounding box) para enquadrar todo o traçado da via confortavelmente na tela visível.
   void _zoomToPoints(
     List<Mapa_PontoDeInteresse> pontos,
     Size childSize,
@@ -422,17 +442,35 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     final double relCenterX = relMinX + (relMaxX - relMinX) / 2;
     final double relCenterY = relMinY + (relMaxY - relMinY) / 2;
 
-    double targetScale = 2.5; // Fixed default for single points
+    final double escalaAtual =
+        _transformationController.value.getMaxScaleOnAxis();
 
     final boxWidthRel = relMaxX - relMinX;
     final boxHeightRel = relMaxY - relMinY;
 
+    // Calcula a dimensão física/lógica do marcador na tela em escala 1.0 (em dp)
+    final double larguraMarcadorDp = boxWidthRel * childSize.width;
+    final double alturaMarcadorDp = boxHeightRel * childSize.height;
+    final double maiorDimensaoMarcadorDp =
+        math.max(larguraMarcadorDp, alturaMarcadorDp);
+
+    // Zoom dinâmico: busca garantir um tamanho confortável (~20dp) para visualização e toque,
+    // com um piso mínimo padrão de 2.5x e teto de 10.0x
+    const double tamanhoConfortavelAlvoDp = 20.0;
+    final double escalaDinamicaConfortavel = maiorDimensaoMarcadorDp > 0
+        ? (tamanhoConfortavelAlvoDp / maiorDimensaoMarcadorDp).clamp(2.5, 10.0)
+        : 2.5;
+
+    double escalaAlvoPadrao = escalaDinamicaConfortavel;
+
     bool hasMultiplePoints = pontos.length > 1;
+    double targetScale = escalaAlvoPadrao;
 
     if (ref != null &&
         ref.hasAjusteDeCamera() &&
         ref.ajusteDeCamera.hasZoom()) {
-      targetScale = ref.ajusteDeCamera.zoom;
+      escalaAlvoPadrao = ref.ajusteDeCamera.zoom;
+      targetScale = math.max(escalaAtual, escalaAlvoPadrao);
     } else if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
       // Usa lógica de Bounding Box para qualquer rota com múltiplos pontos (início/fim, meio, boulders, etc)
       final double availableHeight = viewportSize.height * 0.55;
@@ -445,7 +483,16 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         final calculatedScale = math.min(scaleX, scaleY);
         double maxAutoZoom = 2.5;
         targetScale = math.min(math.max(calculatedScale, 1.0), maxAutoZoom);
+      } else {
+        targetScale = math.max(escalaAtual, escalaAlvoPadrao);
       }
+    } else if (_usuarioAjustouZoomManualmente) {
+      // Se o usuário ajustou o zoom manualmente por pinça ou toque duplo,
+      // preservamos estritamente a escala escolhida pelo usuário
+      targetScale = escalaAtual;
+    } else {
+      // Ponto único: aplica a regra de zoom monotônico (nunca reduz o zoom atual)
+      targetScale = math.max(escalaAtual, escalaAlvoPadrao);
     }
 
     final double markerX = relCenterX * childSize.width;
@@ -487,6 +534,51 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     final Matrix4 targetMatrix = Matrix4.identity()
       ..translate(targetX, targetY)
       ..scale(targetScale);
+
+    _zoomAnimation =
+        Matrix4Tween(
+          begin: _transformationController.value,
+          end: targetMatrix,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeInOut,
+          ),
+        );
+
+    _animationController.forward(from: 0);
+  }
+
+  /// Alterna suavemente o zoom do mapa via duplo toque entre a visão panorâmica (1.0x) e o zoom detalhado (~3.5x).
+  void _aoExecutarDuploToque(TapDownDetails details, Size viewportSize) {
+    final double escalaAtual =
+        _transformationController.value.getMaxScaleOnAxis();
+
+    final Matrix4 targetMatrix;
+    if (escalaAtual > 1.8) {
+      // Se já está ampliado, reseta para a visão panorâmica geral (1.0x)
+      targetMatrix = Matrix4.identity();
+      _usuarioAjustouZoomManualmente = false;
+    } else {
+      // Se está na visão geral, aproxima para 3.5x com foco no ponto tocado
+      const double escalaAlvo = 3.5;
+      _usuarioAjustouZoomManualmente = true;
+
+      final Offset posicaoToqueNaTela = details.localPosition;
+      final Matrix4 matrizInversa =
+          Matrix4.inverted(_transformationController.value);
+      final Offset pontoNoConteudo =
+          MatrixUtils.transformPoint(matrizInversa, posicaoToqueNaTela);
+
+      final double targetX =
+          (viewportSize.width / 2) - (pontoNoConteudo.dx * escalaAlvo);
+      final double targetY =
+          (viewportSize.height / 2) - (pontoNoConteudo.dy * escalaAlvo);
+
+      targetMatrix = Matrix4.identity()
+        ..translate(targetX, targetY)
+        ..scale(escalaAlvo);
+    }
 
     _zoomAnimation =
         Matrix4Tween(
@@ -1113,6 +1205,22 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onTapDown: (details) {
+                final agora = DateTime.now();
+                if (_ultimoToqueTimestamp != null &&
+                    agora.difference(_ultimoToqueTimestamp!) <
+                        const Duration(milliseconds: 300) &&
+                    _ultimaPosicaoToque != null &&
+                    (details.localPosition - _ultimaPosicaoToque!).distance <
+                        40.0) {
+                  _ultimoToqueTimestamp = null;
+                  _ultimaPosicaoToque = null;
+                  _aoExecutarDuploToque(details, viewportSize);
+                  return;
+                }
+                _ultimoToqueTimestamp = agora;
+                _ultimaPosicaoToque = details.localPosition;
+              },
               onTap: () {
                 if (_selectedId != null) {
                   setState(() {
@@ -1135,8 +1243,19 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       vertical: viewportSize.height / 2,
                     ),
                     minScale: 0.5,
-                    maxScale: 6.0,
+                    maxScale: 10.0,
                     constrained: true,
+                    onInteractionStart: (details) {
+                      _escalaNoInicioDoGesto =
+                          _transformationController.value.getMaxScaleOnAxis();
+                    },
+                    onInteractionEnd: (details) {
+                      final double escalaFinal =
+                          _transformationController.value.getMaxScaleOnAxis();
+                      if ((escalaFinal - _escalaNoInicioDoGesto).abs() > 0.05) {
+                        _usuarioAjustouZoomManualmente = true;
+                      }
+                    },
                     child: Center(
                       child: AspectRatio(
                         aspectRatio:

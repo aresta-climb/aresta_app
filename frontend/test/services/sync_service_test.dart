@@ -2000,5 +2000,151 @@ void main() {
       expect(result, isFalse);
     });
   });
+
+  group('quantidadeCroquisBaixadosAtualizadosNoUltimoSync Tests', () {
+    late Directory tempDir;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      HttpOverrides.global = null;
+      tempDir = Directory.systemTemp.createTempSync('sync_count_test');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    });
+
+    tearDown(() {
+      try {
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    test(
+      'deve atualizar quantidadeCroquisBaixadosAtualizadosNoUltimoSync quando croqui local recebe atualização com sucesso',
+      () async {
+        const picoId = 'pico_atualizado';
+        final oldIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Atualizado'
+              ..checksumSha256Croqui = 'OLD_HASH',
+          );
+
+        final indicePath = editor.indicePath(tempDir.path);
+        final indiceFile = File(indicePath);
+        indiceFile.parent.createSync(recursive: true);
+        indiceFile.writeAsBytesSync(oldIndice.writeToBuffer());
+
+        final picoFile = File(
+          '${editor.downloadsPath(tempDir.path)}/$picoId/$picoId.binarypb',
+        );
+        picoFile.parent.createSync(recursive: true);
+        picoFile.writeAsBytesSync([1, 2, 3]);
+
+        final croquiObj = Croqui()
+          ..id = picoId
+          ..nome = 'Pico Atualizado';
+        final croquiBytes = croquiObj.writeToBuffer();
+        final correctHash = sha256.convert(croquiBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Atualizado'
+              ..caminhoRelativo = 'picos/$picoId.binarypb'
+              ..checksumSha256Croqui = correctHash,
+          );
+
+        final fakeClient = FakeClient(
+          newIndice,
+          {'picos/$picoId.binarypb': croquiBytes},
+        );
+
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        editor.isExperimentalMode.value = false;
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          0,
+        );
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          1,
+        );
+      },
+    );
+
+    test(
+      'deve manter quantidadeCroquisBaixadosAtualizadosNoUltimoSync em 0 se apenas o catálogo/índice mudar',
+      () async {
+        const picoId = 'pico_remoto';
+        final croquiObj = Croqui()
+          ..id = picoId
+          ..nome = 'Pico Remoto';
+        final croquiBytes = croquiObj.writeToBuffer();
+        final correctHash = sha256.convert(croquiBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Remoto'
+              ..caminhoRelativo = 'picos/$picoId.binarypb'
+              ..checksumSha256Croqui = correctHash,
+          );
+
+        final fakeClient = FakeClient(newIndice);
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        editor.isExperimentalMode.value = false;
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          0,
+        );
+      },
+    );
+
+    test(
+      'deve manter quantidadeCroquisBaixadosAtualizadosNoUltimoSync em 0 em 304 Not Modified',
+      () async {
+        final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
+        etagFile.parent.createSync(recursive: true);
+        etagFile.writeAsStringSync('mock_etag_123');
+
+        syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 5;
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          0,
+        );
+      },
+    );
+  });
 }
 

@@ -29,6 +29,7 @@ class _SyncUpdates {
   final Map<String, String> filesToRename = {};
   final Map<String, Croqui> metadataToUpdate = {};
   final List<String> failedPicos = [];
+  final List<String> picosAtualizadosComSucesso = [];
   bool hasErrors = false;
 
   /// Combina as operações pendentes de outro [other] com este agregador.
@@ -37,6 +38,7 @@ class _SyncUpdates {
     filesToRename.addAll(other.filesToRename);
     metadataToUpdate.addAll(other.metadataToUpdate);
     failedPicos.addAll(other.failedPicos);
+    picosAtualizadosComSucesso.addAll(other.picosAtualizadosComSucesso);
     if (other.hasErrors) hasErrors = true;
   }
 }
@@ -113,6 +115,12 @@ class SyncService {
 
   /// Indica se a última tentativa de sincronização foi automática (true) ou manual (false).
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier<bool>(true);
+
+  /// Quantidade de croquis armazenados localmente que foram atualizados com sucesso
+  /// na última sincronização. Permite que a interface decida se deve notificar o usuário
+  /// na abertura do app sem emitir avisos caso apenas o catálogo/índice remoto tenha mudado.
+  final ValueNotifier<int> quantidadeCroquisBaixadosAtualizadosNoUltimoSync =
+      ValueNotifier<int>(0);
 
   final RemoteConfigService? remoteConfigService;
 
@@ -358,6 +366,7 @@ class SyncService {
     }
 
     lastSyncWasAuto.value = auto;
+    quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
     TelemetryService.instance.logSincronizarApp(
       acao: auto ? 'automatica' : 'manual',
     );
@@ -453,6 +462,8 @@ class SyncService {
               responseBytes,
               result.newEtag,
             );
+            quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value =
+                globalUpdates.picosAtualizadosComSucesso.length;
             setUpdatedStatus();
           } else {
             AppLogger.instance.logError(
@@ -604,6 +615,7 @@ class SyncService {
               updates.failedPicos.add(newResumo.nome);
               updates.hasErrors = true;
             } else {
+              updates.picosAtualizadosComSucesso.add(newResumo.id);
               if (pico_aberto_id.value == newResumo.id) {
                 _pendenciasAtomicas[newResumo.id] = picoUpdates;
                 recarga_pendente_pico_id.value = newResumo.id;
