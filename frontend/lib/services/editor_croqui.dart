@@ -3,16 +3,27 @@
 
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:yaml/yaml.dart';
 import 'package:frontend/constants/network_constants.dart';
 
+/// Evento disparado quando o Editor Desktop solicita uma atualização em tempo real (Live Reload).
+class LiveReloadEvent {
+  final String? setorId;
+  final DateTime timestamp;
+
+  const LiveReloadEvent({this.setorId, required this.timestamp});
+}
+
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
 class EditorDeCroqui {
   static String get _officialBaseUrl => NetworkConstants.officialServerUrl;
   static const String _configFileName = 'editor_config.yaml';
+  static const String dominioPrevia = 'previa.arestaclimb.com';
 
   static EditorDeCroqui? _instance;
   static EditorDeCroqui get instance {
@@ -32,8 +43,12 @@ class EditorDeCroqui {
   /// Tempo restante para a auto-destruição dos dados experimentais.
   final ValueNotifier<Duration?> timeRemaining = ValueNotifier(null);
 
+  /// Notificador de eventos push de recarregamento em tempo real.
+  final ValueNotifier<LiveReloadEvent?> eventoLiveReload = ValueNotifier(null);
+
   DateTime? _expirationTime;
   Timer? _countdownTimer;
+  WebSocket? _wsLiveReload;
 
   EditorDeCroqui() {
     _instance = this;
@@ -57,6 +72,161 @@ class EditorDeCroqui {
   }
 
   bool get isEditorActive => isExperimentalMode.value;
+
+  /// Normaliza códigos de 8 caracteres alfanuméricos em Base36.
+  static String normalizarCodigo(String codigo) {
+    return codigo.replaceAll(RegExp(r'[\s\-]+'), '').toLowerCase();
+  }
+
+  /// Formata um código de 8 caracteres adicionando um hífen no meio para facilitar a leitura (ex: k9x2-p83a).
+  static String formatarCodigo(String codigo) {
+    final norm = normalizarCodigo(codigo);
+    if (norm.length == 8) {
+      return '${norm.substring(0, 4)}-${norm.substring(4)}';
+    }
+    return norm;
+  }
+
+  /// Extrai o código de 8 caracteres de uma URL canônica previa.arestaclimb.com ou de uma string digitada.
+  /// Suporta tanto o formato contínuo ("abcdefgh") quanto o formato com hífen ("abcd-efgh").
+  static String? extrairCodigoPrevia(String input) {
+    final limpo = input.trim();
+    if (limpo.isEmpty) return null;
+
+    final uri = Uri.tryParse(limpo.contains('://') ? limpo : 'https://$limpo');
+    if (uri != null) {
+      if (uri.host.toLowerCase() == dominioPrevia ||
+          (uri.scheme == 'aresta' && uri.host == 'previa')) {
+        final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+        if (segments.isNotEmpty) {
+          final code = normalizarCodigo(segments.first);
+          if (code.length == 8 && RegExp(r'^[0-9a-z]{8}$').hasMatch(code)) {
+            return code;
+          }
+        }
+      }
+    }
+
+    // Se for apenas o código digitado
+    final direto = normalizarCodigo(limpo);
+    if (direto.length == 8 && RegExp(r'^[0-9a-z]{8}$').hasMatch(direto)) {
+      return direto;
+    }
+
+    return null;
+  }
+
+  /// Constrói a URL canônica de prévia a partir de um código (com hífen por padrão para legibilidade: https://previa.arestaclimb.com/abcd-efgh).
+  static String urlPreviaParaCodigo(String codigo, {bool comHifen = true}) {
+    final norm = normalizarCodigo(codigo);
+    final codExibicao = (comHifen && norm.length == 8)
+        ? '${norm.substring(0, 4)}-${norm.substring(4)}'
+        : norm;
+    return 'https://$dominioPrevia/$codExibicao';
+  }
+
+  /// Resolve a melhor URL (Direct LAN vs Cloudflare Relay) testando a rede local concorrentemente.
+  Future<String> resolverUrlHibrida(
+    String codigoOuUrl, {
+    http.Client? client,
+    Duration timeoutLan = const Duration(milliseconds: 1000),
+  }) async {
+    final codigo = extrairCodigoPrevia(codigoOuUrl);
+    if (codigo == null) {
+      return codigoOuUrl;
+    }
+
+    final httpClient = client ?? http.Client();
+    final urlRelay = urlPreviaParaCodigo(codigo);
+
+    try {
+      // 1. Consulta metadados da sessão na Cloudflare
+      final infoResponse = await httpClient
+          .get(Uri.parse('$urlRelay/info'))
+          .timeout(const Duration(seconds: 3));
+
+      if (infoResponse.statusCode == 200) {
+        final data = jsonDecode(infoResponse.body) as Map<String, dynamic>;
+        final localUrl = data['local_url'] as String?;
+
+        if (localUrl != null && localUrl.isNotEmpty) {
+          // 2. Dispara teste rápido na rede local (Direct LAN)
+          try {
+            final handshakeResponse = await httpClient
+                .get(Uri.parse('$localUrl/handshake'))
+                .timeout(timeoutLan);
+
+            if (handshakeResponse.statusCode == 200) {
+              debugPrint(
+                '[EditorCroqui] Conectado via Direct LAN: $localUrl',
+              );
+              return localUrl;
+            }
+          } catch (_) {
+            // LAN inalcançável (4G ou isolamento de rede)
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.instance.logError(
+        '[EditorCroqui] Falha ao consultar broker na Cloudflare: $e',
+      );
+    } finally {
+      if (client == null) {
+        httpClient.close();
+      }
+    }
+
+    // Fallback: Retransmissor na Nuvem
+    debugPrint(
+      '[EditorCroqui] Conectado via Cloudflare Relay: $urlRelay',
+    );
+    return urlRelay;
+  }
+
+  /// Inicia a escuta de eventos WebSocket para Live Reload.
+  void iniciarEscutaLiveReload(String urlBase) {
+    encerrarEscutaLiveReload();
+
+    final codigo = extrairCodigoPrevia(urlBase);
+    if (codigo == null) return;
+
+    final wsUri = Uri.parse('wss://$dominioPrevia/$codigo/events');
+    try {
+      WebSocket.connect(wsUri.toString()).then((ws) {
+        _wsLiveReload = ws;
+        ws.listen(
+          (event) {
+            try {
+              final dados =
+                  jsonDecode(event.toString()) as Map<String, dynamic>;
+              if (dados['tipo'] == 'recarregar') {
+                final setorId = dados['setor'] as String?;
+                eventoLiveReload.value = LiveReloadEvent(
+                  setorId: setorId,
+                  timestamp: DateTime.now(),
+                );
+              }
+            } catch (_) {}
+          },
+          onDone: () {
+            _wsLiveReload = null;
+          },
+          onError: (_) {
+            _wsLiveReload = null;
+          },
+        );
+      }).catchError((_) {});
+    } catch (_) {}
+  }
+
+  /// Encerra a conexão WebSocket de Live Reload.
+  void encerrarEscutaLiveReload() {
+    try {
+      _wsLiveReload?.close();
+    } catch (_) {}
+    _wsLiveReload = null;
+  }
 
   Future<bool> hasExperimentalData() async {
     try {
@@ -226,7 +396,7 @@ class EditorDeCroqui {
       }
     }
 
-    tick(); // Chama imediatamente para não ter delay de 1 segundo na UI
+    tick();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
   }
 
@@ -234,7 +404,6 @@ class EditorDeCroqui {
     String? url,
     bool forceResetTimer = false,
   }) async {
-    // Só define um novo tempo de expiração se for um reset forçado ou se não houver um tempo válido ativo
     if (forceResetTimer ||
         _expirationTime == null ||
         _expirationTime!.isBefore(DateTime.now())) {
@@ -254,6 +423,7 @@ class EditorDeCroqui {
         url = 'http://$url';
       }
       editorUrl.value = url;
+      iniciarEscutaLiveReload(url);
     }
 
     try {
@@ -290,12 +460,10 @@ class EditorDeCroqui {
   }
 
   Future<void> disconnect() async {
+    encerrarEscutaLiveReload();
     try {
       final config = await _readConfig();
-      // Mantemos a URL no yaml para poder reativá-la depois
       config['isExperimental'] = false;
-      // Mantemos o expiryTime no config para que o tempo continue contando
-
       await _writeConfig(config);
 
       isExperimentalMode.value = false;
@@ -311,6 +479,7 @@ class EditorDeCroqui {
     _expirationTime = null;
     _countdownTimer?.cancel();
     timeRemaining.value = null;
+    encerrarEscutaLiveReload();
 
     try {
       final directory = await getApplicationDocumentsDirectory();

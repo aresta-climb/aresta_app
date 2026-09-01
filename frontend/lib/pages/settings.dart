@@ -17,13 +17,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  int _clickCount = 0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // Maintain existing background appearance if any
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           buildCommonAppBar(context, 'Configurações'),
@@ -36,14 +33,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 buildEditorCard(
                   context: context,
                   datasetRepo: widget.datasetRepo,
-                  clickCount: _clickCount,
-                  onSetClickCount: (val) => setState(() => _clickCount = val),
                 ),
               ],
             ),
           ),
-          // buildLegalLinks(context),
-          // const SizedBox(height: 16),
         ],
       ),
     );

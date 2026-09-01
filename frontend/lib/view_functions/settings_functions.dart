@@ -15,6 +15,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
@@ -43,7 +44,6 @@ String normalizeEditorUrl(String rawUrl) {
   return checkUrl;
 }
 
-/// Tenta conectar ao repositório do editor validando a URL fornecida.
 Future<bool> conectarEditor(
   BuildContext context,
   DatasetRepository datasetRepo,
@@ -53,8 +53,9 @@ Future<bool> conectarEditor(
   if (url.isEmpty) return false;
 
   try {
-    // Valida se o índice está acessível na URL fornecida
-    String checkUrl = normalizeEditorUrl(url);
+    // Valida se o índice está acessível na URL fornecida, resolvendo códigos de prévia hibridamente
+    final resolvedUrl = await configService.resolverUrlHibrida(url);
+    String checkUrl = normalizeEditorUrl(resolvedUrl);
 
     if (checkUrl.toLowerCase().endsWith('.zip')) {
       if (context.mounted) {
@@ -300,7 +301,7 @@ void mostrarDialogConexao(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Insira a URL do repositório experimental para testar novos croquis.',
+                    'Digite o código de 8 caracteres gerado no Editor ou escaneie o QR Code.',
                     style: TextStyle(
                       color: context.colors.ashGrey,
                       fontSize: 13,
@@ -317,7 +318,7 @@ void mostrarDialogConexao(
                         horizontal: 16,
                         vertical: 14,
                       ),
-                      hintText: 'ex: serving.arestaclimb.com/v4',
+                      hintText: 'ex: k9x2-p83a ou URL completa',
                       hintStyle: TextStyle(
                         color: context.colors.ashGrey.withValues(alpha: 0.5),
                         fontSize: 13,
@@ -406,6 +407,36 @@ void mostrarDialogConexao(
                         Navigator.of(context).pop(); // Fecha o diálogo antes
                         await importarArquivoCroqui(context, datasetRepo);
                       },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse('https://arestaclimb.com/editor');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.help_outline_rounded,
+                          size: 14,
+                          color: context.colors.ashGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Como funciona o Editor Desktop? Saiba mais',
+                          style: TextStyle(
+                            color: context.colors.ashGrey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationColor: context.colors.ashGrey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -516,8 +547,8 @@ void mostrarDialogConexao(
 Widget buildEditorCard({
   required BuildContext context,
   required DatasetRepository datasetRepo,
-  required int clickCount,
-  required Function(int) onSetClickCount,
+  int clickCount = 0,
+  Function(int)? onSetClickCount,
 }) {
   final configService = datasetRepo.editorDeCroqui;
 
@@ -529,165 +560,183 @@ Widget buildEditorCard({
         builder: (context, activeUrl, _) {
           final isEditor = isExperimental;
 
-          return ValueListenableBuilder<bool>(
-            valueListenable: configService.isDevModeEnabled,
-            builder: (context, isDevMode, _) {
-              IconData statusIcon;
-              String statusLabel;
-              String description;
-              String buttonText;
+          IconData statusIcon;
+          String statusLabel;
+          String description;
+          String buttonText;
 
-              if (isEditor) {
-                statusIcon = Icons.science;
-                statusLabel = 'MODO EXPERIMENTAL';
-                description =
-                    'O aplicativo está em modo de teste e isolado da base oficial.';
-                buttonText = 'VOLTAR PARA OFICIAL';
-              } else {
-                statusIcon = Icons.verified;
-                statusLabel = 'MODO OFICIAL';
-                description =
-                    'Conectado ao repositório oficial da Aresta Climb.';
-                buttonText = 'CONECTAR COMO EDITOR';
-              }
+          if (isEditor) {
+            statusIcon = Icons.science;
+            statusLabel = 'MODO EXPERIMENTAL / PRÉVIA';
+            description =
+                'Visualizando croquis transmitidos em tempo real pelo Editor Desktop ou arquivo importado.';
+            buttonText = 'VOLTAR PARA MODO OFICIAL';
+          } else {
+            statusIcon = Icons.verified;
+            statusLabel = 'MODO OFICIAL';
+            description =
+                'Conectado à base oficial do Aresta Climb. Você pode conectar ao Editor Desktop para testar novos croquis em tempo real.';
+            buttonText = 'CONECTAR AO EDITOR / PRÉVIA';
+          }
 
-              return Card(
-                elevation: 0,
-                color: context.colors.caveShadow,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          return Card(
+            elevation: 0,
+            color: context.colors.caveShadow,
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              if (isDevMode || isEditor) return;
-                              onSetClickCount(clickCount + 1);
-                              if (clickCount + 1 >= 7) {
-                                configService.setDevMode(true);
-                                onSetClickCount(0);
-                                TelemetryService.instance.logAcaoConfiguracoes(
-                                  'ativar_modo_desenvolvedor',
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Modo Desenvolvedor Ativado! 🛠️',
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: context.colors.graniteEdge,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                statusIcon,
-                                color: context.colors.ashGrey,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  statusLabel,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  description,
-                                  style: TextStyle(
-                                    color: context.colors.ashGrey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (isExperimental && activeUrl != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: context.colors.deepBasalt,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: context.colors.graniteEdge,
-                            ),
-                          ),
-                          child: Text(
-                            activeUrl,
-                            style: TextStyle(
-                              color: context.colors.ashGrey,
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                            ),
-                          ),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isEditor
+                              ? const Color(0xFFC04F34).withValues(alpha: 0.15)
+                              : context.colors.graniteEdge,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                      if (isDevMode || isEditor) ...[
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () async {
-                            if (isEditor) {
-                              TelemetryService.instance.logAcaoConfiguracoes(
-                                'desconectar_editor',
-                              );
-                              await configService.disconnect();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Voltando ao repositório oficial...',
-                                    ),
-                                  ),
-                                );
-                              }
-                            } else {
-                              mostrarDialogConexao(context, datasetRepo);
-                            }
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFC04F34),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              buttonText,
+                        child: Icon(
+                          statusIcon,
+                          color: isEditor
+                              ? const Color(0xFFC04F34)
+                              : context.colors.ashGrey,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              statusLabel,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 0.5,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                color: context.colors.ashGrey,
+                                fontSize: 12,
+                                height: 1.3,
+                              ),
+                            ),
+                            if (!isEditor) ...[
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () async {
+                                  final uri = Uri.parse(
+                                    'https://arestaclimb.com/editor',
+                                  );
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(
+                                      uri,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.help_outline_rounded,
+                                      size: 14,
+                                      color: Color(0xFFC04F34),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      'Como fazer? Saiba mais',
+                                      style: TextStyle(
+                                        color: Color(0xFFC04F34),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: Color(0xFFC04F34),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                      ),
+                    ],
+                  ),
+                  if (isExperimental && activeUrl != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: context.colors.deepBasalt,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: context.colors.graniteEdge,
+                        ),
+                      ),
+                      child: Text(
+                        activeUrl,
+                        style: TextStyle(
+                          color: context.colors.ashGrey,
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      if (isEditor) {
+                        TelemetryService.instance.logAcaoConfiguracoes(
+                          'desconectar_editor',
+                        );
+                        await configService.disconnect();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Voltando ao repositório oficial...',
+                              ),
+                            ),
+                          );
+                        }
+                      } else {
+                        mostrarDialogConexao(context, datasetRepo);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC04F34),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        buttonText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
                         if (!isEditor)
                           FutureBuilder<bool>(
                             future: configService.hasExperimentalData(),
@@ -956,7 +1005,6 @@ Widget buildEditorCard({
                             ),
                           ),
                         ],
-                      ],
                     ],
                   ),
                 ),
@@ -965,8 +1013,6 @@ Widget buildEditorCard({
           );
         },
       );
-    },
-  );
 }
 
 Widget buildThemeSelectionCard(BuildContext context) {

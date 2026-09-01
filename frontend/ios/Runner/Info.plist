@@ -16,6 +16,19 @@
 		<string>Este aplicativo precisa de acesso à localização para recursos de mapeamento e distâncias.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>Este aplicativo precisa de acesso à localização para recursos de mapeamento e distâncias.</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.arestaclimb.app</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>aresta</string>
+				</array>
+			</dict>
+		</array>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>

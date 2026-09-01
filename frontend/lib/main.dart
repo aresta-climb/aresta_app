@@ -97,6 +97,17 @@ void main() async {
   editorDeCroqui.editorUrl.addListener(onModeChange);
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
+  editorDeCroqui.eventoLiveReload.addListener(() async {
+    final evento = editorDeCroqui.eventoLiveReload.value;
+    if (evento != null) {
+      debugPrint(
+        '[LiveReload] Atualização detectada (setor: ${evento.setorId}). Sincronizando...',
+      );
+      await syncService.syncIndex();
+      await datasetRepo.init();
+    }
+  });
+
   // Sincronização inicial na inicialização
   final needsMigration = await setupAppServices(datasetRepo, syncService);
 
