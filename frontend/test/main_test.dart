@@ -623,6 +623,28 @@ void main() {
       verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
       expect(result, isTrue);
     });
+
+    test('registrarOuvintesLiveReload deve sincronizar indice e inicializar datasetRepo quando eventoLiveReload emitir', () async {
+      final mockDataset = MockDatasetRepository();
+      final mockSyncSvc = MockSyncService();
+      final editorLocal = EditorDeCroqui();
+
+      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockDataset.init()).thenAnswer((_) async {});
+
+      registrarOuvintesLiveReload(editorLocal, mockDataset, mockSyncSvc);
+
+      // Emite um evento de recarregamento
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'br_mg_ferros_setor1',
+        timestamp: DateTime.now(),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockDataset.init()).called(1);
+    });
   });
 }
 

@@ -324,4 +324,40 @@ void main() {
       expect(editor.isDevModeEnabled.value, isTrue);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // WebSocket Live Reload Eventos
+  // ---------------------------------------------------------------------------
+
+  group('WebSocket Live Reload', () {
+    test('LiveReloadEvent deve armazenar setorId e timestamp corretamente', () {
+      final now = DateTime.now();
+      final evento = LiveReloadEvent(setorId: 'setor_123', timestamp: now);
+      expect(evento.setorId, 'setor_123');
+      expect(evento.timestamp, now);
+    });
+
+    test('eventoLiveReload notificador deve disparar quando novo evento for emitido', () {
+      LiveReloadEvent? recebido;
+      editor.eventoLiveReload.addListener(() {
+        recebido = editor.eventoLiveReload.value;
+      });
+
+      final now = DateTime.now();
+      editor.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'br_mg_ferros_setor1',
+        timestamp: now,
+      );
+
+      expect(recebido, isNotNull);
+      expect(recebido!.setorId, 'br_mg_ferros_setor1');
+      expect(recebido!.timestamp, now);
+    });
+
+    test('iniciarEscutaLiveReload e encerrarEscutaLiveReload devem lidar com URLs invalidas e fechar conexao sem excecao', () {
+      expect(() => editor.iniciarEscutaLiveReload('https://url-invalida-sem-codigo.com'), returnsNormally);
+      expect(() => editor.iniciarEscutaLiveReload('https://previa.arestaclimb.com/k9x2-p83a'), returnsNormally);
+      expect(() => editor.encerrarEscutaLiveReload(), returnsNormally);
+    });
+  });
 }

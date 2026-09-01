@@ -97,16 +97,7 @@ void main() async {
   editorDeCroqui.editorUrl.addListener(onModeChange);
   editorDeCroqui.isExperimentalMode.addListener(onModeChange);
 
-  editorDeCroqui.eventoLiveReload.addListener(() async {
-    final evento = editorDeCroqui.eventoLiveReload.value;
-    if (evento != null) {
-      debugPrint(
-        '[LiveReload] Atualização detectada (setor: ${evento.setorId}). Sincronizando...',
-      );
-      await syncService.syncIndex();
-      await datasetRepo.init();
-    }
-  });
+  registrarOuvintesLiveReload(editorDeCroqui, datasetRepo, syncService);
 
   // Sincronização inicial na inicialização
   final needsMigration = await setupAppServices(datasetRepo, syncService);
@@ -120,6 +111,24 @@ void main() async {
       acceptedLegalVersion: acceptedLegalVersion ?? 0,
     ),
   );
+}
+
+@visibleForTesting
+void registrarOuvintesLiveReload(
+  EditorDeCroqui editor,
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+) {
+  editor.eventoLiveReload.addListener(() async {
+    final evento = editor.eventoLiveReload.value;
+    if (evento != null) {
+      debugPrint(
+        '[LiveReload] Atualização detectada (setor: ${evento.setorId}). Sincronizando...',
+      );
+      await syncService.syncIndex();
+      await datasetRepo.init();
+    }
+  });
 }
 
 @visibleForTesting
