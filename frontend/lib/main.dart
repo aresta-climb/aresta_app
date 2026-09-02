@@ -384,6 +384,10 @@ class TreeNavigationWrapper extends StatefulWidget {
   static final GlobalKey<_TreeNavigationWrapperState> navKey =
       GlobalKey<_TreeNavigationWrapperState>();
 
+  static _TreeNavigationWrapperState? maybeOf(BuildContext context) {
+    return context.findAncestorStateOfType<_TreeNavigationWrapperState>();
+  }
+
   static _TreeNavigationWrapperState of(BuildContext context) {
     return context.findAncestorStateOfType<_TreeNavigationWrapperState>()!;
   }

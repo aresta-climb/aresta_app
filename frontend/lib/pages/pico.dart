@@ -83,7 +83,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     // Registra interceptor de saída no controlador de navegação em árvore
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final tree = TreeNavigationWrapper.of(context).treeController;
+      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
+      if (tree == null) return;
       tree.onBackInterceptor = () {
         final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
                 .any((p) => p['id'] == widget.cragId) ??
@@ -453,11 +454,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     // Banner de Modo Online / Salvar pra Pedra
                     Builder(
                       builder: (context) {
-                        final tree = TreeNavigationWrapper.of(context);
-                        final syncService = tree.syncService;
+                        final tree = TreeNavigationWrapper.maybeOf(context);
+                        final syncService = tree?.syncService;
+                        final downloadingMapNotifier = syncService?.downloadingCrags ??
+                            ValueNotifier<Map<String, double>>({});
 
                         return ValueListenableBuilder<Map<String, double>>(
-                          valueListenable: syncService.downloadingCrags,
+                          valueListenable: downloadingMapNotifier,
                           builder: (context, downloadingMap, _) {
                             final progresso = downloadingMap[widget.cragId];
 
