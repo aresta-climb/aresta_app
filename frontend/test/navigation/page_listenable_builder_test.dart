@@ -301,6 +301,13 @@ void main() {
       // O popup bloqueante deve aparecer
       expect(find.text('Croqui Atualizado'), findsOneWidget);
       expect(find.text('RECARREGAR'), findsOneWidget);
+      expect(find.byIcon(Icons.bug_report), findsNWidgets(2));
+      expect(
+        find.text(
+          'Uma nova versão deste croqui foi instalada em segundo plano. Recarregue a página para acessar as novidades.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets(

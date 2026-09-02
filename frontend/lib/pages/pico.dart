@@ -479,6 +479,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
                     // Botões de Ação Auxiliares
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         buildFeedbackButton(
                           context,
