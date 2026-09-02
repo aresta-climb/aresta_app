@@ -9,12 +9,39 @@ Por exemplo, se o usuário abrir o mapa de um setor, clicar em uma via, voltar p
 
 Com a navegação em árvore, nós declaramos um **estado atual** na hierarquia (`currentNode`). Ao avançar, criamos um nó filho. Ao recuar, nós simplesmente apontamos para o pai do nó atual. Independentemente de quantos atalhos transversais o usuário pegue (por exemplo, ir de uma via diretamente para o mapa e depois para outra via), a estrutura em árvore garante que o aplicativo saiba exatamente o contexto e o "caminho de volta" correto.
 
-## Arquivos
+## Arquitetura e Módulos (`lib/navigation/`)
+
+A arquitetura foi refatorada seguindo Clean Architecture, decompondo o controlador e os nós em submódulos dedicados em `arvore/`:
+
+```text
+lib/navigation/
+├── arvore/
+│   ├── no_navegacao.dart              - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
+│   ├── nos_globais.dart               - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, etc.)
+│   ├── nos_pico.dart                  - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, MapaInterativoNode, etc.)
+│   ├── nos_modais.dart                - Nós para modais e fluxos de confirmação (ConfirmacaoSaidaModalNode)
+│   ├── modelo_arvore_navegacao.dart   - Modelo de domínio puro com operações de pilha, histórico, canonical path e prevenção de loops
+│   └── controlador_navegacao_arvore.dart - Controlador reativo (ChangeNotifier) que expõe o estado da árvore
+├── navigation_tree.dart               - Fachada de re-exports e aliases para compatibilidade com o restante do app
+├── page_listenable_builder.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
+└── navigation_functions.dart          - API pública simplificada AppNav
+```
+
+### `arvore/no_navegacao.dart`
+Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`), nunca os objetos complexos do Protobuf instanciados na memória.
+- **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
+
+### `arvore/modelo_arvore_navegacao.dart`
+Encapsula as regras de domínio puras da árvore de navegação, desacopladas do framework Flutter:
+- Gestão do nó raiz e nó atual.
+- Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
+- Cálculo de profundidade e caminho canônico.
+
+### `arvore/controlador_navegacao_arvore.dart`
+Controlador de estado que estende `ChangeNotifier`, orquestrando a navegação reativa e notificando a interface quando o nó ativo transiciona.
 
 ### `navigation_tree.dart`
-Contém a definição dos nós (`NavNode`) e o controlador central de estado da navegação (`TreeNavigationController`).
-- **NavNode**: A classe base de todos os nós de navegação. Cada nó guarda uma referência para o seu `parent` (pai) e, o mais importante, **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`), nunca os objetos complexos do Protobuf instanciados na memória.
-- Nós implementados: `HomeNode`, `SettingsNode`, `BrowseNode`, `PicoNode`, `SetorNode`, `GrupoNode`, `ViaNode`, `GPSNode`, `MapaInterativoNode` e `MapaGeralPicoNode`.
+Fachada principal que reexporta todos os módulos de `arvore/` e expõe aliases tipados como `TreeNavigationController` para garantir compatibilidade e uma importação limpa.
 
 ### `page_listenable_builder.dart`
 É o elo de **Hot-Reload** da UI. 
