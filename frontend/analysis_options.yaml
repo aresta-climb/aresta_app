@@ -16,6 +16,7 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    - tool/legal_updater/**
 include: package:flutter_lints/flutter.yaml
 
 linter:
