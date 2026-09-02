@@ -127,115 +127,37 @@ class _GlobalSearchState extends State<GlobalSearch> {
     });
 
     final List<GlobalSearchResult> aggregatedData = [];
+    final Set<String> processedCragIds = {};
 
     for (var cragData in widget.downloadedPicos) {
       final cragId = cragData['id'];
       if (cragId == null) continue;
+      processedCragIds.add(cragId.toString());
 
-      final croqui = await widget.datasetRepo.getCroqui(cragId);
+      final croqui = await widget.datasetRepo.getCroqui(cragId.toString());
       if (croqui == null || croqui.picos.isEmpty) continue;
 
       final pico = croqui.picos.first;
       final picoNome = pico.nome.isNotEmpty
           ? pico.nome
-          : (cragData['nome'] ?? 'Sem Nome');
+          : (cragData['nome']?.toString() ?? 'Sem Nome');
 
-      for (final sg in pico.setoresOuGrupos) {
-        if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
-            sg.setor.hasConteudo()) {
-          final setor = sg.setor.conteudo;
+      _processPicoData(aggregatedData, pico, croqui, cragId.toString(), picoNome);
+    }
 
-          aggregatedData.add(
-            GlobalSearchResult(
-              title: setor.nome,
-              subtitle: 'Setor • $picoNome',
-              icon: Icons.terrain,
-              originalItem: setor,
-              onTap: () {
-                TelemetryService.instance.logAcaoCroqui(
-                  cragId,
-                  'abrir_croqui',
-                  origem: 'busca_global',
-                );
-                AppNav.toPico(
-                  context,
-                  pico: pico,
-                  croqui: croqui,
-                  cragId: cragId,
-                );
-                AppNav.toSetor(
-                  context,
-                  setor: setor,
-                  pico: pico,
-                  croqui: croqui,
-                  cragId: cragId,
-                );
-              },
-            ),
-          );
+    // Inclui também croquis ativos da sessão online
+    for (final entry
+        in widget.datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.entries) {
+      final cragId = entry.key;
+      if (processedCragIds.contains(cragId)) continue;
+      processedCragIds.add(cragId);
 
-          for (final escalada in setor.escaladas) {
-            _addEscalada(
-              aggregatedData,
-              escalada,
-              cragId,
-              picoNome,
-              pico,
-              setor,
-              croqui,
-            );
-          }
-        } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
-            sg.grupo.hasConteudo()) {
-          for (final s in sg.grupo.conteudo.setores) {
-            if (s.hasConteudo()) {
-              final setor = s.conteudo;
+      final croqui = entry.value;
+      if (croqui.picos.isEmpty) continue;
+      final pico = croqui.picos.first;
+      final picoNome = pico.nome.isNotEmpty ? pico.nome : 'Sem Nome';
 
-              aggregatedData.add(
-                GlobalSearchResult(
-                  title: setor.nome,
-                  subtitle:
-                      'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
-                  icon: Icons.terrain,
-                  originalItem: setor,
-                  onTap: () {
-                    TelemetryService.instance.logAcaoCroqui(
-                      cragId,
-                      'abrir_croqui',
-                      origem: 'busca_global',
-                    );
-                    AppNav.toPico(
-                      context,
-                      pico: pico,
-                      croqui: croqui,
-                      cragId: cragId,
-                    );
-                    AppNav.toSetor(
-                      context,
-                      setor: setor,
-                      pico: pico,
-                      croqui: croqui,
-                      cragId: cragId,
-                    );
-                  },
-                ),
-              );
-
-              for (final escalada in setor.escaladas) {
-                _addEscalada(
-                  aggregatedData,
-                  escalada,
-                  cragId,
-                  picoNome,
-                  pico,
-                  setor,
-                  croqui,
-                );
-              }
-            }
-          }
-        }
-      }
+      _processPicoData(aggregatedData, pico, croqui, cragId, picoNome);
     }
 
     if (mounted) {
@@ -245,6 +167,115 @@ class _GlobalSearchState extends State<GlobalSearch> {
         _hasLoadedData = true;
       });
       _applyFilters();
+    }
+  }
+
+  void _processPicoData(
+    List<GlobalSearchResult> aggregatedData,
+    Pico pico,
+    Croqui croqui,
+    String cragId,
+    String picoNome,
+  ) {
+    for (final sg in pico.setoresOuGrupos) {
+      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
+        final setor = sg.setor.conteudo;
+
+        aggregatedData.add(
+          GlobalSearchResult(
+            title: setor.nome,
+            subtitle: 'Setor • $picoNome',
+            icon: Icons.terrain,
+            originalItem: setor,
+            onTap: () {
+              TelemetryService.instance.logAcaoCroqui(
+                cragId,
+                'abrir_croqui',
+                origem: 'busca_global',
+              );
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+              AppNav.toPico(
+                context,
+                pico: pico,
+                croqui: croqui,
+                cragId: cragId,
+              );
+              AppNav.toSetor(
+                context,
+                setor: setor,
+                pico: pico,
+                croqui: croqui,
+                cragId: cragId,
+              );
+            },
+          ),
+        );
+
+        for (final escalada in setor.escaladas) {
+          _addEscalada(
+            aggregatedData,
+            escalada,
+            cragId,
+            picoNome,
+            pico,
+            setor,
+            croqui,
+          );
+        }
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
+          sg.grupo.hasConteudo()) {
+        for (final s in sg.grupo.conteudo.setores) {
+          if (s.hasConteudo()) {
+            final setor = s.conteudo;
+
+            aggregatedData.add(
+              GlobalSearchResult(
+                title: setor.nome,
+                subtitle: 'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
+                icon: Icons.terrain,
+                originalItem: setor,
+                onTap: () {
+                  TelemetryService.instance.logAcaoCroqui(
+                    cragId,
+                    'abrir_croqui',
+                    origem: 'busca_global',
+                  );
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                  AppNav.toPico(
+                    context,
+                    pico: pico,
+                    croqui: croqui,
+                    cragId: cragId,
+                  );
+                  AppNav.toSetor(
+                    context,
+                    setor: setor,
+                    pico: pico,
+                    croqui: croqui,
+                    cragId: cragId,
+                  );
+                },
+              ),
+            );
+
+            for (final escalada in setor.escaladas) {
+              _addEscalada(
+                aggregatedData,
+                escalada,
+                cragId,
+                picoNome,
+                pico,
+                setor,
+                croqui,
+              );
+            }
+          }
+        }
+      }
     }
   }
 
@@ -298,6 +329,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
             'abrir_croqui',
             origem: 'busca_global',
           );
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
           AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
           AppNav.toSetor(
             context,
