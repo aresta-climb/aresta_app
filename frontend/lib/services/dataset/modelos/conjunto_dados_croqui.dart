@@ -13,9 +13,12 @@ class ConjuntoDadosCroqui {
   final List<Map<String, dynamic>> picosBaixados;
 
   const ConjuntoDadosCroqui({
-    required this.picosDisponiveis,
-    required this.picosBaixados,
-  });
+    List<Map<String, dynamic>>? picosDisponiveis,
+    List<Map<String, dynamic>>? picosBaixados,
+    List<Map<String, dynamic>>? availablePicos,
+    List<Map<String, dynamic>>? downloadedPicos,
+  })  : picosDisponiveis = picosDisponiveis ?? availablePicos ?? const [],
+        picosBaixados = picosBaixados ?? downloadedPicos ?? const [];
 
   /// Apelido para manter compatibilidade com implementações legadas.
   List<Map<String, dynamic>> get availablePicos => picosDisponiveis;
