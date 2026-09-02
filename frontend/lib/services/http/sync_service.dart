@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'zip_interceptor_client.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
@@ -138,7 +137,7 @@ class SyncService {
     SyncNetwork? network,
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
-       _network = network ?? SyncNetwork(client ?? ZipInterceptorClient()) {
+       _network = network ?? SyncNetwork(client ?? http.Client()) {
     pico_aberto_id.addListener(() {
       final currentOpenId = pico_aberto_id.value;
       final idsToCommit = _pendenciasAtomicas.keys
