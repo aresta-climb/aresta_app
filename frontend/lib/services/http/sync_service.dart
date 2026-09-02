@@ -311,7 +311,9 @@ class SyncService {
       }
 
       if (success) {
-        if (pico_aberto_id.value == id) {
+        final isExperimental =
+            datasetRepository.editorDeCroqui.isExperimentalMode.value;
+        if (pico_aberto_id.value == id && !isExperimental) {
           _pendenciasAtomicas[id] = updates;
           recarga_pendente_pico_id.value = id;
           debugPrint(
@@ -615,7 +617,9 @@ class SyncService {
               updates.hasErrors = true;
             } else {
               updates.picosAtualizadosComSucesso.add(newResumo.id);
-              if (pico_aberto_id.value == newResumo.id) {
+              final isExperimental =
+                  datasetRepository.editorDeCroqui.isExperimentalMode.value;
+              if (pico_aberto_id.value == newResumo.id && !isExperimental) {
                 _pendenciasAtomicas[newResumo.id] = picoUpdates;
                 recarga_pendente_pico_id.value = newResumo.id;
                 debugPrint(

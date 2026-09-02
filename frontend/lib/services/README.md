@@ -93,16 +93,24 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 
 ### `EditorDeCroqui`
 - Singleton acessível via `EditorDeCroqui.instance`
-- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `timeRemaining`
+- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `timeRemaining`, `notificadorGatilhoRecarregamento`
 - `activeBaseUrl` retorna a URL correta para o modo ativo
 - `downloadsPath(docsPath)` e `indicePath(docsPath)` retornam os caminhos corretos por modo
-- Persiste configuração em `editor_config.json`
+- Gerencia o listener de WebSocket para Live Reload e emite `dispararPulsoRecarregamento()` ao receber atualizações
+- Persiste configuração em `editor_config.yaml`
+
+### `BannerModoExperimental` (Widget Global)
+- Exibido via `MaterialApp.builder` no topo de toda a árvore de navegação
+- Apresenta o temporizador de contagem regressiva em tempo real
+- Fornece botão de saída rápida `[ SAIR ✕ ]` que aciona `nukeExperimentalData()`, restaura o índice oficial e redireciona para a raiz (`HomeNode`)
+- Animação de pulso luminoso (300ms) reativa disparada quando o WebSocket recebe eventos de Hot Reload
 
 ### `SyncService` e `SyncIsolate`
 - Orquestra toda a checagem Delta via API.
 - Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates.
 - Reflete o progresso percentual diretamente via `DatasetRepository.instance!.downloadingCrags`.
 - Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para controle fino de notificações de atualização de dados offline na abertura do aplicativo.
+- No **Modo Experimental**, notificações intrusivas (SnackBar / toasts) são suprimidas para garantir atualização contínua e silenciosa enquanto o `BannerModoExperimental` pulsa visualmente.
 
 
 ### Módulo de In-App Feedback (`feedback/`)
@@ -116,5 +124,6 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 
 - Monitore os logs com o prefixo `[EditorConfig]` para eventos do temporizador e Nuke.
 - Logs com `[DatasetRepo]` mostram verificações de download e caminhos de arquivo.
-- O banner vermelho global é injetado via `MaterialApp.builder` para persistir em todas as telas.
+- Logs com `[LiveReload]` mostram conexões e eventos push recebidos pelo servidor de desenvolvimento.
+- O banner vermelho global `BannerModoExperimental` é injetado via `MaterialApp.builder` para persistir em todas as telas.
 - O estado de **Developer Mode** persiste no disco; os **Dados Experimentais** não persistem entre sessões.

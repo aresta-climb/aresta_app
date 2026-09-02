@@ -2343,6 +2343,77 @@ void main() {
         );
       },
     );
+
+    test(
+      'Modo Experimental - syncIndex não deve definir recarga_pendente_pico_id quando o croqui estiver aberto e deve aplicar atualizações imediatamente',
+      () async {
+        final picoId = 'pico_exp_hotreload';
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value =
+            'http://${localServer.address.address}:${localServer.port}/v3';
+
+        final downloadsDir = Directory(
+          editor.downloadsPath(tempDir.path),
+        );
+        final picoDir = Directory('${downloadsDir.path}/$picoId');
+        await picoDir.create(recursive: true);
+
+        final oldCroqui = Croqui()..picos.add(Pico()..nome = 'Pico Antigo');
+        final oldBytes = oldCroqui.writeToBuffer();
+        final oldHash = sha256.convert(oldBytes).toString();
+        final localPicoFile = File('${picoDir.path}/$picoId.binarypb');
+        await localPicoFile.writeAsBytes(oldBytes);
+
+        final oldIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Antigo'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = oldHash,
+          );
+
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+        final newCroqui = Croqui()..picos.add(Pico()..nome = 'Pico Novo');
+        final newBytes = newCroqui.writeToBuffer();
+        final newHash = sha256.convert(newBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Novo'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = newHash,
+          );
+
+        final fakeClient = FakeClient(newIndice, {
+          '$picoId/$picoId.binarypb': newBytes,
+        });
+
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        // Simula que o usuário está com este croqui aberto na tela
+        syncService.pico_aberto_id.value = picoId;
+
+        await syncService.syncIndex();
+
+        // No modo experimental (Hot Reload), NÃO deve haver recarga pendente
+        expect(syncService.recarga_pendente_pico_id.value, isNull);
+
+        // O arquivo local deve ter sido atualizado imediatamente
+        final updatedLocalBytes = await localPicoFile.readAsBytes();
+        final updatedCroqui = Croqui.fromBuffer(updatedLocalBytes);
+        expect(updatedCroqui.picos.first.nome, 'Pico Novo');
+      },
+    );
   });
 }
 

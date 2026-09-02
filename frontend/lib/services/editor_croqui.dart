@@ -46,6 +46,14 @@ class EditorDeCroqui {
   /// Notificador de eventos push de recarregamento em tempo real.
   final ValueNotifier<LiveReloadEvent?> eventoLiveReload = ValueNotifier(null);
 
+  /// Notificador de gatilho para feedback visual de recarga (pulso luminoso no banner).
+  final ValueNotifier<int> notificadorGatilhoRecarregamento = ValueNotifier(0);
+
+  /// Dispara um pulso de recarregamento para animar o feedback visual nos componentes ouvintes.
+  void dispararPulsoRecarregamento() {
+    notificadorGatilhoRecarregamento.value++;
+  }
+
   DateTime? _expirationTime;
   Timer? _countdownTimer;
   WebSocket? _wsLiveReload;
@@ -168,8 +176,8 @@ class EditorDeCroqui {
         }
       }
     } catch (e) {
-      AppLogger.instance.logError(
-        '[EditorCroqui] Falha ao consultar broker na Cloudflare: $e',
+      debugPrint(
+        '[EditorCroqui] Descoberta LAN via broker indisponível ($e). Usando Cloudflare Relay.',
       );
     } finally {
       if (client == null) {
@@ -189,6 +197,7 @@ class EditorDeCroqui {
   /// Inicia a escuta de eventos WebSocket para Live Reload.
   void iniciarEscutaLiveReload(String urlBase) {
     encerrarEscutaLiveReload();
+    if (urlBase.startsWith('aresta-zip://')) return;
 
     Uri? wsUri;
     final codigo = extrairCodigoPrevia(urlBase);
@@ -229,6 +238,7 @@ class EditorDeCroqui {
                   setorId: setorId,
                   timestamp: DateTime.now(),
                 );
+                dispararPulsoRecarregamento();
               }
             } catch (e) {
               debugPrint('[EditorCroqui] Erro ao decodificar evento Live Reload: $e');
@@ -275,7 +285,7 @@ class EditorDeCroqui {
       final indexFile = File(
         '${directory.path}/editor/experimental/indice.binarypb',
       );
-      return await indexFile.exists();
+      return indexFile.existsSync();
     } catch (e) {
       return false;
     }
@@ -298,8 +308,8 @@ class EditorDeCroqui {
   Future<String> getEditedPath() async {
     final directory = await getApplicationDocumentsDirectory();
     final editedDir = Directory('${directory.path}/edited');
-    if (!await editedDir.exists()) {
-      await editedDir.create(recursive: true);
+    if (!editedDir.existsSync()) {
+      editedDir.createSync(recursive: true);
     }
     return editedDir.path;
   }
@@ -308,8 +318,8 @@ class EditorDeCroqui {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final configFile = File('${directory.path}/$_configFileName');
-      if (!await configFile.exists()) return {};
-      final content = await configFile.readAsString();
+      if (!configFile.existsSync()) return {};
+      final content = configFile.readAsStringSync();
       if (content.trim().isEmpty) return {};
       final yamlDoc = loadYaml(content);
       if (yamlDoc is YamlMap) {
@@ -335,7 +345,7 @@ class EditorDeCroqui {
           lines.add('${entry.key}: ${entry.value}');
         }
       }
-      await configFile.writeAsString(lines.join('\n'));
+      configFile.writeAsStringSync(lines.join('\n'));
     } catch (e) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao gravar yaml',
@@ -460,7 +470,9 @@ class EditorDeCroqui {
 
     isExperimentalMode.value = true;
     if (url != null) {
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      if (!url.startsWith('http://') &&
+          !url.startsWith('https://') &&
+          !url.startsWith('aresta-zip://')) {
         url = 'http://$url';
       }
       editorUrl.value = url;
@@ -506,13 +518,13 @@ class EditorDeCroqui {
       final config = await _readConfig();
       config['isExperimental'] = false;
       await _writeConfig(config);
-
-      isExperimentalMode.value = false;
     } catch (e) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao desconectar',
         error: e,
       );
+    } finally {
+      isExperimentalMode.value = false;
     }
   }
 
@@ -527,27 +539,26 @@ class EditorDeCroqui {
       final experimentalDir = Directory(
         '${directory.path}/editor/experimental',
       );
-      if (await experimentalDir.exists()) {
-        await experimentalDir.delete(recursive: true);
+      if (experimentalDir.existsSync()) {
+        experimentalDir.deleteSync(recursive: true);
       }
 
       final editedDir = Directory('${directory.path}/edited');
-      if (await editedDir.exists()) {
-        await editedDir.delete(recursive: true);
+      if (editedDir.existsSync()) {
+        editedDir.deleteSync(recursive: true);
       }
 
       final config = await _readConfig();
       config['editorUrl'] = null;
       await _writeConfig(config);
-
-      editorUrl.value = null;
-
-      await disconnect();
     } catch (e) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao limpar dados',
         error: e,
       );
+    } finally {
+      editorUrl.value = null;
+      await disconnect();
     }
   }
 }

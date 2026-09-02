@@ -23,10 +23,11 @@ class AppNav {
 
   static TreeNavigationController? _ctrl(BuildContext context) {
     try {
-      return TreeNavigationWrapper.of(context).treeController;
+      final state = TreeNavigationWrapper.of(context);
+      return state.treeController;
     } catch (e) {
-      // Retorna nulo se chamado fora do TreeNavigationWrapper (ex: testes isolados)
-      return null;
+      // Fallback para o controlador global quando chamado de contextos fora da árvore (ex: dialogs/overlays)
+      return TreeNavigationWrapper.currentTreeController;
     }
   }
 
@@ -215,6 +216,13 @@ class AppNav {
     if (ctrl.currentNode is GPSNode) return; // Já está aqui
 
     ctrl.navigateTo(GPSNode(cragId: ctx.cragId, parent: ctrl.currentNode));
+  }
+
+  /// Navega para a aba de exploração e catálogo de croquis (BrowseNode).
+  static void toBrowse(BuildContext context) {
+    final ctrl = _ctrl(context);
+    if (ctrl == null) return;
+    ctrl.navigateTo(BrowseNode(ctrl.currentNode));
   }
 
   /// Volta um nível na árvore de navegação.

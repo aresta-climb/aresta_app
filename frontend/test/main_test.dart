@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
@@ -23,6 +24,8 @@ import 'package:workmanager/workmanager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'mocks/mock_telemetry_service.dart';
+import 'mocks/mock_geolocator_platform.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockAssetBundle extends Fake implements AssetBundle {
@@ -98,6 +101,7 @@ void main() {
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('main_test_');
     PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    GeolocatorPlatform.instance = MockGeolocatorPlatform();
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
     mockSync = SyncService(datasetRepository: mockRepo);
@@ -107,6 +111,16 @@ void main() {
     TelemetryService.instance = mockTelemetry;
 
     SharedPreferences.setMockInitialValues({});
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockStreamHandler(
+          const EventChannel('dev.fluttercommunity.plus/connectivity_status'),
+          MockStreamHandler.inline(
+            onListen: (args, sink) {
+              sink.success(['wifi']);
+            },
+          ),
+        );
 
     PackageInfo.setMockInitialValues(
       appName: 'Aresta',
@@ -118,9 +132,11 @@ void main() {
   });
 
   tearDown(() async {
-    if (tempDir.existsSync()) {
-      await tempDir.delete(recursive: true);
-    }
+    try {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    } catch (_) {}
   });
 
   testWidgets(
@@ -369,6 +385,65 @@ void main() {
       await tester.pump();
 
       expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MyApp does not show auto-update SnackBar when in experimental mode',
+    (WidgetTester tester) async {
+      mockEditor.isExperimentalMode.value = true;
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // Sincronização automática com croquis atualizados
+      mockSync.lastSyncWasAuto.value = true;
+      mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 1;
+      mockSync.syncStatus.value = SyncStatus.justUpdated;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MyApp renders BannerModoExperimental and exits on clicking Sair',
+    (WidgetTester tester) async {
+      mockEditor.isExperimentalMode.value = true;
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.textContaining('MODO EXPERIMENTAL ATIVO'), findsOneWidget);
+      expect(find.textContaining('SAIR'), findsOneWidget);
+
+      final sairFinder = find.textContaining('SAIR');
+      await tester.tap(sairFinder);
+      for (int i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (!mockEditor.isExperimentalMode.value) break;
+      }
+
+      expect(mockEditor.isExperimentalMode.value, isFalse);
     },
   );
 

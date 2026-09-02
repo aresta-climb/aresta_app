@@ -1,6 +1,4 @@
-# data-sync-feedback Specification
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Feedback Contextual de Sincronização
 O sistema MUST informar visualmente ao usuário o resultado preciso da verificação de atualizações no servidor, diferenciando sincronizações manuais/explícitas, automáticas de abertura em produção e eventos em tempo real no modo experimental.
@@ -29,35 +27,3 @@ O sistema MUST informar visualmente ao usuário o resultado preciso da verifica�
 #### Scenario: Sincronização automática de abertura com falha
 - **WHEN** o aplicativo realiza sincronização automática na inicialização e ocorre falha de conexão/erro
 - **THEN** a interface de usuário DEVE exibir uma SnackBar informando o erro
-
-### Requirement: Test Driven Development
-O sistema MUST ser desenvolvido utilizando Test-Driven Development (TDD) e priorizar Testes de Widget em primeiro lugar, mantendo 100% de cobertura de testes para os arquivos modificados.
-
-#### Scenario: Testes de Widget e Unitários em Primeiro Lugar
-- **WHEN** a lógica de sincronização ou a apresentação visual de status for modificada
-- **THEN** os testes de widget e unitários DEVEM ser escritos antes da implementação do código de produção (Red-Green-Refactor)
-- **AND** a cobertura de testes para os arquivos modificados DEVE ser 100%
-
-### Requirement: Telemetria de Resultado da Sincronização
-O sistema MUST registrar na telemetria o resultado exato do término do fluxo global de sincronização.
-
-#### Scenario: Sincronização com Atualizações
-- **WHEN** a sincronização de todos os picos locais finaliza e há atualizações efetivas (status: justUpdated)
-- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'sucesso'
-
-#### Scenario: Sincronização sem Atualizações (No Updates)
-- **WHEN** a sincronização finaliza mas nenhum pacote novo precisou ser baixado (status: noNewUpdates)
-- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'sem_atualizacoes'
-
-#### Scenario: Falha na Sincronização
-- **WHEN** a sincronização global resulta em erro para o usuário (status: error)
-- **THEN** o sistema dispara o evento `logResultadoSincronizacao` passando o status 'erro'
-
-### Requirement: Código e Documentação em Português Brasileiro
-Todo o código, nomes de variáveis, métodos, comentários e documentações MUST ser redigidos em português brasileiro, acompanhados de docstrings explicativas e atualização dos arquivos README.md.
-
-#### Scenario: Nomenclatura e Documentação no Código
-- **WHEN** novos identificadores ou membros de classe forem criados
-- **THEN** os nomes DEVEM estar em português brasileiro (ex: `quantidadeCroquisBaixadosAtualizadosNoUltimoSync`)
-- **AND** métodos e propriedades DEVEM conter docstrings (`///`) em português explicando a intenção
-- **AND** os arquivos `README.md` pertinentes DEVEM ser atualizados para refletir a nova funcionalidade

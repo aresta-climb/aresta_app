@@ -302,5 +302,57 @@ void main() {
       expect(find.text('Croqui Atualizado'), findsOneWidget);
       expect(find.text('RECARREGAR'), findsOneWidget);
     });
+
+    testWidgets(
+      'Não deve exibir o popup bloqueante de recarga pendente se estiver em modo experimental',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Teste';
+        final croqui = Croqui();
+
+        editor.isExperimentalMode.value = true;
+        repo.activeDataset.value = TopoDataset(
+          downloadedPicos: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
+              'isDownloaded': true,
+            },
+          ],
+          availablePicos: [],
+        );
+
+        final syncService = SyncService(datasetRepository: repo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: repo,
+              syncService: syncService,
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final wrapperState =
+            tester.state<State<TreeNavigationWrapper>>(
+                  find.byType(TreeNavigationWrapper),
+                )
+                as dynamic;
+        final treeController = wrapperState.treeController;
+
+        treeController.navigateTo(
+          PicoNode(cragId: 'pico_1', parent: const HomeNode()),
+        );
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // Mesmo que recarga_pendente_pico_id seja modificado, no modo experimental o popup não deve ser renderizado
+        syncService.recarga_pendente_pico_id.value = 'pico_1';
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('Croqui Atualizado'), findsNothing);
+        expect(find.text('RECARREGAR'), findsNothing);
+      },
+    );
   });
 }

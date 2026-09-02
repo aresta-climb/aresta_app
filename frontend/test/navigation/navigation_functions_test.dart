@@ -220,5 +220,44 @@ void main() {
         expect(carrosselNode.mapas[0].initialSelectedId, 'a');
       },
     );
+
+    testWidgets(
+      'AppNav must resolve controller via TreeNavigationWrapper.currentTreeController when called from dialog/overlay context',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final BuildContext context = tester.element(
+          find.byType(Scaffold).first,
+        );
+
+        late BuildContext dialogContext;
+        showDialog(
+          context: context,
+          builder: (ctx) {
+            dialogContext = ctx;
+            return const AlertDialog(title: Text('Overlay'));
+          },
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Chama AppNav usando o contexto do diálogo
+        AppNav.toPico(dialogContext, cragId: 'test_crag');
+        await tester.pump();
+
+        final controller = TreeNavigationWrapper.currentTreeController;
+        expect(controller?.currentNode, isA<PicoNode>());
+        expect((controller?.currentNode as PicoNode).cragId, 'test_crag');
+      },
+    );
   });
 }

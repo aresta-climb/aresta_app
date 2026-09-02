@@ -16,6 +16,8 @@ import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../main.dart';
+import '../navigation/navigation_functions.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
@@ -121,6 +123,19 @@ Future<bool> conectarEditor(
       final syncService = SyncService(datasetRepository: datasetRepo);
       await syncService.syncIndex();
       await datasetRepo.init();
+
+      // Auto-download imediato se houver exatamente 1 croqui no índice
+      final croquisZip = datasetRepo.indiceData.value?.croquis ?? [];
+      if (croquisZip.length == 1) {
+        final resumo = croquisZip.first;
+        try {
+          await syncService.downloadCrag(resumo);
+          await datasetRepo.init();
+        } catch (e) {
+          debugPrint('[conectarEditor] Falha ao auto-baixar croqui único zip: $e');
+        }
+      }
+
       TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
       return true;
     } else {
@@ -138,6 +153,19 @@ Future<bool> conectarEditor(
         final syncService = SyncService(datasetRepository: datasetRepo);
         await syncService.syncIndex();
         await datasetRepo.init();
+
+        // Auto-download imediato se houver exatamente 1 croqui no índice
+        final croquis = datasetRepo.indiceData.value?.croquis ?? [];
+        if (croquis.length == 1) {
+          final resumo = croquis.first;
+          try {
+            await syncService.downloadCrag(resumo);
+            await datasetRepo.init();
+          } catch (e) {
+            debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
+          }
+        }
+
         TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
         return true;
       } else {
@@ -160,6 +188,22 @@ Future<bool> conectarEditor(
       );
     }
     return false;
+  }
+}
+
+/// Navega para a tela adequada após uma conexão com o editor bem-sucedida.
+///
+/// Se o índice contiver exatamente 1 croqui, abre diretamente na tela do Pico (`PicoNode`).
+/// Se contiver múltiplos croquis (ou nenhum), navega para a aba de exploração (`BrowseNode`).
+void navegarAposConexaoExperimental(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+) {
+  final croquis = datasetRepo.indiceData.value?.croquis ?? [];
+  if (croquis.length == 1) {
+    AppNav.toPico(context, cragId: croquis.first.id);
+  } else {
+    AppNav.toBrowse(context);
   }
 }
 
@@ -261,6 +305,7 @@ void mostrarDialogConexao(
   DatasetRepository datasetRepo, {
   String? titulo,
 }) {
+  final BuildContext parentContext = context;
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
   // Inicia vazio, pois a URL atual já é exibida na interface de configurações
   final TextEditingController urlController = TextEditingController();
@@ -268,10 +313,10 @@ void mostrarDialogConexao(
   final brandColor = const Color(0xFFC04F34);
 
   showDialog(
-    context: context,
-    builder: (context) {
+    context: parentContext,
+    builder: (dialogContext) {
       return StatefulBuilder(
-        builder: (context, setDialogState) {
+        builder: (dialogContext, setDialogState) {
           return AlertDialog(
             backgroundColor: context.colors.caveShadow,
             shape: RoundedRectangleBorder(
@@ -475,21 +520,20 @@ void mostrarDialogConexao(
                       setDialogState(() => isLoading = true);
 
                       final success = await conectarEditor(
-                        context,
+                        dialogContext,
                         datasetRepo,
                         configService,
                         url,
                       );
 
-                      if (context.mounted) {
+                      if (dialogContext.mounted) {
                         setDialogState(() => isLoading = false);
                         if (success) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Conectado ao repositório editor!'),
-                            ),
-                          );
+                          Navigator.of(dialogContext).pop();
+                          final navContext =
+                              TreeNavigationWrapper.navKey.currentContext ??
+                              parentContext;
+                          navegarAposConexaoExperimental(navContext, datasetRepo);
                         }
                       }
                     };

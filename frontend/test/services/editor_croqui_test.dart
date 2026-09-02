@@ -359,5 +359,11 @@ void main() {
       expect(() => editor.iniciarEscutaLiveReload('https://previa.arestaclimb.com/k9x2-p83a'), returnsNormally);
       expect(() => editor.encerrarEscutaLiveReload(), returnsNormally);
     });
+
+    test('dispararPulsoRecarregamento deve incrementar notificadorGatilhoRecarregamento', () {
+      expect(editor.notificadorGatilhoRecarregamento.value, 0);
+      editor.dispararPulsoRecarregamento();
+      expect(editor.notificadorGatilhoRecarregamento.value, 1);
+    });
   });
 }

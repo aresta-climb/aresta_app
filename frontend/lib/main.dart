@@ -29,6 +29,8 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/navigation_functions.dart';
+import 'package:frontend/widgets/banner_modo_experimental.dart';
 import 'package:frontend/navigation/modal_bottom_sheet_page.dart';
 import 'package:frontend/view_functions/offline_markdown.dart';
 import 'package:frontend/utils/markdown_utils.dart';
@@ -333,79 +335,15 @@ class _MyAppState extends State<MyApp> {
                 child: Stack(
                   children: [
                     effectiveChild,
-                    ValueListenableBuilder<bool>(
-                      valueListenable:
-                          widget.datasetRepo.editorDeCroqui.isExperimentalMode,
-                      builder: (context, isExperimental, _) {
-                        return ValueListenableBuilder<String?>(
-                          valueListenable:
-                              widget.datasetRepo.editorDeCroqui.editorUrl,
-                          builder: (context, editorUrl, _) {
-                            final isEditor = isExperimental;
-                            if (!isEditor) return const SizedBox.shrink();
-
-                            String bannerText =
-                                'MODO EXPERIMENTAL ATIVO (LOCAL)';
-
-                            return Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: ValueListenableBuilder<Duration?>(
-                                  valueListenable: widget
-                                      .datasetRepo
-                                      .editorDeCroqui
-                                      .timeRemaining,
-                                  builder: (context, remaining, _) {
-                                    String timerText = '';
-                                    if (remaining != null) {
-                                      final minutes = remaining.inMinutes
-                                          .toString()
-                                          .padLeft(2, '0');
-                                      final seconds = (remaining.inSeconds % 60)
-                                          .toString()
-                                          .padLeft(2, '0');
-                                      timerText = ' ($minutes:$seconds)';
-                                    }
-
-                                    return Container(
-                                      padding: EdgeInsets.only(
-                                        top:
-                                            MediaQuery.of(context).padding.top +
-                                            2,
-                                        bottom: 4,
-                                      ),
-                                      color: Colors.red.withValues(alpha: 0.7),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(
-                                            Icons.warning_amber_rounded,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '$bannerText$timerText',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 10,
-                                              letterSpacing: 1.2,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        );
+                    BannerModoExperimental(
+                      editorDeCroqui: widget.datasetRepo.editorDeCroqui,
+                      onSairModoExperimental: () async {
+                        await widget.datasetRepo.editorDeCroqui.nukeExperimentalData();
+                        await widget.datasetRepo.init();
+                        final navContext = TreeNavigationWrapper.navKey.currentContext;
+                        if (navContext != null) {
+                          AppNav.home(navContext);
+                        }
                       },
                     ),
                   ],
@@ -531,18 +469,22 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         );
       }
     } else if (status == SyncStatus.justUpdated && isAuto) {
-      final croquisAtualizados = widget
-          .syncService
-          .quantidadeCroquisBaixadosAtualizadosNoUltimoSync
-          .value;
-      if (croquisAtualizados > 0 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Seus croquis baixados foram atualizados!'),
-            backgroundColor: context.colors.dryMoss,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+      final isExperimental =
+          widget.datasetRepo.editorDeCroqui.isExperimentalMode.value;
+      if (!isExperimental) {
+        final croquisAtualizados = widget
+            .syncService
+            .quantidadeCroquisBaixadosAtualizadosNoUltimoSync
+            .value;
+        if (croquisAtualizados > 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Seus croquis baixados foram atualizados!'),
+              backgroundColor: context.colors.dryMoss,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     }
   }

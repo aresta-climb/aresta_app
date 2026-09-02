@@ -7,6 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/settings_functions.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/theme_controller.dart';
@@ -224,4 +228,138 @@ void main() {
       },
     );
   });
+
+  group('navegarAposConexaoExperimental', () {
+    late EditorDeCroqui configService;
+    late DatasetRepository datasetRepo;
+
+    setUp(() {
+      configService = EditorDeCroqui();
+      datasetRepo = DatasetRepository(editorDeCroqui: configService);
+    });
+
+    testWidgets(
+      'deve navegar para PicoNode quando o índice contiver exatamente 1 croqui',
+      (WidgetTester tester) async {
+        final indice = Indice();
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'br_mg_igarape_pedra_grande',
+            nome: 'Pedra Grande',
+          ),
+        );
+        datasetRepo.indiceData.value = indice;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.of(context).treeController;
+        navegarAposConexaoExperimental(context, datasetRepo);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(controller.currentNode, isA<PicoNode>());
+        expect(
+          (controller.currentNode as PicoNode).cragId,
+          'br_mg_igarape_pedra_grande',
+        );
+      },
+    );
+
+    testWidgets(
+      'deve navegar para BrowseNode quando o índice contiver mais de 1 croqui',
+      (WidgetTester tester) async {
+        final indice = Indice();
+        indice.croquis.addAll([
+          ResumoCroqui(id: 'croqui_1', nome: 'Croqui 1'),
+          ResumoCroqui(id: 'croqui_2', nome: 'Croqui 2'),
+        ]);
+        datasetRepo.indiceData.value = indice;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.of(context).treeController;
+        navegarAposConexaoExperimental(context, datasetRepo);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(controller.currentNode, isA<BrowseNode>());
+      },
+    );
+
+    testWidgets(
+      'deve navegar para PicoNode mesmo quando chamado a partir de um contexto de diálogo ou fora da árvore direta',
+      (WidgetTester tester) async {
+        final indice = Indice();
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'br_mg_igarape_pedra_grande',
+            nome: 'Pedra Grande',
+          ),
+        );
+        datasetRepo.indiceData.value = indice;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        // Abre um diálogo padrão (cujo context fica no Overlay e não é filho de TreeNavigationWrapper)
+        late BuildContext dialogContext;
+        showDialog(
+          context: pageContext,
+          builder: (ctx) {
+            dialogContext = ctx;
+            return const AlertDialog(title: Text('Diálogo Teste'));
+          },
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Diálogo Teste'), findsOneWidget);
+
+        // Fecha o diálogo e chama a navegação com o context do diálogo
+        Navigator.of(dialogContext).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        navegarAposConexaoExperimental(dialogContext, datasetRepo);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final controller = TreeNavigationWrapper.currentTreeController;
+        expect(controller?.currentNode, isA<PicoNode>());
+        expect(
+          (controller?.currentNode as PicoNode).cragId,
+          'br_mg_igarape_pedra_grande',
+        );
+      },
+    );
+  });
 }
+

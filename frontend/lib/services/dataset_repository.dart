@@ -61,17 +61,34 @@ class DatasetRepository {
   // SECTION: Carregamento de Dados e Inicialização
   // ===========================================================================
 
+  Future<void>? _currentInitFuture;
+
   /// Inicializa o repositório carregando o índice do armazenamento local.
   Future<void> init() async {
+    if (_currentInitFuture != null) {
+      return _currentInitFuture;
+    }
+    _currentInitFuture = _executarInit();
+    try {
+      await _currentInitFuture;
+    } finally {
+      _currentInitFuture = null;
+    }
+  }
+
+  Future<void> _executarInit() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final localIndiceFile = File(editorDeCroqui.indicePath(directory.path));
 
-      if (!await localIndiceFile.exists()) {
-        await _unpackPreloadedAssets(directory.path);
+      if (!localIndiceFile.existsSync()) {
+        // Assets pré-carregados da build oficial só devem ser extraídos fora do modo experimental
+        if (!editorDeCroqui.isExperimentalMode.value) {
+          await _unpackPreloadedAssets(directory.path);
+        }
       }
 
-      if (await localIndiceFile.exists()) {
+      if (localIndiceFile.existsSync()) {
         final bytes = await localIndiceFile.readAsBytes();
         final localIndice = Indice.fromBuffer(bytes);
         indiceData.value = localIndice;
@@ -114,6 +131,9 @@ class DatasetRepository {
 
       // Escreve o índice localmente para uso imediato pelo app
       final indiceFile = File(editorDeCroqui.indicePath(docsPath));
+      if (!indiceFile.parent.existsSync()) {
+        indiceFile.parent.createSync(recursive: true);
+      }
       await indiceFile.writeAsBytes(
         indiceData.buffer.asUint8List(
           indiceData.offsetInBytes,

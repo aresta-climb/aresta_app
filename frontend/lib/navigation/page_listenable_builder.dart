@@ -98,7 +98,9 @@ class PageListenableBuilder extends StatelessWidget {
           return ValueListenableBuilder<String?>(
             valueListenable: syncService.recarga_pendente_pico_id,
             builder: (context, pendingId, child) {
-              if (pendingId == cragId) {
+              final isExperimental =
+                  datasetRepo.editorDeCroqui.isExperimentalMode.value;
+              if (pendingId == cragId && !isExperimental) {
                 return Stack(
                   children: [
                     IgnorePointer(child: child!),
