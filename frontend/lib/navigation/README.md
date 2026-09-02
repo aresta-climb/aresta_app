@@ -18,7 +18,7 @@ Contém a definição dos nós (`NavNode`) e o controlador central de estado da 
 
 ### `page_listenable_builder.dart`
 É o elo de **Hot-Reload** da UI. 
-A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Escadaria"), mas é o `PageListenableBuilder` quem consome esse ID e busca o dado atualizado diretamente da memória (`DatasetRepository.activeDataset`). Se um croqui for atualizado em background, o builder notará a alteração e redesenhará a página perfeitamente injetando os objetos novinhos, mantendo a tela do aplicativo em sincronia com arquivos locais.
+A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Escadaria"), mas é o `PageListenableBuilder` quem consome esse ID e busca o dado atualizado diretamente da memória (`downloadedPicos` para croquis offline ou `gerenciadorSessaoOnline` para croquis explorados sob demanda). Se um croqui for atualizado em background, o builder notará a alteração e redesenhará a página perfeitamente injetando os objetos novinhos, mantendo a tela do aplicativo em sincronia com os arquivos locais e a nuvem.
 
 ### `navigation_functions.dart`
 Contém a classe estática `AppNav`, que funciona como uma interface limpa (API) para acessar e modificar a árvore de navegação sem precisar lidar diretamente com o `BuildContext` complexo do controlador.

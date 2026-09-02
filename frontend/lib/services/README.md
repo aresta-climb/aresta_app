@@ -8,10 +8,10 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 
 | Arquivo / Pasta | Responsabilidade |
 |---|---|
-| `dataset_repository.dart` | Gerenciador de estado central: downloads, índice, metadados e prioridade |
+| `dataset_repository.dart` | Fachada e gerenciador de estado central: downloads, índice, metadados e prioridade |
+| `dataset/` | Submódulos desacoplados de responsabilidade única (`modelos/`, `armazenamento/`, `metadados/`, `sessao_online/`) |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
-| `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA) |
-
+| `http/` | Módulo de rede e sincronização (interceptor, downloads, atualizações OTA, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano`) |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
 
@@ -117,6 +117,19 @@ O `EditorDeCroqui` gerencia três contextos de armazenamento completamente isola
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
 - **`FeedbackOrchestrator`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions).
 - **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) para facilitar a depuração.
+
+---
+
+## Navegação Online Sob Demanda (Clean Architecture)
+
+A partir da versão atual, o usuário pode navegar livremente por qualquer croqui do catálogo sem ser obrigado a baixá-lo previamente para o dispositivo.
+
+### Componentes Chave:
+- **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), além de rastrear notificações de novas versões (ETag).
+- **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil e executa polling periódico de ETag (HTTP 304/200).
+- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash).
+- **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`, `PilulaAtualizacaoOnline`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra.
+
 
 
 
