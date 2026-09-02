@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/arvore/modelo_arvore_navegacao.dart';
 import 'package:frontend/navigation/arvore/nos_globais.dart';
 import 'package:frontend/navigation/arvore/nos_pico.dart';
-import 'package:frontend/navigation/arvore/nos_modais.dart';
 
 void main() {
   group('ArvoreNavegacao (Modelo de Domínio Puro)', () {

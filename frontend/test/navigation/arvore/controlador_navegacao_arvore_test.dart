@@ -7,7 +7,7 @@ import 'package:frontend/navigation/arvore/nos_globais.dart';
 import 'package:frontend/navigation/arvore/nos_pico.dart';
 
 void main() {
-  group('ControladorNavegacaoArvore (TreeNavigationController)', () {
+  group('TreeNavigationController', () {
     test('notifica ouvintes ao navegar e atualizar estado', () {
       final controller = TreeNavigationController();
       int notificacoes = 0;

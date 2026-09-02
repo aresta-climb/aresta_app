@@ -8,18 +8,14 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 void main() {
   group('Testes da Árvore de Navegação (Tree Navigation)', () {
     late TreeNavigationController controller;
-    late Pico pico;
     late Setor setor;
     late Escalada escalada;
-    late Croqui croqui;
     const String cragId = 'crag_test_123';
 
     setUp(() {
       controller = TreeNavigationController();
-      pico = Pico()..nome = 'Pico do Corcovado';
       setor = Setor()..nome = 'Setor Principal';
       escalada = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Lactea'));
-      croqui = Croqui();
     });
 
     test('Deve inicializar com HomeNode como nó inicial', () {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/navigation/arvore/no_navegacao.dart';
 import 'package:frontend/navigation/arvore/nos_globais.dart';
 import 'package:frontend/navigation/arvore/nos_pico.dart';
 import 'package:frontend/navigation/arvore/nos_modais.dart';
@@ -38,13 +37,13 @@ void main() {
         cragId: 'bau',
         setorNome: 'Central',
         grupoNome: 'G1',
-        parent: null,
+        parent: HomeNode(),
       );
       const setorOutroNome = SetorNode(
         cragId: 'bau',
         setorNome: 'Leste',
         grupoNome: 'G1',
-        parent: null,
+        parent: HomeNode(),
       );
 
       expect(setor1.isSameNode(setorIgual), isTrue);
@@ -64,14 +63,14 @@ void main() {
         escaladaNome: 'Via Láctea',
         setorNome: 'Central',
         grupoNome: 'G1',
-        parent: null,
+        parent: HomeNode(),
       );
       const viaOutra = ViaNode(
         cragId: 'bau',
         escaladaNome: 'Outra Via',
         setorNome: 'Central',
         grupoNome: 'G1',
-        parent: null,
+        parent: HomeNode(),
       );
 
       expect(via1.isSameNode(viaIgual), isTrue);
@@ -89,13 +88,13 @@ void main() {
         title: 'Regras',
         content: 'Outro',
         cragId: 'bau',
-        parent: null,
+        parent: HomeNode(),
       );
       const text3 = TextNode(
         title: 'História',
         content: 'Conteudo',
         cragId: 'bau',
-        parent: null,
+        parent: HomeNode(),
       );
 
       expect(text1.isSameNode(text2), isTrue);
