@@ -31,7 +31,7 @@ Este design estabelece a arquitetura híbrida de navegação online com transmis
 - **Abordagem**: Enquanto a página de um pico online estiver ativa, um timer periódico dispara a cada 30-60 segundos uma requisição `GET` com o cabeçalho `If-None-Match: <etag>`.
 - **Comportamento**:
   - `304 Not Modified`: Nenhuma ação, tráfego nulo de corpo.
-  - `200 OK`: Atualiza o buffer do croqui e emite notificação reativa para a UI exibir a `PilulaAtualizacaoOnline`.
+  - `200 OK`: Atualiza o buffer do croqui e emite notificação reativa no `DatasetRepository`, permitindo recarregamento transparente e contínuo pela UI.
   - O timer é cancelado automaticamente no descarte (`dispose`) da página.
 
 ### Decisão 3: Tamanho de Download Pré-Computado no `indice.proto`

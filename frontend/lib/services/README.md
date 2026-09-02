@@ -90,7 +90,7 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 - **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), além de rastrear notificações de novas versões (ETag).
 - **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil e executa polling periódico de ETag (HTTP 304/200).
 - **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash).
-- **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`, `PilulaAtualizacaoOnline`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra.
+- **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
 
 
 

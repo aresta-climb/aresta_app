@@ -18,13 +18,12 @@
 - [ ] 3.3 Refatorar `OfflineMarkdown`, `MapaThumbnail`, `MapaInterativo` e `SetorPage` para consumir o novo provedor
 - [ ] 3.4 Validar 100% de cobertura de testes na camada de resolução de imagens e adicionar docstrings abrangentes
 
-## 4. Componentes de UI: Banner Online, Pílula de Atualização e Guardião de Saída (Testes de Widget Primeiro)
+## 4. Componentes de UI: Banner Online e Guardião de Saída (Testes de Widget Primeiro)
 
 - [ ] 4.1 Escrever testes de widget para o `BannerModoOnline` (`test/widgets/banner_modo_online_test.dart`)
 - [ ] 4.2 Implementar o widget `BannerModoOnline` em `lib/widgets/banner_modo_online.dart` com feedback de progresso e transição de estado
-- [ ] 4.3 Escrever testes de widget para a `PilulaAtualizacaoOnline` (`test/widgets/pilula_atualizacao_online_test.dart`) e implementá-la
-- [ ] 4.4 Escrever testes de widget para o `ModalConfirmacaoSaida` (`test/widgets/modal_confirmacao_saida_test.dart`)
-- [ ] 4.5 Implementar `ModalConfirmacaoSaida` em `lib/widgets/modal_confirmacao_saida.dart` e integrá-lo via `PopScope` na `PicoDetailsPage`
+- [ ] 4.3 Escrever testes de widget para o `ModalConfirmacaoSaida` (`test/widgets/modal_confirmacao_saida_test.dart`)
+- [ ] 4.4 Implementar `ModalConfirmacaoSaida` em `lib/widgets/modal_confirmacao_saida.dart` e integrá-lo via `PopScope` na `PicoDetailsPage`
 
 ## 5. Navegação Direta a partir das Telas de Exploração
 

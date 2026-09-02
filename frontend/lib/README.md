@@ -108,6 +108,5 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.
 - **`banner_modo_online.dart`**: Banner informativo persistente que avisa o usuário quando o croqui está em modo online sob demanda.
 - **`modal_confirmacao_saida.dart`**: Guardião de saída (`PopScope`) que alerta o usuário sobre a necessidade de salvar o croqui offline antes de sair para a montanha.
-- **`pilula_atualizacao_online.dart`**: Pílula flutuante que notifica novas versões detectadas via ETag em tempo real com botão de recarregamento instantâneo.
 - **`provedor_imagem_aresta.dart`**: Provedor de imagem modular com resolução em 3 camadas (local, cache temporário e CDN remota com cache de hash).
 - **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.

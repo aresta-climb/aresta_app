@@ -14,7 +14,6 @@ Esta pasta contém testes de widget da interface do usuário. Os testes aqui ver
 | `mapa_thumbnail_test.dart` | `MapaThumbnail` | Testa preview interativo de mapa e transições |
 | `modal_confirmacao_saida_test.dart` | `ModalConfirmacaoSaida` | Testa o guardião de saída em modo online (com feedback e salvamento) |
 | `nearby_crags_carousel_test.dart` | `NearbyCragsCarousel` | Testa carrossel horizontal de picos próximos e destaques |
-| `pilula_atualizacao_online_test.dart` | `PilulaAtualizacaoOnline` | Testa pílula flutuante de notificação de novas versões online |
 | `provedor_imagem_aresta_test.dart` | `ProvedorImagemAresta` | Testa resolução de imagens em camadas (local, cache temporário e CDN) |
 | `feedback/custom_feedback_builder_test.dart` | `CustomStringFeedback` | Testa o layout e comportamento visual (Light/Dark mode) do formulário de In-App Feedback |
 
