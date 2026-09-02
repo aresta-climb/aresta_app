@@ -50,7 +50,7 @@ class PageListenableBuilder extends StatelessWidget {
           );
         }
 
-        // Encontra o crag nos picos baixados
+        // 1. Tenta encontrar o crag nos picos baixados
         Map<String, dynamic>? cragData;
         try {
           final crag = topoDataset.downloadedPicos.firstWhere(
@@ -58,6 +58,18 @@ class PageListenableBuilder extends StatelessWidget {
           );
           cragData = crag['data'] as Map<String, dynamic>?;
         } catch (_) {}
+
+        // 2. Se não estiver baixado, tenta resolver da sessão online ativa
+        if (cragData == null) {
+          final croquiOnline =
+              datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline(cragId);
+          if (croquiOnline != null && croquiOnline.picos.isNotEmpty) {
+            cragData = {
+              'pico': croquiOnline.picos.first,
+              'croqui': croquiOnline,
+            };
+          }
+        }
 
         if (cragData == null) {
           // O pico foi apagado do dataset
