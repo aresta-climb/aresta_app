@@ -17,14 +17,14 @@ class BannerModoOnline extends StatelessWidget {
   final double? progressoDownload;
 
   /// Callback acionado quando o usuário toca para salvar o croqui offline.
-  final VoidCallback onSalvarPraPedra;
+  final VoidCallback onSalvarOffline;
 
   const BannerModoOnline({
     super.key,
     this.tamanhoFormatado,
     required this.isDownloaded,
     this.progressoDownload,
-    required this.onSalvarPraPedra,
+    required this.onSalvarOffline,
   });
 
   @override
@@ -82,16 +82,16 @@ class BannerModoOnline extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.cloud_outlined,
-                color: context.colors.beastHide,
+                color: AppColors.brandColor,
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'MODO ONLINE',
                 style: TextStyle(
-                  color: context.colors.beastHide,
+                  color: AppColors.brandColor,
                   fontWeight: FontWeight.w900,
                   fontSize: 12,
                   letterSpacing: 1.2,
@@ -115,7 +115,7 @@ class BannerModoOnline extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progressoDownload,
                 backgroundColor: context.colors.graniteEdge,
-                color: context.colors.rustIron,
+                color: const Color(0xFF7B8B6F),
                 minHeight: 6,
               ),
             ),
@@ -133,14 +133,14 @@ class BannerModoOnline extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onSalvarPraPedra,
+                onPressed: onSalvarOffline,
                 icon: const Icon(
                   Icons.download_rounded,
                   size: 18,
                   color: Colors.white,
                 ),
                 label: const Text(
-                  'Salvar pra Pedra',
+                  'Salvar Offline',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -149,7 +149,7 @@ class BannerModoOnline extends StatelessWidget {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC05244),
+                  backgroundColor: const Color(0xFF7B8B6F),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(

@@ -7,7 +7,7 @@ import 'package:frontend/widgets/banner_modo_online.dart';
 
 void main() {
   group('BannerModoOnline', () {
-    testWidgets('exibe modo online e botão de salvar pra pedra', (tester) async {
+    testWidgets('exibe modo online e botão de salvar offline', (tester) async {
       bool clicouSalvar = false;
 
       await tester.pumpWidget(
@@ -17,7 +17,7 @@ void main() {
               tamanhoFormatado: '18.4 MB',
               isDownloaded: false,
               progressoDownload: null,
-              onSalvarPraPedra: () {
+              onSalvarOffline: () {
                 clicouSalvar = true;
               },
             ),
@@ -26,9 +26,9 @@ void main() {
       );
 
       expect(find.text('MODO ONLINE'), findsOneWidget);
-      expect(find.text('Salvar pra Pedra'), findsOneWidget);
+      expect(find.text('Salvar Offline'), findsOneWidget);
 
-      await tester.tap(find.text('Salvar pra Pedra'));
+      await tester.tap(find.text('Salvar Offline'));
       expect(clicouSalvar, isTrue);
     });
 
@@ -40,7 +40,7 @@ void main() {
               tamanhoFormatado: '18.4 MB',
               isDownloaded: false,
               progressoDownload: 0.45,
-              onSalvarPraPedra: () {},
+              onSalvarOffline: () {},
             ),
           ),
         ),
@@ -58,7 +58,7 @@ void main() {
               tamanhoFormatado: '18.4 MB',
               isDownloaded: true,
               progressoDownload: null,
-              onSalvarPraPedra: () {},
+              onSalvarOffline: () {},
             ),
           ),
         ),

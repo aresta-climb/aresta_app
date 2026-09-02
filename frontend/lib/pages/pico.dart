@@ -451,7 +451,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       },
                     ),
 
-                    // Banner de Modo Online / Salvar pra Pedra
+                    // Banner de Modo Online / Salvar Offline
                     Builder(
                       builder: (context) {
                         final tree = TreeNavigationWrapper.maybeOf(context);
@@ -468,7 +468,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                               tamanhoFormatado: tamanhoFormatado,
                               isDownloaded: isDownloaded,
                               progressoDownload: progresso,
-                              onSalvarPraPedra: () =>
+                              onSalvarOffline: () =>
                                   _iniciarDownload(context),
                             );
                           },
