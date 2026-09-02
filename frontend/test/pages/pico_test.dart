@@ -241,4 +241,66 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     expect(find.byIcon(Icons.search), findsOneWidget);
   });
+
+  testWidgets('PicoDetailsPage exibe crédito do criador do croqui na primeira página', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['João Silva', 'Maria Santos']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico com Crédito',
+          croqui: croqui,
+          cragId: 'crag_credito',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.text('Croqui por João Silva, Maria Santos'), findsOneWidget);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+  });
+
+  testWidgets('PicoDetailsPage não exibe linha de crédito quando croqui não possui autores definidos', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(); // sem creditos
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico sem Crédito',
+          croqui: croqui,
+          cragId: 'crag_sem_credito',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.person_outline), findsNothing);
+  });
+
+  testWidgets('PicoDetailsPage ignora placeholders genéricos como Autores do Croqui Original', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['Autores do Croqui Original']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico da Vó Gusta',
+          croqui: croqui,
+          cragId: 'crag_vo_gusta',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.person_outline), findsNothing);
+    expect(find.textContaining('Autores do Croqui Original'), findsNothing);
+  });
 }

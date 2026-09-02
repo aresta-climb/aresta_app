@@ -20,6 +20,7 @@ import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
 import '../utils/formatador_tamanho.dart';
 import '../widgets/banner_modo_online.dart';
+import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
 import '../services/http/servico_croqui_online.dart';
 import '../services/http/sync_service.dart';
@@ -420,6 +421,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                         fontSize: 13,
                       ),
                     ),
+                    LinhaCreditoAutor(creditos: widget.croqui.creditos),
                     const SizedBox(height: 16),
 
                     // Banner de Modo Online / Salvar Offline
