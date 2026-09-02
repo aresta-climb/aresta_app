@@ -20,7 +20,6 @@ import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
 import '../utils/formatador_tamanho.dart';
 import '../widgets/banner_modo_online.dart';
-import '../widgets/pilula_atualizacao_online.dart';
 import '../widgets/modal_confirmacao_saida.dart';
 import '../services/http/servico_croqui_online.dart';
 import '../services/http/sync_service.dart';
@@ -423,34 +422,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Pilula de Atualizacao Online (ETag)
-                    ValueListenableBuilder<Map<String, String>>(
-                      valueListenable: widget.datasetRepo
-                          .gerenciadorSessaoOnline.atualizacoesPendentes,
-                      builder: (context, pendentes, _) {
-                        if (pendentes.containsKey(widget.cragId)) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0),
-                            child: PilulaAtualizacaoOnline(
-                              onRecarregar: () async {
-                                widget.datasetRepo.gerenciadorSessaoOnline
-                                    .limparAtualizacaoPendente(widget.cragId);
-                                final url = picoItem?['url']?.toString();
-                                if (url != null) {
-                                  await _servicoCroquiOnline
-                                      .carregarCroquiRemoto(
-                                    url,
-                                    picoId: widget.cragId,
-                                  );
-                                }
-                              },
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-
                     // Banner de Modo Online / Salvar Offline
                     Builder(
                       builder: (context) {
@@ -609,7 +580,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                 SnackBar(
                                   content: Text(
                                     success
-                                        ? 'Guia removido do armazenamento offline. Navegando em modo online.'
+                                        ? 'Guia removido do armazenamento offline.'
                                         : 'Erro ao excluir guia.',
                                   ),
                                   backgroundColor: success

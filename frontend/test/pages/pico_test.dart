@@ -102,7 +102,7 @@ void main() {
       );
       // E que a página continua montada com o snackbar exibido
       expect(
-        find.text('Guia removido do armazenamento offline. Navegando em modo online.'),
+        find.text('Guia removido do armazenamento offline.'),
         findsOneWidget,
       );
     },

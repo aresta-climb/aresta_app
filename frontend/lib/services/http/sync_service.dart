@@ -310,27 +310,17 @@ class SyncService {
       }
 
       if (success) {
-        final isExperimental =
-            datasetRepository.editorDeCroqui.isExperimentalMode.value;
-        if (pico_aberto_id.value == id && !isExperimental) {
-          _pendenciasAtomicas[id] = updates;
-          recarga_pendente_pico_id.value = id;
-          debugPrint(
-            'Download manual retido em pendência porque croqui $id está aberto.',
+        if (updates.filesToDelete.isNotEmpty ||
+            updates.filesToRename.isNotEmpty) {
+          await _storage.applyAtomicFileUpdates(
+            filesToDelete: updates.filesToDelete,
+            filesToRename: updates.filesToRename,
           );
-        } else {
-          if (updates.filesToDelete.isNotEmpty ||
-              updates.filesToRename.isNotEmpty) {
-            await _storage.applyAtomicFileUpdates(
-              filesToDelete: updates.filesToDelete,
-              filesToRename: updates.filesToRename,
-            );
-          }
-          for (final entry in updates.metadataToUpdate.entries) {
-            await _updatePicoMetadata(entry.key, entry.value);
-          }
-          await datasetRepository.updateDatasetAfterDownload(id);
         }
+        for (final entry in updates.metadataToUpdate.entries) {
+          await _updatePicoMetadata(entry.key, entry.value);
+        }
+        await datasetRepository.updateDatasetAfterDownload(id);
         TelemetryService.instance.logAcaoExplorar(id, 'baixar');
       }
 
@@ -616,17 +606,7 @@ class SyncService {
               updates.hasErrors = true;
             } else {
               updates.picosAtualizadosComSucesso.add(newResumo.id);
-              final isExperimental =
-                  datasetRepository.editorDeCroqui.isExperimentalMode.value;
-              if (pico_aberto_id.value == newResumo.id && !isExperimental) {
-                _pendenciasAtomicas[newResumo.id] = picoUpdates;
-                recarga_pendente_pico_id.value = newResumo.id;
-                debugPrint(
-                  'Sincronização em background do croqui ${newResumo.id} retida em pendência (aberto).',
-                );
-              } else {
-                updates.merge(picoUpdates);
-              }
+              updates.merge(picoUpdates);
             }
           }
         }

@@ -7,8 +7,6 @@ import '../services/dataset_repository.dart';
 import '../utils/dataset_resolver.dart';
 import '../services/firebase/app_logger.dart';
 import 'navigation_functions.dart';
-import '../theme/app_colors.dart';
-import '../view_functions/common_functions.dart';
 import '../main.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
@@ -103,119 +101,7 @@ class PageListenableBuilder extends StatelessWidget {
             res.escalada,
           );
 
-          final treeWrapper = context
-              .findAncestorWidgetOfExactType<TreeNavigationWrapper>();
-          final syncService = treeWrapper?.syncService;
-
-          if (syncService == null) return pageContent;
-
-          return ValueListenableBuilder<String?>(
-            valueListenable: syncService.recarga_pendente_pico_id,
-            builder: (context, pendingId, child) {
-              final isExperimental =
-                  datasetRepo.editorDeCroqui.isExperimentalMode.value;
-              if (pendingId == cragId && !isExperimental) {
-                return Stack(
-                  children: [
-                    IgnorePointer(child: child!),
-                    Container(
-                      color: Colors.black.withValues(alpha: 0.8),
-                      child: Center(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 32),
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: context.colors.caveShadow,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: context.colors.graniteEdge,
-                              ),
-                            ),
-                            child: Stack(
-                              children: [
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const SizedBox(height: 8),
-                                    const Icon(
-                                      Icons.history,
-                                      size: 48,
-                                      color: AppColors.brandColor,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Croqui Atualizado',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: context.colors.chalkWhite,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Uma nova versão deste croqui foi instalada em segundo plano. Recarregue a página para acessar as novidades.',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: context.colors.ashGrey,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          syncService.commitPendenciasAtomaticas(
-                                            cragId,
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppColors.brandColor,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 14,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'RECARREGAR',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 1.1,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Positioned(
-                                  top: -12,
-                                  right: -12,
-                                  child: buildFeedbackButton(
-                                    context,
-                                    color: context.colors.chalkWhite,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return child!;
-            },
-            child: pageContent,
-          );
+          return pageContent;
         } catch (e, st) {
           AppLogger.instance.logError(
             'Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st',

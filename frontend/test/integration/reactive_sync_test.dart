@@ -60,12 +60,11 @@ void main() {
       syncService.recarga_pendente_pico_id.value = 'test_pico_1';
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Na home (não há PageListenableBuilder com cragId='test_pico_1'),
-      // O popup "Croqui Atualizado" NÃO deve ser exibido.
+      // Na home, o popup "Croqui Atualizado" nunca é exibido
       expect(find.text('Croqui Atualizado'), findsNothing);
     });
 
-    testWidgets('Fluxo 5.2: Bloqueio e recarga opcional para pico ativo', (
+    testWidgets('Fluxo 5.2: Atualização reativa e contínua para pico ativo', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -94,21 +93,26 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Como o pico está aberto, o pico_aberto_id deve ser 'test_pico_1'
-      expect(syncService.pico_aberto_id.value, 'test_pico_1');
+      expect(find.text('PICO TESTE'), findsOneWidget);
 
-      // Simulamos o término do download no SyncService
-      syncService.recarga_pendente_pico_id.value = 'test_pico_1';
+      // Simula atualização no dataset diretamente (atualização contínua/seamless)
+      final picoV2 = Pico()..nome = 'Pico Teste V2';
+      final croquiV2 = Croqui();
+      datasetRepo.activeDataset.value = TopoDataset(
+        downloadedPicos: [
+          {
+            'id': 'test_pico_1',
+            'data': {'pico': picoV2, 'croqui': croquiV2},
+            'isDownloaded': true,
+          },
+        ],
+        availablePicos: [],
+      );
+
       await tester.pump(const Duration(milliseconds: 500));
 
-      // O popup DEVE aparecer agora
-      expect(find.text('Croqui Atualizado'), findsOneWidget);
-
-      // O usuário clica em recarregar
-      await tester.tap(find.text('RECARREGAR'));
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // O popup deve sumir (pois o pendingId foi setado pra null em commitPendenciasAtomaticas)
+      // A página atualizou instantaneamente sem popups ou bloqueios
+      expect(find.text('PICO TESTE V2'), findsOneWidget);
       expect(find.text('Croqui Atualizado'), findsNothing);
     });
   });
