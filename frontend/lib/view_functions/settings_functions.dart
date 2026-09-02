@@ -15,6 +15,8 @@ import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../navigation/navigation_functions.dart';
+import '../main.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
@@ -89,6 +91,19 @@ Future<bool> conectarEditor(
       );
       await syncService.syncIndex();
       await datasetRepo.init();
+
+      // Auto-download imediato se houver exatamente 1 croqui no índice
+      final croquis = datasetRepo.indiceData.value?.croquis ?? [];
+      if (croquis.length == 1) {
+        final resumo = croquis.first;
+        try {
+          await syncService.downloadCrag(resumo);
+          await datasetRepo.init();
+        } catch (e) {
+          debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
+        }
+      }
+
       TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
       return true;
     } else {
@@ -110,6 +125,22 @@ Future<bool> conectarEditor(
       );
     }
     return false;
+  }
+}
+
+/// Navega para a tela adequada após uma conexão com o editor bem-sucedida.
+///
+/// Se o índice contiver exatamente 1 croqui, abre diretamente na tela do Pico (`PicoNode`).
+/// Se contiver múltiplos croquis (ou nenhum), navega para a aba de exploração (`BrowseNode`).
+void navegarAposConexaoExperimental(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+) {
+  final croquis = datasetRepo.indiceData.value?.croquis ?? [];
+  if (croquis.length == 1) {
+    AppNav.toPico(context, cragId: croquis.first.id);
+  } else {
+    AppNav.toBrowse(context);
   }
 }
 
