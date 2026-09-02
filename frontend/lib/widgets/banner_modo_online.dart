@@ -7,8 +7,8 @@ import '../theme/app_colors.dart';
 /// Banner visual posicionado no topo ou na página de detalhes do pico
 /// indicando navegação em modo online e permitindo salvamento offline com 1 toque.
 class BannerModoOnline extends StatelessWidget {
-  /// Tamanho pré-formatado do download (ex: '18.4 MB').
-  final String tamanhoFormatado;
+  /// Tamanho pré-formatado do download (opcional).
+  final String? tamanhoFormatado;
 
   /// Indica se o pico já se encontra salvo no armazenamento permanente offline.
   final bool isDownloaded;
@@ -21,7 +21,7 @@ class BannerModoOnline extends StatelessWidget {
 
   const BannerModoOnline({
     super.key,
-    required this.tamanhoFormatado,
+    this.tamanhoFormatado,
     required this.isDownloaded,
     this.progressoDownload,
     required this.onSalvarPraPedra,
@@ -139,9 +139,9 @@ class BannerModoOnline extends StatelessWidget {
                   size: 18,
                   color: Colors.white,
                 ),
-                label: Text(
-                  'Salvar pra Pedra ($tamanhoFormatado)',
-                  style: const TextStyle(
+                label: const Text(
+                  'Salvar pra Pedra',
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
