@@ -60,13 +60,6 @@ void main() {
       expect(normalizeEditorUrl('https://example.com/'), 'https://example.com');
       expect(normalizeEditorUrl('example.com/'), 'https://example.com');
     });
-
-    test('deve preservar aresta-zip://', () {
-      expect(
-        normalizeEditorUrl('aresta-zip:///caminho/do/arquivo.croqui'),
-        'aresta-zip:///caminho/do/arquivo.croqui',
-      );
-    });
   });
 
   group('conectarEditor', () {
@@ -114,9 +107,6 @@ void main() {
     testWidgets('deve adicionar https se faltar e remover a barra final', (
       WidgetTester tester,
     ) async {
-      // This test is indirect, we test the HTTP request that is actually sent.
-      // Wait, we can't easily intercept the request inside conectarEditor because it hardcodes ZipInterceptorClient
-      // But we can test other failures
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -140,7 +130,7 @@ void main() {
       expect(result, isFalse);
     });
 
-    testWidgets('deve rejeitar arquivos .zip', (WidgetTester tester) async {
+    testWidgets('deve rejeitar arquivos .zip e .croqui', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -164,7 +154,9 @@ void main() {
 
       await tester.pump();
       expect(
-        find.text('Aviso: Arquivos .zip não são mais suportados. Use .croqui'),
+        find.text(
+          'Aviso: Importação de arquivos locais foi descontinuada. Conecte diretamente via Live Reload / URL.',
+        ),
         findsOneWidget,
       );
     });
