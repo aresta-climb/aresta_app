@@ -191,10 +191,3 @@ class MapasCarrosselNode extends NavNode {
   String toString() =>
       'MapasCarrosselNode(${mapas.map((m) => m.mapaCaminhoImagem.split('/').last).join(',')})';
 }
-
-/// Typedefs em português para nós modais e carrosséis.
-typedef NoTextoModal = TextNode;
-typedef NoCarrosselTexto = TextCarouselNode;
-typedef NoCarrosselMapas = MapasCarrosselNode;
-typedef ItemCarrosselMapa = CarrosselItemData;
-typedef ItemCarrosselTexto = TextCarouselData;

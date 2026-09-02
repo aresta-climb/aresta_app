@@ -71,7 +71,3 @@ abstract class PicoContextNode extends NavNode {
     return runtimeType == other.runtimeType && cragId == other.cragId;
   }
 }
-
-/// Typedefs para conveniência e conformidade com nomenclatura em português.
-typedef NoNavegacao = NavNode;
-typedef NoContextoPico = PicoContextNode;

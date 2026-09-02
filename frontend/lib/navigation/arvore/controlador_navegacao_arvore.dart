@@ -68,6 +68,3 @@ class TreeNavigationController extends ChangeNotifier {
   /// Apelido em português brasileiro para [goHome].
   void irParaHome() => goHome();
 }
-
-/// Typedef em português brasileiro para o controlador de navegação.
-typedef ControladorNavegacaoArvore = TreeNavigationController;

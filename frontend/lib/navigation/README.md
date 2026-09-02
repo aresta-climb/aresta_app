@@ -18,11 +18,11 @@ lib/navigation/
 ├── arvore/
 │   ├── no_navegacao.dart              - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
 │   ├── nos_globais.dart               - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, etc.)
-│   ├── nos_pico.dart                  - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, MapaInterativoNode, etc.)
-│   ├── nos_modais.dart                - Nós para modais e fluxos de confirmação (ConfirmacaoSaidaModalNode)
-│   ├── modelo_arvore_navegacao.dart   - Modelo de domínio puro com operações de pilha, histórico, canonical path e prevenção de loops
-│   └── controlador_navegacao_arvore.dart - Controlador reativo (ChangeNotifier) que expõe o estado da árvore
-├── navigation_tree.dart               - Fachada de re-exports e aliases para compatibilidade com o restante do app
+│   ├── nos_pico.dart                  - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
+│   ├── nos_modais.dart                - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
+│   ├── modelo_arvore_navegacao.dart   - Modelo de domínio puro ArvoreNavegacao com operações de pilha e prevenção de loops
+│   └── controlador_navegacao_arvore.dart - Controlador reativo TreeNavigationController (ChangeNotifier)
+├── navigation_tree.dart               - Fachada de re-exports dos módulos da árvore para importação unificada
 ├── page_listenable_builder.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
 └── navigation_functions.dart          - API pública simplificada AppNav
 ```
@@ -32,16 +32,16 @@ Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcion
 - **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
 
 ### `arvore/modelo_arvore_navegacao.dart`
-Encapsula as regras de domínio puras da árvore de navegação, desacopladas do framework Flutter:
+Encapsula as regras de domínio puras da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
 - Gestão do nó raiz e nó atual.
 - Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
 - Cálculo de profundidade e caminho canônico.
 
 ### `arvore/controlador_navegacao_arvore.dart`
-Controlador de estado que estende `ChangeNotifier`, orquestrando a navegação reativa e notificando a interface quando o nó ativo transiciona.
+Controlador de estado `TreeNavigationController` que estende `ChangeNotifier`, orquestrando a navegação reativa e notificando a interface quando o nó ativo transiciona.
 
 ### `navigation_tree.dart`
-Fachada principal que reexporta todos os módulos de `arvore/` e expõe aliases tipados como `TreeNavigationController` para garantir compatibilidade e uma importação limpa.
+Fachada principal que reexporta todos os módulos de `arvore/` para garantir uma importação limpa e centralizada em todo o app.
 
 ### `page_listenable_builder.dart`
 É o elo de **Hot-Reload** da UI. 

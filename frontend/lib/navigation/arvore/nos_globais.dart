@@ -140,12 +140,3 @@ class MeusCroquisNode extends NavNode {
   @override
   String toString() => 'MeusCroquisNode';
 }
-
-/// Typedefs para conveniência em português.
-typedef NoHome = HomeNode;
-typedef NoBuscar = BrowseNode;
-typedef NoMapaGlobal = MapaGlobalNode;
-typedef NoConfiguracoes = SettingsNode;
-typedef NoComunidade = ComunidadeNode;
-typedef NoSobreTime = SobreTimeNode;
-typedef NoMeusCroquis = MeusCroquisNode;

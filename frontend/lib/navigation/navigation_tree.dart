@@ -5,6 +5,7 @@
 ///
 /// Este módulo centraliza os nós de tela, nós de pico, nós modais, o modelo de domínio
 /// [ArvoreNavegacao] e o controlador reativo [TreeNavigationController].
+library;
 
 export 'arvore/no_navegacao.dart';
 export 'arvore/nos_globais.dart';

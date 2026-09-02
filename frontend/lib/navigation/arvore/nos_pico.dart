@@ -281,14 +281,3 @@ class GPSNode extends PicoContextNode {
   @override
   String toString() => 'GPSNode($cragId)';
 }
-
-/// Typedefs em português para os nós de pico.
-typedef NoPico = PicoNode;
-typedef NoSetores = SetoresNode;
-typedef NoSetor = SetorNode;
-typedef NoGrupo = GrupoNode;
-typedef NoVia = ViaNode;
-typedef NoExplorarLocal = ExplorarLocalNode;
-typedef NoComunidadePico = ComunidadePicoNode;
-typedef NoApoiePico = ApoiePicoNode;
-typedef NoGPS = GPSNode;

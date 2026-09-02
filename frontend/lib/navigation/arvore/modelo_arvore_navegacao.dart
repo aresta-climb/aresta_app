@@ -97,7 +97,3 @@ class ArvoreNavegacao {
   @override
   String toString() => 'ArvoreNavegacao(noAtual: $noAtual, profundidade: $profundidade)';
 }
-
-/// Typedef para compatibilidade e nomenclatura alternativa.
-typedef NavigationTreeModel = ArvoreNavegacao;
-typedef ModeloArvoreNavegacao = ArvoreNavegacao;
