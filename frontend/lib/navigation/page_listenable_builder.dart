@@ -7,7 +7,6 @@ import '../services/dataset_repository.dart';
 import '../utils/dataset_resolver.dart';
 import '../services/firebase/app_logger.dart';
 import 'navigation_functions.dart';
-import '../main.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
 /// redesenha a página atual com os dados mais recentes do croqui.

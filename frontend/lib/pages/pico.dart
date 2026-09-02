@@ -18,12 +18,10 @@ import '../theme/app_colors.dart';
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
 import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
-import '../utils/formatador_tamanho.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
 import '../services/http/servico_croqui_online.dart';
-import '../services/http/sync_service.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;

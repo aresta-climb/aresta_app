@@ -211,8 +211,7 @@ class DatasetRepository {
                 'totalMultiplasEnfiadas':
                     resumo.precomputados.totalMultiplasEnfiadas,
                 'totalHighlines': resumo.precomputados.totalHighlines,
-                if (tamanhoBytes != null)
-                  'tamanhoDownloadBytes': tamanhoBytes,
+                'tamanhoDownloadBytes': ?tamanhoBytes,
               },
           };
 

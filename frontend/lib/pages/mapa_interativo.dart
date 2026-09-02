@@ -1,20 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/utils/croqui_map_index.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:frontend/constants/network_constants.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
-import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
