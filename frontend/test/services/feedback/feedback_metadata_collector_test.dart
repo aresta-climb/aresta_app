@@ -103,5 +103,31 @@ void main() {
 
       FeedbackMetadataCollector.globalActiveNodeOverride = null;
     });
+
+    test('gera caminho canônico mais curto para nós profundos de navegação', () {
+      const viaNode = ViaNode(
+        cragId: 'bau',
+        setorNome: 'Falésia Central',
+        grupoNome: 'Bloco A',
+        escaladaNome: 'Via Láctea',
+        parent: HomeNode(),
+      );
+
+      expect(
+        viaNode.obterCaminhoCurto(),
+        'Início -> Pico (bau) -> Grupo (Bloco A) -> Setor (Falésia Central) -> Via (Via Láctea)',
+      );
+
+      const setorSemGrupo = SetorNode(
+        cragId: 'bau',
+        setorNome: 'Falésia Sul',
+        parent: HomeNode(),
+      );
+
+      expect(
+        setorSemGrupo.obterCaminhoCurto(),
+        'Início -> Pico (bau) -> Setor (Falésia Sul)',
+      );
+    });
   });
 }
