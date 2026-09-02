@@ -18,7 +18,7 @@ Aresta Climb_App/
 
 O Aresta Climb é um guia de escalada digital. O app permite que alpinistas baixem informações completas de picos — croquis, betas, mapas GPS e descrições — para acesso **completamente offline** no campo, sem depender de sinal de celular.
 
-Os dados são distribuídos no formato `.croqui` (um ZIP com ofuscação XOR), podendo ser baixados do nosso servidor remoto ou importados de repositórios locais via **Ghost Protocol** (`aresta-zip://`).
+Os dados são distribuídos no formato `.binarypb` e imagens WebP, sincronizados a partir do nosso servidor remoto ou consumidos em tempo real pelo Live Reload do Editor Desktop.
 
 ## Arquitetura e Padrões
 
@@ -37,7 +37,7 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 | [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
 | [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: MVVM, serviços, páginas, funções e widgets |
 | [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, Modo Experimental e ciclo de importação |
-| [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e Ghost Protocol |
+| [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e streaming sob demanda |
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
 
