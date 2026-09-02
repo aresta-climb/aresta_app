@@ -53,7 +53,7 @@ void main() {
     });
 
     testWidgets(
-      'Deve abrir bottom sheet de download ao clicar se nao baixado',
+      'Deve acionar onDownload ao clicar no card se onOpen nao fornecido',
       (WidgetTester tester) async {
         bool downloadChamado = false;
 
@@ -73,13 +73,7 @@ void main() {
 
         // Clicar no card
         await tester.tap(find.text('PEDRA DO BAÚ'));
-        await tester.pumpAndSettle();
-
-        // Verifica se abriu o bottom sheet com botão BAIXAR CROQUI
-        expect(find.text('BAIXAR CROQUI'), findsOneWidget);
-
-        // Clicar no botão de baixar no bottom sheet
-        await tester.tap(find.text('BAIXAR CROQUI'));
+        await tester.pump();
 
         expect(downloadChamado, isTrue);
       },

@@ -57,7 +57,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
   }
 
-  void _handleDownload(Map<String, dynamic> crag) async {
+  @visibleForTesting
+  void handleDownload(Map<String, dynamic> crag) async {
     final name = crag['nome'] ?? 'Pico';
     final String id = crag['id'];
 
@@ -487,7 +488,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   crag: pico,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
-                  onDownload: () => _handleDownload(pico),
+                  onDownload: () => handleDownload(pico),
                   onOpen: () {
                     final repo = DatasetRepository.instance;
                     if (repo != null) {

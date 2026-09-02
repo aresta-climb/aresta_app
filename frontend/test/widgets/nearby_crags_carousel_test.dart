@@ -57,6 +57,8 @@ void main() {
     late MockGeolocatorPlatform mockGeolocator;
     late FakeSyncService fakeSyncService;
     late Directory tempDir;
+    late Map<String, dynamic> picoA;
+    late Map<String, dynamic> picoB;
 
     setUp(() async {
       TelemetryService.instance = MockTelemetryService();
@@ -70,7 +72,7 @@ void main() {
       final editorDeCroqui = EditorDeCroqui();
       final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
       
-      final picoA = <String, dynamic>{
+      picoA = <String, dynamic>{
         'id': 'pico_a',
         'nome': 'Pico A',
         'caminhoRelativo': 'picos/pico_a/pico_a.binarypb',
@@ -79,7 +81,7 @@ void main() {
         'isDownloaded': false,
         'thumbnailUrl': '',
       };
-      final picoB = <String, dynamic>{
+      picoB = <String, dynamic>{
         'id': 'pico_b',
         'nome': 'Pico B',
         'caminhoRelativo': 'picos/pico_b/pico_b.binarypb',
@@ -516,13 +518,9 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Toca no card do Pico A para abrir o bottom sheet
-        await tester.tap(find.text('PICO A'));
-        await tester.pumpAndSettle();
-
-        // No bottom sheet, clica em BAIXAR CROQUI
-        expect(find.text('BAIXAR CROQUI'), findsOneWidget);
-        await tester.tap(find.text('BAIXAR CROQUI'));
+        // Aciona o download do Pico A
+        final carouselState = tester.state(find.byType(NearbyCragsCarousel)) as dynamic;
+        carouselState.handleDownload(picoA);
         await tester.pumpAndSettle();
 
         expect(fakeSyncService.downloadedResumo?.id, 'pico_a');
@@ -589,11 +587,10 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('PICO A'));
+        // Aciona o download do Pico A quando rede estiver desabilitada
+        final carouselState = tester.state(find.byType(NearbyCragsCarousel)) as dynamic;
+        carouselState.handleDownload(picoA);
         await tester.pumpAndSettle();
-
-        await tester.tap(find.text('BAIXAR CROQUI'));
-        await tester.pump();
 
         expect(
           find.text('Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.'),
