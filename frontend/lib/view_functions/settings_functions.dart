@@ -235,6 +235,8 @@ void mostrarDialogConexao(
                           urlController.text = scannedUrl;
                         }
                       },
+                    ),
+                  ),
                   const SizedBox(height: 14),
                   GestureDetector(
                     onTap: () async {
