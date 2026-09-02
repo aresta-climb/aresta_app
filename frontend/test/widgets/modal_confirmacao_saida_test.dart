@@ -44,7 +44,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Salvar Offline (18.4 MB)'), findsOneWidget);
+      expect(find.text('Salvar Offline'), findsOneWidget);
       expect(find.text('Sair sem Salvar'), findsOneWidget);
     });
 
@@ -77,7 +77,7 @@ void main() {
       await tester.tap(find.text('Abrir Guardião'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Salvar Offline (12 MB)'));
+      await tester.tap(find.text('Salvar Offline'));
       await tester.pumpAndSettle();
 
       expect(clicouSalvar, isTrue);

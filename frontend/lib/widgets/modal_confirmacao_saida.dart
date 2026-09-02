@@ -19,8 +19,8 @@ class ModalConfirmacaoSaida extends StatelessWidget {
   /// Nome do pico sendo explorado.
   final String nomePico;
 
-  /// Tamanho pré-formatado do download (ex: '18.4 MB').
-  final String tamanhoFormatado;
+  /// Tamanho pré-formatado do download (opcional).
+  final String? tamanhoFormatado;
 
   /// Ação executada ao escolher salvar o croqui offline.
   final VoidCallback onSalvar;
@@ -31,7 +31,7 @@ class ModalConfirmacaoSaida extends StatelessWidget {
   const ModalConfirmacaoSaida({
     super.key,
     required this.nomePico,
-    required this.tamanhoFormatado,
+    this.tamanhoFormatado,
     required this.onSalvar,
     required this.onSairSemSalvar,
   });
@@ -43,7 +43,7 @@ class ModalConfirmacaoSaida extends StatelessWidget {
   static Future<void> mostrar({
     required BuildContext context,
     required String nomePico,
-    required String tamanhoFormatado,
+    String? tamanhoFormatado,
     required VoidCallback onSalvar,
     required VoidCallback onSairSemSalvar,
     bool forcarExibicao = false,
@@ -148,9 +148,9 @@ class ModalConfirmacaoSaida extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onSalvar,
                 icon: const Icon(Icons.download, color: Colors.white, size: 18),
-                label: Text(
-                  'Salvar Offline ($tamanhoFormatado)',
-                  style: const TextStyle(
+                label: const Text(
+                  'Salvar Offline',
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
