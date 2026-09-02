@@ -594,16 +594,22 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           );
 
                           if (confirm == true && context.mounted) {
+                            // Garante que o croqui permaneça em memória para transição suave para modo online
+                            widget.datasetRepo.gerenciadorSessaoOnline
+                                .registrarCroquiOnline(
+                              widget.cragId,
+                              widget.croqui,
+                            );
+
                             final success = await widget.datasetRepo.deleteCrag(
                               widget.cragId,
                             );
                             if (context.mounted) {
-                              AppNav.home(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     success
-                                        ? 'Guia excluído.'
+                                        ? 'Guia removido do armazenamento offline. Navegando em modo online.'
                                         : 'Erro ao excluir guia.',
                                   ),
                                   backgroundColor: success

@@ -316,6 +316,14 @@ class DatasetRepository {
     final directory = await getApplicationDocumentsDirectory();
     final downloadsPath = editorDeCroqui.downloadsPath(directory.path);
 
+    // Se o croqui existia localmente, preserva em memória na sessão online
+    // para permitir transição suave caso o usuário esteja navegando nele.
+    final localCroqui =
+        await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
+    if (localCroqui != null) {
+      gerenciadorSessaoOnline.registrarCroquiOnline(id, localCroqui);
+    }
+
     final sucesso =
         await gerenciadorArquivosLocais.excluirPico(downloadsPath, id);
     if (sucesso) {

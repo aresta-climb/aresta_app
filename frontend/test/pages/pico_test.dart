@@ -10,6 +10,15 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 
+class _FakeDatasetRepository extends DatasetRepository {
+  _FakeDatasetRepository() : super(editorDeCroqui: EditorDeCroqui());
+
+  @override
+  Future<bool> deleteCrag(String id) async {
+    return true;
+  }
+}
+
 void main() {
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (
     tester,
@@ -58,6 +67,46 @@ void main() {
     expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'excluir');
   });
+
+  testWidgets(
+    'PicoDetailsPage ao confirmar exclusão transiciona para modo online registrando croqui em memória',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final croqui = Croqui();
+      final pico = Pico()..nome = 'Pico Teste';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PicoDetailsPage(
+            pico: pico,
+            croqui: croqui,
+            cragId: 'crag1',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      );
+
+      // Clica na lixeira
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      // Confirma no modal de exclusão
+      expect(find.text('Excluir?'), findsOneWidget);
+      await tester.tap(find.text('EXCLUIR'));
+      await tester.pumpAndSettle();
+
+      // Verifica se o croqui foi preservado na sessão online para transição suave
+      expect(
+        datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline('crag1'),
+        equals(croqui),
+      );
+      // E que a página continua montada com o snackbar exibido
+      expect(
+        find.text('Guia removido do armazenamento offline. Navegando em modo online.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('PicoDetailsPage should call logAcaoCroqui on FAB tap', (
     tester,
