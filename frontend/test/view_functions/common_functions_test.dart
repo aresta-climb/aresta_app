@@ -470,7 +470,11 @@ group('handleManualSync', () {
   testWidgets('deve exibir SnackBar de sucesso se status for updated', (WidgetTester tester) async {
     final mockSync = MockSyncService();
     final mockRepo = MockDatasetRepository();
-    mockSync._status.value = SyncStatus.justUpdated; // Qualquer coisa diferente de noNewUpdates e updated
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: [],
+      downloadedPicos: [{'id': 'pico_1', 'nome': 'Pico 1'}],
+    );
+    mockSync._status.value = SyncStatus.justUpdated;
 
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(extensions: const [AppColors.light]),
@@ -488,6 +492,60 @@ group('handleManualSync', () {
     await tester.pumpAndSettle();
 
     expect(find.text('Croquis foram atualizados!'), findsOneWidget);
+  });
+
+  testWidgets('quando downloadedPicos for vazio e status for justUpdated, deve exibir Catálogo atualizado com sucesso!', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: [],
+      downloadedPicos: [],
+    );
+    mockSync._status.value = SyncStatus.justUpdated;
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catálogo atualizado com sucesso!'), findsOneWidget);
+  });
+
+  testWidgets('quando downloadedPicos for vazio e status for noNewUpdates, deve exibir Catálogo já está atualizado.', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockRepo.activeDataset.value = TopoDataset(
+      availablePicos: [],
+      downloadedPicos: [],
+    );
+    mockSync._status.value = SyncStatus.noNewUpdates;
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catálogo já está atualizado.'), findsOneWidget);
   });
 });
 

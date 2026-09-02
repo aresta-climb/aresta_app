@@ -30,7 +30,7 @@ void main() {
   }
 
   testWidgets(
-    'HomePage pull-to-refresh quando não há croquis baixados mostra snackbar adequado',
+    'HomePage pull-to-refresh quando não há croquis baixados sincroniza o catálogo',
     (tester) async {
       final mockRepo = MockDatasetRepository();
       final mockSync = MockSyncService();
@@ -41,8 +41,11 @@ void main() {
       when(() => mockRepo.activeDataset).thenReturn(activeDataset);
       when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
       when(
+        () => mockSync.syncIndex(auto: false),
+      ).thenAnswer((_) async => <String>[]);
+      when(
         () => mockSync.syncStatus,
-      ).thenReturn(ValueNotifier(SyncStatus.updated));
+      ).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
       when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
 
       await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
@@ -57,10 +60,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // Wait for refresh logic
 
       expect(
-        find.text('Nenhum croqui baixado para atualizar.'),
+        find.text('Catálogo já está atualizado.'),
         findsOneWidget,
       );
-      verifyNever(() => mockSync.syncIndex(auto: false));
+      verify(() => mockSync.syncIndex(auto: false)).called(1);
     },
   );
 

@@ -2145,6 +2145,204 @@ void main() {
         );
       },
     );
+
+    test(
+      'syncIndex em modo experimental deve verificar atualizações e baixar croquis alterados no editor',
+      () async {
+        final picoId = 'br_mg_igarape_pedra_grande';
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value = 'http://127.0.0.1:8080';
+
+        final expDownloadsDir = Directory(editor.downloadsPath(tempDir.path));
+        final picoDir = Directory('${expDownloadsDir.path}/$picoId');
+        await picoDir.create(recursive: true);
+
+        final oldCroqui = Croqui()
+          ..picos.add(Pico()..nome = 'Versao Antiga');
+        final oldBytes = oldCroqui.writeToBuffer();
+        final oldHash = sha256.convert(oldBytes).toString();
+
+        await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldBytes);
+
+        final oldIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pedra Grande'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = oldHash,
+          );
+        final oldIndiceFile = File(editor.indicePath(tempDir.path));
+        await oldIndiceFile.parent.create(recursive: true);
+        await oldIndiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+        final newCroqui = Croqui()
+          ..picos.add(Pico()..nome = 'Versao Nova Atualizada');
+        final newBytes = newCroqui.writeToBuffer();
+        final newHash = sha256.convert(newBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pedra Grande'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = newHash,
+          );
+
+        final fakeClient = FakeClient(newIndice, {
+          '$picoId/$picoId.binarypb': newBytes,
+        });
+
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          1,
+        );
+
+        // O arquivo físico do croqui no disco do modo experimental deve ter sido atualizado com a nova versão
+        final updatedFileBytes = await File('${picoDir.path}/$picoId.binarypb').readAsBytes();
+        final updatedCroqui = Croqui.fromBuffer(updatedFileBytes);
+        expect(updatedCroqui.picos.first.nome, 'Versao Nova Atualizada');
+
+        // E o índice do modo experimental deve ter sido persistido com o novo resumo
+        final updatedIndiceBytes = await File(editor.indicePath(tempDir.path)).readAsBytes();
+        final updatedIndice = Indice.fromBuffer(updatedIndiceBytes);
+        expect(updatedIndice.croquis.first.checksumSha256Croqui, newHash);
+      },
+    );
+
+    test(
+      'Modo Experimental - syncIndex deve atualizar fotos e mídias externas modificadas no editor',
+      () async {
+        final picoId = 'pico_exp_midias';
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value = 'http://127.0.0.1:8080';
+
+        final expDownloadsDir = Directory(editor.downloadsPath(tempDir.path));
+        final picoDir = Directory('${expDownloadsDir.path}/$picoId');
+        await picoDir.create(recursive: true);
+
+        // Versão antiga: imagem antiga no disco
+        final oldImgFile = File('${picoDir.path}/foto_topo.webp');
+        await oldImgFile.writeAsBytes([1, 2, 3]);
+        final oldImgHash = sha256.convert([1, 2, 3]).toString();
+
+        final oldCroqui = Croqui()
+          ..picos.add(Pico()..nome = 'Pico Teste')
+          ..arquivosExternos.add(
+            ArquivoExterno()
+              ..caminho = 'foto_topo.webp'
+              ..checksumSha256 = oldImgHash,
+          );
+        final oldBytes = oldCroqui.writeToBuffer();
+        final oldHash = sha256.convert(oldBytes).toString();
+        await File('${picoDir.path}/$picoId.binarypb').writeAsBytes(oldBytes);
+
+        final oldIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Teste'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = oldHash,
+          );
+        final oldIndiceFile = File(editor.indicePath(tempDir.path));
+        await oldIndiceFile.parent.create(recursive: true);
+        await oldIndiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+        // Nova versão: nova imagem atualizada pelo editor
+        final newImgBytes = [9, 9, 9, 9];
+        final newImgHash = sha256.convert(newImgBytes).toString();
+
+        final newCroqui = Croqui()
+          ..picos.add(Pico()..nome = 'Pico Teste')
+          ..arquivosExternos.add(
+            ArquivoExterno()
+              ..caminho = 'foto_topo.webp'
+              ..checksumSha256 = newImgHash,
+          );
+        final newBytes = newCroqui.writeToBuffer();
+        final newHash = sha256.convert(newBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Teste'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = newHash,
+          );
+
+        final fakeClient = FakeClient(newIndice, {
+          '$picoId/$picoId.binarypb': newBytes,
+          '$picoId/foto_topo.webp': newImgBytes,
+        });
+
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
+          1,
+        );
+
+        // A imagem externa deve ter sido atualizada para os novos bytes
+        final updatedImgBytes = await oldImgFile.readAsBytes();
+        expect(updatedImgBytes, newImgBytes);
+      },
+    );
+
+    test(
+      'Modo Experimental - syncIndex não deve poluir a pasta oficial de thumbnails',
+      () async {
+        final picoId = 'pico_exp_sem_thumb_oficial';
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value = 'http://127.0.0.1:8080';
+
+        final officialThumbnailsDir = Directory('${tempDir.path}/thumbnails');
+        if (officialThumbnailsDir.existsSync()) {
+          officialThumbnailsDir.deleteSync(recursive: true);
+        }
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Teste'
+              ..caminhoRelativo = '$picoId/$picoId.binarypb'
+              ..checksumSha256Croqui = 'HASH_CROQUI'
+              ..checksumSha256Thumbnail = 'HASH_THUMB',
+          );
+
+        final fakeClient = FakeClient(newIndice);
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        await syncService.syncIndex();
+
+        // Pasta oficial de thumbnails não deve ter sido criada/populada em modo experimental
+        expect(
+          File('${officialThumbnailsDir.path}/$picoId.webp').existsSync(),
+          isFalse,
+        );
+      },
+    );
   });
 }
 

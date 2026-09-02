@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,12 +27,34 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   bool _isLoading = true;
   bool _permissionDenied = false;
+  double? _lastUserLat;
+  double? _lastUserLon;
+  StreamSubscription<Position>? _positionSubscription;
   List<Map<String, dynamic>> _closestCrags = [];
 
   @override
   void initState() {
     super.initState();
+    DatasetRepository.instance?.activeDataset.addListener(_onDatasetOrResetChanged);
+    DatasetRepository.instance?.homeResetTrigger.addListener(_onDatasetOrResetChanged);
     _initLocation();
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    DatasetRepository.instance?.activeDataset.removeListener(_onDatasetOrResetChanged);
+    DatasetRepository.instance?.homeResetTrigger.removeListener(_onDatasetOrResetChanged);
+    super.dispose();
+  }
+
+  void _onDatasetOrResetChanged() {
+    if (!mounted) return;
+    if (_lastUserLat != null && _lastUserLon != null) {
+      _calculateDistances(_lastUserLat!, _lastUserLon!);
+    } else {
+      _fallbackToCachedLocationOrFinish();
+    }
   }
 
   void _handleDownload(Map<String, dynamic> crag) async {
@@ -101,9 +124,16 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
 
     if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _permissionDenied = true;
+      });
       await _fallbackToCachedLocationOrFinish();
       return;
     }
+
+    setState(() {
+      _permissionDenied = false;
+    });
 
     await _fetchGpsLocation();
   }
@@ -117,61 +147,108 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     LocationPermission permission = await Geolocator.requestPermission();
     if (!mounted) return;
 
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied) {
+      setState(() {
+        _isLoading = false;
+        _permissionDenied = true;
+      });
       await _fallbackToCachedLocationOrFinish();
-    } else {
-      await _fetchGpsLocation();
+      return;
     }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _isLoading = false;
+        _permissionDenied = true;
+      });
+      await Geolocator.openAppSettings();
+      await _fallbackToCachedLocationOrFinish();
+      return;
+    }
+
+    setState(() {
+      _permissionDenied = false;
+    });
+    await _fetchGpsLocation();
+  }
+
+  void _applyPosition(Position position) {
+    if (!mounted) return;
+    _lastUserLat = position.latitude;
+    _lastUserLon = position.longitude;
+    _saveLocationToCache(position.latitude, position.longitude);
+    _calculateDistances(position.latitude, position.longitude);
+  }
+
+  void _startPositionStream() {
+    _positionSubscription?.cancel();
+    try {
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      ).listen(
+        (Position position) {
+          _applyPosition(position);
+        },
+        onError: (_) {},
+        cancelOnError: false,
+      );
+    } catch (_) {}
   }
 
   /// Tenta resolver a localização por satélite com degradação progressiva de precisão.
   Future<void> _fetchGpsLocation() async {
     if (!mounted) return;
+
+    // 1. Tenta obter a última posição conhecida do SO (instantâneo)
     try {
-      Position? position;
-
-      try {
-        // 1. Tenta GPS de alta precisão (funciona offline via satélites)
-        position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 3),
-          ),
-        );
-      } catch (_) {
-        // 2. Se demorar ou falhar, tenta precisão baixa
-        try {
-          position = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.low,
-              timeLimit: Duration(seconds: 2),
-            ),
-          );
-        } catch (_) {
-          // 3. Fallback para última posição conhecida do SO
-          position = await Geolocator.getLastKnownPosition();
-        }
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null && mounted) {
+        _applyPosition(lastKnown);
       }
+    } catch (_) {}
 
-      if (!mounted) return;
+    // 2. Se ainda não temos coordenadas, tenta o cache de SharedPreferences
+    if (_lastUserLat == null) {
+      await _fallbackToCachedLocationOrFinish();
+    }
 
-      if (position != null) {
-        _saveLocationToCache(position.latitude, position.longitude);
-        _calculateDistances(position.latitude, position.longitude);
+    // 3. Se já temos localização resolvida, encerra a busca inicial
+    if (_lastUserLat != null) {
+      return;
+    }
+
+    // 4. Solicita a posição GPS atual com precisão alta (necessária no Android/Emulador)
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      if (mounted) {
+        _applyPosition(position);
         return;
       }
     } catch (_) {
-      // Falhas no GPS ativo direcionam para o cache local
+      // Se a requisição síncrona expirar, inicia o stream contínuo para capturar quando o sinal chegar
+      _startPositionStream();
     }
 
-    if (!mounted) return;
-    // 4. Se todas as tentativas ativas falharem, usa coordenadas salvas em disco
-    await _fallbackToCachedLocationOrFinish();
+    if (mounted && _lastUserLat == null) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   /// Salva coordenadas de sucesso em disco local (SharedPreferences).
   Future<void> _saveLocationToCache(double lat, double lon) async {
+    _lastUserLat = lat;
+    _lastUserLon = lon;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_kLastKnownLatKey, lat);
@@ -191,6 +268,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       if (!mounted) return;
 
       if (cachedLat != null && cachedLon != null) {
+        _lastUserLat = cachedLat;
+        _lastUserLon = cachedLon;
         _calculateDistances(cachedLat, cachedLon);
         return;
       }
@@ -207,6 +286,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   /// Calcula as distâncias geodésicas entre o usuário e todos os picos do índice local.
   void _calculateDistances(double userLat, double userLon) {
+    _lastUserLat = userLat;
+    _lastUserLon = userLon;
+
     final datasetRepo = DatasetRepository.instance;
     final availablePicos =
         datasetRepo?.activeDataset.value?.availablePicos ?? [];
@@ -290,7 +372,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   Widget _buildContent() {
-    if (_isLoading) {
+    final isDatasetLoading =
+        DatasetRepository.instance?.activeDataset.value == null;
+
+    if (_isLoading || isDatasetLoading) {
       return Center(
         child: CircularProgressIndicator(color: context.colors.rustIron),
       );
@@ -332,6 +417,29 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               child: const Text(
                 'Permitir Localização',
                 style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_lastUserLat == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Aguardando sinal de GPS...',
+              style: TextStyle(color: context.colors.ashGrey),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _initLocation,
+              icon: Icon(Icons.refresh, size: 16, color: context.colors.rustIron),
+              label: Text(
+                'Tentar novamente',
+                style: TextStyle(color: context.colors.rustIron, fontSize: 13),
               ),
             ),
           ],

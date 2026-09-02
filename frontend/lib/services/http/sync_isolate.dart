@@ -18,12 +18,14 @@ class DownloadIsolateArgs {
   final String downloadsDirPath;
   final String baseUrl;
   final SendPort sendPort;
+  final Duration timeoutDuration;
 
   DownloadIsolateArgs({
     required this.newResumoBytes,
     required this.downloadsDirPath,
     required this.baseUrl,
     required this.sendPort,
+    this.timeoutDuration = const Duration(seconds: 15),
   });
 }
 
@@ -62,8 +64,8 @@ class DownloadIsolateResult {
 /// Como este método apenas baixa para `.tmp` e não faz o `rename` dos arquivos originais,
 /// ele nunca interfere na leitura em disco que o App possa estar fazendo na Thread principal.
 Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
+  final client = http.Client();
   try {
-    final client = http.Client();
     final storage = SyncStorage();
     final newResumo = ResumoCroqui.fromBuffer(args.newResumoBytes);
     final id = newResumo.id;
@@ -78,22 +80,28 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
       String tmpPath,
       String expectedHash,
     ) async {
-      final isTmpValid = await storage.validateExistingTmpFile(
-        tmpPath,
-        expectedHash,
-      );
-      if (isTmpValid) return true;
-      final cacheBustingUrl = fileUrl.contains('?')
-          ? '$fileUrl&v=$expectedHash'
-          : '$fileUrl?v=$expectedHash';
-      final response = await client.get(Uri.parse(cacheBustingUrl));
-      if (response.statusCode != 200) return false;
-      await storage.saveTmpFile(tmpPath, response.bodyBytes);
-      return await storage.validateExistingTmpFile(tmpPath, expectedHash);
+      try {
+        final isTmpValid = await storage.validateExistingTmpFile(
+          tmpPath,
+          expectedHash,
+        );
+        if (isTmpValid) return true;
+        final cacheBustingUrl = fileUrl.contains('?')
+            ? '$fileUrl&v=$expectedHash'
+            : '$fileUrl?v=$expectedHash';
+        final response = await client
+            .get(Uri.parse(cacheBustingUrl))
+            .timeout(args.timeoutDuration);
+        if (response.statusCode != 200) return false;
+        await storage.saveTmpFile(tmpPath, response.bodyBytes);
+        return await storage.validateExistingTmpFile(tmpPath, expectedHash);
+      } catch (_) {
+        return false;
+      }
     }
 
-    // 1% progress for starting/downloading main file
-    args.sendPort.send(0.01);
+    // Progresso inicial de 5% para início do download do arquivo principal
+    args.sendPort.send(0.05);
 
     final mainFileSuccess = await downloadAtomic(
       url,
@@ -105,7 +113,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         DownloadIsolateResult(
           filesToDelete: [],
           filesToRename: {},
-          error: 'Falha ao baixar binarypb',
+          error: 'Falha ao baixar binarypb de $url',
         ),
       );
       return;
@@ -179,7 +187,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     filesToRename[tmpPicoFilePath] = picoFilePath;
 
     final int totalFiles = newPicoData.arquivosExternos.length;
-    int completedFiles = 0;
+    int processedFiles = 0;
 
     if (totalFiles == 0) {
       args.sendPort.send(1.0);
@@ -216,14 +224,18 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
               filesToRename['$picoDirPath/$localPath.tmp'] =
                   '$picoDirPath/$localPath';
             }
-            completedFiles++;
-            args.sendPort.send(0.01 + (0.99 * (completedFiles / totalFiles)));
+            processedFiles++;
+            args.sendPort.send(0.05 + (0.95 * (processedFiles / totalFiles)));
             return success;
+          }).catchError((_) {
+            processedFiles++;
+            args.sendPort.send(0.05 + (0.95 * (processedFiles / totalFiles)));
+            return false;
           }),
         );
       } else {
-        completedFiles++;
-        args.sendPort.send(0.01 + (0.99 * (completedFiles / totalFiles)));
+        processedFiles++;
+        args.sendPort.send(0.05 + (0.95 * (processedFiles / totalFiles)));
       }
     }
 
@@ -256,5 +268,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         error: e.toString(),
       ),
     );
+  } finally {
+    client.close();
   }
 }

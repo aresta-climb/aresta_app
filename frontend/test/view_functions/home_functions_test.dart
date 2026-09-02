@@ -47,13 +47,17 @@ void main() {
   }
 
   testWidgets(
-    'buildHomeBody renders the new layout including NearbyCragsCarousel',
+    'buildHomeBody renders the new layout including NearbyCragsCarousel and header buttons',
     (WidgetTester tester) async {
+      mockRepo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
+
       await tester.pumpWidget(buildTestableWidget());
       await tester.pump();
 
-      // Verify Header exists by checking for settings icon
+      // Verify Header buttons exist even when downloadedPicos is empty
       expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byIcon(Icons.sync), findsOneWidget);
+      expect(find.byIcon(Icons.search), findsNWidgets(3));
 
       // Verify NearbyCragsCarousel exists
       expect(find.byType(NearbyCragsCarousel), findsOneWidget);
@@ -161,7 +165,7 @@ void main() {
   );
 
   testWidgets(
-    'buildHomeBody shows search button only when there are downloaded picos',
+    'buildHomeBody always shows search button in header regardless of downloaded picos',
     (WidgetTester tester) async {
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [],
@@ -171,9 +175,8 @@ void main() {
       await tester.pumpWidget(buildTestableWidget());
       await tester.pump();
 
-      // Search icon shouldn't be visible in the header since there are no downloaded picos
-      // However, there are 2 search icons elsewhere on the page (_buildSearchBar and _buildGuiaRapido)
-      expect(find.byIcon(Icons.search), findsNWidgets(2));
+      // Search icon is visible in header, in search bar and in quick guide (3 total)
+      expect(find.byIcon(Icons.search), findsNWidgets(3));
 
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [],
@@ -182,7 +185,6 @@ void main() {
 
       await tester.pump();
 
-      // Search icon should now be visible in the header as well
       expect(find.byIcon(Icons.search), findsNWidgets(3));
     },
   );

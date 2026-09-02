@@ -123,10 +123,13 @@ void registrarOuvintesLiveReload(
     final evento = editor.eventoLiveReload.value;
     if (evento != null) {
       debugPrint(
-        '[LiveReload] Atualização detectada (setor: ${evento.setorId}). Sincronizando...',
+        '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
       );
       await syncService.syncIndex();
       await datasetRepo.init();
+      debugPrint(
+        '⚡ [LiveReload] Sincronização automática concluída!',
+      );
     }
   });
 }

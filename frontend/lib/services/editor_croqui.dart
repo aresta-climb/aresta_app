@@ -184,44 +184,85 @@ class EditorDeCroqui {
     return urlRelay;
   }
 
+  Timer? _reconnectLiveReloadTimer;
+
   /// Inicia a escuta de eventos WebSocket para Live Reload.
   void iniciarEscutaLiveReload(String urlBase) {
     encerrarEscutaLiveReload();
 
+    Uri? wsUri;
     final codigo = extrairCodigoPrevia(urlBase);
-    if (codigo == null) return;
+    if (codigo != null) {
+      wsUri = Uri.parse('wss://$dominioPrevia/$codigo/events');
+    } else {
+      final uri = Uri.tryParse(urlBase);
+      if (uri != null && uri.host.isNotEmpty) {
+        final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
+        final portSuffix = uri.hasPort ? ':${uri.port}' : '';
+        wsUri = Uri.parse('$scheme://${uri.host}$portSuffix/events');
+      }
+    }
 
-    final wsUri = Uri.parse('wss://$dominioPrevia/$codigo/events');
+    if (wsUri == null) return;
+
     try {
+      debugPrint('[EditorCroqui] Conectando WebSocket de Live Reload em $wsUri...');
       WebSocket.connect(wsUri.toString()).then((ws) {
         _wsLiveReload = ws;
+        debugPrint('[EditorCroqui] 🟢 WebSocket de Live Reload conectado com sucesso!');
         ws.listen(
           (event) {
             try {
               final dados =
                   jsonDecode(event.toString()) as Map<String, dynamic>;
-              if (dados['tipo'] == 'recarregar') {
-                final setorId = dados['setor'] as String?;
+              if (dados['tipo'] == 'recarregar' ||
+                  dados['evento'] == 'recarregar' ||
+                  dados['tipo'] == 'evento' ||
+                  dados.containsKey('setor')) {
+                final setorId = (dados['setor'] ??
+                    dados['dados']?['setor'] ??
+                    dados['dados']?['id_croqui']) as String?;
+                debugPrint(
+                  '[EditorCroqui] ⚡ Evento Live Reload recebido! Setor/ID: $setorId',
+                );
                 eventoLiveReload.value = LiveReloadEvent(
                   setorId: setorId,
                   timestamp: DateTime.now(),
                 );
               }
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('[EditorCroqui] Erro ao decodificar evento Live Reload: $e');
+            }
           },
           onDone: () {
             _wsLiveReload = null;
+            _agendarReconexaoLiveReload(urlBase);
           },
           onError: (_) {
             _wsLiveReload = null;
+            _agendarReconexaoLiveReload(urlBase);
           },
         );
-      }).catchError((_) {});
+      }).catchError((_) {
+        _agendarReconexaoLiveReload(urlBase);
+      });
     } catch (_) {}
+  }
+
+  void _agendarReconexaoLiveReload(String urlBase) {
+    if (!isExperimentalMode.value) return;
+    _reconnectLiveReloadTimer?.cancel();
+    _reconnectLiveReloadTimer = Timer(const Duration(seconds: 4), () {
+      if (isExperimentalMode.value && _wsLiveReload == null) {
+        iniciarEscutaLiveReload(urlBase);
+      }
+    });
   }
 
   /// Encerra a conexão WebSocket de Live Reload.
   void encerrarEscutaLiveReload() {
+    _reconnectLiveReloadTimer?.cancel();
+    _reconnectLiveReloadTimer = null;
     try {
       _wsLiveReload?.close();
     } catch (_) {}

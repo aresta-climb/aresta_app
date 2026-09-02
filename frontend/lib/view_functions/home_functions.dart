@@ -127,16 +127,12 @@ Widget _buildHeader(
             ValueListenableBuilder<TopoDataset?>(
               valueListenable: datasetRepo.activeDataset,
               builder: (context, dataset, _) {
-                final hasDownloaded =
-                    dataset != null && dataset.downloadedPicos.isNotEmpty;
-                if (!hasDownloaded) return const SizedBox.shrink();
-
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: Icon(Icons.sync, color: context.colors.ashGrey),
-                      tooltip: 'Atualizar croquis baixados',
+                      tooltip: 'Sincronizar catálogo e croquis',
                       onPressed: () async {
                         await handleManualSync(
                           context,
@@ -148,29 +144,30 @@ Widget _buildHeader(
                     IconButton(
                       icon: Icon(Icons.search, color: context.colors.ashGrey),
                       tooltip: 'Buscar nos guias baixados',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Scaffold(
-                          backgroundColor: context.colors.deepBasalt,
-                          appBar: AppBar(
-                            backgroundColor: context.colors.deepBasalt,
-                            elevation: 0,
-                            iconTheme: IconThemeData(
-                              color: context.colors.chalkWhite,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Scaffold(
+                              backgroundColor: context.colors.deepBasalt,
+                              appBar: AppBar(
+                                backgroundColor: context.colors.deepBasalt,
+                                elevation: 0,
+                                iconTheme: IconThemeData(
+                                  color: context.colors.chalkWhite,
+                                ),
+                              ),
+                              body: GlobalSearch(
+                                datasetRepo: datasetRepo,
+                                downloadedPicos:
+                                    dataset?.downloadedPicos ?? const [],
+                              ),
                             ),
                           ),
-                          body: GlobalSearch(
-                            datasetRepo: datasetRepo,
-                            downloadedPicos: dataset.downloadedPicos,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,6 +262,231 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('PICO A'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Quando permissão for concedida mas GPS retornar null e cache vazio, não deve manter card de permissão',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        mockGeolocator.checkPermissionResult = LocationPermission.denied;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Permitir Localização'), findsOneWidget);
+
+        // Usuário concede permissão, mas GPS dá erro/timeout e lastKnown é nulo
+        mockGeolocator.requestPermissionResult = LocationPermission.whileInUse;
+        mockGeolocator.currentPositionException = Exception('No GPS fix');
+        mockGeolocator.lastKnownPositionResult = null;
+
+        await tester.tap(find.text('Permitir Localização'));
+        await tester.pumpAndSettle();
+
+        // Não deve mais mostrar o botão nem o card de permissão negada
+        expect(find.text('Permitir Localização'), findsNothing);
+        expect(
+          find.text(
+            'Permita o acesso à localização para ver os picos mais próximos de você.',
+          ),
+          findsNothing,
+        );
+        expect(
+          find.text('Aguardando sinal de GPS...'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'Quando activeDataset for populado após a resolução do GPS, deve recalcular distâncias e exibir picos automaticamente',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository.instance!;
+        // Simula startup: GPS já tem fix, mas o repositório ainda está carregando do disco
+        datasetRepo.activeDataset.value = null;
+
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        // Primeiro pump: activeDataset é null -> spinner de loading
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        // Repositório conclui a leitura em disco e notifica activeDataset
+        datasetRepo.activeDataset.value = TopoDataset(
+          availablePicos: [
+            <String, dynamic>{
+              'id': 'pico_a',
+              'nome': 'Pico A',
+              'caminhoRelativo': 'picos/pico_a/pico_a.binarypb',
+              'latitude': -20.01,
+              'longitude': -44.01,
+              'isDownloaded': false,
+              'thumbnailUrl': '',
+            },
+          ],
+          downloadedPicos: [],
+        );
+
+        await tester.pumpAndSettle();
+
+        // Deve ter recalculado as distâncias e exibido o Pico A!
+        expect(find.text('PICO A'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Deve obter localização instantaneamente a partir de getLastKnownPosition do SO sem travar',
+      (WidgetTester tester) async {
+        mockGeolocator.lastKnownPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+        mockGeolocator.currentPositionException = Exception('Slow active GPS');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('PICO A'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Deve escutar getPositionStream e atualizar os picos em tempo real quando o emulador/GPS emitir uma nova posição',
+      (WidgetTester tester) async {
+        mockGeolocator.lastKnownPositionResult = null;
+        mockGeolocator.currentPositionException = Exception('No fix initially');
+
+        final streamController = StreamController<Position>.broadcast();
+        mockGeolocator.positionStreamOverride = streamController.stream;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.text('Aguardando sinal de GPS...'), findsOneWidget);
+
+        // Emulador emite nova posição via stream
+        streamController.add(
+          Position(
+            latitude: -20.0,
+            longitude: -44.0,
+            timestamp: DateTime.now(),
+            accuracy: 5.0,
+            altitude: 1000.0,
+            heading: 0.0,
+            speed: 0.0,
+            speedAccuracy: 0.0,
+            altitudeAccuracy: 0.0,
+            headingAccuracy: 0.0,
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('PICO A'), findsOneWidget);
+        expect(mockGeolocator.lastStreamSettings?.accuracy, equals(LocationAccuracy.high));
+        await streamController.close();
+      },
+    );
+
+    testWidgets(
+      'getCurrentPosition deve ser chamado com LocationAccuracy.high para suportar emulador e satélites',
+      (WidgetTester tester) async {
+        mockGeolocator.lastKnownPositionResult = null;
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(mockGeolocator.lastCurrentPositionSettings?.accuracy, equals(LocationAccuracy.high));
+        expect(find.text('PICO A'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Quando permissão for deniedForever ao clicar no botão, deve chamar openAppSettings',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        mockGeolocator.checkPermissionResult = LocationPermission.denied;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        mockGeolocator.requestPermissionResult = LocationPermission.deniedForever;
+        await tester.tap(find.text('Permitir Localização'));
+        await tester.pumpAndSettle();
+
+        expect(mockGeolocator.openAppSettingsCalled, isTrue);
       },
     );
 

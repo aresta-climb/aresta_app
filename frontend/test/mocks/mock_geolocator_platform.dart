@@ -13,6 +13,45 @@ class MockGeolocatorPlatform extends GeolocatorPlatform with MockPlatformInterfa
   Position? currentPositionResult;
   Position? lastKnownPositionResult;
   Exception? currentPositionException;
+  bool openAppSettingsCalled = false;
+  Stream<Position>? positionStreamOverride;
+
+  LocationSettings? lastCurrentPositionSettings;
+  LocationSettings? lastStreamSettings;
+
+  @override
+  Stream<Position> getPositionStream({LocationSettings? locationSettings}) {
+    lastStreamSettings = locationSettings;
+    if (positionStreamOverride != null) {
+      return positionStreamOverride!;
+    }
+    if (currentPositionException != null) {
+      return Stream.error(currentPositionException!);
+    }
+    if (currentPositionResult != null) {
+      return Stream.value(currentPositionResult!);
+    }
+    return Stream.value(
+      Position(
+        latitude: -20.0,
+        longitude: -44.0,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: 1000.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      ),
+    );
+  }
+
+  @override
+  Future<bool> openAppSettings() async {
+    openAppSettingsCalled = true;
+    return true;
+  }
 
   @override
   Future<bool> isLocationServiceEnabled() async => isLocationServiceEnabledResult;
@@ -29,6 +68,7 @@ class MockGeolocatorPlatform extends GeolocatorPlatform with MockPlatformInterfa
 
   @override
   Future<Position> getCurrentPosition({LocationSettings? locationSettings}) async {
+    lastCurrentPositionSettings = locationSettings;
     if (currentPositionException != null) {
       throw currentPositionException!;
     }

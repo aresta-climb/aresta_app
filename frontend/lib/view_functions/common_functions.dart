@@ -537,23 +537,6 @@ Future<void> handleManualSync(
   DatasetRepository datasetRepo,
   SyncService syncService,
 ) async {
-  final dataset = datasetRepo.activeDataset.value;
-  final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
-
-  if (!hasDownloaded) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: const Text('Nenhum croqui baixado para atualizar.'),
-            backgroundColor: context.colors.ashGrey,
-          ),
-        );
-    }
-    return;
-  }
-
   if (await syncService.isNetworkDisabled()) {
     if (context.mounted) {
       showDeprecatedAppVersionSnackBar(context);
@@ -568,6 +551,9 @@ Future<void> handleManualSync(
         const SnackBar(content: Text('Verificando atualizações...')),
       );
   }
+
+  final dataset = datasetRepo.activeDataset.value;
+  final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
 
   final failed = await syncService.syncIndex(auto: false);
 
@@ -585,6 +571,14 @@ Future<void> handleManualSync(
     } else if (failed.isNotEmpty) {
       message = 'Concluído com falhas: ${failed.join(', ')}';
       bgColor = Theme.of(context).colorScheme.error;
+    } else if (!hasDownloaded) {
+      if (status == SyncStatus.justUpdated) {
+        message = 'Catálogo atualizado com sucesso!';
+        bgColor = context.colors.dryMoss;
+      } else {
+        message = 'Catálogo já está atualizado.';
+        bgColor = context.colors.ashGrey;
+      }
     } else if (status == SyncStatus.noNewUpdates ||
         status == SyncStatus.updated) {
       message = 'Nenhum croqui precisava ser atualizado.';

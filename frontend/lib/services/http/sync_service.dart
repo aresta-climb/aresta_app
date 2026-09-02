@@ -428,12 +428,10 @@ class SyncService {
               baseUrl,
             );
             globalUpdates.merge(thumbUpdates);
-
-            final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
-            globalUpdates.merge(croquiUpdates);
-          } else {
-            setUpdatedStatus();
           }
+
+          final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
+          globalUpdates.merge(croquiUpdates);
 
           if (globalUpdates.failedPicos.isNotEmpty) {
             failedPicos.addAll(globalUpdates.failedPicos);
@@ -491,6 +489,7 @@ class SyncService {
           if (datasetRepository.activeDataset.value == null) {
             await _loadLocalIndiceAndNotify(localIndicePath);
           }
+          quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
       }
     } catch (e) {
@@ -775,7 +774,9 @@ class SyncService {
         sendPort: receivePort.sendPort,
       );
 
-      print('DEBUG: mockIsolateSpawn is not null! \'\'');
+      if (kDebugMode) {
+        debugPrint('[SyncService] Iniciando download do croqui $id a partir de: $baseUrl');
+      }
       if (mockIsolateSpawn != null) {
         await mockIsolateSpawn!(downloadIsolateMain, args);
       } else {
