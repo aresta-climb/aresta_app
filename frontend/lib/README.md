@@ -6,36 +6,33 @@ Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em
 
 A camada de serviços é responsável pelo gerenciamento de estado do aplicativo e da arquitetura baseada em **MVVM**. Classes geradas via **Protobuf** (`ResumoCroqui`, `Indice`, `Croqui`) atuam como nossos **Models** fortemente tipados. O `DatasetRepository` atua como a **ViewModel** principal.
 
-### `DatasetRepository` (`dataset_repository.dart`)
-O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local até as camadas reativas da interface. Expõe `ValueNotifier`s reativos (`activeDataset`, `syncStatus`, `downloadingCrags`) que a árvore de widgets escuta para atualizações instantâneas.
+### `DatasetRepository` (`dataset_repository.dart` e `dataset/`)
+O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local e das sessões online até as camadas reativas da interface. Foi decomposto em submódulos desacoplados de responsabilidade única:
 
-- **Gerenciamento de Armazenamento Local**: Cria diretórios dedicados para cada pico baixado em `<app_docs>/downloads/<pico_id>/`, evitando colisões de nomes e tornando atualizações e exclusões eficientes.
-- **Tipagem Forte**: Ao invés de trafegar mapas fracamente tipados para a camada de negócios, o repositório consome e despacha objetos do tipo `ResumoCroqui` nativamente, garantindo integridade das requisições e downloads.
-- **Agrupamento de Metadados**: Converte metadados complexos do protobuf em agrupamentos simples (`Map<String, dynamic>`) apenas para o consumo otimizado pelas *Views* de renderização rápida (`home.dart`, `browse.dart`).
-- **Rastreamento de Prioridade e Migração**: Gerencia `recent_picos.yaml` para ordenar os guias mais acessados recentemente no carrossel da Home. Contém lógica de migração automática do formato antigo `.json` para YAML.
+- **`dataset/modelos/`**: Modelo de dados em memória `TopoDataset` e tipos auxiliares fortemente tipados.
+- **`dataset/armazenamento/`**: `GerenciadorArmazenamento` responsável pela estrutura de diretórios em `<app_docs>/downloads/<pico_id>/` e integridade física.
+- **`dataset/metadados/`**: `FormatadorMetadados` e `GerenciadorPrioridade` para ordenação, normalização e manipulação de `recent_picos.yaml`.
+- **`dataset/sessao_online/`**: `GerenciadorSessaoOnline` responsável pelo gerenciamento de croquis visualizados sob demanda na RAM e cache volátil (`/temp_cache`), além de notificações de atualização de versão via ETag.
 
 ### Módulo HTTP e Conectividade (`http/`)
-Diretório isolado que retém todas as responsabilidades que interagem com tráfego de rede, conexões externas e simulações do *Ghost Protocol*. A arquitetura geral do aplicativo é completamente agnóstica à internet (offline-first) fora desse módulo.
+Diretório isolado que retém todas as responsabilidades que interagem com tráfego de rede, conexões externas, downloads em background e streaming sob demanda. A arquitetura geral do aplicativo é completamente agnóstica à internet (offline-first) fora desse módulo.
 
 - **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Aciona e monitora a thread secundária (`Isolate`), convertendo atualizações em eventos para barras de progresso na UI. Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para que a UI notifique o usuário exclusivamente quando croquis locais baixados forem alterados na inicialização do app.
 - **`SyncIsolate` (`sync_isolate.dart`)**: Executa as validações pesadas de integridade (SHA256) e gere o fluxo das Delta Syncs (baixando apenas arquivos que mudaram) em uma thread separada para não causar travamentos ou "lag" na UI.
 - **`SyncNetwork` (`sync_network.dart`)**: Responsável pela comunicação HTTP pura, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
 - **`SyncStorage` (`sync_storage.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
-- **`ZipInterceptorClient` (`zip_interceptor_client.dart`)**: Implementa o **Ghost Protocol** (`aresta-zip://`). Lê arquivos transparentemente do interior de ZIPs `.croqui` criptografados (XOR) servindo os bytes decodificados como se fosse uma resposta HTTP normal.
+- **`ServicoCroquiOnline` (`servico_croqui_online.dart`)**: Baixa arquivos `.binarypb` sob demanda em milissegundos para navegação imediata sem exigir download prévio e executa polling periódico leve de ETag.
+- **`ServicoDownloadSegundoPlano` (`servico_download_segundo_plano.dart`)**: Realiza downloads permanentes resilientes em segundo plano com notificações persistentes (`ongoing: true`).
 - **`UpdateDownloader` (`update_downloader.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
 
 ### `EditorDeCroqui` (`editor_croqui.dart`)
 O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.
 
 - **Modos de operação**:
-  - **Oficial**: Dados do servidor GitHub Pages. URL base: `https://aresta-climb.github.io/aresta_serving`.
-  - **Editor (URL)**: Servidor local via IP. URL base: a URL fornecida pelo desenvolvedor.
-  - **Experimental (aresta-zip)**: Arquivo `.croqui` importado localmente. URL base: `aresta-zip:///caminho/para/o/arquivo.croqui`.
+  - **Oficial**: Dados do servidor CDN/GitHub Pages. URL base: `https://aresta-climb.github.io/aresta_serving`.
+  - **Experimental / Live Reload**: Conexão com Editor Desktop via WebSocket e Live Reload.
 - **Temporizador de Auto-Destruição**: O modo experimental tem vida útil de 20 minutos. Um cronômetro regressivo é exibido em um banner global e, ao chegar em zero, executa um "Nuke" dos dados de teste.
 - **Persistência**: Salva o estado em `editor_config.json` para sobreviver reinicializações parciais.
-
-### `ArchiveService` (`archive.dart`)
-O utilitário legado de manipulação de arquivos `.croqui`. Ainda é usado para a **importação inicial** do arquivo pelo seletor de arquivos (file picker), extraindo o `indice.binarypb` e copiando o `.croqui` para a pasta de trabalho. Após a importação, o fluxo de leitura é assumido pelo `ZipInterceptorClient`.
 
 ### Integração Firebase (`firebase/`)
 Subdiretório responsável por isolar o SDK do Firebase do restante da aplicação. Contém serviços para inicialização centralizada, Firebase App Check (atestação de integridade para Play Integrity / App Attest), Remote Config e Telemetry (Analytics). Consulte o [`firebase/README.md`](services/firebase/README.md) para detalhes de arquitetura e testes de linter que previnem vazamento de dependências do Firebase para a UI.
@@ -98,7 +95,7 @@ Para evitar arquivos de página monolíticos, todos os construtores de UI comple
 - **`mapa/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapa_global_functions.dart` e o `mapa_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
 - **`common_functions.dart`**: Sistema de design genérico. Define componentes como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária. Obs: O controle mestre de cores passou para o diretório `theme/app_colors.dart`.
 - **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
-- **`settings_functions.dart`**: Gerencia a importação de arquivos `.croqui` (via file picker ou URL), a conexão com servidores de editor e a leitura de QR codes. Após a importação, constrói a URL `aresta-zip://` e aciona a sincronização via `SyncService`.
+- **`settings_functions.dart`**: Gerencia a conexão com servidores de editor desktop (via código de prévia ou URL) e a leitura de QR codes, acionando a sincronização e Live Reload via `SyncService` e WebSocket.
 
 ---
 
@@ -109,3 +106,7 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 - **`feedback/`**: Contém o `custom_feedback_builder.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
 - **`global_search.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.
+- **`banner_modo_online.dart`**: Banner informativo persistente que avisa o usuário quando o croqui está em modo online sob demanda.
+- **`modal_confirmacao_saida.dart`**: Guardião de saída (`PopScope`) que alerta o usuário sobre a necessidade de salvar o croqui offline antes de sair para a montanha.
+- **`provedor_imagem_aresta.dart`**: Provedor de imagem modular com resolução em 3 camadas (local, cache temporário e CDN remota com cache de hash).
+- **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.

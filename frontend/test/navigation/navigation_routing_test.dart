@@ -36,13 +36,13 @@ void main() {
       );
 
       final topoDataset = TopoDataset(
-        downloadedPicos: [
+        picosBaixados: [
           {
             'id': 'crag123',
             'data': {'pico': pico, 'croqui': croqui},
           },
         ],
-        availablePicos: [],
+        picosDisponiveis: [],
       );
 
       // Inject data
@@ -116,13 +116,13 @@ void main() {
       );
 
       final topoDataset = TopoDataset(
-        downloadedPicos: [
+        picosBaixados: [
           {
             'id': 'crag123',
             'data': {'pico': pico, 'croqui': croqui},
           },
         ],
-        availablePicos: [],
+        picosDisponiveis: [],
       );
 
       datasetRepo.activeDataset.value = topoDataset;
@@ -174,13 +174,13 @@ void main() {
         final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
         final pico = Pico()..nome = 'Pico Teste';
         datasetRepo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+          picosBaixados: [
             {
               'id': '123',
               'data': {'pico': pico, 'croqui': Croqui()},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
         final syncService = SyncService(datasetRepository: datasetRepo);
 
@@ -238,13 +238,13 @@ void main() {
         final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
         final pico = Pico()..nome = 'Pico Teste';
         datasetRepo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+          picosBaixados: [
             {
               'id': '123',
               'data': {'pico': pico, 'croqui': Croqui()},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
         final syncService = SyncService(datasetRepository: datasetRepo);
 
@@ -291,13 +291,13 @@ void main() {
         final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
         final pico = Pico()..nome = 'Pico Teste';
         datasetRepo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+          picosBaixados: [
             {
               'id': '123',
               'data': {'pico': pico, 'croqui': Croqui()},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
         final syncService = SyncService(datasetRepository: datasetRepo);
 
@@ -380,13 +380,13 @@ void main() {
         final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
         final pico = Pico()..nome = 'Pico Teste';
         datasetRepo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+          picosBaixados: [
             {
               'id': '123',
               'data': {'pico': pico, 'croqui': Croqui()},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
         final syncService = SyncService(datasetRepository: datasetRepo);
 
@@ -435,13 +435,13 @@ void main() {
         );
 
         datasetRepo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+          picosBaixados: [
             {
               'id': '123',
               'data': {'pico': pico, 'croqui': Croqui()},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
         final syncService = SyncService(datasetRepository: datasetRepo);
 

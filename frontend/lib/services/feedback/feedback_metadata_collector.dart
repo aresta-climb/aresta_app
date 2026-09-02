@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/main.dart'; // Para acessar TreeNavigationWrapper
+import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -240,11 +241,19 @@ class FeedbackMetadataCollector {
     );
   }
 
-  /// Constrói uma representação em string do caminho de nós percorrido na árvore.
-  ///
-  /// Utiliza recursão pelo nó `parent` para formar uma string do tipo `Raiz -> Setor -> Via`.
+  /// Constrói uma representação em string do caminho canônico mais curto percorrido na árvore.
   String _getNodePath(dynamic node) {
     if (node == null) return '';
+    if (node is NavNode) {
+      if (globalActiveNodeOverride != null) {
+        final parentPath = node.parent?.obterCaminhoCurto();
+        if (parentPath != null && parentPath.isNotEmpty) {
+          return '$parentPath -> $globalActiveNodeOverride';
+        }
+        return globalActiveNodeOverride!;
+      }
+      return node.obterCaminhoCurto();
+    }
     String path = globalActiveNodeOverride ?? node.toString();
     var current = node.parent;
     while (current != null) {

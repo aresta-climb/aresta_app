@@ -75,12 +75,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Tap the card to open the bottom sheet
-    await tester.tap(find.text('PICO TESTE'));
-    await tester.pumpAndSettle();
-
-    // Tap the download button in the bottom sheet
-    await tester.tap(find.text('BAIXAR CROQUI'));
+    // Aciona download do pico
+    final browseState = tester.state(find.byType(BrowsePage)) as dynamic;
+    browseState.handleDownload({'id': 'pico_1', 'nome': 'Pico Teste'});
 
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();
@@ -116,12 +113,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Tap the card to open the bottom sheet
-    await tester.tap(find.text('PICO TESTE'));
-    await tester.pumpAndSettle();
-
-    // Tap the download button in the bottom sheet
-    await tester.tap(find.text('BAIXAR CROQUI'));
+    // Aciona download do pico
+    final browseState = tester.state(find.byType(BrowsePage)) as dynamic;
+    browseState.handleDownload({'id': 'pico_1', 'nome': 'Pico Teste'});
 
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();

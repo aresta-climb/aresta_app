@@ -68,9 +68,6 @@ class EditorDeCroqui {
     String? url = editorUrl.value;
     if (url == null || url.isEmpty) return '';
 
-    // Se for um link local ou aresta-zip, retornamos como está
-    if (url.startsWith('aresta-zip')) return url;
-
     // Garante que tenha scheme
     if (!url.contains('://')) {
       url = 'https://$url';

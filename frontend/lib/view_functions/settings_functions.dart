@@ -1,22 +1,18 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart' as fp;
-import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../view_functions/common_functions.dart';
 import '../pages/qr_scanner.dart';
 import '../services/http/sync_service.dart';
-import '../services/http/zip_interceptor_client.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../main.dart';
 import '../navigation/navigation_functions.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
@@ -27,8 +23,7 @@ String normalizeEditorUrl(String rawUrl) {
 
   final lowerUrl = checkUrl.toLowerCase();
   if (!lowerUrl.startsWith('http://') &&
-      !lowerUrl.startsWith('https://') &&
-      !lowerUrl.startsWith('aresta-zip://')) {
+      !lowerUrl.startsWith('https://')) {
     if (lowerUrl.startsWith('192.168.') ||
         lowerUrl.startsWith('10.') ||
         lowerUrl.startsWith('127.') ||
@@ -50,21 +45,26 @@ Future<bool> conectarEditor(
   BuildContext context,
   DatasetRepository datasetRepo,
   EditorDeCroqui configService,
-  String url,
-) async {
+  String url, {
+  http.Client? client,
+}) async {
   if (url.isEmpty) return false;
 
   try {
     // Valida se o índice está acessível na URL fornecida, resolvendo códigos de prévia hibridamente
-    final resolvedUrl = await configService.resolverUrlHibrida(url);
+    final resolvedUrl = await configService.resolverUrlHibrida(
+      url,
+      client: client,
+    );
     String checkUrl = normalizeEditorUrl(resolvedUrl);
 
-    if (checkUrl.toLowerCase().endsWith('.zip')) {
+    if (checkUrl.toLowerCase().endsWith('.zip') ||
+        checkUrl.toLowerCase().endsWith('.croqui')) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Aviso: Arquivos .zip não são mais suportados. Use .croqui',
+              'Aviso: Importação de arquivos locais foi descontinuada. Conecte diretamente via Live Reload / URL.',
             ),
           ),
         );
@@ -72,114 +72,48 @@ Future<bool> conectarEditor(
       return false;
     }
 
-    final client = ZipInterceptorClient();
+    final httpClient = client ?? http.Client();
+    final response = await httpClient
+        .get(Uri.parse('$checkUrl/indice.binarypb'))
+        .timeout(const Duration(seconds: 5));
 
-    // Se for um arquivo Croqui, precisamos baixar o arquivo inteiro primeiro
-    if (checkUrl.toLowerCase().endsWith('.croqui')) {
-      final directory = await getApplicationDocumentsDirectory();
-      final editedDir = Directory('${directory.path}/edited');
-      if (!await editedDir.exists()) {
-        await editedDir.create(recursive: true);
-      }
-
-      final safeName = 'imported_repo.croqui';
-      final savedFile = File('${editedDir.path}/$safeName');
-
-      // Busca o binário zip real se for uma URL remota
-      if (!checkUrl.startsWith('aresta-zip')) {
-        // Opcional: mostrar um SnackBar de "Baixando croqui..." aqui seria bom
-        final zipResponse = await client
-            .get(Uri.parse(checkUrl))
-            .timeout(const Duration(seconds: 30));
-        if (zipResponse.statusCode != 200) {
-          throw Exception(
-            'Falha ao baixar arquivo .croqui (Status ${zipResponse.statusCode})',
-          );
-        }
-        await savedFile.writeAsBytes(zipResponse.bodyBytes);
-      }
-
-      final ghostUrl = checkUrl.startsWith('aresta-zip')
-          ? checkUrl
-          : Uri.file(
-              savedFile.path,
-            ).toString().replaceFirst('file://', 'aresta-zip://');
-
-      // Agora validamos se o zip que baixamos tem um índice válido dentro dele!
-      final zipTestResponse = await client
-          .get(Uri.parse('$ghostUrl/indice.binarypb'))
-          .timeout(const Duration(seconds: 5));
-      if (zipTestResponse.statusCode != 200) {
-        throw Exception(
-          'O arquivo .croqui baixado é inválido ou está corrompido.',
-        );
-      }
-
+    if (response.statusCode == 200) {
       await configService.activateExperimental(
-        url: ghostUrl,
+        url: checkUrl,
         forceResetTimer: false,
       );
-
-      final syncService = SyncService(datasetRepository: datasetRepo);
+      final syncService = SyncService(
+        datasetRepository: datasetRepo,
+        client: httpClient,
+      );
       await syncService.syncIndex();
       await datasetRepo.init();
 
       // Auto-download imediato se houver exatamente 1 croqui no índice
-      final croquisZip = datasetRepo.indiceData.value?.croquis ?? [];
-      if (croquisZip.length == 1) {
-        final resumo = croquisZip.first;
+      final croquis = datasetRepo.indiceData.value?.croquis ?? [];
+      if (croquis.length == 1) {
+        final resumo = croquis.first;
         try {
           await syncService.downloadCrag(resumo);
           await datasetRepo.init();
         } catch (e) {
-          debugPrint('[conectarEditor] Falha ao auto-baixar croqui único zip: $e');
+          debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
         }
       }
 
-      TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_zip');
+      TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
       return true;
     } else {
-      // Se não for ZIP, é um repositório web normal. Validamos o índice remoto.
-      final resolvedUrl = checkUrl;
-      final response = await client
-          .get(Uri.parse('$resolvedUrl/indice.binarypb'))
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        await configService.activateExperimental(
-          url: resolvedUrl,
-          forceResetTimer: false,
-        );
-        final syncService = SyncService(datasetRepository: datasetRepo);
-        await syncService.syncIndex();
-        await datasetRepo.init();
-
-        // Auto-download imediato se houver exatamente 1 croqui no índice
-        final croquis = datasetRepo.indiceData.value?.croquis ?? [];
-        if (croquis.length == 1) {
-          final resumo = croquis.first;
-          try {
-            await syncService.downloadCrag(resumo);
-            await datasetRepo.init();
-          } catch (e) {
-            debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
-          }
-        }
-
-        TelemetryService.instance.logAcaoConfiguracoes('conectar_editor_url');
-        return true;
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Erro: Não foi possível acessar o índice (Status ${response.statusCode})',
-              ),
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Erro: Não foi possível acessar o índice (Status ${response.statusCode})',
             ),
-          );
-        }
-        return false;
+          ),
+        );
       }
+      return false;
     }
   } catch (e) {
     if (context.mounted) {
@@ -207,105 +141,12 @@ void navegarAposConexaoExperimental(
   }
 }
 
-/// Permite ao usuário selecionar e importar um arquivo .croqui local.
-Future<void> importarArquivoCroqui(
-  BuildContext context,
-  DatasetRepository datasetRepo,
-) async {
-  final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
-
-  try {
-    final fp.PlatformFile? pickedFile = await fp.FilePicker.pickFile(
-      type: fp.FileType.any,
-    );
-
-    if (pickedFile != null && pickedFile.path != null) {
-      final path = pickedFile.path!;
-      if (!path.toLowerCase().endsWith('.croqui')) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Aviso: O arquivo selecionado não tem a extensão .croqui',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-      final file = File(path);
-      final directory = await getApplicationDocumentsDirectory();
-
-      // Feedback visual de processamento
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Processando arquivo...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-
-      final editedDir = Directory('${directory.path}/edited');
-      if (!await editedDir.exists()) {
-        await editedDir.create(recursive: true);
-      }
-      final safeName = 'imported_repo.croqui';
-      final savedFile = await file.copy('${editedDir.path}/$safeName');
-
-      final ghostUrl = Uri.file(
-        savedFile.path,
-      ).toString().replaceFirst('file://', 'aresta-zip://');
-
-      // Valida se o croqui que importamos é válido e pode ser lido
-      final client = ZipInterceptorClient();
-      final zipTestResponse = await client
-          .get(Uri.parse('$ghostUrl/indice.binarypb'))
-          .timeout(const Duration(seconds: 5));
-      if (zipTestResponse.statusCode != 200) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Erro: O arquivo .croqui importado não é válido ou está corrompido.',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      await configService.activateExperimental(
-        url: ghostUrl,
-        forceResetTimer: false,
-      );
-
-      // Tenta sincronizar o índice usando o interceptor
-      final syncService = SyncService(datasetRepository: datasetRepo);
-      await syncService.syncIndex();
-      await datasetRepo.init();
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Croqui experimental importado!')),
-        );
-        TelemetryService.instance.logAcaoConfiguracoes(
-          'importar_arquivo_croqui',
-        );
-      }
-    }
-  } catch (e) {
-    debugPrint('[Import] Erro ao selecionar arquivo: $e');
-  }
-}
-
 /// Exibe o diálogo para inserir a URL do repositório do editor.
 void mostrarDialogConexao(
   BuildContext context,
   DatasetRepository datasetRepo, {
   String? titulo,
 }) {
-  final BuildContext parentContext = context;
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
   // Inicia vazio, pois a URL atual já é exibida na interface de configurações
   final TextEditingController urlController = TextEditingController();
@@ -313,10 +154,10 @@ void mostrarDialogConexao(
   final brandColor = const Color(0xFFC04F34);
 
   showDialog(
-    context: parentContext,
-    builder: (dialogContext) {
+    context: context,
+    builder: (context) {
       return StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
+        builder: (context, setDialogState) {
           return AlertDialog(
             backgroundColor: context.colors.caveShadow,
             shape: RoundedRectangleBorder(
@@ -424,36 +265,6 @@ void mostrarDialogConexao(
                       },
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      icon: Icon(
-                        Icons.file_present,
-                        color: context.colors.ashGrey,
-                        size: 20,
-                      ),
-                      label: Text(
-                        'IMPORTAR .CROQUI',
-                        style: TextStyle(
-                          color: context.colors.ashGrey,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: context.colors.graniteEdge),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        Navigator.of(context).pop(); // Fecha o diálogo antes
-                        await importarArquivoCroqui(context, datasetRepo);
-                      },
-                    ),
-                  ),
                   const SizedBox(height: 14),
                   GestureDetector(
                     onTap: () async {
@@ -520,20 +331,21 @@ void mostrarDialogConexao(
                       setDialogState(() => isLoading = true);
 
                       final success = await conectarEditor(
-                        dialogContext,
+                        context,
                         datasetRepo,
                         configService,
                         url,
                       );
 
-                      if (dialogContext.mounted) {
+                      if (context.mounted) {
                         setDialogState(() => isLoading = false);
                         if (success) {
-                          Navigator.of(dialogContext).pop();
-                          final navContext =
-                              TreeNavigationWrapper.navKey.currentContext ??
-                              parentContext;
-                          navegarAposConexaoExperimental(navContext, datasetRepo);
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Conectado ao repositório editor!'),
+                            ),
+                          );
                         }
                       }
                     };

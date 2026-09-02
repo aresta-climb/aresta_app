@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../main.dart';
+import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
@@ -18,6 +18,10 @@ import '../theme/app_colors.dart';
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
 import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
+import '../widgets/banner_modo_online.dart';
+import '../widgets/linha_credito_autor.dart';
+import '../widgets/modal_confirmacao_saida.dart';
+import '../services/http/servico_croqui_online.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;
@@ -44,11 +48,41 @@ class PicoDetailsPage extends StatefulWidget {
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
   late PicoCategorizedData _categories;
+  late DateTime _tempoInicio;
+  late ServicoCroquiOnline _servicoCroquiOnline;
+  late bool _isInitiallyDownloaded;
 
   @override
   void initState() {
     super.initState();
+    _tempoInicio = DateTime.now();
     _categories = PicoCategorizedData(widget.croqui);
+    _servicoCroquiOnline = ServicoCroquiOnline(
+      sessaoOnline: widget.datasetRepo.gerenciadorSessaoOnline,
+    );
+
+    final dataset = widget.datasetRepo.activeDataset.value;
+    _isInitiallyDownloaded = dataset?.picosBaixados
+            .any((p) => p['id'] == widget.cragId) ??
+        false;
+
+    if (!_isInitiallyDownloaded && dataset != null) {
+      try {
+        final picoItem = dataset.picosDisponiveis.firstWhere(
+          (p) => p['id'] == widget.cragId,
+        );
+        final url = picoItem['url']?.toString();
+        if (url != null && url.isNotEmpty) {
+          _servicoCroquiOnline.iniciarPollingEtag(widget.cragId, url);
+        }
+      } catch (_) {}
+    }
+
+    // Registra interceptor de saída no controlador de navegação em árvore
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _setupBackInterceptor();
+    });
 
     if (widget.scrollToMapaGeral) {
       Future.delayed(const Duration(milliseconds: 600), () {
@@ -75,6 +109,108 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           }
         });
       });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setupBackInterceptor();
+  }
+
+  void _setupBackInterceptor() {
+    final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+        TreeNavigationWrapper.currentTreeController;
+    if (tree == null) return;
+
+    tree.onBackInterceptor = () {
+      final parentNode = tree.currentNode.parent;
+      final staysInSameCroqui =
+          parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
+
+      if (staysInSameCroqui) {
+        return false;
+      }
+
+      final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
+              .any((p) => p['id'] == widget.cragId) ??
+          false;
+
+      if (isBaixado) {
+        tree.onBackInterceptor = null;
+        return false;
+      }
+
+      Map<String, dynamic>? picoItem;
+      try {
+        picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
+            .firstWhere((p) => p['id'] == widget.cragId);
+      } catch (_) {}
+      final tamanhoFormatado =
+          picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+
+      ModalConfirmacaoSaida.mostrar(
+        context: context,
+        nomePico: widget.pico.nome,
+        tamanhoFormatado: tamanhoFormatado,
+        onSalvar: () {
+          _iniciarDownload(context);
+          tree.onBackInterceptor = null;
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+        },
+        onSairSemSalvar: () {
+          tree.onBackInterceptor = null;
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+        },
+      );
+      return true;
+    };
+  }
+
+  @override
+  void dispose() {
+    final tree = TreeNavigationWrapper.currentTreeController;
+    if (tree != null) {
+      tree.onBackInterceptor = null;
+    }
+    _servicoCroquiOnline.cancelarPolling(widget.cragId);
+    _servicoCroquiOnline.dispose();
+    super.dispose();
+  }
+
+  void _iniciarDownload(BuildContext context) async {
+    final indice = widget.datasetRepo.indiceData.value;
+    if (indice == null) return;
+
+    final resumos = indice.croquis.where((r) => r.id == widget.cragId).toList();
+    if (resumos.isEmpty) return;
+
+    final tree = TreeNavigationWrapper.of(context);
+    final syncService = tree.syncService;
+
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text('Baixando ${widget.pico.nome}...')));
+
+    final success = await syncService.downloadCrag(resumos.first);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? '${widget.pico.nome} salvo offline!'
+                  : 'Falha ao baixar ${widget.pico.nome}',
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
     }
   }
 
@@ -155,183 +291,214 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       if (modalidades.isNotEmpty) {
         statsText += ' (${modalidades.join(', ')})';
       }
-    }
-
-    final String subtitleText =
+    }    final String subtitleText =
         "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES$statsText";
 
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300.0,
-            pinned: true,
-            backgroundColor: context.colors.deepBasalt,
-            iconTheme: IconThemeData(color: context.colors.chalkWhite),
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black87,
-                  shape: BoxShape.circle,
+    final dataset = widget.datasetRepo.activeDataset.value;
+    final bool isDownloaded = dataset?.picosBaixados
+            .any((p) => p['id'] == widget.cragId) ??
+        false;
+
+    Map<String, dynamic>? picoItem;
+    try {
+      picoItem = dataset?.picosDisponiveis.firstWhere(
+        (p) => p['id'] == widget.cragId,
+      );
+    } catch (_) {}
+
+    final String tamanhoFormatado =
+        picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
+        final parentNode = tree?.currentNode.parent;
+        final staysInSameCroqui =
+            parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
+
+        if (staysInSameCroqui) {
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+          return;
+        }
+
+        final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
+                .any((p) => p['id'] == widget.cragId) ??
+            false;
+
+        if (isBaixado) {
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+          return;
+        }
+
+        ModalConfirmacaoSaida.mostrar(
+          context: context,
+          nomePico: widget.pico.nome,
+          tamanhoFormatado: tamanhoFormatado,
+          onSalvar: () {
+            _iniciarDownload(context);
+            if (context.mounted && AppNav.canGoBack(context)) {
+              AppNav.back(context);
+            }
+          },
+          onSairSemSalvar: () {
+            if (context.mounted && AppNav.canGoBack(context)) {
+              AppNav.back(context);
+            }
+          },
+        );
+      },
+      child: Scaffold(
+        backgroundColor: context.colors.deepBasalt,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300.0,
+              pinned: true,
+              backgroundColor: context.colors.deepBasalt,
+              iconTheme: IconThemeData(color: context.colors.chalkWhite),
+              leading: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black87,
+                    shape: BoxShape.circle,
+                  ),
+                  child: BackButton(
+                    color: Colors.white,
+                    onPressed: () {
+                      AppNav.back(context);
+                    },
+                  ),
                 ),
-                child: const BackButton(color: Colors.white),
               ),
-            ),
-            flexibleSpace: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final top = constraints.biggest.height;
-                final collapsedHeight =
-                    MediaQuery.of(context).padding.top + kToolbarHeight;
-                final expandedHeight = 300.0;
-                // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
-                // Usamos isso para animar manualmente o padding e o tamanho da fonte.
-                double t =
-                    (top - collapsedHeight) /
-                    (expandedHeight - collapsedHeight);
-                t = t.clamp(0.0, 1.0);
+              flexibleSpace: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final top = constraints.biggest.height;
+                  final collapsedHeight =
+                      MediaQuery.of(context).padding.top + kToolbarHeight;
+                  final expandedHeight = 300.0;
+                  double t = (top - collapsedHeight) /
+                      (expandedHeight - collapsedHeight);
+                  t = t.clamp(0.0, 1.0);
 
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    FlexibleSpaceBar(
-                      background: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          buildCragBackground(
-                            widget.croqui.caminhoThumbnail,
-                            cragId: widget.cragId,
-                          ),
-
-                          // Gradient to make text readable
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  context.colors.deepBasalt.withValues(
-                                    alpha: 0.8,
-                                  ),
-                                  context.colors.deepBasalt,
-                                ],
-                                stops: const [0.5, 0.8, 1.0],
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FlexibleSpaceBar(
+                        background: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            buildCragBackground(
+                              widget.croqui.caminhoThumbnail,
+                              cragId: widget.cragId,
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    context.colors.deepBasalt.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                    context.colors.deepBasalt,
+                                  ],
+                                  stops: const [0.5, 0.8, 1.0],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      // Anima a margem esquerda de 20 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
-                      left: 20 + (52 * (1 - t)),
-                      // Anima a margem direita para dar espaço aos botões de share e feedback.
-                      right: 20, // Make room for share and feedback buttons
-                      bottom: 20,
-                      child: Text(
-                        widget.pico.nome.toUpperCase(),
-                        style: TextStyle(
-                          color: context.colors.chalkWhite,
-                          fontWeight: FontWeight.w900,
-                          // A fonte diminui suavemente de 24 para 18.
-                          fontSize: 18 + (6 * t),
+                          ],
                         ),
-                        // Força para 1 linha a partir da metade do scroll para evitar que o texto bata na status bar.
-                        maxLines: t > 0.5 ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                );
-              },
+                      Positioned(
+                        left: 20 + (52 * (1 - t)),
+                        right: 20,
+                        bottom: 20,
+                        child: Text(
+                          widget.pico.nome.toUpperCase(),
+                          style: TextStyle(
+                            color: context.colors.chalkWhite,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18 + (6 * t),
+                          ),
+                          maxLines: t > 0.5 ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subtitleText,
-                    style: TextStyle(
-                      color: context.colors.mossRock,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LinhaCreditoAutor(creditos: widget.croqui.creditos),
+                    Text(
+                      subtitleText,
+                      style: TextStyle(
+                        color: context.colors.mossRock,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Action buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
+                    // Banner de Modo Online / Salvar Offline
+                    Builder(
+                      builder: (context) {
+                        final tree = TreeNavigationWrapper.maybeOf(context);
+                        final syncService = tree?.syncService;
+                        final downloadingMapNotifier = syncService?.downloadingCrags ??
+                            ValueNotifier<Map<String, double>>({});
+
+                        return ValueListenableBuilder<Map<String, double>>(
+                          valueListenable: downloadingMapNotifier,
+                          builder: (context, downloadingMap, _) {
+                            final progresso = downloadingMap[widget.cragId];
+
+                            return BannerModoOnline(
+                              tamanhoFormatado: tamanhoFormatado,
+                              isDownloaded: isDownloaded,
+                              progressoDownload: progresso,
+                              onSalvarOffline: () =>
+                                  _iniciarDownload(context),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Botões de Ação Auxiliares
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        buildFeedbackButton(
+                          context,
+                          color: context.colors.chalkWhite,
+                        ),
+                        IconButton(
                           icon: Icon(
-                            Icons.check,
-                            size: 18,
+                            Icons.search,
                             color: context.colors.chalkWhite,
                           ),
-                          label: Text(
-                            'SALVO OFFLINE',
-                            style: TextStyle(
-                              color: context.colors.chalkWhite,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: context.colors.mossRock,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      /*
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(
-                            Icons.share,
-                            size: 18,
-                            color: context.colors.chalkWhite,
-                          ),
-                          label: Text(
-                            'COMPARTILHAR',
-                            style: TextStyle(
-                              color: context.colors.chalkWhite,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: context.colors.caveShadow,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      */
-                      const SizedBox(width: 8),
-                      buildFeedbackButton(context, color: context.colors.chalkWhite),
-                      IconButton(
-                        icon: Icon(Icons.search, color: context.colors.chalkWhite),
-                        tooltip: searchTooltip,
-                        onPressed: () async {
-                          TelemetryService.instance.logAcaoCroqui(
-                            widget.cragId,
-                            'buscar',
-                          );
+                          tooltip: searchTooltip,
+                          onPressed: () async {
+                            TelemetryService.instance.logAcaoCroqui(
+                              widget.cragId,
+                              'buscar',
+                            );
                           final tree = TreeNavigationWrapper.currentTreeController;
                           tree?.onBackInterceptor = () {
                             // Tenta fechar o search
@@ -344,10 +511,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             delegate: PicoSearchDelegate(widget.pico, widget.cragId),
                           );
 
-                          // Limpa o interceptor apenas se ele for exatamente a função que registramos.
-                          // Isso previne que zere um interceptor que possa ter sido registrado
-                          // por outra coisa se a navegação ficasse muito rápida.
-                          tree?.onBackInterceptor = null;
+                          _setupBackInterceptor();
 
                           if (result != null && context.mounted) {
                             if (result is Escalada) {
@@ -357,6 +521,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                   context,
                                   setor: setor,
                                   scrollToEscalada: result,
+                                  cragId: widget.cragId,
                                 );
                               }
                               TelemetryService.instance.logAcaoEscalada(
@@ -366,13 +531,22 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                 'abrir_detalhes',
                                 'busca',
                               );
-                              AppNav.toVia(context, escalada: result, setor: setor);
+                              AppNav.toVia(
+                                context,
+                                escalada: result,
+                                setor: setor,
+                                cragId: widget.cragId,
+                              );
                             } else if (result is Setor) {
                               TelemetryService.instance.logAbrirSetor(
                                 widget.cragId,
                                 result.nome,
                               );
-                              AppNav.toSetor(context, setor: result);
+                              AppNav.toSetor(
+                                context,
+                                setor: result,
+                                cragId: widget.cragId,
+                              );
                             }
                           }
                         },
@@ -420,16 +594,22 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           );
 
                           if (confirm == true && context.mounted) {
+                            // Garante que o croqui permaneça em memória para transição suave para modo online
+                            widget.datasetRepo.gerenciadorSessaoOnline
+                                .registrarCroquiOnline(
+                              widget.cragId,
+                              widget.croqui,
+                            );
+
                             final success = await widget.datasetRepo.deleteCrag(
                               widget.cragId,
                             );
                             if (context.mounted) {
-                              AppNav.home(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     success
-                                        ? 'Guia excluído.'
+                                        ? 'Guia removido do armazenamento offline.'
                                         : 'Erro ao excluir guia.',
                                   ),
                                   backgroundColor: success
@@ -643,6 +823,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    ),
     );
   }
 }

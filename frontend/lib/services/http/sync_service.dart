@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'zip_interceptor_client.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
@@ -138,7 +137,7 @@ class SyncService {
     SyncNetwork? network,
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
-       _network = network ?? SyncNetwork(client ?? ZipInterceptorClient()) {
+       _network = network ?? SyncNetwork(client ?? http.Client()) {
     pico_aberto_id.addListener(() {
       final currentOpenId = pico_aberto_id.value;
       final idsToCommit = _pendenciasAtomicas.keys
@@ -311,27 +310,17 @@ class SyncService {
       }
 
       if (success) {
-        final isExperimental =
-            datasetRepository.editorDeCroqui.isExperimentalMode.value;
-        if (pico_aberto_id.value == id && !isExperimental) {
-          _pendenciasAtomicas[id] = updates;
-          recarga_pendente_pico_id.value = id;
-          debugPrint(
-            'Download manual retido em pendência porque croqui $id está aberto.',
+        if (updates.filesToDelete.isNotEmpty ||
+            updates.filesToRename.isNotEmpty) {
+          await _storage.applyAtomicFileUpdates(
+            filesToDelete: updates.filesToDelete,
+            filesToRename: updates.filesToRename,
           );
-        } else {
-          if (updates.filesToDelete.isNotEmpty ||
-              updates.filesToRename.isNotEmpty) {
-            await _storage.applyAtomicFileUpdates(
-              filesToDelete: updates.filesToDelete,
-              filesToRename: updates.filesToRename,
-            );
-          }
-          for (final entry in updates.metadataToUpdate.entries) {
-            await _updatePicoMetadata(entry.key, entry.value);
-          }
-          await datasetRepository.updateDatasetAfterDownload(id);
         }
+        for (final entry in updates.metadataToUpdate.entries) {
+          await _updatePicoMetadata(entry.key, entry.value);
+        }
+        await datasetRepository.updateDatasetAfterDownload(id);
         TelemetryService.instance.logAcaoExplorar(id, 'baixar');
       }
 
@@ -617,17 +606,7 @@ class SyncService {
               updates.hasErrors = true;
             } else {
               updates.picosAtualizadosComSucesso.add(newResumo.id);
-              final isExperimental =
-                  datasetRepository.editorDeCroqui.isExperimentalMode.value;
-              if (pico_aberto_id.value == newResumo.id && !isExperimental) {
-                _pendenciasAtomicas[newResumo.id] = picoUpdates;
-                recarga_pendente_pico_id.value = newResumo.id;
-                debugPrint(
-                  'Sincronização em background do croqui ${newResumo.id} retida em pendência (aberto).',
-                );
-              } else {
-                updates.merge(picoUpdates);
-              }
+              updates.merge(picoUpdates);
             }
           }
         }

@@ -368,18 +368,11 @@ void main() {
 
         await syncService.syncIndex();
 
-        // Verificamos que o pendente engatilhou
-        expect(syncService.recarga_pendente_pico_id.value, picoId);
-
-        // E garantimos que o .tmp NÂO foi renomeado atomaticamente para sobreescrever o real
+        // A atualização atômica é aplicada imediatamente sem reter pendência bloqueante
         expect(
-          File('${picoDir.path}/$picoId.binarypb.tmp').existsSync(),
+          File('${picoDir.path}/$picoId.binarypb').existsSync(),
           isTrue,
         );
-
-        // Ao comitar a pendência, o arquivo é movido
-        await syncService.commitPendenciasAtomaticas(picoId);
-        expect(syncService.recarga_pendente_pico_id.value, isNull);
         expect(
           File('${picoDir.path}/$picoId.binarypb.tmp').existsSync(),
           isFalse,

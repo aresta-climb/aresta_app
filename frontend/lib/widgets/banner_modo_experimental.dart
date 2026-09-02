@@ -99,7 +99,7 @@ class _BannerModoExperimentalState extends State<BannerModoExperimental>
                       final seconds = (remaining.inSeconds % 60)
                           .toString()
                           .padLeft(2, '0');
-                      timerText = ' (' + minutes + ':' + seconds + ')';
+                      timerText = ' ($minutes:$seconds)';
                     }
 
                     return Container(
@@ -120,7 +120,7 @@ class _BannerModoExperimentalState extends State<BannerModoExperimental>
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'MODO EXPERIMENTAL ATIVO' + timerText,
+                              'MODO EXPERIMENTAL ATIVO$timerText',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

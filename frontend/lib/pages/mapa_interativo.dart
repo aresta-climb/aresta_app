@@ -1,24 +1,21 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/utils/croqui_map_index.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:frontend/constants/network_constants.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
-import '../services/editor_croqui.dart';
 import '../utils/dataset_resolver.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
 import '../theme/app_colors.dart';
+import '../widgets/provedor_imagem_aresta.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -241,79 +238,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   }
 
   Future<ImageProvider?> _resolveImageProvider() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final editor = EditorDeCroqui.instance;
-    final downloadsPath = '${editor.downloadsPath(dir.path)}/${widget.cragId}';
-
-    String path = widget.mapa.caminhoImagemMapa;
-    String fileName = path.split('/').last;
-
-    File? localFile;
-
-    // 1. Se for uma URL absoluta, tentamos extrair o caminho relativo
-    final baseUrl = '${NetworkConstants.officialServerUrl}/';
-    if (path.startsWith(baseUrl)) {
-      final relativePath = path.replaceFirst(baseUrl, '');
-      final directFile = File('$downloadsPath/$relativePath');
-      if (directFile.existsSync()) {
-        localFile = directFile;
-      }
-    }
-
-    // 2. Tenta usar o caminho diretamente como um caminho relativo
-    if (localFile == null) {
-      String cleanPath = path.startsWith('/') ? path.substring(1) : path;
-      final directFile = File('$downloadsPath/$cleanPath');
-      if (directFile.existsSync()) {
-        localFile = directFile;
-      }
-    }
-
-    // 2. Fallback: Procura pelo nome do arquivo recursivamente
-    if (localFile == null && fileName.isNotEmpty) {
-      final searchName = Uri.decodeComponent(fileName).toLowerCase();
-      String searchBaseName = searchName.contains('.')
-          ? searchName.substring(0, searchName.lastIndexOf('.'))
-          : searchName;
-
-      try {
-        final downloadsDir = Directory(downloadsPath);
-        if (downloadsDir.existsSync()) {
-          final entities = downloadsDir.listSync(recursive: true);
-          for (var entity in entities) {
-            if (entity is File) {
-              final String ePath = entity.path.replaceAll('\\', '/');
-              final String eName = ePath.split('/').last;
-              final String eNameLower = Uri.decodeComponent(
-                eName,
-              ).toLowerCase();
-              if (eNameLower == searchName) {
-                localFile = entity;
-                break;
-              }
-              String eBaseName = eNameLower.contains('.')
-                  ? eNameLower.substring(0, eNameLower.lastIndexOf('.'))
-                  : eNameLower;
-              if (eBaseName == searchBaseName) {
-                localFile = entity;
-                break;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // ignora erros de leitura
-      }
-    }
-
-    if (localFile != null && localFile.existsSync()) {
-      return FileImage(localFile);
-    }
-
-    AppLogger.instance.logError(
-      'Erro: Imagem do mapa não encontrada localmente: $path',
+    return ProvedorImagemAresta.resolver(
+      picoId: widget.cragId,
+      caminho: widget.mapa.caminhoImagemMapa,
     );
-    return null;
   }
 
   @override

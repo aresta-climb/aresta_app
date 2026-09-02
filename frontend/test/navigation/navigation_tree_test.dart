@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 void main() {
   group('NavNode path', () {
@@ -91,9 +90,6 @@ void main() {
       'Navigating between MapaGeral and MapaInterativo should not create an infinite loop',
       () {
         final controller = TreeNavigationController();
-
-        final pico = Pico()..nome = 'Pico Teste';
-        final mapa = Mapa();
 
         // Navigate to Home
         expect(controller.currentNode, isA<HomeNode>());

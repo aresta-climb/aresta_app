@@ -54,9 +54,9 @@ void main() {
     final testRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
     final testSync = SyncService(datasetRepository: testRepo);
 
-    testRepo.activeDataset.value = TopoDataset(
-      availablePicos: [],
-      downloadedPicos: [],
+    testRepo.activeDataset.value = ConjuntoDadosCroqui(
+      picosDisponiveis: [],
+      picosBaixados: [],
     );
 
     // Fornece as dependências necessárias para o TreeNavigationWrapper
@@ -99,9 +99,9 @@ void main() {
       );
       testSync.syncStatus.value = SyncStatus.updated;
 
-      testRepo.activeDataset.value = TopoDataset(
-        availablePicos: [],
-        downloadedPicos: [
+      testRepo.activeDataset.value = ConjuntoDadosCroqui(
+        picosDisponiveis: [],
+        picosBaixados: [
           {
             'id': 'pico_teste',
             'nome': 'Pico Teste',

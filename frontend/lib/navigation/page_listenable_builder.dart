@@ -7,7 +7,6 @@ import '../services/dataset_repository.dart';
 import '../utils/dataset_resolver.dart';
 import '../services/firebase/app_logger.dart';
 import 'navigation_functions.dart';
-import '../main.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
 /// redesenha a página atual com os dados mais recentes do croqui.
@@ -50,7 +49,7 @@ class PageListenableBuilder extends StatelessWidget {
           );
         }
 
-        // Encontra o crag nos picos baixados
+        // 1. Tenta encontrar o crag nos picos baixados
         Map<String, dynamic>? cragData;
         try {
           final crag = topoDataset.downloadedPicos.firstWhere(
@@ -58,6 +57,18 @@ class PageListenableBuilder extends StatelessWidget {
           );
           cragData = crag['data'] as Map<String, dynamic>?;
         } catch (_) {}
+
+        // 2. Se não estiver baixado, tenta resolver da sessão online ativa
+        if (cragData == null) {
+          final croquiOnline =
+              datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline(cragId);
+          if (croquiOnline != null && croquiOnline.picos.isNotEmpty) {
+            cragData = {
+              'pico': croquiOnline.picos.first,
+              'croqui': croquiOnline,
+            };
+          }
+        }
 
         if (cragData == null) {
           // O pico foi apagado do dataset
@@ -89,95 +100,7 @@ class PageListenableBuilder extends StatelessWidget {
             res.escalada,
           );
 
-          final treeWrapper = context
-              .findAncestorWidgetOfExactType<TreeNavigationWrapper>();
-          final syncService = treeWrapper?.syncService;
-
-          if (syncService == null) return pageContent;
-
-          return ValueListenableBuilder<String?>(
-            valueListenable: syncService.recarga_pendente_pico_id,
-            builder: (context, pendingId, child) {
-              final isExperimental =
-                  datasetRepo.editorDeCroqui.isExperimentalMode.value;
-              if (pendingId == cragId && !isExperimental) {
-                return Stack(
-                  children: [
-                    IgnorePointer(child: child!),
-                    Container(
-                      color: Colors.black.withValues(alpha: 0.8),
-                      child: Center(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 32),
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.update,
-                                  size: 48,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Croqui Atualizado',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Uma nova versão deste croqui foi instalada com sucesso em segundo plano. Recarregue a página para acessar as novidades.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 15),
-                                ),
-                                const SizedBox(height: 24),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      syncService.commitPendenciasAtomaticas(
-                                        cragId,
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'RECARREGAR',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.1,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return child!;
-            },
-            child: pageContent,
-          );
+          return pageContent;
         } catch (e, st) {
           AppLogger.instance.logError(
             'Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st',

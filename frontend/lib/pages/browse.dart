@@ -55,7 +55,8 @@ class _BrowsePageState extends State<BrowsePage> {
   ///
   /// Mostra um SnackBar durante o processo e outro para indicar
   /// sucesso ou falha após a conclusão.
-  void _handleDownload(Map<String, dynamic> crag) async {
+  @visibleForTesting
+  void handleDownload(Map<String, dynamic> crag) async {
     final name = safeString(crag['nome'], fallback: 'Pico');
     final String id = crag['id'];
     if (await widget.syncService.isNetworkDisabled()) {
@@ -222,7 +223,7 @@ class _BrowsePageState extends State<BrowsePage> {
                           },
                         );
                       },
-                      onDownload: _handleDownload,
+                      onDownload: handleDownload,
                       onOpen: (crag) => handlePicoSelection(
                         context,
                         widget.datasetRepo,

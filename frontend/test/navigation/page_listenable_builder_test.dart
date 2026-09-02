@@ -39,14 +39,14 @@ void main() {
         final picoV2 = Pico()..nome = 'Pico Versão 2';
         final croqui = Croqui();
 
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV1, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pumpWidget(
@@ -68,14 +68,14 @@ void main() {
         expect(find.text('Pico Versão 2'), findsNothing);
 
         // Simula um Hot-Reload (Novo download do _checkForUpdates)
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV2, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pump();
@@ -99,14 +99,14 @@ void main() {
 
         final croqui = Croqui();
 
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV1, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pumpWidget(
@@ -159,14 +159,14 @@ void main() {
 
         // Hot-Reload: Um novo Pico entra, mas o "Setor de Teste" foi deletado no servidor!
         final picoV2 = Pico()..nome = 'Pico V2 Sem Setores';
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV2, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         // Pump para processar o builder
@@ -199,14 +199,14 @@ void main() {
 
       final croqui = Croqui();
 
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [
           {
             'id': 'pico_1',
             'data': {'pico': pico, 'croqui': croqui},
           },
         ],
-        availablePicos: [],
+        picosDisponiveis: [],
       );
 
       await tester.pumpWidget(
@@ -250,75 +250,21 @@ void main() {
       expect(find.text('View do Sub-setor Teste'), findsOneWidget);
       expect(mockObserver.hasPopped, isFalse);
     });
-    testWidgets('Deve exibir o popup bloqueante se houver recarga pendente', (
-      WidgetTester tester,
-    ) async {
-      final picoV1 = Pico()..nome = 'Pico Teste';
-      final croqui = Croqui();
-
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
-          {
-            'id': 'pico_1',
-            'data': {'pico': picoV1, 'croqui': croqui},
-            'isDownloaded': true,
-          },
-        ],
-        availablePicos: [],
-      );
-
-      final syncService = SyncService(datasetRepository: repo);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: TreeNavigationWrapper(
-            datasetRepo: repo,
-            syncService: syncService,
-          ),
-        ),
-      );
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      final wrapperState =
-          tester.state<State<TreeNavigationWrapper>>(
-                find.byType(TreeNavigationWrapper),
-              )
-              as dynamic;
-      final treeController = wrapperState.treeController;
-
-      treeController.navigateTo(
-        PicoNode(cragId: 'pico_1', parent: const HomeNode()),
-      );
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('Croqui Atualizado'), findsNothing);
-
-      // Simula fim do download atômico
-      syncService.recarga_pendente_pico_id.value = 'pico_1';
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // O popup bloqueante deve aparecer
-      expect(find.text('Croqui Atualizado'), findsOneWidget);
-      expect(find.text('RECARREGAR'), findsOneWidget);
-    });
-
     testWidgets(
-      'Não deve exibir o popup bloqueante de recarga pendente se estiver em modo experimental',
+      'Deve atualizar a UI de forma transparente e contínua sem popup bloqueante',
       (WidgetTester tester) async {
         final picoV1 = Pico()..nome = 'Pico Teste';
         final croqui = Croqui();
 
-        editor.isExperimentalMode.value = true;
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV1, 'croqui': croqui},
               'isDownloaded': true,
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         final syncService = SyncService(datasetRepository: repo);
@@ -346,12 +292,26 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 500));
 
-        // Mesmo que recarga_pendente_pico_id seja modificado, no modo experimental o popup não deve ser renderizado
-        syncService.recarga_pendente_pico_id.value = 'pico_1';
+        expect(find.text('PICO TESTE'), findsOneWidget);
+        expect(find.text('Croqui Atualizado'), findsNothing);
+
+        // Simula atualização no dataset
+        final picoV2 = Pico()..nome = 'Pico Teste Atualizado';
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+              'isDownloaded': true,
+            },
+          ],
+          picosDisponiveis: [],
+        );
         await tester.pump(const Duration(milliseconds: 500));
 
+        // A UI atualiza automaticamente sem popup bloqueante
+        expect(find.text('PICO TESTE ATUALIZADO'), findsOneWidget);
         expect(find.text('Croqui Atualizado'), findsNothing);
-        expect(find.text('RECARREGAR'), findsNothing);
       },
     );
   });

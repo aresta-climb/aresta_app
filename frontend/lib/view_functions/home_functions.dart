@@ -12,9 +12,11 @@ import '../view_functions/common_functions.dart';
 import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
+import '../aresta_api/proto/generated/croqui.pb.dart';
 
-/// Navega para a página de detalhes de um pico selecionado.
-/// (Mantido para compatibilidade com browse.dart e mapa_global.dart)
+import '../services/http/servico_croqui_online.dart';
+
+/// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 void handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
@@ -34,7 +36,18 @@ void handlePicoSelection(
     ),
   );
 
-  final croqui = await datasetRepo.getCroqui(id);
+  Croqui? croqui = await datasetRepo.getCroqui(id);
+
+  // Se não estiver salvo localmente, busca sob demanda para sessão online
+  if (croqui == null) {
+    final url = pico['url']?.toString();
+    if (url != null && url.isNotEmpty) {
+      final servicoOnline = ServicoCroquiOnline(
+        sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
+      );
+      croqui = await servicoOnline.carregarCroquiRemoto(url, picoId: id);
+    }
+  }
 
   if (!context.mounted) return;
 
@@ -55,7 +68,7 @@ void handlePicoSelection(
   } else {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o guia.')));
+    ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o guia. Verifique sua conexão.')));
   }
 }
 

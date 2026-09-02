@@ -34,14 +34,7 @@ void main() {
       expect(editor.activeBaseUrl, 'http://meuservidor.local:8080');
     });
 
-    test(
-      'deve retornar a URL ghost aresta-zip no modo experimental com URL',
-      () {
-        editor.isExperimentalMode.value = true;
-        editor.editorUrl.value = 'aresta-zip:///data/repo.croqui';
-        expect(editor.activeBaseUrl, 'aresta-zip:///data/repo.croqui');
-      },
-    );
+
 
     test('deve normalizar URLs sem scheme adicionando https://', () {
       editor.isExperimentalMode.value = true;

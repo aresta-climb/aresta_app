@@ -2,7 +2,7 @@
 
 Historicamente, o Aresta Climb impunha um modelo estritamente offline-first onde explorar um pico exigia baixar seu pacote completo de dados e imagens para a pasta `/downloads/<picoId>/`. Embora isso garanta 100% de disponibilidade na montanha, gera alta fricção para usuários que desejam apenas consultar graus de vias, verificar betas ou comparar picos em casa.
 
-A infraestrutura remota do Aresta distribui os dados no formato `.binarypb` com imagens WebP e mapas estáticos sobre CDN HTTP (e localmente via protocolo Ghost `aresta-zip://`). Além disso, cada `ResumoCroqui` no `indice.binarypb` já contém hashes SHA-256 e o `Croqui` mapeia hashes de todos os `arquivosExternos`.
+A infraestrutura remota do Aresta distribui os dados no formato `.binarypb` com imagens WebP e mapas estáticos sobre CDN HTTP (e localmente via Live Reload no Desktop). Além disso, cada `ResumoCroqui` no `indice.binarypb` já contém hashes SHA-256 e o `Croqui` mapeia hashes de todos os `arquivosExternos`.
 
 Este design estabelece a arquitetura híbrida de navegação online com transmissão sob demanda, cache volátil, verificação de ETag, guardiões de conscientização visual e downloads em segundo plano com notificações persistentes do sistema operacional, respeitando rigorosamente os **Princípios de Engenharia do Aresta App** (`PRINCIPIOS.md`): nomenclatura 100% em português brasileiro, componentes independentes (feature-first), TDD com cobertura integral de testes, priorização de testes de widget e documentação contínua.
 
@@ -31,7 +31,7 @@ Este design estabelece a arquitetura híbrida de navegação online com transmis
 - **Abordagem**: Enquanto a página de um pico online estiver ativa, um timer periódico dispara a cada 30-60 segundos uma requisição `GET` com o cabeçalho `If-None-Match: <etag>`.
 - **Comportamento**:
   - `304 Not Modified`: Nenhuma ação, tráfego nulo de corpo.
-  - `200 OK`: Atualiza o buffer do croqui e emite notificação reativa para a UI exibir a `PilulaAtualizacaoOnline`.
+  - `200 OK`: Atualiza o buffer do croqui e emite notificação reativa no `DatasetRepository`, permitindo recarregamento transparente e contínuo pela UI.
   - O timer é cancelado automaticamente no descarte (`dispose`) da página.
 
 ### Decisão 3: Tamanho de Download Pré-Computado no `indice.proto`

@@ -7,8 +7,22 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/widgets/linha_credito_autor.dart';
+import 'package:frontend/widgets/modal_confirmacao_saida.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/main.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
+
+class _FakeDatasetRepository extends DatasetRepository {
+  _FakeDatasetRepository() : super(editorDeCroqui: EditorDeCroqui());
+
+  @override
+  Future<bool> deleteCrag(String id) async {
+    return true;
+  }
+}
 
 void main() {
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (
@@ -58,6 +72,46 @@ void main() {
     expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
     expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'excluir');
   });
+
+  testWidgets(
+    'PicoDetailsPage ao confirmar exclusão transiciona para modo online registrando croqui em memória',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final croqui = Croqui();
+      final pico = Pico()..nome = 'Pico Teste';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PicoDetailsPage(
+            pico: pico,
+            croqui: croqui,
+            cragId: 'crag1',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      );
+
+      // Clica na lixeira
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+
+      // Confirma no modal de exclusão
+      expect(find.text('Excluir?'), findsOneWidget);
+      await tester.tap(find.text('EXCLUIR'));
+      await tester.pumpAndSettle();
+
+      // Verifica se o croqui foi preservado na sessão online para transição suave
+      expect(
+        datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline('crag1'),
+        equals(croqui),
+      );
+      // E que a página continua montada com o snackbar exibido
+      expect(
+        find.text('Guia removido do armazenamento offline.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('PicoDetailsPage should call logAcaoCroqui on FAB tap', (
     tester,
@@ -191,5 +245,179 @@ void main() {
     // Verify we returned to PicoDetailsPage and SearchPageRoute is closed
     expect(find.byType(TextField), findsNothing);
     expect(find.byIcon(Icons.search), findsOneWidget);
+  });
+
+  testWidgets('PicoDetailsPage exibe crédito do criador do croqui na primeira página', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['João Silva', 'Maria Santos']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico com Crédito',
+          croqui: croqui,
+          cragId: 'crag_credito',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.text('Croqui por João Silva, Maria Santos'), findsOneWidget);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+  });
+
+  testWidgets('PicoDetailsPage não exibe linha de crédito quando croqui não possui autores definidos', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(); // sem creditos
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico sem Crédito',
+          croqui: croqui,
+          cragId: 'crag_sem_credito',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.person_outline), findsNothing);
+  });
+
+  testWidgets('PicoDetailsPage ignora placeholders genéricos como Autores do Croqui Original', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['Autores do Croqui Original']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico da Vó Gusta',
+          croqui: croqui,
+          cragId: 'crag_vo_gusta',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.person_outline), findsNothing);
+    expect(find.textContaining('Autores do Croqui Original'), findsNothing);
+  });
+
+  testWidgets('PicoDetailsPage exibe LinhaCreditoAutor posicionado antes do subtítulo verde', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['Danilo Stehling']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()
+            ..nome = 'Pico Teste'
+            ..estado = 'MG',
+          croqui: croqui,
+          cragId: 'crag_pos',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    final creditFinder = find.byType(LinhaCreditoAutor);
+    final subtitleFinder = find.textContaining('MG • 0 SETORES');
+
+    expect(creditFinder, findsOneWidget);
+    expect(subtitleFinder, findsOneWidget);
+
+    final creditY = tester.getTopLeft(creditFinder).dy;
+    final subtitleY = tester.getTopLeft(subtitleFinder).dy;
+
+    expect(creditY, lessThan(subtitleY));
+  });
+
+  testWidgets('PicoDetailsPage onBackInterceptor não intercepta quando volta entre subpáginas do mesmo croqui', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final treeController = TreeNavigationController(
+      estadoInicial: ArvoreNavegacao(
+        noAtual: SetorNode(
+          setorNome: 'Setor 1',
+          cragId: 'crag_online',
+          parent: PicoNode(
+            cragId: 'crag_online',
+            parent: const HomeNode(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: treeController,
+          child: PicoDetailsPage(
+            pico: Pico()..nome = 'Pico Online',
+            croqui: Croqui(),
+            cragId: 'crag_online',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Quando noAtual é SetorNode (parent é PicoNode com mesmo cragId), onBackInterceptor deve retornar false
+    expect(treeController.onBackInterceptor, isNotNull);
+    final intercepted = treeController.onBackInterceptor!();
+    expect(intercepted, isFalse);
+  });
+
+  testWidgets('PicoDetailsPage onBackInterceptor intercepta quando volta para fora do croqui em croqui não baixado', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final treeController = TreeNavigationController(
+      estadoInicial: ArvoreNavegacao(
+        noAtual: PicoNode(
+          cragId: 'crag_online_nao_baixado',
+          parent: const HomeNode(),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: treeController,
+          child: PicoDetailsPage(
+            pico: Pico()..nome = 'Pico Online Não Baixado',
+            croqui: Croqui(),
+            cragId: 'crag_online_nao_baixado',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Quando noAtual é PicoNode (parent é HomeNode), onBackInterceptor deve interceptar e mostrar modal
+    expect(treeController.onBackInterceptor, isNotNull);
+    final intercepted = treeController.onBackInterceptor!();
+    expect(intercepted, isTrue);
+
+    await tester.pump();
+    expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
   });
 }

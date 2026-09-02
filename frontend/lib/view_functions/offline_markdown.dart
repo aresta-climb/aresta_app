@@ -4,13 +4,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import '../constants/network_constants.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../services/editor_croqui.dart';
+import '../widgets/provedor_imagem_aresta.dart';
 import 'common_functions.dart';
 
 /// Um widget que renderiza conteúdo Markdown com suporte a imagens offline locais.
@@ -79,99 +79,19 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
             }
           },
           imageBuilder: (Uri uri, String? title, String? alt) {
-            String path = Uri.decodeFull(uri.toString());
+            final String path = Uri.decodeFull(uri.toString());
 
-            String fileName = '';
-            if (uri.pathSegments.isNotEmpty) {
-              fileName = Uri.decodeFull(uri.pathSegments.last);
-            } else {
-              fileName = path.split('/').last;
-            }
+            Widget buildZoomableImage(ImageProvider provider) {
+              _imageProviders.add(provider);
+              final imageWidget = Image(
+                image: provider,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.broken_image,
+                  size: 50,
+                  color: Colors.grey,
+                ),
+              );
 
-            File? localFile;
-
-            // 1. Tenta mapear a URL do servidor conhecida diretamente para o caminho baixado
-            final baseUrl = '${NetworkConstants.officialServerUrl}/';
-            String cleanUrl = Uri.decodeFull(uri.toString());
-            if (cleanUrl.startsWith(baseUrl)) {
-              final relativePath = cleanUrl.replaceFirst(baseUrl, '');
-              final directFile = File('$downloadsPath/$relativePath');
-              if (directFile.existsSync()) {
-                localFile = directFile;
-              }
-            }
-
-            // 2. Tenta usar o caminho diretamente como um caminho relativo
-            if (localFile == null) {
-              String cleanPath;
-              if (path.startsWith('/')) {
-                cleanPath = path.substring(1);
-              } else {
-                cleanPath = path;
-              }
-
-              final directFile = File('$downloadsPath/$cleanPath');
-              if (directFile.existsSync()) {
-                localFile = directFile;
-              }
-            }
-
-            // 3. Fallback: Procura pelo nome do arquivo recursivamente no diretório de downloads
-            if (localFile == null && fileName.isNotEmpty) {
-              final searchName = Uri.decodeComponent(fileName).toLowerCase();
-
-              String searchBaseName;
-              if (searchName.contains('.')) {
-                searchBaseName = searchName.substring(
-                  0,
-                  searchName.lastIndexOf('.'),
-                );
-              } else {
-                searchBaseName = searchName;
-              }
-
-              try {
-                final downloadsDir = Directory(downloadsPath);
-                if (downloadsDir.existsSync()) {
-                  final entities = downloadsDir.listSync(recursive: true);
-                  for (var entity in entities) {
-                    if (entity is File) {
-                      final String ePath = entity.path.replaceAll('\\', '/');
-                      final String eName = ePath.split('/').last;
-                      final String eNameLower = Uri.decodeComponent(
-                        eName,
-                      ).toLowerCase();
-
-                      // Correspondência exata
-                      if (eNameLower == searchName) {
-                        localFile = entity;
-                        break;
-                      }
-
-                      // Corresponde ao nome base sem extensão (lida com incompatibilidades .webp vs .jpg)
-                      String eBaseName;
-                      if (eNameLower.contains('.')) {
-                        eBaseName = eNameLower.substring(
-                          0,
-                          eNameLower.lastIndexOf('.'),
-                        );
-                      } else {
-                        eBaseName = eNameLower;
-                      }
-
-                      if (eBaseName == searchBaseName) {
-                        localFile = entity;
-                        break;
-                      }
-                    }
-                  }
-                }
-              } catch (e) {
-                // Ignora erros de travessia
-              }
-            }
-
-            Widget buildZoomableImage(Image imageWidget) {
               return GestureDetector(
                 onTap: () {
                   showDialog(
@@ -222,39 +142,24 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
               );
             }
 
-            // Retorna o arquivo local se encontrado
-            if (localFile != null && localFile.existsSync()) {
-              final provider = FileImage(localFile);
-              _imageProviders.add(provider);
-              return buildZoomableImage(
-                Image(
-                  image: provider,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.broken_image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
-              );
-            }
-
-            // Fallback para a rede se for uma URL absoluta (apenas caso não tenha sido baixada)
-            if (path.startsWith('http://') || path.startsWith('https://')) {
-              final provider = NetworkImage(path);
-              _imageProviders.add(provider);
-              return buildZoomableImage(
-                Image(
-                  image: provider,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.broken_image,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
-              );
-            }
-
-            return const Icon(Icons.broken_image, color: Colors.grey);
+            return FutureBuilder<ImageProvider?>(
+              future: ProvedorImagemAresta.resolver(
+                picoId: widget.cragId,
+                caminho: path,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 100,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasData && snapshot.data != null) {
+                  return buildZoomableImage(snapshot.data!);
+                }
+                return const Icon(Icons.broken_image, color: Colors.grey);
+              },
+            );
           },
           styleSheet: MarkdownStyleSheet(
             p: TextStyle(color: fishBone.withValues(alpha: 0.8), fontSize: 16),

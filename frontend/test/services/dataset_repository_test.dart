@@ -292,9 +292,63 @@ void main() {
       expect(picoDir.existsSync(), isFalse);
     });
 
-    test('deleteCrag retorna falso se ocorrer erro na deleção', () async {
-      final result = await repo.deleteCrag('pico_inexistente');
-      expect(result, isFalse);
+    test('deleteCrag preserva croqui no GerenciadorSessaoOnline ao excluir do disco permanente', () async {
+      final picoId = 'pico_para_preservar';
+      final picoDir = Directory(
+        '${editor.downloadsPath(tempDir.path)}/$picoId',
+      );
+      await picoDir.create(recursive: true);
+
+      final croqui = Croqui(id: picoId, nome: 'Pico Preservado');
+      final croquiFile = File('${picoDir.path}/$picoId.binarypb');
+      await croquiFile.writeAsBytes(croqui.writeToBuffer());
+
+      final result = await repo.deleteCrag(picoId);
+
+      expect(result, isTrue);
+      expect(picoDir.existsSync(), isFalse);
+      expect(
+        repo.gerenciadorSessaoOnline.obterCroquiOnline(picoId)?.nome,
+        equals('Pico Preservado'),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Consulta de Croqui (Híbrido: Local ou Sessão Online)
+  // ---------------------------------------------------------------------------
+  group('getCroqui (Híbrido Local e Sessão Online)', () {
+    test('retorna croqui do disco permanente se existir em /downloads', () async {
+      final picoId = 'pico_local';
+      final picoDir = Directory(
+        '${editor.downloadsPath(tempDir.path)}/$picoId',
+      );
+      await picoDir.create(recursive: true);
+
+      final croquiLocal = Croqui(id: picoId, nome: 'Pico Local');
+      final croquiFile = File('${picoDir.path}/$picoId.binarypb');
+      await croquiFile.writeAsBytes(croquiLocal.writeToBuffer());
+
+      final resultado = await repo.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Local'));
+    });
+
+    test('retorna croqui da sessão online se não estiver baixado localmente', () async {
+      final picoId = 'pico_remoto';
+      final croquiOnline = Croqui(id: picoId, nome: 'Pico Online em Memória');
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline(picoId, croquiOnline);
+
+      final resultado = await repo.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Online em Memória'));
+    });
+
+    test('retorna null se o croqui não estiver nem em disco nem na sessão online', () async {
+      final resultado = await repo.getCroqui('pico_fantasma');
+      expect(resultado, isNull);
     });
   });
 
