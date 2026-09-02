@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'no_navegacao.dart';
+import 'nav_node.dart';
 
 /// Nó que representa um modal textual aberto sobre a página atual.
 class TextNode extends NavNode {

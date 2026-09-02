@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'no_navegacao.dart';
-import 'modelo_arvore_navegacao.dart';
+import 'nav_node.dart';
+import 'navigation_tree_model.dart';
 
 /// Controlador de estado reativo de navegação baseado na árvore de nós ([ArvoreNavegacao]).
 ///

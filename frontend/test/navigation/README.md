@@ -6,9 +6,9 @@ Este diretório contém os testes de unidade dedicados a validar o comportamento
 
 Os testes estão organizados em testes de integração de navegação e testes de domínio modular em `test/navigation/arvore/`:
 - `navigation_test.dart` e `navigation_tree_test.dart`: Testes de integração de roteamento e fluxos de tela.
-- `arvore/modelo_arvore_navegacao_test.dart`: Testes unitários puros das regras de domínio da árvore (push, pop, rewind, reset, canonical path).
-- `arvore/controlador_navegacao_arvore_test.dart`: Testes do controlador reativo e notificações do `ChangeNotifier`.
-- `arvore/nos_navegacao_test.dart`: Testes unitários dos nós (`NavNode`, rótulos amigáveis e caminhos canônicos curtos).
+- `arvore/navigation_tree_model_test.dart`: Testes unitários puros das regras de domínio da árvore (push, pop, rewind, reset, canonical path).
+- `arvore/tree_navigation_controller_test.dart`: Testes do controlador reativo e notificações do `ChangeNotifier`.
+- `arvore/nav_nodes_test.dart`: Testes unitários dos nós (`NavNode`, rótulos amigáveis e caminhos canônicos curtos).
 
 Validam as seguintes capacidades e comportamentos da Árvore de Navegação:
 

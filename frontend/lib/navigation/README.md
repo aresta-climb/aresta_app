@@ -16,28 +16,28 @@ A arquitetura foi refatorada seguindo Clean Architecture, decompondo o controlad
 ```text
 lib/navigation/
 ├── arvore/
-│   ├── no_navegacao.dart              - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
-│   ├── nos_globais.dart               - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, etc.)
-│   ├── nos_pico.dart                  - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
-│   ├── nos_modais.dart                - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
-│   ├── modelo_arvore_navegacao.dart   - Modelo de domínio puro ArvoreNavegacao com operações de pilha e prevenção de loops
-│   └── controlador_navegacao_arvore.dart - Controlador reativo TreeNavigationController (ChangeNotifier)
+│   ├── nav_node.dart                  - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
+│   ├── global_nodes.dart              - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, etc.)
+│   ├── pico_nodes.dart                - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
+│   ├── modal_nodes.dart               - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
+│   ├── navigation_tree_model.dart     - Modelo de domínio puro ArvoreNavegacao com operações de pilha e prevenção de loops
+│   └── tree_navigation_controller.dart - Controlador reativo TreeNavigationController (ChangeNotifier)
 ├── navigation_tree.dart               - Fachada de re-exports dos módulos da árvore para importação unificada
 ├── page_listenable_builder.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
 └── navigation_functions.dart          - API pública simplificada AppNav
 ```
 
-### `arvore/no_navegacao.dart`
+### `arvore/nav_node.dart`
 Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`), nunca os objetos complexos do Protobuf instanciados na memória.
 - **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
 
-### `arvore/modelo_arvore_navegacao.dart`
+### `arvore/navigation_tree_model.dart`
 Encapsula as regras de domínio puras da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
 - Gestão do nó raiz e nó atual.
 - Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
 - Cálculo de profundidade e caminho canônico.
 
-### `arvore/controlador_navegacao_arvore.dart`
+### `arvore/tree_navigation_controller.dart`
 Controlador de estado `TreeNavigationController` que estende `ChangeNotifier`, orquestrando a navegação reativa e notificando a interface quando o nó ativo transiciona.
 
 ### `navigation_tree.dart`

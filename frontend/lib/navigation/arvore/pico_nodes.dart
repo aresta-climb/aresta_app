@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'no_navegacao.dart';
+import 'nav_node.dart';
 
 /// Nó que representa a tela de detalhes e hub de um Pico específico (PicoView).
 class PicoNode extends PicoContextNode {

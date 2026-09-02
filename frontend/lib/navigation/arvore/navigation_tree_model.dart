@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'no_navegacao.dart';
-import 'nos_globais.dart';
+import 'nav_node.dart';
+import 'global_nodes.dart';
 
 /// Modelo de domínio puro e imutável que representa o estado e as regras estruturais
 /// da árvore de navegação do aplicativo.

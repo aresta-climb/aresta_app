@@ -7,9 +7,9 @@
 /// [ArvoreNavegacao] e o controlador reativo [TreeNavigationController].
 library;
 
-export 'arvore/no_navegacao.dart';
-export 'arvore/nos_globais.dart';
-export 'arvore/nos_pico.dart';
-export 'arvore/nos_modais.dart';
-export 'arvore/modelo_arvore_navegacao.dart';
-export 'arvore/controlador_navegacao_arvore.dart';
+export 'arvore/nav_node.dart';
+export 'arvore/global_nodes.dart';
+export 'arvore/pico_nodes.dart';
+export 'arvore/modal_nodes.dart';
+export 'arvore/navigation_tree_model.dart';
+export 'arvore/tree_navigation_controller.dart';
