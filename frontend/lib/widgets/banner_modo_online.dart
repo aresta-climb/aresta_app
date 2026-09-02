@@ -41,22 +41,21 @@ class BannerModoOnline extends StatelessWidget {
           ),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
               Icons.check_circle_outline,
               color: Color(0xFF7B8B6F),
               size: 20,
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'SALVO OFFLINE',
-                style: TextStyle(
-                  color: Color(0xFF7B8B6F),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 1.1,
-                ),
+            const SizedBox(width: 8),
+            const Text(
+              'SALVO OFFLINE',
+              style: TextStyle(
+                color: Color(0xFF7B8B6F),
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 1.1,
               ),
             ),
           ],
