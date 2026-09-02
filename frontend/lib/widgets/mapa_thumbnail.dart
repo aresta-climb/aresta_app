@@ -12,6 +12,7 @@ import 'package:frontend/constants/network_constants.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../navigation/navigation_tree.dart';
+import 'provedor_imagem_aresta.dart';
 
 class MapaThumbnail extends StatefulWidget {
   final List<Mapa> mapas;
@@ -174,68 +175,8 @@ Future<ImageProvider?> resolveImagePathProvider(
   String cragId,
   String path,
 ) async {
-  final dir = await getApplicationDocumentsDirectory();
-  final editor = EditorDeCroqui.instance;
-  final downloadsPath = '${editor.downloadsPath(dir.path)}/$cragId';
-
-  String fileName = path.split('/').last;
-
-  File? localFile;
-
-  final baseUrl = '${NetworkConstants.officialServerUrl}/';
-  if (path.startsWith(baseUrl)) {
-    final relativePath = path.replaceFirst(baseUrl, '');
-    final directFile = File('$downloadsPath/$relativePath');
-    if (directFile.existsSync()) {
-      localFile = directFile;
-    }
-  }
-
-  if (localFile == null) {
-    String cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    final directFile = File('$downloadsPath/$cleanPath');
-    if (directFile.existsSync()) {
-      localFile = directFile;
-    }
-  }
-
-  if (localFile == null && fileName.isNotEmpty) {
-    final searchName = Uri.decodeComponent(fileName).toLowerCase();
-    String searchBaseName = searchName.contains('.')
-        ? searchName.substring(0, searchName.lastIndexOf('.'))
-        : searchName;
-
-    try {
-      final downloadsDir = Directory(downloadsPath);
-      if (downloadsDir.existsSync()) {
-        final entities = downloadsDir.listSync(recursive: true);
-        for (var entity in entities) {
-          if (entity is File) {
-            final String ePath = entity.path.replaceAll('\\', '/');
-            final String eName = ePath.split('/').last;
-            final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
-            if (eNameLower == searchName) {
-              localFile = entity;
-              break;
-            }
-            String eBaseName = eNameLower.contains('.')
-                ? eNameLower.substring(0, eNameLower.lastIndexOf('.'))
-                : eNameLower;
-            if (eBaseName == searchBaseName) {
-              localFile = entity;
-              break;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // ignora erros
-    }
-  }
-
-  if (localFile != null && localFile.existsSync()) {
-    return FileImage(localFile);
-  }
-
-  return null;
+  return ProvedorImagemAresta.resolver(
+    picoId: cragId,
+    caminho: path,
+  );
 }
