@@ -10,6 +10,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late Directory tempDownloadsDir;
   late Directory tempCacheDir;
 
@@ -120,6 +121,46 @@ void main() {
       expect(
         netImg.url,
         equals('https://cdn.arestaclimb.com/picos/br_mg_igarape_pedra_grande/imagens/setor.webp?v=abc123hash'),
+      );
+    });
+
+    test('retorna null se o picoId ou caminho for vazio', () async {
+      expect(await ProvedorImagemAresta.resolver(picoId: '', caminho: 'foto.jpg'), isNull);
+      expect(await ProvedorImagemAresta.resolver(picoId: 'pico_1', caminho: ''), isNull);
+    });
+
+    test('normaliza caminhos com barras iniciais corretamente', () async {
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: '/imagens/setor.webp',
+        checksumSha256: 'hash123',
+        baseUrl: 'https://cdn.arestaclimb.com',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<NetworkImage>());
+      final netImg = provedor as NetworkImage;
+      expect(
+        netImg.url,
+        equals('https://cdn.arestaclimb.com/picos/pico_1/imagens/setor.webp?v=hash123'),
+      );
+    });
+
+    test('adiciona &v=<hash> se a URL remota já possuir parâmetros de query', () async {
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'https://servidor.com/imagem.webp?token=abc',
+        checksumSha256: 'xyz999',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<NetworkImage>());
+      final netImg = provedor as NetworkImage;
+      expect(
+        netImg.url,
+        equals('https://servidor.com/imagem.webp?token=abc&v=xyz999'),
       );
     });
   });

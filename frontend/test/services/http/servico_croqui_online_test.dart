@@ -130,5 +130,65 @@ void main() {
       expect(houveAtualizacao, isTrue);
       expect(sessaoOnline.atualizacoesPendentes.value['pico_1'], equals('"etag_novo"'));
     });
+
+    test('carregarCroquiRemoto trata exceções de rede (ex: SocketException) retornando null', () async {
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenThrow(const SocketException('Falha de conexão com o servidor'));
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/croquis/pico_offline.binarypb',
+        picoId: 'pico_offline',
+      );
+
+      expect(resultado, isNull);
+      expect(sessaoOnline.obterCroquiOnline('pico_offline'), isNull);
+    });
+
+    test('verificarAtualizacaoEtag trata exceções de rede retornando false', () async {
+      sessaoOnline.registrarCroquiOnline(
+        'pico_1',
+        Croqui(id: 'pico_1'),
+        etag: '"etag_atual"',
+      );
+
+      when(() => mockClient.get(
+            any(),
+            headers: any(named: 'headers'),
+          )).thenThrow(const HttpException('Conexão abortada'));
+
+      final houveAtualizacao = await servico.verificarAtualizacaoEtag(
+        'pico_1',
+        'https://servidor.com/pico_1.binarypb',
+      );
+
+      expect(houveAtualizacao, isFalse);
+    });
+
+    test('iniciarPollingEtag gerencia timers e cancelarPolling encerra polling específico', () async {
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('', 304));
+
+      servico.iniciarPollingEtag(
+        'pico_1',
+        'https://servidor.com/pico_1.binarypb',
+        intervalo: const Duration(milliseconds: 100),
+      );
+
+      // Inicia polling para um segundo pico
+      servico.iniciarPollingEtag(
+        'pico_2',
+        'https://servidor.com/pico_2.binarypb',
+        intervalo: const Duration(milliseconds: 100),
+      );
+
+      // Cancela o polling de pico_1
+      servico.cancelarPolling('pico_1');
+
+      // Cancelar de pico inexistente não gera erro
+      expect(() => servico.cancelarPolling('pico_inexistente'), returnsNormally);
+
+      // Dispose cancela todos os timers restantes
+      servico.dispose();
+    });
   });
 }
