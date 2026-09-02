@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -105,7 +106,7 @@ void main() {
     });
 
     test('gera caminho canônico mais curto para nós profundos de navegação', () {
-      const viaNode = ViaNode(
+      final viaNode = ViaNode(
         cragId: 'bau',
         setorNome: 'Falésia Central',
         grupoNome: 'Bloco A',
@@ -118,7 +119,7 @@ void main() {
         'Início -> Pico (bau) -> Grupo (Bloco A) -> Setor (Falésia Central) -> Via (Via Láctea)',
       );
 
-      const setorSemGrupo = SetorNode(
+      final setorSemGrupo = SetorNode(
         cragId: 'bau',
         setorNome: 'Falésia Sul',
         parent: HomeNode(),

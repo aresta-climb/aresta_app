@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset/metadados/extrator_metadados_croqui.dart';
@@ -50,7 +51,7 @@ void main() {
       );
 
       expect(encontrado, isNotNull);
-      expect(encontrado!.path, equals(imgFile.path));
+      expect(p.canonicalize(encontrado!.path), equals(p.canonicalize(imgFile.path)));
     });
 
     test('atualizarMetadadosPico popula capaPath e dados do croqui', () async {

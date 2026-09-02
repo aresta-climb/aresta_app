@@ -102,36 +102,38 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
-      // Como trocamos o conteúdo do botão, vamos procurar o CircularProgressIndicator.
-      // Existem vários, então    // Verifica se a barra de progresso (LinearProgressIndicator) está presente.
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      // Verifica se o CircularProgressIndicator com o percentual está presente no card.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
     },
   );
 
-  testWidgets('buildBrowseBody exibe a descrição curta do pico caso exista', (
+  testWidgets('showDownloadBottomSheet exibe a descrição curta do pico caso exista', (
     WidgetTester tester,
   ) async {
-    final List<Map<String, dynamic>> availableCrags = [
-      {
-        'id': 'crag_desc',
-        'nome': 'Pico Descrição',
-        'local': 'Local Desc',
-        'descricao': 'Esta é a descrição curta e bacana do pico.',
-        'isDownloaded': false,
-      },
-    ];
+    final Map<String, dynamic> crag = {
+      'id': 'crag_desc',
+      'nome': 'Pico Descrição',
+      'local': 'Local Desc',
+      'descricao': 'Esta é a descrição curta e bacana do pico.',
+      'isDownloaded': false,
+    };
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Builder(
             builder: (context) {
-              return buildBrowseBody(
-                context,
-                availableCrags,
-                ValueNotifier<Map<String, double>>({}),
-                onSearchChanged: (_) {},
-                onDownload: (_) {},
+              return ElevatedButton(
+                onPressed: () {
+                  showDownloadBottomSheet(
+                    context,
+                    crag,
+                    () {},
+                    ValueNotifier<Map<String, double>>({}),
+                  );
+                },
+                child: const Text('ABRIR MODAL'),
               );
             },
           ),
@@ -139,14 +141,13 @@ void main() {
       ),
     );
 
-    // A descrição não é mais renderizada no CragCard diretamente.
-    // Ela aparece no Modal após o clique.
+    // Antes de abrir o modal, a descrição não existe
     expect(
       find.text('Esta é a descrição curta e bacana do pico.'),
       findsNothing,
     );
 
-    await tester.tap(find.text('PICO DESCRIÇÃO')); // Note the uppercase name!
+    await tester.tap(find.text('ABRIR MODAL'));
     await tester.pumpAndSettle();
 
     // Deve existir após abrir o modal

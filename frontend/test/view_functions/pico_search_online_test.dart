@@ -17,12 +17,12 @@ void main() {
       viaSombra = Escalada()
         ..viaEsportiva = (ViaEsportiva()
           ..nome = 'Sombra e Água Fresca'
-          ..grau = '7a');
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
 
       boulderMonstro = Escalada()
         ..boulder = (Boulder()
           ..nome = 'Monstro da Gruta'
-          ..grau = 'V4');
+          ..dificuldade = GrauBoulder_GrauBoulder.V4);
 
       setorFalasia = Setor()
         ..nome = 'Falésia Central'
@@ -32,7 +32,7 @@ void main() {
         ..nome = 'Pedra Sonora Online'
         ..setoresOuGrupos.add(
           SetorOuGrupo()
-            ..setor = (SetorRef()
+            ..setor = (ArquivoSetor()
               ..conteudo = setorFalasia),
         );
     });
@@ -92,7 +92,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Monstro da Gruta'), findsOneWidget);
-      expect(find.text('Dificuldade: V4'), findsOneWidget);
+      expect(find.text('Dificuldade: v4'), findsOneWidget);
     });
 
     testWidgets('busca setor por nome no croqui online', (tester) async {
