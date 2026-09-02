@@ -7,6 +7,11 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/widgets/linha_credito_autor.dart';
+import 'package:frontend/widgets/modal_confirmacao_saida.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/main.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 
@@ -302,5 +307,117 @@ void main() {
 
     expect(find.byIcon(Icons.person_outline), findsNothing);
     expect(find.textContaining('Autores do Croqui Original'), findsNothing);
+  });
+
+  testWidgets('PicoDetailsPage exibe LinhaCreditoAutor posicionado antes do subtítulo verde', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final croqui = Croqui(creditos: ['Danilo Stehling']);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()
+            ..nome = 'Pico Teste'
+            ..estado = 'MG',
+          croqui: croqui,
+          cragId: 'crag_pos',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+
+    final creditFinder = find.byType(LinhaCreditoAutor);
+    final subtitleFinder = find.textContaining('MG • 0 SETORES');
+
+    expect(creditFinder, findsOneWidget);
+    expect(subtitleFinder, findsOneWidget);
+
+    final creditY = tester.getTopLeft(creditFinder).dy;
+    final subtitleY = tester.getTopLeft(subtitleFinder).dy;
+
+    expect(creditY, lessThan(subtitleY));
+  });
+
+  testWidgets('PicoDetailsPage onBackInterceptor não intercepta quando volta entre subpáginas do mesmo croqui', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final treeController = TreeNavigationController(
+      estadoInicial: ArvoreNavegacao(
+        noAtual: SetorNode(
+          setorNome: 'Setor 1',
+          cragId: 'crag_online',
+          parent: PicoNode(
+            cragId: 'crag_online',
+            parent: const HomeNode(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: treeController,
+          child: PicoDetailsPage(
+            pico: Pico()..nome = 'Pico Online',
+            croqui: Croqui(),
+            cragId: 'crag_online',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Quando noAtual é SetorNode (parent é PicoNode com mesmo cragId), onBackInterceptor deve retornar false
+    expect(treeController.onBackInterceptor, isNotNull);
+    final intercepted = treeController.onBackInterceptor!();
+    expect(intercepted, isFalse);
+  });
+
+  testWidgets('PicoDetailsPage onBackInterceptor intercepta quando volta para fora do croqui em croqui não baixado', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final treeController = TreeNavigationController(
+      estadoInicial: ArvoreNavegacao(
+        noAtual: PicoNode(
+          cragId: 'crag_online_nao_baixado',
+          parent: const HomeNode(),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: treeController,
+          child: PicoDetailsPage(
+            pico: Pico()..nome = 'Pico Online Não Baixado',
+            croqui: Croqui(),
+            cragId: 'crag_online_nao_baixado',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Quando noAtual é PicoNode (parent é HomeNode), onBackInterceptor deve interceptar e mostrar modal
+    expect(treeController.onBackInterceptor, isNotNull);
+    final intercepted = treeController.onBackInterceptor!();
+    expect(intercepted, isTrue);
+
+    await tester.pump();
+    expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
   });
 }

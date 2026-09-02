@@ -372,28 +372,30 @@ class _MyAppState extends State<MyApp> {
 class TreeNavigationWrapper extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
+  final TreeNavigationController? treeController;
   final Widget? child; // Utilizado puramente para injeção em testes
 
   const TreeNavigationWrapper({
     super.key,
     required this.datasetRepo,
     required this.syncService,
+    this.treeController,
     this.child,
   });
 
-  static final GlobalKey<_TreeNavigationWrapperState> navKey =
-      GlobalKey<_TreeNavigationWrapperState>();
+  static final GlobalKey<TreeNavigationWrapperState> navKey =
+      GlobalKey<TreeNavigationWrapperState>();
 
-  static _TreeNavigationWrapperState? maybeOf(BuildContext context) {
-    return context.findAncestorStateOfType<_TreeNavigationWrapperState>();
+  static TreeNavigationWrapperState? maybeOf(BuildContext context) {
+    return context.findAncestorStateOfType<TreeNavigationWrapperState>();
   }
 
-  static _TreeNavigationWrapperState of(BuildContext context) {
-    return context.findAncestorStateOfType<_TreeNavigationWrapperState>()!;
+  static TreeNavigationWrapperState of(BuildContext context) {
+    return context.findAncestorStateOfType<TreeNavigationWrapperState>()!;
   }
 
   @override
-  State<TreeNavigationWrapper> createState() => _TreeNavigationWrapperState();
+  State<TreeNavigationWrapper> createState() => TreeNavigationWrapperState();
 
   /// Usado para atalhos do bottom nav
   static void switchTab(int index) {
@@ -405,7 +407,7 @@ class TreeNavigationWrapper extends StatefulWidget {
       navKey.currentState?.treeController;
 }
 
-class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
+class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
 
   SyncService get syncService => widget.syncService;
@@ -413,7 +415,7 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   @override
   void initState() {
     super.initState();
-    treeController = TreeNavigationController();
+    treeController = widget.treeController ?? TreeNavigationController();
     treeController.addListener(_onNodeChanged);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
   }
@@ -748,6 +750,10 @@ class _TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.child != null) {
+      return widget.child!;
+    }
+
     // 1. Extraímos o caminho completo da raiz até o nó atual
     final fullPath = treeController.currentNode.path;
 

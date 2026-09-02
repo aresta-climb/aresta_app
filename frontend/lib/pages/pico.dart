@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../main.dart';
+import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view_functions/common_functions.dart';
@@ -81,46 +81,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     // Registra interceptor de saída no controlador de navegação em árvore
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
-      if (tree == null) return;
-      tree.onBackInterceptor = () {
-        final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
-                .any((p) => p['id'] == widget.cragId) ??
-            false;
-
-        if (isBaixado) {
-          tree.onBackInterceptor = null;
-          return false;
-        }
-
-        Map<String, dynamic>? picoItem;
-        try {
-          picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
-              .firstWhere((p) => p['id'] == widget.cragId);
-        } catch (_) {}
-        final tamanhoFormatado =
-            picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
-
-        ModalConfirmacaoSaida.mostrar(
-          context: context,
-          nomePico: widget.pico.nome,
-          tamanhoFormatado: tamanhoFormatado,
-          onSalvar: () {
-            _iniciarDownload(context);
-            tree.onBackInterceptor = null;
-            if (context.mounted && AppNav.canGoBack(context)) {
-              AppNav.back(context);
-            }
-          },
-          onSairSemSalvar: () {
-            tree.onBackInterceptor = null;
-            if (context.mounted && AppNav.canGoBack(context)) {
-              AppNav.back(context);
-            }
-          },
-        );
-        return true;
-      };
+      _setupBackInterceptor();
     });
 
     if (widget.scrollToMapaGeral) {
@@ -149,6 +110,65 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         });
       });
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setupBackInterceptor();
+  }
+
+  void _setupBackInterceptor() {
+    final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+        TreeNavigationWrapper.currentTreeController;
+    if (tree == null) return;
+
+    tree.onBackInterceptor = () {
+      final parentNode = tree.currentNode.parent;
+      final staysInSameCroqui =
+          parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
+
+      if (staysInSameCroqui) {
+        return false;
+      }
+
+      final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
+              .any((p) => p['id'] == widget.cragId) ??
+          false;
+
+      if (isBaixado) {
+        tree.onBackInterceptor = null;
+        return false;
+      }
+
+      Map<String, dynamic>? picoItem;
+      try {
+        picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
+            .firstWhere((p) => p['id'] == widget.cragId);
+      } catch (_) {}
+      final tamanhoFormatado =
+          picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+
+      ModalConfirmacaoSaida.mostrar(
+        context: context,
+        nomePico: widget.pico.nome,
+        tamanhoFormatado: tamanhoFormatado,
+        onSalvar: () {
+          _iniciarDownload(context);
+          tree.onBackInterceptor = null;
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+        },
+        onSairSemSalvar: () {
+          tree.onBackInterceptor = null;
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+        },
+      );
+      return true;
+    };
   }
 
   @override
@@ -293,6 +313,18 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
+        final parentNode = tree?.currentNode.parent;
+        final staysInSameCroqui =
+            parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
+
+        if (staysInSameCroqui) {
+          if (context.mounted && AppNav.canGoBack(context)) {
+            AppNav.back(context);
+          }
+          return;
+        }
+
         final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
                 .any((p) => p['id'] == widget.cragId) ??
             false;
@@ -411,6 +443,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    LinhaCreditoAutor(creditos: widget.croqui.creditos),
                     Text(
                       subtitleText,
                       style: TextStyle(
@@ -419,7 +452,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                         fontSize: 13,
                       ),
                     ),
-                    LinhaCreditoAutor(creditos: widget.croqui.creditos),
                     const SizedBox(height: 16),
 
                     // Banner de Modo Online / Salvar Offline
@@ -479,10 +511,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             delegate: PicoSearchDelegate(widget.pico, widget.cragId),
                           );
 
-                          // Limpa o interceptor apenas se ele for exatamente a função que registramos.
-                          // Isso previne que zere um interceptor que possa ter sido registrado
-                          // por outra coisa se a navegação ficasse muito rápida.
-                          tree?.onBackInterceptor = null;
+                          _setupBackInterceptor();
 
                           if (result != null && context.mounted) {
                             if (result is Escalada) {
