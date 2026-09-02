@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import '../constants/network_constants.dart';
+import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
 
@@ -57,11 +58,31 @@ class ProvedorImagemAresta {
       }
 
       // 3. Streaming Remoto / CDN
-      final serverBase = baseUrl ?? NetworkConstants.officialServerUrl;
+      String serverBase = baseUrl ?? '';
+      if (serverBase.isEmpty) {
+        try {
+          serverBase = EditorDeCroqui.instance.activeBaseUrl;
+        } catch (_) {
+          serverBase = NetworkConstants.officialServerUrl;
+        }
+      }
+
       String urlFinal = caminho;
       if (!urlFinal.startsWith('http://') && !urlFinal.startsWith('https://')) {
-        String cleanPath = urlFinal.startsWith('/') ? urlFinal.substring(1) : urlFinal;
-        urlFinal = '$serverBase/$cleanPath';
+        String cleanPath =
+            urlFinal.startsWith('/') ? urlFinal.substring(1) : urlFinal;
+
+        // Resolve o diretório base do pico no índice remoto (ex: "picos/br_mg_igarape_pedra_grande")
+        String baseDir = _obterBaseDirDoIndice(picoId);
+
+        String remotePath = cleanPath;
+        if (baseDir.isNotEmpty &&
+            !remotePath.startsWith(baseDir) &&
+            !remotePath.startsWith('picos/')) {
+          remotePath = '$baseDir/$cleanPath';
+        }
+
+        urlFinal = '$serverBase/$remotePath';
       }
 
       if (checksumSha256 != null && checksumSha256.isNotEmpty) {
@@ -79,6 +100,27 @@ class ProvedorImagemAresta {
       );
     }
     return null;
+  }
+
+  /// Recupera o diretório base do pico a partir do índice carregado em memória.
+  static String _obterBaseDirDoIndice(String picoId) {
+    try {
+      final repo = DatasetRepository.instance;
+      if (repo != null) {
+        final indice = repo.indiceData.value;
+        if (indice != null) {
+          final match = indice.croquis.where((r) => r.id == picoId);
+          if (match.isNotEmpty) {
+            final caminhoRelativo = match.first.caminhoRelativo;
+            final lastSlash = caminhoRelativo.lastIndexOf('/');
+            if (lastSlash != -1) {
+              return caminhoRelativo.substring(0, lastSlash);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return 'picos/$picoId';
   }
 
   /// Busca um arquivo em um diretório através de caminho direto ou busca recursiva.

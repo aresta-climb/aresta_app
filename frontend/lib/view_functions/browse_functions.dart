@@ -577,6 +577,15 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
             );
           }
         }
+        if (widget.thumbnailUrl.isNotEmpty &&
+            (widget.thumbnailUrl.startsWith('http://') ||
+                widget.thumbnailUrl.startsWith('https://'))) {
+          return Image.network(
+            widget.thumbnailUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+          );
+        }
         return _buildPlaceholder();
       },
     );
