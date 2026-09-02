@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -22,22 +22,22 @@ class LinhaCreditoAutor extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           Icon(
             Icons.person_outline,
-            size: 14,
-            color: context.colors.ashGrey,
+            size: 16,
+            color: context.colors.chalkWhite,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               textoFormatado,
               style: TextStyle(
-                color: context.colors.ashGrey,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                color: context.colors.chalkWhite,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

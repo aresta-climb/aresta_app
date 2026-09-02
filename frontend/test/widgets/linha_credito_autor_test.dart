@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -21,7 +21,11 @@ void main() {
       );
 
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
-      expect(find.text('Croqui por João Silva, Maria Santos'), findsOneWidget);
+      final textFinder = find.text('Croqui por João Silva, Maria Santos');
+      expect(textFinder, findsOneWidget);
+      final textWidget = tester.widget<Text>(textFinder);
+      expect(textWidget.style?.fontSize, 13);
+      expect(textWidget.style?.fontWeight, FontWeight.w600);
     });
 
     testWidgets('não renderiza nada quando créditos estiverem vazios', (
