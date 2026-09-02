@@ -6,7 +6,6 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 
 | Arquivo | Serviço testado | Descrição |
 |---|---|---|
-| `zip_interceptor_test.dart` | `ZipInterceptorClient` | Testa o interceptor HTTP que serve arquivos de dentro de um `.croqui` local usando o protocolo `aresta-zip://` em memória |
 | `editor_croqui_test.dart` | `EditorDeCroqui` | Testa lógica de modos (oficial, editor, experimental), cálculo de caminhos (`downloadsPath`, `indicePath`) e notificadores de estado |
 | `experimental_mode_test.dart`| `EditorDeCroqui` | Testa o comportamento do Modo Experimental: timer em background, persistência de URL na desconexão e limpeza total (Nuke) |
 | `dataset_repository_test.dart` | `DatasetRepository` | Testa estado público do repositório, mapeamento de propriedades (ex: descrição) e inicializações tipadas |
@@ -26,11 +25,10 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 flutter test test/services/
 
 # Um arquivo específico
-flutter test test/services/zip_interceptor_test.dart
+flutter test test/services/editor_croqui_test.dart
 ```
 
 ## Notas
 
 - Os testes criam arquivos temporários em `Directory.systemTemp` e os removem após cada teste.
 - Testes que dependem de `getApplicationDocumentsDirectory()` **não são testados aqui** pois requerem o binding do Flutter.
-- O protocolo `aresta-zip://` usa hífen (não sublinhado) por ser compatível com o padrão RFC 3986 exigido pela classe `Uri` do Dart.
