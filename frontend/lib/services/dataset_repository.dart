@@ -85,18 +85,34 @@ class DatasetRepository {
   // SECTION: Inicialização e Carregamento
   // ===========================================================================
 
+  Future<void>? _currentInitFuture;
+
   /// Inicializa o repositório carregando o índice a partir do armazenamento local ou preload.
   Future<void> init() async {
+    if (_currentInitFuture != null) {
+      return _currentInitFuture;
+    }
+    _currentInitFuture = _executarInit();
+    try {
+      await _currentInitFuture;
+    } finally {
+      _currentInitFuture = null;
+    }
+  }
+
+  Future<void> _executarInit() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final localIndiceFile = File(editorDeCroqui.indicePath(directory.path));
 
       if (!await localIndiceFile.exists()) {
-        await extratorAssets.desempacotarAssetsPreload(
-          docsPath: directory.path,
-          indicePath: localIndiceFile.path,
-          bundle: assetBundle,
-        );
+        if (!editorDeCroqui.isExperimentalMode.value) {
+          await extratorAssets.desempacotarAssetsPreload(
+            docsPath: directory.path,
+            indicePath: localIndiceFile.path,
+            bundle: assetBundle,
+          );
+        }
       }
 
       if (await localIndiceFile.exists()) {
