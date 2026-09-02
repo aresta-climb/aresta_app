@@ -20,6 +20,8 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
   @override
   final ValueNotifier<int> homeResetTrigger = ValueNotifier(0);
   @override
+  final GerenciadorSessaoOnline gerenciadorSessaoOnline = GerenciadorSessaoOnline();
+  @override
   late final EditorDeCroqui editorDeCroqui;
 
   FakeDatasetRepository(this.editorDeCroqui) {
@@ -41,9 +43,9 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
     final croqui = Croqui();
 
     activeDataset = ValueNotifier(
-      TopoDataset(
-        availablePicos: [],
-        downloadedPicos: [
+      ConjuntoDadosCroqui(
+        picosDisponiveis: [],
+        picosBaixados: [
           {
             'id': 'test_crag',
             'data': {'pico': pico, 'croqui': croqui},

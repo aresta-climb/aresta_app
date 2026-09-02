@@ -39,14 +39,14 @@ void main() {
         final picoV2 = Pico()..nome = 'Pico Versão 2';
         final croqui = Croqui();
 
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV1, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pumpWidget(
@@ -68,14 +68,14 @@ void main() {
         expect(find.text('Pico Versão 2'), findsNothing);
 
         // Simula um Hot-Reload (Novo download do _checkForUpdates)
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV2, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pump();
@@ -99,14 +99,14 @@ void main() {
 
         final croqui = Croqui();
 
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV1, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         await tester.pumpWidget(
@@ -159,14 +159,14 @@ void main() {
 
         // Hot-Reload: Um novo Pico entra, mas o "Setor de Teste" foi deletado no servidor!
         final picoV2 = Pico()..nome = 'Pico V2 Sem Setores';
-        repo.activeDataset.value = TopoDataset(
-          downloadedPicos: [
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
             {
               'id': 'pico_1',
               'data': {'pico': picoV2, 'croqui': croqui},
             },
           ],
-          availablePicos: [],
+          picosDisponiveis: [],
         );
 
         // Pump para processar o builder
@@ -199,14 +199,14 @@ void main() {
 
       final croqui = Croqui();
 
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [
           {
             'id': 'pico_1',
             'data': {'pico': pico, 'croqui': croqui},
           },
         ],
-        availablePicos: [],
+        picosDisponiveis: [],
       );
 
       await tester.pumpWidget(
@@ -256,15 +256,15 @@ void main() {
       final picoV1 = Pico()..nome = 'Pico Teste';
       final croqui = Croqui();
 
-      repo.activeDataset.value = TopoDataset(
-        downloadedPicos: [
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [
           {
             'id': 'pico_1',
             'data': {'pico': picoV1, 'croqui': croqui},
             'isDownloaded': true,
           },
         ],
-        availablePicos: [],
+        picosDisponiveis: [],
       );
 
       final syncService = SyncService(datasetRepository: repo);
