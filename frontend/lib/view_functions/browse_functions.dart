@@ -304,16 +304,10 @@ class CragCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        if (isDownloaded) {
-          onOpen?.call();
+        if (onOpen != null) {
+          onOpen!();
         } else {
-          showDownloadBottomSheet(
-            context,
-            crag,
-            onDownload,
-            downloadingCrags,
-            onOpen: onOpen,
-          );
+          onDownload();
         }
       },
       child: Container(
