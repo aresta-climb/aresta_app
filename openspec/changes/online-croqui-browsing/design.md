@@ -2,7 +2,7 @@
 
 Historicamente, o Aresta Climb impunha um modelo estritamente offline-first onde explorar um pico exigia baixar seu pacote completo de dados e imagens para a pasta `/downloads/<picoId>/`. Embora isso garanta 100% de disponibilidade na montanha, gera alta fricção para usuários que desejam apenas consultar graus de vias, verificar betas ou comparar picos em casa.
 
-A infraestrutura remota do Aresta distribui os dados no formato `.binarypb` com imagens WebP e mapas estáticos sobre CDN HTTP (e localmente via protocolo Ghost `aresta-zip://`). Além disso, cada `ResumoCroqui` no `indice.binarypb` já contém hashes SHA-256 e o `Croqui` mapeia hashes de todos os `arquivosExternos`.
+A infraestrutura remota do Aresta distribui os dados no formato `.binarypb` com imagens WebP e mapas estáticos sobre CDN HTTP (e localmente via Live Reload no Desktop). Além disso, cada `ResumoCroqui` no `indice.binarypb` já contém hashes SHA-256 e o `Croqui` mapeia hashes de todos os `arquivosExternos`.
 
 Este design estabelece a arquitetura híbrida de navegação online com transmissão sob demanda, cache volátil, verificação de ETag, guardiões de conscientização visual e downloads em segundo plano com notificações persistentes do sistema operacional, respeitando rigorosamente os **Princípios de Engenharia do Aresta App** (`PRINCIPIOS.md`): nomenclatura 100% em português brasileiro, componentes independentes (feature-first), TDD com cobertura integral de testes, priorização de testes de widget e documentação contínua.
 

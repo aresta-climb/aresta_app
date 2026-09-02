@@ -43,8 +43,8 @@ Para entregar valor aos provedores de croqui (autores), rastrearemos os seguinte
 
 - `open_crag_details`: Disparado quando o usuário entra na tela de um pico.
   - Parâmetros: `crag_id`, `crag_name`.
-- `download_croqui`: Disparado no sucesso da extração/sincronização do `.croqui`.
-  - Parâmetros: `crag_id`, `source` (github ou aresta-zip).
+- `download_croqui`: Disparado no sucesso da extração/sincronização do croqui.
+  - Parâmetros: `crag_id`, `source` (oficial ou experimental).
 - `view_route`: Disparado ao abrir a aba de uma via específica.
   - Parâmetros: `crag_id`, `route_name`, `grade`.
 
