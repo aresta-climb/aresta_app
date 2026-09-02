@@ -5,8 +5,6 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import '../services/http/zip_interceptor_client.dart';
 import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
@@ -523,7 +521,6 @@ class _CragBackgroundWidget extends StatefulWidget {
 }
 
 class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
-  Future<http.Response>? _zipFuture;
   Future<Directory>? _dirFuture;
 
   @override
@@ -542,13 +539,8 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   }
 
   void _initFutures() {
-    _zipFuture = null;
     _dirFuture = null;
-
-    if (widget.thumbnailUrl.isNotEmpty &&
-        widget.thumbnailUrl.startsWith('aresta-zip://')) {
-      _zipFuture = ZipInterceptorClient().get(Uri.parse(widget.thumbnailUrl));
-    } else if (widget.cragId != null && widget.cragId!.isNotEmpty) {
+    if (widget.cragId != null && widget.cragId!.isNotEmpty) {
       _dirFuture = getApplicationDocumentsDirectory();
     }
   }
@@ -563,27 +555,6 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
           size: 64,
         ),
       ),
-    );
-  }
-
-  Widget _buildZipImage() {
-    return FutureBuilder<http.Response>(
-      future: _zipFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildPlaceholder();
-        }
-        if (snapshot.hasError ||
-            !snapshot.hasData ||
-            snapshot.data!.statusCode != 200) {
-          return _buildPlaceholder();
-        }
-        return Image.memory(
-          snapshot.data!.bodyBytes,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-        );
-      },
     );
   }
 
@@ -613,9 +584,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_zipFuture != null) {
-      return _buildZipImage();
-    } else if (_dirFuture != null) {
+    if (_dirFuture != null) {
       return _buildLocalFileImage();
     }
     return _buildPlaceholder();
