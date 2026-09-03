@@ -23,4 +23,30 @@ void main() {
     final safeAreas = tester.widgetList<SafeArea>(find.byType(SafeArea));
     expect(safeAreas.any((sa) => sa.bottom == true), isTrue);
   });
+
+  testWidgets('GrupoPage re-resolve imagem de capa no didUpdateWidget durante Hot Reload', (tester) async {
+    final grupo1 = Grupo()
+      ..nome = 'Grupo 1'
+      ..descricao = '![Capa](capa1.webp)';
+    final grupo2 = Grupo()
+      ..nome = 'Grupo 1'
+      ..descricao = '![Capa](capa2.webp)';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GrupoPage(grupo: grupo1, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    // Re-pump simulando hot reload com novo grupo
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GrupoPage(grupo: grupo2, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+  });
 }
+
+

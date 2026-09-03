@@ -60,13 +60,15 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     _categories = PicoCategorizedData(widget.croqui);
     _servicoCroquiOnline = ServicoCroquiOnline(
       sessaoOnline: widget.datasetRepo.gerenciadorSessaoOnline,
+      verificarPicoBaixado: (id) => widget.datasetRepo.isPicoDownloaded(id),
     );
 
-    final dataset = widget.datasetRepo.activeDataset.value;
-    _isInitiallyDownloaded = dataset?.picosBaixados
-            .any((p) => p['id'] == widget.cragId) ??
-        false;
+    _isInitiallyDownloaded =
+        widget.datasetRepo.isPicoDownloaded(widget.cragId);
 
+    widget.datasetRepo.activeDataset.addListener(_verificarStatusDownload);
+
+    final dataset = widget.datasetRepo.activeDataset.value;
     if (!_isInitiallyDownloaded && dataset != null) {
       try {
         final picoItem = dataset.picosDisponiveis.firstWhere(
@@ -78,6 +80,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         }
       } catch (_) {}
     }
+
 
     // Registra interceptor de saída no controlador de navegação em árvore
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -133,14 +136,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         return false;
       }
 
-      final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
-              .any((p) => p['id'] == widget.cragId) ??
-          false;
+      final isBaixado = widget.datasetRepo.isPicoDownloaded(widget.cragId);
 
       if (isBaixado) {
         tree.onBackInterceptor = null;
         return false;
       }
+
 
       Map<String, dynamic>? picoItem;
       try {
@@ -172,8 +174,38 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     };
   }
 
+  void _verificarStatusDownload() {
+    if (!mounted) return;
+    final isDownloaded = widget.datasetRepo.isPicoDownloaded(widget.cragId);
+    if (isDownloaded) {
+      _servicoCroquiOnline.cancelarPolling(widget.cragId);
+      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+          TreeNavigationWrapper.currentTreeController;
+      if (tree != null && tree.onBackInterceptor != null) {
+        tree.onBackInterceptor = null;
+      }
+      if (!_isInitiallyDownloaded) {
+        setState(() {
+          _isInitiallyDownloaded = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(PicoDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cragId != widget.cragId ||
+        oldWidget.datasetRepo != widget.datasetRepo) {
+      oldWidget.datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
+      widget.datasetRepo.activeDataset.addListener(_verificarStatusDownload);
+    }
+    _verificarStatusDownload();
+  }
+
   @override
   void dispose() {
+    widget.datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
     final tree = TreeNavigationWrapper.currentTreeController;
     if (tree != null) {
       tree.onBackInterceptor = null;
@@ -201,6 +233,20 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         ServicoDownloadSegundoPlano(syncService: syncService);
     final success = await servicoDownload.executarDownload(resumos.first);
 
+    if (success) {
+      _servicoCroquiOnline.cancelarPolling(widget.cragId);
+      final currentTree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+          TreeNavigationWrapper.currentTreeController;
+      if (currentTree != null) {
+        currentTree.onBackInterceptor = null;
+      }
+      if (mounted) {
+        setState(() {
+          _isInitiallyDownloaded = true;
+        });
+      }
+    }
+
     if (context.mounted) {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
@@ -216,6 +262,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         );
     }
   }
+
 
   int _countTotalSetores() {
     int count = 0;
@@ -298,9 +345,9 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES$statsText";
 
     final dataset = widget.datasetRepo.activeDataset.value;
-    final bool isDownloaded = dataset?.picosBaixados
-            .any((p) => p['id'] == widget.cragId) ??
-        false;
+    final bool isDownloaded = widget.datasetRepo.isPicoDownloaded(widget.cragId);
+
+
 
     Map<String, dynamic>? picoItem;
     try {

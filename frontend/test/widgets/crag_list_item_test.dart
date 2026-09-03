@@ -143,9 +143,9 @@ void main() {
       (WidgetTester tester) async {
         final Map<String, dynamic> crag = {
           'nome': 'Pico Sem ID',
-          'thumbnailUrl':
-              'https://serving.arestaclimb.com/v3/thumbnails/pico_network.webp',
+          'thumbnailUrl': '',
         };
+
 
         await tester.pumpWidget(
           MaterialApp(

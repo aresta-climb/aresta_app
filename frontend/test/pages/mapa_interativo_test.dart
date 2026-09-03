@@ -1243,6 +1243,38 @@ void main() {
     );
 
     testWidgets(
+      'didUpdateWidget re-resolves image provider even when mapa fields are identical',
+      (WidgetTester tester) async {
+        final pico = Pico()..nome = 'Pico Teste';
+        Mapa testMapa = mockMapa;
+        final img1 = MemoryImage(kTransparentImage);
+        final img2 = MemoryImage(Uint8List.fromList(kTransparentImage));
+
+        Widget buildAppWithOverride(ImageProvider override) {
+          return MaterialApp(
+            home: Scaffold(
+              body: MapaInterativoPage(
+                mapa: testMapa,
+                pico: pico,
+                cragId: 'pico_1',
+                imageProviderOverride: override,
+              ),
+            ),
+          );
+        }
+
+
+        await tester.pumpWidget(buildAppWithOverride(img1));
+        await tester.pumpAndSettle();
+
+        // Re-pump com mesmo objeto testMapa, mas provider diferente
+        await tester.pumpWidget(buildAppWithOverride(img2));
+        await tester.pumpAndSettle();
+      },
+    );
+
+
+    testWidgets(
       'Tapping on a marker with multiple maps DOES NOT display "Ver mapas" button for vias',
       (WidgetTester tester) async {
         final ponto = Mapa_PontoDeInteresse(

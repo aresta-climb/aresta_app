@@ -8,6 +8,7 @@ import '../constants/network_constants.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
+import 'imagem_arquivo_aresta.dart';
 
 /// Provedor unificado e em camadas para resolução de imagens do ecossistema Aresta.
 ///
@@ -19,6 +20,13 @@ class ProvedorImagemAresta {
   const ProvedorImagemAresta._();
 
   /// Resolve e entrega a instância de [ImageProvider] apropriada para a mídia indicada.
+  ///
+  /// O [checksumSha256] é opcional; quando omitido ou nulo, o provedor tenta
+  /// auto-resolvê-lo consultando a tabela de dispersão do [DatasetRepository].
+  ///
+  /// Se [larguraAlvo] ou [alturaAlvo] forem especificados, o [ImageProvider] resultante
+  /// será encapsulado por um [ResizeImage] via [ResizeImage.resizeIfNeeded] para garantir
+  /// que a decodificação do bitmap na memória RAM seja otimizada e caiba no orçamento de memória.
   static Future<ImageProvider?> resolver({
     required String picoId,
     required String caminho,
@@ -26,9 +34,25 @@ class ProvedorImagemAresta {
     String? baseUrl,
     String? caminhoDownloads,
     String? caminhoCacheVolatil,
+    DatasetRepository? datasetRepository,
+    int? larguraAlvo,
+    int? alturaAlvo,
   }) async {
     try {
-      if (caminho.isEmpty) return null;
+      if (picoId.isEmpty || caminho.isEmpty) return null;
+
+      ImageProvider? provedorBase;
+
+      // Auto-resolução do checksum SHA-256 via DatasetRepository se não fornecido
+      String? hashEfetivo = checksumSha256;
+      if (hashEfetivo == null || hashEfetivo.isEmpty) {
+        try {
+          final repo = datasetRepository ?? DatasetRepository.instance;
+          if (repo != null) {
+            hashEfetivo = repo.obterSha256DaMidia(picoId, caminho);
+          }
+        } catch (_) {}
+      }
 
       // 1. Diretório Permanente (/downloads)
       String downloadsRoot = caminhoDownloads ?? '';
@@ -41,58 +65,68 @@ class ProvedorImagemAresta {
 
       File? localFile = _buscarArquivoNoDiretorio(downloadsPicoPath, caminho);
       if (localFile != null && localFile.existsSync()) {
-        return FileImage(localFile);
+        provedorBase = ImagemArquivoAresta(localFile, checksumSha256: hashEfetivo);
       }
 
       // 2. Cache Temporário Volátil (/temp_cache)
-      String cacheRoot = caminhoCacheVolatil ?? '';
-      if (cacheRoot.isEmpty) {
-        final tempDir = await getTemporaryDirectory();
-        cacheRoot = '${tempDir.path}/temp_cache';
-      }
-      final cachePicoPath = '$cacheRoot/$picoId';
+      if (provedorBase == null) {
+        String cacheRoot = caminhoCacheVolatil ?? '';
+        if (cacheRoot.isEmpty) {
+          final tempDir = await getTemporaryDirectory();
+          cacheRoot = '${tempDir.path}/temp_cache';
+        }
+        final cachePicoPath = '$cacheRoot/$picoId';
 
-      File? cacheFile = _buscarArquivoNoDiretorio(cachePicoPath, caminho);
-      if (cacheFile != null && cacheFile.existsSync()) {
-        return FileImage(cacheFile);
+        File? cacheFile = _buscarArquivoNoDiretorio(cachePicoPath, caminho);
+        if (cacheFile != null && cacheFile.existsSync()) {
+          provedorBase = ImagemArquivoAresta(cacheFile, checksumSha256: hashEfetivo);
+        }
       }
 
       // 3. Streaming Remoto / CDN
-      String serverBase = baseUrl ?? '';
-      if (serverBase.isEmpty) {
-        try {
-          serverBase = EditorDeCroqui.instance.activeBaseUrl;
-        } catch (_) {
-          serverBase = NetworkConstants.officialServerUrl;
-        }
-      }
-
-      String urlFinal = caminho;
-      if (!urlFinal.startsWith('http://') && !urlFinal.startsWith('https://')) {
-        String cleanPath =
-            urlFinal.startsWith('/') ? urlFinal.substring(1) : urlFinal;
-
-        // Resolve o diretório base do pico no índice remoto (ex: "picos/br_mg_igarape_pedra_grande")
-        String baseDir = _obterBaseDirDoIndice(picoId);
-
-        String remotePath = cleanPath;
-        if (baseDir.isNotEmpty &&
-            !remotePath.startsWith(baseDir) &&
-            !remotePath.startsWith('picos/')) {
-          remotePath = '$baseDir/$cleanPath';
+      if (provedorBase == null) {
+        String serverBase = baseUrl ?? '';
+        if (serverBase.isEmpty) {
+          try {
+            serverBase = EditorDeCroqui.instance.activeBaseUrl;
+          } catch (_) {
+            serverBase = NetworkConstants.officialServerUrl;
+          }
         }
 
-        urlFinal = '$serverBase/$remotePath';
+        String urlFinal = caminho;
+        if (!urlFinal.startsWith('http://') && !urlFinal.startsWith('https://')) {
+          String cleanPath =
+              urlFinal.startsWith('/') ? urlFinal.substring(1) : urlFinal;
+
+          // Resolve o diretório base do pico no índice remoto (ex: "picos/br_mg_igarape_pedra_grande")
+          String baseDir = _obterBaseDirDoIndice(picoId);
+
+          String remotePath = cleanPath;
+          if (baseDir.isNotEmpty &&
+              !remotePath.startsWith(baseDir) &&
+              !remotePath.startsWith('picos/')) {
+            remotePath = '$baseDir/$cleanPath';
+          }
+
+          urlFinal = '$serverBase/$remotePath';
+        }
+
+        if (hashEfetivo != null && hashEfetivo.isNotEmpty) {
+          final uri = Uri.parse(urlFinal);
+          final queryParams = Map<String, String>.from(uri.queryParameters);
+          queryParams['v'] = hashEfetivo;
+          urlFinal = uri.replace(queryParameters: queryParams).toString();
+        }
+
+        provedorBase = NetworkImage(urlFinal);
       }
 
-      if (checksumSha256 != null && checksumSha256.isNotEmpty) {
-        final uri = Uri.parse(urlFinal);
-        final queryParams = Map<String, String>.from(uri.queryParameters);
-        queryParams['v'] = checksumSha256;
-        urlFinal = uri.replace(queryParameters: queryParams).toString();
+      if (larguraAlvo != null || alturaAlvo != null) {
+        return ResizeImage.resizeIfNeeded(larguraAlvo, alturaAlvo, provedorBase);
       }
 
-      return NetworkImage(urlFinal);
+      return provedorBase;
     } catch (e) {
       AppLogger.instance.logError(
         'Erro ao resolver provedor de imagem para $picoId em $caminho',
@@ -101,6 +135,7 @@ class ProvedorImagemAresta {
     }
     return null;
   }
+
 
   /// Recupera o diretório base do pico a partir do índice carregado em memória.
   static String _obterBaseDirDoIndice(String picoId) {

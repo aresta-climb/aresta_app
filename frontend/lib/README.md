@@ -108,5 +108,7 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.
 - **`banner_modo_online.dart`**: Banner informativo persistente que avisa o usuário quando o croqui está em modo online sob demanda.
 - **`modal_confirmacao_saida.dart`**: Guardião de saída (`PopScope`) que alerta o usuário sobre a necessidade de salvar o croqui offline antes de sair para a montanha.
-- **`provedor_imagem_aresta.dart`**: Provedor de imagem modular com resolução em 3 camadas (local, cache temporário e CDN remota com cache de hash).
+- **`provedor_imagem_aresta.dart`**: Provedor unificado com resolução em camadas (downloads permanente, cache volátil e streaming remoto CDN com query `?v=<sha256>`). Realiza auto-resolução de SHA-256 via `DatasetRepository`.
+- **`imagem_arquivo_aresta.dart`**: Implementação especializada de `ImageProvider<ChaveImagemArquivoAresta>` que substitui o `FileImage` do Flutter, indexando a chave de cache nativa por caminho, escala e `checksumSha256` para invalidar texturas em disco reativamente sem piscar a UI.
 - **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.
+

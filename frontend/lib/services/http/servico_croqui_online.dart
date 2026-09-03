@@ -16,6 +16,7 @@ class ServicoCroquiOnline {
   final http.Client _client;
   final GerenciadorSessaoOnline _sessaoOnline;
   final String? _caminhoCacheVolatil;
+  final bool Function(String picoId)? _verificarPicoBaixado;
 
   final Map<String, Timer> _timersPolling = {};
 
@@ -23,9 +24,12 @@ class ServicoCroquiOnline {
     http.Client? client,
     required GerenciadorSessaoOnline sessaoOnline,
     String? caminhoCacheVolatil,
+    bool Function(String picoId)? verificarPicoBaixado,
   })  : _client = client ?? http.Client(),
         _sessaoOnline = sessaoOnline,
-        _caminhoCacheVolatil = caminhoCacheVolatil;
+        _caminhoCacheVolatil = caminhoCacheVolatil,
+        _verificarPicoBaixado = verificarPicoBaixado;
+
 
   /// Obtém o diretório de cache temporário volátil do sistema operacional.
   Future<String> _obterDiretorioCache() async {
@@ -85,6 +89,20 @@ class ServicoCroquiOnline {
     String picoId,
     String url,
   ) async {
+    // Se o pico já está baixado no armazenamento local, cancela o polling e não faz requisição de rede
+    if (_verificarPicoBaixado != null && _verificarPicoBaixado!(picoId)) {
+      cancelarPolling(picoId);
+      debugPrint('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId já está baixado offline.');
+      return false;
+    }
+
+    // Se o pico não estiver mais na sessão online (foi baixado ou encerrado), encerra o polling
+    if (_sessaoOnline.obterCroquiOnline(picoId) == null) {
+      cancelarPolling(picoId);
+      debugPrint('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId não possui sessão online ativa.');
+      return false;
+    }
+
     try {
       final etagAtual = _sessaoOnline.obterEtag(picoId);
       final headers = <String, String>{};
@@ -117,9 +135,21 @@ class ServicoCroquiOnline {
     Duration intervalo = const Duration(seconds: 30),
   }) {
     cancelarPolling(picoId);
+
+    // Se o pico já está baixado no armazenamento local, não inicia polling desnecessário
+    if (_verificarPicoBaixado != null && _verificarPicoBaixado!(picoId)) {
+      debugPrint('[ServicoCroquiOnline] Pico $picoId já está baixado offline. Polling de ETag ignorado.');
+      return;
+    }
+
     _timersPolling[picoId] = Timer.periodic(intervalo, (_) {
       verificarAtualizacaoEtag(picoId, url);
     });
+  }
+
+  /// Verifica se há um timer de polling ativo para o pico indicado.
+  bool isPollingAtivo(String picoId) {
+    return _timersPolling.containsKey(picoId);
   }
 
   /// Cancela o polling de verificação de ETag para o pico indicado.
@@ -127,6 +157,7 @@ class ServicoCroquiOnline {
     _timersPolling[picoId]?.cancel();
     _timersPolling.remove(picoId);
   }
+
 
   /// Descarta todos os timers e fecha o cliente HTTP.
   void dispose() {

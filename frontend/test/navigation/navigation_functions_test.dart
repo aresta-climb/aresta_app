@@ -54,7 +54,11 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
       ),
     );
   }
+
+  @override
+  bool isPicoDownloaded(String picoId) => false;
 }
+
 
 class FakeSyncService extends Fake implements SyncService {
   @override

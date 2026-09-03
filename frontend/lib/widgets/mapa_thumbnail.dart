@@ -44,14 +44,11 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   @override
   void didUpdateWidget(MapaThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.mapas != oldWidget.mapas ||
-        widget.imageProviderOverride != oldWidget.imageProviderOverride) {
-      _imageProviderFuture?.then((provider) {
-        provider?.evict();
-      });
+    setState(() {
       _imageProviderFuture = _resolveImageProvider();
-    }
+    });
   }
+
 
   Future<ImageProvider?> _resolveImageProvider() async {
     if (widget.imageProviderOverride != null) {
@@ -163,16 +160,32 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   }
 }
 
-Future<ImageProvider?> resolveMapImageProvider(String cragId, Mapa mapa) async {
-  return resolveImagePathProvider(cragId, mapa.caminhoImagemMapa);
+/// Resolve o provedor de imagem para um [Mapa], aplicando downsampling por padrão para miniaturas.
+Future<ImageProvider?> resolveMapImageProvider(
+  String cragId,
+  Mapa mapa, {
+  int? larguraAlvo = 400,
+  int? alturaAlvo,
+}) async {
+  return resolveImagePathProvider(
+    cragId,
+    mapa.caminhoImagemMapa,
+    larguraAlvo: larguraAlvo,
+    alturaAlvo: alturaAlvo,
+  );
 }
 
+/// Resolve o provedor de imagem para um caminho de mídia, com suporte a downsampling opcional.
 Future<ImageProvider?> resolveImagePathProvider(
   String cragId,
-  String path,
-) async {
+  String path, {
+  int? larguraAlvo,
+  int? alturaAlvo,
+}) async {
   return ProvedorImagemAresta.resolver(
     picoId: cragId,
     caminho: path,
+    larguraAlvo: larguraAlvo,
+    alturaAlvo: alturaAlvo,
   );
 }

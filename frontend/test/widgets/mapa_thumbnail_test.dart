@@ -1,12 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
@@ -79,7 +83,34 @@ final Uint8List kTransparentImage = Uint8List.fromList([
   0x82,
 ]);
 
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
+
 void main() {
+  late Directory tempDir;
+
+  setUp(() async {
+    EditorDeCroqui();
+    tempDir = await Directory.systemTemp.createTemp('mapa_thumb_test_');
+    PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+  });
+
+  tearDown(() async {
+    try {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    } catch (_) {}
+  });
+
   testWidgets('MapaThumbnail calls logAbrirMapa on tap', (tester) async {
     final mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
@@ -145,4 +176,66 @@ void main() {
     expect(find.text('Mapas Interativos (2)'), findsOneWidget);
     expect(find.text('Abrir Mapa Interativo'), findsNothing);
   });
+
+  testWidgets('MapaThumbnail re-resolve imagem no didUpdateWidget mesmo com mapas idênticos', (tester) async {
+    final mapa = Mapa()
+      ..caminhoImagemMapa = 'teste.png'
+      ..larguraMapa = 100
+      ..alturaMapa = 100;
+
+    final img1 = MemoryImage(kTransparentImage);
+    final img2 = MemoryImage(Uint8List.fromList(kTransparentImage));
+
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapaThumbnail(
+            mapas: [mapa],
+            cragId: 'crag1',
+            imageProviderOverride: img1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Re-pump simulando hot reload com novo providerOverride e mapa idêntico
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MapaThumbnail(
+            mapas: [mapa],
+            cragId: 'crag1',
+            imageProviderOverride: img2,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+  });
+
+  group('resolveMapImageProvider & resolveImagePathProvider Downsampling Tests', () {
+    test('resolveMapImageProvider aplica larguraAlvo padrão de 400', () async {
+      final mapa = Mapa()..caminhoImagemMapa = 'https://cdn.arestaclimb.com/mapa.webp';
+      final provider = await resolveMapImageProvider('pico_teste', mapa);
+      expect(provider, isA<ResizeImage>());
+      final resize = provider as ResizeImage;
+      expect(resize.width, equals(400));
+    });
+
+    test('resolveImagePathProvider repassa larguraAlvo customizada', () async {
+      final provider = await resolveImagePathProvider(
+        'pico_teste',
+        'https://cdn.arestaclimb.com/foto.webp',
+        larguraAlvo: 600,
+        alturaAlvo: 400,
+      );
+      expect(provider, isA<ResizeImage>());
+      final resize = provider as ResizeImage;
+      expect(resize.width, equals(600));
+      expect(resize.height, equals(400));
+    });
+  });
 }
+

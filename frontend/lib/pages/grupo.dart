@@ -34,6 +34,15 @@ class _GrupoPageState extends State<GrupoPage> {
     _coverProviderFuture = _resolveCoverImage();
   }
 
+  @override
+  void didUpdateWidget(GrupoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    setState(() {
+      _coverProviderFuture = _resolveCoverImage();
+    });
+  }
+
+
   Future<ImageProvider?> _resolveCoverImage() async {
     // Tenta encontrar uma imagem Markdown aleatória
     final String jsonString = jsonEncode(widget.grupo.toProto3Json());
@@ -53,7 +62,7 @@ class _GrupoPageState extends State<GrupoPage> {
     if (paths.isNotEmpty) {
       final firstPath = paths.first;
       _coverImagePath = firstPath;
-      return resolveImagePathProvider(widget.cragId, firstPath);
+      return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
     }
 
     // Se não encontrou imagens, retorna null para fazer fallback pra capa principal

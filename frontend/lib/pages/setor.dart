@@ -53,14 +53,16 @@ class _SetorPageState extends State<SetorPage> {
   @override
   void didUpdateWidget(SetorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.scrollToEscalada != oldWidget.scrollToEscalada &&
-        widget.scrollToEscalada != null) {
-      setState(() {
+    setState(() {
+      _coverProviderFuture = _resolveCoverImage();
+      if (widget.scrollToEscalada != oldWidget.scrollToEscalada &&
+          widget.scrollToEscalada != null) {
         _targetKey = GlobalKey();
-      });
-      _scheduleScrollToTarget();
-    }
+        _scheduleScrollToTarget();
+      }
+    });
   }
+
 
   void _scheduleScrollToTarget() {
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -108,7 +110,7 @@ class _SetorPageState extends State<SetorPage> {
     if (paths.isNotEmpty) {
       final firstPath = paths.first;
       _coverImagePath = firstPath;
-      return resolveImagePathProvider(widget.cragId, firstPath);
+      return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
     }
 
     // Se não encontrou imagens, retorna null para fazer fallback pra capa principal

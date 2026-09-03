@@ -53,6 +53,8 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 - Notificadores reativos: `activeDataset`, `syncStatus`, `downloadingCrags`, `homeResetTrigger`
 - Converte Protobuf em `Map<String, dynamic>` para consumo pela UI
 - Gerencia `recent_picos.yaml` para ordenação por prioridade
+- **Tabela de Dispersão $O(1)$ de Mídias**: Mantém tabela de dispersão `_tabelaSha256PorPico` populada em `loadIndiceToMemory` e `getCroqui`, indexando hashes SHA-256 de miniaturas (`Indice.checksumSha256Thumbnail`) e mídias de croqui (`Croqui.arquivosExternos`). Expõe `obterSha256DaMidia(picoId, caminho)` e `indexarMidiasDoCroqui(picoId, croqui)` para invalidação reativa de cache de imagens sem varreduras lineares.
+
 
 ### `EditorDeCroqui`
 - Singleton acessível via `EditorDeCroqui.instance`
@@ -90,7 +92,7 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 ### Componentes Chave:
 - **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), além de rastrear notificações de novas versões (ETag).
 - **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil e executa polling periódico de ETag (HTTP 304/200).
-- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash).
+- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash e suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo`).
 - **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
 - **`GerenciadorNotificacaoDownload` (`notificacoes/gerenciador_notificacao_download.dart`)**: Gestão de notificações nativas na barra de status do sistema operacional. No Android, ancora a execução a um Foreground Service nativo ininterrupto com notificação contínua sticky (`ongoing: true`) e barra de progresso, transitando atomicamente para uma notificação dispensável de sucesso/erro. No iOS, emite a notificação nativa ao concluir o salvamento.
 - **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves no pipeline de download offline e sincronização de índice são tratadas com a mesma seriedade de um crash (`logCrash`, `fatal: true`), impactando imediatamente as métricas de estabilidade no Firebase Crashlytics e disparando alertas para a equipe de desenvolvimento.

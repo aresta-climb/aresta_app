@@ -190,5 +190,74 @@ void main() {
       // Dispose cancela todos os timers restantes
       servico.dispose();
     });
+
+    test('iniciarPollingEtag não agenda timer se o pico já estiver baixado', () async {
+      final servicoComCheck = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: tempDir.path,
+        verificarPicoBaixado: (id) => id == 'pico_baixado',
+      );
+
+      servicoComCheck.iniciarPollingEtag(
+        'pico_baixado',
+        'https://servidor.com/pico_baixado.binarypb',
+      );
+
+      expect(servicoComCheck.isPollingAtivo('pico_baixado'), isFalse);
+      verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+      servicoComCheck.dispose();
+    });
+
+    test('verificarAtualizacaoEtag cancela polling e não faz requisição HTTP se o pico estiver baixado', () async {
+      bool baixado = false;
+      final servicoComCheck = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: tempDir.path,
+        verificarPicoBaixado: (id) => baixado,
+      );
+
+      sessaoOnline.registrarCroquiOnline('pico_1', Croqui(id: 'pico_1'), etag: 'etag1');
+      servicoComCheck.iniciarPollingEtag(
+        'pico_1',
+        'https://servidor.com/pico_1.binarypb',
+      );
+      expect(servicoComCheck.isPollingAtivo('pico_1'), isTrue);
+
+      // Simula que o download acabou de ser concluído
+      baixado = true;
+
+      final resultado = await servicoComCheck.verificarAtualizacaoEtag(
+        'pico_1',
+        'https://servidor.com/pico_1.binarypb',
+      );
+
+      expect(resultado, isFalse);
+      expect(servicoComCheck.isPollingAtivo('pico_1'), isFalse);
+      verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+      servicoComCheck.dispose();
+    });
+
+    test('verificarAtualizacaoEtag cancela polling e não faz requisição HTTP se a sessão online foi encerrada', () async {
+      servico.iniciarPollingEtag(
+        'pico_sem_sessao',
+        'https://servidor.com/pico_sem_sessao.binarypb',
+      );
+      expect(servico.isPollingAtivo('pico_sem_sessao'), isTrue);
+
+      // A sessão online não possui o pico registrado (ou foi removida)
+      expect(sessaoOnline.obterCroquiOnline('pico_sem_sessao'), isNull);
+
+      final resultado = await servico.verificarAtualizacaoEtag(
+        'pico_sem_sessao',
+        'https://servidor.com/pico_sem_sessao.binarypb',
+      );
+
+      expect(resultado, isFalse);
+      expect(servico.isPollingAtivo('pico_sem_sessao'), isFalse);
+      verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+    });
   });
 }
+

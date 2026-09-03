@@ -1,1 +1,7 @@
 #include "Generated.xcconfig"
+
+// Otimizações de compilação em Release para iOS (ThinLTO e Dead Code Stripping)
+LLVM_LTO = YES_THIN
+DEAD_CODE_STRIPPING = YES
+STRIP_INSTALLED_PRODUCT = YES
+DEPLOYMENT_POSTPROCESSING = YES

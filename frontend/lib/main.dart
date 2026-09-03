@@ -55,9 +55,23 @@ import 'package:feedback/feedback.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
 import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
 
+/// Configura os parâmetros de gestão de memória e teto LRU do Flutter para
+/// garantir conformidade com os novos requisitos técnicos do Google Play (Android Vitals).
+///
+/// Define o tamanho máximo de bytes em memória RAM para o [PaintingBinding.instance.imageCache]
+/// como [tamanhoMaximoBytes] (por padrão 100 MB). Isso preserva os últimos 5-6 croquis em alta
+/// resolução para consulta instantânea na rocha, mantendo o consumo em segundo plano bem
+/// abaixo do limite de 200 MB da Google Play.
+void configurarGestaoMemoria({int tamanhoMaximoBytes = 100 * 1024 * 1024}) {
+  PaintingBinding.instance.imageCache.maximumSizeBytes = tamanhoMaximoBytes;
+}
+
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configura a gestão de memória e teto de cache de bitmaps para Vitals do Android
+  configurarGestaoMemoria();
 
   // Inicializa o Workmanager para processamento de feedback em background
   Workmanager().initialize(callbackDispatcher);

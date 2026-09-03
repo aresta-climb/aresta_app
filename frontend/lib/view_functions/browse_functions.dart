@@ -572,6 +572,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
           if (file.existsSync()) {
             return Image.file(
               file,
+              cacheWidth: 300,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
             );
@@ -582,6 +583,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
                 widget.thumbnailUrl.startsWith('https://'))) {
           return Image.network(
             widget.thumbnailUrl,
+            cacheWidth: 300,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
           );
@@ -595,6 +597,16 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   Widget build(BuildContext context) {
     if (_dirFuture != null) {
       return _buildLocalFileImage();
+    }
+    if (widget.thumbnailUrl.isNotEmpty &&
+        (widget.thumbnailUrl.startsWith('http://') ||
+            widget.thumbnailUrl.startsWith('https://'))) {
+      return Image.network(
+        widget.thumbnailUrl,
+        cacheWidth: 300,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      );
     }
     return _buildPlaceholder();
   }

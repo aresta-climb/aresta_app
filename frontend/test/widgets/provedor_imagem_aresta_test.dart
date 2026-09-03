@@ -5,31 +5,54 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/services/dataset_repository.dart';
+
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
+import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory tempDownloadsDir;
   late Directory tempCacheDir;
+  late MockPathProviderPlatform mockPlatform;
 
   setUp(() async {
     tempDownloadsDir = await Directory.systemTemp.createTemp('downloads_img_test_');
     tempCacheDir = await Directory.systemTemp.createTemp('cache_img_test_');
+    mockPlatform = MockPathProviderPlatform(tempDownloadsDir.path);
+    PathProviderPlatform.instance = mockPlatform;
   });
 
+
   tearDown(() async {
-    if (await tempDownloadsDir.exists()) {
-      await tempDownloadsDir.delete(recursive: true);
-    }
-    if (await tempCacheDir.exists()) {
-      await tempCacheDir.delete(recursive: true);
-    }
+    try {
+      if (await tempDownloadsDir.exists()) {
+        await tempDownloadsDir.delete(recursive: true);
+      }
+      if (await tempCacheDir.exists()) {
+        await tempCacheDir.delete(recursive: true);
+      }
+    } catch (_) {}
   });
 
   group('ProvedorImagemAresta', () {
-    test('resolve para FileImage se a imagem existir no diretório permanente /downloads', () async {
+    test('resolve para ImagemArquivoAresta se a imagem existir no diretório permanente /downloads', () async {
       final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
       await picoDir.create(recursive: true);
       final imgFile = File('${picoDir.path}/mapa.webp');
@@ -38,15 +61,18 @@ void main() {
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: 'mapa.webp',
+        checksumSha256: 'sha_local_1',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
       );
 
-      expect(provedor, isA<FileImage>());
-      expect((provedor as FileImage).file.path, equals(imgFile.path));
+      expect(provedor, isA<ImagemArquivoAresta>());
+      final imgAresta = provedor as ImagemArquivoAresta;
+      expect(imgAresta.arquivo.path, equals(imgFile.path));
+      expect(imgAresta.checksumSha256, equals('sha_local_1'));
     });
 
-    test('resolve para FileImage no /temp_cache se não estiver no /downloads', () async {
+    test('resolve para ImagemArquivoAresta no /temp_cache se não estiver no /downloads', () async {
       final picoCacheDir = Directory('${tempCacheDir.path}/pico_1');
       await picoCacheDir.create(recursive: true);
       final imgFile = File('${picoCacheDir.path}/mapa.webp');
@@ -59,9 +85,10 @@ void main() {
         caminhoCacheVolatil: tempCacheDir.path,
       );
 
-      expect(provedor, isA<FileImage>());
-      expect((provedor as FileImage).file.path, equals(imgFile.path));
+      expect(provedor, isA<ImagemArquivoAresta>());
+      expect((provedor as ImagemArquivoAresta).arquivo.path, equals(imgFile.path));
     });
+
 
     test('resolve para NetworkImage com baseDir padrão e hash de cache-busting quando não existir localmente', () async {
       final provedor = await ProvedorImagemAresta.resolver(
@@ -163,5 +190,160 @@ void main() {
         equals('https://servidor.com/imagem.webp?token=abc&v=xyz999'),
       );
     });
+
+    test('auto-resolve checksumSha256 a partir do DatasetRepository para arquivo local', () async {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final croqui = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'mapa.webp',
+            checksumSha256: 'sha_auto_local_999',
+          ),
+        );
+      repo.indexarMidiasDoCroqui('pico_1', croqui);
+
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final imgFile = File('${picoDir.path}/mapa.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'mapa.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+      final imgAresta = provedor as ImagemArquivoAresta;
+      expect(imgAresta.checksumSha256, equals('sha_auto_local_999'));
+    });
+
+    test('auto-resolve checksumSha256 a partir do DatasetRepository para NetworkImage', () async {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final croqui = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'fotos/via.jpg',
+            checksumSha256: 'sha_auto_remote_888',
+          ),
+        );
+      repo.indexarMidiasDoCroqui('pico_1', croqui);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'fotos/via.jpg',
+        baseUrl: 'https://cdn.arestaclimb.com',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<NetworkImage>());
+      final netImg = provedor as NetworkImage;
+      expect(netImg.url, contains('?v=sha_auto_remote_888'));
+    });
+
+    test('resolve usando caminhos padrão quando caminhoDownloads e caminhoCacheVolatil são nulos', () async {
+      final editor = EditorDeCroqui.instance;
+      final docsDownloads = editor.downloadsPath(tempDownloadsDir.path);
+      final picoDir = Directory('$docsDownloads/pico_default');
+      await picoDir.create(recursive: true);
+      final img = File('${picoDir.path}/capa.webp');
+      await img.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_default',
+        caminho: 'capa.webp',
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+    });
+
+    test('resolve arquivo local quando caminho é URL completa do servidor oficial', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final img = File('${picoDir.path}/mapa_oficial.webp');
+      await img.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: '${NetworkConstants.officialServerUrl}/mapa_oficial.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+    });
+
+    test('resolve para ImagemArquivoAresta no cache volátil padrão quando não está em downloads', () async {
+      final cacheDir = Directory('${tempDownloadsDir.path}/temp_cache/pico_temp');
+      await cacheDir.create(recursive: true);
+      final img = File('${cacheDir.path}/foto_temp.webp');
+      await img.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_temp',
+        caminho: 'foto_temp.webp',
+        caminhoDownloads: '${tempDownloadsDir.path}/downloads_vazios',
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+    });
+
+    test('encontra arquivo em subpasta por busca recursiva', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1/subpasta');
+      await picoDir.create(recursive: true);
+      final img = File('${picoDir.path}/foto_subpasta.webp');
+      await img.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'foto_subpasta.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+    });
+
+    test('retorna ResizeImage quando larguraAlvo ou alturaAlvo for especificada para arquivo local', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final imgFile = File('${picoDir.path}/mapa.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'mapa.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+        larguraAlvo: 300,
+        alturaAlvo: 200,
+      );
+
+      expect(provedor, isA<ResizeImage>());
+      final resize = provedor as ResizeImage;
+      expect(resize.width, equals(300));
+      expect(resize.height, equals(200));
+      expect(resize.imageProvider, isA<ImagemArquivoAresta>());
+    });
+
+    test('retorna ResizeImage quando larguraAlvo for especificada para NetworkImage', () async {
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'imagens/setor.webp',
+        baseUrl: 'https://cdn.arestaclimb.com',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+        larguraAlvo: 400,
+      );
+
+      expect(provedor, isA<ResizeImage>());
+      final resize = provedor as ResizeImage;
+      expect(resize.width, equals(400));
+      expect(resize.height, isNull);
+      expect(resize.imageProvider, isA<NetworkImage>());
+    });
   });
 }
+
+
+

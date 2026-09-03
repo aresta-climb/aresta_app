@@ -721,5 +721,25 @@ void main() {
       verify(() => mockDataset.init()).called(1);
     });
   });
+
+  group('Gestão de Memória e Vitals Tests', () {
+    test('configurarGestaoMemoria deve definir teto LRU do imageCache para 100 MB por padrão', () {
+      configurarGestaoMemoria();
+      expect(
+        PaintingBinding.instance.imageCache.maximumSizeBytes,
+        equals(100 * 1024 * 1024),
+      );
+    });
+
+    test('configurarGestaoMemoria deve permitir tamanho customizado', () {
+      configurarGestaoMemoria(tamanhoMaximoBytes: 50 * 1024 * 1024);
+      expect(
+        PaintingBinding.instance.imageCache.maximumSizeBytes,
+        equals(50 * 1024 * 1024),
+      );
+      // Restaura para 100 MB
+      configurarGestaoMemoria();
+    });
+  });
 }
 

@@ -149,17 +149,34 @@ flutter test test/integration/
 
 ---
 
-## Build e Release (Android)
+## Build e Release (Android & iOS)
 
-O projeto está configurado para gerar a versão final (`.aab` assinado) para a Play Store de forma segura, sem expor senhas no repositório.
+O projeto está configurado para gerar as versões finais assinadas (`.aab` para Google Play e `.ipa` para App Store) e enviar automaticamente os símbolos de depuração para o Firebase Crashlytics via CI/CD.
 
-### Via GitHub Actions (Recomendado)
-A integração contínua (CI/CD) foi configurada no `.github/workflows/build_android.yml`. Ao fazer push para a branch `main` ou engatilhar manualmente via `workflow_dispatch`, o GitHub Actions lerá os seguintes **Secrets do Repositório** para assinar o app:
-- `KEYSTORE_BASE64`: Arquivo `.jks` convertido para texto Base64.
-- `KEY_ALIAS`: Alias da chave (ex: `upload`).
-- `KEYSTORE_PASSWORD` / `KEY_PASSWORD`: Senhas do Keystore e da chave.
+### Segredos do Repositório (GitHub Actions Secrets)
+Para que o pipeline automatizado (`release_new_app_version.yml`) compile, assine e envie os relatórios de crash desofuscados, configure os seguintes secrets no GitHub:
 
-O arquivo final `.aab` ficará disponível para download nos Artifacts do fluxo executado na aba "Actions".
+| Secret | Finalidade |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | Arquivo Keystore `.jks` do Android em Base64 |
+| `ANDROID_KEY_ALIAS` | Alias da chave de assinatura do Android |
+| `ANDROID_KEY_PASSWORD` / `ANDROID_STORE_PASSWORD` | Senhas da chave e do Keystore |
+| `ANDROID_PLAY_STORE_CONFIG_JSON` | Service Account JSON da Google Play Console |
+| `IOS_BUILD_CERTIFICATE_BASE64` | Certificado de Distribuição Apple (`.p12`) em Base64 |
+| `IOS_BUILD_CERTIFICATE_PASSWORD` | Senha do certificado `.p12` |
+| `IOS_MOBILE_PROVISIONING_PROFILE_BASE64` | Provisioning Profile (`.mobileprovision`) em Base64 |
+| `APPSTORE_KEY_ID` / `APPSTORE_ISSUER_ID` / `APPSTORE_PRIVATE_KEY` | Chave API da App Store Connect (`.p8`) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Service Account JSON do Google Cloud com role `Firebase Crashlytics Admin` para upload de `dSYMs` e `.symbols` |
+
+### Otimizações de Compilação e Google Play Vitals
+O Aresta implementa as melhores práticas recomendadas para Android Vitals e App Store:
+- **Gestão de Memória e Bitmaps:** Teto global de 100 MB para o `imageCache` (via `configurarGestaoMemoria()`) e decodificação com downsampling via `ResizeImage.resizeIfNeeded` no `ProvedorImagemAresta` e `_CragBackgroundWidget` (restringindo o uso de RAM por miniatura a ~160 KB).
+- **R8 e Minificação (Android):** `isMinifyEnabled` e `isShrinkResources` ativados com `proguard-android-optimize.txt` e `proguard-rules.pro`, reduzindo o DEX e tamanho do AAB em mais de 25%.
+- **ThinLTO e Dead Code Stripping (iOS):** Otimizações inter-módulos ativadas no Clang via `Release.xcconfig`.
+- **Ofuscação de Código Dart:** Flags `--obfuscate --split-debug-info=build/symbols` aplicadas nos builds de release com upload automático de `mapping.txt`, `.symbols` e `dSYMs` para o Firebase Crashlytics e Google Play Console.
+
+### Artefatos de Release no GitHub Actions
+A cada release gerada pelos workflows `build_android.yml` e `build_ios.yml`, um pacote `.zip` completo contendo os binários (`.aab` / `.ipa`), tabelas de símbolos Dart (`.symbols`), dSYMs do Xcode e arquivos de mapeamento R8/ProGuard é armazenado na aba **Actions** do GitHub (com retenção de 90 dias).
 
 ### Build Local
 Se precisar gerar o `.aab` na sua própria máquina, você **não** deve utilizar o arquivo `key.properties` (por segurança). O arquivo `build.gradle.kts` foi configurado para ler diretamente as Variáveis de Ambiente do Sistema Operacional.
@@ -171,7 +188,7 @@ $env:STORE_FILE='caminho\absoluto\upload-keystore.jks'
 $env:KEY_PASSWORD='sua_senha'
 $env:STORE_PASSWORD='sua_senha'
 
-flutter build appbundle --release
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 ```
 > **Nota:** Use aspas simples (`' '`) no PowerShell caso sua senha contenha caracteres especiais como `$`.
 

@@ -449,4 +449,109 @@ void main() {
       },
     );
   });
+
+  group('Tabela de Dispersão de Hashes de Mídia', () {
+    test('obterSha256DaMidia resolve thumbnail indexada do Indice', () async {
+      final indice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_ouro_preto'
+            ..checksumSha256Thumbnail = 'hash_thumb_123',
+        );
+
+      await repo.loadIndiceToMemory(indice);
+
+      expect(
+        repo.obterSha256DaMidia('pico_ouro_preto', 'thumbnails/pico_ouro_preto.webp'),
+        equals('hash_thumb_123'),
+      );
+      expect(
+        repo.obterSha256DaMidia('pico_ouro_preto', 'pico_ouro_preto.webp'),
+        equals('hash_thumb_123'),
+      );
+    });
+
+    test('obterSha256DaMidia resolve arquivo externo indexado do Croqui', () {
+      final croqui = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'setores/principal/mapa.webp',
+            checksumSha256: 'sha_mapa_xyz',
+          ),
+        );
+
+      repo.indexarMidiasDoCroqui('pico_ouro_preto', croqui);
+
+      expect(
+        repo.obterSha256DaMidia('pico_ouro_preto', 'setores/principal/mapa.webp'),
+        equals('sha_mapa_xyz'),
+      );
+      expect(
+        repo.obterSha256DaMidia('pico_ouro_preto', '/setores/principal/mapa.webp'),
+        equals('sha_mapa_xyz'),
+      );
+    });
+
+    test('obterSha256DaMidia retorna null para pico ou mídia inexistente', () {
+      expect(repo.obterSha256DaMidia('pico_fantasma', 'mapa.webp'), isNull);
+      expect(repo.obterSha256DaMidia('pico_ouro_preto', 'arquivo_inexistente.jpg'), isNull);
+    });
+
+    test('obterSha256DaMidia resolve mídia a partir do GerenciadorSessaoOnline se não indexada previamente', () {
+      final croqui = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'croqui_online.webp',
+            checksumSha256: 'sha_online_999',
+          ),
+        );
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croqui);
+
+      expect(
+        repo.obterSha256DaMidia('pico_online_1', 'croqui_online.webp'),
+        equals('sha_online_999'),
+      );
+    });
+
+    test('isPicoDownloaded retorna true apenas para picos presentes em picosBaixados', () {
+      expect(repo.isPicoDownloaded('pico_qualquer'), isFalse);
+
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosDisponiveis: [
+          {'id': 'pico_1', 'nome': 'Pico 1'},
+          {'id': 'pico_2', 'nome': 'Pico 2'},
+        ],
+        picosBaixados: [
+          {'id': 'pico_1', 'nome': 'Pico 1'},
+        ],
+      );
+
+      expect(repo.isPicoDownloaded('pico_1'), isTrue);
+      expect(repo.isPicoDownloaded('pico_2'), isFalse);
+    });
+
+    test('updateDatasetAfterDownload remove a sessão do pico no GerenciadorSessaoOnline', () async {
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosDisponiveis: [
+          {'id': 'pico_1', 'nome': 'Pico 1'},
+        ],
+        picosBaixados: [],
+      );
+
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+        'pico_1',
+        Croqui(id: 'pico_1'),
+        etag: 'etag_123',
+      );
+      expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_1'), isNotNull);
+
+      await repo.updateDatasetAfterDownload('pico_1');
+
+      expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_1'), isNull);
+      expect(repo.gerenciadorSessaoOnline.obterEtag('pico_1'), isNull);
+    });
+  });
 }
+
+
+

@@ -81,6 +81,93 @@ class DatasetRepository {
   /// Disparo para reiniciar a visualização do carrossel da Home.
   final ValueNotifier<int> homeResetTrigger = ValueNotifier(0);
 
+  /// Tabela de dispersão interna indexando caminhos de mídias por pico: [picoId] -> {[caminho] -> [checksumSha256]}.
+  final Map<String, Map<String, String>> _tabelaSha256PorPico = {};
+
+  /// Indexa os arquivos externos de um [Croqui] para consultas O(1) de checksum SHA-256.
+  void indexarMidiasDoCroqui(String picoId, Croqui croqui) {
+    if (picoId.isEmpty) return;
+    final mapaPico = _tabelaSha256PorPico.putIfAbsent(picoId, () => {});
+    for (final ext in croqui.arquivosExternos) {
+      if (ext.hasChecksumSha256() && ext.checksumSha256.isNotEmpty) {
+        String limpo = ext.caminho.trim();
+        if (limpo.startsWith('/')) limpo = limpo.substring(1);
+        mapaPico[limpo] = ext.checksumSha256;
+        mapaPico[ext.caminho] = ext.checksumSha256;
+        final nomeArquivo = limpo.split('/').last;
+        if (nomeArquivo.isNotEmpty) {
+          mapaPico[nomeArquivo] = ext.checksumSha256;
+        }
+      }
+    }
+  }
+
+  /// Retorna o checksum SHA-256 pré-indexado O(1) para uma mídia de croqui ou thumbnail.
+  ///
+  /// Caso o pico esteja em uma sessão online ativa e ainda não indexado,
+  /// o croqui online é consultado e indexado dinamicamente.
+  String? obterSha256DaMidia(String picoId, String caminho) {
+    if (picoId.isEmpty || caminho.isEmpty) return null;
+
+    final mapaPico = _tabelaSha256PorPico[picoId];
+    String caminhoLimpo = caminho.trim();
+    if (caminhoLimpo.startsWith('/')) {
+      caminhoLimpo = caminhoLimpo.substring(1);
+    }
+
+    if (mapaPico != null) {
+      if (mapaPico.containsKey(caminhoLimpo)) {
+        return mapaPico[caminhoLimpo];
+      }
+      if (mapaPico.containsKey(caminho)) {
+        return mapaPico[caminho];
+      }
+      final nomeArquivo = caminhoLimpo.split('/').last;
+      if (mapaPico.containsKey(nomeArquivo)) {
+        return mapaPico[nomeArquivo];
+      }
+    }
+
+    // Fallback: Consulta o índice em memória para thumbnails
+    final indice = indiceData.value;
+    if (indice != null) {
+      for (final r in indice.croquis) {
+        if (r.id == picoId &&
+            r.hasChecksumSha256Thumbnail() &&
+            r.checksumSha256Thumbnail.isNotEmpty) {
+          final thumbHash = r.checksumSha256Thumbnail;
+          final mapa = _tabelaSha256PorPico.putIfAbsent(picoId, () => {});
+          mapa['thumbnails/$picoId.webp'] = thumbHash;
+          mapa['$picoId.webp'] = thumbHash;
+          mapa['thumbnail.webp'] = thumbHash;
+
+          if (caminhoLimpo.contains('thumbnail') ||
+              caminhoLimpo.endsWith('$picoId.webp')) {
+            return thumbHash;
+          }
+        }
+      }
+    }
+
+    // Fallback: Sessão online ativa
+    final croquiOnline = gerenciadorSessaoOnline.obterCroquiOnline(picoId);
+    if (croquiOnline != null) {
+      indexarMidiasDoCroqui(picoId, croquiOnline);
+      final mapaOnline = _tabelaSha256PorPico[picoId];
+      if (mapaOnline != null) {
+        if (mapaOnline.containsKey(caminhoLimpo)) {
+          return mapaOnline[caminhoLimpo];
+        }
+        final nomeArquivo = caminhoLimpo.split('/').last;
+        if (mapaOnline.containsKey(nomeArquivo)) {
+          return mapaOnline[nomeArquivo];
+        }
+      }
+    }
+
+    return null;
+  }
+
   // ===========================================================================
   // SECTION: Inicialização e Carregamento
   // ===========================================================================
@@ -135,6 +222,16 @@ class DatasetRepository {
   /// Converte os resumos de [Indice] em estruturas mapeadas para a interface.
   Future<void> loadIndiceToMemory(Indice indice) async {
     indiceData.value = indice;
+    for (var resumo in indice.croquis) {
+      if (resumo.hasChecksumSha256Thumbnail() &&
+          resumo.checksumSha256Thumbnail.isNotEmpty) {
+        final mapaPico = _tabelaSha256PorPico.putIfAbsent(resumo.id, () => {});
+        final thumbHash = resumo.checksumSha256Thumbnail;
+        mapaPico['thumbnails/${resumo.id}.webp'] = thumbHash;
+        mapaPico['${resumo.id}.webp'] = thumbHash;
+        mapaPico['thumbnail.webp'] = thumbHash;
+      }
+    }
     try {
       final directory = await getApplicationDocumentsDirectory();
       final docsPath = directory.path;
@@ -248,10 +345,18 @@ class DatasetRepository {
         }),
       );
 
+      for (final picoData in ordenados) {
+        final croqui = picoData['data']?['croqui'];
+        if (croqui is Croqui) {
+          indexarMidiasDoCroqui(picoData['id'] as String, croqui);
+        }
+      }
+
       activeDataset.value = ConjuntoDadosCroqui(
         picosDisponiveis: parsedPicos,
         picosBaixados: ordenados,
       );
+
     } catch (e) {
       AppLogger.instance.logError(
         'Erro crítico em loadIndiceToMemory',
@@ -270,8 +375,15 @@ class DatasetRepository {
 
   /// Atualiza o conjunto de dados após a conclusão de um download.
   Future<void> updateDatasetAfterDownload(String id) async {
+    gerenciadorSessaoOnline.removerSessao(id);
     await _refreshActiveDataset();
   }
+
+  /// Retorna se o pico com [picoId] está baixado no armazenamento local.
+  bool isPicoDownloaded(String picoId) {
+    return activeDataset.value?.picosBaixados.any((p) => p['id'] == picoId) ?? false;
+  }
+
 
   // ===========================================================================
   // SECTION: Prioridade e Navegação
@@ -319,12 +431,18 @@ class DatasetRepository {
     final localCroqui =
         await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
     if (localCroqui != null) {
+      indexarMidiasDoCroqui(id, localCroqui);
       return localCroqui;
     }
 
     // 2. Se não estiver no disco permanente, consulta a sessão online ativa
-    return gerenciadorSessaoOnline.obterCroquiOnline(id);
+    final online = gerenciadorSessaoOnline.obterCroquiOnline(id);
+    if (online != null) {
+      indexarMidiasDoCroqui(id, online);
+    }
+    return online;
   }
+
 
   /// Exclui um pico do armazenamento permanente e atualiza a interface.
   Future<bool> deleteCrag(String id) async {

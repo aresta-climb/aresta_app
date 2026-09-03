@@ -420,4 +420,61 @@ void main() {
     await tester.pump();
     expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
   });
+
+  testWidgets('PicoDetailsPage cancela onBackInterceptor e encerra polling quando o pico passa a estar baixado', (
+    tester,
+  ) async {
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    final syncService = SyncService(datasetRepository: datasetRepo);
+    final treeController = TreeNavigationController(
+      estadoInicial: ArvoreNavegacao(
+        noAtual: PicoNode(
+          cragId: 'crag_online_teste',
+          parent: const HomeNode(),
+        ),
+      ),
+    );
+
+    datasetRepo.activeDataset.value = ConjuntoDadosCroqui(
+      picosDisponiveis: [
+        {'id': 'crag_online_teste', 'nome': 'Pico Online', 'url': 'https://exemplo.com/croqui.binarypb'},
+      ],
+      picosBaixados: [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TreeNavigationWrapper(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+          treeController: treeController,
+          child: PicoDetailsPage(
+            pico: Pico()..nome = 'Pico Online',
+            croqui: Croqui(),
+            cragId: 'crag_online_teste',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Como não estava baixado, interceptor de saída deve estar ativo
+    expect(treeController.onBackInterceptor, isNotNull);
+
+    // Agora simulamos que o pico foi baixado (notificação do activeDataset)
+    datasetRepo.activeDataset.value = ConjuntoDadosCroqui(
+      picosDisponiveis: [
+        {'id': 'crag_online_teste', 'nome': 'Pico Online', 'url': 'https://exemplo.com/croqui.binarypb'},
+      ],
+      picosBaixados: [
+        {'id': 'crag_online_teste', 'nome': 'Pico Online'},
+      ],
+    );
+    await tester.pump();
+
+    // Com o pico baixado, o interceptor de saída deve ser cancelado automaticamente
+    expect(treeController.onBackInterceptor, isNull);
+  });
 }
+

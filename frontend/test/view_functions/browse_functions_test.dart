@@ -1,13 +1,29 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../mocks/mock_telemetry_service.dart';
 
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
     'buildBrowseBody passa onOpen corretamente e permite acionar telemetria',
     (WidgetTester tester) async {
@@ -223,4 +239,42 @@ void main() {
       findsOneWidget,
     );
   });
+
+  group('CragBackground Downsampling Tests', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('thumb_test_');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    });
+
+    tearDown(() async {
+      try {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    testWidgets('buildCragBackground aplica cacheWidth na imagem remota', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragBackground('https://cdn.arestaclimb.com/thumb.webp'),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsOneWidget);
+      final Image imageWidget = tester.widget(imageFinder);
+      expect(imageWidget.image, isA<ResizeImage>());
+      final resize = imageWidget.image as ResizeImage;
+      expect(resize.width, equals(300));
+    });
+  });
 }
+

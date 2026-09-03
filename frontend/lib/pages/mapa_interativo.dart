@@ -176,24 +176,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   @override
   void didUpdateWidget(MapaInterativoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.mapa != oldWidget.mapa || widget.pico != oldWidget.pico) {
-      _buildReferenceMaps();
-    }
-
-    if (widget.mapa != oldWidget.mapa ||
-        widget.imageProviderOverride != oldWidget.imageProviderOverride) {
-      // The map object changed (either experimental mode update or a new downloaded update)
-      // The file on disk might have been overwritten without path changes.
-      // We evict the image from the cache to force a reload from disk.
-      _imageProviderFuture?.then((provider) {
-        provider?.evict();
-      });
-
+    _buildReferenceMaps();
+    setState(() {
       _imageProviderFuture = widget.imageProviderOverride != null
           ? Future.value(widget.imageProviderOverride)
           : _resolveImageProvider();
-    }
+    });
   }
+
 
   void _buildReferenceMaps() {
     _poiToRefs.clear();

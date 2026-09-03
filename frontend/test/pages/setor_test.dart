@@ -61,4 +61,30 @@ void main() {
 
     expect(find.text('Via 1'), findsOneWidget);
   });
+
+  testWidgets('SetorPage re-resolve imagem de capa no didUpdateWidget durante Hot Reload', (tester) async {
+    final setor1 = Setor()
+      ..nome = 'Setor 1'
+      ..descricao = '![Capa](capa1.webp)';
+    final setor2 = Setor()
+      ..nome = 'Setor 1'
+      ..descricao = '![Capa](capa2.webp)';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor1, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    // Re-pump simulando hot reload com novo setor
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor2, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+  });
 }
+

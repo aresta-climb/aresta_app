@@ -35,3 +35,9 @@ Responsável pela atestação de integridade de hardware e software da aplicaç�
 - **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
 - **Desenvolvimento (Debug)**: Utiliza o Provedor de Depuração com suporte a UUIDs cadastrados no Firebase Console, permitindo que os desenvolvedores testem a rota real, ou realiza fallback silencioso em ambiente de desenvolvimento sem bloquear a interface.
 
+### 5. Desofuscação e Símbolos no Crashlytics (CI/CD)
+Para que os relatórios de crash no painel do Firebase Crashlytics exibam os nomes de funções, arquivos e linhas de código (ao invés de ponteiros hexadecimais *unsymbolicated*), a pipeline do GitHub Actions realiza o upload automático de dois tipos de símbolos a cada release:
+- **dSYMs nativos do iOS**: extraídos do `Runner.xcarchive` gerado pelo Xcode.
+- **Símbolos Dart (Android e iOS)**: gerados com a flag `--split-debug-info=build/symbols` do Flutter.
+
+**Autenticação**: O upload é autenticado via Google Cloud Service Account com a role `Firebase Crashlytics Admin`, configurada no repositório GitHub como o segredo `FIREBASE_SERVICE_ACCOUNT_JSON`.
