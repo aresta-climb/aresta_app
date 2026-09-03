@@ -6,17 +6,20 @@ Esta pasta contém todos os testes automatizados do frontend do aplicativo Arest
 
 ```text
 test/
-├── architecture/    Testes arquiteturais e de convenção de código
-├── integration/     Testes de integração de fluxos completos (download, leitura de croqui)
-├── legal/           Testes para validação e extração de datas de documentos legais
-├── navigation/      Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder (Hot-Reload)
-├── pages/           Testes de widget das páginas de roteamento superior (ex: mapa_global)
-├── protobuf/        Testes de serialização/desserialização dos objetos Protobuf
-├── services/        Testes unitários dos serviços principais (EditorDeCroqui, DatasetRepository, SyncService, SyncNetwork, SyncStorage)
-├── theme/           Testes unitários do gerenciamento de temas e persistência do tema ao reiniciar
-├── utils/           Testes de funções utilitárias isoladas (ex: parsers de Markdown)
-├── view_functions/  Testes unitários de funções utilitárias compartilhadas
-└── widgets/         Testes de widget da interface do usuário
+├── application_managers/ Testes dos orquestradores de background, feedback e migração
+├── architecture/         Testes arquiteturais e de convenção de código (isolamento de pacotes)
+├── constants/            Testes de validação de constantes de rede e URLs
+├── data/                 Testes de DTOs e serialização de metadados
+├── integration/          Testes de integração de fluxos completos (download, leitura, hot reload)
+├── legal/                Testes para validação e extração de datas de documentos legais
+├── navigation/           Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder
+├── pages/                Testes de widget de todas as páginas de navegação
+├── protobuf/             Testes de serialização/desserialização dos objetos Protobuf
+├── services/             Testes unitários dos serviços centrais (DatasetRepository, SyncService, EditorDeCroqui, etc.)
+├── theme/                Testes unitários do gerenciamento de temas e persistência
+├── utils/                Testes de funções utilitárias isoladas (FormatadorCreditos, ConstrutorCaminhoTrajeto, etc.)
+├── view_functions/       Testes unitários de funções de formatação e visualização compartilhadas
+└── widgets/              Testes de componentes e widgets reutilizáveis da interface
 ```
 
 Cada pasta tem seu próprio `README.md` com detalhes sobre os arquivos e os cenários cobertos.
@@ -36,6 +39,7 @@ flutter test test/protobuf/
 flutter test test/integration/
 flutter test test/widgets/
 flutter test test/utils/
+flutter test test/pages/
 
 # Rodar um arquivo específico
 flutter test test/services/editor_croqui_test.dart
@@ -43,20 +47,14 @@ flutter test test/services/editor_croqui_test.dart
 
 ## Resumo dos testes
 
-| Pasta | Arquivos | Testes |
+| Módulo | Descrição | Status |
 |---|---|---|
-| `services/` | 18 | ~135 |
-| `view_functions/` | 13 | ~62 |
-| `navigation/` | 6 | ~42 |
-| `theme/` | 1 | ~3 |
-| `protobuf/` | 1 | ~18 |
-| `integration/` | 1 | ~4 |
-| `pages/` | 12 | ~71 |
-| `widgets/` | 6 | ~18 |
-| `architecture/` | 1 | ~1 |
-| `legal/` | 1 | ~1 |
-| `utils/` | 4 | ~38 |
-| **Total** | **64** | **~393** |
+| `services/` e `application_managers/` | Gestão de dados, sincronização atômica, Isolates, offline-first e feedback | 100% aprovado |
+| `navigation/` | Árvore de nós, prevenção de loops, Hot-Reload passivo e API `AppNav` | 100% aprovado |
+| `pages/` e `widgets/` | Interfaces de usuário, carrossel de mapas, busca global, créditos e banners | 100% aprovado |
+| `view_functions/` e `utils/` | Formatação de graus, traçados vetoriais, hit-testing e créditos | 100% aprovado |
+| `architecture/`, `legal/` e `protobuf/` | Garantia de isolamento arquitetural, conformidade e integridade binária | 100% aprovado |
+| **Total Geral** | **102 arquivos de teste / 737 cenários automatizados** | **100% aprovado** |
 
 ## Convenções
 
