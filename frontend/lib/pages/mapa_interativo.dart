@@ -1272,23 +1272,25 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       viewportSize,
                     ),
                   ),
-                  // Camada 3: Botão de Recentralizar Imagem
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.center_focus_strong,
-                          color: rustIron,
-                        ),
-                        tooltip: 'Centralizar imagem',
-                        onPressed: _recentralizarImagem,
-                      ),
+                  // Camada 3: Botão de Recentralizar Imagem (Estilo Mapa Global / FloatingActionButton)
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    bottom: _selectedId != null
+                        ? 220 + MediaQuery.of(context).padding.bottom
+                        : 20 + MediaQuery.of(context).padding.bottom,
+                    right: 20,
+                    child: FloatingActionButton(
+                      heroTag: 'recentralizar_mapa_interativo',
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? context.colors.caveShadow
+                              : context.colors.chalkWhite,
+                      foregroundColor: AppColors.brandColor,
+                      mini: true,
+                      onPressed: _recentralizarImagem,
+                      tooltip: 'Centralizar imagem',
+                      child: const Icon(Icons.my_location),
                     ),
                   ),
                   // Camada 4: Botão de Navegação "Subir" (Up)
