@@ -1178,11 +1178,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   // Camada 1: Mapa e Marcadores
                   InteractiveViewer(
                     transformationController: _transformationController,
-                    boundaryMargin: EdgeInsets.symmetric(
-                      horizontal: viewportSize.width / 2,
-                      vertical: viewportSize.height / 2,
-                    ),
-                    minScale: 0.5,
+                    boundaryMargin: EdgeInsets.zero,
+                    minScale: 1.0,
                     maxScale: 10.0,
                     constrained: true,
                     onInteractionStart: (details) {
