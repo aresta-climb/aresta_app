@@ -26,10 +26,23 @@ class FakeDatasetRepository extends DatasetRepository {
 class FakeSyncService extends SyncService {
   FakeSyncService(DatasetRepository repo) : super(datasetRepository: repo);
   bool mockResult = true;
+  bool syncIndexCalled = false;
+  bool forceBypassCacheUsed = false;
 
   @override
   Future<bool> downloadCrag(ResumoCroqui resumo) async {
     return mockResult;
+  }
+
+  @override
+  Future<List<String>> syncIndex({
+    bool auto = true,
+    bool forceBypassCache = false,
+  }) async {
+    syncIndexCalled = true;
+    forceBypassCacheUsed = forceBypassCache;
+    syncStatus.value = SyncStatus.justUpdated;
+    return [];
   }
 }
 
@@ -284,6 +297,38 @@ void main() {
         true,
         reason: 'Routes order: C should be before A',
       );
+    },
+  );
+
+  testWidgets(
+    'BrowsePage triggers handleSyncServing when sync button is tapped',
+    (WidgetTester tester) async {
+      mockRepo.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {'id': 'pico_1', 'nome': 'Pico Teste'},
+        ],
+        downloadedPicos: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final syncButtonFinder = find.byTooltip('Sincronizar com serving');
+      expect(syncButtonFinder, findsOneWidget);
+
+      await tester.tap(syncButtonFinder);
+      await tester.pumpAndSettle();
+
+      expect(mockSync.syncIndexCalled, isTrue);
+      expect(mockSync.forceBypassCacheUsed, isTrue);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.text('Catálogo atualizado com o serving!'), findsOneWidget);
     },
   );
 }
