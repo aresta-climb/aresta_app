@@ -75,15 +75,14 @@ class GerenciadorNotificacaoDownload {
         );
         await androidPlugin.createNotificationChannel(canalProgresso);
 
-        // Canal de conclusão: vibração discreta sem som alto
-        final canalConclusao = AndroidNotificationChannel(
+        // Canal de conclusão: totalmente silencioso sem som nem vibração
+        const canalConclusao = AndroidNotificationChannel(
           canalConclusaoId,
           canalConclusaoNome,
           description: canalConclusaoDescricao,
-          importance: Importance.defaultImportance,
+          importance: Importance.low,
           playSound: false,
-          enableVibration: true,
-          vibrationPattern: Int64List.fromList([0, 180]),
+          enableVibration: false,
         );
         await androidPlugin.createNotificationChannel(canalConclusao);
       }
@@ -113,7 +112,7 @@ class GerenciadorNotificacaoDownload {
         final permitido = await iosPlugin.requestPermissions(
           alert: true,
           badge: true,
-          sound: true,
+          sound: false,
         );
         return permitido ?? true;
       }
@@ -158,6 +157,9 @@ class GerenciadorNotificacaoDownload {
         progress: progressoInt,
         onlyAlertOnce: true,
         autoCancel: false,
+        playSound: false,
+        enableVibration: false,
+        silent: true,
       );
 
       final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
@@ -176,6 +178,7 @@ class GerenciadorNotificacaoDownload {
       } else {
         final darwinDetails = DarwinNotificationDetails(
           subtitle: 'Baixando... $progressoInt%',
+          presentSound: false,
         );
 
         final notificationDetails = NotificationDetails(
@@ -222,14 +225,14 @@ class GerenciadorNotificacaoDownload {
         subText: nomeApp,
         icon: iconePequeno,
         largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
+        importance: Importance.low,
+        priority: Priority.low,
         ongoing: false, // Pode ser limpa (clearable)
         autoCancel: true, // Desaparece ao clicar
         showProgress: false, // Remove a barra de progresso
         playSound: false,
-        enableVibration: true,
-        vibrationPattern: Int64List.fromList([0, 180]),
+        enableVibration: false,
+        silent: true,
       );
 
       const darwinDetails = DarwinNotificationDetails(
@@ -282,14 +285,14 @@ class GerenciadorNotificacaoDownload {
         subText: nomeApp,
         icon: iconePequeno,
         largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: Importance.low,
+        priority: Priority.low,
         ongoing: false,
         autoCancel: true,
         showProgress: false,
         playSound: false,
-        enableVibration: true,
-        vibrationPattern: Int64List.fromList([0, 180]),
+        enableVibration: false,
+        silent: true,
       );
 
       const darwinDetails = DarwinNotificationDetails(
