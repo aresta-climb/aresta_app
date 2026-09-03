@@ -60,5 +60,36 @@ void main() {
       expect(find.byIcon(Icons.person_outline), findsNothing);
       expect(find.textContaining('Autores do Croqui Original'), findsNothing);
     });
+
+    testWidgets('permite que o texto de créditos ocupe múltiplas linhas sem corte por ellipsis', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 150,
+              child: LinhaCreditoAutor(
+                creditos: [
+                  'Equipe Igarameca',
+                  'Alexsandro',
+                  'Loucuras de Escalada',
+                  'Colaboradores Gerais',
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final textFinder = find.text(
+        'Croqui por Equipe Igarameca, Alexsandro, Loucuras de Escalada, Colaboradores Gerais',
+      );
+      expect(textFinder, findsOneWidget);
+
+      final textWidget = tester.widget<Text>(textFinder);
+      expect(textWidget.maxLines, isNull);
+      expect(textWidget.overflow, isNull);
+    });
   });
 }
