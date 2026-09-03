@@ -57,7 +57,8 @@ void main() {
       // Verify Header buttons exist even when downloadedPicos is empty
       expect(find.byIcon(Icons.settings), findsOneWidget);
       expect(find.byIcon(Icons.sync), findsOneWidget);
-      expect(find.byIcon(Icons.search), findsNWidgets(3));
+      expect(find.byIcon(Icons.search), findsNWidgets(2));
+      expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
 
       // Verify NearbyCragsCarousel exists
       expect(find.byType(NearbyCragsCarousel), findsOneWidget);
@@ -165,7 +166,7 @@ void main() {
   );
 
   testWidgets(
-    'buildHomeBody always shows search button in header regardless of downloaded picos',
+    'buildHomeBody renders unified search bar regardless of downloaded picos',
     (WidgetTester tester) async {
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [],
@@ -175,8 +176,9 @@ void main() {
       await tester.pumpWidget(buildTestableWidget());
       await tester.pump();
 
-      // Search icon is visible in header, in search bar and in quick guide (3 total)
-      expect(find.byIcon(Icons.search), findsNWidgets(3));
+      // Search icon is visible in search bar and in quick guide (2 total)
+      expect(find.byIcon(Icons.search), findsNWidgets(2));
+      expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
 
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [],
@@ -185,7 +187,8 @@ void main() {
 
       await tester.pump();
 
-      expect(find.byIcon(Icons.search), findsNWidgets(3));
+      expect(find.byIcon(Icons.search), findsNWidgets(2));
+      expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
     },
   );
 }
