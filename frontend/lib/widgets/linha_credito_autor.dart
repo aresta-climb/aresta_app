@@ -24,11 +24,15 @@ class LinhaCreditoAutor extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.person_outline,
-            size: 16,
-            color: context.colors.chalkWhite,
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.person_outline,
+              size: 16,
+              color: context.colors.chalkWhite,
+            ),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -39,8 +43,6 @@ class LinhaCreditoAutor extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
