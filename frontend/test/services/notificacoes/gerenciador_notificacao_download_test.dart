@@ -158,6 +158,28 @@ void main() {
       expect(largeIcon.data, equals('ic_launcher_foreground'));
     });
 
+    test('atualizarProgresso subsequente atualiza via show() sem reiniciar ForegroundService', () async {
+      await gerenciador.atualizarProgresso('pico_1', 'Pedra Grande', 0.10);
+      await gerenciador.atualizarProgresso('pico_1', 'Pedra Grande', 0.50);
+
+      verify(() => mockAndroidPlugin.startForegroundService(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            notificationDetails: any(named: 'notificationDetails'),
+            payload: any(named: 'payload'),
+            foregroundServiceTypes: any(named: 'foregroundServiceTypes'),
+          )).called(1);
+
+      verify(() => mockPlugin.show(
+            id: any(named: 'id'),
+            title: 'Pedra Grande',
+            body: 'Baixando... 50%',
+            notificationDetails: any(named: 'notificationDetails'),
+            payload: any(named: 'payload'),
+          )).called(1);
+    });
+
     test('notificarConclusao para ForegroundService, cancela notificação sticky e exibe notificação dispensável sem barra', () async {
       await gerenciador.notificarConclusao(
         'pico_1',

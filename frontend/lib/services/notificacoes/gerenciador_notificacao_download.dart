@@ -126,6 +126,8 @@ class GerenciadorNotificacaoDownload {
     }
   }
 
+  final Set<int> _servicosAtivos = {};
+
   /// Gera um identificador numérico estável e positivo de 32 bits a partir do [picoId].
   int calcularIdNotificacao(String picoId) {
     return (picoId.hashCode & 0x7FFFFFFF) % 100000;
@@ -166,15 +168,26 @@ class GerenciadorNotificacaoDownload {
           AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
-        await androidPlugin.startForegroundService(
-          id: id,
-          title: nomePico,
-          body: 'Baixando... $progressoInt%',
-          notificationDetails: androidDetails,
-          foregroundServiceTypes: {
-            AndroidServiceForegroundType.foregroundServiceTypeDataSync,
-          },
-        );
+        if (!_servicosAtivos.contains(id)) {
+          _servicosAtivos.add(id);
+          await androidPlugin.startForegroundService(
+            id: id,
+            title: nomePico,
+            body: 'Baixando... $progressoInt%',
+            notificationDetails: androidDetails,
+            foregroundServiceTypes: {
+              AndroidServiceForegroundType.foregroundServiceTypeDataSync,
+            },
+          );
+        } else {
+          // Atualiza a notificação existente sem reenviar intent de inicialização do serviço no background
+          await _plugin.show(
+            id: id,
+            title: nomePico,
+            body: 'Baixando... $progressoInt%',
+            notificationDetails: NotificationDetails(android: androidDetails),
+          );
+        }
       } else {
         final darwinDetails = DarwinNotificationDetails(
           subtitle: 'Baixando... $progressoInt%',
@@ -208,10 +221,11 @@ class GerenciadorNotificacaoDownload {
   ) async {
     try {
       final id = calcularIdNotificacao(picoId);
+      _servicosAtivos.remove(id);
 
       final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
+      if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
 
@@ -268,10 +282,11 @@ class GerenciadorNotificacaoDownload {
   ]) async {
     try {
       final id = calcularIdNotificacao(picoId);
+      _servicosAtivos.remove(id);
 
       final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
+      if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
 
@@ -323,10 +338,11 @@ class GerenciadorNotificacaoDownload {
   Future<void> cancelar(String picoId) async {
     try {
       final id = calcularIdNotificacao(picoId);
+      _servicosAtivos.remove(id);
 
       final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
+      if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
 
