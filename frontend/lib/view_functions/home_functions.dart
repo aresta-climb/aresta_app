@@ -76,9 +76,9 @@ void handlePicoSelection(
 Widget buildHomeBody(
   BuildContext context,
   DatasetRepository datasetRepo,
-  SyncService syncService,
-  Function(int) onSwitchTab,
-) {
+  SyncService syncService, [
+  Function(int)? onSwitchTab,
+]) {
   return SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(
       parent: BouncingScrollPhysics(),
@@ -87,7 +87,7 @@ Widget buildHomeBody(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(context, datasetRepo, syncService),
-        _buildSearchBar(context, onSwitchTab),
+        _buildSearchBar(context, datasetRepo),
         NearbyCragsCarousel(syncService: syncService),
         _buildGuiaRapido(context),
         _buildConservacao(context),
@@ -137,50 +137,14 @@ Widget _buildHeader(
               ),
             ),
             const Spacer(),
-            ValueListenableBuilder<TopoDataset?>(
-              valueListenable: datasetRepo.activeDataset,
-              builder: (context, dataset, _) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.sync, color: context.colors.ashGrey),
-                      tooltip: 'Sincronizar catálogo e croquis',
-                      onPressed: () async {
-                        await handleManualSync(
-                          context,
-                          datasetRepo,
-                          syncService,
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.search, color: context.colors.ashGrey),
-                      tooltip: 'Buscar nos guias baixados',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Scaffold(
-                              backgroundColor: context.colors.deepBasalt,
-                              appBar: AppBar(
-                                backgroundColor: context.colors.deepBasalt,
-                                elevation: 0,
-                                iconTheme: IconThemeData(
-                                  color: context.colors.chalkWhite,
-                                ),
-                              ),
-                              body: GlobalSearch(
-                                datasetRepo: datasetRepo,
-                                downloadedPicos:
-                                    dataset?.downloadedPicos ?? const [],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+            IconButton(
+              icon: Icon(Icons.sync, color: context.colors.ashGrey),
+              tooltip: 'Sincronizar catálogo e croquis',
+              onPressed: () async {
+                await handleManualSync(
+                  context,
+                  datasetRepo,
+                  syncService,
                 );
               },
             ),
@@ -219,13 +183,31 @@ Widget _buildHeader(
   );
 }
 
-Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
+Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 24, 24, 30),
     child: GestureDetector(
       onTap: () {
-        // Redireciona para a aba de explorar para realizar buscas
-        onSwitchTab(1);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Scaffold(
+              backgroundColor: context.colors.deepBasalt,
+              appBar: AppBar(
+                backgroundColor: context.colors.deepBasalt,
+                elevation: 0,
+                iconTheme: IconThemeData(
+                  color: context.colors.chalkWhite,
+                ),
+              ),
+              body: GlobalSearch(
+                datasetRepo: datasetRepo,
+                downloadedPicos:
+                    datasetRepo.activeDataset.value?.downloadedPicos ?? const [],
+              ),
+            ),
+          ),
+        );
       },
       child: Container(
         height: 50,
@@ -240,7 +222,7 @@ Widget _buildSearchBar(BuildContext context, Function(int) onSwitchTab) {
             Icon(Icons.search, color: context.colors.ashGrey, size: 20),
             const SizedBox(width: 12),
             Text(
-              'Buscar picos para escalar...',
+              'Buscar picos, setores ou vias...',
               style: TextStyle(color: context.colors.ashGrey, fontSize: 15),
             ),
           ],
