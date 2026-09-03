@@ -545,6 +545,58 @@ void main() {
       );
     });
 
+    test('TDD 1.3: obterSha256DaMidia deve resolver mídia de croqui online mesmo quando índice já indexou thumbnail do pico', () async {
+      final indice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_com_thumb'
+            ..checksumSha256Thumbnail = 'hash_thumb_123',
+        );
+      await repo.loadIndiceToMemory(indice);
+
+      expect(
+        repo.obterSha256DaMidia('pico_com_thumb', 'thumbnails/pico_com_thumb.webp'),
+        equals('hash_thumb_123'),
+      );
+
+      final croquiOnline = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'imagens/mapa_setor.webp',
+            checksumSha256: 'hash_mapa_456',
+          ),
+        );
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_com_thumb', croquiOnline);
+
+      expect(
+        repo.obterSha256DaMidia('pico_com_thumb', 'imagens/mapa_setor.webp'),
+        equals('hash_mapa_456'),
+      );
+    });
+
+    test('TDD 1.3: obterSha256DaMidia e indexarMidiasDoCroqui devem normalizar caminhos com ./ e barras invertidas', () {
+      final croqui = Croqui()
+        ..arquivosExternos.addAll([
+          ArquivoExterno(
+            caminho: r'.\imagens\setor_1.webp',
+            checksumSha256: 'hash_normalizado_1',
+          ),
+          ArquivoExterno(
+            caminho: './mapas/geral.webp',
+            checksumSha256: 'hash_normalizado_2',
+          ),
+        ]);
+
+      repo.indexarMidiasDoCroqui('pico_normalizacao', croqui);
+
+      expect(repo.obterSha256DaMidia('pico_normalizacao', 'imagens/setor_1.webp'), equals('hash_normalizado_1'));
+      expect(repo.obterSha256DaMidia('pico_normalizacao', r'.\imagens\setor_1.webp'), equals('hash_normalizado_1'));
+      expect(repo.obterSha256DaMidia('pico_normalizacao', r'imagens\setor_1.webp'), equals('hash_normalizado_1'));
+      expect(repo.obterSha256DaMidia('pico_normalizacao', './imagens/setor_1.webp'), equals('hash_normalizado_1'));
+      expect(repo.obterSha256DaMidia('pico_normalizacao', 'mapas/geral.webp'), equals('hash_normalizado_2'));
+      expect(repo.obterSha256DaMidia('pico_normalizacao', r'.\mapas\geral.webp'), equals('hash_normalizado_2'));
+    });
+
     test('isPicoDownloaded retorna true apenas para picos presentes em picosBaixados', () {
       expect(repo.isPicoDownloaded('pico_qualquer'), isFalse);
 

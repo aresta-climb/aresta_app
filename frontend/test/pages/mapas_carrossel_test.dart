@@ -54,6 +54,32 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget);
     });
 
+    testWidgets('Toca no botão de voltar da AppBar e aciona retorno de navegação', (tester) async {
+      final pico = Pico()..nome = 'Pico Teste';
+      final mapas = [
+        const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
+        const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+    });
+
     testWidgets('Navigation arrows work correctly', (tester) async {
       final pico = Pico()..nome = 'Pico Teste';
       final mapas = [
@@ -241,9 +267,79 @@ void main() {
         final mapaPage = tester.widget<MapaInterativoPage>(
           find.byType(MapaInterativoPage),
         );
-
         expect(mapaPage.popOnActionIfOriginal, isFalse);
       },
     );
+
+    testWidgets(
+      'TDD: didUpdateWidget deve reconstruir e propagar novos dados e provedores de imagem para MapaInterativoPage',
+      (tester) async {
+        final mapa1 = Mapa()..caminhoImagemMapa = 'map1.png';
+        final mapa2 = Mapa()..caminhoImagemMapa = 'map2.png';
+        final picoInicial = Pico()
+          ..nome = 'Pico Teste'
+          ..mapasGerais = (ArquivoMapas()
+            ..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
+        final mapas = [
+          const CarrosselItemData(mapaCaminhoImagem: 'map1.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'map2.png'),
+        ];
+
+        final provedorInicial = MemoryImage(Uint8List.fromList([1, 2, 3]));
+        final provedorAtualizado = MemoryImage(Uint8List.fromList([4, 5, 6]));
+
+        Widget construirCarrossel({
+          required Pico pico,
+          required ImageProvider imagemProvedor,
+        }) {
+          return MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              imageProviderOverride: imagemProvedor,
+            ),
+          );
+        }
+
+        // 1. Renderiza inicialmente com o primeiro provedor
+        await tester.pumpWidget(
+          construirCarrossel(
+            pico: picoInicial,
+            imagemProvedor: provedorInicial,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(MapaInterativoPage), findsOneWidget);
+        var paginaMapa = tester.widget<MapaInterativoPage>(
+          find.byType(MapaInterativoPage),
+        );
+        expect(paginaMapa.imageProviderOverride, equals(provedorInicial));
+
+        // 2. Simula a atualização do widget pai durante Live Reload com novo provedor
+        final picoAtualizado = Pico()
+          ..nome = 'Pico Teste Atualizado'
+          ..mapasGerais = (ArquivoMapas()
+            ..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
+
+        await tester.pumpWidget(
+          construirCarrossel(
+            pico: picoAtualizado,
+            imagemProvedor: provedorAtualizado,
+          ),
+        );
+        await tester.pump();
+
+        // 3. Deve ter reconstruído os filhos propagando o novo provedor
+        paginaMapa = tester.widget<MapaInterativoPage>(
+          find.byType(MapaInterativoPage),
+        );
+        expect(paginaMapa.pico.nome, equals('Pico Teste Atualizado'));
+        expect(paginaMapa.imageProviderOverride, equals(provedorAtualizado));
+      },
+    );
   });
+
 }

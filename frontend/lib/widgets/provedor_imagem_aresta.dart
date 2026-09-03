@@ -63,6 +63,7 @@ class ProvedorImagemAresta {
       }
       final downloadsPicoPath = '$downloadsRoot/$picoId';
 
+      // 1. Armazenamento Local Permanente (/downloads)
       File? localFile = _buscarArquivoNoDiretorio(downloadsPicoPath, caminho);
       if (localFile != null && localFile.existsSync()) {
         provedorBase = ImagemArquivoAresta(localFile, checksumSha256: hashEfetivo);
@@ -170,11 +171,17 @@ class ProvedorImagemAresta {
       if (directFile.existsSync()) return directFile;
     }
 
-    String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    String cleanPath = path.trim().replaceAll(r'\', '/');
+    while (cleanPath.startsWith('./')) {
+      cleanPath = cleanPath.substring(2);
+    }
+    while (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
     final directFile = File('$rootDir/$cleanPath');
     if (directFile.existsSync()) return directFile;
 
-    String fileName = path.split('/').last;
+    String fileName = cleanPath.split('/').last;
     if (fileName.isNotEmpty) {
       final searchName = Uri.decodeComponent(fileName).toLowerCase();
       String searchBaseName = searchName.contains('.')

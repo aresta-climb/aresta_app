@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../services/firebase/app_logger.dart';
 
 /// Chave de cache imutável para [ImagemArquivoAresta], incorporando o caminho,
 /// escala e o checksum SHA-256 para invalidação reativa no [ImageCache].
@@ -61,11 +62,30 @@ class ImagemArquivoAresta extends ImageProvider<ChaveImagemArquivoAresta> {
   final String? checksumSha256;
 
   /// Cria um provedor [ImagemArquivoAresta] para o arquivo local informado.
-  const ImagemArquivoAresta(
+  ///
+  /// Caso [checksumSha256] seja nulo ou vazio, emite um registro de erro na telemetria
+  /// via [AppLogger] e recorre ao timestamp de modificação ([File.lastModifiedSync])
+  /// como chave de diferenciação para manter a reatividade de recarga no Flutter.
+  ImagemArquivoAresta(
     this.arquivo, {
     this.escala = 1.0,
-    this.checksumSha256,
-  });
+    String? checksumSha256,
+  }) : checksumSha256 = _resolverChecksum(arquivo, checksumSha256);
+
+  static String _resolverChecksum(File arquivo, String? checksumSha256) {
+    if (checksumSha256 != null && checksumSha256.isNotEmpty) {
+      return checksumSha256;
+    }
+    AppLogger.instance.logError(
+      'Checksum SHA-256 ausente ou nulo para imagem local (${arquivo.path}). Utilizando fallback de timestamp.',
+    );
+    try {
+      if (arquivo.existsSync()) {
+        return arquivo.lastModifiedSync().millisecondsSinceEpoch.toString();
+      }
+    } catch (_) {}
+    return '';
+  }
 
   @override
   Future<ChaveImagemArquivoAresta> obtainKey(ImageConfiguration configuration) {

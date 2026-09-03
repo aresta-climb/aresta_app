@@ -47,14 +47,15 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
   @override
   void didUpdateWidget(MapasCarrosselPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialIndex != oldWidget.initialIndex) {
-      _currentIndex = widget.initialIndex;
-      // We don't want to jump instantly without animation or wait if it's already on that page.
-      // jumpToPage handles this synchronously.
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(_currentIndex);
+    setState(() {
+      if (widget.initialIndex != oldWidget.initialIndex) {
+        _currentIndex = widget.initialIndex;
+        // jumpToPage sincroniza a página quando o índice inicial é alterado.
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_currentIndex);
+        }
       }
-    }
+    });
   }
 
   @override
@@ -117,6 +118,7 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
     }
 
     return MapaInterativoPage(
+      key: ValueKey('${widget.cragId}_${item.mapaCaminhoImagem}_${widget.imageProviderOverride.hashCode}'),
       pico: widget.pico,
       mapa: result.mapa,
       cragId: widget.cragId,

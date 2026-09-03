@@ -12,6 +12,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -31,16 +33,19 @@ void main() {
   late Directory tempDownloadsDir;
   late Directory tempCacheDir;
   late MockPathProviderPlatform mockPlatform;
+  late MockAppLogger mockLogger;
 
   setUp(() async {
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
     tempDownloadsDir = await Directory.systemTemp.createTemp('downloads_img_test_');
     tempCacheDir = await Directory.systemTemp.createTemp('cache_img_test_');
     mockPlatform = MockPathProviderPlatform(tempDownloadsDir.path);
     PathProviderPlatform.instance = mockPlatform;
   });
 
-
   tearDown(() async {
+    AppLogger.resetForTesting();
     try {
       if (await tempDownloadsDir.exists()) {
         await tempDownloadsDir.delete(recursive: true);
@@ -243,6 +248,31 @@ void main() {
       expect(netImg.url, contains('?v=sha_auto_remote_888'));
     });
 
+    test('TDD 3.3: auto-resolve checksumSha256 para NetworkImage a partir de sessão online com fallback dinâmico', () async {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final croqui = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'mapas/mapa_online.webp',
+            checksumSha256: 'sha_online_live_reload',
+          ),
+        );
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_teste', croqui);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_online_teste',
+        caminho: 'mapas/mapa_online.webp',
+        baseUrl: 'https://cdn.arestaclimb.com',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+        datasetRepository: repo,
+      );
+
+      expect(provedor, isA<NetworkImage>());
+      final netImg = provedor as NetworkImage;
+      expect(netImg.url, contains('?v=sha_online_live_reload'));
+    });
+
     test('resolve usando caminhos padrão quando caminhoDownloads e caminhoCacheVolatil são nulos', () async {
       final editor = EditorDeCroqui.instance;
       final docsDownloads = editor.downloadsPath(tempDownloadsDir.path);
@@ -341,6 +371,92 @@ void main() {
       expect(resize.width, equals(400));
       expect(resize.height, isNull);
       expect(resize.imageProvider, isA<NetworkImage>());
+    });
+
+    test('TDD 2.3: utiliza timestamp de modificação como fallback dinâmico para arquivos locais sem hash explícito', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final imgFile = File('${picoDir.path}/sem_hash.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'sem_hash.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+      final imgAresta = provedor as ImagemArquivoAresta;
+      expect(imgAresta.checksumSha256, equals(imgFile.lastModifiedSync().millisecondsSinceEpoch.toString()));
+    });
+
+    test('TDD: dispara erro na telemetria e segue em frente com lastModifiedSync se checksumSha256 for nulo para arquivo local em /downloads', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final imgFile = File('${picoDir.path}/sem_hash_downloads.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'sem_hash_downloads.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+      final imgAresta = provedor as ImagemArquivoAresta;
+      expect(imgAresta.checksumSha256, equals(imgFile.lastModifiedSync().millisecondsSinceEpoch.toString()));
+
+      // Verifica erro registrado na telemetria
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('Checksum SHA-256 ausente ou nulo'));
+      expect(erro['contextMessage'], contains('pico_1'));
+      expect(erro['contextMessage'], contains('sem_hash_downloads.webp'));
+    });
+
+    test('TDD: dispara erro na telemetria e segue em frente com lastModifiedSync se checksumSha256 for nulo para arquivo em /temp_cache', () async {
+      final picoCacheDir = Directory('${tempCacheDir.path}/pico_1');
+      await picoCacheDir.create(recursive: true);
+      final imgFile = File('${picoCacheDir.path}/sem_hash_cache.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'sem_hash_cache.webp',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+      final imgAresta = provedor as ImagemArquivoAresta;
+      expect(imgAresta.checksumSha256, equals(imgFile.lastModifiedSync().millisecondsSinceEpoch.toString()));
+
+      // Verifica erro registrado na telemetria
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('Checksum SHA-256 ausente ou nulo'));
+      expect(erro['contextMessage'], contains('pico_1'));
+      expect(erro['contextMessage'], contains('sem_hash_cache.webp'));
+    });
+
+    test('não dispara erro na telemetria se checksumSha256 estiver presente para arquivo local', () async {
+      final picoDir = Directory('${tempDownloadsDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+      final imgFile = File('${picoDir.path}/com_hash.webp');
+      await imgFile.writeAsBytes([1, 2, 3]);
+
+      final provedor = await ProvedorImagemAresta.resolver(
+        picoId: 'pico_1',
+        caminho: 'com_hash.webp',
+        checksumSha256: 'hash_valido_999',
+        caminhoDownloads: tempDownloadsDir.path,
+        caminhoCacheVolatil: tempCacheDir.path,
+      );
+
+      expect(provedor, isA<ImagemArquivoAresta>());
+      expect(mockLogger.recordedErrors, isEmpty);
     });
   });
 }

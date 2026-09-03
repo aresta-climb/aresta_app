@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Pré-indexação Centralizada de SHA-256 no Repositório
 O `DatasetRepository` MUST manter uma tabela de dispersão indexada $O(1)$ mapeando caminhos canônicos normalizados de mídias para seus respectivos hashes `checksumSha256`, consolidando os arquivos de `croqui.arquivosExternos` e as miniaturas (`checksumSha256Thumbnail`) presentes no `indice.croquis`. Caso uma consulta de mídia não seja encontrada inicialmente e o croqui esteja carregado na sessão online, o repositório DEVE reindexar dinamicamente o croqui online sob demanda.
@@ -16,28 +16,6 @@ O `DatasetRepository` MUST manter uma tabela de dispersão indexada $O(1)$ mapea
 - **WHEN** o método `obterSha256DaMidia` for consultado para um caminho de mídia não previamente indexado
 - **AND** o pico correspondente estiver registrado no `GerenciadorSessaoOnline`
 - **THEN** o sistema DEVE indexar imediatamente os `arquivosExternos` do croqui online em memória e retornar o hash correspondente
-
-### Requirement: Provedor de Imagem Aresta com Cache-Busting Unificado
-O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas chaves incorporem o `checksumSha256` da mídia para diferenciar instantaneamente versões antigas e novas, tanto para arquivos armazenados no disco quanto para streaming remoto da CDN.
-
-#### Scenario: Resolução de imagem remota com query parameter de versão
-- **WHEN** uma imagem não baixada localmente for resolvida para streaming remoto
-- **AND** existir um `checksumSha256` registrado para a mídia
-- **THEN** o provedor DEVE retornar uma instância de `NetworkImage` contendo a query string `?v=<checksumSha256>` anexada à URL
-
-#### Scenario: Resolução de imagem local via ImagemArquivoAresta
-- **WHEN** uma imagem for resolvida a partir do armazenamento local (`/downloads` ou `/temp_cache`)
-- **THEN** o provedor DEVE retornar uma instância de `ImagemArquivoAresta` contendo o arquivo e o `checksumSha256`
-- **AND** a chave gerada (`ChaveImagemArquivoAresta`) DEVE ser sensível a alterações no `checksumSha256`
-
-#### Scenario: Auto-resolução do checksum pelo caminho da mídia
-- **WHEN** um componente da interface solicitar a resolução de uma imagem sem passar o `checksumSha256` explicitamente
-- **THEN** o `ProvedorImagemAresta` DEVE consultar automaticamente a tabela de dispersão pré-indexada do `DatasetRepository` utilizando o `picoId` e o `caminho`
-
-#### Scenario: Fallback dinâmico com log de telemetria para arquivos locais sem hash
-- **WHEN** uma imagem local não possuir `checksumSha256` disponível no repositório
-- **THEN** o sistema DEVE registrar um erro na telemetria via `AppLogger.instance.logError`
-- **AND** seguir em frente utilizando o timestamp de modificação (`lastModifiedSync`) como hash substituto para preservar a diferenciação de chave no Flutter
 
 ### Requirement: Invalidação e Atualização Reativa em Hot Reload
 O sistema MUST substituir na interface imediatamente qualquer imagem cujo `checksumSha256` tenha sido modificado após um evento de recarregamento (*Live Reload*) ou sincronização, purgar o cache ativo de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), e manter inalteradas e cacheadas na GPU todas as imagens cujo hash permaneceu idêntico.
@@ -67,19 +45,3 @@ Os componentes visuais com estado (`SetorPage`, `GrupoPage`, `MapaInterativoPage
 #### Scenario: Atualização de carrossel em MapasCarrosselPage
 - **WHEN** o `MapasCarrosselPage` for reconstruído pelo `PageListenableBuilder` após um Live Reload
 - **THEN** o método `didUpdateWidget` DEVE executar `setState()` para propagar as alterações para o `PageView.builder` e remontar os nós filhos com chaves reativas
-
-### Requirement: Test-Driven Development e Cobertura Integral
-O desenvolvimento MUST ser orientado estritamente por Testes em Primeiro Lugar (TDD), priorizando testes de widget para validar o comportamento visual ponta a ponta e assegurando 100% de cobertura de código para os arquivos modificados e criados.
-
-#### Scenario: Testes de widget escritos e validados em falha antes da implementação
-- **WHEN** uma nova funcionalidade ou correção de ciclo de vida for iniciada
-- **THEN** os testes de widget e de unidade DEVEM ser criados e executados em falha (Red) antes da escrita do código de produção (Green)
-- **AND** a cobertura final de testes nos arquivos criados ou modificados DEVE ser de 100%
-
-### Requirement: Nomenclatura e Documentação em Português Brasileiro
-Todo o código, identificadores, classes, variáveis, métodos, comentários e documentação técnica MUST estar integralmente em português brasileiro, acompanhados de docstrings explicativas com blocos `///`.
-
-#### Scenario: Identificadores e docstrings no código
-- **WHEN** novas classes, tipos ou métodos forem adicionados (ex: `ImagemArquivoAresta`, `ChaveImagemArquivoAresta`, `obterSha256DaMidia`)
-- **THEN** os nomes DEVEM estar em português brasileiro
-- **AND** as classes e métodos públicos DEVEM conter docstrings explicando a intenção e o funcionamento

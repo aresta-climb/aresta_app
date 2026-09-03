@@ -95,6 +95,8 @@ class MockWorkmanager extends Mock implements Workmanager {}
 
 class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}
 
+class MockImageCache extends Mock implements ImageCache {}
+
 void main() {
   late Directory tempDir;
   late DatasetRepository mockRepo;
@@ -827,6 +829,36 @@ void main() {
             picoId: 'pico_online_1',
           )).called(1);
       verify(() => mockDataset.notificarAtualizacaoSessaoOnline('pico_online_1')).called(1);
+    });
+
+    test('TDD 1.2: registrarOuvintesLiveReload deve purgar cache de imagens do Flutter (clear e clearLiveImages) ao receber eventoLiveReload', () async {
+      final mockDataset = MockDatasetRepository();
+      final mockSyncSvc = MockSyncService();
+      final mockImageCache = MockImageCache();
+      final editorLocal = EditorDeCroqui();
+
+      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockDataset.init()).thenAnswer((_) async {});
+      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
+
+      registrarOuvintesLiveReload(
+        editorLocal,
+        mockDataset,
+        mockSyncSvc,
+        imageCache: mockImageCache,
+      );
+
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'setor_1',
+        timestamp: DateTime.now(),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockDataset.init()).called(1);
+      verify(() => mockImageCache.clear()).called(1);
+      verify(() => mockImageCache.clearLiveImages()).called(1);
     });
   });
 

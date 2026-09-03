@@ -137,13 +137,15 @@ void main() async {
 /// Registra ouvintes para eventos de Live Reload emitidos pelo Editor Desktop via WebSocket.
 ///
 /// Dispara a sincronização do índice, inicialização do repositório local e recarrega
-/// sob demanda qualquer croqui atualmente aberto em sessão online com quebra de cache HTTP.
+/// Registra os ouvintes do evento de Live Reload do Editor Desktop, sincronizando o índice,
+/// recarregando sob demanda croquis em sessão online e purga o cache de imagens da GPU.
 @visibleForTesting
 void registrarOuvintesLiveReload(
   EditorDeCroqui editor,
   DatasetRepository datasetRepo,
   SyncService syncService, {
   ServicoCroquiOnline? servicoCroquiOnline,
+  ImageCache? imageCache,
 }) {
   editor.eventoLiveReload.addListener(() async {
     final evento = editor.eventoLiveReload.value;
@@ -172,6 +174,11 @@ void registrarOuvintesLiveReload(
           datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
         }
       }
+
+      // Purgação explícita do cache de texturas do Flutter (imagens ativas e inativas)
+      final cache = imageCache ?? PaintingBinding.instance.imageCache;
+      cache.clear();
+      cache.clearLiveImages();
 
       debugPrint(
         '⚡ [LiveReload] Sincronização automática concluída!',

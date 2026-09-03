@@ -6,11 +6,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory tempDir;
   late File arquivoImagem;
+  late MockAppLogger mockLogger;
 
   // Bytes válidos de PNG de 1x1 pixel transparente
   final bytesPng1 = <int>[
@@ -22,12 +25,15 @@ void main() {
   ];
 
   setUp(() async {
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
     tempDir = await Directory.systemTemp.createTemp('aresta_img_widget_test_');
     arquivoImagem = File('${tempDir.path}/imagem_teste.png');
     await arquivoImagem.writeAsBytes(bytesPng1);
   });
 
   tearDown(() async {
+    AppLogger.resetForTesting();
     try {
       if (await tempDir.exists()) {
         await tempDir.delete(recursive: true);
@@ -226,6 +232,23 @@ void main() {
       expect(completer, isNotNull);
       await Future.delayed(const Duration(milliseconds: 50));
       expect(decodificou, isTrue);
+    });
+
+    test('TDD: ImagemArquivoAresta adota lastModifiedSync e registra telemetria se checksumSha256 for nulo', () {
+      final img = ImagemArquivoAresta(arquivoImagem);
+
+      expect(img.checksumSha256, equals(arquivoImagem.lastModifiedSync().millisecondsSinceEpoch.toString()));
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('Checksum SHA-256 ausente ou nulo'));
+      expect(erro['contextMessage'], contains(arquivoImagem.path));
+    });
+
+    test('TDD: ImagemArquivoAresta mantém checksum informado e não registra telemetria se for válido', () {
+      final img = ImagemArquivoAresta(arquivoImagem, checksumSha256: 'hash_informado');
+
+      expect(img.checksumSha256, equals('hash_informado'));
+      expect(mockLogger.recordedErrors, isEmpty);
     });
   });
 }

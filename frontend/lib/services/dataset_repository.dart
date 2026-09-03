@@ -115,10 +115,21 @@ class DatasetRepository {
     final mapaPico = _tabelaSha256PorPico.putIfAbsent(picoId, () => {});
     for (final ext in croqui.arquivosExternos) {
       if (ext.hasChecksumSha256() && ext.checksumSha256.isNotEmpty) {
-        String limpo = ext.caminho.trim();
-        if (limpo.startsWith('/')) limpo = limpo.substring(1);
+        String limpo = ext.caminho.trim().replaceAll(r'\', '/');
+        while (limpo.startsWith('./')) {
+          limpo = limpo.substring(2);
+        }
+        while (limpo.startsWith('/')) {
+          limpo = limpo.substring(1);
+        }
         mapaPico[limpo] = ext.checksumSha256;
         mapaPico[ext.caminho] = ext.checksumSha256;
+        mapaPico['./$limpo'] = ext.checksumSha256;
+        mapaPico['/$limpo'] = ext.checksumSha256;
+        final barraInvertida = limpo.replaceAll('/', r'\');
+        mapaPico[barraInvertida] = ext.checksumSha256;
+        mapaPico[r'.\' + barraInvertida] = ext.checksumSha256;
+
         final nomeArquivo = limpo.split('/').last;
         if (nomeArquivo.isNotEmpty) {
           mapaPico[nomeArquivo] = ext.checksumSha256;
@@ -135,8 +146,11 @@ class DatasetRepository {
     if (picoId.isEmpty || caminho.isEmpty) return null;
 
     final mapaPico = _tabelaSha256PorPico[picoId];
-    String caminhoLimpo = caminho.trim();
-    if (caminhoLimpo.startsWith('/')) {
+    String caminhoLimpo = caminho.trim().replaceAll(r'\', '/');
+    while (caminhoLimpo.startsWith('./')) {
+      caminhoLimpo = caminhoLimpo.substring(2);
+    }
+    while (caminhoLimpo.startsWith('/')) {
       caminhoLimpo = caminhoLimpo.substring(1);
     }
 
@@ -144,11 +158,8 @@ class DatasetRepository {
       if (mapaPico.containsKey(caminhoLimpo)) {
         return mapaPico[caminhoLimpo];
       }
-      if (mapaPico.containsKey(caminho)) {
-        return mapaPico[caminho];
-      }
       final nomeArquivo = caminhoLimpo.split('/').last;
-      if (mapaPico.containsKey(nomeArquivo)) {
+      if (nomeArquivo.isNotEmpty && mapaPico.containsKey(nomeArquivo)) {
         return mapaPico[nomeArquivo];
       }
     }
@@ -184,7 +195,7 @@ class DatasetRepository {
           return mapaOnline[caminhoLimpo];
         }
         final nomeArquivo = caminhoLimpo.split('/').last;
-        if (mapaOnline.containsKey(nomeArquivo)) {
+        if (nomeArquivo.isNotEmpty && mapaOnline.containsKey(nomeArquivo)) {
           return mapaOnline[nomeArquivo];
         }
       }
