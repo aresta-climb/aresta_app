@@ -234,6 +234,13 @@ class _BrowsePageState extends State<BrowsePage> {
                         source: 'explorar',
                       ),
                       onAddExperimental: addCallback,
+                      onSyncPressed: () async {
+                        await handleSyncServing(
+                          context,
+                          widget.datasetRepo,
+                          widget.syncService,
+                        );
+                      },
                       onFilterPressed: () {
                         showModalBottomSheet(
                           context: context,
