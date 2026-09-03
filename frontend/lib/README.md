@@ -103,6 +103,7 @@ Para evitar arquivos de página monolíticos, todos os construtores de UI comple
 
 Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e comportamento específico.
 
+- **`linha_credito_autor.dart`**: Widget padronizado para exibição dos créditos de autores e conquistadores do croqui. Suporta quebra automática em múltiplas linhas para listas longas, mantendo o ícone `Icons.person_outline` alinhado ao topo.
 - **`feedback/`**: Contém o `custom_feedback_builder.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
 - **`global_search.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.
@@ -118,6 +119,7 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 
 Reúne utilitários de domínio para manipulação de dados, resolução de índices e renderização vetorial.
 
+- **`formatador_creditos.dart`**: Validação de placeholders genéricos e formatação de listas de autores/créditos em frases amigáveis (`"Croqui por ..."`).
 - **`construtor_caminho_trajeto.dart`**: Barreira arquitetural exclusiva para o subsistema de desenho vetorial com `package:path_drawing/`. Converte dados compilados SVG (`M ... C ...`) em `ui.Path` nativo, aplica estilos de traçado FEMEMG (sólido, tracejado, pontilhado), mantém cache em memória por rota/estilo para garantir 60/120 FPS no `InteractiveViewer`, realiza conversão defensiva de cores hexadecimais (`ponto.cor`) e amostra polilinhas para detecção ergonômica de toques (hit-testing por menor distância euclidiana com tolerância de 16dp).
 - **`croqui_map_index.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.
 - **`dataset_resolver.dart`**: Resolução dinâmica de referências cruzadas entre marcadores do mapa e entidades do dataset (`Escalada`, `Setor`, `Pico`).

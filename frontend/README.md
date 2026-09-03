@@ -6,16 +6,18 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 
 ## Funcionalidades
 
-- **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`).
-
-- **Home**: Carrossel dos guias baixados, ordenados por acesso recente, com **Busca Global Integrada** (Fuzzy Search e accent-insensitive) para navegação rápida entre setores e vias de todos os crags.
-- **Explorar**: Lista todos os picos disponíveis no índice remoto com thumbnails e download paralelo, além do **Mapão Global**, que projeta todos os picos do índice em um mapa-múndi 2D interativo.
-- **GPS / Mapas em Carrossel**: Visualização horizontal contínua de múltiplos mapas de setores e picos com overlay interativo e navegação hierárquica fluida entre áreas e subsetores (Carousel).
-- **Leitura Offline e Streaming Online**: Textos, imagens e betas funcionam sem conexão após o download permanente ou sob demanda via conexão ativa.
-- **Live Reload & Prévia em Tempo Real**: Conexão WebSocket e sincronização com o Editor Desktop via código de prévia ou rede local.
-- **Modo Experimental** _(oculto)_: Ferramentas para editores testarem repositórios em desenvolvimento. Acesso via Easter Egg nas Configurações (7 toques no ícone de status). Dados se auto-destroem após 20 minutos.
-- **Importação via QR Code**: Escaneia um QR code para conectar ao servidor de prévia do editor desktop.
-- **Atualização de APK**: Verifica e baixa atualizações do aplicativo em segundo plano.
+- **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`) e gerenciamento de notificações silenciosas em Foreground Service nativo ininterrupto.
+- **Home com Busca Global Unificada**: Carrossel dos guias baixados com ordenação por prioridade/acesso recente e barra de busca integrada que realiza Fuzzy Search aproximado (insensível a acentos) em todos os picos, setores e vias da aplicação.
+- **Explorar & Sincronização com Serving**: Lista todos os picos do índice remoto com download paralelo, botão de sincronização forçada com o serving ativo e acesso direto ao **Mapão Global**, projetando os crags em um mapa 2D interativo com Google Maps.
+- **Croquis Topográficos e Mapas Interativos**:
+  - Renderização vetorial nativa de traçados de vias (sólido, tracejado, pontilhado) com hit-testing por distância euclidiana (16dp).
+  - Contenção rígida de limites (`boundaryMargin: EdgeInsets.zero`) e zoom mínimo (`minScale: 1.0`) para evitar perda do mapa em telas pretas.
+  - Botão de recentralização ergonômico no canto inferior direito com a mesma identidade visual do Mapa Global.
+- **Leitura Offline e Streaming Online**: Textos, imagens de alta resolução e betas funcionam 100% offline após o download ou em modo streaming online sob demanda (com guardião de saída para salvar offline).
+- **Formatação Padronizada de Graus**: Dificuldades de escalada esportiva, móvel, boulder e multipitch formatadas no padrão brasileiro com barras diagonais (ex: `7b/7c`, `4º/5º`, `6ºsup/7a`, `10a/10b`).
+- **Créditos e Conquistadores**: Componente `LinhaCreditoAutor` com quebra automática em múltiplas linhas e higienização de placeholders genéricos (`FormatadorCreditos`).
+- **Live Reload & Modo Experimental**: Conexão WebSocket e sincronização em tempo real com o Editor Desktop (vida útil de 20 minutos com Nuke automático ao expirar).
+- **Importação via QR Code**: Leitura rápida de QR codes para emparelhamento instantâneo com o editor em rede local ou relay.
 
 ---
 

@@ -32,3 +32,13 @@ A renderização dos traçados no `MarkerPainter` segue rigorosamente as especif
 6. **Traço Principal**: O traço central é desenhado na cor da rota ou na cor padrão `rustIron`.
 7. **Marcadores Tipados (Fidelidade Cromática e Dimensional)**: Círculos identificadores de base (`CIRCULO_IDENTIFICADOR` e `INICIO_AGACHADO`) utilizam fundo na cor da via (`corLinha`), texto do número centralizado em branco em negrito, borda intermediária branca e casing externo preto de alto contraste, com raio e tipografia adaptativos ao zoom do viewport.
 
+---
+
+## 2. FormatadorCreditos (`formatador_creditos.dart`)
+
+O `FormatadorCreditos` centraliza a lógica de validação, filtragem e formatação dos créditos dos croquis:
+- **Filtragem de Placeholders**: Ignora automaticamente termos genéricos (ex: `"Autores do Croqui Original"`, `"Desconhecido"`, `"Sem autor"`, `"Créditos"`).
+- **Formatação Amigável**: Gera frases como `"Croqui por Autor 1, Autor 2"`, respeitando prefixos já existentes.
+- **Desacoplamento de UI**: Utilidade pura em Dart, consumida pelo componente `LinhaCreditoAutor`.
+
+
