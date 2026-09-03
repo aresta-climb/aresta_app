@@ -1148,7 +1148,7 @@ void main() {
     );
 
     testWidgets(
-      'InteractiveViewer configuration should have maxScale set to 10.0',
+      'InteractiveViewer configuration should have maxScale set to 10.0, minScale set to 1.0 and zero boundaryMargin',
       (WidgetTester tester) async {
         await tester.pumpWidget(buildApp([], mockMapa));
         await tester.pumpAndSettle();
@@ -1158,6 +1158,8 @@ void main() {
         );
 
         expect(interactiveViewer.maxScale, equals(10.0));
+        expect(interactiveViewer.minScale, equals(1.0));
+        expect(interactiveViewer.boundaryMargin, equals(EdgeInsets.zero));
       },
     );
 
