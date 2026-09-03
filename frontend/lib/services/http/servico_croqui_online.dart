@@ -90,7 +90,7 @@ class ServicoCroquiOnline {
     String url,
   ) async {
     // Se o pico já está baixado no armazenamento local, cancela o polling e não faz requisição de rede
-    if (_verificarPicoBaixado != null && _verificarPicoBaixado!(picoId)) {
+    if (_verificarPicoBaixado != null && _verificarPicoBaixado(picoId)) {
       cancelarPolling(picoId);
       debugPrint('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId já está baixado offline.');
       return false;
@@ -137,7 +137,7 @@ class ServicoCroquiOnline {
     cancelarPolling(picoId);
 
     // Se o pico já está baixado no armazenamento local, não inicia polling desnecessário
-    if (_verificarPicoBaixado != null && _verificarPicoBaixado!(picoId)) {
+    if (_verificarPicoBaixado != null && _verificarPicoBaixado(picoId)) {
       debugPrint('[ServicoCroquiOnline] Pico $picoId já está baixado offline. Polling de ETag ignorado.');
       return;
     }

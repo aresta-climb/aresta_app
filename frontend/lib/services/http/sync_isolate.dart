@@ -3,7 +3,6 @@
 
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';

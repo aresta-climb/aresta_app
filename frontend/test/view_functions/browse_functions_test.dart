@@ -3,7 +3,6 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
