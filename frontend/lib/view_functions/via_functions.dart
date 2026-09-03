@@ -270,6 +270,8 @@ String _fmtEnum(dynamic e) {
         ),
         '',
       )
+      .replaceAll('_BARRA_', '/')
+      .replaceAll('BARRA', '/')
       .replaceAll('_', ' ')
       .toLowerCase();
 
@@ -294,7 +296,7 @@ Widget _buildViaEsportiva(
       _buildStatCard(
         context,
         'Dificuldade',
-        _fmtEnum(via.dificuldade),
+        formatGradeString(via.dificuldade.name),
         Icons.trending_up,
       ),
     );
@@ -496,7 +498,7 @@ Widget _buildViaMovel(
       _buildStatCard(
         context,
         'Dificuldade',
-        _fmtEnum(via.dificuldade),
+        formatGradeString(via.dificuldade.name),
         Icons.trending_up,
       ),
     );
@@ -717,7 +719,7 @@ Widget _buildBoulder(
       _buildStatCard(
         context,
         'Dificuldade',
-        _fmtEnum(via.dificuldade),
+        formatGradeString(via.dificuldade.name),
         Icons.trending_up,
       ),
     );
@@ -862,7 +864,7 @@ Widget _buildMultipitch(
       _buildStatCard(
         context,
         'Dificuldade Máx',
-        _fmtEnum(via.dificuldadeMaxima),
+        formatGradeString(via.dificuldadeMaxima.name),
         Icons.trending_up,
       ),
     );
@@ -872,7 +874,7 @@ Widget _buildMultipitch(
       _buildStatCard(
         context,
         'Dificuldade Média',
-        _fmtEnum(via.dificuldadeMedia),
+        formatGradeString(via.dificuldadeMedia.name),
         Icons.trending_flat,
       ),
     );
