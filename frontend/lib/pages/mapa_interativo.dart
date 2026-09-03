@@ -521,6 +521,21 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     _animationController.forward(from: 0);
   }
 
+  /// Recentraliza a imagem do mapa suavemente para a visão panorâmica inicial (1.0x).
+  void _recentralizarImagem() {
+    _usuarioAjustouZoomManualmente = false;
+    _zoomAnimation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: Matrix4.identity(),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _animationController.forward(from: 0);
+  }
+
   List<Widget> _buildMarkers(BoxConstraints constraints, Size viewportSize) {
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) return [];
 
@@ -1176,11 +1191,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                   // Camada 1: Mapa e Marcadores
                   InteractiveViewer(
                     transformationController: _transformationController,
-                    boundaryMargin: EdgeInsets.symmetric(
-                      horizontal: viewportSize.width / 2,
-                      vertical: viewportSize.height / 2,
-                    ),
-                    minScale: 0.5,
+                    boundaryMargin: EdgeInsets.zero,
+                    minScale: 1.0,
                     maxScale: 10.0,
                     constrained: true,
                     onInteractionStart: (details) {
@@ -1270,46 +1282,25 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       viewportSize,
                     ),
                   ),
-                  // Camada 3: Toggle Auto-Zoom
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          _autoZoomEnabled
-                              ? Icons.gps_fixed
-                              : Icons.gps_not_fixed,
-                          color: _autoZoomEnabled
-                              ? rustIron
-                              : fishBone.withValues(alpha: 0.5),
-                        ),
-                        tooltip: _autoZoomEnabled
-                            ? 'Desativar Auto-Zoom'
-                            : 'Ativar Auto-Zoom',
-                        onPressed: () {
-                          setState(() {
-                            _autoZoomEnabled = !_autoZoomEnabled;
-                            if (_autoZoomEnabled && _selectedId != null && _imageSize != null) {
-                              final refs = _poiToRefs[_selectedId];
-                              if (refs != null && refs.isNotEmpty) {
-                                final ref = refs[_focusedItemIndex];
-                                final pontos = _getPontosForRef(ref);
-                                _zoomToPoints(
-                                  pontos,
-                                  _imageSize!,
-                                  viewportSize,
-                                  ref: ref,
-                                );
-                              }
-                            }
-                          });
-                        },
-                      ),
+                  // Camada 3: Botão de Recentralizar Imagem (Estilo Mapa Global / FloatingActionButton)
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    bottom: _selectedId != null
+                        ? 220 + MediaQuery.of(context).padding.bottom
+                        : 20 + MediaQuery.of(context).padding.bottom,
+                    right: 20,
+                    child: FloatingActionButton(
+                      heroTag: 'recentralizar_mapa_interativo',
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? context.colors.caveShadow
+                              : context.colors.chalkWhite,
+                      foregroundColor: AppColors.brandColor,
+                      mini: true,
+                      onPressed: _recentralizarImagem,
+                      tooltip: 'Centralizar imagem',
+                      child: const Icon(Icons.my_location),
                     ),
                   ),
                   // Camada 4: Botão de Navegação "Subir" (Up)

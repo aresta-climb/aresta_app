@@ -631,18 +631,22 @@ void main() {
       expect(find.text('Via Teste'), findsNothing);
     });
 
-    testWidgets('Toggle auto-zoom button changes state', (
+    testWidgets('Botão no canto inferior direito recentraliza a imagem para a visão panorâmica inicial', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(buildApp([], mockMapa, autoZoom: true));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
+      final recenterBtn = find.byTooltip('Centralizar imagem');
+      expect(recenterBtn, findsOneWidget);
+      expect(find.byIcon(Icons.my_location), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.gps_fixed));
+      await tester.tap(recenterBtn);
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.gps_not_fixed), findsOneWidget);
+      final interactiveViewerFinder = find.byType(InteractiveViewer);
+      expect(interactiveViewerFinder, findsOneWidget);
     });
 
     testWidgets('Closing floating card de-selects marker', (
@@ -1144,7 +1148,7 @@ void main() {
     );
 
     testWidgets(
-      'InteractiveViewer configuration should have maxScale set to 10.0',
+      'InteractiveViewer configuration should have maxScale set to 10.0, minScale set to 1.0 and zero boundaryMargin',
       (WidgetTester tester) async {
         await tester.pumpWidget(buildApp([], mockMapa));
         await tester.pumpAndSettle();
@@ -1154,6 +1158,8 @@ void main() {
         );
 
         expect(interactiveViewer.maxScale, equals(10.0));
+        expect(interactiveViewer.minScale, equals(1.0));
+        expect(interactiveViewer.boundaryMargin, equals(EdgeInsets.zero));
       },
     );
 
