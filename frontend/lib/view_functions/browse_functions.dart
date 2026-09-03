@@ -23,6 +23,7 @@ Widget buildBrowseBody(
   Function(Map<String, dynamic>)? onOpen,
   VoidCallback? onAddExperimental,
   VoidCallback? onFilterPressed,
+  VoidCallback? onSyncPressed,
 }) {
   return Column(
     children: [
@@ -30,6 +31,7 @@ Widget buildBrowseBody(
       buildSearchBar(
         onChanged: onSearchChanged,
         onFilterPressed: onFilterPressed,
+        onSyncPressed: onSyncPressed,
         showFeedback: true,
       ),
       Expanded(
