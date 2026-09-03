@@ -148,6 +148,9 @@ void main() {
       expect(details.autoCancel, isFalse);
       expect(details.showProgress, isTrue);
       expect(details.progress, equals(45));
+      expect(details.playSound, isFalse);
+      expect(details.enableVibration, isFalse);
+      expect(details.silent, isTrue);
       expect(details.subText, equals('Aresta Climb'));
       // Imagem raster PNG para evitar OpenGLRenderer 'unimplemented'
       expect(details.largeIcon, isA<DrawableResourceAndroidBitmap>());
@@ -180,7 +183,8 @@ void main() {
       expect(details.android?.autoCancel, isTrue);
       expect(details.android?.showProgress, isFalse);
       expect(details.android?.playSound, isFalse);
-      expect(details.android?.enableVibration, isTrue);
+      expect(details.android?.enableVibration, isFalse);
+      expect(details.android?.silent, isTrue);
       expect(details.android?.subText, equals('Aresta Climb'));
       expect(details.android?.largeIcon, isA<DrawableResourceAndroidBitmap>());
     });
