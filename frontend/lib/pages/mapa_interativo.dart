@@ -515,6 +515,21 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     _animationController.forward(from: 0);
   }
 
+  /// Recentraliza a imagem do mapa suavemente para a visão panorâmica inicial (1.0x).
+  void _recentralizarImagem() {
+    _usuarioAjustouZoomManualmente = false;
+    _zoomAnimation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: Matrix4.identity(),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _animationController.forward(from: 0);
+  }
+
   List<Widget> _buildMarkers(BoxConstraints constraints, Size viewportSize) {
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) return [];
 
@@ -1257,7 +1272,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       viewportSize,
                     ),
                   ),
-                  // Camada 3: Toggle Auto-Zoom
+                  // Camada 3: Botão de Recentralizar Imagem
                   Positioned(
                     top: 10,
                     right: 10,
@@ -1268,34 +1283,11 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                       ),
                       child: IconButton(
                         icon: Icon(
-                          _autoZoomEnabled
-                              ? Icons.gps_fixed
-                              : Icons.gps_not_fixed,
-                          color: _autoZoomEnabled
-                              ? rustIron
-                              : fishBone.withValues(alpha: 0.5),
+                          Icons.center_focus_strong,
+                          color: rustIron,
                         ),
-                        tooltip: _autoZoomEnabled
-                            ? 'Desativar Auto-Zoom'
-                            : 'Ativar Auto-Zoom',
-                        onPressed: () {
-                          setState(() {
-                            _autoZoomEnabled = !_autoZoomEnabled;
-                            if (_autoZoomEnabled && _selectedId != null && _imageSize != null) {
-                              final refs = _poiToRefs[_selectedId];
-                              if (refs != null && refs.isNotEmpty) {
-                                final ref = refs[_focusedItemIndex];
-                                final pontos = _getPontosForRef(ref);
-                                _zoomToPoints(
-                                  pontos,
-                                  _imageSize!,
-                                  viewportSize,
-                                  ref: ref,
-                                );
-                              }
-                            }
-                          });
-                        },
+                        tooltip: 'Centralizar imagem',
+                        onPressed: _recentralizarImagem,
                       ),
                     ),
                   ),
