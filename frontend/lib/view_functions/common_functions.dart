@@ -236,6 +236,7 @@ Widget buildSearchBar({
   required ValueChanged<String> onChanged,
   String hintText = 'Buscar picos para escalar...',
   VoidCallback? onFilterPressed,
+  VoidCallback? onSyncPressed,
   bool showFeedback = false,
 }) {
   return Builder(
@@ -287,6 +288,26 @@ Widget buildSearchBar({
                 onPressed: onFilterPressed ?? () {},
               ),
             ),
+            if (onSyncPressed != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                height: 52,
+                width: 52,
+                decoration: BoxDecoration(
+                  color: context.colors.caveShadow,
+                  border: Border.all(color: context.colors.graniteEdge),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.sync,
+                    color: context.colors.ashGrey,
+                  ),
+                  tooltip: 'Sincronizar com serving',
+                  onPressed: onSyncPressed,
+                ),
+              ),
+            ],
             if (showFeedback) ...[
               const SizedBox(width: 4),
               buildFeedbackButton(context, color: context.colors.ashGrey),
