@@ -2156,5 +2156,232 @@ void main() {
       // Sem o tratamento de Bounding Box, o código antigo aplicaria o piso de pin único de 2.5x!
       expect(escalaFinal, closeTo(1.87, 0.15));
     });
+
+    testWidgets('Linha vetorial sem referência vinculada é desenhada no mapa (não descartada com SizedBox.shrink)', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_orfa',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.TRACEJADO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 100 100 L 200 200',
+            caixaDelimitadora: BoundingRetangulo(x: 150, y: 150, comprimento: 100, largura: 100),
+            marcadores: [
+              MarcadorCompilado(x: 100, y: 100, tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR, rotulo: '1'),
+            ],
+          ),
+        ),
+      );
+
+      final mapa = Mapa(larguraMapa: 1000, alturaMapa: 1000, pontosDeInteresse: [ponto]);
+      // Nenhuma referência adicionada em mapa.referencias
+      final pico = Pico();
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'test_crag',
+              imageProviderOverride: MemoryImage(kTransparentImage),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final markerFinder = find.byKey(const Key('marker_linha_orfa'));
+      expect(markerFinder, findsOneWidget);
+      expect(find.descendant(of: markerFinder, matching: find.byType(CustomPaint)), findsOneWidget);
+    });
+
+    testWidgets('Toque em linha vetorial sem referência seleciona a linha e dispara auto-zoom', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_orfa_toque',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.TRACEJADO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 100 100 L 200 200',
+            caixaDelimitadora: BoundingRetangulo(x: 150, y: 150, comprimento: 100, largura: 100),
+          ),
+        ),
+      );
+
+      final mapa = Mapa(larguraMapa: 1000, alturaMapa: 1000, pontosDeInteresse: [ponto]);
+      final pico = Pico();
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'test_crag',
+              autoZoomEnabled: true,
+              imageProviderOverride: MemoryImage(kTransparentImage),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_linha_orfa_toque')));
+      await tester.pumpAndSettle();
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_linha_orfa_toque')), matching: find.byType(CustomPaint)),
+      );
+      expect((customPaint.painter as MarkerPainter).isSelected, isTrue);
+    });
+
+    test('MarkerPainter _paintMarcadores pinta círculo identificador com cores fiéis ao editor e raio adaptativo', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#00E5FF',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '1',
+                raio: 18,
+                tamanhoFonte: 18,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // 1. Deve desenhar 3 círculos: casing escuro, preenchimento com a cor da via e borda branca
+      expect(canvas.circulos.length, 3);
+
+      // Casing escuro externo
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.strokeWidth >= 2.5),
+        isTrue,
+      );
+
+      // Fundo preenchido com a cor da via (#00E5FF)
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF00E5FF),
+        isTrue,
+      );
+
+      // Borda intermediária branca
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.color == Colors.white),
+        isTrue,
+      );
+
+      // 2. Raio adaptativo escalado proporcionalmente dentro do clamp ergonômico (11.0 a 15.0dp)
+      // ao invés dos 18.0dp fixos antigos
+      expect(canvas.circulos.first.raio, inInclusiveRange(11.0, 15.0));
+    });
+
+    test('MarkerPainter _paintLinha desenha com espessura proporcional à escala e halos moderados', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 2000,
+        mapHeight: 2000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: true,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#00E5FF',
+        linha: LinhaTrajeto(
+          espessura: 6,
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      expect(canvas.caminhos.length, 3);
+
+      final haloPath = canvas.caminhos[0];
+      final casingPath = canvas.caminhos[1];
+      final corePath = canvas.caminhos[2];
+
+      // 1. O traço principal deve ter espessura proporcional (clamp entre 2.0 e 4.0dp),
+      // e NÃO os 6.0dp absolutos nominais
+      expect(corePath.paint.strokeWidth, inInclusiveRange(2.0, 4.0));
+
+      // 2. O casing deve ser ligeiramente maior que o traço principal (+1.5dp)
+      expect(casingPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 1.5, 0.01));
+
+      // 3. O halo moderado de seleção deve ser espessuraVisual + 6.0dp (e não +12.0dp)
+      expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 6.0, 0.01));
+    });
   });
+}
+
+class RegistroCirculo {
+  final Offset centro;
+  final double raio;
+  final Paint paint;
+  RegistroCirculo(this.centro, this.raio, this.paint);
+}
+
+class RegistroCaminho {
+  final Path caminho;
+  final Paint paint;
+  RegistroCaminho(this.caminho, this.paint);
+}
+
+class CanvasRegistrador extends Fake implements Canvas {
+  final List<RegistroCirculo> circulos = [];
+  final List<RegistroCaminho> caminhos = [];
+
+  @override
+  void drawCircle(Offset c, double radius, Paint paint) {
+    circulos.add(RegistroCirculo(c, radius, Paint()
+      ..color = paint.color
+      ..style = paint.style
+      ..strokeWidth = paint.strokeWidth));
+  }
+
+  @override
+  void drawPath(Path path, Paint paint) {
+    caminhos.add(RegistroCaminho(path, Paint()
+      ..color = paint.color
+      ..style = paint.style
+      ..strokeWidth = paint.strokeWidth));
+  }
+
+  @override
+  void drawParagraph(Paragraph paragraph, Offset offset) {}
+
+  @override
+  void drawLine(Offset p1, Offset p2, Paint paint) {}
+
+  @override
+  void save() {}
+
+  @override
+  void restore() {}
 }

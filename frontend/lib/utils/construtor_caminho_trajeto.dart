@@ -25,11 +25,15 @@ class ConstrutorCaminhoTrajeto {
   /// Cache de instâncias de [Path] processadas indexadas por chave de cache e estilo.
   static final Map<String, Path> _cacheCaminhos = {};
 
+  /// Cache de instâncias de [Path] decompostas no espaço de tela do viewport.
+  static final Map<String, Path> _cacheCaminhosViewport = {};
+
   /// Limpa o cache de caminhos em memória.
   ///
   /// Deve ser acionado em eventos de invalidação de dados, migração de croquis ou recarga do mapa.
   static void limparCache() {
     _cacheCaminhos.clear();
+    _cacheCaminhosViewport.clear();
   }
 
   /// Converte a string SVG compilada em um [Path] nativo, aplicando o estilo configurado.
@@ -94,6 +98,62 @@ class ConstrutorCaminhoTrajeto {
       _cacheCaminhos[chave] = fallback;
       return fallback;
     }
+  }
+
+  /// Aplica a decomposição métrica de estilo de traço diretamente no espaço do viewport local (dp).
+  ///
+  /// Ao aplicar o tracejado após a projeção para coordenadas de tela, garante-se que os intervalos
+  /// de traço e espaço mantenham dimensões constantes e nítidas (independente da resolução do mapa base).
+  ///
+  /// Padrões adotados (em dp lógicos de tela):
+  /// - `TRACEJADO` (Escalada livre): 8.0dp traço / 4.0dp vão
+  /// - `PONTILHADO` (Artificial): 3.0dp traço / 4.0dp vão
+  /// - `CAMINHADA` (Trilhas / Acessos): 6.0dp traço / 4.0dp vão
+  /// - `SOLIDO`: Retorna o próprio [caminhoTransformado] sem cortes
+  static Path aplicarEstiloNoViewport(
+    Path caminhoTransformado,
+    LinhaTrajeto_EstiloTraco estilo, {
+    String? chaveCache,
+  }) {
+    if (chaveCache != null) {
+      final chave = '$chaveCache-${estilo.name}';
+      if (_cacheCaminhosViewport.containsKey(chave)) {
+        return _cacheCaminhosViewport[chave]!;
+      }
+    }
+
+    Path caminhoFinal;
+    switch (estilo) {
+      case LinhaTrajeto_EstiloTraco.TRACEJADO:
+        caminhoFinal = dashPath(
+          caminhoTransformado,
+          dashArray: CircularIntervalList<double>([8.0, 4.0]),
+        );
+        break;
+      case LinhaTrajeto_EstiloTraco.PONTILHADO:
+        caminhoFinal = dashPath(
+          caminhoTransformado,
+          dashArray: CircularIntervalList<double>([3.0, 4.0]),
+        );
+        break;
+      case LinhaTrajeto_EstiloTraco.CAMINHADA:
+        caminhoFinal = dashPath(
+          caminhoTransformado,
+          dashArray: CircularIntervalList<double>([6.0, 4.0]),
+        );
+        break;
+      case LinhaTrajeto_EstiloTraco.SOLIDO:
+      default:
+        caminhoFinal = caminhoTransformado;
+        break;
+    }
+
+    if (chaveCache != null) {
+      final chave = '$chaveCache-${estilo.name}';
+      _cacheCaminhosViewport[chave] = caminhoFinal;
+    }
+
+    return caminhoFinal;
   }
 
   /// Converte uma string hexadecimal (#RRGGBB ou RRGGBB) para uma instância de [Color].

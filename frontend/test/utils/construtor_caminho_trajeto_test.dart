@@ -218,5 +218,59 @@ void main() {
       expect(path, isNotNull);
       expect(path.computeMetrics().isNotEmpty, isTrue);
     });
+
+    test('aplicarEstiloNoViewport deve decompor caminho em intervalos nítidos para TRACEJADO, PONTILHADO e CAMINHADA', () {
+      final caminhoBase = Path()
+        ..moveTo(0, 0)
+        ..lineTo(100, 0);
+
+      final caminhoSolido = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+      expect(caminhoSolido.computeMetrics().length, 1);
+
+      // TRACEJADO: 8dp traço / 4dp vão -> em 100dp gera múltiplos segmentos
+      final caminhoTracejado = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.TRACEJADO,
+      );
+      final metricasTracejado = caminhoTracejado.computeMetrics().toList();
+      expect(metricasTracejado.length, greaterThan(5));
+      expect(metricasTracejado.first.length, closeTo(8.0, 0.5));
+
+      // PONTILHADO: 3dp traço / 4dp vão
+      final caminhoPontilhado = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.PONTILHADO,
+      );
+      final metricasPontilhado = caminhoPontilhado.computeMetrics().toList();
+      expect(metricasPontilhado.length, greaterThan(10));
+      expect(metricasPontilhado.first.length, closeTo(3.0, 0.5));
+
+      // CAMINHADA: 6dp traço / 4dp vão
+      final caminhoCaminhada = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.CAMINHADA,
+      );
+      final metricasCaminhada = caminhoCaminhada.computeMetrics().toList();
+      expect(metricasCaminhada.length, greaterThan(5));
+      expect(metricasCaminhada.first.length, closeTo(6.0, 0.5));
+    });
+
+    test('aplicarEstiloNoViewport reutiliza cache quando fornecida chaveCache', () {
+      final caminhoBase = Path()..moveTo(0, 0)..lineTo(100, 0);
+      final c1 = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.TRACEJADO,
+        chaveCache: 'teste_cache_viewport',
+      );
+      final c2 = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.TRACEJADO,
+        chaveCache: 'teste_cache_viewport',
+      );
+      expect(identical(c1, c2), isTrue);
+    });
   });
 }

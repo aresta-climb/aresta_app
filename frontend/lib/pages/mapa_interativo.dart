@@ -309,6 +309,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           ref: ref,
         );
       }
+    } else if (marker.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha && _autoZoomEnabled) {
+      _zoomToPoints(
+        [marker],
+        Size(constraints.maxWidth, constraints.maxHeight),
+        viewportSize,
+      );
     }
   }
 
@@ -533,19 +539,26 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       final relWidth = (maxX - minX) / widget.mapa.larguraMapa;
       final relHeight = (maxY - minY) / widget.mapa.alturaMapa;
 
-      // POIs that don't have references shouldn't be drawn at all, per phase 4.5.
-      if (!_poiToRefs.containsKey(ponto.id)) {
+      final isLinha = ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha;
+      // Pontos de interesse que não possuem referências não devem ser desenhados, conforme fase 4.5.
+      // Exceção: traçados vetoriais (linhas de vias ou caminhadas) são elementos topográficos
+      // da rocha e devem sempre ser exibidos, mesmo se ainda não possuírem referência associada.
+      if (!isLinha && !_poiToRefs.containsKey(ponto.id)) {
         return const SizedBox.shrink();
       }
 
       bool isSelected = false;
       if (_selectedId != null) {
-        final refs = _poiToRefs[_selectedId!];
-        if (refs != null &&
-            refs.isNotEmpty &&
-            _focusedItemIndex < refs.length) {
-          final focusedRef = refs[_focusedItemIndex];
-          isSelected = focusedRef.ids.contains(ponto.id);
+        if (_selectedId == ponto.id) {
+          isSelected = true;
+        } else {
+          final refs = _poiToRefs[_selectedId!];
+          if (refs != null &&
+              refs.isNotEmpty &&
+              _focusedItemIndex < refs.length) {
+            final focusedRef = refs[_focusedItemIndex];
+            isSelected = focusedRef.ids.contains(ponto.id);
+          }
         }
       }
 
@@ -1794,6 +1807,15 @@ class MarkerPainter extends CustomPainter {
     _paintAreaFechada(canvas, size);
   }
 
+  /// Renderiza a linha vetorial em múltiplas camadas no espaço do viewport local da tela.
+  ///
+  /// **Racional de Design e Fidelidade 1:1 com o Editor:**
+  /// - Aplica o estilo de traço (tracejado, pontilhado) diretamente após projetar o caminho para a
+  ///   tela, garantindo intervalos nítidos e consistentes em qualquer resolução de imagem.
+  /// - A espessura do traço e dos halos é escalada proporcionalmente com [scaleX], evitando
+  ///   traços massivos em telas móveis e mantendo a delicadeza visual do croqui.
+  /// - As camadas incluem: halo de seleção, pulso luminoso ao tocar fora, casing de contraste escuro,
+  ///   traço principal colorido e marcadores de base/proteção pré-compilados.
   void _paintLinha(Canvas canvas, Size size) {
     if (polygon.isEmpty) return;
 
@@ -1802,10 +1824,11 @@ class MarkerPainter extends CustomPainter {
 
     Path localPath;
     if (linha != null && linha!.hasCompilado() && linha!.compilado.caminhoSvg.isNotEmpty) {
-      final basePath = ConstrutorCaminhoTrajeto.obterCaminho(
-        chaveCache: chaveCache ?? 'linha',
+      // 1. Obtém o caminho contínuo (SOLIDO) da base SVG para transformar sem distorcer o tracejado
+      final baseContinuous = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: '${chaveCache ?? "linha"}_base_continuo',
         caminhoSvg: linha!.compilado.caminhoSvg,
-        estilo: linha!.estilo,
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
       );
 
       final matrix = Matrix4.identity()
@@ -1813,32 +1836,47 @@ class MarkerPainter extends CustomPainter {
         ..scale(scaleX, scaleY)
         ..translate(-minX, -minY);
 
-      localPath = basePath.transform(matrix.storage);
+      final transformedPath = baseContinuous.transform(matrix.storage);
+
+      // 2. Aplica o estilo de traço diretamente no espaço do viewport de tela
+      final cacheKeyViewport = '${chaveCache ?? "linha"}_${constraints.maxWidth.toInt()}x${constraints.maxHeight.toInt()}';
+      localPath = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        transformedPath,
+        linha!.estilo,
+        chaveCache: cacheKeyViewport,
+      );
     } else {
-      localPath = Path();
+      final basePolyPath = Path();
       for (int i = 0; i < polygon.length; i++) {
         final p = polygon[i];
         final lx = ((p.dx - minX) * scaleX) + padding;
         final ly = ((p.dy - minY) * scaleY) + padding;
         if (i == 0) {
-          localPath.moveTo(lx, ly);
+          basePolyPath.moveTo(lx, ly);
         } else {
-          localPath.lineTo(lx, ly);
+          basePolyPath.lineTo(lx, ly);
         }
       }
+      final estilo = linha != null ? linha!.estilo : LinhaTrajeto_EstiloTraco.SOLIDO;
+      localPath = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        basePolyPath,
+        estilo,
+      );
     }
 
     final double espessuraNominal = (linha?.hasEspessura() == true && linha!.espessura > 0)
         ? linha!.espessura.toDouble()
         : 3.0;
+    // Escala proporcional da espessura baseada na proporção do viewport com limites confortáveis (2.0 a 4.0dp)
+    final double espessuraVisual = (espessuraNominal * scaleX * 2.2).clamp(2.0, 4.0);
     final Color corLinha = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
 
-    // Camada 1: Halo de Seleção (glow difuso ao redor do SVG quando selecionado)
+    // Camada 1: Halo de Seleção (glow difuso de largura moderada ao redor do traçado selecionado)
     if (isSelected) {
       final haloPaint = Paint()
         ..color = corLinha.withValues(alpha: 0.5)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraNominal + 12.0
+        ..strokeWidth = espessuraVisual + 6.0
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
@@ -1850,7 +1888,7 @@ class MarkerPainter extends CustomPainter {
       final pulsePaint = Paint()
         ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraNominal + (8.0 * highlightIntensity)
+        ..strokeWidth = espessuraVisual + (4.0 * highlightIntensity)
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
@@ -1861,7 +1899,7 @@ class MarkerPainter extends CustomPainter {
     final casingPaint = Paint()
       ..color = Colors.black.withValues(alpha: isSelected ? 0.6 : 0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = espessuraNominal + 2.0
+      ..strokeWidth = espessuraVisual + 1.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(localPath, casingPaint);
@@ -1870,7 +1908,7 @@ class MarkerPainter extends CustomPainter {
     final corePaint = Paint()
       ..color = isSelected ? corLinha : corLinha.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = espessuraNominal
+      ..strokeWidth = espessuraVisual
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(localPath, corePaint);
@@ -1881,6 +1919,14 @@ class MarkerPainter extends CustomPainter {
     }
   }
 
+  /// Desenha os marcadores pré-posicionados ao longo da linha com fidelidade estética 1:1 ao editor.
+  ///
+  /// Para círculos identificadores (`CIRCULO_IDENTIFICADOR` e `INICIO_AGACHADO`), aplica:
+  /// 1. Casing escuro externo para contraste sobre qualquer textura de rocha.
+  /// 2. Fundo preenchido com a cor da via ([corLinha]).
+  /// 3. Borda intermediária branca de alto contraste.
+  /// 4. Rótulo numérico/textual em branco em negrito centralizado.
+  /// 5. Raio e tipografia adaptativos escalados com base na escala do viewport.
   void _paintMarcadores(Canvas canvas, double scaleX, double scaleY, Color corLinha) {
     for (final m in linha!.compilado.marcadores) {
       final lx = ((m.x - minX) * scaleX) + padding;
@@ -1890,26 +1936,38 @@ class MarkerPainter extends CustomPainter {
       switch (m.tipo) {
         case NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR:
         case NoTrajeto_TipoNo.INICIO_AGACHADO:
-          final double r = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 9.0;
-          final fillPaint = Paint()
-            ..color = isSelected ? corLinha : Colors.white
-            ..style = PaintingStyle.fill;
-          final borderPaint = Paint()
-            ..color = isSelected ? Colors.white : corLinha
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.0;
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
+          // Escala proporcional ao viewport com limites ergonômicos de legibilidade e toque (11.0 a 15.0dp)
+          final double r = (baseR * scaleX * 2.2).clamp(11.0, 15.0);
 
+          // 1. Casing externo preto de alto contraste (para leitura sobre rochas claras ou escuras)
+          final casingCirclePaint = Paint()
+            ..color = Colors.black54
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3.0;
+          canvas.drawCircle(center, r, casingCirclePaint);
+
+          // 2. Fundo preenchido com a cor da via
+          final fillPaint = Paint()
+            ..color = corLinha
+            ..style = PaintingStyle.fill;
           canvas.drawCircle(center, r, fillPaint);
+
+          // 3. Borda intermediária branca
+          final borderPaint = Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5;
           canvas.drawCircle(center, r, borderPaint);
 
+          // 4. Texto em branco em negrito centralizado
           if (m.rotulo.isNotEmpty) {
+            final double fontSize = (r * 0.95).clamp(9.0, 13.0);
             final textSpan = TextSpan(
               text: m.rotulo,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
-                fontSize: m.hasTamanhoFonte() && m.tamanhoFonte > 0
-                    ? m.tamanhoFonte.toDouble()
-                    : 10.0,
+                color: Colors.white,
+                fontSize: fontSize,
                 fontWeight: FontWeight.bold,
               ),
             );

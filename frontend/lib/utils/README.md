@@ -22,10 +22,13 @@ Diferente de polígonos fechados onde `Path.contains` determina se um ponto est�
 - O método `calcularDistanciaAoCaminho` projeta a coordenada do toque sobre cada segmento consecutivo da polilinha amostrada (sem fechar o laço entre início e fim da via).
 - Se a menor distância euclidiana for inferior ou igual a 16.0dp, o toque é considerado válido, proporcionando excelente usabilidade em telas sensíveis ao toque.
 
-### Pipeline de Renderização em Camadas
-A renderização dos traçados no `MarkerPainter` segue uma ordem estrita de camadas visuais:
-1. **Halo de Seleção (Difuso)**: Se a via estiver selecionada, um traço largo com desfoque gaussiano (`MaskFilter.blur`) na cor da via é desenhado na base para criar destaque orgânico no mapa.
-2. **Halo de Pulso (Advertência)**: Quando o usuário toca em uma área vazia do mapa, todas as rotas e áreas clicáveis recebem um pulso luminoso branco que pulsa e desvanece suavemente.
-3. **Casing de Contraste**: Um contorno escuro semi-transparente ligeiramente mais largo que o traço principal é desenhado, garantindo legibilidade da linha sobre qualquer tipo de rocha (granito claro, calcário escuro, sombras e vegetação).
-4. **Traço Principal**: O caminho estilizado (sólido, tracejado ou pontilhado conforme convenções FEMEMG) na cor da via ou cor padrão `rustIron`.
-5. **Marcadores Tipados**: Pontos semânticos compilados desenhados na escala exata da tela (círculos numerados de início de base/agachado, "X" para proteções fixas, "XX" para paradas e losangos para lances crux).
+### Pipeline de Renderização em Camadas e Fidelidade 1:1 com o Editor
+A renderização dos traçados no `MarkerPainter` segue rigorosamente as especificações estéticas do editor de mapas desktop (`aresta_db`), mantendo fidelidade visual 1:1:
+1. **Decomposição Métrica no Espaço do Viewport (`aplicarEstiloNoViewport`)**: O tracejado e o pontilhado são calculados diretamente após a projeção do caminho contínuo para o sistema métrico de tela em dp (ex: 8.0dp traço / 4.0dp vão para `TRACEJADO`), garantindo que os vãos nunca se fundam em linhas sólidas, independente da resolução da imagem original (2000px a 8000px).
+2. **Espessura Proporcional (`espessuraVisual`)**: A espessura do traço e seus halos é escalada proporcionalmente em relação à tela via `(espessuraNominal * scaleX * 2.2).clamp(2.0, 4.0)`, evitando linhas excessivamente pesadas em celulares.
+3. **Halo de Seleção (Difuso Moderado)**: Se a via estiver selecionada, um traço com desfoque gaussiano moderado (`espessuraVisual + 6.0dp`) na cor da via cria destaque orgânico no mapa.
+4. **Halo de Pulso (Advertência)**: Ao tocar no vazio do mapa, todas as rotas recebem um pulso luminoso branco que pulsa e desvanece suavemente.
+5. **Casing de Contraste**: Um contorno escuro semi-transparente (`espessuraVisual + 1.5dp`) garante legibilidade da linha sobre qualquer tipo de rocha (granito claro, calcário escuro, sombras e vegetação).
+6. **Traço Principal**: O traço central é desenhado na cor da rota ou na cor padrão `rustIron`.
+7. **Marcadores Tipados (Fidelidade Cromática e Dimensional)**: Círculos identificadores de base (`CIRCULO_IDENTIFICADOR` e `INICIO_AGACHADO`) utilizam fundo na cor da via (`corLinha`), texto do número centralizado em branco em negrito, borda intermediária branca e casing externo preto de alto contraste, com raio e tipografia adaptativos ao zoom do viewport.
+
