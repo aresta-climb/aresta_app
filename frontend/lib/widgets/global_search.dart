@@ -62,6 +62,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
   final List<String> _filters = [
     'Todos',
+    'Picos',
     'Setores',
     'Esportivas',
     'Móveis',
@@ -574,8 +575,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     final typeFilteredData = _allData.where((item) {
       if (_selectedFilter != 'Todos') {
-        if (_selectedFilter == 'Setores' && item.originalItem is! Setor) {
-          return false;
+        if (_selectedFilter == 'Picos') {
+          return item.isPico;
+        }
+        if (_selectedFilter == 'Setores') {
+          return item.originalItem is Setor;
         }
 
         if (item.originalItem is Escalada) {
@@ -596,37 +600,62 @@ class _GlobalSearchState extends State<GlobalSearch> {
               esc.whichTipo() != Escalada_Tipo.highline) {
             return false;
           }
-        } else if (_selectedFilter != 'Setores') {
+        } else {
           return false;
         }
       }
       return true;
     }).toList();
 
-    final fuse = Fuzzy<GlobalSearchResult>(
-      typeFilteredData,
-      options: FuzzyOptions(
-        keys: [
-          WeightedKey(
-            name: 'title',
-            getter: (GlobalSearchResult i) => normalizeSearchString(i.title),
-            weight: 1.0,
-          ),
-          WeightedKey(
-            name: 'subtitle',
-            getter: (GlobalSearchResult i) => normalizeSearchString(i.subtitle),
-            weight: 0.5,
-          ),
-        ],
-        threshold: 0.4,
-      ),
-    );
-
     final queryLower = normalizeSearchString(_searchQuery);
-    final results = fuse.search(queryLower);
+
+    final exactMatches = <GlobalSearchResult>[];
+    final otherCandidates = <GlobalSearchResult>[];
+
+    for (final item in typeFilteredData) {
+      final titleNorm = normalizeSearchString(item.title);
+      final subtitleNorm = normalizeSearchString(item.subtitle);
+      if (titleNorm.contains(queryLower) || subtitleNorm.contains(queryLower)) {
+        exactMatches.add(item);
+      } else {
+        otherCandidates.add(item);
+      }
+    }
+
+    List<GlobalSearchResult> fuzzyResults = [];
+    if (otherCandidates.isNotEmpty) {
+      final fuse = Fuzzy<GlobalSearchResult>(
+        otherCandidates,
+        options: FuzzyOptions(
+          keys: [
+            WeightedKey(
+              name: 'title',
+              getter: (GlobalSearchResult i) => normalizeSearchString(i.title),
+              weight: 1.0,
+            ),
+            WeightedKey(
+              name: 'subtitle',
+              getter: (GlobalSearchResult i) => normalizeSearchString(i.subtitle),
+              weight: 0.5,
+            ),
+          ],
+          threshold: 0.5,
+        ),
+      );
+      fuzzyResults = fuse.search(queryLower).map((r) => r.item).toList();
+    }
+
+    final combinedResults = [...exactMatches, ...fuzzyResults];
+
+    // Prioriza itens já baixados mantendo a ordem relativa de relevância
+    combinedResults.sort((a, b) {
+      if (a.isDownloaded && !b.isDownloaded) return -1;
+      if (!a.isDownloaded && b.isDownloaded) return 1;
+      return 0;
+    });
 
     setState(() {
-      _filteredResults = results.map((r) => r.item).toList();
+      _filteredResults = combinedResults;
     });
   }
 
