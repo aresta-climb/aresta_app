@@ -4,65 +4,96 @@
 
 O Aresta DB introduziu o suporte à criação de linhas vetoriais de vias de escalada através da mudança `tracados-vetoriais-vias-mapas`. Nesse novo formato, as rotas desenhadas sobre fotos em alta definição são pré-compiladas pela biblioteca matemática do backend em strings de caminho SVG contendo curvas cúbicas de Bézier (`caminho_svg`), uma caixa delimitadora calculada (`caixa_delimitadora`), lista de marcadores semânticos com rotação angular (`marcadores`), estilos de traço (tracejado, sólido) e cores personalizadas (`cor`).
 
-No aplicativo móvel (`aresta_app`), o componente `MapaInterativoPage` e seu auxiliar `MarkerPainter` foram projetados originalmente para áreas fechadas delimitadas (`circulo`, `quadrado`, `retangulo`, `poligono`), onde o hit-test utiliza `path.contains(touchPoint)` e o zoom de pontos individuais assume um elemento pontual de ~20dp. 
+No aplicativo móvel (`aresta_app`), o componente `MapaInterativoPage` e seu auxiliar `MarkerPainter` foram projetados originalmente para áreas fechadas delimitadas (`circulo`, `quadrado`, `retangulo`, `poligono`), onde o hit-test utiliza `path.contains(touchPoint)` e o zoom de pontos individuais assume um elemento pontual de ~20dp.
 
-Este design técnico estabelece a arquitetura para consumir o SVG compilado acelerado por GPU, garantir isolamento estrito de bibliotecas externas de terceiros (`path_drawing`) validado por testes automatizados, fornecer detecção ergonômica de toques ao longo de toda a extensão do traçado, enquadrar a via inteira no auto-zoom e renderizar os efeitos visuais de highlight persistente e pulso luminoso.
+Este documento detalha as decisões arquiteturais e técnicas para suportar a visualização e interação com traçados vetoriais, estruturado rigorosamente sob as diretrizes de `PRINCIPIOS.md`.
+
+## Alinhamento com os Princípios de Engenharia (`PRINCIPIOS.md`)
+
+1. **Princípio I (Tudo em Português):**
+   - Todos os novos arquivos, classes, métodos, testes, docstrings e variáveis adotam estritamente o português brasileiro como idioma.
+   - O utilitário central é denominado `ConstrutorCaminhoTrajeto` (em `lib/utils/construtor_caminho_trajeto.dart`), com métodos como `obterCaminho()`, `aplicarTracejado()` e `limparCache()`.
+   - O teste de integridade arquitetural é nomeado `path_drawing_isolation_test.dart` no diretório `test/architecture/`, seguindo o padrão de nomenclatura pré-existente `firebase_isolation_test.dart`.
+
+2. **Princípio II (Componentes Independentes / Feature-First):**
+   - O módulo `ConstrutorCaminhoTrajeto` é autossuficiente e desacoplado de widgets ou estados de tela, podendo ser testado e reutilizado de maneira isolada.
+   - Regras de geometria e cálculo de distância de toque ficam concentradas em funções puras, sem contaminar o fluxo de ciclo de vida da página `MapaInterativoPage`.
+
+3. **Princípio III (100% de Test Coverage):**
+   - Exigência inegociável de 100% de cobertura de código para o novo arquivo `lib/utils/construtor_caminho_trajeto.dart` e para todas as ramificações adicionadas ou modificadas em `lib/pages/mapa_interativo.dart` (`AreaHelper`, `MarkerPainter`, `_zoomToPoints`).
+
+4. **Princípio IV (Imperativo do Teste em Primeiro Lugar / TDD):**
+   - Todo arquivo `.dart` de código de produção possui seu arquivo `_test.dart` correspondente espelhando o caminho na pasta `test/`.
+   - O ciclo Red-Green-Refactor é aplicado estritamente: os testes de unidade, de widget e de arquitetura são escritos e executados em falha antes da implementação do código de produção correspondente.
+
+5. **Princípio V (Testes de Widget em Primeiro Lugar):**
+   - A validação da experiência do usuário é priorizada através de testes de widget em `test/pages/mapa_interativo_test.dart`, simulando toques em curvas abertas, toques fora para ativação do pulso de highlight e verificação do enquadramento de câmera com animação.
+
+6. **Princípio VI (Simplicidade e Anti-Abstração):**
+   - Sem hierarquias abstratas desnecessárias de pintores ou classes genéricas de desenho. O código utiliza de forma direta as primitivas do Flutter (`Path`, `Paint`, `Canvas`, `MaskFilter`), preferindo clareza e simplicidade declarativa a generalizações prematuras.
+
+7. **Princípio VII (Documentação Contínua e Abrangente):**
+   - Todas as novas classes, métodos e funções contêm docstrings em blocos `///` detalhando a motivação (*o porquê*) e não apenas o comportamento mecânico (*o quê*).
+   - O arquivo `frontend/lib/README.md` é atualizado documentando o funcionamento do pipeline de renderização vetorial e a barreira de isolamento arquitetural.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Atualizar a compilação Protobuf no aplicativo (`croqui.pb.dart`) para sincronizar a mensagem `LinhaTrajeto` e os novos campos de `PontoDeInteresse`.
-- Criar a biblioteca utilitária `TrajetoPathHelper` (`lib/utils/trajeto_path_helper.dart`) encapsulando o uso do `path_drawing`, com 100% de cobertura de testes.
-- Implementar um teste de barreira arquitetural (`test/architecture/dependencias_externas_test.dart`) garantindo que nenhum arquivo de view ou lógica do app importe diretamente `path_drawing`.
-- Expandir o `AreaHelper.getAreaInfo` para suportar `Mapa_PontoDeInteresse_TipoArea.linha`, calculando os limites a partir de `caixa_delimitadora` e do próprio `Path`.
-- Implementar detecção de toques contínua ao longo de curvas abertas no `MarkerPainter.hitTest` com tolerância ergonômica de 16dp.
-- Implementar renderização em 4 camadas no `MarkerPainter`: halo de destaque difuso (`MaskFilter.blur`), casing de alto contraste, traço principal estilizado e marcadores rotacionados.
-- Adaptar o cálculo de auto-zoom em `_zoomToPoints` para tratar vias com traçados vetoriais através de Bounding Box, enquadrando toda a extensão da via (base ao topo) mesmo quando composta por um único elemento de linha.
-- Assegurar compatibilidade total e sem regressões com todos os croquis legados.
+- Sincronizar as mensagens Protobuf (`croqui.pb.dart`) para suportar `LinhaTrajeto`, `DadosCompiladosLinha`, `MarcadorCompilado` e os campos `linha` e `cor`.
+- Criar a classe utilitária `ConstrutorCaminhoTrajeto` (`lib/utils/construtor_caminho_trajeto.dart`) encapsulando o pacote `path_drawing` e provendo cache em memória.
+- Implementar teste de barreira arquitetural (`test/architecture/path_drawing_isolation_test.dart`) garantindo que nenhum outro arquivo do projeto importe `path_drawing`.
+- Expandir `AreaHelper.getAreaInfo` para suportar `Mapa_PontoDeInteresse_TipoArea.linha`, extraindo a caixa delimitadora da linha e seus pontos de controle.
+- Implementar hit-testing ergonômico no `MarkerPainter.hitTest` por menor distância euclidiana a segmentos da curva (~16dp de tolerância).
+- Implementar renderização em camadas no `MarkerPainter`: halo de destaque difuso com `MaskFilter.blur` ao redor da via selecionada, contorno de contraste (*casing*), traço principal com cor customizada (`ponto.cor`) e marcadores compilados.
+- Renderizar pulso de advertência luminoso ao redor de linhas clicáveis quando o usuário toca em área livre (`highlightIntensity > 0`).
+- Adaptar o cálculo de zoom em `_zoomToPoints` para enquadrar a extensão completa de vias com traçado vetorial (da base ao topo) por Bounding Box.
+- Atingir 100% de cobertura de testes em todos os arquivos tocados.
 
 **Non-Goals:**
-- Não recalcular curvas de Catmull-Rom nem realizar cálculos matemáticos pesados de interpolação no aplicativo: o celular consome estritamente o SVG já compilado pelo backend.
-- Não alterar a lógica de apresentação e navegação dos cartões inferiores de vias, setores e grupos.
+- Não recalcular splines ou interpolações no aplicativo: o dispositivo móvel consome diretamente o `caminho_svg` pré-calculado pelo backend.
+- Não alterar a interface dos cartões inferiores de vias, setores ou grupos.
+- Não modificar o comportamento ou renderização de áreas fechadas legadas (`circulo`, `quadrado`, `retangulo`, `poligono`).
 
 ## Decisions
 
-### Decisão 1: Encapsulamento Estrito do `path_drawing` e Teste de Barreira Arquitetural
-- **Escolha:** Todo acesso à biblioteca `path_drawing` (para `parseSvgPathData` e `dashPath`) fica restrito exclusivamente ao arquivo `lib/utils/trajeto_path_helper.dart`. Um teste automatizado de análise de código-fonte em Dart verifica que nenhuma outra parte do app importa esse pacote.
-- **Justificativa:** Atende ao Princípio II (Componentes Independentes) e Princípio VI (Simplicidade). O pacote `path_drawing` está estável na versão 1.0.1, mas possui manutenção infrequentemente atualizada. O encapsulamento garante que, caso no futuro seja necessário migrar para um parser interno ou outra solução, o impacto no código seja restrito a um único arquivo de 30 linhas.
+### Decisão 1: Encapsulamento Estrito em `ConstrutorCaminhoTrajeto` com Teste de Barreira
+- **Escolha:** O acesso ao pacote `path_drawing` é confinado a `lib/utils/construtor_caminho_trajeto.dart`. Um teste automatizado (`test/architecture/path_drawing_isolation_test.dart`) varre recursivamente a pasta `lib/` e falha caso qualquer outro arquivo contenha a instrução `import 'package:path_drawing/`.
+- **Justificativa:** Atende aos Princípios I, II e VI. Garante que se a dependência precisar ser substituída ou atualizada no futuro, a alteração se restrinja a um único arquivo de domínio com menos de 50 linhas, sem risco de vazamento para a UI.
 
-### Decisão 2: Hit-Testing Baseado em Proximidade a Segmentos Amostrados da Curva
-- **Escolha:** Como caminhos abertos não possuem área interna para `path.contains()`, o `MarkerPainter.hitTest(Offset position)` aproxima a curva por uma sequência de pontos locais (via `path.computeMetrics()` com amostragem a cada ~15dp) e calcula a distância euclidiana do ponto de toque aos segmentos de reta consecutivos.
-- **Tolerância Ergonômica:** Raio de 16dp (~32px em telas retina). Se a menor distância for $\le 16\text{dp}$, o clique é aceito.
-- **Delegação para Clique Fora:** Como o `GestureDetector` que envolve o marcador utiliza `HitTestBehavior.deferToChild`, qualquer clique fora do raio de 16dp faz o `hitTest` retornar `false`. O evento de toque vaza automaticamente para o `GestureDetector` de fundo da tela, que cancela seleções ou dispara o pulso de destaque (`highlightIntensity`).
+### Decisão 2: Cache em Memória dos Caminhos (`ui.Path`) Processados
+- **Escolha:** Os objetos `ui.Path` gerados a partir da string SVG e estilizados via tracejado são armazenados em um mapa de cache em memória dentro de `ConstrutorCaminhoTrajeto`, indexados por chave composta `"$pontoId-$estilo"`.
+- **Justificativa:** O método `paint` do Flutter é executado a cada quadro (60–120 FPS) durante translações e pinças de zoom. Re-executar o parsing do SVG e o cálculo de intervalos de tracejado a cada quadro criaria milhares de objetos descartáveis, pressionando o coletor de lixo (*Garbage Collector*). O cache elimina essa sobrecarga.
 
-### Decisão 3: Cache em Memória dos Caminhos Vetoriais Processados
-- **Escolha:** Os objetos `ui.Path` gerados e tracejados não devem ser recriados a cada chamada de `paint()` (que roda a 60/120 FPS em gestos de pan/zoom).
-- **Justificativa:** Criação de `Path` via `dashPath` gera alocações de memória significativas. Mantendo uma estrutura simples de cache indexada pelo ID do ponto de interesse e estilo de traço, evitamos pressão desnecessária sobre o Garbage Collector do Flutter.
+### Decisão 3: Hit-Testing por Amostragem de Segmentos e Distância Euclidiana
+- **Escolha:** Em vez de depender de `path.contains()`, que não é aplicável a caminhos abertos, o método `MarkerPainter.hitTest(Offset position)` decompõe a curva em segmentos de reta locais utilizando amostragem regular via métricas do caminho (`Path.computeMetrics()`) a cada 15dp.
+- **Tolerância Física:** Raio de 16dp ao redor do traçado.
+- **Delegação ao Toque Fora:** Se a menor distância euclidiana da coordenada de toque a qualquer segmento for $\le 16\text{dp}$, o método retorna `true`. Se for maior, retorna `false`, permitindo que o `GestureDetector` pai descarte o toque no marcador e acione a desseleção ou o pulso de destaque no fundo da tela.
 
-### Decisão 4: Estrutura Visual em Camadas (Layering) do Traçado
-- **Escolha:** O `MarkerPainter` desenha o traçado vetorial na seguinte ordem:
-  1. *Halo de Seleção* (quando `isSelected == true`): `strokeWidth = espessura + 12`, cor viva com `MaskFilter.blur(BlurStyle.normal, 5.0)`.
-  2. *Halo de Pulso* (quando não selecionado e `highlightIntensity > 0`): `strokeWidth = espessura + 8 * highlightIntensity`, cor branca com opacidade proporcional.
-  3. *Casing de Contraste*: Traço escuro sutil de base (`strokeWidth = espessura + 2`) para garantir legibilidade contra rochas claras ou escuras.
-  4. *Traço Principal*: Traço com a cor do ponto (`ponto.cor` ou cor padrão), pontas arredondadas (`StrokeCap.round`).
-  5. *Marcadores*: Ícones e rótulos de nós desenhados sobre as posições compiladas.
+### Decisão 4: Pintura em Camadas (Layering) do Traçado
+- **Escolha:** O `MarkerPainter` desenha o traçado vetorial na seguinte ordem de profundidade:
+  1. *Halo de Seleção* (quando `isSelected == true`): traço largo (`espessura + 12`) com `MaskFilter.blur(BlurStyle.normal, 5.0)` e cor viva.
+  2. *Halo de Pulso* (quando não selecionado e `highlightIntensity > 0`): traço largo (`espessura + 8 * highlightIntensity`) em branco com opacidade proporcional.
+  3. *Contorno de Contraste (Casing)*: traço fino escuro/claro (`espessura + 2`) para separar a linha do fundo da rocha.
+  4. *Traço Principal*: traçado estilizado (sólido, tracejado ou pontilhado) com a cor da via (`ponto.cor`).
+  5. *Marcadores*: círculos numerados na base, cruxes e paradas desenhados sobre as posições compiladas.
 
-### Decisão 5: Enquadramento Adaptativo de Zoom por Bounding Box da Linha
-- **Escolha:** Vias com traçado vetorial acionam a lógica de Bounding Box em `_zoomToPoints`, calculando `scaleX` e `scaleY` a partir dos limites totais do traçado (`minX, minY, maxX, maxY`), em vez de tratar como ponto único.
-- **Justificativa:** Garante que o usuário veja a via completa (da base ao topo) confortavelmente enquadrada acima do card inferior, com um teto de zoom automático agradável (ex: 2.5x).
+### Decisão 5: Enquadramento de Câmera por Bounding Box Total da Linha
+- **Escolha:** No método `_zoomToPoints`, qualquer seleção que inclua um ponto do tipo `linha` utiliza obrigatoriamente a lógica de enquadramento por caixa delimitadora (*Bounding Box*), calculando a escala alvo para que toda a via (da base ao topo) caiba confortavelmente na área útil do viewport (acima do card flutuante).
+- **Justificativa:** Corrige a limitação do código legado que tratava qualquer via com um único ponto como pin pontual de 20dp.
 
 ## Risks / Trade-offs
 
-- **[Risco: String SVG inválida ou malformada vinda de croquis legados ou em desenvolvimento]** → *Mitigação:* `TrajetoPathHelper` envolve a interpretação em bloco `try/catch` defensivo, retornando `Path()` vazio em caso de falha sem quebrar a renderização do mapa.
-- **[Risco: Vias paralelas muito próximas confundindo o clique do usuário]** → *Mitigação:* O `hitTest` calcula a distância euclidiana exata até a curva; caso duas vias estejam sob o raio de tolerância do toque, a seleção prioriza o traçado com menor distância absoluta até o ponto de contato.
-- **[Risco: Sobrecarga de rebuilds com muitas linhas animando o pulso]** → *Mitigação:* O pulso reutiliza o `_highlightAnimation` existente e apenas recalcula o valor escalar de alfa/largura na pintura sem recriar os caminhos da memória.
+- **[Risco: String SVG inválida ou vazia recebida do backend]** → *Mitigação:* `ConstrutorCaminhoTrajeto` utiliza bloco `try/catch` defensivo, registrando o erro no `AppLogger` e retornando um `Path()` vazio, impedindo que a aplicação trave na tela do usuário.
+- **[Risco: Toques concorrentes em vias com traçados muito próximos]** → *Mitigação:* O `hitTest` calcula a distância euclidiana exata; em caso de sobreposição de tolerâncias, o sistema seleciona o traçado com menor distância absoluta até o ponto de toque.
+- **[Risco: Regressão de comportamento em croquis legados]** → *Mitigação:* A suíte pré-existente de mais de 40 testes de mapa interativo continuará rodando integralmente no CI/CD, e os novos testes validarão que pontos do tipo círculo, retângulo, quadrado e polígono mantêm seu comportamento inalterado.
 
 ## Migration Plan
 
-1. Sincronizar o schema Protobuf executando a compilação dos protos Dart para atualizar `croqui.pb.dart`.
-2. Adicionar a dependência `path_drawing: ^1.0.1` ao `frontend/pubspec.yaml` e executar `flutter pub get`.
-3. Escrever o teste de barreira arquitetural e o teste unitário de `TrajetoPathHelper` (TDD).
-4. Implementar `lib/utils/trajeto_path_helper.dart`.
-5. Atualizar `AreaHelper` e `MarkerPainter` para suportar `linha`, hit-testing e camadas de highlight.
-6. Atualizar `_zoomToPoints` para enquadramento completo de vias vetoriais.
-7. Executar a suíte completa de testes unitários e de widget com `flutter test`.
+1. Atualização do `frontend/pubspec.yaml` com a adição de `path_drawing: ^1.0.1` e execução de `flutter pub get`.
+2. Sincronização dos arquivos compilados Dart do Protobuf (`croqui.pb.dart`).
+3. Criação do teste arquitetural `test/architecture/path_drawing_isolation_test.dart` e validação da sua falha/sucesso (TDD).
+4. Implementação de `test/utils/construtor_caminho_trajeto_test.dart` e de `lib/utils/construtor_caminho_trajeto.dart`.
+5. Escrita dos testes de widget e unidade para `AreaHelper`, `MarkerPainter` e `_zoomToPoints` em `test/pages/mapa_interativo_test.dart`.
+6. Implementação das atualizações correspondentes em `lib/pages/mapa_interativo.dart`.
+7. Execução completa da suíte de testes com `flutter test --coverage` para verificar aprovação unânime e 100% de cobertura.
+8. Atualização de documentação em `frontend/lib/README.md`.

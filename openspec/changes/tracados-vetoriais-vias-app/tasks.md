@@ -1,36 +1,39 @@
-## 1. Configuração e Sincronização de Modelos
+## 1. Configuração de Dependências e Sincronização de Modelos
 
 - [ ] 1.1 Adicionar dependência `path_drawing: ^1.0.1` em `frontend/pubspec.yaml` e executar `flutter pub get`
 - [ ] 1.2 Atualizar os arquivos Dart gerados do Protobuf (`lib/aresta_api/proto/generated/croqui.pb.dart`) com o suporte a `LinhaTrajeto`, `DadosCompiladosLinha`, `MarcadorCompilado` e campos `linha` e `cor`
 
-## 2. Isolamento de Dependência e Construção de Caminhos (TDD)
+## 2. Barreira Arquitetural e Módulo de Trajetos (TDD)
 
-- [ ] 2.1 Criar teste de barreira arquitetural em `frontend/test/architecture/dependencias_externas_test.dart` garantindo que nenhum arquivo fora de `lib/utils/trajeto_path_helper.dart` importe `package:path_drawing/`
-- [ ] 2.2 Criar suíte de testes unitários em `frontend/test/utils/trajeto_path_helper_test.dart` para parsing de SVG, estilos tracejado/sólido e tratamento defensivo de erros
-- [ ] 2.3 Implementar `frontend/lib/utils/trajeto_path_helper.dart` com métodos para obter `Path` nativo, aplicar tracejados e fazer cache em memória
+- [ ] 2.1 [RED] Escrever teste de barreira arquitetural em `frontend/test/architecture/path_drawing_isolation_test.dart` verificando que apenas `lib/utils/construtor_caminho_trajeto.dart` pode importar `package:path_drawing/`
+- [ ] 2.2 [RED] Escrever suíte de testes unitários em `frontend/test/utils/construtor_caminho_trajeto_test.dart` cobrindo conversão de SVG para `Path`, estilos (sólido, tracejado, pontilhado), cache de instâncias em memória e tratamento defensivo de erros
+- [ ] 2.3 [GREEN] Implementar a classe `ConstrutorCaminhoTrajeto` em `frontend/lib/utils/construtor_caminho_trajeto.dart` atendendo aos testes unitários e respeitando o isolamento arquitetural
 
-## 3. Geometria de Linhas e Parsing de Áreas
+## 3. Geometria de Linhas e Parser de Áreas (TDD)
 
-- [ ] 3.1 Adicionar testes unitários em `frontend/test/pages/mapa_interativo_test.dart` para `AreaHelper.getAreaInfo` com `ponto.linha`, verificando bounds e polígono envolvente
-- [ ] 3.2 Implementar o suporte a `Mapa_PontoDeInteresse_TipoArea.linha` no `AreaHelper.getAreaInfo` em `frontend/lib/pages/mapa_interativo.dart`
+- [ ] 3.1 [RED] Escrever testes unitários em `frontend/test/pages/mapa_interativo_test.dart` para `AreaHelper.getAreaInfo` com `ponto.linha`, verificando limites (bounds AABB) e geometria correspondente
+- [ ] 3.2 [GREEN] Implementar o tratamento de `Mapa_PontoDeInteresse_TipoArea.linha` no `AreaHelper.getAreaInfo` em `frontend/lib/pages/mapa_interativo.dart`
 
-## 4. Detecção Ergonômica de Toques (Hit-Testing)
+## 4. Testes de Widget e Interatividade de Toque (Widget-First & TDD)
 
-- [ ] 4.1 Escrever testes unitários para `MarkerPainter.hitTest` avaliando toques próximos à curva (distância <= 16dp -> true) e toques distantes (distância > 16dp -> false)
-- [ ] 4.2 Implementar no `MarkerPainter.hitTest` o cálculo de distância euclidiana a segmentos de reta da curva aproximada para caminhos abertos de linha
+- [ ] 4.1 [RED] Escrever testes de widget em `frontend/test/pages/mapa_interativo_test.dart` simulando toques do usuário em curvas abertas: toque dentro da tolerância de 16dp seleciona a via; toque fora da tolerância dentro da caixa delimitadora não seleciona e propaga toque para o mapa
+- [ ] 4.2 [RED] Escrever testes unitários para o método `MarkerPainter.hitTest` avaliando o algoritmo de distância euclidiana a segmentos da curva
+- [ ] 4.3 [GREEN] Implementar no `MarkerPainter.hitTest` a detecção ergonômica de proximidade por segmentos de reta aproximados para traçados de linha aberta
 
-## 5. Renderização em Camadas, Destaque e Pulso
+## 5. Renderização em Camadas, Destaque e Pulso Visual (Widget-First & TDD)
 
-- [ ] 5.1 Escrever testes de widget e pintura para traçados vetoriais cobrindo halo de seleção, casing de contraste, cor personalizada (`ponto.cor`), marcadores e pulso de advertência (`highlightIntensity`)
-- [ ] 5.2 Implementar a renderização em camadas no `MarkerPainter.paint` para linhas (halo blur, casing, traço principal e marcadores compilados)
-- [ ] 5.3 Integrar o suporte à cor hexadecimal personalizada (`ponto.cor`) no pintor e widgets do mapa
+- [ ] 5.1 [RED] Escrever testes de widget em `frontend/test/pages/mapa_interativo_test.dart` verificando que a via selecionada renderiza halo de destaque difuso com blur, contorno de contraste e marcadores tipados
+- [ ] 5.2 [RED] Escrever testes de widget verificando que linhas não selecionadas ganham halo luminoso pulsante quando o usuário toca no vazio (`highlightIntensity > 0`)
+- [ ] 5.3 [GREEN] Implementar a pintura em camadas (halo de blur, casing, traço principal e marcadores compilados) no `MarkerPainter.paint`
+- [ ] 5.4 [GREEN] Integrar o suporte à cor hexadecimal customizada (`ponto.cor`) na pintura do traçado e bordas
 
-## 6. Enquadramento de Câmera e Auto-Zoom Adaptativo
+## 6. Enquadramento de Câmera e Auto-Zoom Adaptativo (Widget-First & TDD)
 
-- [ ] 6.1 Criar testes de widget para `_zoomToPoints` validando enquadramento por caixa delimitadora para vias compostas por linhas vetoriais (incluso via com único ponto de linha)
-- [ ] 6.2 Atualizar o método `_zoomToPoints` em `frontend/lib/pages/mapa_interativo.dart` para aplicar zoom por Bounding Box quando a rota possuir elemento de linha
+- [ ] 6.1 [RED] Escrever testes de widget em `frontend/test/pages/mapa_interativo_test.dart` validando que a seleção de uma via com traçado vetorial aplica o enquadramento por caixa delimitadora cobrindo toda a rota da base ao topo (mesmo com um único elemento de linha)
+- [ ] 6.2 [GREEN] Atualizar a lógica de `_zoomToPoints` em `frontend/lib/pages/mapa_interativo.dart` para aplicar zoom por Bounding Box quando houver elemento do tipo linha
 
-## 7. Verificação Final e Documentação
+## 7. Documentação, Cobertura Integral e Validação Final
 
-- [ ] 7.1 Executar a suíte completa de testes com `flutter test` garantindo 100% de aprovação e sem regressões em croquis legados
-- [ ] 7.2 Documentar métodos, widgets e classes com docstrings em português e atualizar os arquivos `README.md` pertinentes
+- [ ] 7.1 Adicionar docstrings em blocos `///` em todos os métodos, classes e widgets novos ou alterados, explicitando intenções e rationale arquitetural
+- [ ] 7.2 Atualizar o arquivo de documentação arquitetural `frontend/lib/README.md` descrevendo o subsistema de traçados vetoriais e sua barreira de isolamento
+- [ ] 7.3 Executar a suíte completa de testes com `flutter test --coverage` garantindo 100% de cobertura nos arquivos modificados/criados e zero regressões em croquis legados

@@ -5,7 +5,7 @@ Adaptação dos comportamentos de parser geométrico, enquadramento de câmera e
 ## MODIFIED Requirements
 
 ### Requirement: O parser de áreas deve usar a nomenclatura da v4
-The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circulo, retangulo, poligono, quadrado, linha.
+O sistema DEVE processar geometrias de `PontoDeInteresse` utilizando o vocabulário: circulo, retangulo, poligono, quadrado, linha.
 
 #### Scenario: Parsing circulo
 - **WHEN** point type is circulo
@@ -24,11 +24,11 @@ The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circ
 - **THEN** it generates a square polygon based on x, y and lado without rotation
 
 #### Scenario: Parsing linha
-- **WHEN** point type is linha
-- **THEN** it resolves the bounding box from pre-calculated `caixa_delimitadora` or the SVG path bounds, generating the encompassing AABB and curve geometry
+- **WHEN** o tipo do ponto de interesse for `linha`
+- **THEN** o `AreaHelper.getAreaInfo` resolve os limites espaciais a partir da `caixa_delimitadora` pré-calculada ou das dimensões do próprio `Path`, gerando a caixa delimitadora envolvente (AABB) e a geometria correspondente
 
 ### Requirement: Enquadramento de Rotas com Múltiplos Pontos (Caixa Delimitadora)
-The system SHALL calcular a escala e translação necessárias para enquadrar simultaneamente toda a extensão da via no viewport visível com margens confortáveis ao selecionar uma via, quer ela seja composta por múltiplos marcadores pontuais ou por uma ou mais linhas vetoriais.
+O sistema DEVE calcular a escala e a translação necessárias para enquadrar simultaneamente toda a extensão da via no viewport visível com margens confortáveis ao selecionar uma via, quer ela seja composta por múltiplos marcadores pontuais ou por uma ou mais linhas vetoriais.
 
 #### Scenario: Seleção de via com múltiplos pontos distantes
 - **WHEN** o usuário seleciona uma via composta por múltiplos marcadores (início e fim)
@@ -36,14 +36,14 @@ The system SHALL calcular a escala e translação necessárias para enquadrar si
 - **THEN** a câmera ajusta o zoom e a posição para que todos os pontos da via fiquem visíveis na tela
 
 #### Scenario: Seleção de via composta por linha vetorial
-- **WHEN** o usuário seleciona uma via com traçado em linha vetorial (mesmo com um único elemento de linha)
-- **THEN** o sistema aplica o enquadramento por caixa delimitadora cobrindo a altura e largura completas do trajeto
+- **WHEN** o usuário seleciona uma via com traçado em linha vetorial (mesmo com um único elemento de linha no croqui)
+- **THEN** o sistema aplica o enquadramento por caixa delimitadora cobrindo a altura e a largura completas do trajeto
 - **THEN** a câmera preserva margens adequadas acima do card inferior de informações
 
 ## ADDED Requirements
 
 ### Requirement: Detecção Precisa de Toques ao Longo da Linha (Hit-Testing)
-The system SHALL detectar toques do usuário em qualquer ponto ao longo de uma curva de traçado vetorial aberta, considerando uma tolerância ergonômica de proximidade física para toques na tela (~16dp).
+O `MarkerPainter` DEVE detectar toques do usuário em qualquer ponto ao longo de uma curva de traçado vetorial aberta, considerando uma tolerância ergonômica de proximidade física para toques com o dedo (~16dp).
 
 #### Scenario: Toque próximo ao traçado da via
 - **WHEN** o usuário toca a uma distância menor ou igual a 16dp de qualquer trecho da linha vetorial
