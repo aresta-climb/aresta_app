@@ -17,6 +17,7 @@ class ServicoCroquiOnline {
   final GerenciadorSessaoOnline _sessaoOnline;
   final String? _caminhoCacheVolatil;
   final bool Function(String picoId)? _verificarPicoBaixado;
+  final void Function(String picoId, Croqui croqui)? _aoAtualizarCroqui;
 
   final Map<String, Timer> _timersPolling = {};
 
@@ -25,10 +26,12 @@ class ServicoCroquiOnline {
     required GerenciadorSessaoOnline sessaoOnline,
     String? caminhoCacheVolatil,
     bool Function(String picoId)? verificarPicoBaixado,
+    void Function(String picoId, Croqui croqui)? aoAtualizarCroqui,
   })  : _client = client ?? http.Client(),
         _sessaoOnline = sessaoOnline,
         _caminhoCacheVolatil = caminhoCacheVolatil,
-        _verificarPicoBaixado = verificarPicoBaixado;
+        _verificarPicoBaixado = verificarPicoBaixado,
+        _aoAtualizarCroqui = aoAtualizarCroqui;
 
 
   /// Obtém o diretório de cache temporário volátil do sistema operacional.
@@ -54,19 +57,7 @@ class ServicoCroquiOnline {
         final bytes = response.bodyBytes;
 
         final croqui = Croqui.fromBuffer(bytes);
-
-        // Salva cópia no cache temporário volátil
-        try {
-          final cacheDir = await _obterDiretorioCache();
-          final picoCacheDir = Directory('$cacheDir/$picoId');
-          if (!await picoCacheDir.exists()) {
-            await picoCacheDir.create(recursive: true);
-          }
-          final cacheFile = File('${picoCacheDir.path}/$picoId.binarypb');
-          await cacheFile.writeAsBytes(bytes);
-        } catch (e) {
-          debugPrint('[ServicoCroquiOnline] Aviso: falha ao gravar cache volátil: $e');
-        }
+        await _salvarEmCacheVolatil(picoId, bytes);
 
         _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: etag);
         return croqui;
@@ -84,11 +75,50 @@ class ServicoCroquiOnline {
     return null;
   }
 
+  /// Recarrega sob demanda o `.binarypb` de um croqui forçando bypass de cache HTTP com timestamp.
+  ///
+  /// Garante que proxies e CDNs intermediários não entreguem versões obsoletas durante eventos de recarga.
+  Future<Croqui?> recarregarCroquiOnline(
+    String url, {
+    required String picoId,
+  }) async {
+    try {
+      final uri = Uri.parse(url);
+      final queryParams = Map<String, String>.from(uri.queryParameters);
+      queryParams['t'] = DateTime.now().millisecondsSinceEpoch.toString();
+      final urlBypass = uri.replace(queryParameters: queryParams).toString();
+
+      return await carregarCroquiRemoto(urlBypass, picoId: picoId);
+    } catch (e) {
+      AppLogger.instance.logError(
+        '[ServicoCroquiOnline] Erro ao recarregar croqui online $picoId',
+        error: e,
+      );
+      return null;
+    }
+  }
+
+  /// Salva uma cópia binária do croqui no diretório de cache volátil do sistema operacional.
+  Future<void> _salvarEmCacheVolatil(String picoId, Uint8List bytes) async {
+    try {
+      final cacheDir = await _obterDiretorioCache();
+      final picoCacheDir = Directory('$cacheDir/$picoId');
+      if (!await picoCacheDir.exists()) {
+        await picoCacheDir.create(recursive: true);
+      }
+      final cacheFile = File('${picoCacheDir.path}/$picoId.binarypb');
+      await cacheFile.writeAsBytes(bytes);
+    } catch (e) {
+      debugPrint('[ServicoCroquiOnline] Aviso: falha ao gravar cache volátil: $e');
+    }
+  }
+
   /// Executa uma verificação leve com cabeçalho `If-None-Match: <etag>` para checar atualizações remotas.
   Future<bool> verificarAtualizacaoEtag(
     String picoId,
-    String url,
-  ) async {
+    String url, {
+    void Function(String picoId, Croqui croqui)? aoAtualizar,
+  }) async {
     // Se o pico já está baixado no armazenamento local, cancela o polling e não faz requisição de rede
     if (_verificarPicoBaixado != null && _verificarPicoBaixado(picoId)) {
       cancelarPolling(picoId);
@@ -120,6 +150,19 @@ class ServicoCroquiOnline {
         final novoEtag = response.headers['etag'] ?? '';
         debugPrint('[ServicoCroquiOnline] ETag 200 Nova versão detectada para $picoId ($novoEtag)');
         _sessaoOnline.registrarAtualizacaoPendente(picoId, novoEtag);
+
+        final bytes = response.bodyBytes;
+        if (bytes.isNotEmpty) {
+          try {
+            final croqui = Croqui.fromBuffer(bytes);
+            await _salvarEmCacheVolatil(picoId, bytes);
+            _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: novoEtag);
+            _aoAtualizarCroqui?.call(picoId, croqui);
+            aoAtualizar?.call(picoId, croqui);
+          } catch (e) {
+            debugPrint('[ServicoCroquiOnline] Erro ao desserializar croqui atualizado no ETag: $e');
+          }
+        }
         return true;
       }
     } catch (e) {
@@ -133,6 +176,7 @@ class ServicoCroquiOnline {
     String picoId,
     String url, {
     Duration intervalo = const Duration(seconds: 30),
+    void Function(String picoId, Croqui croqui)? aoAtualizar,
   }) {
     cancelarPolling(picoId);
 
@@ -142,8 +186,8 @@ class ServicoCroquiOnline {
       return;
     }
 
-    _timersPolling[picoId] = Timer.periodic(intervalo, (_) {
-      verificarAtualizacaoEtag(picoId, url);
+    _timersPolling[picoId] = Timer.periodic(intervalo, (_) async {
+      await verificarAtualizacaoEtag(picoId, url, aoAtualizar: aoAtualizar);
     });
   }
 

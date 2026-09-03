@@ -22,6 +22,8 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
   @override
   final GerenciadorSessaoOnline gerenciadorSessaoOnline = GerenciadorSessaoOnline();
   @override
+  final ValueNotifier<String?> notificadorCroquiAtualizado = ValueNotifier(null);
+  @override
   late final EditorDeCroqui editorDeCroqui;
 
   FakeDatasetRepository(this.editorDeCroqui) {

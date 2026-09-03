@@ -2,12 +2,30 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/dataset/sessao_online/gerenciador_sessao_online.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+}
 
 class MockHttpClient extends Mock implements http.Client {}
 
@@ -257,6 +275,171 @@ void main() {
       expect(resultado, isFalse);
       expect(servico.isPollingAtivo('pico_sem_sessao'), isFalse);
       verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+    });
+
+    test('verificarAtualizacaoEtag com 200 processa bytes, atualiza sessão online e grava em cache volátil', () async {
+      sessaoOnline.registrarCroquiOnline(
+        'pico_1',
+        Croqui(id: 'pico_1', nome: 'Pedra Velha'),
+        etag: '"etag_antigo"',
+      );
+
+      final croquiAtualizado = Croqui(id: 'pico_1', nome: 'Pedra Nova');
+      when(() => mockClient.get(
+            any(),
+            headers: {'If-None-Match': '"etag_antigo"'},
+          )).thenAnswer(
+        (_) async => http.Response.bytes(
+          croquiAtualizado.writeToBuffer(),
+          200,
+          headers: {'etag': '"etag_novo"'},
+        ),
+      );
+
+      final houveAtualizacao = await servico.verificarAtualizacaoEtag(
+        'pico_1',
+        'https://servidor.com/pico_1.binarypb',
+      );
+
+      expect(houveAtualizacao, isTrue);
+      // Deve ter atualizado o croqui diretamente em memória
+      expect(sessaoOnline.obterCroquiOnline('pico_1')?.nome, equals('Pedra Nova'));
+      expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_novo"'));
+
+      // Deve ter salvo cópia no cache volátil
+      final arquivoCache = File('${tempDir.path}/pico_1/pico_1.binarypb');
+      expect(await arquivoCache.exists(), isTrue);
+      expect(await arquivoCache.readAsBytes(), equals(croquiAtualizado.writeToBuffer()));
+    });
+
+    test('recarregarCroquiOnline baixa com bypass de cache (?t=) e atualiza sessão online', () async {
+      sessaoOnline.registrarCroquiOnline(
+        'pico_1',
+        Croqui(id: 'pico_1', nome: 'Pedra Antes'),
+        etag: '"etag_1"',
+      );
+
+      final croquiRecarregado = Croqui(id: 'pico_1', nome: 'Pedra Recarregada');
+      when(() => mockClient.get(
+            any(that: predicate<Uri>((uri) => uri.queryParameters.containsKey('t'))),
+          )).thenAnswer(
+        (_) async => http.Response.bytes(
+          croquiRecarregado.writeToBuffer(),
+          200,
+          headers: {'etag': '"etag_2"'},
+        ),
+      );
+
+      final resultado = await servico.recarregarCroquiOnline(
+        'https://servidor.com/croquis/pico_1.binarypb',
+        picoId: 'pico_1',
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado?.nome, equals('Pedra Recarregada'));
+      expect(sessaoOnline.obterCroquiOnline('pico_1')?.nome, equals('Pedra Recarregada'));
+      expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_2"'));
+
+      final arquivoCache = File('${tempDir.path}/pico_1/pico_1.binarypb');
+      expect(await arquivoCache.exists(), isTrue);
+      expect(await arquivoCache.readAsBytes(), equals(croquiRecarregado.writeToBuffer()));
+    });
+
+    test('usa getTemporaryDirectory quando caminhoCacheVolatil for nulo', () async {
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      final servicoPadrao = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: sessaoOnline,
+      );
+
+      final croquiMock = Croqui(id: 'pico_default', nome: 'Pedra Default');
+      when(() => mockClient.get(any())).thenAnswer(
+        (_) async => http.Response.bytes(croquiMock.writeToBuffer(), 200),
+      );
+
+      final res = await servicoPadrao.carregarCroquiRemoto(
+        'https://servidor.com/croqui.binarypb',
+        picoId: 'pico_default',
+      );
+      expect(res, isNotNull);
+      expect(res?.nome, equals('Pedra Default'));
+      servicoPadrao.dispose();
+    });
+
+    test('recarregarCroquiOnline retorna null se ocorrer exceção ao processar URL', () async {
+      final resultado = await servico.recarregarCroquiOnline(
+        '::url-invalida::',
+        picoId: 'pico_invalido',
+      );
+      expect(resultado, isNull);
+    });
+
+    test('verificarAtualizacaoEtag com 200 e bytes corrompidos trata exceção e retorna true', () async {
+      sessaoOnline.registrarCroquiOnline('pico_corrompido', Croqui(id: 'pico_corrompido'), etag: '"etag_1"');
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer(
+        (_) async => http.Response.bytes(Uint8List.fromList([255, 255, 255]), 200, headers: {'etag': '"etag_2"'}),
+      );
+
+      final resultado = await servico.verificarAtualizacaoEtag(
+        'pico_corrompido',
+        'https://servidor.com/croqui.binarypb',
+      );
+
+      expect(resultado, isTrue);
+      expect(sessaoOnline.atualizacoesPendentes.value['pico_corrompido'], equals('"etag_2"'));
+    });
+
+    test('iniciarPollingEtag com callback aoAtualizar executa verificação no timer periódico', () async {
+      sessaoOnline.registrarCroquiOnline('pico_timer', Croqui(id: 'pico_timer', nome: 'Pedra Timer'), etag: '"etag_1"');
+      final novoCroqui = Croqui(id: 'pico_timer', nome: 'Pedra Timer Nova');
+
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer(
+        (_) async => http.Response.bytes(novoCroqui.writeToBuffer(), 200, headers: {'etag': '"etag_2"'}),
+      );
+
+      bool callbackChamado = false;
+      servico.iniciarPollingEtag(
+        'pico_timer',
+        'https://servidor.com/croqui.binarypb',
+        intervalo: const Duration(milliseconds: 20),
+        aoAtualizar: (id, croqui) {
+          callbackChamado = true;
+        },
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(callbackChamado, isTrue);
+      servico.cancelarPolling('pico_timer');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+
+    test('instanciação padrão usa http.Client() padrão', () {
+      final s = ServicoCroquiOnline(sessaoOnline: sessaoOnline);
+      expect(s, isNotNull);
+      s.dispose();
+    });
+
+    test('_salvarEmCacheVolatil trata exceção ao falhar gravação em disco', () async {
+      final arquivoFalso = File('${tempDir.path}/bloqueio');
+      await arquivoFalso.writeAsString('bloqueado');
+
+      final servicoComErroCache = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: arquivoFalso.path,
+      );
+
+      final croquiMock = Croqui(id: 'pico_erro_cache', nome: 'Pedra Erro Cache');
+      when(() => mockClient.get(any())).thenAnswer(
+        (_) async => http.Response.bytes(croquiMock.writeToBuffer(), 200),
+      );
+
+      final res = await servicoComErroCache.carregarCroquiRemoto(
+        'https://servidor.com/croqui.binarypb',
+        picoId: 'sub_bloqueio',
+      );
+      expect(res, isNotNull);
+      servicoComErroCache.dispose();
     });
   });
 }

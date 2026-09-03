@@ -9,6 +9,8 @@ import '../view_functions/common_functions.dart';
 import '../pages/qr_scanner.dart';
 import '../services/http/sync_service.dart';
 import '../services/http/servico_download_segundo_plano.dart';
+import '../services/http/servico_croqui_online.dart';
+import '../main.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
@@ -48,6 +50,7 @@ Future<bool> conectarEditor(
   EditorDeCroqui configService,
   String url, {
   http.Client? client,
+  SyncService? syncService,
 }) async {
   if (url.isEmpty) return false;
 
@@ -83,11 +86,12 @@ Future<bool> conectarEditor(
         url: checkUrl,
         forceResetTimer: false,
       );
-      final syncService = SyncService(
-        datasetRepository: datasetRepo,
-        client: httpClient,
-      );
-      await syncService.syncIndex();
+      final servicoSync = syncService ??
+          SyncService(
+            datasetRepository: datasetRepo,
+            client: httpClient,
+          );
+      await servicoSync.syncIndex();
       await datasetRepo.init();
 
       // Auto-download imediato se houver exatamente 1 croqui no índice
@@ -95,11 +99,30 @@ Future<bool> conectarEditor(
       if (croquis.length == 1) {
         final resumo = croquis.first;
         try {
-          await ServicoDownloadSegundoPlano(syncService: syncService)
+          await ServicoDownloadSegundoPlano(syncService: servicoSync)
               .executarDownload(resumo);
           await datasetRepo.init();
         } catch (e) {
           debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
+        }
+
+        // Se o download não completou offline (ex: streaming/remoto), garante disponibilidade na sessão online
+        if (!datasetRepo.isPicoDownloaded(resumo.id)) {
+          try {
+            final baseUrl = datasetRepo.editorDeCroqui.activeBaseUrl;
+            final relPath = resumo.caminhoRelativo.isNotEmpty
+                ? resumo.caminhoRelativo
+                : '${resumo.id}.binarypb';
+            final croquiUrl = '$baseUrl/$relPath';
+            final servicoOnline = ServicoCroquiOnline(
+              client: httpClient,
+              sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
+            );
+            await servicoOnline.carregarCroquiRemoto(croquiUrl, picoId: resumo.id);
+            datasetRepo.notificarAtualizacaoSessaoOnline(resumo.id);
+          } catch (e) {
+            debugPrint('[conectarEditor] Falha ao carregar na sessão online: $e');
+          }
         }
       }
 
@@ -148,7 +171,10 @@ void mostrarDialogConexao(
   BuildContext context,
   DatasetRepository datasetRepo, {
   String? titulo,
+  http.Client? client,
+  SyncService? syncService,
 }) {
+  final BuildContext parentContext = context;
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
   // Inicia vazio, pois a URL atual já é exibida na interface de configurações
   final TextEditingController urlController = TextEditingController();
@@ -156,10 +182,10 @@ void mostrarDialogConexao(
   final brandColor = const Color(0xFFC04F34);
 
   showDialog(
-    context: context,
-    builder: (context) {
+    context: parentContext,
+    builder: (dialogContext) {
       return StatefulBuilder(
-        builder: (context, setDialogState) {
+        builder: (dialogContext, setDialogState) {
           return AlertDialog(
             backgroundColor: context.colors.caveShadow,
             shape: RoundedRectangleBorder(
@@ -308,7 +334,7 @@ void mostrarDialogConexao(
                     if (isLoading) {
                       return;
                     }
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                   child: Text(
                     'CANCELAR',
@@ -321,7 +347,7 @@ void mostrarDialogConexao(
                 ),
               ),
               Builder(
-                builder: (context) {
+                builder: (buttonContext) {
                   VoidCallback? onConnect;
                   if (isLoading) {
                     onConnect = null;
@@ -333,21 +359,28 @@ void mostrarDialogConexao(
                       setDialogState(() => isLoading = true);
 
                       final success = await conectarEditor(
-                        context,
+                        dialogContext,
                         datasetRepo,
                         configService,
                         url,
+                        client: client,
+                        syncService: syncService,
                       );
-
-                      if (context.mounted) {
+                      if (dialogContext.mounted) {
                         setDialogState(() => isLoading = false);
                         if (success) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Conectado ao repositório editor!'),
-                            ),
-                          );
+                          Navigator.of(dialogContext).pop();
+                          final navContext =
+                              TreeNavigationWrapper.navKey.currentContext ??
+                              parentContext;
+                          navegarAposConexaoExperimental(navContext, datasetRepo);
+                          if (navContext.mounted) {
+                            ScaffoldMessenger.of(navContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Conectado ao repositório editor!'),
+                              ),
+                            );
+                          }
                         }
                       }
                     };
@@ -610,9 +643,20 @@ Widget buildEditorCard({
                                           );
                                       await configService
                                           .activateExperimental();
-                                      if (context.mounted) {
+                                      await datasetRepo.init();
+                                      final navContext =
+                                          TreeNavigationWrapper
+                                              .navKey
+                                              .currentContext ??
+                                          (context.mounted ? context : null);
+                                      if (navContext != null &&
+                                          navContext.mounted) {
+                                        navegarAposConexaoExperimental(
+                                          navContext,
+                                          datasetRepo,
+                                        );
                                         ScaffoldMessenger.of(
-                                          context,
+                                          navContext,
                                         ).showSnackBar(
                                           const SnackBar(
                                             content: Text(

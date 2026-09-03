@@ -26,6 +26,7 @@ import 'package:frontend/view_functions/common_functions.dart';
 import 'widgets/text_carousel_modal_content.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
@@ -133,12 +134,17 @@ void main() async {
   );
 }
 
+/// Registra ouvintes para eventos de Live Reload emitidos pelo Editor Desktop via WebSocket.
+///
+/// Dispara a sincronização do índice, inicialização do repositório local e recarrega
+/// sob demanda qualquer croqui atualmente aberto em sessão online com quebra de cache HTTP.
 @visibleForTesting
 void registrarOuvintesLiveReload(
   EditorDeCroqui editor,
   DatasetRepository datasetRepo,
-  SyncService syncService,
-) {
+  SyncService syncService, {
+  ServicoCroquiOnline? servicoCroquiOnline,
+}) {
   editor.eventoLiveReload.addListener(() async {
     final evento = editor.eventoLiveReload.value;
     if (evento != null) {
@@ -147,6 +153,26 @@ void registrarOuvintesLiveReload(
       );
       await syncService.syncIndex();
       await datasetRepo.init();
+
+      // Recarrega sob demanda croquis que estejam abertos em sessão online
+      final servicoOnline = servicoCroquiOnline ??
+          ServicoCroquiOnline(sessaoOnline: datasetRepo.gerenciadorSessaoOnline);
+      final croquisOnlineIds =
+          datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.keys.toList();
+      for (final picoId in croquisOnlineIds) {
+        final picosDisponiveis =
+            datasetRepo.activeDataset.value?.picosDisponiveis ?? [];
+        final picoItem = picosDisponiveis.firstWhere(
+          (p) => p['id'] == picoId,
+          orElse: () => <String, dynamic>{},
+        );
+        final url = picoItem['url']?.toString();
+        if (url != null && url.isNotEmpty) {
+          await servicoOnline.recarregarCroquiOnline(url, picoId: picoId);
+          datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+        }
+      }
+
       debugPrint(
         '⚡ [LiveReload] Sincronização automática concluída!',
       );
@@ -436,6 +462,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     treeController = widget.treeController ?? TreeNavigationController();
     treeController.addListener(_onNodeChanged);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
+    widget.datasetRepo.notificadorCroquiAtualizado.addListener(_onCroquiOnlineAtualizado);
   }
 
   FeedbackController? _feedbackController;
@@ -470,10 +497,28 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   @override
   void dispose() {
     _feedbackController?.removeListener(_onFeedbackChanged);
+    widget.datasetRepo.notificadorCroquiAtualizado.removeListener(_onCroquiOnlineAtualizado);
     widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);
     treeController.removeListener(_onNodeChanged);
     treeController.dispose();
     super.dispose();
+  }
+
+  void _onCroquiOnlineAtualizado() {
+    final nomeOuId = widget.datasetRepo.notificadorCroquiAtualizado.value;
+    if (nomeOuId == null || !mounted) return;
+
+    final isExperimental =
+        widget.datasetRepo.editorDeCroqui.isExperimentalMode.value;
+    if (!isExperimental) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('O guia de $nomeOuId foi atualizado!'),
+          backgroundColor: context.colors.dryMoss,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   void _onSyncStatusChanged() {

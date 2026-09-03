@@ -10,11 +10,38 @@ import 'package:frontend/view_functions/settings_functions.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/sync_isolate.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/theme/theme_controller.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
+import 'package:geolocator/geolocator.dart';
+import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
+
+class FakePathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  FakePathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+}
+
+class MockGerenciadorNotificacaoDownload extends Mock
+    implements GerenciadorNotificacaoDownload {}
 
 void main() {
   setUpAll(() {
@@ -65,20 +92,10 @@ void main() {
   group('conectarEditor', () {
     late DatasetRepository datasetRepo;
     late EditorDeCroqui configService;
-    late HttpServer server;
-    late String serverUrl;
 
     setUp(() async {
       configService = EditorDeCroqui();
       datasetRepo = DatasetRepository(editorDeCroqui: configService);
-
-      // Setup a local HTTP server to mock responses
-      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      serverUrl = 'http://${server.address.address}:${server.port}';
-    });
-
-    tearDown(() async {
-      await server.close(force: true);
     });
 
     testWidgets('deve rejeitar URLs vazias', (WidgetTester tester) async {
@@ -165,12 +182,10 @@ void main() {
   group('buildEditorCard experimental mode tests', () {
     late EditorDeCroqui configService;
     late DatasetRepository datasetRepo;
-    late ThemeController themeController;
 
     setUp(() {
       configService = EditorDeCroqui();
       datasetRepo = DatasetRepository(editorDeCroqui: configService);
-      themeController = ThemeController();
       // Set to experimental mode
       configService.isExperimentalMode.value = true;
     });
@@ -350,6 +365,236 @@ void main() {
           (controller?.currentNode as PicoNode).cragId,
           'br_mg_igarape_pedra_grande',
         );
+      },
+    );
+  });
+
+  group('mostrarDialogConexao', () {
+    late DatasetRepository datasetRepo;
+    late EditorDeCroqui configService;
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('settings_dialog_test_');
+      PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
+      final mockNotificador = MockGerenciadorNotificacaoDownload();
+      when(() => mockNotificador.solicitarPermissoes()).thenAnswer((_) async => true);
+      when(() => mockNotificador.atualizarProgresso(any(), any(), any())).thenAnswer((_) async {});
+      when(() => mockNotificador.notificarConclusao(any(), any())).thenAnswer((_) async {});
+      when(() => mockNotificador.notificarFalha(any(), any())).thenAnswer((_) async {});
+      GerenciadorNotificacaoDownload.instancia = mockNotificador;
+      GeolocatorPlatform.instance = MockGeolocatorPlatform();
+
+      configService = EditorDeCroqui();
+      datasetRepo = DatasetRepository(editorDeCroqui: configService);
+    });
+
+    tearDown(() async {
+      await configService.nukeExperimentalData();
+      GerenciadorNotificacaoDownload.instancia = null;
+      try {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    testWidgets(
+      'ao conectar com sucesso com exatamente 1 croqui, deve fechar diálogo e navegar para PicoNode automaticamente',
+      (WidgetTester tester) async {
+        final croqui = Croqui(id: 'pico_unico', nome: 'Pedra Única');
+        croqui.picos.add(Pico(nome: 'Pedra Única'));
+
+        final indice = Indice();
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'pico_unico',
+            nome: 'Pedra Única',
+            caminhoRelativo: 'pico_unico.binarypb',
+          ),
+        );
+
+        final mockHttpClient = MockClient((request) async {
+          if (request.url.path.endsWith('indice.binarypb')) {
+            return http.Response.bytes(indice.writeToBuffer(), 200);
+          } else if (request.url.path.endsWith('pico_unico.binarypb')) {
+            return http.Response.bytes(croqui.writeToBuffer(), 200);
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepo,
+          client: mockHttpClient,
+        );
+        testSyncService.mockIsolateSpawn = (entryPoint, args) async {
+          args.sendPort.send(DownloadIsolateResult(
+            filesToDelete: [],
+            filesToRename: {},
+            newPicoDataBytes: croqui.writeToBuffer(),
+          ));
+        };
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: testSyncService,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        // Abre o diálogo de conexão passando o mock client e syncService
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          client: mockHttpClient,
+          syncService: testSyncService,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('CONECTAR'), findsOneWidget);
+
+        // Digita a URL do servidor
+        await tester.enterText(find.byType(TextField), 'http://editor.local:8000');
+        await tester.pump();
+
+        // Clica em CONECTAR
+        await tester.tap(find.text('CONECTAR'));
+        await tester.pump();
+
+        for (int i = 0; i < 100; i++) {
+          await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+          await tester.pump(const Duration(milliseconds: 100));
+          if (find.text('Conectar Editor').evaluate().isEmpty) {
+            break;
+          }
+        }
+
+        // O diálogo deve ter sido fechado
+        expect(find.text('Conectar Editor'), findsNothing);
+
+        // O controlador de navegação deve ter aberto o PicoNode automaticamente
+        final controller = TreeNavigationWrapper.currentTreeController;
+        expect(controller?.currentNode, isA<PicoNode>());
+        expect((controller?.currentNode as PicoNode).cragId, equals('pico_unico'));
+
+        // Desativa modo experimental para cancelar timers periódicos de contagem regressiva e de reconexão
+        await configService.nukeExperimentalData();
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
+
+    testWidgets(
+      'ao conectar com sucesso com múltiplos croquis, deve fechar diálogo e navegar para BrowseNode automaticamente',
+      (WidgetTester tester) async {
+        final indice = Indice();
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'pico_1',
+            nome: 'Pedra 1',
+            caminhoRelativo: 'pico_1.binarypb',
+          ),
+        );
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'pico_2',
+            nome: 'Pedra 2',
+            caminhoRelativo: 'pico_2.binarypb',
+          ),
+        );
+
+        final mockHttpClient = MockClient((request) async {
+          if (request.url.path.endsWith('indice.binarypb')) {
+            return http.Response.bytes(indice.writeToBuffer(), 200);
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepo,
+          client: mockHttpClient,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: testSyncService,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          client: mockHttpClient,
+          syncService: testSyncService,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.enterText(find.byType(TextField), 'http://editor.local:8000');
+        await tester.pump();
+
+        await tester.tap(find.text('CONECTAR'));
+        await tester.pump();
+
+        for (int i = 0; i < 100; i++) {
+          await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+          await tester.pump(const Duration(milliseconds: 100));
+          if (find.text('Conectar Editor').evaluate().isEmpty) {
+            break;
+          }
+        }
+
+        expect(find.text('Conectar Editor'), findsNothing);
+
+        final controller = TreeNavigationWrapper.currentTreeController;
+        expect(controller?.currentNode, isA<BrowseNode>());
+
+        await configService.nukeExperimentalData();
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
+
+    testWidgets(
+      'ao clicar em CANCELAR, deve fechar diálogo sem navegar nem conectar',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(pageContext, datasetRepo);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Conectar Editor'), findsOneWidget);
+
+        await tester.tap(find.text('CANCELAR'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Conectar Editor'), findsNothing);
+        expect(configService.isExperimentalMode.value, isFalse);
       },
     );
   });

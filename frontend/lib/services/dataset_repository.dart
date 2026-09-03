@@ -81,6 +81,31 @@ class DatasetRepository {
   /// Disparo para reiniciar a visualização do carrossel da Home.
   final ValueNotifier<int> homeResetTrigger = ValueNotifier(0);
 
+  /// Notificador reativo emitindo o nome ou identificador de um croqui online que acabou de ser atualizado para exibição na UI.
+  final ValueNotifier<String?> notificadorCroquiAtualizado = ValueNotifier(null);
+
+  /// Emite notificação para a interface exibir aviso amigável de que um croqui online foi atualizado.
+  void notificarCroquiOnlineAtualizadoNaUI(String nomeOuId) {
+    notificadorCroquiAtualizado.value = nomeOuId;
+  }
+
+  /// Notifica a interface do usuário e re-indexa mídias quando um croqui em sessão online é atualizado.
+  ///
+  /// Garante que novos hashes SHA-256 sejam conhecidos pelo provedor de imagem e que o
+  /// [PageListenableBuilder] reconstrua as páginas ativas com a versão mais recente em memória.
+  void notificarAtualizacaoSessaoOnline(String picoId) {
+    final croquiOnline = gerenciadorSessaoOnline.obterCroquiOnline(picoId);
+    if (croquiOnline != null) {
+      indexarMidiasDoCroqui(picoId, croquiOnline);
+    }
+    if (activeDataset.value != null) {
+      activeDataset.value = ConjuntoDadosCroqui(
+        picosDisponiveis: activeDataset.value!.picosDisponiveis,
+        picosBaixados: activeDataset.value!.picosBaixados,
+      );
+    }
+  }
+
   /// Tabela de dispersão interna indexando caminhos de mídias por pico: [picoId] -> {[caminho] -> [checksumSha256]}.
   final Map<String, Map<String, String>> _tabelaSha256PorPico = {};
 

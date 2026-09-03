@@ -582,6 +582,47 @@ void main() {
       expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_1'), isNull);
       expect(repo.gerenciadorSessaoOnline.obterEtag('pico_1'), isNull);
     });
+
+    test('notificarAtualizacaoSessaoOnline re-indexa mídias e atualiza activeDataset', () {
+      final croqui = Croqui(id: 'pico_online_1')
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'mapa_novo.webp',
+            checksumSha256: 'sha_novo_123',
+          ),
+        );
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croqui);
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosDisponiveis: [
+          {'id': 'pico_online_1', 'nome': 'Pico Online 1'},
+        ],
+        picosBaixados: [],
+      );
+
+      bool activeDatasetNotificou = false;
+      repo.activeDataset.addListener(() {
+        activeDatasetNotificou = true;
+      });
+
+      repo.notificarAtualizacaoSessaoOnline('pico_online_1');
+
+      expect(activeDatasetNotificou, isTrue);
+      expect(
+        repo.obterSha256DaMidia('pico_online_1', 'mapa_novo.webp'),
+        equals('sha_novo_123'),
+      );
+    });
+
+    test('notificarCroquiOnlineAtualizadoNaUI notifica notificadorCroquiAtualizado', () {
+      String? nomeNotificado;
+      repo.notificadorCroquiAtualizado.addListener(() {
+        nomeNotificado = repo.notificadorCroquiAtualizado.value;
+      });
+
+      repo.notificarCroquiOnlineAtualizadoNaUI('Pedra do Baú');
+
+      expect(nomeNotificado, equals('Pedra do Baú'));
+    });
   });
 }
 

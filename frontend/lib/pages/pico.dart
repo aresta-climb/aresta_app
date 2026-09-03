@@ -76,7 +76,22 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         );
         final url = picoItem['url']?.toString();
         if (url != null && url.isNotEmpty) {
-          _servicoCroquiOnline.iniciarPollingEtag(widget.cragId, url);
+          _servicoCroquiOnline.iniciarPollingEtag(
+            widget.cragId,
+            url,
+            aoAtualizar: (picoId, croqui) {
+              widget.datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+              final isExperimental =
+                  widget.datasetRepo.editorDeCroqui.isExperimentalMode.value;
+              if (isExperimental) {
+                widget.datasetRepo.editorDeCroqui.dispararPulsoRecarregamento();
+              } else {
+                widget.datasetRepo.notificarCroquiOnlineAtualizadoNaUI(
+                  widget.pico.nome.isNotEmpty ? widget.pico.nome : picoId,
+                );
+              }
+            },
+          );
         }
       } catch (_) {}
     }

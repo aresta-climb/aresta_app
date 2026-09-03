@@ -11,10 +11,12 @@ import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -90,6 +92,8 @@ class MockDatasetRepository extends Mock implements DatasetRepository {}
 class MockSyncService extends Mock implements SyncService {}
 
 class MockWorkmanager extends Mock implements Workmanager {}
+
+class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}
 
 void main() {
   late Directory tempDir;
@@ -381,6 +385,58 @@ void main() {
       mockSync.lastSyncWasAuto.value = false;
       mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 2;
       mockSync.syncStatus.value = SyncStatus.justUpdated;
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MyApp exibe SnackBar amigável quando um croqui online é atualizado fora do modo experimental',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      mockRepo.editorDeCroqui.isExperimentalMode.value = false;
+      mockRepo.notificarCroquiOnlineAtualizadoNaUI('Pedra Grande');
+
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('O guia de Pedra Grande foi atualizado!'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'MyApp não exibe SnackBar quando um croqui online é atualizado em modo experimental',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      mockRepo.editorDeCroqui.isExperimentalMode.value = true;
+      mockRepo.notificarCroquiOnlineAtualizadoNaUI('Pedra Grande');
 
       await tester.pump();
 
@@ -706,6 +762,7 @@ void main() {
 
       when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
       when(() => mockDataset.init()).thenAnswer((_) async {});
+      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
 
       registrarOuvintesLiveReload(editorLocal, mockDataset, mockSyncSvc);
 
@@ -719,6 +776,57 @@ void main() {
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
       verify(() => mockDataset.init()).called(1);
+    });
+
+    test('registrarOuvintesLiveReload deve recarregar croquis ativos em sessão online ao receber eventoLiveReload', () async {
+      final mockDataset = MockDatasetRepository();
+      final mockSyncSvc = MockSyncService();
+      final mockServicoOnline = MockServicoCroquiOnline();
+      final editorLocal = EditorDeCroqui();
+
+      final sessaoOnline = GerenciadorSessaoOnline();
+      sessaoOnline.registrarCroquiOnline('pico_online_1', Croqui(id: 'pico_online_1'));
+
+      final datasetNotifier = ValueNotifier<ConjuntoDadosCroqui?>(
+        ConjuntoDadosCroqui(
+          picosBaixados: [],
+          picosDisponiveis: [
+            {'id': 'pico_online_1', 'url': 'https://servidor.com/croqui.binarypb'},
+          ],
+        ),
+      );
+
+      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(sessaoOnline);
+      when(() => mockDataset.activeDataset).thenReturn(datasetNotifier);
+      when(() => mockDataset.notificarAtualizacaoSessaoOnline('pico_online_1')).thenReturn(null);
+      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockDataset.init()).thenAnswer((_) async {});
+      when(() => mockServicoOnline.recarregarCroquiOnline(
+            any(),
+            picoId: any(named: 'picoId'),
+          )).thenAnswer((_) async => Croqui(id: 'pico_online_1'));
+
+      registrarOuvintesLiveReload(
+        editorLocal,
+        mockDataset,
+        mockSyncSvc,
+        servicoCroquiOnline: mockServicoOnline,
+      );
+
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'setor_1',
+        timestamp: DateTime.now(),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockDataset.init()).called(1);
+      verify(() => mockServicoOnline.recarregarCroquiOnline(
+            'https://servidor.com/croqui.binarypb',
+            picoId: 'pico_online_1',
+          )).called(1);
+      verify(() => mockDataset.notificarAtualizacaoSessaoOnline('pico_online_1')).called(1);
     });
   });
 

@@ -314,5 +314,52 @@ void main() {
         expect(find.text('Croqui Atualizado'), findsNothing);
       },
     );
+
+    testWidgets(
+      'Deve injetar o Pico da sessão online na UI e recarregar quando a sessão online for atualizada',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Online V1';
+        final croquiV1 = Croqui()..id = 'pico_online_1';
+        croquiV1.picos.add(picoV1);
+
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croquiV1);
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [],
+          picosDisponiveis: [
+            {'id': 'pico_online_1', 'nome': 'Pico Online V1'},
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_online_1',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Pico Online V1'), findsOneWidget);
+        expect(find.text('Pico Online V2'), findsNothing);
+
+        // Atualiza a sessão online com V2 e aciona notificação
+        final picoV2 = Pico()..nome = 'Pico Online V2';
+        final croquiV2 = Croqui()..id = 'pico_online_1';
+        croquiV2.picos.add(picoV2);
+
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croquiV2);
+        repo.notificarAtualizacaoSessaoOnline('pico_online_1');
+
+        await tester.pump();
+
+        expect(find.text('Pico Online V1'), findsNothing);
+        expect(find.text('Pico Online V2'), findsOneWidget);
+      },
+    );
   });
 }

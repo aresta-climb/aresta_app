@@ -6,9 +6,15 @@ Este documento foi criado para ajudar você a entender como o mecanismo de hot r
 
 O fluxo que faz a tela atualizar magicamente quando você salva algo no editor funciona em três etapas principais:
 
-1. **Sincronização:** O arquivo `.binarypb` (e/ou as imagens associadas) do Pico é atualizado na pasta de `downloads/` do aparelho.
-2. **Notificação de Repositório:** O `DatasetRepository` escuta o `EditorDeCroqui` ou o serviço de sincronização. Quando um pacote novo chega, o repositório processa o novo arquivo binário e atualiza o `ValueNotifier<TopoDataset?> activeDataset`.
+1. **Sincronização / Re-fetch:**
+   - Para **Croquis Baixados**: O arquivo `.binarypb` (e/ou as imagens associadas) do Pico é atualizado na pasta de `downloads/` do aparelho.
+   - Para **Sessões Online (Streaming sob demanda)**: O aplicativo executa um re-fetch imediato com quebra de cache HTTP (`?t=timestamp`), desserializa a nova instância do `Croqui`, atualiza o `GerenciadorSessaoOnline` e armazena uma cópia no cache volátil (`/temp_cache/`).
+2. **Notificação de Repositório:** O `DatasetRepository` escuta o `EditorDeCroqui`, o `SyncService` ou o polling de ETag de `ServicoCroquiOnline`. Ao detectar a nova versão, reindexa a tabela de dispersão $O(1)$ de mídias (`notificarAtualizacaoSessaoOnline`) e notifica o `ValueNotifier<TopoDataset?> activeDataset`.
 3. **Atualização Seamless da UI:** Quase todas as telas filhas do app (`PicoDetailsPage`, `SetorPage`, `ViaPage`, etc.) estão embrulhadas no `PageListenableBuilder`. Como esse builder escuta o `activeDataset`, qualquer alteração no repositório **é o suficiente para engatilhar um hot reload**. O Flutter chama o método `build()` da tela atual novamente, injetando os novos objetos. **Isso acontece de forma completamente invisível e seamless para o usuário**: ele continua na mesma tela, na mesma posição de scroll, mas vendo os dados atualizados em tempo real.
+
+### 4. Consistência de UX: Modo Experimental vs Modo Normal
+- **No Modo Experimental**: O recarregamento é 100% automático e silencioso (sem popups ou mensagens bloqueantes), acionando uma animação sutil de pulso luminoso no `BannerModoExperimental`.
+- **Fora do Modo Experimental (Produção)**: Quando uma atualização remota é detectada (ex: via polling periódico com ETag), a sessão online é atualizada e a interface exibe um aviso não intrusivo via `SnackBar` informando que o guia foi atualizado, em total simetria com a notificação já existente para croquis baixados.
 
 ---
 
