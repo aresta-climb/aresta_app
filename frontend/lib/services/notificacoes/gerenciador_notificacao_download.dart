@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -70,15 +71,20 @@ class GerenciadorNotificacaoDownload {
           canalProgressoNome,
           description: canalProgressoDescricao,
           importance: Importance.low,
+          playSound: false,
+          enableVibration: false,
         );
         await androidPlugin.createNotificationChannel(canalProgresso);
 
-        // Canal de conclusão: importância padrão para alertar o usuário quando terminar
-        const canalConclusao = AndroidNotificationChannel(
+        // Canal de conclusão: vibração discreta sem som alto
+        final canalConclusao = AndroidNotificationChannel(
           canalConclusaoId,
           canalConclusaoNome,
           description: canalConclusaoDescricao,
           importance: Importance.defaultImportance,
+          playSound: false,
+          enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 180]),
         );
         await androidPlugin.createNotificationChannel(canalConclusao);
       }
@@ -210,23 +216,30 @@ class GerenciadorNotificacaoDownload {
       // Cancela a notificação sticky anterior
       await _plugin.cancel(id: id);
 
-      const androidDetails = AndroidNotificationDetails(
+      final androidDetails = AndroidNotificationDetails(
         canalConclusaoId,
         canalConclusaoNome,
         channelDescription: canalConclusaoDescricao,
         subText: nomeApp,
         icon: iconePequeno,
-        largeIcon: DrawableResourceAndroidBitmap(iconeBitmapRaster),
+        largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
         ongoing: false, // Pode ser limpa (clearable)
         autoCancel: true, // Desaparece ao clicar
         showProgress: false, // Remove a barra de progresso
+        playSound: false,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 180]),
       );
 
-      const darwinDetails = DarwinNotificationDetails();
+      const darwinDetails = DarwinNotificationDetails(
+        presentSound: false,
+        presentAlert: true,
+        presentBadge: false,
+      );
 
-      const notificationDetails = NotificationDetails(
+      final notificationDetails = NotificationDetails(
         android: androidDetails,
         iOS: darwinDetails,
       );
@@ -234,7 +247,7 @@ class GerenciadorNotificacaoDownload {
       await _plugin.show(
         id: id,
         title: nomePico,
-        body: '✓ Download concluído! Salvo para uso offline.',
+        body: '✓ Croqui salvo para uso offline.',
         notificationDetails: notificationDetails,
       );
     } catch (e) {
@@ -263,23 +276,30 @@ class GerenciadorNotificacaoDownload {
       // Cancela a notificação contínua sticky anterior
       await _plugin.cancel(id: id);
 
-      const androidDetails = AndroidNotificationDetails(
+      final androidDetails = AndroidNotificationDetails(
         canalConclusaoId,
         canalConclusaoNome,
         channelDescription: canalConclusaoDescricao,
         subText: nomeApp,
         icon: iconePequeno,
-        largeIcon: DrawableResourceAndroidBitmap(iconeBitmapRaster),
+        largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
         importance: Importance.high,
         priority: Priority.high,
         ongoing: false,
         autoCancel: true,
         showProgress: false,
+        playSound: false,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 180]),
       );
 
-      const darwinDetails = DarwinNotificationDetails();
+      const darwinDetails = DarwinNotificationDetails(
+        presentSound: false,
+        presentAlert: true,
+        presentBadge: false,
+      );
 
-      const notificationDetails = NotificationDetails(
+      final notificationDetails = NotificationDetails(
         android: androidDetails,
         iOS: darwinDetails,
       );

@@ -168,7 +168,7 @@ void main() {
       final captured = verify(() => mockPlugin.show(
             id: notifId,
             title: 'Pedra Grande',
-            body: '✓ Download concluído! Salvo para uso offline.',
+            body: '✓ Croqui salvo para uso offline.',
             notificationDetails: captureAny(named: 'notificationDetails'),
             payload: any(named: 'payload'),
           )).captured;
@@ -179,6 +179,8 @@ void main() {
       expect(details.android?.ongoing, isFalse); // Clearable!
       expect(details.android?.autoCancel, isTrue);
       expect(details.android?.showProgress, isFalse);
+      expect(details.android?.playSound, isFalse);
+      expect(details.android?.enableVibration, isTrue);
       expect(details.android?.subText, equals('Aresta Climb'));
       expect(details.android?.largeIcon, isA<DrawableResourceAndroidBitmap>());
     });
