@@ -348,8 +348,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
     Pico pico,
     Croqui croqui,
     String cragId,
-    String picoNome,
-  ) {
+    String picoNome, {
+    bool isDownloaded = true,
+  }) {
     for (final sg in pico.setoresOuGrupos) {
       if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
         final setor = sg.setor.conteudo;
@@ -359,6 +360,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
             title: setor.nome,
             subtitle: 'Setor • $picoNome',
             icon: Icons.terrain,
+            isDownloaded: isDownloaded,
+            isPico: false,
             originalItem: setor,
             onTap: () {
               TelemetryService.instance.logAcaoCroqui(
@@ -395,6 +398,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
             pico,
             setor,
             croqui,
+            isDownloaded: isDownloaded,
           );
         }
       } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
@@ -408,6 +412,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 title: setor.nome,
                 subtitle: 'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
                 icon: Icons.terrain,
+                isDownloaded: isDownloaded,
+                isPico: false,
                 originalItem: setor,
                 onTap: () {
                   TelemetryService.instance.logAcaoCroqui(
@@ -444,6 +450,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 pico,
                 setor,
                 croqui,
+                isDownloaded: isDownloaded,
               );
             }
           }
@@ -459,8 +466,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
     String picoNome,
     Pico pico,
     Setor setor,
-    Croqui croqui,
-  ) {
+    Croqui croqui, {
+    bool isDownloaded = true,
+  }) {
     String escaladaNome = getEscaladaNome(escalada);
     String tipoStr = 'Via';
     IconData icon = Icons.trending_up;
@@ -495,12 +503,16 @@ class _GlobalSearchState extends State<GlobalSearch> {
         title: escaladaNome,
         subtitle: '$tipoStr$grauDisplay • ${setor.nome} • $picoNome',
         icon: icon,
+        isDownloaded: isDownloaded,
+        isPico: false,
         originalItem: escalada,
         onTap: () {
-          TelemetryService.instance.logAcaoCroqui(
+          TelemetryService.instance.logAcaoEscalada(
             cragId,
-            'abrir_croqui',
-            origem: 'busca_global',
+            'global',
+            escaladaNome,
+            'abrir_detalhes',
+            'busca_global',
           );
           if (Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
