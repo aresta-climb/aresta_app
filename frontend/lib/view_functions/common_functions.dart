@@ -596,6 +596,64 @@ Future<void> handleManualSync(
   }
 }
 
+/// Sincroniza o catálogo do aplicativo diretamente com o serving conectado (servidor CDN oficial ou local),
+/// garantindo que a lista de croquis disponíveis esteja na versão mais recente do serving.
+Future<void> handleSyncServing(
+  BuildContext context,
+  DatasetRepository datasetRepo,
+  SyncService syncService,
+) async {
+  if (await syncService.isNetworkDisabled()) {
+    if (context.mounted) {
+      showDeprecatedAppVersionSnackBar(context);
+    }
+    return;
+  }
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        const SnackBar(content: Text('Sincronizando com o serving...')),
+      );
+  }
+
+  final failed = await syncService.syncIndex(
+    auto: false,
+    forceBypassCache: true,
+  );
+
+  if (context.mounted) {
+    final status = syncService.syncStatus.value;
+    String message = '';
+    Color bgColor = context.colors.dryMoss;
+
+    if (status == SyncStatus.offline) {
+      message = 'Sem conexão com o serving.';
+      bgColor = Theme.of(context).colorScheme.error;
+    } else if (status == SyncStatus.error) {
+      message = 'Erro ao sincronizar com o serving. Tente novamente mais tarde.';
+      bgColor = Theme.of(context).colorScheme.error;
+    } else if (failed.isNotEmpty) {
+      message = 'Sincronizado com falhas em: ${failed.join(', ')}';
+      bgColor = Theme.of(context).colorScheme.error;
+    } else if (status == SyncStatus.justUpdated ||
+        status == SyncStatus.updated) {
+      message = 'Catálogo atualizado com o serving!';
+      bgColor = context.colors.dryMoss;
+    } else {
+      message = 'Catálogo já está na versão mais recente do serving.';
+      bgColor = context.colors.ashGrey;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: bgColor),
+      );
+  }
+}
+
 void showDeprecatedAppVersionSnackBar(BuildContext context) {
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
