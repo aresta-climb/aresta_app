@@ -123,6 +123,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
   }
 
   void _toggleExpand() {
+    if (Navigator.of(context).canPop() && _isExpanded) {
+      Navigator.of(context).pop();
+      return;
+    }
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
@@ -694,7 +698,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                     style: TextStyle(color: searchTextColor),
                     cursorColor: const Color(0xFFC04F34),
                     decoration: InputDecoration(
-                      hintText: 'Pesquisar em seus guias baixados...',
+                      hintText: 'Buscar picos, setores ou vias...',
                       hintStyle: TextStyle(
                         color: searchTextColor.withValues(alpha: 0.6),
                       ),
@@ -781,7 +785,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Dica: você também pode pesquisar por dificuldade (ex: 7a, V4)',
+                    'Dica: pesquise por picos, setores, vias ou graus (ex: 7a, V4)',
                     style: TextStyle(
                       color: context.colors.ashGrey,
                       fontSize: 11,
@@ -832,7 +836,9 @@ class _GlobalSearchState extends State<GlobalSearch> {
                       return ListTile(
                         leading: Icon(
                           item.icon,
-                          color: const Color(0xFFC04F34),
+                          color: item.isDownloaded
+                              ? context.colors.dryMoss
+                              : const Color(0xFFC04F34),
                         ),
                         title: Text(
                           item.title,
@@ -848,6 +854,17 @@ class _GlobalSearchState extends State<GlobalSearch> {
                             fontSize: 12,
                           ),
                         ),
+                        trailing: item.isDownloaded
+                            ? Icon(
+                                Icons.check_circle_outline,
+                                size: 16,
+                                color: context.colors.dryMoss,
+                              )
+                            : Icon(
+                                Icons.cloud_outlined,
+                                size: 16,
+                                color: context.colors.ashGrey,
+                              ),
                         onTap: () {
                           TelemetryService.instance.logAcaoEscalada(
                             'global_search',
