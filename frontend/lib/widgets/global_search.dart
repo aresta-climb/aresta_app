@@ -18,6 +18,8 @@ class GlobalSearchResult {
   final IconData icon;
   final VoidCallback onTap;
   final dynamic originalItem;
+  final bool isDownloaded;
+  final bool isPico;
 
   GlobalSearchResult({
     required this.title,
@@ -25,17 +27,21 @@ class GlobalSearchResult {
     required this.icon,
     required this.onTap,
     required this.originalItem,
+    this.isDownloaded = true,
+    this.isPico = false,
   });
 }
 
 class GlobalSearch extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final List<Map<String, dynamic>> downloadedPicos;
+  final bool autoFocus;
 
   const GlobalSearch({
     super.key,
     required this.datasetRepo,
     required this.downloadedPicos,
+    this.autoFocus = true,
   });
 
   @override
@@ -68,6 +74,16 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   void initState() {
     super.initState();
+    if (widget.autoFocus) {
+      _isExpanded = true;
+      _loadAllData();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    }
+
     _searchFocusNode.addListener(() {
       if (_searchFocusNode.hasFocus && !_hasLoadedData && !_isLoading) {
         _loadAllData();
