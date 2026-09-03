@@ -37,18 +37,18 @@ void main() {
 
     // Initial state: collapsed content should be visible
     expect(find.text('Designer'), findsOneWidget);
-    expect(find.text('Produto/Marketing'), findsOneWidget);
+    expect(find.text('Produto/\nMarketing'), findsOneWidget);
     expect(find.text('Backend'), findsOneWidget);
     expect(find.text('Frontend'), findsOneWidget);
   });
 
-  testWidgets('Tapping a quadrant expands to show detailed content', (WidgetTester tester) async {
+  testWidgets('Tapping a quadrant expands to show detailed content without description', (WidgetTester tester) async {
     setScreenSize(tester);
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
     // Tap on Eduardo (Frontend)
-    await tester.tap(find.text('Frontend'));
+    await tester.tap(find.text('Frontend'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     // After expanding, it should show GitHub and LinkedIn buttons if available
@@ -57,6 +57,9 @@ void main() {
     
     // The name text should be visible in detail view
     expect(find.text('EDUARDO UTSCH'), findsWidgets);
+
+    // Description paragraph should no longer be displayed
+    expect(find.textContaining('Desenvolvimento da interface'), findsNothing);
   });
 
   testWidgets('Tapping background when expanded collapses the quadrant', (WidgetTester tester) async {
@@ -65,7 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Expand Eduardo
-    await tester.tap(find.text('Frontend'));
+    await tester.tap(find.text('Frontend'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     // Verify it expanded (GitHub/LinkedIn buttons visible)
@@ -87,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Expand Lorena
-    await tester.tap(find.text('Designer'));
+    await tester.tap(find.text('Designer'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.text('LORENA CARLA'), findsWidgets);

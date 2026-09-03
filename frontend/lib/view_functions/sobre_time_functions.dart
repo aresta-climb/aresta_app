@@ -11,9 +11,13 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
   AlignmentGeometry align = Alignment.center;
   if (index == 0) {
     align = const Alignment(-0.424, -0.424);
-  } else if (index == 1) align = const Alignment(0.424, -0.424);
-  else if (index == 2) align = const Alignment(-0.424, 0.424);
-  else if (index == 3) align = const Alignment(0.424, 0.424);
+  } else if (index == 1) {
+    align = const Alignment(0.424, -0.424);
+  } else if (index == 2) {
+    align = const Alignment(-0.424, 0.424);
+  } else if (index == 3) {
+    align = const Alignment(0.424, 0.424);
+  }
 
   final bool isTopQuadrant = index == 0 || index == 1;
 
@@ -32,12 +36,13 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
     mainAxisSize: MainAxisSize.min,
     children: [
       Text(
-        data['role']!,
+        data['collapsedRole'] ?? data['role']!,
         style: TextStyle(
           color: context.colors.chalkWhite,
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
+          height: 1.15,
         ),
         textAlign: TextAlign.center,
       ),
@@ -79,39 +84,36 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
 }
 
 const List<Map<String, String>> teamData = [
-    {
-      'role': 'Designer',
-      'name': 'Lorena Carla',
-      'desc': 'Responsável por toda a identidade visual do app, prototipagem e criação de layouts.',
-      'linkedin': 'https://www.linkedin.com/in/lorenamelor/',
-      'github': '',
-      'image': 'assets/team/lorena.webp',
-    },
-    {
-      'role': 'Produto/Marketing',
-      'name': 'Evandro Jaconi',
-      'desc': 'Faz as pesquisas de persona, definições de visão de negócio e marketing do projeto.',
-      'linkedin': 'https://www.linkedin.com/in/evandrojaconi/',
-      'github': '',
-      'image': 'assets/team/evandro.webp',
-    },
-    {
-      'role': 'Backend',
-      'name': 'Renato Utsch',
-      'desc': 'Desenvolvimento de APIs, banco de dados, infraestrutura do servidor e auxilia a equipe de frontend.',
-      'linkedin': '',
-      'github': 'https://github.com/renatoutsch',
-      'image': 'assets/team/renato.webp',
-    },
-    {
-      'role': 'Frontend',
-      'name': 'Eduardo Utsch',
-      'desc': 'Desenvolvimento da interface do aplicativo, testes de integração e auxilia a equipe de backend.',
-      'linkedin': 'https://www.linkedin.com/in/eduardo-utsch-205745350/',
-      'github': 'https://github.com/eduardoutsch',
-      'image': 'assets/team/eduardo.webp',
-    },
-  ];
+  {
+    'role': 'Designer',
+    'name': 'Lorena Carla',
+    'linkedin': 'https://www.linkedin.com/in/lorenamelor/',
+    'github': '',
+    'image': 'assets/team/lorena.webp',
+  },
+  {
+    'role': 'Produto / Marketing',
+    'collapsedRole': 'Produto/\nMarketing',
+    'name': 'Evandro Jaconi',
+    'linkedin': 'https://www.linkedin.com/in/evandrojaconi/',
+    'github': '',
+    'image': 'assets/team/evandro.webp',
+  },
+  {
+    'role': 'Backend',
+    'name': 'Renato Utsch',
+    'linkedin': '',
+    'github': 'https://github.com/renatoutsch',
+    'image': 'assets/team/renato.webp',
+  },
+  {
+    'role': 'Frontend',
+    'name': 'Eduardo Utsch',
+    'linkedin': 'https://www.linkedin.com/in/eduardo-utsch-205745350/',
+    'github': 'https://github.com/eduardoutsch',
+    'image': 'assets/team/eduardo.webp',
+  },
+];
 
 Widget buildAnimatedQuadrant({
   required BuildContext context,
@@ -139,18 +141,26 @@ Widget buildAnimatedQuadrant({
         final double pushDist = 20.0 * animation.value;
         if (index == 0) {
           translate = Offset(-pushDist, -pushDist);
-        } else if (index == 1) translate = Offset(pushDist, -pushDist);
-        else if (index == 2) translate = Offset(-pushDist, pushDist);
-        else if (index == 3) translate = Offset(pushDist, pushDist);
+        } else if (index == 1) {
+          translate = Offset(pushDist, -pushDist);
+        } else if (index == 2) {
+          translate = Offset(-pushDist, pushDist);
+        } else if (index == 3) {
+          translate = Offset(pushDist, pushDist);
+        }
       }
     } else {
       // Doritos separados
       const double gap = 4.0;
       if (index == 0) {
         translate = const Offset(-gap, -gap);
-      } else if (index == 1) translate = const Offset(gap, -gap);
-      else if (index == 2) translate = const Offset(-gap, gap);
-      else if (index == 3) translate = const Offset(gap, gap);
+      } else if (index == 1) {
+        translate = const Offset(gap, -gap);
+      } else if (index == 2) {
+        translate = const Offset(-gap, gap);
+      } else if (index == 3) {
+        translate = const Offset(gap, gap);
+      }
     }
 
     return Transform.translate(
@@ -238,16 +248,6 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-            Text(
-              data['desc']!,
-              style: TextStyle(
-                color: context.colors.ashGrey,
-                fontSize: 13,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
             const SizedBox(height: 16),
             Wrap(
               alignment: WrapAlignment.center,
@@ -314,9 +314,13 @@ Path getQuadrantPath(Size size, int index, double expand) {
 
   if (index == 0) {
     startAngle = math.pi; // Top-Left
-  } else if (index == 1) startAngle = -math.pi / 2; // Top-Right
-  else if (index == 2) startAngle = math.pi / 2; // Bottom-Left
-  else if (index == 3) startAngle = 0; // Bottom-Right
+  } else if (index == 1) {
+    startAngle = -math.pi / 2; // Top-Right
+  } else if (index == 2) {
+    startAngle = math.pi / 2; // Bottom-Left
+  } else if (index == 3) {
+    startAngle = 0; // Bottom-Right
+  }
 
   final double extraSweep = (math.pi * 2 - math.pi / 2) * expand;
   startAngle -= extraSweep / 2;
