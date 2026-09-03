@@ -1,13 +1,13 @@
 ﻿## 1. Gestão de Memória e Decodificação de Imagens no Flutter (TDD)
 
-- [ ] 1.1 [TDD] Criar testes unitários e de widget para configuração de teto de memória e tratamento de ciclo de vida no `main.dart` (Fase Vermelha)
+- [ ] 1.1 [TDD] Criar testes unitários para configuração de teto de memória LRU (100 MB) e tratamento de ciclo de vida no `main.dart` (Fase Vermelha)
 - [ ] 1.2 Implementar configuração do `imageCache.maximumSizeBytes` (100 MB) e listener de ciclo de vida no `main.dart` com docstrings `///` em português (Fase Verde e Refatoração)
-- [ ] 1.3 [TDD] Criar testes de widget para decodificação de miniaturas com `cacheWidth` em `browse_functions.dart` (Fase Vermelha)
-- [ ] 1.4 Implementar downsampling (`cacheWidth` / `ResizeImage`) em `browse_functions.dart` com docstrings `///` em português (Fase Verde e Refatoração)
-- [ ] 1.5 [TDD] Criar testes de widget para downsampling em `mapa_thumbnail.dart` (Fase Vermelha)
-- [ ] 1.6 Implementar downsampling em `mapa_thumbnail.dart` e `resolveImagePathProvider` com docstrings `///` em português (Fase Verde e Refatoração)
-- [ ] 1.7 [TDD] Criar testes de widget para capas em `grupo.dart` e `setor.dart` (Fase Vermelha)
-- [ ] 1.8 Implementar downsampling nas capas de `grupo.dart` e `setor.dart` com docstrings `///` em português (Fase Verde e Refatoração)
+- [ ] 1.3 [TDD] Criar testes unitários em `provedor_imagem_aresta_test.dart` para os parâmetros de downsampling `larguraAlvo` e `alturaAlvo` (Fase Vermelha)
+- [ ] 1.4 Implementar `ResizeImage.resizeIfNeeded` em `ProvedorImagemAresta.resolver` com docstrings `///` em português (Fase Verde e Refatoração)
+- [ ] 1.5 [TDD] Criar testes de widget para decodificação de miniaturas com `cacheWidth` em `browse_functions.dart` (`_CragBackgroundWidget`) (Fase Vermelha)
+- [ ] 1.6 Implementar `cacheWidth: 300` para carregamento local e remoto em `_CragBackgroundWidget` com docstrings `///` em português (Fase Verde e Refatoração)
+- [ ] 1.7 [TDD] Criar testes de widget para downsampling em `mapa_thumbnail.dart` passando `larguraAlvo` para o provedor (Fase Vermelha)
+- [ ] 1.8 Implementar passagem de `larguraAlvo` em `mapa_thumbnail.dart` com docstrings `///` em português (Fase Verde e Refatoração)
 
 ## 2. Otimização de Compilação Android (R8 & ProGuard)
 
@@ -26,7 +26,7 @@
 
 ## 5. Documentação Contínua (PRINCIPIOS.md)
 
-- [ ] 5.1 Atualizar `frontend/README.md` e `frontend/lib/README.md` documentando a arquitetura de gestão de memória, teto de cache LRU e pipeline de compilação release
+- [ ] 5.1 Atualizar `frontend/README.md`, `frontend/lib/README.md` e `frontend/lib/services/README.md` documentando a arquitetura de gestão de memória, downsampling centralizado no `ProvedorImagemAresta` e pipeline de compilação release
 - [ ] 5.2 Validar que todas as classes, métodos e widgets novos ou alterados contenham docstrings `///` explicativas em português brasileiro
 
 ## 6. Verificação, Cobertura de Testes e Validação de Build
