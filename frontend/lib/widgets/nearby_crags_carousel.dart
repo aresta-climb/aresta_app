@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/theme/app_colors.dart';
@@ -85,7 +86,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       context,
     ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
 
-    final success = await widget.syncService.downloadCrag(resumo);
+    final servicoDownload =
+        ServicoDownloadSegundoPlano(syncService: widget.syncService);
+    final success = await servicoDownload.executarDownload(resumo);
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();

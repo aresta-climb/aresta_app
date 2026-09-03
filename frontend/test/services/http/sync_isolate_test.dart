@@ -140,7 +140,7 @@ void main() {
         );
 
         expect(result.error, isNotNull);
-        expect(result.error, 'Falha em downloads de imagens');
+        expect(result.error, contains('Falha em downloads de imagens'));
         expect(progressList, contains(0.05));
       },
     );

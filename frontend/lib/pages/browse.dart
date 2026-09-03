@@ -10,6 +10,7 @@ import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/http/sync_service.dart';
+import '../services/http/servico_download_segundo_plano.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
@@ -99,7 +100,9 @@ class _BrowsePageState extends State<BrowsePage> {
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text('Baixando $name...')));
 
-    final success = await widget.syncService.downloadCrag(resumo);
+    final servicoDownload =
+        ServicoDownloadSegundoPlano(syncService: widget.syncService);
+    final success = await servicoDownload.executarDownload(resumo);
 
     if (mounted) {
       ScaffoldMessenger.of(context)

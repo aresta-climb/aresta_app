@@ -8,6 +8,7 @@ import '../services/editor_croqui.dart';
 import '../view_functions/common_functions.dart';
 import '../pages/qr_scanner.dart';
 import '../services/http/sync_service.dart';
+import '../services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
@@ -94,7 +95,8 @@ Future<bool> conectarEditor(
       if (croquis.length == 1) {
         final resumo = croquis.first;
         try {
-          await syncService.downloadCrag(resumo);
+          await ServicoDownloadSegundoPlano(syncService: syncService)
+              .executarDownload(resumo);
           await datasetRepo.init();
         } catch (e) {
           debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');

@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'sync_storage.dart';
@@ -25,7 +26,7 @@ class DownloadIsolateArgs {
     required this.downloadsDirPath,
     required this.baseUrl,
     required this.sendPort,
-    this.timeoutDuration = const Duration(seconds: 15),
+    this.timeoutDuration = const Duration(seconds: 30),
   });
 }
 
@@ -74,6 +75,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     final picoFilePath = '$picoDirPath/$id.binarypb';
     final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
 
+    final List<String> errosDownloads = [];
+
     // Helper for atomic download
     Future<bool> downloadAtomic(
       String fileUrl,
@@ -92,10 +95,24 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         final response = await client
             .get(Uri.parse(cacheBustingUrl))
             .timeout(args.timeoutDuration);
-        if (response.statusCode != 200) return false;
+        if (response.statusCode != 200) {
+          final erroMsg = 'HTTP ${response.statusCode} ao baixar $cacheBustingUrl';
+          debugPrint('🛑 [SyncIsolate] $erroMsg');
+          errosDownloads.add(erroMsg);
+          return false;
+        }
         await storage.saveTmpFile(tmpPath, response.bodyBytes);
-        return await storage.validateExistingTmpFile(tmpPath, expectedHash);
-      } catch (_) {
+        final valido = await storage.validateExistingTmpFile(tmpPath, expectedHash);
+        if (!valido) {
+          final erroMsg = 'Checksum SHA-256 inválido para $tmpPath. Esperado: $expectedHash';
+          debugPrint('🛑 [SyncIsolate] $erroMsg');
+          errosDownloads.add(erroMsg);
+        }
+        return valido;
+      } catch (e, stack) {
+        final erroMsg = 'Exceção ao baixar $fileUrl: $e';
+        debugPrint('🛑 [SyncIsolate] $erroMsg\n$stack');
+        errosDownloads.add(erroMsg);
         return false;
       }
     }
@@ -242,11 +259,15 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     if (downloadFutures.isNotEmpty) {
       final results = await Future.wait(downloadFutures);
       if (results.any((success) => !success)) {
+        final detalhe = errosDownloads.isNotEmpty
+            ? ': ${errosDownloads.join("; ")}'
+            : '';
+        debugPrint('🛑 [SyncIsolate] Falha em downloads de imagens$detalhe');
         args.sendPort.send(
           DownloadIsolateResult(
             filesToDelete: [],
             filesToRename: {},
-            error: 'Falha em downloads de imagens',
+            error: 'Falha em downloads de imagens$detalhe',
           ),
         );
         return;

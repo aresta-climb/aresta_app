@@ -17,6 +17,7 @@ class MockAppLogger implements AppLogger {
     StackTrace?, {
     bool printDetails,
     dynamic reason,
+    bool fatal,
   })?
   crashlyticsOverride;
 
@@ -25,11 +26,44 @@ class MockAppLogger implements AppLogger {
     String contextMessage, {
     dynamic error,
     StackTrace? stackTrace,
+    bool fatal = false,
   }) {
     recordedErrors.add({
       'contextMessage': contextMessage,
       'error': error,
       'stackTrace': stackTrace,
+      'fatal': fatal,
     });
+  }
+
+  @override
+  void logCrash(
+    String contextMessage, {
+    dynamic error,
+    StackTrace? stackTrace,
+  }) {
+    logError(
+      contextMessage,
+      error: error,
+      stackTrace: stackTrace,
+      fatal: true,
+    );
+  }
+
+  @override
+  void logFalhaSyncOuDownload(
+    String contextMessage, {
+    dynamic error,
+    StackTrace? stackTrace,
+  }) {
+    final ehConexaoOuTimeout =
+        AppLogger.isFalhaConexaoOuTimeout(error) || AppLogger.isFalhaConexaoOuTimeout(contextMessage);
+
+    logError(
+      contextMessage,
+      error: error,
+      stackTrace: stackTrace,
+      fatal: !ehConexaoOuTimeout,
+    );
   }
 }

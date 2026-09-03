@@ -53,6 +53,7 @@ import 'package:frontend/services/feedback/network_feedback_trigger.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
 
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
@@ -60,6 +61,9 @@ void main() async {
 
   // Inicializa o Workmanager para processamento de feedback em background
   Workmanager().initialize(callbackDispatcher);
+
+  // Inicializa o gerenciador de notificações nativas de download
+  await GerenciadorNotificacaoDownload.instancia.inicializar();
 
   // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
   await initFirebase();

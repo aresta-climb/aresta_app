@@ -287,7 +287,7 @@ class SyncService {
         // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto
         // e a CDN buscou um arquivo novo). Vamos forçar uma atualização do índice e tentar de novo.
         debugPrint(
-          'Download falhou. Forçando atualização do índice ignorando o cache...',
+          '🛑 [SyncService] Tentativa 1 de download de $id falhou. Forçando atualização do índice ignorando o cache...',
         );
         await syncIndex(auto: false, forceBypassCache: true);
 
@@ -298,7 +298,7 @@ class SyncService {
               .toList();
           if (updatedResumoList.isNotEmpty) {
             debugPrint(
-              'Tentando download novamente com o índice atualizado...',
+              '[SyncService] Tentando download novamente com o índice atualizado para $id...',
             );
             updates = await _downloadOrUpdatePico(
               updatedResumoList.first,
@@ -306,6 +306,15 @@ class SyncService {
             );
             success = !updates.hasErrors;
           }
+        }
+
+        if (!success) {
+          debugPrint(
+            '🛑 [SyncService] Falha definitiva no download de $id. Arquivos não foram salvos.',
+          );
+          AppLogger.instance.logFalhaSyncOuDownload(
+            'Falha definitiva no download do croqui $id',
+          );
         }
       }
 
@@ -325,8 +334,12 @@ class SyncService {
       }
 
       return success;
-    } catch (e) {
-      AppLogger.instance.logError('Error downloading crag $id', error: e);
+    } catch (e, stack) {
+      AppLogger.instance.logFalhaSyncOuDownload(
+        'Erro ao baixar croqui $id',
+        error: e,
+        stackTrace: stack,
+      );
     } finally {
       downloadingCrags.value = {...downloadingCrags.value}..remove(id);
     }
@@ -483,8 +496,12 @@ class SyncService {
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
       }
-    } catch (e) {
-      AppLogger.instance.logError('Failed to connect to the server', error: e);
+    } catch (e, stack) {
+      AppLogger.instance.logFalhaSyncOuDownload(
+        'Falha ao sincronizar o índice com o servidor',
+        error: e,
+        stackTrace: stack,
+      );
       final directory = await getApplicationDocumentsDirectory();
       await _loadLocalIndiceAndNotify(
         datasetRepository.editorDeCroqui.indicePath(directory.path),
@@ -773,8 +790,12 @@ class SyncService {
           receivePort.close();
 
           if (message.error != null) {
-            AppLogger.instance.logError(
+            debugPrint(
+              '🛑 [SyncService] Erro no isolate de download do pico $id: ${message.error}',
+            );
+            AppLogger.instance.logFalhaSyncOuDownload(
               'Erro no isolate de download do pico $id: ${message.error}',
+              error: message.error,
             );
             updates.hasErrors = true;
             return updates;

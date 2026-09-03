@@ -1,8 +1,4 @@
-# Especificação: Download em Segundo Plano Persistente
-
-Esta especificação define os requisitos de download resiliente de croquis em segundo plano com integração a notificações do sistema operacional móvel (Android e iOS).
-
-## Requisitos
+## ADDED Requirements
 
 ### Requirement: Gerenciamento Multiplataforma de Permissões de Notificação
 O sistema DEVE (MUST) solicitar ao usuário as permissões de notificação necessárias de acordo com a plataforma em execução:
@@ -41,8 +37,3 @@ Ao término do processo de download (em ambas as plataformas), o sistema DEVE (M
 #### Scenario: Transição para estado de sucesso
 - **WHEN** todos os arquivos são validados contra seus checksums SHA-256 e salvos no armazenamento local
 - **THEN** a notificação persistente é substituída por uma notificação concluída e dispensável.
-
-#### Scenario: Falha de conexão durante download em background
-- **WHEN** a conexão de rede é interrompida durante o download dos arquivos
-- **THEN** o serviço tenta reconectar de acordo com a política de retentativas
-- **AND** se falhar definitivamente, notifica o usuário sobre a interrupção e descarta arquivos temporários corrompidos.

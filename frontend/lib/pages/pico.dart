@@ -22,6 +22,7 @@ import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
 import '../services/http/servico_croqui_online.dart';
+import '../services/http/servico_download_segundo_plano.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;
@@ -196,7 +197,9 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text('Baixando ${widget.pico.nome}...')));
 
-    final success = await syncService.downloadCrag(resumos.first);
+    final servicoDownload =
+        ServicoDownloadSegundoPlano(syncService: syncService);
+    final success = await servicoDownload.executarDownload(resumos.first);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context)

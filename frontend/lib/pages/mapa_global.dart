@@ -8,6 +8,7 @@ import '../view_functions/mapa/mapa_global_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
+import '../services/http/servico_download_segundo_plano.dart';
 import '../view_functions/mapa/mapa_marker.dart';
 import '../view_functions/home_functions.dart';
 import '../theme/app_colors.dart';
@@ -56,7 +57,9 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
       ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
     }
 
-    final success = await widget.syncService.downloadCrag(resumo);
+    final servicoDownload =
+        ServicoDownloadSegundoPlano(syncService: widget.syncService);
+    final success = await servicoDownload.executarDownload(resumo);
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
