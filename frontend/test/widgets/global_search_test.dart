@@ -82,7 +82,7 @@ void main() {
       expect(find.text('Nenhum resultado encontrado.'), findsOneWidget);
     });
 
-    testWidgets('Busca encontra picos do catálogo e prioriza picos baixados', (
+    testWidgets('Busca encontra picos do catálogo e picos baixados por relevância fuzzy', (
       WidgetTester tester,
     ) async {
       repo.activeDataset.value = TopoDataset(
