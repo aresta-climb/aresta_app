@@ -64,6 +64,12 @@ class BannerModoOnline extends StatelessWidget {
     }
 
     final isBaixando = progressoDownload != null;
+    final String rotuloBotao = (tamanhoFormatado != null &&
+            tamanhoFormatado!.isNotEmpty &&
+            tamanhoFormatado != '0 B' &&
+            tamanhoFormatado != 'Offline')
+        ? 'Salvar Offline ($tamanhoFormatado)'
+        : 'Salvar Offline';
 
     return Container(
       width: double.infinity,
@@ -138,9 +144,9 @@ class BannerModoOnline extends StatelessWidget {
                   size: 18,
                   color: Colors.white,
                 ),
-                label: const Text(
-                  'Salvar Offline',
-                  style: TextStyle(
+                label: Text(
+                  rotuloBotao,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,

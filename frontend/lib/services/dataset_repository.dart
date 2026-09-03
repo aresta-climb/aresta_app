@@ -275,10 +275,10 @@ class DatasetRepository {
               .verificarPicoBaixado(downloadsPath, picoId);
 
           int? tamanhoBytes;
-          // TODO(proto): restaurar leitura quando tamanho_download_bytes for adicionado ao indice.proto upstream
-          // if (resumo.hasPrecomputados() && resumo.precomputados.hasTamanhoDownloadBytes()) {
-          //   tamanhoBytes = resumo.precomputados.tamanhoDownloadBytes.toInt();
-          // }
+          if (resumo.hasPrecomputados() &&
+              resumo.precomputados.hasTamanhoDownloadBytes()) {
+            tamanhoBytes = resumo.precomputados.tamanhoDownloadBytes.toInt();
+          }
 
           final Map<String, dynamic> picoMap = {
             'nome': resumo.nome,

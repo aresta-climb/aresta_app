@@ -63,7 +63,7 @@ The system SHALL preservar o estado visual do mapa interativo (incluindo nível 
 - **AND** a animação inicial de zoom não é reproduzida novamente
 
 ### Requirement: O parser de áreas deve usar a nomenclatura da v4
-The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circulo, retangulo, poligono, quadrado.
+The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circulo, retangulo, poligono, quadrado, linha.
 
 #### Scenario: Parsing circulo
 - **WHEN** point type is circulo
@@ -81,6 +81,10 @@ The system SHALL parse PontoDeInteresse geometries using the v4 vocabulary: circ
 - **WHEN** point type is quadrado
 - **THEN** it generates a square polygon based on x, y and lado without rotation
 
+#### Scenario: Parsing linha
+- **WHEN** o tipo do ponto de interesse for `linha`
+- **THEN** o `AreaHelper.getAreaInfo` resolve os limites espaciais a partir da `caixa_delimitadora` pré-calculada ou das dimensões do próprio `Path`, gerando a caixa delimitadora envolvente (AABB) e a geometria correspondente
+
 ### Requirement: Auto-Zoom Monotônico para Pontos Únicos
 The system SHALL centralizar a câmera no ponto de interesse selecionado sem jamais reduzir a escala de zoom atual caso o usuário já esteja com um nível de zoom superior à escala padrão.
 
@@ -96,13 +100,31 @@ The system SHALL centralizar a câmera no ponto de interesse selecionado sem jam
 - **THEN** a escala da câmera é mantida em 4.5x (sem redução de zoom)
 - **AND** a câmera translada suavemente para centralizar o ponto selecionado
 
-### Requirement: Enquadramento de Rotas com Múltiplos Pontos (Caixa Delimitadora)
-The system SHALL calcular a escala necessária para enquadrar simultaneamente todos os marcadores associados (início e fim) no viewport visível com margens confortáveis ao selecionar uma via com múltiplos pontos.
+### Requirement: Enquadramento de Rotas com Múltiplos Pontos ou Linhas (Caixa Delimitadora)
+The system SHALL calcular a escala necessária para enquadrar simultaneamente todos os marcadores associados (início e fim) ou o traçado vetorial completo da via no viewport visível com margens confortáveis ao selecionar uma via.
 
 #### Scenario: Seleção de via com múltiplos pontos distantes
 - **WHEN** o usuário seleciona uma via composta por múltiplos marcadores (início e fim)
 - **THEN** o sistema calcula a caixa delimitadora englobando todos os pontos
 - **THEN** a câmera ajusta o zoom e a posição para que todos os pontos da via fiquem visíveis na tela
+
+#### Scenario: Seleção de via composta por linha vetorial
+- **WHEN** o usuário seleciona uma via com traçado em linha vetorial (mesmo com um único elemento de linha no croqui)
+- **THEN** o sistema aplica o enquadramento por caixa delimitadora cobrindo a altura e a largura completas do trajeto
+- **THEN** a câmera preserva margens adequadas acima do card inferior de informações
+
+### Requirement: Detecção Precisa de Toques ao Longo da Linha (Hit-Testing)
+The `MarkerPainter` SHALL detectar toques do usuário em qualquer ponto ao longo de uma curva de traçado vetorial aberta, considerando uma tolerância ergonômica de proximidade física para toques com o dedo (~16dp).
+
+#### Scenario: Toque próximo ao traçado da via
+- **WHEN** o usuário toca a uma distância menor ou igual a 16dp de qualquer trecho da linha vetorial
+- **THEN** o `hitTest` do pintor retorna `true`
+- **THEN** a via correspondente é selecionada e recebe o foco do mapa
+
+#### Scenario: Toque distante do traçado dentro da caixa delimitadora
+- **WHEN** o usuário toca dentro da caixa delimitadora da linha, porém a uma distância superior a 16dp de qualquer trecho do traçado
+- **THEN** o `hitTest` do pintor retorna `false`
+- **THEN** o evento de toque não é consumido pelo marcador e propaga para o mapa de fundo, acionando o pulso de destaque
 
 ### Requirement: Zoom Dinâmico por Dimensão Confortável na Tela
 The system SHALL calcular uma escala alvo proporcional ao tamanho do polígono do ponto na tela para garantir uma dimensão física mínima confortável (~20dp) em mapas de grandes dimensões ou alta resolução, sem nunca reduzir o zoom atual.

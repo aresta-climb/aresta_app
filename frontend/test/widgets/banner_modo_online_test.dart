@@ -26,10 +26,27 @@ void main() {
       );
 
       expect(find.text('MODO ONLINE'), findsOneWidget);
-      expect(find.text('Salvar Offline'), findsOneWidget);
+      expect(find.text('Salvar Offline (18.4 MB)'), findsOneWidget);
 
-      await tester.tap(find.text('Salvar Offline'));
+      await tester.tap(find.text('Salvar Offline (18.4 MB)'));
       expect(clicouSalvar, isTrue);
+    });
+
+    testWidgets('exibe Salvar Offline sem parenteses quando tamanhoFormatado for nulo ou 0 B', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BannerModoOnline(
+              tamanhoFormatado: null,
+              isDownloaded: false,
+              progressoDownload: null,
+              onSalvarOffline: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Salvar Offline'), findsOneWidget);
     });
 
     testWidgets('exibe progresso quando download estiver ativo', (tester) async {

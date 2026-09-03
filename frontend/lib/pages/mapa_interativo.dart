@@ -16,6 +16,7 @@ import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
+import '../utils/construtor_caminho_trajeto.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -381,7 +382,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     double escalaAlvoPadrao = escalaDinamicaConfortavel;
 
-    bool hasMultiplePoints = pontos.length > 1;
+    final bool hasMultiplePoints = pontos.length > 1;
+    final bool hasLinha = pontos.any((p) => p.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha);
     double targetScale = escalaAlvoPadrao;
 
     if (ref != null &&
@@ -389,8 +391,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         ref.ajusteDeCamera.hasZoom()) {
       escalaAlvoPadrao = ref.ajusteDeCamera.zoom;
       targetScale = math.max(escalaAtual, escalaAlvoPadrao);
-    } else if (hasMultiplePoints && (boxWidthRel > 0 || boxHeightRel > 0)) {
-      // Usa lógica de Bounding Box para qualquer rota com múltiplos pontos (início/fim, meio, boulders, etc)
+    } else if ((hasMultiplePoints || hasLinha) && (boxWidthRel > 0 || boxHeightRel > 0)) {
+      // Usa lógica de Bounding Box para rotas com múltiplos pontos ou traçados vetoriais em linha
       final double availableHeight = viewportSize.height * 0.55;
       final double availableWidth = viewportSize.width * 0.85;
 
@@ -426,6 +428,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     double visualCenterY = viewportSize.height * 0.35;
 
     if (pontos.length == 1 &&
+        !hasLinha &&
         ref != null &&
         _refToResolved[ref]?.escalada != null) {
       final ids = ref.ids;
@@ -569,6 +572,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               isSelected: isSelected,
               highlightIntensity: _highlightAnimation.value,
               padding: hitBoxPadding,
+              isLinha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha,
+              linha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha ? ponto.linha : null,
+              corHex: ponto.cor.isNotEmpty ? ponto.cor : null,
+              chaveCache: ponto.id,
             ),
           ),
         ),
@@ -1491,6 +1498,56 @@ class AreaHelper {
         maxY = polygon.map((p) => p.dy).reduce(math.max);
         break;
 
+      case Mapa_PontoDeInteresse_TipoArea.linha:
+        final linha = ponto.linha;
+        if (linha.hasCompilado() && linha.compilado.caminhoSvg.isNotEmpty) {
+          final comp = linha.compilado;
+          final caminho = ConstrutorCaminhoTrajeto.obterCaminho(
+            chaveCache: ponto.id,
+            caminhoSvg: comp.caminhoSvg,
+            estilo: linha.estilo,
+          );
+
+          polygon = ConstrutorCaminhoTrajeto.amostrarSegmentos(caminho);
+
+          final pathBounds = caminho.getBounds();
+          double calcMinX = pathBounds.left;
+          double calcMaxX = pathBounds.right;
+          double calcMinY = pathBounds.top;
+          double calcMaxY = pathBounds.bottom;
+
+          if (comp.hasCaixaDelimitadora()) {
+            final caixa = comp.caixaDelimitadora;
+            final double w2 = caixa.comprimento / 2.0;
+            final double h2 = caixa.largura / 2.0;
+            final caixaMinX = caixa.x - w2;
+            final caixaMaxX = caixa.x + w2;
+            final caixaMinY = caixa.y - h2;
+            final caixaMaxY = caixa.y + h2;
+
+            calcMinX = math.min(calcMinX, caixaMinX);
+            calcMaxX = math.max(calcMaxX, caixaMaxX);
+            calcMinY = math.min(calcMinY, caixaMinY);
+            calcMaxY = math.max(calcMaxY, caixaMaxY);
+          }
+
+          minX = calcMinX;
+          maxX = calcMaxX;
+          minY = calcMinY;
+          maxY = calcMaxY;
+        } else if (linha.hasConteudo() && linha.conteudo.nos.isNotEmpty) {
+          for (var no in linha.conteudo.nos) {
+            polygon.add(Offset(no.x.toDouble(), no.y.toDouble()));
+          }
+          minX = polygon.map((p) => p.dx).reduce(math.min);
+          maxX = polygon.map((p) => p.dx).reduce(math.max);
+          minY = polygon.map((p) => p.dy).reduce(math.min);
+          maxY = polygon.map((p) => p.dy).reduce(math.max);
+        } else {
+          return null;
+        }
+        break;
+
       default:
         return null;
     }
@@ -1706,6 +1763,10 @@ class MarkerPainter extends CustomPainter {
   final bool isSelected;
   final double highlightIntensity;
   final double padding;
+  final bool isLinha;
+  final LinhaTrajeto? linha;
+  final String? corHex;
+  final String? chaveCache;
 
   MarkerPainter({
     required this.polygon,
@@ -1717,10 +1778,200 @@ class MarkerPainter extends CustomPainter {
     required this.isSelected,
     this.highlightIntensity = 0.0,
     required this.padding,
+    this.isLinha = false,
+    this.linha,
+    this.corHex,
+    this.chaveCache,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (isLinha) {
+      _paintLinha(canvas, size);
+      return;
+    }
+
+    _paintAreaFechada(canvas, size);
+  }
+
+  void _paintLinha(Canvas canvas, Size size) {
+    if (polygon.isEmpty) return;
+
+    final scaleX = constraints.maxWidth / mapWidth;
+    final scaleY = constraints.maxHeight / mapHeight;
+
+    Path localPath;
+    if (linha != null && linha!.hasCompilado() && linha!.compilado.caminhoSvg.isNotEmpty) {
+      final basePath = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: chaveCache ?? 'linha',
+        caminhoSvg: linha!.compilado.caminhoSvg,
+        estilo: linha!.estilo,
+      );
+
+      final matrix = Matrix4.identity()
+        ..translate(padding, padding)
+        ..scale(scaleX, scaleY)
+        ..translate(-minX, -minY);
+
+      localPath = basePath.transform(matrix.storage);
+    } else {
+      localPath = Path();
+      for (int i = 0; i < polygon.length; i++) {
+        final p = polygon[i];
+        final lx = ((p.dx - minX) * scaleX) + padding;
+        final ly = ((p.dy - minY) * scaleY) + padding;
+        if (i == 0) {
+          localPath.moveTo(lx, ly);
+        } else {
+          localPath.lineTo(lx, ly);
+        }
+      }
+    }
+
+    final double espessuraNominal = (linha?.hasEspessura() == true && linha!.espessura > 0)
+        ? linha!.espessura.toDouble()
+        : 3.0;
+    final Color corLinha = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
+
+    // Camada 1: Halo de Seleção (glow difuso ao redor do SVG quando selecionado)
+    if (isSelected) {
+      final haloPaint = Paint()
+        ..color = corLinha.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = espessuraNominal + 12.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+      canvas.drawPath(localPath, haloPaint);
+    }
+
+    // Camada 2: Halo de Pulso (ao tocar fora de área clicável)
+    if (!isSelected && highlightIntensity > 0.0) {
+      final pulsePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = espessuraNominal + (8.0 * highlightIntensity)
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
+      canvas.drawPath(localPath, pulsePaint);
+    }
+
+    // Camada 3: Casing de Contraste para leitura sobre qualquer rocha
+    final casingPaint = Paint()
+      ..color = Colors.black.withValues(alpha: isSelected ? 0.6 : 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessuraNominal + 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(localPath, casingPaint);
+
+    // Camada 4: Traço Principal
+    final corePaint = Paint()
+      ..color = isSelected ? corLinha : corLinha.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = espessuraNominal
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(localPath, corePaint);
+
+    // Camada 5: Marcadores Compilados
+    if (linha != null && linha!.hasCompilado() && linha!.compilado.marcadores.isNotEmpty) {
+      _paintMarcadores(canvas, scaleX, scaleY, corLinha);
+    }
+  }
+
+  void _paintMarcadores(Canvas canvas, double scaleX, double scaleY, Color corLinha) {
+    for (final m in linha!.compilado.marcadores) {
+      final lx = ((m.x - minX) * scaleX) + padding;
+      final ly = ((m.y - minY) * scaleY) + padding;
+      final center = Offset(lx, ly);
+
+      switch (m.tipo) {
+        case NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR:
+        case NoTrajeto_TipoNo.INICIO_AGACHADO:
+          final double r = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 9.0;
+          final fillPaint = Paint()
+            ..color = isSelected ? corLinha : Colors.white
+            ..style = PaintingStyle.fill;
+          final borderPaint = Paint()
+            ..color = isSelected ? Colors.white : corLinha
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0;
+
+          canvas.drawCircle(center, r, fillPaint);
+          canvas.drawCircle(center, r, borderPaint);
+
+          if (m.rotulo.isNotEmpty) {
+            final textSpan = TextSpan(
+              text: m.rotulo,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontSize: m.hasTamanhoFonte() && m.tamanhoFonte > 0
+                    ? m.tamanhoFonte.toDouble()
+                    : 10.0,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+            final tp = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+            )..layout();
+            tp.paint(canvas, Offset(lx - tp.width / 2.0, ly - tp.height / 2.0));
+          }
+          break;
+
+        case NoTrajeto_TipoNo.PROTECAO_FIXA:
+          // Desenha "X"
+          final paintX = Paint()
+            ..color = isSelected ? corLinha : Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0
+            ..strokeCap = StrokeCap.round;
+          const double d = 4.0;
+          canvas.drawLine(Offset(lx - d, ly - d), Offset(lx + d, ly + d), paintX);
+          canvas.drawLine(Offset(lx - d, ly + d), Offset(lx + d, ly - d), paintX);
+          break;
+
+        case NoTrajeto_TipoNo.PARADA_INTERMEDIARIA:
+        case NoTrajeto_TipoNo.TOP_PARADA:
+          // Desenha "XX"
+          final paintXX = Paint()
+            ..color = isSelected ? corLinha : Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0
+            ..strokeCap = StrokeCap.round;
+          const double d = 3.5;
+          // Primeiro X
+          canvas.drawLine(Offset(lx - 5 - d, ly - d), Offset(lx - 5 + d, ly + d), paintXX);
+          canvas.drawLine(Offset(lx - 5 - d, ly + d), Offset(lx - 5 + d, ly - d), paintXX);
+          // Segundo X
+          canvas.drawLine(Offset(lx + 5 - d, ly - d), Offset(lx + 5 + d, ly + d), paintXX);
+          canvas.drawLine(Offset(lx + 5 - d, ly + d), Offset(lx + 5 + d, ly - d), paintXX);
+          break;
+
+        case NoTrajeto_TipoNo.CRUX:
+          // Ponto crux (diamante / losango)
+          final cruxPaint = Paint()
+            ..color = const Color(0xFFFF1744)
+            ..style = PaintingStyle.fill;
+          const double cd = 5.0;
+          final cruxPath = Path()
+            ..moveTo(lx, ly - cd)
+            ..lineTo(lx + cd, ly)
+            ..lineTo(lx, ly + cd)
+            ..lineTo(lx - cd, ly)
+            ..close();
+          canvas.drawPath(cruxPath, cruxPaint);
+          break;
+
+        default:
+          break;
+      }
+    }
+  }
+
+  void _paintAreaFechada(Canvas canvas, Size size) {
     final path = Path();
     for (int i = 0; i < polygon.length; i++) {
       final p = polygon[i];
@@ -1737,15 +1988,17 @@ class MarkerPainter extends CustomPainter {
     }
     path.close();
 
+    final Color corBase = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
+
     if (isSelected) {
       final fillPaint = Paint()
-        ..color = rustIron.withValues(alpha: 0.5)
+        ..color = corBase.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
       canvas.drawPath(path, fillPaint);
 
       final borderPaint = Paint()
-        ..color = rustIron.withValues(alpha: 0.7)
+        ..color = corBase.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
         ..strokeJoin = StrokeJoin.round
@@ -1776,6 +2029,28 @@ class MarkerPainter extends CustomPainter {
 
   @override
   bool? hitTest(Offset position) {
+    if (isLinha) {
+      if (polygon.isEmpty) return false;
+
+      final localPolygon = <Offset>[];
+      for (int i = 0; i < polygon.length; i++) {
+        final p = polygon[i];
+        final localX =
+            ((p.dx - minX) / mapWidth * constraints.maxWidth) + padding;
+        final localY =
+            ((p.dy - minY) / mapHeight * constraints.maxHeight) + padding;
+        localPolygon.add(Offset(localX, localY));
+      }
+
+      // Tolerância ergonômica para toque com o dedo: 16.0dp
+      const double tolerance = 16.0;
+      final double distance = ConstrutorCaminhoTrajeto.calcularDistanciaAoCaminho(
+        position,
+        localPolygon,
+      );
+      return distance <= tolerance;
+    }
+
     final path = Path();
     final localPolygon = <Offset>[];
     for (int i = 0; i < polygon.length; i++) {
@@ -1839,6 +2114,9 @@ class MarkerPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant MarkerPainter oldDelegate) {
     return oldDelegate.isSelected != isSelected ||
-        oldDelegate.constraints != constraints;
+        oldDelegate.highlightIntensity != highlightIntensity ||
+        oldDelegate.constraints != constraints ||
+        oldDelegate.corHex != corHex ||
+        oldDelegate.isLinha != isLinha;
   }
 }

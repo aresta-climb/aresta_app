@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -255,6 +256,56 @@ void main() {
       final areaInfo = AreaHelper.getAreaInfo(ponto);
       expect(areaInfo, isNull);
     });
+
+    test('LinhaTrajeto Area - Compilado com SVG e Bounding Box', () {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_teste',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 100 800 C 120 700, 140 600, 160 500',
+            caixaDelimitadora: BoundingRetangulo(
+              x: 130,
+              y: 650,
+              comprimento: 60,
+              largura: 300,
+            ),
+          ),
+        ),
+      );
+
+      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      expect(areaInfo, isNotNull);
+      expect(areaInfo!.bounds.left, closeTo(100.0, 1.0));
+      expect(areaInfo.bounds.right, closeTo(160.0, 1.0));
+      expect(areaInfo.bounds.top, closeTo(500.0, 1.0));
+      expect(areaInfo.bounds.bottom, closeTo(800.0, 1.0));
+      expect(areaInfo.polygon, isNotEmpty);
+    });
+
+    test('LinhaTrajeto Area - Fallback com Conteúdo de Nós', () {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_conteudo',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          conteudo: DadosConteudoLinha(
+            nos: [
+              NoTrajeto(x: 10, y: 20),
+              NoTrajeto(x: 50, y: 100),
+              NoTrajeto(x: 30, y: 150),
+            ],
+          ),
+        ),
+      );
+
+      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      expect(areaInfo, isNotNull);
+      expect(areaInfo!.bounds.left, 10.0);
+      expect(areaInfo.bounds.right, 50.0);
+      expect(areaInfo.bounds.top, 20.0);
+      expect(areaInfo.bounds.bottom, 150.0);
+      expect(areaInfo.polygon.length, 3);
+    });
   });
 
   group('MarkerPainter hitTest Tests', () {
@@ -346,6 +397,40 @@ void main() {
 
       // Far away
       expect(painter.hitTest(const Offset(54, 20)), isFalse);
+    });
+
+    test('hitTest para LinhaTrajeto detecta toque próximo da curva e não fecha laço entre início e fim', () {
+      // Linha em L: (0, 0) -> (100, 0) -> (100, 100)
+      final polygon = [
+        const Offset(0, 0),
+        const Offset(100, 0),
+        const Offset(100, 100),
+      ];
+      final minX = 0.0;
+      final minY = 0.0;
+      final padding = 4.0;
+
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: minX,
+        minY: minY,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: padding,
+        isLinha: true,
+      );
+
+      // Toque próximo à linha horizontal (local y = 4 + 8 = 12, dist = 8dp <= 16dp)
+      expect(painter.hitTest(const Offset(54, 12)), isTrue);
+
+      // Toque entre o fim (100, 100) e o início (0, 0), por exemplo em (14, 94).
+      // Se fechasse o laço como polígono fechado, estaria perto da hipotenusa. Como é linha aberta, DEVE ser false!
+      expect(painter.hitTest(const Offset(14, 94)), isFalse);
+
+      // Toque no canto oposto vazio (0, 100), dist ~100dp
+      expect(painter.hitTest(const Offset(4, 104)), isFalse);
     });
   });
 
@@ -1893,6 +1978,183 @@ void main() {
       
       // Let animation finish
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('Toque em linha vetorial seleciona via e toque em área vazia da AABB não seleciona', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_via',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            caixaDelimitadora: BoundingRetangulo(
+              x: 50,
+              y: 50,
+              comprimento: 80,
+              largura: 80,
+            ),
+          ),
+        ),
+      );
+
+      final mapa = Mapa(
+        larguraMapa: 100,
+        alturaMapa: 100,
+        pontosDeInteresse: [ponto],
+      );
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Vetorial', ids: ['linha_via']));
+
+      final esc = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Vetorial'));
+
+      await tester.pumpWidget(buildNavApp([esc], mapa));
+      await tester.pumpAndSettle();
+
+      // Verifica que inicialmente o card não está aberto
+      expect(find.text('Via Vetorial'), findsNothing);
+
+      final gestureDetectorFinder = find.byKey(const Key('marker_linha_via'));
+      expect(gestureDetectorFinder, findsOneWidget);
+
+      final topLeft = tester.getTopLeft(gestureDetectorFinder);
+      // Toque no canto superior direito da AABB (dx=70, dy=10), a mais de 40dp da diagonal
+      await tester.tapAt(topLeft + const Offset(70, 10));
+      await tester.pumpAndSettle();
+
+      // Não deve ter selecionado a via
+      expect(find.text('Via Vetorial'), findsNothing);
+
+      // Agora toca perto da diagonal (dx=44, dy=44)
+      await tester.tapAt(topLeft + const Offset(44, 44));
+      await tester.pumpAndSettle();
+
+      // Agora sim a via deve estar selecionada!
+      expect(find.text('Via Vetorial'), findsOneWidget);
+    });
+
+    testWidgets('Toque no vazio aciona pulso de highlight na linha vetorial', (WidgetTester tester) async {
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_pulso',
+        cor: '#00E5FF',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.TRACEJADO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 20 90',
+            caixaDelimitadora: BoundingRetangulo(x: 15, y: 50, comprimento: 10, largura: 80),
+          ),
+        ),
+      );
+
+      final mapa = Mapa(larguraMapa: 100, alturaMapa: 100, pontosDeInteresse: [ponto]);
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Pulso', ids: ['linha_pulso']));
+      final esc = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Pulso'));
+
+      await tester.pumpWidget(buildNavApp([esc], mapa));
+      await tester.pumpAndSettle();
+
+      final paintInicial = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_linha_pulso')), matching: find.byType(CustomPaint)),
+      );
+      expect((paintInicial.painter as MarkerPainter).highlightIntensity, 0.0);
+
+      // Toca no vazio do mapa
+      await tester.tap(find.byType(InteractiveViewer));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final paintAnimando = tester.widget<CustomPaint>(
+        find.descendant(of: find.byKey(const Key('marker_linha_pulso')), matching: find.byType(CustomPaint)),
+      );
+      expect((paintAnimando.painter as MarkerPainter).highlightIntensity, greaterThan(0.0));
+      expect((paintAnimando.painter as MarkerPainter).corHex, '#00E5FF');
+      expect((paintAnimando.painter as MarkerPainter).isLinha, isTrue);
+
+      await tester.pumpAndSettle();
+    });
+
+    test('MarkerPainter _paintLinha executa desenho completo em camadas e marcadores', () {
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: true,
+        highlightIntensity: 0.5,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FF1744',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(x: 10, y: 10, tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR, rotulo: '01'),
+              MarcadorCompilado(x: 30, y: 30, tipo: NoTrajeto_TipoNo.PROTECAO_FIXA),
+              MarcadorCompilado(x: 60, y: 60, tipo: NoTrajeto_TipoNo.CRUX),
+              MarcadorCompilado(x: 90, y: 90, tipo: NoTrajeto_TipoNo.TOP_PARADA),
+            ],
+          ),
+        ),
+      );
+
+      // Não deve lançar erro ao desenhar todas as camadas e marcadores
+      expect(() => painter.paint(canvas, const Size(100, 100)), returnsNormally);
+      final picture = recorder.endRecording();
+      expect(picture, isNotNull);
+    });
+
+    testWidgets('Zoom automático enquadra via de linha vetorial inteira por Bounding Box', (WidgetTester tester) async {
+      // Linha vertical ocupando 40% da altura da parede (de y=300 até y=700 em mapa de 1000x1000)
+      final ponto = Mapa_PontoDeInteresse(
+        id: 'linha_alta',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 500 700 L 500 300',
+            caixaDelimitadora: BoundingRetangulo(x: 500, y: 500, comprimento: 20, largura: 400),
+          ),
+        ),
+      );
+
+      final mapa = Mapa(larguraMapa: 1000, alturaMapa: 1000, pontosDeInteresse: [ponto]);
+      mapa.referencias.add(Mapa_Referencia(setor: 'Setor Teste', escalada: 'Via Longa', ids: ['linha_alta']));
+      final esc = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Longa'));
+
+      final pico = Pico();
+      final setor = Setor()..nome = 'Setor Teste'..escaladas.add(esc);
+      pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'test_crag',
+              autoZoomEnabled: true,
+              imageProviderOverride: MemoryImage(kTransparentImage),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Clica na linha para disparar o auto-zoom
+      await tester.tap(find.byKey(const Key('marker_linha_alta')));
+      await tester.pumpAndSettle();
+
+      final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+      final escalaFinal = interactiveViewer.transformationController!.value.getMaxScaleOnAxis();
+
+      // Com Bounding Box cobrindo 400px da via, a escala enquadra a via inteira na área visível (~1.87x)
+      // Sem o tratamento de Bounding Box, o código antigo aplicaria o piso de pin único de 2.5x!
+      expect(escalaFinal, closeTo(1.87, 0.15));
     });
   });
 }

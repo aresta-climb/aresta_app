@@ -112,3 +112,14 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 - **`imagem_arquivo_aresta.dart`**: Implementação especializada de `ImageProvider<ChaveImagemArquivoAresta>` que substitui o `FileImage` do Flutter, indexando a chave de cache nativa por caminho, escala e `checksumSha256` para invalidar texturas em disco reativamente sem piscar a UI.
 - **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.
 
+---
+
+## 6. Camada de Utilitários e Traçados Vetoriais (`lib/utils/`)
+
+Reúne utilitários de domínio para manipulação de dados, resolução de índices e renderização vetorial.
+
+- **`construtor_caminho_trajeto.dart`**: Barreira arquitetural exclusiva para o subsistema de desenho vetorial com `package:path_drawing/`. Converte dados compilados SVG (`M ... C ...`) em `ui.Path` nativo, aplica estilos de traçado FEMEMG (sólido, tracejado, pontilhado), mantém cache em memória por rota/estilo para garantir 60/120 FPS no `InteractiveViewer`, realiza conversão defensiva de cores hexadecimais (`ponto.cor`) e amostra polilinhas para detecção ergonômica de toques (hit-testing por menor distância euclidiana com tolerância de 16dp).
+- **`croqui_map_index.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.
+- **`dataset_resolver.dart`**: Resolução dinâmica de referências cruzadas entre marcadores do mapa e entidades do dataset (`Escalada`, `Setor`, `Pico`).
+
+

@@ -16,6 +16,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:fixnum/fixnum.dart';
 import '../mocks/mock_telemetry_service.dart';
 import '../mocks/mock_app_logger.dart';
 import 'package:mocktail/mocktail.dart';
@@ -230,6 +231,37 @@ void main() {
         expect(stats['totalEsportivas'], 30);
         expect(stats['totalBoulders'], 20);
         expect(stats['totalMoveis'], 0);
+      },
+    );
+
+    test(
+      'loadIndiceToMemory mapeia tamanho_download_bytes e tamanhoFormatado corretamente',
+      () async {
+        final precomputados = PrecomputadosResumoCroqui(
+          totalEscaladas: 10,
+          totalSetores: 2,
+          tamanhoDownloadBytes: Int64(19293798),
+        );
+
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'pico_com_tamanho',
+              nome: 'Pico Com Tamanho',
+              caminhoRelativo: 'pico_com_tamanho.zip',
+              precomputados: precomputados,
+            ),
+          ],
+        );
+        repo.indiceData.value = indice;
+        await repo.loadIndiceToMemory(indice);
+
+        final available = repo.activeDataset.value!.availablePicos;
+        expect(available.length, 1);
+        final item = available.first;
+        expect(item['tamanhoBytes'], 19293798);
+        expect(item['tamanhoFormatado'], '18.4 MB');
+        expect(item['estatisticas']['tamanhoDownloadBytes'], 19293798);
       },
     );
 

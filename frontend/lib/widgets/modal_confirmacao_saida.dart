@@ -78,6 +78,13 @@ class ModalConfirmacaoSaida extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String rotuloBotao = (tamanhoFormatado != null &&
+            tamanhoFormatado!.isNotEmpty &&
+            tamanhoFormatado != '0 B' &&
+            tamanhoFormatado != 'Offline')
+        ? 'Salvar Offline ($tamanhoFormatado)'
+        : 'Salvar Offline';
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -148,9 +155,9 @@ class ModalConfirmacaoSaida extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onSalvar,
                 icon: const Icon(Icons.download, color: Colors.white, size: 18),
-                label: const Text(
-                  'Salvar Offline',
-                  style: TextStyle(
+                label: Text(
+                  rotuloBotao,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

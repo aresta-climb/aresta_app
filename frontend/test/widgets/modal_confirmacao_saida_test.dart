@@ -44,7 +44,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Salvar Offline'), findsOneWidget);
+      expect(find.text('Salvar Offline (18.4 MB)'), findsOneWidget);
       expect(find.text('Sair sem Salvar'), findsOneWidget);
     });
 
@@ -77,11 +77,39 @@ void main() {
       await tester.tap(find.text('Abrir Guardião'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Salvar Offline'));
+      await tester.tap(find.text('Salvar Offline (12 MB)'));
       await tester.pumpAndSettle();
 
       expect(clicouSalvar, isTrue);
       expect(find.text('SALVAR PARA A PEDRA?'), findsNothing);
+    });
+
+    testWidgets('exibe Salvar Offline sem parenteses quando tamanhoFormatado for nulo ou invalido', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  ModalConfirmacaoSaida.mostrar(
+                    context: context,
+                    nomePico: 'Pico Sem Tamanho',
+                    tamanhoFormatado: null,
+                    onSalvar: () {},
+                    onSairSemSalvar: () {},
+                  );
+                },
+                child: const Text('Abrir Guardião'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir Guardião'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Salvar Offline'), findsOneWidget);
     });
 
     testWidgets('aparece apenas uma vez por sessao do app', (tester) async {
