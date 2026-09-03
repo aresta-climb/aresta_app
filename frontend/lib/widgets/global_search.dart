@@ -7,6 +7,7 @@ import 'package:fuzzy/fuzzy.dart';
 import '../services/dataset_repository.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
+import '../view_functions/home_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -145,44 +146,200 @@ class _GlobalSearchState extends State<GlobalSearch> {
     final List<GlobalSearchResult> aggregatedData = [];
     final Set<String> processedCragIds = {};
 
-    for (var cragData in widget.downloadedPicos) {
-      final cragId = cragData['id'];
-      if (cragId == null) continue;
-      processedCragIds.add(cragId.toString());
+    try {
+      // 1. Croquis Baixados
+      for (var cragData in widget.downloadedPicos) {
+        final cragId = cragData['id'];
+        if (cragId == null) continue;
+        final cragIdStr = cragId.toString();
+        processedCragIds.add(cragIdStr);
 
-      final croqui = await widget.datasetRepo.getCroqui(cragId.toString());
-      if (croqui == null || croqui.picos.isEmpty) continue;
+        final picoNome = cragData['nome']?.toString() ?? 'Sem Nome';
+        final picoLocal = cragData['local']?.toString() ??
+            cragData['estado']?.toString() ??
+            '';
+        final picoSubtitle = picoLocal.isNotEmpty
+            ? 'Pico • $picoLocal • Salvo offline'
+            : 'Pico • Salvo offline';
 
-      final pico = croqui.picos.first;
-      final picoNome = pico.nome.isNotEmpty
-          ? pico.nome
-          : (cragData['nome']?.toString() ?? 'Sem Nome');
+        Croqui? croqui;
+        try {
+          croqui = await widget.datasetRepo.getCroqui(cragIdStr);
+        } catch (_) {
+          croqui = null;
+        }
 
-      _processPicoData(aggregatedData, pico, croqui, cragId.toString(), picoNome);
-    }
+        if (croqui != null && croqui.picos.isNotEmpty) {
+          final pico = croqui.picos.first;
+          final finalNome = pico.nome.isNotEmpty ? pico.nome : picoNome;
+          final finalLocal = picoLocal.isNotEmpty
+              ? picoLocal
+              : (pico.hasEstado() ? pico.estado : '');
+          final finalSubtitle = finalLocal.isNotEmpty
+              ? 'Pico • $finalLocal • Salvo offline'
+              : 'Pico • Salvo offline';
 
-    // Inclui também croquis ativos da sessão online
-    for (final entry
-        in widget.datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.entries) {
-      final cragId = entry.key;
-      if (processedCragIds.contains(cragId)) continue;
-      processedCragIds.add(cragId);
+          aggregatedData.add(
+            GlobalSearchResult(
+              title: finalNome,
+              subtitle: finalSubtitle,
+              icon: Icons.landscape,
+              isDownloaded: true,
+              isPico: true,
+              originalItem: pico,
+              onTap: () {
+                TelemetryService.instance.logAcaoCroqui(
+                  cragIdStr,
+                  'abrir_croqui',
+                  origem: 'busca_global',
+                );
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+                AppNav.toPico(
+                  context,
+                  pico: pico,
+                  croqui: croqui,
+                  cragId: cragIdStr,
+                );
+              },
+            ),
+          );
 
-      final croqui = entry.value;
-      if (croqui.picos.isEmpty) continue;
-      final pico = croqui.picos.first;
-      final picoNome = pico.nome.isNotEmpty ? pico.nome : 'Sem Nome';
+          _processPicoData(
+            aggregatedData,
+            pico,
+            croqui,
+            cragIdStr,
+            finalNome,
+            isDownloaded: true,
+          );
+        } else {
+          // Pico salvo mas sem protobuf carregado no momento
+          aggregatedData.add(
+            GlobalSearchResult(
+              title: picoNome,
+              subtitle: picoSubtitle,
+              icon: Icons.landscape,
+              isDownloaded: true,
+              isPico: true,
+              originalItem: cragData,
+              onTap: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+                handlePicoSelection(
+                  context,
+                  widget.datasetRepo,
+                  cragData,
+                  source: 'busca_global',
+                );
+              },
+            ),
+          );
+        }
+      }
 
-      _processPicoData(aggregatedData, pico, croqui, cragId, picoNome);
-    }
+      // 2. Croquis da Sessão Online em Memória
+      for (final entry
+          in widget.datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.entries) {
+        final cragId = entry.key;
+        if (processedCragIds.contains(cragId)) continue;
+        processedCragIds.add(cragId);
 
-    if (mounted) {
-      setState(() {
-        _allData = aggregatedData;
-        _isLoading = false;
-        _hasLoadedData = true;
-      });
-      _applyFilters();
+        final croqui = entry.value;
+        if (croqui.picos.isEmpty) continue;
+        final pico = croqui.picos.first;
+        final picoNome = pico.nome.isNotEmpty ? pico.nome : 'Sem Nome';
+        final picoLocal = pico.hasEstado() ? pico.estado : '';
+        final picoSubtitle = picoLocal.isNotEmpty
+            ? 'Pico • $picoLocal'
+            : 'Pico';
+
+        aggregatedData.add(
+          GlobalSearchResult(
+            title: picoNome,
+            subtitle: picoSubtitle,
+            icon: Icons.landscape,
+            isDownloaded: false,
+            isPico: true,
+            originalItem: pico,
+            onTap: () {
+              TelemetryService.instance.logAcaoCroqui(
+                cragId,
+                'abrir_croqui',
+                origem: 'busca_global',
+              );
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+              AppNav.toPico(
+                context,
+                pico: pico,
+                croqui: croqui,
+                cragId: cragId,
+              );
+            },
+          ),
+        );
+
+        _processPicoData(
+          aggregatedData,
+          pico,
+          croqui,
+          cragId,
+          picoNome,
+          isDownloaded: false,
+        );
+      }
+
+      // 3. Croquis Disponíveis no Catálogo / Explorar
+      final availablePicos =
+          widget.datasetRepo.activeDataset.value?.availablePicos ?? const [];
+      for (final crag in availablePicos) {
+        final cragId = crag['id']?.toString();
+        if (cragId == null || processedCragIds.contains(cragId)) continue;
+        processedCragIds.add(cragId);
+
+        final cragNome = crag['nome']?.toString() ?? 'Sem Nome';
+        final cragLocal = crag['local']?.toString() ??
+            crag['estado']?.toString() ??
+            '';
+        final cragSubtitle = cragLocal.isNotEmpty
+            ? 'Pico • $cragLocal • Catálogo'
+            : 'Pico • Catálogo';
+
+        aggregatedData.add(
+          GlobalSearchResult(
+            title: cragNome,
+            subtitle: cragSubtitle,
+            icon: Icons.travel_explore,
+            isDownloaded: false,
+            isPico: true,
+            originalItem: crag,
+            onTap: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+              handlePicoSelection(
+                context,
+                widget.datasetRepo,
+                crag,
+                source: 'busca_global',
+              );
+            },
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _allData = aggregatedData;
+          _isLoading = false;
+          _hasLoadedData = true;
+        });
+        _applyFilters();
+      }
     }
   }
 
