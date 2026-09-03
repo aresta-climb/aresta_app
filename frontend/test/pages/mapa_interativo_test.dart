@@ -631,7 +631,7 @@ void main() {
       expect(find.text('Via Teste'), findsNothing);
     });
 
-    testWidgets('Botão no canto superior direito recentraliza a imagem para a visão panorâmica inicial', (
+    testWidgets('Botão no canto inferior direito recentraliza a imagem para a visão panorâmica inicial', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(buildApp([], mockMapa, autoZoom: true));
@@ -639,7 +639,8 @@ void main() {
 
       final recenterBtn = find.byTooltip('Centralizar imagem');
       expect(recenterBtn, findsOneWidget);
-      expect(find.byIcon(Icons.center_focus_strong), findsOneWidget);
+      expect(find.byIcon(Icons.my_location), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
 
       await tester.tap(recenterBtn);
       await tester.pumpAndSettle();
