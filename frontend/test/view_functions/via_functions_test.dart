@@ -59,6 +59,10 @@ void main() {
       expect(formatGradeString('BR_4_BARRA_5'), '4º/5º');
       expect(formatGradeString('BR_5_BARRA_5sup'), '5º/5ºsup');
       expect(formatGradeString('BR_6sup_BARRA_7a'), '6ºsup/7a');
+      expect(formatGradeString('BR_7B_BARRA_7C'), '7b/7c');
+      expect(formatGradeString('BR_10A_BARRA_10B'), '10a/10b');
+      expect(formatGradeString('VB_BARRA_V0'), 'vb/v0');
+      expect(formatGradeString('V3_BARRA_V4'), 'v3/v4');
     });
 
     test('deve retornar string vazia ou inalterada se não fizer match (ex: strings puras)', () {
@@ -167,6 +171,40 @@ void main() {
         );
 
         expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'deve renderizar grau com barra formatado com "/" ao invés de "barra"',
+      (tester) async {
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Zig Marley'
+            ..dificuldade = GrauVia_GrauVia.BR_7B_BARRA_7C);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return buildViaBody(
+                    context,
+                    escalada,
+                    'crag1',
+                    pico: null,
+                    setor: null,
+                    grupo: null,
+                    fromSetorPage: false,
+                    fromMapaPage: false,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('7b/7c'), findsOneWidget);
+        expect(find.text('7b barra 7c'), findsNothing);
       },
     );
   });
