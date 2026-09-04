@@ -154,7 +154,6 @@ void registrarOuvintesLiveReload(
         '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
       );
       await syncService.syncIndex();
-      await datasetRepo.init();
 
       // Recarrega sob demanda croquis que estejam abertos em sessão online
       final servicoOnline = servicoCroquiOnline ??
@@ -175,10 +174,9 @@ void registrarOuvintesLiveReload(
         }
       }
 
-      // Purgação explícita do cache de texturas do Flutter (imagens ativas e inativas)
+      // Purgação cirúrgica do cache inativo do Flutter sem descartar texturas ativas da GPU
       final cache = imageCache ?? PaintingBinding.instance.imageCache;
       cache.clear();
-      cache.clearLiveImages();
 
       debugPrint(
         '⚡ [LiveReload] Sincronização automática concluída!',

@@ -13,6 +13,8 @@ import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/pages/setor.dart';
+import 'package:frontend/navigation/page_listenable_builder.dart';
 import 'package:frontend/pages/terms_of_use.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
@@ -757,7 +759,7 @@ void main() {
       expect(result, isTrue);
     });
 
-    test('registrarOuvintesLiveReload deve sincronizar indice e inicializar datasetRepo quando eventoLiveReload emitir', () async {
+    test('registrarOuvintesLiveReload deve sincronizar indice sem chamada redundante a datasetRepo.init() quando eventoLiveReload emitir', () async {
       final mockDataset = MockDatasetRepository();
       final mockSyncSvc = MockSyncService();
       final editorLocal = EditorDeCroqui();
@@ -777,10 +779,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
-      verify(() => mockDataset.init()).called(1);
+      verifyNever(() => mockDataset.init());
     });
 
-    test('registrarOuvintesLiveReload deve recarregar croquis ativos em sessão online ao receber eventoLiveReload', () async {
+    test('registrarOuvintesLiveReload deve recarregar croquis ativos em sessão online ao receber eventoLiveReload sem init redundante', () async {
       final mockDataset = MockDatasetRepository();
       final mockSyncSvc = MockSyncService();
       final mockServicoOnline = MockServicoCroquiOnline();
@@ -823,7 +825,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
-      verify(() => mockDataset.init()).called(1);
+      verifyNever(() => mockDataset.init());
       verify(() => mockServicoOnline.recarregarCroquiOnline(
             'https://servidor.com/croqui.binarypb',
             picoId: 'pico_online_1',
@@ -831,7 +833,7 @@ void main() {
       verify(() => mockDataset.notificarAtualizacaoSessaoOnline('pico_online_1')).called(1);
     });
 
-    test('TDD 1.2: registrarOuvintesLiveReload deve purgar cache de imagens do Flutter (clear e clearLiveImages) ao receber eventoLiveReload', () async {
+    test('registrarOuvintesLiveReload deve purgar cache inativo do Flutter via clear() sem invocar clearLiveImages() ao receber eventoLiveReload', () async {
       final mockDataset = MockDatasetRepository();
       final mockSyncSvc = MockSyncService();
       final mockImageCache = MockImageCache();
@@ -856,10 +858,108 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
-      verify(() => mockDataset.init()).called(1);
       verify(() => mockImageCache.clear()).called(1);
-      verify(() => mockImageCache.clearLiveImages()).called(1);
+      verifyNever(() => mockImageCache.clearLiveImages());
     });
+
+    testWidgets(
+      'Live Reload via WebSocket preserva estritamente a rolagem da tela ativa',
+      (WidgetTester tester) async {
+        final mockDataset = MockDatasetRepository();
+        final mockSyncSvc = MockSyncService();
+        final editorLocal = EditorDeCroqui();
+
+        final vias = List.generate(
+          25,
+          (i) => Escalada(viaEsportiva: ViaEsportiva(nome: 'Via $i')),
+        );
+        final setor = Setor()
+          ..nome = 'Setor Live'
+          ..escaladas.addAll(vias);
+        final pico = Pico()..nome = 'Pico Live';
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+        final croqui = Croqui();
+
+        final datasetNotifier = ValueNotifier<ConjuntoDadosCroqui?>(
+          ConjuntoDadosCroqui(
+            picosBaixados: [
+              {
+                'id': 'crag1',
+                'data': {'pico': pico, 'croqui': croqui},
+              },
+            ],
+            picosDisponiveis: [],
+          ),
+        );
+
+        when(() => mockDataset.activeDataset).thenReturn(datasetNotifier);
+        when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
+        when(() => mockDataset.init()).thenAnswer((_) async {});
+        when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async {
+          final setorAtualizado = Setor()
+            ..nome = 'Setor Live'
+            ..descricao = 'Nova descrição vinda do Live Reload'
+            ..escaladas.addAll(vias);
+          final picoAtualizado = Pico()..nome = 'Pico Live';
+          picoAtualizado.setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorAtualizado),
+          );
+
+          datasetNotifier.value = ConjuntoDadosCroqui(
+            picosBaixados: [
+              {
+                'id': 'crag1',
+                'data': {'pico': picoAtualizado, 'croqui': croqui},
+              },
+            ],
+            picosDisponiveis: [],
+          );
+          return <String>[];
+        });
+
+        registrarOuvintesLiveReload(editorLocal, mockDataset, mockSyncSvc);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: mockDataset,
+              cragId: 'crag1',
+              setorNome: 'Setor Live',
+              builder: (context, p, c, s, g, e) {
+                return SetorPage(
+                  setor: s!,
+                  cragId: 'crag1',
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Rola a tela do setor
+        final scrollFinder = find.byType(CustomScrollView);
+        await tester.drag(scrollFinder, const Offset(0, -250));
+        await tester.pumpAndSettle();
+
+        final scrollableState = tester.state<ScrollableState>(find.byType(Scrollable).first);
+        final posicaoAntes = scrollableState.position.pixels;
+        expect(posicaoAntes, greaterThan(180.0));
+
+        // Dispara o evento de Live Reload
+        editorLocal.eventoLiveReload.value = LiveReloadEvent(
+          setorId: 'setor_1',
+          timestamp: DateTime.now(),
+        );
+
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+
+        final scrollableStateApos = tester.state<ScrollableState>(find.byType(Scrollable).first);
+        expect(scrollableStateApos.position.pixels, equals(posicaoAntes));
+      },
+    );
   });
 
   group('Gestão de Memória e Vitals Tests', () {

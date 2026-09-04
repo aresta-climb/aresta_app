@@ -13,6 +13,10 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
@@ -152,4 +156,117 @@ void main() {
 
     expect(tempSyncService.syncStatus.value, SyncStatus.outdated);
   });
+
+  test(
+    'syncIndex emite logs estruturados de depuração com arquivos atualizados/renomeados e removidos',
+    () async {
+      final editor = EditorDeCroqui();
+      final picoId = 'pico_debug_logs';
+      final newIndice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = picoId
+            ..caminhoRelativo = 'picos/$picoId.binarypb'
+            ..checksumSha256Croqui = 'NEW_HASH',
+        );
+
+      final indiceFile = File(editor.indicePath(tempDir.path));
+      await indiceFile.parent.create(recursive: true);
+      await indiceFile.writeAsBytes(
+        (Indice()
+              ..croquis.add(
+                ResumoCroqui()
+                  ..id = picoId
+                  ..checksumSha256Croqui = 'OLD_HASH',
+              ))
+            .writeToBuffer(),
+      );
+
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId');
+      await picoDir.create(recursive: true);
+      final oldPicoFile = File('${picoDir.path}/$picoId.binarypb');
+      await oldPicoFile.writeAsBytes(Croqui().writeToBuffer());
+
+      final logs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+
+      try {
+        final fakeClient = _SyncTestFakeClient(newIndice);
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepository,
+          storage: storage,
+          client: fakeClient,
+        );
+
+        testSyncService.mockIsolateSpawn = (mainFunc, args) async {
+          File('${picoDir.path}/$picoId.binarypb.tmp')
+              .createSync(recursive: true);
+          args.sendPort.send(
+            DownloadIsolateResult(
+              filesToDelete: ['${picoDir.path}/foto_antiga.jpg'],
+              filesToRename: {
+                '${picoDir.path}/$picoId.binarypb.tmp':
+                    '${picoDir.path}/$picoId.binarypb',
+              },
+            ),
+          );
+        };
+
+        await testSyncService.syncIndex(auto: true);
+
+        expect(
+          logs.any(
+            (l) => l.contains(
+              '🔄 [SyncService] Arquivos atualizados/renomeados no syncIndex (1):',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          logs.any(
+            (l) => l.contains(
+              '${picoDir.path}/$picoId.binarypb.tmp -> ${picoDir.path}/$picoId.binarypb',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          logs.any(
+            (l) => l.contains(
+              '🗑️ [SyncService] Arquivos removidos no syncIndex (1):',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          logs.any((l) => l.contains('${picoDir.path}/foto_antiga.jpg')),
+          isTrue,
+        );
+      } finally {
+        debugPrint = originalDebugPrint;
+      }
+    },
+  );
 }
+
+class _SyncTestFakeClient extends http.BaseClient {
+  final Indice indice;
+  _SyncTestFakeClient(this.indice);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('indice.binarypb')) {
+      final bytes = indice.writeToBuffer();
+      return http.StreamedResponse(
+        Stream.value(bytes),
+        200,
+        headers: {'etag': 'TEST_ETAG'},
+      );
+    }
+    return http.StreamedResponse(Stream.value([]), 404);
+  }
+}
+

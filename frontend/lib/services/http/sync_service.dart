@@ -445,6 +445,23 @@ class SyncService {
             // Sucesso total. Efetivar todas as alterações pendentes de uma vez só (Atomic Global Updates).
             // Isso previne que o aplicativo fique com dados e arquivos em estados inconsistentes caso
             // o índice mestre falhe ao ser baixado ou processado.
+            if (globalUpdates.filesToRename.isNotEmpty) {
+              debugPrint(
+                '🔄 [SyncService] Arquivos atualizados/renomeados no syncIndex (${globalUpdates.filesToRename.length}):',
+              );
+              for (final entrada in globalUpdates.filesToRename.entries) {
+                debugPrint('   • ${entrada.key} -> ${entrada.value}');
+              }
+            }
+            if (globalUpdates.filesToDelete.isNotEmpty) {
+              debugPrint(
+                '🗑️ [SyncService] Arquivos removidos no syncIndex (${globalUpdates.filesToDelete.length}):',
+              );
+              for (final arquivo in globalUpdates.filesToDelete) {
+                debugPrint('   • $arquivo');
+              }
+            }
+
             if (globalUpdates.filesToDelete.isNotEmpty ||
                 globalUpdates.filesToRename.isNotEmpty) {
               await _storage.applyAtomicFileUpdates(
