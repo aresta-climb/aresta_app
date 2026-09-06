@@ -72,6 +72,36 @@ jobs:
           STORE_FILE: upload-keystore.jks
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 
+      - name: Upload Android Release Artifacts (AAB, Mappings e Símbolos Dart)
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-${{ inputs.tag_name }}
+          path: |
+            frontend/build/app/outputs/bundle/release/*.aab
+            frontend/build/app/outputs/mapping/release/
+            frontend/build/symbols
+          retention-days: 90
+
+      - name: Upload Dart Symbols to Firebase Crashlytics
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        working-directory: ./frontend
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON não configurada."
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > $GOOGLE_APPLICATION_CREDENTIALS
+          if [ ! -d "build/symbols" ]; then
+            echo "::error::Diretório build/symbols não encontrado."
+            exit 1
+          fi
+          echo "Enviando símbolos Dart do Android para o Crashlytics..."
+          npx --yes firebase-tools crashlytics:symbols:upload \
+            --app="1:737982062809:android:e168a4e15cd353e1d5dec8" \
+            build/symbols
+
       - name: Upload to Google Play Console
         uses: r0adkll/upload-google-play@v1
         with:
@@ -81,31 +111,3 @@ jobs:
           mappingFile: frontend/build/app/outputs/mapping/release/mapping.txt
           tracks: internal
           status: completed
-
-      - name: Upload Dart Symbols to Firebase Crashlytics
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
-        working-directory: ./frontend
-        run: |
-          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "$FIREBASE_SERVICE_ACCOUNT" > $GOOGLE_APPLICATION_CREDENTIALS
-            if [ -d "build/symbols" ]; then
-              echo "Enviando símbolos Dart do Android para o Crashlytics..."
-              npx --yes firebase-tools crashlytics:symbols:upload \
-                --app="1:737982062809:android:e168a4e15cd353e1d5dec8" \
-                build/symbols
-            fi
-          else
-            echo "::warning::FIREBASE_SERVICE_ACCOUNT_JSON não configurada. Pulando upload de símbolos para o Crashlytics."
-          fi
-
-      - name: Upload Android Release Artifacts (AAB, Mappings e Símbolos Dart)
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-release-${{ inputs.tag_name }}
-          path: |
-            frontend/build/app/outputs/bundle/release/*.aab
-            frontend/build/app/outputs/mapping/release/
-            frontend/build/symbols
-          retention-days: 90

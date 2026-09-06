@@ -133,6 +133,44 @@ jobs:
           # Compila o app e gera o arquivo .ipa usando as configurações locais de ExportOptions.plist
           flutter build ipa --release --obfuscate --split-debug-info=build/symbols --export-options-plist=ios/ExportOptions.plist
 
+      - name: Upload iOS Release Artifacts (IPA, dSYMs e Símbolos Dart)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-release-${{ inputs.tag_name }}
+          path: |
+            frontend/build/ios/ipa/*.ipa
+            frontend/build/ios/archive/Runner.xcarchive/dSYMs
+            frontend/build/symbols
+          retention-days: 90
+
+      - name: Upload dSYMs and Dart Symbols to Firebase Crashlytics
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        working-directory: frontend
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON não configurada."
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > $GOOGLE_APPLICATION_CREDENTIALS
+          
+          # Upload dos dSYMs nativos gerados no Archive do Xcode usando o upload-symbols do FirebaseCrashlytics
+          if [ ! -d "build/ios/archive/Runner.xcarchive/dSYMs" ]; then
+            echo "::error::Diretório build/ios/archive/Runner.xcarchive/dSYMs não encontrado."
+            exit 1
+          fi
+          
+          UPLOAD_SYMBOLS=$(find ios/Pods -name "upload-symbols" -type f 2>/dev/null | head -n 1)
+          if [ -z "$UPLOAD_SYMBOLS" ]; then
+            echo "::error::Utilitário upload-symbols não encontrado em ios/Pods."
+            exit 1
+          fi
+          
+          echo "Enviando dSYMs nativos para o Crashlytics via $UPLOAD_SYMBOLS..."
+          chmod +x "$UPLOAD_SYMBOLS"
+          "$UPLOAD_SYMBOLS" -gsp ios/Runner/GoogleService-Info.plist -p ios build/ios/archive/Runner.xcarchive/dSYMs
+
       - name: Upload to App Store Connect
         env:
           API_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
@@ -152,41 +190,3 @@ jobs:
           # Envia para a App Store Connect
           # Passamos o --apple-id e --bundle-id explicitamente pois o altool no Xcode 15+ tem um bug de lookup usando API Keys
           xcrun altool --upload-app -f "$IPA_PATH" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" --apple-id "6776467893" --bundle-id "app.escalada.croquis"
-
-      - name: Upload dSYMs and Dart Symbols to Firebase Crashlytics
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
-        working-directory: frontend
-        run: |
-          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "$FIREBASE_SERVICE_ACCOUNT" > $GOOGLE_APPLICATION_CREDENTIALS
-            
-            # Upload dos dSYMs nativos gerados no Archive do Xcode
-            if [ -d "build/ios/archive/Runner.xcarchive/dSYMs" ]; then
-              echo "Enviando dSYMs do iOS para o Crashlytics..."
-              npx --yes firebase-tools crashlytics:symbols:upload \
-                --app="1:737982062809:ios:0402933638e489bcd5dec8" \
-                build/ios/archive/Runner.xcarchive/dSYMs
-            fi
-            
-            # Upload das tabelas de símbolos de depuração do Dart
-            if [ -d "build/symbols" ]; then
-              echo "Enviando símbolos Dart do iOS para o Crashlytics..."
-              npx --yes firebase-tools crashlytics:symbols:upload \
-                --app="1:737982062809:ios:0402933638e489bcd5dec8" \
-                build/symbols
-            fi
-          else
-            echo "::warning::FIREBASE_SERVICE_ACCOUNT_JSON não configurada. Pulando upload de símbolos para o Crashlytics."
-          fi
-
-      - name: Upload iOS Release Artifacts (IPA, dSYMs e Símbolos Dart)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-release-${{ inputs.tag_name }}
-          path: |
-            frontend/build/ios/ipa/*.ipa
-            frontend/build/ios/archive/Runner.xcarchive/dSYMs
-            frontend/build/symbols
-          retention-days: 90
