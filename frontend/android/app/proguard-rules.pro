@@ -1,4 +1,4 @@
-﻿# Regras do ProGuard / R8 para o Aresta App
+# Regras do ProGuard / R8 para o Aresta App
 
 # 1. Manter atributos essenciais para stacktraces e annotations no Crashlytics
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
@@ -37,3 +37,6 @@
 # 8. KotlinX Coroutines e Reflection
 -dontwarn kotlinx.coroutines.**
 -keepclassmembers class kotlinx.coroutines.** { *; }
+
+# 9. Google Play Core (Flutter Deferred Components / PlayStoreSplitApplication)
+-dontwarn com.google.android.play.core.**

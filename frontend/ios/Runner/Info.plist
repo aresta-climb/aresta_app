@@ -98,5 +98,14 @@
 			<string>fetch</string>
 			<string>processing</string>
 		</array>
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+		<array>
+			<string>workmanager.background.task</string>
+			<string>dev.fluttercommunity.workmanager.iOSBackgroundTask</string>
+			<string>app.escalada.croquis.background</string>
+			<string>tarefa_migracao_pos_atualizacao</string>
+			<string>migracao_pos_update</string>
+			<string>send_feedback_task</string>
+		</array>
 	</dict>
 </plist>
