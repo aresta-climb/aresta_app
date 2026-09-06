@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/services/dataset_repository.dart';
 
 import 'package:frontend/services/editor_croqui.dart';
@@ -297,7 +297,7 @@ void main() {
 
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
-        caminho: '${NetworkConstants.officialServerUrl}/mapa_oficial.webp',
+        caminho: '${RemoteConfigService.instance.officialServerUrl}/mapa_oficial.webp',
         caminhoDownloads: tempDownloadsDir.path,
       );
 

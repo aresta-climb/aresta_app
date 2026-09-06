@@ -44,6 +44,8 @@ class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigServ
   String get feedbackEdgeFunctionUrl => "";
   @override
   String get servingBaseUrl => "";
+  @override
+  String get officialServerUrl => "";
 
   Completer<void>? initCompleter;
 

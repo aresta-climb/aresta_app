@@ -4,10 +4,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import '../constants/network_constants.dart';
 import '../services/dataset_repository.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/firebase/remote_config_service.dart';
 import 'imagem_arquivo_aresta.dart';
 
 /// Provedor unificado e em camadas para resolução de imagens do ecossistema Aresta.
@@ -91,7 +91,7 @@ class ProvedorImagemAresta {
           try {
             serverBase = EditorDeCroqui.instance.activeBaseUrl;
           } catch (_) {
-            serverBase = NetworkConstants.officialServerUrl;
+            serverBase = RemoteConfigService.instance.officialServerUrl;
           }
         }
 
@@ -163,7 +163,7 @@ class ProvedorImagemAresta {
   static File? _buscarArquivoNoDiretorio(String rootDir, String path) {
     if (!Directory(rootDir).existsSync()) return null;
 
-    final baseUrl = '${NetworkConstants.officialServerUrl}/';
+    final baseUrl = '${RemoteConfigService.instance.officialServerUrl}/';
     String cleanUrl = Uri.decodeFull(path);
     if (cleanUrl.startsWith(baseUrl)) {
       final relativePath = cleanUrl.replaceFirst(baseUrl, '');

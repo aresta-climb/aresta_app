@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 
 void main() {
   late EditorDeCroqui editor;
@@ -25,7 +25,7 @@ void main() {
 
   group('activeBaseUrl', () {
     test('deve retornar URL oficial quando sem editor ou experimental', () {
-      expect(editor.activeBaseUrl, NetworkConstants.officialServerUrl);
+      expect(editor.activeBaseUrl, RemoteConfigService.instance.officialServerUrl);
     });
 
     test('deve retornar a URL do editor quando configurada', () {

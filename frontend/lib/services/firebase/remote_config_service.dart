@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import '../../constants/network_constants.dart';
 
 /// Serviço responsável por gerenciar o Firebase Remote Config de forma reativa e não-bloqueante.
 ///
@@ -47,14 +48,14 @@ class RemoteConfigService extends ChangeNotifier {
   Future<void> _initializeInternal() async {
     try {
       // 1. Define os padrões locais seguros para garantir funcionamento offline imediato
-      await _remoteConfig.setDefaults(const {
+      await _remoteConfig.setDefaults({
         "recommended_version": 0,
         "soft_min_version": 0,
         "hard_min_version": 0,
         "store_url_ios": "",
         "feedback_edge_function_url":
-            "https://gawgqiqzptckwghgqypt.supabase.co/functions/v1/app-feedback",
-        "serving_base_url": "https://serving.arestaclimb.com",
+            NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+        "serving_base_url": NetworkConstants.kDefaultServingBaseUrl,
       });
 
       // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
@@ -127,8 +128,22 @@ class RemoteConfigService extends ChangeNotifier {
   String get storeUrlIos => getString('store_url_ios');
 
   /// URL do endpoint seguro de feedback do aplicativo (Edge Function Supabase).
-  String get feedbackEdgeFunctionUrl => getString('feedback_edge_function_url');
+  String get feedbackEdgeFunctionUrl {
+    final value = getString('feedback_edge_function_url');
+    return value.isNotEmpty
+        ? value
+        : NetworkConstants.kDefaultFeedbackEdgeFunctionUrl;
+  }
 
   /// URL base do servidor de dados de escalada (Cloudflare Serving).
-  String get servingBaseUrl => getString('serving_base_url');
+  String get servingBaseUrl {
+    final value = getString('serving_base_url');
+    return value.isNotEmpty
+        ? value
+        : NetworkConstants.kDefaultServingBaseUrl;
+  }
+
+  /// URL combinada do servidor de dados com a versão atual de dados.
+  String get officialServerUrl =>
+      '$servingBaseUrl/v${NetworkConstants.kDataVersion}';
 }

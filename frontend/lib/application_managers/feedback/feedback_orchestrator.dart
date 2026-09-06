@@ -13,10 +13,10 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-import '../../constants/network_constants.dart';
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
 import '../../services/firebase/app_check_service.dart';
+import '../../services/firebase/remote_config_service.dart';
 
 /// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
 /// das tarefas de feedback salvas no disco local do dispositivo.
@@ -70,7 +70,8 @@ class FeedbackOrchestrator {
     );
 
     final isDebug = isDebugModeOverride ?? kDebugMode;
-    final edgeFunctionUrl = NetworkConstants.feedbackEdgeFunctionUrl;
+    final edgeFunctionUrl =
+        RemoteConfigService.instance.feedbackEdgeFunctionUrl;
 
     try {
       // 1. Limpeza de lixo e destravamento de crashes anteriores

@@ -138,7 +138,7 @@ class SyncPreloadRunner {
 Future<void> main(List<String> args) async {
   final runner = SyncPreloadRunner(
     client: http.Client(),
-    baseUrl: NetworkConstants.officialServerUrl,
+    baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
     outputDir: 'assets/preload',
   );
 

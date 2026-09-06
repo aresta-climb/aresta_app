@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:mocktail/mocktail.dart';
@@ -138,6 +139,33 @@ void main() {
       );
     });
 
+    test('Acessar officialServerUrl combina servingBaseUrl com a versão de dados', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('serving_base_url'),
+      ).thenReturn('https://remote.serving.arestaclimb.com');
+      expect(
+        RemoteConfigService.instance.officialServerUrl,
+        'https://remote.serving.arestaclimb.com/v${NetworkConstants.kDataVersion}',
+      );
+    });
+
+    test('officialServerUrl e URLs dinâmicas usam valores padrão quando Remote Config vazio ou com erro', () {
+      when(() => mockFirebaseRemoteConfig.getString(any())).thenReturn('');
+
+      expect(
+        RemoteConfigService.instance.servingBaseUrl,
+        NetworkConstants.kDefaultServingBaseUrl,
+      );
+      expect(
+        RemoteConfigService.instance.officialServerUrl,
+        NetworkConstants.kDefaultOfficialServerUrl,
+      );
+      expect(
+        RemoteConfigService.instance.feedbackEdgeFunctionUrl,
+        NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+      );
+    });
+
     test('Getters tratam exceções retornando valores padrão seguros', () {
       when(() => mockFirebaseRemoteConfig.getBool(any())).thenThrow(Exception('Error'));
       when(() => mockFirebaseRemoteConfig.getInt(any())).thenThrow(Exception('Error'));
@@ -146,6 +174,18 @@ void main() {
       expect(RemoteConfigService.instance.getBool('qualquer_bool'), isFalse);
       expect(RemoteConfigService.instance.getInt('qualquer_int'), 0);
       expect(RemoteConfigService.instance.getString('qualquer_string'), '');
+      expect(
+        RemoteConfigService.instance.servingBaseUrl,
+        NetworkConstants.kDefaultServingBaseUrl,
+      );
+      expect(
+        RemoteConfigService.instance.officialServerUrl,
+        NetworkConstants.kDefaultOfficialServerUrl,
+      );
+      expect(
+        RemoteConfigService.instance.feedbackEdgeFunctionUrl,
+        NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+      );
     });
   });
 }

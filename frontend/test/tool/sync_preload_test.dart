@@ -19,7 +19,7 @@ void main() {
   setUp(() {
     mockClient = MockHttpClient();
     tempDir = Directory.systemTemp.createTempSync('sync_preload_test');
-    registerFallbackValue(Uri.parse(NetworkConstants.officialServerUrl));
+    registerFallbackValue(Uri.parse(NetworkConstants.kDefaultOfficialServerUrl));
   });
 
   tearDown(() {
@@ -35,7 +35,7 @@ void main() {
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 
@@ -67,7 +67,7 @@ void main() {
       // Mock indice download
       when(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: any(named: 'headers'),
         ),
       ).thenAnswer(
@@ -78,7 +78,7 @@ void main() {
       when(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -87,7 +87,7 @@ void main() {
       when(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag2.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag2.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -95,7 +95,7 @@ void main() {
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 
@@ -126,14 +126,14 @@ void main() {
 
       when(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: {'If-None-Match': 'old_etag'},
         ),
       ).thenAnswer((_) async => http.Response('', 304));
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 
@@ -141,7 +141,7 @@ void main() {
 
       verify(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: {'If-None-Match': 'old_etag'},
         ),
       ).called(1);
@@ -149,7 +149,7 @@ void main() {
       verifyNever(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
         ),
       );
@@ -205,7 +205,7 @@ void main() {
 
       when(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: any(named: 'headers'),
         ),
       ).thenAnswer(
@@ -220,7 +220,7 @@ void main() {
       when(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -228,7 +228,7 @@ void main() {
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 
@@ -238,7 +238,7 @@ void main() {
       verify(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -246,7 +246,7 @@ void main() {
       verifyNever(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag2.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag2.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -302,7 +302,7 @@ void main() {
 
       when(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: any(named: 'headers'),
         ),
       ).thenAnswer(
@@ -317,7 +317,7 @@ void main() {
       when(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -325,7 +325,7 @@ void main() {
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 
@@ -334,7 +334,7 @@ void main() {
       verify(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -361,7 +361,7 @@ void main() {
 
       when(
         () => mockClient.get(
-          Uri.parse('${NetworkConstants.officialServerUrl}/indice.binarypb'),
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
           headers: any(named: 'headers'),
         ),
       ).thenAnswer(
@@ -376,7 +376,7 @@ void main() {
       when(
         () => mockClient.get(
           Uri.parse(
-            '${NetworkConstants.officialServerUrl}/thumbnails/crag1.webp',
+            '${NetworkConstants.kDefaultOfficialServerUrl}/thumbnails/crag1.webp',
           ),
           headers: any(named: 'headers'),
         ),
@@ -384,7 +384,7 @@ void main() {
 
       final runner = SyncPreloadRunner(
         client: mockClient,
-        baseUrl: NetworkConstants.officialServerUrl,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
         outputDir: tempDir.path,
       );
 

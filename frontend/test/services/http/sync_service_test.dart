@@ -46,6 +46,8 @@ class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigServ
   @override
   String get servingBaseUrl => "";
   @override
+  String get officialServerUrl => "";
+  @override
   Future<void> initialize() async {}
   @override
   FirebaseRemoteConfig? debugRemoteConfig;

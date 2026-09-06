@@ -8,8 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:yaml/yaml.dart';
-import 'package:frontend/constants/network_constants.dart';
 
 /// Evento disparado quando o Editor Desktop solicita uma atualização em tempo real (Live Reload).
 class LiveReloadEvent {
@@ -21,7 +21,8 @@ class LiveReloadEvent {
 
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
 class EditorDeCroqui {
-  static String get _officialBaseUrl => NetworkConstants.officialServerUrl;
+  static String get _officialBaseUrl =>
+      RemoteConfigService.instance.officialServerUrl;
   static const String _configFileName = 'editor_config.yaml';
   static const String dominioPrevia = 'previa.arestaclimb.com';
 
