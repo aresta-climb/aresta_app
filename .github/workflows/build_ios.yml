@@ -118,6 +118,8 @@ jobs:
             <string>manual</string>
             <key>signingCertificate</key>
             <string>Apple Distribution</string>
+            <key>uploadSymbols</key>
+            <true/>
             <key>provisioningProfiles</key>
             <dict>
               <key>app.escalada.croquis</key>
@@ -161,14 +163,17 @@ jobs:
             exit 1
           fi
           
-          UPLOAD_SYMBOLS=$(find ios/Pods -name "upload-symbols" -type f 2>/dev/null | head -n 1)
+          UPLOAD_SYMBOLS=$(find ios ~/Library/Developer/Xcode/DerivedData -name "upload-symbols" -type f 2>/dev/null | head -n 1)
           if [ -z "$UPLOAD_SYMBOLS" ]; then
-            echo "::error::Utilitário upload-symbols não encontrado em ios/Pods."
-            exit 1
+            echo "upload-symbols não encontrado localmente. Baixando utilitário oficial do repositório do Firebase iOS SDK..."
+            curl -sSL "https://github.com/firebase/firebase-ios-sdk/raw/main/Crashlytics/upload-symbols" -o /tmp/upload-symbols
+            chmod +x /tmp/upload-symbols
+            UPLOAD_SYMBOLS="/tmp/upload-symbols"
+          else
+            chmod +x "$UPLOAD_SYMBOLS"
           fi
           
           echo "Enviando dSYMs nativos para o Crashlytics via $UPLOAD_SYMBOLS..."
-          chmod +x "$UPLOAD_SYMBOLS"
           "$UPLOAD_SYMBOLS" -gsp ios/Runner/GoogleService-Info.plist -p ios build/ios/archive/Runner.xcarchive/dSYMs
 
       - name: Upload to App Store Connect
