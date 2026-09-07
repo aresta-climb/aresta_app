@@ -1,35 +1,64 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'resumo_pico.dart';
+
 /// Representa o conjunto de dados atual do catálogo de croquis.
 ///
 /// Contém a lista de todos os picos disponíveis no índice e a lista
-/// dos picos que já foram baixados para o dispositivo local.
+/// dos picos que já foram baixados para o dispositivo local, utilizando
+/// objetos fortemente tipados [ResumoPico].
 class ConjuntoDadosCroqui {
   /// Lista de todos os picos catalogados disponíveis no índice.
-  final List<Map<String, dynamic>> picosDisponiveis;
+  final List<ResumoPico> picosDisponiveis;
 
   /// Lista dos picos salvos no armazenamento local para acesso offline.
-  final List<Map<String, dynamic>> picosBaixados;
+  final List<ResumoPico> picosBaixados;
 
-  const ConjuntoDadosCroqui({
-    List<Map<String, dynamic>>? picosDisponiveis,
-    List<Map<String, dynamic>>? picosBaixados,
-    List<Map<String, dynamic>>? availablePicos,
-    List<Map<String, dynamic>>? downloadedPicos,
-  })  : picosDisponiveis = picosDisponiveis ?? availablePicos ?? const [],
-        picosBaixados = picosBaixados ?? downloadedPicos ?? const [];
+  ConjuntoDadosCroqui({
+    dynamic picosDisponiveis,
+    dynamic picosBaixados,
+    dynamic availablePicos,
+    dynamic downloadedPicos,
+  })  : picosDisponiveis = _normalizarLista(picosDisponiveis ?? availablePicos),
+        picosBaixados = _normalizarLista(picosBaixados ?? downloadedPicos);
+
+  /// Construtor constante para listas puras já tipadas.
+  const ConjuntoDadosCroqui.puro({
+    this.picosDisponiveis = const [],
+    this.picosBaixados = const [],
+  });
+
+  static List<ResumoPico> _normalizarLista(dynamic lista) {
+    if (lista == null) return const [];
+    if (lista is List<ResumoPico>) return List.unmodifiable(lista);
+    if (lista is List) {
+      return List.unmodifiable(
+        lista.map((item) {
+          if (item is ResumoPico) return item;
+          if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
+          if (item is Map) {
+            return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+          }
+          throw ArgumentError(
+            'Tipo inválido de item na lista de picos: ${item.runtimeType}',
+          );
+        }),
+      );
+    }
+    return const [];
+  }
 
   /// Apelido para manter compatibilidade com implementações legadas.
-  List<Map<String, dynamic>> get availablePicos => picosDisponiveis;
+  List<ResumoPico> get availablePicos => picosDisponiveis;
 
   /// Apelido para manter compatibilidade com implementações legadas.
-  List<Map<String, dynamic>> get downloadedPicos => picosBaixados;
+  List<ResumoPico> get downloadedPicos => picosBaixados;
 
   /// Cria uma cópia com campos atualizados opcionalmente.
   ConjuntoDadosCroqui copyWith({
-    List<Map<String, dynamic>>? picosDisponiveis,
-    List<Map<String, dynamic>>? picosBaixados,
+    dynamic picosDisponiveis,
+    dynamic picosBaixados,
   }) {
     return ConjuntoDadosCroqui(
       picosDisponiveis: picosDisponiveis ?? this.picosDisponiveis,
@@ -39,10 +68,7 @@ class ConjuntoDadosCroqui {
 
   /// Retorna uma instância vazia inicial do conjunto de dados.
   factory ConjuntoDadosCroqui.vazio() {
-    return const ConjuntoDadosCroqui(
-      picosDisponiveis: [],
-      picosBaixados: [],
-    );
+    return const ConjuntoDadosCroqui.puro();
   }
 }
 
