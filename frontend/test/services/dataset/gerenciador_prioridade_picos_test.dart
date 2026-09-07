@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset/armazenamento/gerenciador_prioridade_picos.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
   late Directory tempDir;
@@ -73,6 +74,25 @@ void main() {
         'pico_2',
         'pico_3',
         'pico_invalido',
+      ]);
+    });
+
+    test('ordena lista tipada de ResumoPico com base na lista de prioridade', () {
+      final picos = [
+        const ResumoPico(id: 'pico_3', nome: 'Pico 3', local: 'L3'),
+        const ResumoPico(id: 'pico_1', nome: 'Pico 1', local: 'L1'),
+        const ResumoPico(id: 'pico_2', nome: 'Pico 2', local: 'L2'),
+      ];
+
+      final ordenados = gerenciador.ordenarPorPrioridade<ResumoPico>(
+        picos,
+        ['pico_1', 'pico_2', 'pico_3'],
+      );
+
+      expect(ordenados.map((p) => p.id).toList(), [
+        'pico_1',
+        'pico_2',
+        'pico_3',
       ]);
     });
   });

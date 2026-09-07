@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:frontend/services/firebase/app_logger.dart';
+import '../modelos/resumo_pico.dart';
 
 /// Gerencia a persistência e ordenação dos picos acessados recentemente.
 ///
@@ -81,15 +82,16 @@ class GerenciadorPrioridadePicos {
   }
 
   /// Ordena a lista de [picos] com base na [listaPrioridade].
+  /// Suporta tanto objetos fortemente tipados [ResumoPico] quanto estruturas dinâmicas.
   /// Picos não presentes na lista recebem prioridade mais baixa e são colocados no final.
-  List<Map<String, dynamic>> ordenarPorPrioridade(
-    List<Map<String, dynamic>> picos,
+  List<T> ordenarPorPrioridade<T>(
+    List<T> picos,
     List<String> listaPrioridade,
   ) {
-    final List<Map<String, dynamic>> ordenados = List.from(picos);
+    final List<T> ordenados = List.from(picos);
     ordenados.sort((a, b) {
-      final String idA = a['id']?.toString() ?? '';
-      final String idB = b['id']?.toString() ?? '';
+      final String idA = _extrairId(a);
+      final String idB = _extrairId(b);
 
       int indexA = listaPrioridade.indexOf(idA);
       int indexB = listaPrioridade.indexOf(idB);
@@ -100,5 +102,11 @@ class GerenciadorPrioridadePicos {
       return indexA.compareTo(indexB);
     });
     return ordenados;
+  }
+
+  static String _extrairId(dynamic item) {
+    if (item is ResumoPico) return item.id;
+    if (item is Map) return item['id']?.toString() ?? '';
+    return '';
   }
 }
