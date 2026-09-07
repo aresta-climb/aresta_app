@@ -3,10 +3,21 @@ name: Unified App Release
 on:
   workflow_dispatch:
     inputs:
-      new_version:
-        description: 'New Version Number (e.g. 1.0.0)'
+      bump_type:
+        description: 'Tipo de incremento de versão'
         required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
+        default: 'patch'
+      custom_version:
+        description: 'Versão customizada (obrigatório se bump_type for custom, ex: 1.0.0)'
+        required: false
         type: string
+        default: ''
       deploy_android:
         description: 'Deploy para Android?'
         required: true
@@ -52,42 +63,28 @@ jobs:
           flutter pub get
           flutter analyze --fatal-infos --fatal-warnings
 
-      - name: Bump Version and Create Tag
+      - name: Calcular Versão de Release
         id: bump
         run: |
-          NEW_VERSION="${{ inputs.new_version }}"
+          cd frontend
+          dart run tool/release_tools/calcular_versao_release.dart \
+            --tipo "${{ inputs.bump_type }}" \
+            --custom "${{ inputs.custom_version }}" \
+            --pubspec pubspec.yaml \
+            --exportar-env "$GITHUB_OUTPUT"
+          cd ..
+
+      - name: Injetar Versão Oficial e Atualizar Recursos
+        run: |
+          FINAL_VERSION="${{ steps.bump.outputs.versao_completa }}"
+          TAG_NAME="${{ steps.bump.outputs.tag_name }}"
           PUBSPEC="frontend/pubspec.yaml"
-          
-          # Obter a versão atual do pubspec.yaml
-          CURRENT_FULL_VERSION=$(grep "^version:" $PUBSPEC | awk '{print $2}')
-          CURRENT_VERSION=$(echo $CURRENT_FULL_VERSION | cut -d'+' -f1)
-          CURRENT_BUILD=$(echo $CURRENT_FULL_VERSION | cut -d'+' -f2)
-          
-          echo "Current version: $CURRENT_VERSION, Current build: $CURRENT_BUILD"
-          echo "Requested new version: $NEW_VERSION"
-          
-          # Validação: A nova versão deve ser estritamente maior que a atual
-          # O sort -V compara versões semânticas (1.0.0) nativamente
-          HIGHEST=$(printf "%s\n%s" "$CURRENT_VERSION" "$NEW_VERSION" | sort -V | tail -n1)
-          
-          if [ "$HIGHEST" != "$NEW_VERSION" ] || [ "$CURRENT_VERSION" == "$NEW_VERSION" ]; then
-            echo "::error::A nova versão ($NEW_VERSION) deve ser estritamente maior que a versão atual ($CURRENT_VERSION)."
-            exit 1
-          fi
-          
-          # Incrementa o número de build
-          NEW_BUILD=$((CURRENT_BUILD + 1))
-          FINAL_VERSION="${NEW_VERSION}+${NEW_BUILD}"
-          TAG_NAME="v${FINAL_VERSION}"
           
           echo "Final target version: $FINAL_VERSION"
           echo "Target tag: $TAG_NAME"
           
-          # Atualiza o arquivo pubspec.yaml substituindo a linha
-          sed -i "s/^version: .*/version: ${FINAL_VERSION}/" $PUBSPEC
-          
-          # Atualiza o preload (baixa as capas mais recentes)
           cd frontend
+          dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml "$FINAL_VERSION"
           flutter pub get
           dart tool/sync_preload.dart
           cd ..
@@ -124,20 +121,22 @@ jobs:
           # Envia tudo de volta para a branch que chamou a esteira (geralmente main)
           git push origin HEAD
           git push origin $TAG_NAME
+
+      - name: Iniciar Ciclo de Desenvolvimento Posterior
+        run: |
+          RELEASE_VER="${{ steps.bump.outputs.versao_release }}"
+          RELEASE_BUILD="${{ steps.bump.outputs.novo_build }}"
+          PUBSPEC="frontend/pubspec.yaml"
           
-          # Cria a versão de desenvolvimento (-dev) para o próximo ciclo
-          NEXT_DEV_BUILD=$((NEW_BUILD + 1))
-          DEV_VERSION="${NEW_VERSION}-dev+${NEXT_DEV_BUILD}"
-          
+          cd frontend
+          DEV_VERSION=$(dart run tool/release_tools/calcular_proximo_dev.dart "$RELEASE_VER" --build "$RELEASE_BUILD" --formato completo)
           echo "Setting version to dev mode: $DEV_VERSION"
+          dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml "$DEV_VERSION"
+          cd ..
           
-          sed -i "s/^version: .*/version: ${DEV_VERSION}/" $PUBSPEC
           git add $PUBSPEC
           git commit -m "chore: iniciar ciclo de desenvolvimento ($DEV_VERSION)"
           git push origin HEAD
-          
-          # Exporta a variável tag_name para os outros jobs do GitHub Actions usarem
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
   build_android:
     name: Build Android

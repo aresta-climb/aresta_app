@@ -177,6 +177,34 @@ O Aresta implementa as melhores práticas recomendadas para Android Vitals e App
 - **ThinLTO e Dead Code Stripping (iOS):** Otimizações inter-módulos ativadas no Clang via `Release.xcconfig`.
 - **Ofuscação de Código Dart:** Flags `--obfuscate --split-debug-info=build/symbols` aplicadas nos builds de release com upload automático de `mapping.txt`, `.symbols` e `dSYMs` para o Firebase Crashlytics e Google Play Console.
 
+### Fluxo de Release Automatizado (GitHub Actions)
+O lançamento de novas versões para as lojas de aplicativo é realizado através do workflow unificado [`.github/workflows/release_new_app_version.yml`](../.github/workflows/release_new_app_version.yml) via disparo manual (**workflow_dispatch**):
+
+| Parâmetro | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `bump_type` | `choice` | `patch` | Tipo de incremento semântico: `patch`, `minor`, `major` ou `custom`. |
+| `custom_version` | `string` | *(vazio)* | Versão explícita (obrigatória apenas se `bump_type` for `custom`, ex: `1.0.0`). |
+| `deploy_android` | `boolean` | `true` | Se verdadeiro, executa build do AAB e publicação na Google Play Store. |
+| `deploy_ios` | `boolean` | `true` | Se verdadeiro, executa build do IPA e publicação na Apple App Store / TestFlight. |
+
+#### Ciclo Contínuo de Desenvolvimento (`-dev`)
+O repositório adota a convenção de que a branch `main` sempre aponta para a versão do **próximo patch planejado** com o sufixo `-dev`:
+- Quando a versão atual for `0.2.5-dev+67` e um release `patch` for disparado, o pipeline lança `0.2.5+68`, cria a tag `v0.2.5+68` e comita automaticamente o início do próximo ciclo dev em `main` como `0.2.6-dev+69`.
+- Se um incremento `minor` for selecionado, a versão lançada será `0.3.0+68` e o ciclo seguinte em `main` iniciará em `0.3.1-dev+69`.
+- Se um incremento `major` for selecionado, a versão lançada será `1.0.0+68` e o ciclo seguinte em `main` iniciará em `1.0.1-dev+69`.
+
+As ferramentas de cálculo e manipulação de versão estão centralizadas e testadas em `frontend/tool/release_tools/`:
+```bash
+# Calcular versão de lançamento:
+dart run tool/release_tools/calcular_versao_release.dart --tipo patch
+
+# Calcular próximo ciclo dev:
+dart run tool/release_tools/calcular_proximo_dev.dart 0.2.5 --build 68
+
+# Atualizar o pubspec.yaml:
+dart run tool/release_tools/atualizar_versao_pubspec.dart pubspec.yaml 0.2.5-dev+67
+```
+
 ### Artefatos de Release no GitHub Actions
 A cada release gerada pelos workflows `build_android.yml` e `build_ios.yml`, um pacote `.zip` completo contendo os binários (`.aab` / `.ipa`), tabelas de símbolos Dart (`.symbols`), dSYMs do Xcode e arquivos de mapeamento R8/ProGuard é armazenado na aba **Actions** do GitHub (com retenção de 90 dias).
 
