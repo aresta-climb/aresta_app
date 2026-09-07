@@ -4,11 +4,55 @@
 import 'dart:io';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../firebase/app_logger.dart';
+import '../modelos/resumo_pico.dart';
 
 /// Responsável por extrair caminhos de capas, processar seções markdown de croquis
 /// e resolver recursivamente arquivos de imagem no sistema de arquivos.
 class ExtratorMetadadosCroqui {
+  /// Carrega os dados locais do croqui e o caminho da imagem de capa para um [ResumoPico].
+  Future<ResumoPico> carregarMetadadosLocais({
+    required ResumoPico pico,
+    required String downloadsPath,
+    required String baseUrl,
+    Croqui? parsedCroqui,
+  }) async {
+    try {
+      Croqui croqui;
+      if (parsedCroqui != null) {
+        croqui = parsedCroqui;
+      } else {
+        final picoFile = File('$downloadsPath/${pico.id}/${pico.id}.binarypb');
+        if (!picoFile.existsSync()) {
+          return pico;
+        }
+        croqui = Croqui.fromBuffer(await picoFile.readAsBytes());
+      }
+
+      final capaPath = _resolverCapaPath(
+        croqui: croqui,
+        url: pico.url,
+        downloadsPath: downloadsPath,
+        id: pico.id,
+        baseUrl: baseUrl,
+      );
+
+      return pico.copyWith(
+        croqui: croqui,
+        pico: croqui.picos.isNotEmpty ? croqui.picos.first : null,
+        capaPath: capaPath,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao carregar metadados locais do pico ${pico.id}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return pico;
+    }
+  }
+
   /// Atualiza o caminho da imagem de capa (`capaPath`) e o nó `data` dentro do mapa [picoData].
+  /// Mantido para compatibilidade com mapas legados.
   Future<void> atualizarMetadadosPico({
     required String id,
     required Map<String, dynamic> picoData,
@@ -32,64 +76,16 @@ class ExtratorMetadadosCroqui {
         picoData['data'] = {'pico': croqui.picos.first, 'croqui': croqui};
       }
 
-      String baseDir = '';
-      final String? url = picoData['url'];
-      if (url != null && url.startsWith(baseUrl)) {
-        String relative = url.substring(baseUrl.length);
-        if (relative.startsWith('/')) relative = relative.substring(1);
-        int lastSlash = relative.lastIndexOf('/');
-        if (lastSlash != -1) {
-          baseDir = relative.substring(0, lastSlash);
-        }
-      }
-
-      String? capaPath;
-      if (croqui.hasCaminhoThumbnail() && croqui.caminhoThumbnail.isNotEmpty) {
-        capaPath = croqui.caminhoThumbnail;
-      } else {
-        capaPath = extrairCapaPathFromMarkdown(croqui, baseDir);
-      }
+      final capaPath = _resolverCapaPath(
+        croqui: croqui,
+        url: picoData['url']?.toString(),
+        downloadsPath: downloadsPath,
+        id: id,
+        baseUrl: baseUrl,
+      );
 
       if (capaPath != null) {
-        String fullPath = '$downloadsPath/$id/$capaPath';
-        File imgFile = File(fullPath);
-
-        if (!imgFile.existsSync()) {
-          if (capaPath.contains('/')) {
-            final fileName = capaPath.split('/').last;
-            final directFile = File('$downloadsPath/$id/$fileName');
-            if (directFile.existsSync()) {
-              imgFile = directFile;
-            } else {
-              final File? foundFile = buscarImagemRecursivamente(
-                '$downloadsPath/$id',
-                fileName,
-              );
-              if (foundFile != null) {
-                imgFile = foundFile;
-              }
-            }
-          } else {
-            final File? foundFile = buscarImagemRecursivamente(
-              '$downloadsPath/$id',
-              capaPath,
-            );
-            if (foundFile != null) {
-              imgFile = foundFile;
-            }
-          }
-        }
-
-        if (imgFile.existsSync()) {
-          AppLogger.instance.logInfo(
-            '[ExtratorMetadados] Imagem de capa encontrada para $id em: ${imgFile.path}',
-          );
-          picoData['capaPath'] = imgFile.path;
-        } else {
-          AppLogger.instance.logInfo(
-            '[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $fullPath',
-          );
-        }
+        picoData['capaPath'] = capaPath;
       }
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -98,6 +94,74 @@ class ExtratorMetadadosCroqui {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  String? _resolverCapaPath({
+    required Croqui croqui,
+    required String? url,
+    required String downloadsPath,
+    required String id,
+    required String baseUrl,
+  }) {
+    String baseDir = '';
+    if (url != null && url.startsWith(baseUrl)) {
+      String relative = url.substring(baseUrl.length);
+      if (relative.startsWith('/')) relative = relative.substring(1);
+      int lastSlash = relative.lastIndexOf('/');
+      if (lastSlash != -1) {
+        baseDir = relative.substring(0, lastSlash);
+      }
+    }
+
+    String? capaPath;
+    if (croqui.hasCaminhoThumbnail() && croqui.caminhoThumbnail.isNotEmpty) {
+      capaPath = croqui.caminhoThumbnail;
+    } else {
+      capaPath = extrairCapaPathFromMarkdown(croqui, baseDir);
+    }
+
+    if (capaPath != null) {
+      String fullPath = '$downloadsPath/$id/$capaPath';
+      File imgFile = File(fullPath);
+
+      if (!imgFile.existsSync()) {
+        if (capaPath.contains('/')) {
+          final fileName = capaPath.split('/').last;
+          final directFile = File('$downloadsPath/$id/$fileName');
+          if (directFile.existsSync()) {
+            imgFile = directFile;
+          } else {
+            final File? foundFile = buscarImagemRecursivamente(
+              '$downloadsPath/$id',
+              fileName,
+            );
+            if (foundFile != null) {
+              imgFile = foundFile;
+            }
+          }
+        } else {
+          final File? foundFile = buscarImagemRecursivamente(
+            '$downloadsPath/$id',
+            capaPath,
+          );
+          if (foundFile != null) {
+            imgFile = foundFile;
+          }
+        }
+      }
+
+      if (imgFile.existsSync()) {
+        AppLogger.instance.logInfo(
+          '[ExtratorMetadados] Imagem de capa encontrada para $id em: ${imgFile.path}',
+        );
+        return imgFile.path;
+      } else {
+        AppLogger.instance.logInfo(
+          '[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $fullPath',
+        );
+      }
+    }
+    return null;
   }
 
   /// Busca uma imagem recursivamente dentro de um diretório ignorando case e sufixos de extensão.
