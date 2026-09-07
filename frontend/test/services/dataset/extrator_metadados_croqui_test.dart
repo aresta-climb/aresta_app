@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset/metadados/extrator_metadados_croqui.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
   late Directory tempDir;
@@ -79,6 +80,37 @@ void main() {
 
       expect(picoData['capaPath'], equals(imgCapa.path));
       expect(picoData['data'], isNotNull);
+    });
+
+    test('carregarMetadadosLocais retorna novo ResumoPico com capaPath e croqui tipados', () async {
+      final picoDir = Directory('${tempDir.path}/pico_tipado');
+      await picoDir.create(recursive: true);
+
+      final imgCapa = File('${picoDir.path}/capa.webp');
+      await imgCapa.writeAsBytes([1, 2, 3]);
+
+      final croqui = Croqui(
+        id: 'pico_tipado',
+        caminhoThumbnail: 'capa.webp',
+      );
+      croqui.picos.add(Pico(nome: 'Pico Forte'));
+
+      final picoOriginal = const ResumoPico(
+        id: 'pico_tipado',
+        nome: 'Pico Forte',
+        local: 'Minas Gerais',
+      );
+
+      final picoCarregado = await extrator.carregarMetadadosLocais(
+        pico: picoOriginal,
+        downloadsPath: tempDir.path,
+        baseUrl: 'https://exemplo.com',
+        parsedCroqui: croqui,
+      );
+
+      expect(picoCarregado.capaPath, equals(imgCapa.path));
+      expect(picoCarregado.croqui, equals(croqui));
+      expect(picoCarregado.pico?.nome, equals('Pico Forte'));
     });
   });
 }
