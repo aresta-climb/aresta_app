@@ -23,10 +23,11 @@ class ExtratorAssetsPreload {
       ByteData? indiceData;
       try {
         indiceData = await bundleAtivo.load('assets/preload/indice.binarypb');
-      } catch (e) {
+      } catch (e, stackTrace) {
         AppLogger.instance.logError(
           '[ExtratorAssetsPreload] Preload de indice.binarypb não encontrado ou erro ao carregar',
           error: e,
+          stackTrace: stackTrace,
         );
         return;
       }
@@ -71,10 +72,11 @@ class ExtratorAssetsPreload {
                 thumbData.lengthInBytes,
               ),
             );
-          } catch (e) {
+          } catch (e, stackTrace) {
             AppLogger.instance.logError(
               '[ExtratorAssetsPreload] Erro ao carregar thumbnail $cragId do preload',
               error: e,
+              stackTrace: stackTrace,
             );
           }
         }
@@ -82,10 +84,11 @@ class ExtratorAssetsPreload {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[ExtratorAssetsPreload] Erro geral ao descompactar assets',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }

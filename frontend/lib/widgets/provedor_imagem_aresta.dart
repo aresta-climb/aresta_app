@@ -128,10 +128,11 @@ class ProvedorImagemAresta {
       }
 
       return provedorBase;
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao resolver provedor de imagem para $picoId em $caminho',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return null;

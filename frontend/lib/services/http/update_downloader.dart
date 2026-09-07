@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
+import '../firebase/app_logger.dart';
 
 /// Um modelo representando uma entrada de arquivo do índice mestre.
 class IndexEntry {
@@ -37,7 +37,7 @@ class UpdateDownloader {
     for (final fileEntry in filesToUpdate) {
       final targetFile = File('${stagingDir.path}/${fileEntry.filename}');
 
-      debugPrint('Downloading ${fileEntry.filename}...');
+      AppLogger.instance.logInfo('Downloading ${fileEntry.filename}...');
 
       // 1. Baixa o arquivo diretamente para o diretório de preparação
       final response = await _client.get(Uri.parse(fileEntry.downloadUrl));
@@ -51,7 +51,7 @@ class UpdateDownloader {
       await targetFile.writeAsBytes(response.bodyBytes);
 
       // 2. Verifica o Checksum via Streaming
-      debugPrint('Verifying checksum for ${fileEntry.filename}...');
+      AppLogger.instance.logInfo('Verifying checksum for ${fileEntry.filename}...');
 
       final bool isChecksumValid = await _verifyFileChecksum(
         file: targetFile,
@@ -66,7 +66,7 @@ class UpdateDownloader {
         );
       }
 
-      debugPrint('Verified ${fileEntry.filename} successfully.');
+      AppLogger.instance.logInfo('Verified ${fileEntry.filename} successfully.');
     }
   }
 

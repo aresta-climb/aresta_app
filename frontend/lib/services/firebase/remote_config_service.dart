@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import '../../constants/network_constants.dart';
+import 'app_logger.dart';
 
 /// Serviço responsável por gerenciar o Firebase Remote Config de forma reativa e não-bloqueante.
 ///
@@ -69,16 +70,22 @@ class RemoteConfigService extends ChangeNotifier {
       // 3. Tenta buscar e ativar novas configurações do servidor
       final updated = await _remoteConfig.fetchAndActivate();
 
-      if (kDebugMode) {
-        print('🔧 [RemoteConfig] Configuração atualizada com sucesso (novo valor: $updated).');
-      }
+      AppLogger.instance.logInfo(
+        '🔧 [RemoteConfig] Configuração atualizada com sucesso (novo valor: $updated).',
+      );
 
       // 4. Notifica widgets ouvintes para atualizarem seu estado reativamente
       notifyListeners();
-    } catch (e) {
-      if (kDebugMode) {
-        print(
-          '🔧 [RemoteConfig] Falha ao atualizar (offline/timeout). Usando cache e defaults. Erro: $e',
+    } catch (e, stackTrace) {
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          '🔧 [RemoteConfig] Falha ao atualizar (offline/timeout). Usando cache e defaults: $e',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '🔧 [RemoteConfig] Erro inesperado ao buscar configurações remotas',
+          error: e,
+          stackTrace: stackTrace,
         );
       }
     }

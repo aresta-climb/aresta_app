@@ -56,10 +56,11 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
                   Uri.parse(href),
                   mode: LaunchMode.externalApplication,
                 );
-              } catch (e) {
+              } catch (e, stackTrace) {
                 AppLogger.instance.logError(
                   'abrir_link_markdown',
-                  error: e.toString(),
+                  error: e,
+                  stackTrace: stackTrace,
                 );
               }
             }

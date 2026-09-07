@@ -35,8 +35,12 @@ void callbackDispatcher({
       } else {
         await initFirebase();
       }
-    } catch (e) {
-      debugPrint('[BackgroundDispatcher] Falha ao inicializar Firebase no background: $e');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[BackgroundDispatcher] Falha ao inicializar Firebase no background',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
     return await BackgroundDispatcher.executarTarefa(
       task,
@@ -58,7 +62,7 @@ abstract class BackgroundDispatcher {
     MigracaoBackgroundRunner? migracaoRunner,
   }) async {
     try {
-      debugPrint('[BackgroundDispatcher] Executando tarefa em segundo plano: $task');
+      AppLogger.instance.logInfo('[BackgroundDispatcher] Executando tarefa em segundo plano: $task');
 
       switch (task) {
         case 'send_feedback_task':
@@ -87,7 +91,10 @@ abstract class BackgroundDispatcher {
           break;
 
         default:
-          debugPrint('[BackgroundDispatcher] Tarefa desconhecida recebida: $task');
+          AppLogger.instance.logError(
+            '[BackgroundDispatcher] Tarefa desconhecida recebida: $task',
+            stackTrace: StackTrace.current,
+          );
           break;
       }
 

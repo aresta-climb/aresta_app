@@ -1,0 +1,156 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:frontend/pages/comunidade.dart';
+import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
+
+class MockUrlLauncherPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements UrlLauncherPlatform {
+  bool shouldThrow = false;
+  String? lastLaunchedUrl;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    lastLaunchedUrl = url;
+    if (shouldThrow) {
+      throw Exception('Falha ao abrir URL nativa');
+    }
+    return true;
+  }
+}
+
+void main() {
+  late MockAppLogger mockLogger;
+  late MockUrlLauncherPlatform mockLauncher;
+
+  setUp(() {
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
+    mockLauncher = MockUrlLauncherPlatform();
+    UrlLauncherPlatform.instance = mockLauncher;
+  });
+
+  Widget createTestWidget() {
+    return MaterialApp(
+      home: Theme(
+        data: ThemeData(
+          extensions: [
+            AppColors.dark,
+          ],
+        ),
+        child: const ComunidadePage(),
+      ),
+    );
+  }
+
+  void setScreenSize(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
+  testWidgets('ComunidadePage renderiza todos os cards de ação', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text('MÍDIAS, APOIOS E INTERATIVIDADES'), findsOneWidget);
+    expect(find.text('SOBRE O TIME'), findsOneWidget);
+    expect(find.text('GRUPO DO WHATSAPP'), findsOneWidget);
+    expect(find.text('INSTAGRAM OFICIAL'), findsOneWidget);
+    expect(find.text('LINKEDIN DO PROJETO'), findsOneWidget);
+    expect(find.text('DISCORD DOS DESENVOLVEDORES'), findsOneWidget);
+    expect(find.text('GITHUB DO ARESTA'), findsOneWidget);
+  });
+
+  testWidgets('Ao clicar nos cards com sucesso, abre a URL correspondente sem registrar erros', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockLauncher.shouldThrow = false;
+
+    // WhatsApp
+    await tester.tap(find.text('GRUPO DO WHATSAPP'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv');
+    expect(mockLogger.recordedErrors, isEmpty);
+
+    // Instagram
+    await tester.tap(find.text('INSTAGRAM OFICIAL'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(mockLauncher.lastLaunchedUrl, 'https://www.instagram.com/arestaclimb/');
+    expect(mockLogger.recordedErrors, isEmpty);
+  });
+
+  testWidgets('Ao clicar nos cards de links externos com falha nativa, registra erro com a URL correspondente', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockLauncher.shouldThrow = true;
+
+    // 1. WhatsApp
+    await tester.ensureVisible(find.text('GRUPO DO WHATSAPP'));
+    await tester.tap(find.text('GRUPO DO WHATSAPP'));
+    await tester.pumpAndSettle();
+    expect(
+      mockLogger.recordedErrors.any(
+        (e) => e['contextMessage'].contains('https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv'),
+      ),
+      isTrue,
+    );
+
+    // 2. Instagram
+    await tester.ensureVisible(find.text('INSTAGRAM OFICIAL'));
+    await tester.tap(find.text('INSTAGRAM OFICIAL'));
+    await tester.pumpAndSettle();
+    expect(
+      mockLogger.recordedErrors.any(
+        (e) => e['contextMessage'].contains('https://www.instagram.com/arestaclimb/'),
+      ),
+      isTrue,
+    );
+
+    // 3. LinkedIn
+    await tester.ensureVisible(find.text('LINKEDIN DO PROJETO'));
+    await tester.tap(find.text('LINKEDIN DO PROJETO'));
+    await tester.pumpAndSettle();
+    expect(
+      mockLogger.recordedErrors.any(
+        (e) => e['contextMessage'].contains('https://www.linkedin.com/company/arestaclimb/'),
+      ),
+      isTrue,
+    );
+
+    // 4. Discord
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+    expect(
+      mockLogger.recordedErrors.any(
+        (e) => e['contextMessage'].contains('https://discord.gg/3KDTwcxHK'),
+      ),
+      isTrue,
+    );
+
+    // 5. GitHub
+    await tester.ensureVisible(find.text('GITHUB DO ARESTA'));
+    await tester.tap(find.text('GITHUB DO ARESTA'));
+    await tester.pumpAndSettle();
+    expect(
+      mockLogger.recordedErrors.any(
+        (e) => e['contextMessage'].contains('https://github.com/aresta-climb'),
+      ),
+      isTrue,
+    );
+  });
+}

@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../firebase/app_logger.dart';
 
 /// Gerencia o ciclo de vida das notificações nativas de download do sistema operacional,
 /// suportando Foreground Services ininterruptos e sticky no Android,
@@ -88,9 +89,13 @@ class GerenciadorNotificacaoDownload {
       }
 
       return inicializado ?? true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao inicializar notificações: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao inicializar notificações',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
       return false;
     }
@@ -118,9 +123,13 @@ class GerenciadorNotificacaoDownload {
       }
 
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao solicitar permissões: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao solicitar permissões',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
       return false;
     }
@@ -200,15 +209,18 @@ class GerenciadorNotificacaoDownload {
         );
 
         await _plugin.show(
-          id: id,
-          title: nomePico,
-          body: 'Baixando... $progressoInt%',
-          notificationDetails: notificationDetails,
-        );
+            id: id,
+            title: nomePico,
+            body: 'Baixando... $progressoInt%',
+            notificationDetails: notificationDetails);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao atualizar progresso: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao atualizar progresso',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }
@@ -266,9 +278,13 @@ class GerenciadorNotificacaoDownload {
         body: '✓ Croqui salvo para uso offline.',
         notificationDetails: notificationDetails,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao notificar conclusão: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao notificar conclusão',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }
@@ -327,9 +343,13 @@ class GerenciadorNotificacaoDownload {
         body: motivo ?? 'Falha ao baixar croqui. Verifique sua conexão.',
         notificationDetails: notificationDetails,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao notificar falha: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao notificar falha',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }
@@ -347,9 +367,13 @@ class GerenciadorNotificacaoDownload {
       }
 
       await _plugin.cancel(id: id);
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
-        debugPrint('[GerenciadorNotificacaoDownload] Erro ao cancelar notificação: $e');
+        AppLogger.instance.logError(
+          '[GerenciadorNotificacaoDownload] Erro ao cancelar notificação',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }

@@ -7,6 +7,7 @@ import '../main.dart';
 import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
+import '../services/firebase/app_logger.dart';
 import '../view_functions/common_functions.dart';
 
 class ComunidadePage extends StatelessWidget {
@@ -63,10 +64,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
                 onTap: () async {
+                  const url = 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv';
                   try {
-                    await launchUrl(Uri.parse('https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: ');
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError('Erro ao abrir link do WhatsApp ($url)', error: e, stackTrace: stackTrace);
                   }
                 },
               ),
@@ -79,10 +81,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
                 onTap: () async {
+                  const url = 'https://www.instagram.com/arestaclimb/';
                   try {
-                    await launchUrl(Uri.parse('https://www.instagram.com/arestaclimb/'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: ');
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError('Erro ao abrir link do Instagram ($url)', error: e, stackTrace: stackTrace);
                   }
                 },
               ),
@@ -95,10 +98,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.work_outline,
                 iconBgColor: const Color(0xFF0A66C2), // LinkedIn Blue
                 onTap: () async {
+                  const url = 'https://www.linkedin.com/company/arestaclimb/';
                   try {
-                    await launchUrl(Uri.parse('https://www.linkedin.com/company/arestaclimb/'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: ');
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError('Erro ao abrir link do LinkedIn ($url)', error: e, stackTrace: stackTrace);
                   }
                 },
               ),
@@ -111,10 +115,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
                 onTap: () async {
+                  const url = 'https://discord.gg/3KDTwcxHK';
                   try {
-                    await launchUrl(Uri.parse('https://discord.gg/3KDTwcxHK'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: ');
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError('Erro ao abrir link do Discord ($url)', error: e, stackTrace: stackTrace);
                   }
                 },
               ),
@@ -126,10 +131,11 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.code,
                 iconBgColor: const Color(0xFF333333), // GitHub Dark Gray
                 onTap: () async {
+                  const url = 'https://github.com/aresta-climb';
                   try {
-                    await launchUrl(Uri.parse('https://github.com/aresta-climb'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: ');
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError('Erro ao abrir link do GitHub ($url)', error: e, stackTrace: stackTrace);
                   }
                 },
               ),

@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
 import '../../services/firebase/app_check_service.dart';
+import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/remote_config_service.dart';
 
 /// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
@@ -85,7 +86,7 @@ class FeedbackOrchestrator {
           // Em modo de depuração sem token do App Check registrado no Firebase Console,
           // realizamos um mock gracioso para não impedir contribuidores externos de testar o app.
           if (isDebug && (appCheckToken == null || appCheckToken.isEmpty)) {
-            debugPrint(
+            AppLogger.instance.logInfo(
               '📝 [DEBUG MOCK] Feedback concluído localmente (App Check não registrado em dev):\n'
               '   Descrição: ${task.jsonContent['description']}\n'
               '   Metadados: ${task.jsonContent['metadata']}\n'

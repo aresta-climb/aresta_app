@@ -257,7 +257,7 @@ void main() {
 
   group('Tratamento de Erros de Isolate com Rastreamento de Pilha', () {
     test(
-      'tratarErroDownloadIsolate deve reconstruir StackTrace via StackTrace.fromString e repassar ao AppLogger',
+      'tratarErroDownloadIsolate com erro transitório (HTTP 504) deve repassar como logAviso',
       () {
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
@@ -272,19 +272,15 @@ void main() {
 
         syncService.tratarErroDownloadIsolate('pico_teste', resultado);
 
-        expect(mockLogger.recordedErrors.length, 1);
-        final recorded = mockLogger.recordedErrors.first;
-        expect(recorded['error'], 'HTTP 504 ao baixar crag_sector_13.webp');
-        expect(recorded['stackTrace'], isNotNull);
-        expect(
-          recorded['stackTrace'].toString(),
-          contains('sync_isolate.dart:98'),
-        );
+        expect(mockLogger.recordedWarnings.length, 1);
+        final recorded = mockLogger.recordedWarnings.first;
+        expect(recorded, contains('HTTP 504 ao baixar crag_sector_13.webp'));
+        expect(recorded, contains('pico_teste'));
       },
     );
 
     test(
-      'tratarErroDownloadIsolate deve passar stackTrace nulo quando rastreamentoPilha não for fornecido',
+      'tratarErroDownloadIsolate com erro permanente (Checksum mismatch) deve gerar logCrash e usar StackTrace.current de fallback quando rastreamentoPilha for nulo',
       () {
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
@@ -292,7 +288,7 @@ void main() {
         final resultado = DownloadIsolateResult(
           filesToDelete: [],
           filesToRename: {},
-          error: 'Erro genérico sem stack',
+          error: 'Checksum SHA-256 inválido para crag_sector_13.webp',
           rastreamentoPilha: null,
         );
 
@@ -300,7 +296,8 @@ void main() {
 
         expect(mockLogger.recordedErrors.length, 1);
         final recorded = mockLogger.recordedErrors.first;
-        expect(recorded['stackTrace'], isNull);
+        expect(recorded['fatal'], isTrue);
+        expect(recorded['stackTrace'], isNotNull);
       },
     );
   });

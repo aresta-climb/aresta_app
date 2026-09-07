@@ -208,8 +208,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
             _poiToRefs.putIfAbsent(id, () => []).add(ref);
           }
         }
-      } catch (e) {
-        AppLogger.instance.logError('Unresolved reference in map: $e');
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          'Unresolved reference in map',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }

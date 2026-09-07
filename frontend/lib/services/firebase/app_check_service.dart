@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'app_logger.dart';
 
 /// Serviço responsável por gerenciar a atestação de integridade do aplicativo via Firebase App Check.
 ///
@@ -34,13 +35,13 @@ class AppCheckService {
         appleProvider: appleProvider ??
             (kDebugMode ? AppleProvider.debug : AppleProvider.appAttest),
       );
-      if (kDebugMode) {
-        debugPrint('🛡️ [AppCheck] Firebase App Check ativado com sucesso.');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('🛡️ [AppCheck] Erro ao ativar Firebase App Check: $e');
-      }
+      AppLogger.instance.logInfo('🛡️ [AppCheck] Firebase App Check ativado com sucesso.');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '🛡️ [AppCheck] Erro ao ativar Firebase App Check',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -49,10 +50,12 @@ class AppCheckService {
     try {
       final token = await _appCheck.getToken(forceRefresh);
       return token;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('🛡️ [AppCheck] Não foi possível obter o token do App Check: $e');
-      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '🛡️ [AppCheck] Não foi possível obter o token do App Check',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }

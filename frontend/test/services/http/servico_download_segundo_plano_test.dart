@@ -86,7 +86,7 @@ void main() {
       expect(crashErrors.first['contextMessage'], contains('crag_2'));
     });
 
-    test('executarDownload captura exceção de rede e NÃO gera crash fatal', () async {
+    test('executarDownload captura exceção de rede e registra como logAviso sem abrir issue fatal', () async {
       final resumo = ResumoCroqui(id: 'crag_3', nome: 'Erro Rede');
 
       when(() => mockSyncService.downloadCrag(any())).thenThrow(Exception('Falha de rede'));
@@ -96,14 +96,12 @@ void main() {
       expect(sucesso, isFalse);
       verify(() => mockNotificador.notificarFalha('crag_3', 'Erro Rede', any())).called(1);
 
-      // Não deve ter gerado erro fatal (crash), pois é falha de conexão
-      final crashErrors = mockLogger.recordedErrors.where((e) => e['fatal'] == true).toList();
-      expect(crashErrors, isEmpty);
+      // Não deve ter gerado erro no recordedErrors, pois falhas de rede viram avisos contextuais (breadcrumbs)
+      expect(mockLogger.recordedErrors, isEmpty);
 
-      // Mas deve ter sido registrado no log não-fatal
-      final nonFatalErrors = mockLogger.recordedErrors.where((e) => e['fatal'] == false).toList();
-      expect(nonFatalErrors, isNotEmpty);
-      expect(nonFatalErrors.first['contextMessage'], contains('crag_3'));
+      // Deve ter sido registrado como aviso
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedWarnings.first, contains('crag_3'));
     });
 
     test('executarDownload captura erro de integridade e DEVE gerar crash fatal', () async {

@@ -33,7 +33,6 @@ class ServicoCroquiOnline {
         _verificarPicoBaixado = verificarPicoBaixado,
         _aoAtualizarCroqui = aoAtualizarCroqui;
 
-
   /// Obtém o diretório de cache temporário volátil do sistema operacional.
   Future<String> _obterDiretorioCache() async {
     if (_caminhoCacheVolatil != null) {
@@ -64,12 +63,14 @@ class ServicoCroquiOnline {
       } else {
         AppLogger.instance.logError(
           '[ServicoCroquiOnline] Falha ao carregar croqui online $picoId. Status: ${response.statusCode}',
+          stackTrace: StackTrace.current,
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[ServicoCroquiOnline] Erro de rede ao carregar croqui $picoId',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return null;
@@ -89,10 +90,11 @@ class ServicoCroquiOnline {
       final urlBypass = uri.replace(queryParameters: queryParams).toString();
 
       return await carregarCroquiRemoto(urlBypass, picoId: picoId);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[ServicoCroquiOnline] Erro ao recarregar croqui online $picoId',
         error: e,
+        stackTrace: stackTrace,
       );
       return null;
     }
@@ -108,8 +110,12 @@ class ServicoCroquiOnline {
       }
       final cacheFile = File('${picoCacheDir.path}/$picoId.binarypb');
       await cacheFile.writeAsBytes(bytes);
-    } catch (e) {
-      debugPrint('[ServicoCroquiOnline] Aviso: falha ao gravar cache volátil: $e');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[ServicoCroquiOnline] Falha ao gravar cache volátil',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -122,14 +128,14 @@ class ServicoCroquiOnline {
     // Se o pico já está baixado no armazenamento local, cancela o polling e não faz requisição de rede
     if (_verificarPicoBaixado != null && _verificarPicoBaixado(picoId)) {
       cancelarPolling(picoId);
-      debugPrint('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId já está baixado offline.');
+      AppLogger.instance.logInfo('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId já está baixado offline.');
       return false;
     }
 
     // Se o pico não estiver mais na sessão online (foi baixado ou encerrado), encerra o polling
     if (_sessaoOnline.obterCroquiOnline(picoId) == null) {
       cancelarPolling(picoId);
-      debugPrint('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId não possui sessão online ativa.');
+      AppLogger.instance.logInfo('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId não possui sessão online ativa.');
       return false;
     }
 
@@ -144,11 +150,11 @@ class ServicoCroquiOnline {
       final response = await _client.get(uri, headers: headers);
 
       if (response.statusCode == 304) {
-        debugPrint('[ServicoCroquiOnline] ETag 304 Not Modified para $picoId');
+        AppLogger.instance.logInfo('[ServicoCroquiOnline] ETag 304 Not Modified para $picoId');
         return false;
       } else if (response.statusCode == 200) {
         final novoEtag = response.headers['etag'] ?? '';
-        debugPrint('[ServicoCroquiOnline] ETag 200 Nova versão detectada para $picoId ($novoEtag)');
+        AppLogger.instance.logInfo('[ServicoCroquiOnline] ETag 200 Nova versão detectada para $picoId ($novoEtag)');
         _sessaoOnline.registrarAtualizacaoPendente(picoId, novoEtag);
 
         final bytes = response.bodyBytes;
@@ -159,14 +165,22 @@ class ServicoCroquiOnline {
             _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: novoEtag);
             _aoAtualizarCroqui?.call(picoId, croqui);
             aoAtualizar?.call(picoId, croqui);
-          } catch (e) {
-            debugPrint('[ServicoCroquiOnline] Erro ao desserializar croqui atualizado no ETag: $e');
+          } catch (e, stackTrace) {
+            AppLogger.instance.logError(
+              '[ServicoCroquiOnline] Erro ao desserializar croqui atualizado no ETag',
+              error: e,
+              stackTrace: stackTrace,
+            );
           }
         }
         return true;
       }
-    } catch (e) {
-      debugPrint('[ServicoCroquiOnline] Erro durante verificação de ETag para $picoId: $e');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[ServicoCroquiOnline] Erro durante verificação de ETag para $picoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
     return false;
   }
@@ -182,7 +196,7 @@ class ServicoCroquiOnline {
 
     // Se o pico já está baixado no armazenamento local, não inicia polling desnecessário
     if (_verificarPicoBaixado != null && _verificarPicoBaixado(picoId)) {
-      debugPrint('[ServicoCroquiOnline] Pico $picoId já está baixado offline. Polling de ETag ignorado.');
+      AppLogger.instance.logInfo('[ServicoCroquiOnline] Pico $picoId já está baixado offline. Polling de ETag ignorado.');
       return;
     }
 
@@ -201,7 +215,6 @@ class ServicoCroquiOnline {
     _timersPolling[picoId]?.cancel();
     _timersPolling.remove(picoId);
   }
-
 
   /// Descarta todos os timers e fecha o cliente HTTP.
   void dispose() {

@@ -64,7 +64,7 @@ class DatasetRepository {
   }
 
   void _handleModeChange() {
-    debugPrint('[DatasetRepo] Modo alterado detectado. Recarregando índice...');
+    AppLogger.instance.logInfo('[DatasetRepo] Modo alterado detectado. Recarregando índice...');
     init();
   }
 
@@ -246,10 +246,11 @@ class DatasetRepository {
       } else {
         loadEmpty();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[DatasetRepo] Erro na inicialização',
         error: e,
+        stackTrace: stackTrace,
       );
       loadEmpty();
     }
@@ -352,10 +353,11 @@ class DatasetRepository {
           if (isStored) {
             downloaded.add(picoMap);
           }
-        } catch (itemEx) {
+        } catch (itemEx, stackTrace) {
           AppLogger.instance.logError(
             'Erro ao processar pico individual ${resumo.id}',
             error: itemEx,
+            stackTrace: stackTrace,
           );
         }
       }
@@ -372,10 +374,11 @@ class DatasetRepository {
               downloadsPath: downloadsPath,
               baseUrl: editorDeCroqui.activeBaseUrl,
             );
-          } catch (e) {
+          } catch (e, stackTrace) {
             AppLogger.instance.logError(
               'Erro ao atualizar metadados do pico ${picoData['id']}',
               error: e,
+              stackTrace: stackTrace,
             );
           }
         }),
@@ -393,10 +396,11 @@ class DatasetRepository {
         picosBaixados: ordenados,
       );
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro crítico em loadIndiceToMemory',
         error: e,
+        stackTrace: stackTrace,
       );
       if (activeDataset.value == null) {
         loadEmpty();

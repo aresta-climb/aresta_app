@@ -7,6 +7,8 @@ import 'package:frontend/services/firebase/app_logger.dart';
 /// Implementação simulada para evitar chamadas reais do Crashlytics durante testes
 class MockAppLogger implements AppLogger {
   final List<Map<String, dynamic>> recordedErrors = [];
+  final List<String> recordedInfos = [];
+  final List<String> recordedWarnings = [];
 
   @override
   bool? debugModeOverride;
@@ -22,10 +24,23 @@ class MockAppLogger implements AppLogger {
   crashlyticsOverride;
 
   @override
+  void Function(String)? crashlyticsLogOverride;
+
+  @override
+  void logInfo(String mensagem) {
+    recordedInfos.add(mensagem);
+  }
+
+  @override
+  void logAviso(String mensagem) {
+    recordedWarnings.add(mensagem);
+  }
+
+  @override
   void logError(
     String contextMessage, {
     dynamic error,
-    StackTrace? stackTrace,
+    required StackTrace stackTrace,
     bool fatal = false,
   }) {
     recordedErrors.add({
@@ -40,7 +55,7 @@ class MockAppLogger implements AppLogger {
   void logCrash(
     String contextMessage, {
     dynamic error,
-    StackTrace? stackTrace,
+    required StackTrace stackTrace,
   }) {
     logError(
       contextMessage,
@@ -54,16 +69,20 @@ class MockAppLogger implements AppLogger {
   void logFalhaSyncOuDownload(
     String contextMessage, {
     dynamic error,
-    StackTrace? stackTrace,
+    required StackTrace stackTrace,
   }) {
     final ehConexaoOuTimeout =
         AppLogger.isFalhaConexaoOuTimeout(error) || AppLogger.isFalhaConexaoOuTimeout(contextMessage);
 
-    logError(
-      contextMessage,
-      error: error,
-      stackTrace: stackTrace,
-      fatal: !ehConexaoOuTimeout,
-    );
+    if (ehConexaoOuTimeout) {
+      final detalhe = error != null ? ' ($error)' : '';
+      logAviso('$contextMessage$detalhe');
+    } else {
+      logCrash(
+        contextMessage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }

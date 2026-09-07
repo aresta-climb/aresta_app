@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'app_logger.dart';
 
 /// Serviço responsável por disparar eventos de telemetria para o Firebase Analytics.
 ///
@@ -22,35 +23,71 @@ class TelemetryService {
   static TelemetryService instance = TelemetryService._privateConstructor();
 
   @visibleForTesting
+  FirebaseAnalytics? debugAnalytics;
+
+  FirebaseAnalytics get _analytics =>
+      debugAnalytics ?? FirebaseAnalytics.instance;
+
+  @visibleForTesting
   static void resetForTesting() {
     instance = TelemetryService._privateConstructor();
   }
 
+  /// Inicializa e configura a coleta do Firebase Analytics.
+  ///
+  /// Em modo de desenvolvimento/debug (`kDebugMode`), a coleta analítica do Firebase
+  /// é desativada (`setAnalyticsCollectionEnabled(false)`) para não registrar tráfego
+  /// falso de teste nem poluir os relatórios do Looker Studio/GA4.
+  Future<void> initialize({
+    bool? isDebugMode,
+    FirebaseAnalytics? analyticsInstance,
+  }) async {
+    final isDebug = isDebugMode ?? kDebugMode;
+    final analytics = analyticsInstance ?? _analytics;
+
+    if (isDebug) {
+      try {
+        await analytics.setAnalyticsCollectionEnabled(false);
+        AppLogger.instance.logInfo(
+          '📊 [Telemetry] Modo debug detectado: coleta do Firebase Analytics desativada.',
+        );
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          '⚠️ [Telemetry] Erro ao desativar coleta do Firebase Analytics',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+  }
+
   /// Método interno de utilidade para printar no console local e despachar ao Firebase.
   Future<void> _logEvent(String name, [Map<String, Object>? parameters]) async {
-    if (kDebugMode) {
-      print('📈 [Telemetry] Evento disparado: $name | Parâmetros: $parameters');
-    }
+    AppLogger.instance.logInfo('📈 [Telemetry] Evento disparado: $name | Parâmetros: $parameters');
     try {
-      await FirebaseAnalytics.instance.logEvent(
+      await _analytics.logEvent(
         name: name,
         parameters: parameters,
       );
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ [Telemetry] Erro ao enviar evento (Firebase pronto?): $e');
-      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '⚠️ [Telemetry] Erro ao enviar evento (Firebase pronto?)',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
   /// Retorna o appInstanceId do Firebase Analytics (útil para associar feedbacks à sessão).
   Future<String?> getAppInstanceId() async {
     try {
-      return await FirebaseAnalytics.instance.appInstanceId;
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ [Telemetry] Erro ao obter appInstanceId: $e');
-      }
+      return await _analytics.appInstanceId;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '⚠️ [Telemetry] Erro ao obter appInstanceId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }

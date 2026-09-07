@@ -11,6 +11,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
 
 class NearbyCragsCarousel extends StatefulWidget {
@@ -257,8 +258,12 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_kLastKnownLatKey, lat);
       await prefs.setDouble(_kLastKnownLonKey, lon);
-    } catch (e) {
-      debugPrint('Erro ao persistir localização em cache: $e');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao persistir localização em cache',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -277,8 +282,12 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         _calculateDistances(cachedLat, cachedLon);
         return;
       }
-    } catch (e) {
-      debugPrint('Erro ao ler localização do cache: $e');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao ler localização do cache',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
 
     if (mounted) {

@@ -9,8 +9,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/dataset/sessao_online/gerenciador_sessao_online.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -419,7 +421,10 @@ void main() {
       s.dispose();
     });
 
-    test('_salvarEmCacheVolatil trata exceção ao falhar gravação em disco', () async {
+    test('_salvarEmCacheVolatil trata exceção ao falhar gravação em disco e registra via logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
       final arquivoFalso = File('${tempDir.path}/bloqueio');
       await arquivoFalso.writeAsString('bloqueado');
 
@@ -439,6 +444,13 @@ void main() {
         picoId: 'sub_bloqueio',
       );
       expect(res, isNotNull);
+
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      final recorded = mockLogger.recordedErrors.firstWhere(
+        (e) => e['contextMessage'].contains('[ServicoCroquiOnline] Falha ao gravar cache volátil'),
+      );
+      expect(recorded['stackTrace'], isNotNull);
+
       servicoComErroCache.dispose();
     });
   });

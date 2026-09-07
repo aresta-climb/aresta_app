@@ -12,7 +12,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:frontend/application_managers/background/background_dispatcher.dart';
 import 'package:frontend/application_managers/migracao/migracao_background_orchestrator.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import '../../mocks/mock_telemetry_service.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -68,6 +70,33 @@ void main() {
       expect(firebaseInicializado, isTrue);
     });
 
+    test('callbackDispatcher captura falha na inicialização do Firebase e registra via logError', () async {
+      final mockWm = MockWorkmanager();
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      dynamic taskHandler;
+
+      when(() => mockWm.executeTask(any())).thenAnswer((invocation) {
+        taskHandler = invocation.positionalArguments[0];
+      });
+
+      callbackDispatcher(
+        workmanager: mockWm,
+        initFirebaseOverride: () async {
+          throw Exception('Erro de conexão com o Firebase');
+        },
+      );
+
+      expect(taskHandler, isNotNull);
+      await taskHandler('send_feedback_task', null);
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final recorded = mockLogger.recordedErrors.first;
+      expect(recorded['contextMessage'], contains('[BackgroundDispatcher] Falha ao inicializar Firebase no background'));
+      expect(recorded['error'].toString(), contains('Erro de conexão com o Firebase'));
+      expect(recorded['stackTrace'], isNotNull);
+    });
+
     test('callbackDispatcher sem argumentos utiliza instância padrão', () async {
       try {
         callbackDispatcher();
@@ -113,11 +142,19 @@ void main() {
       );
     });
 
-    test('deve aceitar tarefa desconhecida sem lançar erro', () async {
+    test('deve aceitar tarefa desconhecida sem lançar erro e registrar via logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
       final result = await BackgroundDispatcher.executarTarefa(
         'tarefa_inexistente_123',
       );
       expect(result, isTrue);
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('Tarefa desconhecida recebida: tarefa_inexistente_123'));
+      expect(erro['stackTrace'], isNotNull);
     });
 
     test('deve capturar exceção do runner, registrar log e relançar para ativar backoff', () async {

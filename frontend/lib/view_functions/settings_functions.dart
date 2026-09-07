@@ -12,6 +12,7 @@ import '../services/http/servico_download_segundo_plano.dart';
 import '../services/http/servico_croqui_online.dart';
 import '../main.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import '../theme/theme_controller.dart';
 import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
@@ -102,8 +103,12 @@ Future<bool> conectarEditor(
           await ServicoDownloadSegundoPlano(syncService: servicoSync)
               .executarDownload(resumo);
           await datasetRepo.init();
-        } catch (e) {
-          debugPrint('[conectarEditor] Falha ao auto-baixar croqui único: $e');
+        } catch (e, stackTrace) {
+          AppLogger.instance.logError(
+            '[conectarEditor] Falha ao auto-baixar croqui único',
+            error: e,
+            stackTrace: stackTrace,
+          );
         }
 
         // Se o download não completou offline (ex: streaming/remoto), garante disponibilidade na sessão online
@@ -120,8 +125,12 @@ Future<bool> conectarEditor(
             );
             await servicoOnline.carregarCroquiRemoto(croquiUrl, picoId: resumo.id);
             datasetRepo.notificarAtualizacaoSessaoOnline(resumo.id);
-          } catch (e) {
-            debugPrint('[conectarEditor] Falha ao carregar na sessão online: $e');
+          } catch (e, stackTrace) {
+            AppLogger.instance.logError(
+              '[conectarEditor] Falha ao carregar na sessão online',
+              error: e,
+              stackTrace: stackTrace,
+            );
           }
         }
       }

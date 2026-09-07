@@ -103,7 +103,9 @@ class PageListenableBuilder extends StatelessWidget {
           return pageContent;
         } catch (e, st) {
           AppLogger.instance.logError(
-            'Exception while resolving node in PageListenableBuilder: $e\nStacktrace:\n$st',
+            'Exception while resolving node in PageListenableBuilder',
+            error: e,
+            stackTrace: st,
           );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted && AppNav.canGoBack(context)) {

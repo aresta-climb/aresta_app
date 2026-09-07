@@ -7,6 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
+import '../services/firebase/app_logger.dart';
 import 'common_functions.dart';
 
 Widget buildActionCard(
@@ -480,8 +481,12 @@ void showLinkOverlay(
                     if (context.mounted) {
                       Navigator.pop(context);
                     }
-                  } catch (e) {
-                    debugPrint('Error launching url: $e');
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError(
+                      'Erro ao abrir link externo em comunidade_functions',
+                      error: e,
+                      stackTrace: stackTrace,
+                    );
                   }
                 }
               },

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../firebase/app_logger.dart';
 
@@ -16,10 +15,11 @@ class GerenciadorArquivosLocais {
         final bytes = await file.readAsBytes();
         return Croqui.fromBuffer(bytes);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao carregar croqui local $picoId em $downloadsPath',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return null;
@@ -37,15 +37,20 @@ class GerenciadorArquivosLocais {
       final dir = Directory('$downloadsPath/$picoId');
       if (await dir.exists()) {
         await dir.delete(recursive: true);
-        debugPrint('[GerenciadorArquivosLocais] Pasta do pico $picoId deletada com sucesso.');
+        AppLogger.instance.logInfo(
+          '[GerenciadorArquivosLocais] Pasta do pico $picoId deletada com sucesso.',
+        );
         return true;
       } else {
-        debugPrint('[GerenciadorArquivosLocais] Pasta não encontrada para deleção: ${dir.path}');
+        AppLogger.instance.logInfo(
+          '[GerenciadorArquivosLocais] Pasta não encontrada para deleção: ${dir.path}',
+        );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao excluir pasta do pico $picoId',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return false;

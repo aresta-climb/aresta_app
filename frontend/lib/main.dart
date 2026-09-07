@@ -44,6 +44,7 @@ import 'package:frontend/constants/legal_version.g.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/firebase/init_firebase.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/pages/database_migration_screen.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
@@ -150,7 +151,7 @@ void registrarOuvintesLiveReload(
   editor.eventoLiveReload.addListener(() async {
     final evento = editor.eventoLiveReload.value;
     if (evento != null) {
-      debugPrint(
+      AppLogger.instance.logInfo(
         '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
       );
       await syncService.syncIndex();
@@ -178,7 +179,7 @@ void registrarOuvintesLiveReload(
       final cache = imageCache ?? PaintingBinding.instance.imageCache;
       cache.clear();
 
-      debugPrint(
+      AppLogger.instance.logInfo(
         '⚡ [LiveReload] Sincronização automática concluída!',
       );
     }

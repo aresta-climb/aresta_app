@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/editor_croqui.dart';
@@ -31,7 +30,7 @@ class MigracaoBackgroundOrchestrator {
     EditorDeCroqui? editorDeCroqui,
   }) async {
     try {
-      debugPrint('[MigracaoBackground] Iniciando verificação de migração pós-atualização...');
+      AppLogger.instance.logInfo('[MigracaoBackground] Iniciando verificação de migração pós-atualização...');
 
       final editor = editorDeCroqui ?? EditorDeCroqui();
       final repo = datasetRepo ?? DatasetRepository(editorDeCroqui: editor);
@@ -39,11 +38,11 @@ class MigracaoBackgroundOrchestrator {
 
       final precisaMigrar = await sync.checkNeedsMigration();
       if (!precisaMigrar) {
-        debugPrint('[MigracaoBackground] Nenhuma migração pendente detectada.');
+        AppLogger.instance.logInfo('[MigracaoBackground] Nenhuma migração pendente detectada.');
         return true;
       }
 
-      debugPrint('[MigracaoBackground] Migração necessária. Executando migração...');
+      AppLogger.instance.logInfo('[MigracaoBackground] Migração necessária. Executando migração...');
       return await sync.executarMigracao();
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -78,9 +77,13 @@ class MigracaoBackgroundOrchestrator {
     try {
       final wm = workmanager ?? Workmanager();
       await wm.cancelByUniqueName(kNomeUnicoMigracao);
-      debugPrint('[MigracaoBackground] Tarefa em segundo plano cancelada para prioridade do primeiro plano.');
-    } catch (e) {
-      debugPrint('[MigracaoBackground] Erro ao cancelar tarefa de segundo plano: $e');
+      AppLogger.instance.logInfo('[MigracaoBackground] Tarefa em segundo plano cancelada para prioridade do primeiro plano.');
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[MigracaoBackground] Erro ao cancelar tarefa de segundo plano',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

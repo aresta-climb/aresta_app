@@ -93,10 +93,11 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         _termsMarkdown = terms;
         _privacyMarkdown = privacy;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'carregar_documentos_legais',
-        error: e.toString(),
+        error: e,
+        stackTrace: stackTrace,
       );
       setState(() {
         _termsMarkdown =
@@ -120,9 +121,12 @@ class _TermsOfUsePageState extends State<TermsOfUsePage> {
         if (!launched) {
           await launchUrl(url, mode: LaunchMode.externalApplication);
         }
-      } catch (e) {
-        AppLogger.instance.logError('abrir_link_termos', error: e.toString());
-        debugPrint('Erro ao abrir link: $e');
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          'abrir_link_termos',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
   }

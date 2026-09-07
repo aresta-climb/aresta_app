@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/sobre_time_functions.dart';
+import '../services/firebase/app_logger.dart';
 import '../main.dart';
 
 class SobreTimePage extends StatefulWidget {
@@ -173,8 +174,12 @@ class _SobreTimePageState extends State<SobreTimePage>
                 onTap: () async {
                   try {
                     await launchUrl(Uri.parse('https://discord.gg/3KDTwcxHK'), mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Error launching url: $e');
+                  } catch (e, stackTrace) {
+                    AppLogger.instance.logError(
+                      'Erro ao abrir link do Discord em SobreTimePage',
+                      error: e,
+                      stackTrace: stackTrace,
+                    );
                   }
                 },
                 child: Container(

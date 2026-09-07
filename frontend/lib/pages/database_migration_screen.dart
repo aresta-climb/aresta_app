@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 
@@ -104,7 +105,12 @@ class _DatabaseMigrationScreenState extends State<DatabaseMigrationScreen> {
           });
         }
       }
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro inesperado na tela de migração de banco',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
         setState(() {
           _etapa = EtapaMigracao.erro;

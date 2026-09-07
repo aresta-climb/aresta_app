@@ -13,6 +13,7 @@ O que ele faz:
 - Chama `Firebase.initializeApp()` injetando as opções de plataforma (geradas pelo flutterfire).
 - Captura exceções não-fatais do SDK do Flutter mapeando-as para `recordFlutterFatalError`.
 - Captura _Unhandled Exceptions_ em processamento Assíncrono do Dart via `PlatformDispatcher.instance.onError` e as envia como falhas fatais.
+- Desativa a coleta do Firebase Analytics em modo debug (`initAnalytics`).
 - Dá o "Start" no serviço de _Remote Config_.
 
 ### 2. `telemetry_service.dart`
@@ -35,7 +36,23 @@ Responsável pela atestação de integridade de hardware e software da aplicaç�
 - **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
 - **Desenvolvimento (Debug)**: Utiliza o Provedor de Depuração com suporte a UUIDs cadastrados no Firebase Console, permitindo que os desenvolvedores testem a rota real, ou realiza fallback silencioso em ambiente de desenvolvimento sem bloquear a interface.
 
-### 5. Desofuscação e Símbolos no Crashlytics (CI/CD)
+### 5. `app_logger.dart`
+Abstração centralizada de logging e relatórios de erro construída sobre o `firebase_crashlytics`.
+O aplicativo adota a regra arquitetural estrita de que nenhum código em `lib/` (fora deste serviço) pode invocar `print` ou `debugPrint` diretamente.
+- **`logInfo(String mensagem)`**:
+  - *Debug*: Imprime no console local com prefixo `ℹ️ [AppLogger]`.
+- **`logAviso(String mensagem)`**:
+  - *Debug*: Imprime no console com prefixo de aviso `⚠️ [AppLogger AVISO]`.
+  - *Release*: Registra exclusivamente como breadcrumb contextual via `FirebaseCrashlytics.instance.log`, sem abrir issues no Crashlytics.
+- **`logError(String contextMessage, {error, required StackTrace stackTrace, bool fatal = false})`**:
+  - *Debug*: Imprime detalhes completos no console local.
+  - *Release*: Envia ao Crashlytics com o `stackTrace` de origem obrigatório para permitir agrupamento correto e diagnóstico preciso de falhas.
+- **`logCrash(String contextMessage, {error, required StackTrace stackTrace})`**:
+  - Registra falhas severas com nível crítico (`fatal: true`).
+- **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`**:
+  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, 502, 503, 504, 429), tratando como não-fatal (`fatal: false`), ou se é falha de integridade/corrupção de dados (`fatal: true`).
+
+### 6. Desofuscação e Símbolos no Crashlytics (CI/CD)
 Para que os relatórios de crash no painel do Firebase Crashlytics exibam os nomes de funções, arquivos e linhas de código (ao invés de ponteiros hexadecimais *unsymbolicated*), a pipeline do GitHub Actions realiza o upload automático de dois tipos de símbolos a cada release:
 - **dSYMs nativos do iOS**: extraídos do `Runner.xcarchive` gerado pelo Xcode.
 - **Símbolos Dart (Android e iOS)**: gerados com a flag `--split-debug-info=build/symbols` do Flutter.

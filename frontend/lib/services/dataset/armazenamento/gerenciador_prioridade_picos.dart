@@ -50,10 +50,11 @@ class GerenciadorPrioridadePicos {
 
         return list;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao ler lista de prioridade de picos',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return [];
@@ -70,10 +71,11 @@ class GerenciadorPrioridadePicos {
 
       final yamlContent = prioridades.map((id) => '- "$id"').join('\n');
       await yamlFile.writeAsString(yamlContent);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao atualizar prioridade do pico $picoId',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }

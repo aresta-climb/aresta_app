@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../firebase/app_logger.dart';
 
 /// Gerencia o armazenamento local de arquivos para sincronização,
 /// ocultando os detalhes de I/O do SyncService.
@@ -20,9 +21,11 @@ class SyncStorage {
       try {
         final bytes = await file.readAsBytes();
         return Indice.fromBuffer(bytes);
-      } catch (e) {
-        debugPrint(
-          '[SyncStorage] Erro ao ler indice local (possível breaking change): $e',
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          '[SyncStorage] Erro ao ler indice local (possível breaking change)',
+          error: e,
+          stackTrace: stackTrace,
         );
         return null;
       }
@@ -73,9 +76,11 @@ class SyncStorage {
     if (await file.exists()) {
       try {
         return Croqui.fromBuffer(await file.readAsBytes());
-      } catch (e) {
-        debugPrint(
-          '[SyncStorage] Erro ao ler croqui local (possível breaking change): $e',
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          '[SyncStorage] Erro ao ler croqui local (possível breaking change)',
+          error: e,
+          stackTrace: stackTrace,
         );
         return null;
       }
@@ -168,7 +173,7 @@ class SyncStorage {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();
-        debugPrint('Deleted old file: $path');
+        AppLogger.instance.logInfo('Deleted old file: $path');
       }
     }
   }

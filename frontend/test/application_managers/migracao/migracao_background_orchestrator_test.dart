@@ -13,7 +13,9 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import '../../mocks/mock_telemetry_service.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -188,7 +190,10 @@ void main() {
       );
     });
 
-    test('cancelarMigracaoSegundoPlano deve capturar exceção do Workmanager silenciosamente', () async {
+    test('cancelarMigracaoSegundoPlano deve capturar exceção do Workmanager e registrar no AppLogger via logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
       when(() => mockWorkmanager.cancelByUniqueName(any())).thenThrow(Exception('Falha nativa'));
 
       await expectLater(
@@ -197,6 +202,12 @@ void main() {
         ),
         completes,
       );
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[MigracaoBackground] Erro ao cancelar tarefa de segundo plano'));
+      expect(erro['error'].toString(), contains('Falha nativa'));
+      expect(erro['stackTrace'], isNotNull);
     });
   });
 }

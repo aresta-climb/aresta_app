@@ -6,6 +6,7 @@ import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../firebase/app_logger.dart';
 import 'sync_storage.dart';
 
 /// Argumentos necessários para instanciar o [downloadIsolateMain].
@@ -117,7 +118,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
           if (response.statusCode != 200) {
             final erroMsg =
                 'HTTP ${response.statusCode} ao baixar $cacheBustingUrl';
-            debugPrint('🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)');
+            AppLogger.instance.logAviso('🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)');
 
             if (ehStatusTransitorio(response.statusCode) &&
                 tentativa < maxTentativas) {
@@ -136,15 +137,15 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
           if (!valido) {
             final erroMsg =
                 'Checksum SHA-256 inválido para $tmpPath. Esperado: $expectedHash';
-            debugPrint('🛑 [SyncIsolate] $erroMsg');
+            AppLogger.instance.logAviso('🛑 [SyncIsolate] $erroMsg');
             errosDownloads.add(erroMsg);
             ultimoRastreamentoPilha = StackTrace.current.toString();
           }
           return valido;
         } catch (e, stack) {
           final erroMsg = 'Exceção ao baixar $fileUrl: $e';
-          debugPrint(
-            '🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)\n$stack',
+          AppLogger.instance.logAviso(
+            '🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)',
           );
 
           if (tentativa < maxTentativas) {
@@ -308,7 +309,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         final detalhe = errosDownloads.isNotEmpty
             ? ': ${errosDownloads.join("; ")}'
             : '';
-        debugPrint('🛑 [SyncIsolate] Falha em downloads de imagens$detalhe');
+        AppLogger.instance.logAviso('🛑 [SyncIsolate] Falha em downloads de imagens$detalhe');
         args.sendPort.send(
           DownloadIsolateResult(
             filesToDelete: [],

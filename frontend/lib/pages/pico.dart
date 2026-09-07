@@ -12,6 +12,7 @@ import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/navigation_tree.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/app_logger.dart';
 import '../theme/app_colors.dart';
 
 // New imports for sub-pages
@@ -119,8 +120,12 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   curve: Curves.easeInOut,
                   alignment: 0.1,
                 );
-              } catch (e) {
-                debugPrint('[PicoDetailsPage] Falha ao rolar para mapa geral: $e');
+              } catch (e, stackTrace) {
+                AppLogger.instance.logError(
+                  '[PicoDetailsPage] Falha ao rolar para mapa geral',
+                  error: e,
+                  stackTrace: stackTrace,
+                );
               }
             }
           }

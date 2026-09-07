@@ -90,9 +90,11 @@ class ConstrutorCaminhoTrajeto {
 
       _cacheCaminhos[chave] = caminhoFinal;
       return caminhoFinal;
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
-        'Falha ao converter SVG de trajeto para Path ($chave): $e',
+        'Falha ao converter SVG de trajeto para Path ($chave)',
+        error: e,
+        stackTrace: stackTrace,
       );
       final fallback = Path();
       _cacheCaminhos[chave] = fallback;

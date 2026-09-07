@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../firebase/app_logger.dart';
 
@@ -82,16 +81,21 @@ class ExtratorMetadadosCroqui {
         }
 
         if (imgFile.existsSync()) {
-          debugPrint('[ExtratorMetadados] Imagem de capa encontrada para $id em: ${imgFile.path}');
+          AppLogger.instance.logInfo(
+            '[ExtratorMetadados] Imagem de capa encontrada para $id em: ${imgFile.path}',
+          );
           picoData['capaPath'] = imgFile.path;
         } else {
-          debugPrint('[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $fullPath');
+          AppLogger.instance.logInfo(
+            '[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $fullPath',
+          );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao extrair metadados e capa do pico $id',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -125,10 +129,11 @@ class ExtratorMetadadosCroqui {
           if (eBaseName == searchBaseName) return entity;
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro na busca recursiva de imagem',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return null;
@@ -168,10 +173,11 @@ class ExtratorMetadadosCroqui {
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao extrair capa do markdown',
         error: e,
+        stackTrace: stackTrace,
       );
     }
     return null;

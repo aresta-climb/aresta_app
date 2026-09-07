@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
+import '../services/firebase/app_logger.dart';
 
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
   // Place elements exactly at the geometric centroid of a quarter circle (4 / 3π ≈ 0.424)
@@ -259,8 +260,12 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                     onPressed: () async {
                       try {
                         await launchUrl(Uri.parse(data['linkedin']!), mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        debugPrint('Error launching url: ');
+                      } catch (e, stackTrace) {
+                        AppLogger.instance.logError(
+                          'Erro ao abrir link do LinkedIn em sobre_time_functions',
+                          error: e,
+                          stackTrace: stackTrace,
+                        );
                       }
                     },
                     icon: const Icon(Icons.work_outline, size: 16, color: Colors.white),
@@ -276,8 +281,12 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                     onPressed: () async {
                       try {
                         await launchUrl(Uri.parse(data['github']!), mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        debugPrint('Error launching url: $e');
+                      } catch (e, stackTrace) {
+                        AppLogger.instance.logError(
+                          'Erro ao abrir link do GitHub em sobre_time_functions',
+                          error: e,
+                          stackTrace: stackTrace,
+                        );
                       }
                     },
                     icon: const Icon(Icons.code, size: 16, color: Colors.black),

@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockFlutterLocalNotificationsPlugin extends Mock
     implements FlutterLocalNotificationsPlugin {}
@@ -242,6 +244,107 @@ void main() {
 
       verify(() => mockAndroidPlugin.stopForegroundService()).called(1);
       verify(() => mockPlugin.cancel(id: gerenciador.calcularIdNotificacao('pico_1'))).called(1);
+    });
+
+    test('inicializar trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockPlugin.initialize(
+            settings: any(named: 'settings'),
+            onDidReceiveNotificationResponse: any(named: 'onDidReceiveNotificationResponse'),
+          )).thenThrow(Exception('Falha ao inicializar canais nativos'));
+
+      final res = await gerenciador.inicializar();
+      expect(res, isFalse);
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao inicializar notificações'));
+      expect(erro['stackTrace'], isNotNull);
+    });
+
+    test('solicitarPermissoes trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockAndroidPlugin.requestNotificationsPermission())
+          .thenThrow(Exception('Falha de permissão nativa'));
+
+      final res = await gerenciador.solicitarPermissoes();
+      expect(res, isFalse);
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao solicitar permissões'));
+      expect(erro['stackTrace'], isNotNull);
+    });
+
+    test('atualizarProgresso trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockAndroidPlugin.startForegroundService(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            notificationDetails: any(named: 'notificationDetails'),
+            payload: any(named: 'payload'),
+            startType: any(named: 'startType'),
+            foregroundServiceTypes: any(named: 'foregroundServiceTypes'),
+          )).thenThrow(Exception('Falha ao iniciar ForegroundService'));
+
+      await gerenciador.atualizarProgresso('pico_erro', 'Pedra Erro', 0.5);
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao atualizar progresso'));
+      expect(erro['stackTrace'], isNotNull);
+    });
+
+    test('notificarConclusao trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockPlugin.cancel(id: any(named: 'id')))
+          .thenThrow(Exception('Falha ao cancelar notificação'));
+
+      await gerenciador.notificarConclusao('pico_erro', 'Pedra Erro');
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao notificar conclusão'));
+      expect(erro['stackTrace'], isNotNull);
+    });
+
+    test('notificarFalha trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockPlugin.cancel(id: any(named: 'id')))
+          .thenThrow(Exception('Falha ao cancelar notificação'));
+
+      await gerenciador.notificarFalha('pico_erro', 'Pedra Erro');
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao notificar falha'));
+      expect(erro['stackTrace'], isNotNull);
+    });
+
+    test('cancelar trata erro e registra via logError com stackTrace', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockPlugin.cancel(id: any(named: 'id')))
+          .thenThrow(Exception('Falha ao cancelar notificação'));
+
+      await gerenciador.cancelar('pico_erro');
+
+      expect(mockLogger.recordedErrors.length, 1);
+      final erro = mockLogger.recordedErrors.first;
+      expect(erro['contextMessage'], contains('[GerenciadorNotificacaoDownload] Erro ao cancelar notificação'));
+      expect(erro['stackTrace'], isNotNull);
     });
   });
 }

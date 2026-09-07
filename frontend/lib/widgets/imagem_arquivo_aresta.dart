@@ -78,6 +78,7 @@ class ImagemArquivoAresta extends ImageProvider<ChaveImagemArquivoAresta> {
     }
     AppLogger.instance.logError(
       'Checksum SHA-256 ausente ou nulo para imagem local (${arquivo.path}). Utilizando fallback de timestamp.',
+      stackTrace: StackTrace.current,
     );
     try {
       if (arquivo.existsSync()) {

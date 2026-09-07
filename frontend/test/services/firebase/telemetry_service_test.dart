@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../../mocks/mock_app_logger.dart';
 import '../../mocks/mock_telemetry_service.dart';
 
 void main() {
@@ -119,6 +121,41 @@ void main() {
         } catch (e) {
           fail('Should not throw uncaught exception: $e');
         }
+      },
+    );
+
+    test(
+      'Should logError when _logEvent fails',
+      () async {
+        TelemetryService.resetForTesting();
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        await TelemetryService.instance.logSincronizarApp(acao: 'automatica');
+
+        expect(mockLogger.recordedErrors, isNotEmpty);
+        expect(
+          mockLogger.recordedErrors.first['contextMessage'],
+          '⚠️ [Telemetry] Erro ao enviar evento (Firebase pronto?)',
+        );
+      },
+    );
+
+    test(
+      'Should logError and return null when getAppInstanceId fails',
+      () async {
+        TelemetryService.resetForTesting();
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        final id = await TelemetryService.instance.getAppInstanceId();
+
+        expect(id, isNull);
+        expect(mockLogger.recordedErrors, isNotEmpty);
+        expect(
+          mockLogger.recordedErrors.first['contextMessage'],
+          '⚠️ [Telemetry] Erro ao obter appInstanceId',
+        );
       },
     );
   });

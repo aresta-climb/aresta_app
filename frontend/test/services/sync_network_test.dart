@@ -7,8 +7,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:frontend/services/http/sync_network.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
 
 void main() {
+  late MockAppLogger mockLogger;
+
+  setUp(() {
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
+  });
+
   group('SyncNetwork', () {
     test(
       'fetchIndiceWithRetries retorna IndiceUpdated na primeira tentativa (200)',
@@ -75,7 +84,7 @@ void main() {
     });
 
     test(
-      'fetchIndiceWithRetries tenta novamente apos falha e retorna sucesso',
+      'fetchIndiceWithRetries tenta novamente apos falha de rede transitória registrando logAviso e retorna sucesso',
       () async {
         int attempts = 0;
         final client = MockClient((request) async {
@@ -95,11 +104,14 @@ void main() {
 
         expect(response, isA<IndiceUpdated>());
         expect(attempts, 2);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(mockLogger.recordedWarnings.first, contains('Falha transitória na tentativa de fetch'));
+        expect(mockLogger.recordedErrors, isEmpty);
       },
     );
 
     test(
-      'fetchIndiceWithRetries retorna null apos falhar todas as tentativas',
+      'fetchIndiceWithRetries retorna null apos falhar todas as tentativas e registra logAviso',
       () async {
         int attempts = 0;
         final client = MockClient((request) async {
@@ -116,6 +128,29 @@ void main() {
 
         expect(response, isNull);
         expect(attempts, 2);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings.any((w) => w.contains('Falha de conexão após várias tentativas')), isTrue);
+      },
+    );
+
+    test(
+      'fetchIndiceWithRetries com binário corrompido registra logError com stackTrace',
+      () async {
+        final client = MockClient((request) async {
+          // Bytes inválidos que falham ao parsear Indice
+          return http.Response.bytes(Uint8List.fromList([0xFF, 0xFF, 0xFF]), 200);
+        });
+
+        final network = SyncNetwork(client);
+        final response = await network.fetchIndiceWithRetries(
+          'https://base.com',
+          null,
+        );
+
+        expect(response, isNull);
+        expect(mockLogger.recordedErrors, isNotEmpty);
+        expect(mockLogger.recordedErrors.first['contextMessage'], contains('Falha ao parsear binário do índice'));
+        expect(mockLogger.recordedErrors.first['stackTrace'], isNotNull);
       },
     );
 

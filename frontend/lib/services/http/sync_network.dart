@@ -41,11 +41,18 @@ class SyncNetwork {
     while (retries > 0) {
       try {
         return await action();
-      } catch (e) {
-        AppLogger.instance.logError(
-          '[SyncNetwork] Erro na tentativa de fetch',
-          error: e,
-        );
+      } catch (e, stackTrace) {
+        if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+          AppLogger.instance.logAviso(
+            '[SyncNetwork] Falha transitória na tentativa de fetch (tentativas restantes: ${retries - 1}): $e',
+          );
+        } else {
+          AppLogger.instance.logError(
+            '[SyncNetwork] Erro na tentativa de fetch',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
         retries--;
         if (retries > 0) {
           await Future.delayed(const Duration(seconds: 2));
@@ -79,7 +86,9 @@ class SyncNetwork {
     }, retries: retries);
 
     if (response == null) {
-      AppLogger.instance.logError('Falha de conexão após várias tentativas.');
+      AppLogger.instance.logAviso(
+        '[SyncNetwork] Falha de conexão após várias tentativas de sincronização do índice.',
+      );
       return null;
     }
 
@@ -92,16 +101,27 @@ class SyncNetwork {
           rawBytes: bytes,
           newEtag: response.headers['etag'],
         );
-      } catch (e) {
-        AppLogger.instance.logError('Falha ao parsear binário do índice: $e');
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          'Falha ao parsear binário do índice',
+          error: e,
+          stackTrace: stackTrace,
+        );
         return null;
       }
     } else if (response.statusCode == 304) {
       return IndiceUnchanged();
     } else {
-      AppLogger.instance.logError(
-        'Server returned an error: ${response.statusCode}',
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(response.statusCode)) {
+        AppLogger.instance.logAviso(
+          '[SyncNetwork] Servidor retornou erro transitório: ${response.statusCode}',
+        );
+      } else {
+        AppLogger.instance.logError(
+          'Server returned an error: ${response.statusCode}',
+          stackTrace: StackTrace.current,
+        );
+      }
       return null;
     }
   }
@@ -125,9 +145,16 @@ class SyncNetwork {
     }
 
     if (response != null) {
-      AppLogger.instance.logError(
-        '[SyncNetwork] Failed to download $url, status: ${response.statusCode}',
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(response.statusCode)) {
+        AppLogger.instance.logAviso(
+          '[SyncNetwork] Falha transitória ao baixar $url, status: ${response.statusCode}',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '[SyncNetwork] Failed to download $url, status: ${response.statusCode}',
+          stackTrace: StackTrace.current,
+        );
+      }
     }
     return null;
   }

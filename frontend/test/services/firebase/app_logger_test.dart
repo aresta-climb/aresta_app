@@ -16,7 +16,7 @@ void main() {
       AppLogger.instance = mockLogger;
     });
 
-    test('Should record error in mock instance', () {
+    test('Should record error in mock instance with required stackTrace', () {
       final exception = Exception('Falha grave');
       final stack = StackTrace.fromString('linha 1, arquivo teste.dart');
 
@@ -35,12 +35,14 @@ void main() {
       expect(mockLogger.recordedErrors.first['stackTrace'], stack);
     });
 
-    test('logCrash deve registrar erro com fatal = true na instância mock', () {
+    test('logCrash deve registrar erro com fatal = true e stackTrace na instância mock', () {
       final exception = Exception('Falha crítica de download');
+      final stack = StackTrace.fromString('stack crash mock');
 
       AppLogger.instance.logCrash(
         'Falha no download offline',
         error: exception,
+        stackTrace: stack,
       );
 
       expect(mockLogger.recordedErrors.length, 1);
@@ -49,7 +51,24 @@ void main() {
         'Falha no download offline',
       );
       expect(mockLogger.recordedErrors.first['error'], exception);
+      expect(mockLogger.recordedErrors.first['stackTrace'], stack);
       expect(mockLogger.recordedErrors.first['fatal'], isTrue);
+    });
+
+    test('logInfo deve registrar mensagem informativa no MockAppLogger', () {
+      AppLogger.instance.logInfo('Live reload conectado');
+
+      expect(mockLogger.recordedInfos.length, 1);
+      expect(mockLogger.recordedInfos.first, 'Live reload conectado');
+    });
+
+    test('logAviso deve registrar aviso no MockAppLogger', () {
+      AppLogger.instance.logAviso(
+        'Aviso de rede lenta',
+      );
+
+      expect(mockLogger.recordedWarnings.length, 1);
+      expect(mockLogger.recordedWarnings.first, 'Aviso de rede lenta');
     });
   });
 
@@ -65,12 +84,15 @@ void main() {
         bool crashlyticsCalled = false;
         dynamic capturedException;
         String? capturedReason;
+        StackTrace? capturedStack;
+
+        final stack = StackTrace.fromString('stack trace de producao');
 
         // Injeta comportamento mock do Crashlytics
         AppLogger.instance.crashlyticsOverride =
             (
               exception,
-              stack, {
+              st, {
               reason,
               printDetails = false,
               fatal = false,
@@ -78,21 +100,24 @@ void main() {
               crashlyticsCalled = true;
               capturedException = exception;
               capturedReason = reason;
+              capturedStack = st;
             };
 
         AppLogger.instance.logError(
           'Erro de produção fake',
           error: Exception('Crash'),
+          stackTrace: stack,
         );
 
         expect(crashlyticsCalled, isTrue);
         expect(capturedReason, 'Erro de produção fake');
         expect(capturedException.toString(), contains('Crash'));
+        expect(capturedStack, stack);
       },
     );
 
     test(
-      'logCrash deve enviar erro para Crashlytics com fatal = true',
+      'logCrash deve enviar erro para Crashlytics com fatal = true e stackTrace',
       () async {
         AppLogger.resetForTesting();
         AppLogger.instance.debugModeOverride = false;
@@ -100,11 +125,14 @@ void main() {
         bool crashlyticsCalled = false;
         bool? capturedFatal;
         String? capturedReason;
+        StackTrace? capturedStack;
+
+        final stack = StackTrace.fromString('stack crash real');
 
         AppLogger.instance.crashlyticsOverride =
             (
               exception,
-              stack, {
+              st, {
               reason,
               printDetails = false,
               fatal = false,
@@ -112,18 +140,63 @@ void main() {
               crashlyticsCalled = true;
               capturedReason = reason;
               capturedFatal = fatal;
+              capturedStack = st;
             };
 
         AppLogger.instance.logCrash(
           'Falha crítica no sync offline',
           error: Exception('Checksum mismatch'),
+          stackTrace: stack,
         );
 
         expect(crashlyticsCalled, isTrue);
         expect(capturedReason, 'Falha crítica no sync offline');
         expect(capturedFatal, isTrue);
+        expect(capturedStack, stack);
       },
     );
+
+    test('logInfo deve registrar breadcrumb no Crashlytics em modo release', () {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = false;
+
+      String? loggedMessage;
+      AppLogger.instance.crashlyticsLogOverride = (msg) {
+        loggedMessage = msg;
+      };
+
+      AppLogger.instance.logInfo('Iniciando download do croqui pico_1');
+
+      expect(loggedMessage, 'Iniciando download do croqui pico_1');
+    });
+
+    test('logAviso deve registrar exclusivamente breadcrumb no Crashlytics em release sem chamar recordError', () {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = false;
+
+      String? loggedMessage;
+      AppLogger.instance.crashlyticsLogOverride = (msg) {
+        loggedMessage = msg;
+      };
+
+      bool errorReported = false;
+      AppLogger.instance.crashlyticsOverride = (
+        exception,
+        st, {
+        reason,
+        printDetails = false,
+        fatal = false,
+      }) async {
+        errorReported = true;
+      };
+
+      AppLogger.instance.logAviso(
+        'Instabilidade momentânea',
+      );
+
+      expect(loggedMessage, '⚠️ AVISO: Instabilidade momentânea');
+      expect(errorReported, isFalse, reason: 'logAviso nunca deve acionar recordError no Crashlytics');
+    });
 
     test('isFalhaConexaoOuTimeout identifica corretamente exceções de rede e timeout', () {
       expect(AppLogger.isFalhaConexaoOuTimeout(const SocketException('Failed host lookup')), isTrue);
@@ -142,30 +215,37 @@ void main() {
     });
 
     test(
-      'logFalhaSyncOuDownload NÃO deve gerar crash (fatal = false) se for falha de conexão ou timeout',
+      'logFalhaSyncOuDownload deve delegar para logAviso (breadcrumb) e NÃO gerar issue no Crashlytics se for falha de conexão ou timeout',
       () async {
         AppLogger.resetForTesting();
         AppLogger.instance.debugModeOverride = false;
 
-        bool? capturedFatal;
+        String? loggedBreadcrumb;
+        AppLogger.instance.crashlyticsLogOverride = (msg) {
+          loggedBreadcrumb = msg;
+        };
 
-        AppLogger.instance.crashlyticsOverride =
-            (
-              exception,
-              stack, {
-              reason,
-              printDetails = false,
-              fatal = false,
-            }) async {
-              capturedFatal = fatal;
-            };
+        bool errorReported = false;
+        final stack = StackTrace.fromString('stack timeout');
+
+        AppLogger.instance.crashlyticsOverride = (
+          exception,
+          st, {
+          reason,
+          printDetails = false,
+          fatal = false,
+        }) async {
+          errorReported = true;
+        };
 
         AppLogger.instance.logFalhaSyncOuDownload(
           'Falha ao baixar fotos do croqui',
           error: TimeoutException('Conexão instável'),
+          stackTrace: stack,
         );
 
-        expect(capturedFatal, isFalse);
+        expect(errorReported, isFalse, reason: 'Timeouts não devem gerar issues no Crashlytics');
+        expect(loggedBreadcrumb, contains('Falha ao baixar fotos do croqui'));
       },
     );
 
@@ -177,11 +257,12 @@ void main() {
 
         bool? capturedFatal;
         String? capturedReason;
+        final stack = StackTrace.fromString('stack integridade');
 
         AppLogger.instance.crashlyticsOverride =
             (
               exception,
-              stack, {
+              st, {
               reason,
               printDetails = false,
               fatal = false,
@@ -193,6 +274,7 @@ void main() {
         AppLogger.instance.logFalhaSyncOuDownload(
           'Falha definitiva no download do croqui pico_1',
           error: 'Checksum SHA-256 inválido para setor_1.webp',
+          stackTrace: stack,
         );
 
         expect(capturedFatal, isTrue);
@@ -218,32 +300,37 @@ void main() {
       expect(AppLogger.isFalhaConexaoOuTimeout(500), isFalse);
     });
 
-    test('logFalhaSyncOuDownload registra HTTP 504 com fatal = false', () async {
+    test('logFalhaSyncOuDownload registra HTTP 504 como logAviso (breadcrumb) sem gerar issue no Crashlytics', () async {
       AppLogger.resetForTesting();
       AppLogger.instance.debugModeOverride = false;
 
-      bool? capturedFatal;
-      dynamic capturedException;
+      String? loggedBreadcrumb;
+      AppLogger.instance.crashlyticsLogOverride = (msg) {
+        loggedBreadcrumb = msg;
+      };
+
+      bool errorReported = false;
+      final stack = StackTrace.fromString('stack 504');
 
       AppLogger.instance.crashlyticsOverride = (
         exception,
-        stack, {
+        st, {
         reason,
         printDetails = false,
         fatal = false,
       }) async {
-        capturedFatal = fatal;
-        capturedException = exception;
+        errorReported = true;
       };
 
       AppLogger.instance.logFalhaSyncOuDownload(
         'Falha ao baixar imagem de setor: HTTP 504 ao baixar https://serving.arestaclimb.com/.../crag_sector_13.webp',
         error: 'HTTP 504 ao baixar https://serving.arestaclimb.com/.../crag_sector_13.webp',
+        stackTrace: stack,
       );
 
-      expect(capturedFatal, isFalse,
-          reason: 'Erros HTTP 504 transitórios não devem ser marcados como fatal');
-      expect(capturedException.toString(), contains('504'));
+      expect(errorReported, isFalse,
+          reason: 'Erros HTTP 504 transitórios não devem gerar issue no Crashlytics');
+      expect(loggedBreadcrumb, contains('504'));
     });
   });
 }

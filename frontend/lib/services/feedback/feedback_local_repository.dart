@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../../data/dtos/feedback_task.dart';
+import '../firebase/app_logger.dart';
 
 class FeedbackLocalRepository {
   final Future<Directory> Function()? getSupportDirectoryOverride;
@@ -104,8 +105,13 @@ class FeedbackLocalRepository {
             pngFile: pngFile.existsSync() ? pngFile : null,
           ),
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         // Em caso de corrupção ou erro de parse, destrava para tentar novamente mais tarde
+        AppLogger.instance.logError(
+          'Erro ao processar feedback persistido em disco: ${processingFile.path}',
+          error: e,
+          stackTrace: stackTrace,
+        );
         unlockTask(processingFile);
       }
     }

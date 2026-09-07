@@ -1,9 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 
 class MockTelemetryService implements TelemetryService {
+  @override
+  FirebaseAnalytics? debugAnalytics;
+
   final List<String> recordedEvents = [];
   final Map<String, Map<String, dynamic>> recordedParams = {};
 
@@ -11,6 +15,12 @@ class MockTelemetryService implements TelemetryService {
     recordedEvents.clear();
     recordedParams.clear();
   }
+
+  @override
+  Future<void> initialize({
+    bool? isDebugMode,
+    FirebaseAnalytics? analyticsInstance,
+  }) async {}
 
   @override
   Future<void> logAcaoExplorar(String idCroqui, String acao) async {

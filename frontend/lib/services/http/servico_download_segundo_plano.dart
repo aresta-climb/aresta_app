@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../firebase/app_logger.dart';
 import '../notificacoes/gerenciador_notificacao_download.dart';
@@ -34,7 +33,7 @@ class ServicoDownloadSegundoPlano {
     }
 
     try {
-      debugPrint(
+      AppLogger.instance.logInfo(
         '[ServicoDownloadSegundoPlano] Iniciando download do croqui $picoId ($nomePico)...',
       );
 
@@ -47,23 +46,18 @@ class ServicoDownloadSegundoPlano {
       if (sucesso) {
         await gerenciadorNotificacao.notificarConclusao(picoId, nomePico);
       } else {
-        debugPrint(
-          '🛑 [ServicoDownloadSegundoPlano] Falha no download do croqui $picoId ($nomePico). Verifique logs anteriores do SyncService/SyncIsolate.',
-        );
         AppLogger.instance.logFalhaSyncOuDownload(
           'Falha no download do croqui $picoId ($nomePico) em segundo plano',
+          stackTrace: StackTrace.current,
         );
         await gerenciadorNotificacao.notificarFalha(picoId, nomePico);
       }
 
-      debugPrint(
+      AppLogger.instance.logInfo(
         '[ServicoDownloadSegundoPlano] Download de $picoId finalizado com status: $sucesso',
       );
       return sucesso;
     } catch (e, stack) {
-      debugPrint(
-        '🛑 [ServicoDownloadSegundoPlano] Exceção ao executar download do croqui $picoId: $e',
-      );
       AppLogger.instance.logFalhaSyncOuDownload(
         'Exceção ao baixar croqui $picoId ($nomePico) em segundo plano',
         error: e,

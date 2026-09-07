@@ -163,7 +163,7 @@ class EditorDeCroqui {
                 .timeout(timeoutLan);
 
             if (handshakeResponse.statusCode == 200) {
-              debugPrint(
+              AppLogger.instance.logInfo(
                 '[EditorCroqui] Conectado via Direct LAN: $localUrl',
               );
               return localUrl;
@@ -174,7 +174,7 @@ class EditorDeCroqui {
         }
       }
     } catch (e) {
-      debugPrint(
+      AppLogger.instance.logInfo(
         '[EditorCroqui] Descoberta LAN via broker indisponível ($e). Usando Cloudflare Relay.',
       );
     } finally {
@@ -184,7 +184,7 @@ class EditorDeCroqui {
     }
 
     // Fallback: Retransmissor na Nuvem
-    debugPrint(
+    AppLogger.instance.logInfo(
       '[EditorCroqui] Conectado via Cloudflare Relay: $urlRelay',
     );
     return urlRelay;
@@ -213,10 +213,14 @@ class EditorDeCroqui {
     if (wsUri == null) return;
 
     try {
-      debugPrint('[EditorCroqui] Conectando WebSocket de Live Reload em $wsUri...');
+      AppLogger.instance.logInfo(
+        '[EditorCroqui] Conectando WebSocket de Live Reload em $wsUri...',
+      );
       WebSocket.connect(wsUri.toString()).then((ws) {
         _wsLiveReload = ws;
-        debugPrint('[EditorCroqui] 🟢 WebSocket de Live Reload conectado com sucesso!');
+        AppLogger.instance.logInfo(
+          '[EditorCroqui] 🟢 WebSocket de Live Reload conectado com sucesso!',
+        );
         ws.listen(
           (event) {
             try {
@@ -229,7 +233,7 @@ class EditorDeCroqui {
                 final setorId = (dados['setor'] ??
                     dados['dados']?['setor'] ??
                     dados['dados']?['id_croqui']) as String?;
-                debugPrint(
+                AppLogger.instance.logInfo(
                   '[EditorCroqui] ⚡ Evento Live Reload recebido! Setor/ID: $setorId',
                 );
                 eventoLiveReload.value = LiveReloadEvent(
@@ -238,8 +242,12 @@ class EditorDeCroqui {
                 );
                 dispararPulsoRecarregamento();
               }
-            } catch (e) {
-              debugPrint('[EditorCroqui] Erro ao decodificar evento Live Reload: $e');
+            } catch (e, stackTrace) {
+              AppLogger.instance.logError(
+                '[EditorCroqui] Erro ao decodificar evento Live Reload',
+                error: e,
+                stackTrace: stackTrace,
+              );
             }
           },
           onDone: () {
@@ -323,8 +331,12 @@ class EditorDeCroqui {
       if (yamlDoc is YamlMap) {
         return Map<String, dynamic>.from(yamlDoc);
       }
-    } catch (e) {
-      AppLogger.instance.logError('[EditorConfig] Erro ao ler yaml', error: e);
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[EditorConfig] Erro ao ler yaml',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
     return {};
   }
@@ -344,10 +356,11 @@ class EditorDeCroqui {
         }
       }
       configFile.writeAsStringSync(lines.join('\n'));
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao gravar yaml',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -373,14 +386,16 @@ class EditorDeCroqui {
         // Dev Mode sempre persiste
         if (devMode) {
           isDevModeEnabled.value = true;
-          debugPrint('[EditorConfig] Modo Desenvolvedor ativado via disco.');
+          AppLogger.instance.logInfo(
+            '[EditorConfig] Modo Desenvolvedor ativado via disco.',
+          );
         }
 
         final expiryStr = config['expiryTime'] as String?;
 
         // Se o app foi fechado em modo experimental, limpamos tudo ao abrir
         if (experimental) {
-          debugPrint(
+          AppLogger.instance.logInfo(
             '[EditorConfig] Modo experimental detectado no boot. Executando Nuke compulsório...',
           );
           await nukeExperimentalData();
@@ -404,7 +419,7 @@ class EditorDeCroqui {
           if (_expirationTime != null) {
             final now = DateTime.now();
             if (_expirationTime!.isBefore(now)) {
-              debugPrint(
+              AppLogger.instance.logInfo(
                 '[EditorConfig] Tempo expirado durante o boot. Limpando...',
               );
               nukeExperimentalData();
@@ -414,10 +429,11 @@ class EditorDeCroqui {
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao carregar configuração',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -438,7 +454,9 @@ class EditorDeCroqui {
       if (difference.isNegative || difference.inSeconds <= 0) {
         _countdownTimer?.cancel();
         timeRemaining.value = Duration.zero;
-        debugPrint('[EditorConfig] Tempo esgotado! Iniciando Nuke...');
+        AppLogger.instance.logInfo(
+          '[EditorConfig] Tempo esgotado! Iniciando Nuke...',
+        );
         nukeExperimentalData();
       } else {
         timeRemaining.value = difference;
@@ -457,11 +475,13 @@ class EditorDeCroqui {
         _expirationTime == null ||
         _expirationTime!.isBefore(DateTime.now())) {
       _expirationTime = DateTime.now().add(const Duration(minutes: 20));
-      debugPrint(
+      AppLogger.instance.logInfo(
         '[EditorConfig] Definindo novo tempo de expiração: 20 minutos.',
       );
     } else {
-      debugPrint('[EditorConfig] Mantendo tempo de expiração existente.');
+      AppLogger.instance.logInfo(
+        '[EditorConfig] Mantendo tempo de expiração existente.',
+      );
     }
 
     _startCountdown();
@@ -488,10 +508,11 @@ class EditorDeCroqui {
       config['expiryTime'] = _expirationTime?.toIso8601String();
 
       await _writeConfig(config);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao persistir modo experimental',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -502,10 +523,11 @@ class EditorDeCroqui {
       final config = await _readConfig();
       config['isDevMode'] = enabled;
       await _writeConfig(config);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao persistir modo dev',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -516,10 +538,11 @@ class EditorDeCroqui {
       final config = await _readConfig();
       config['isExperimental'] = false;
       await _writeConfig(config);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao desconectar',
         error: e,
+        stackTrace: stackTrace,
       );
     } finally {
       isExperimentalMode.value = false;
@@ -549,10 +572,11 @@ class EditorDeCroqui {
       final config = await _readConfig();
       config['editorUrl'] = null;
       await _writeConfig(config);
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao limpar dados',
         error: e,
+        stackTrace: stackTrace,
       );
     } finally {
       editorUrl.value = null;

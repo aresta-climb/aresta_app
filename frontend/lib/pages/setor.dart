@@ -9,6 +9,7 @@ import '../view_functions/setor_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/browse_functions.dart';
+import '../services/firebase/app_logger.dart';
 import '../widgets/mapa_thumbnail.dart';
 
 /// Uma página que fornece uma visão geral de um setor específico.
@@ -81,8 +82,12 @@ class _SetorPageState extends State<SetorPage> {
                 curve: Curves.easeInOut,
                 alignment: 0.5,
               );
-            } catch (e) {
-              debugPrint('[SetorPage] Falha ao rolar para via alvo: $e');
+            } catch (e, stackTrace) {
+              AppLogger.instance.logError(
+                '[SetorPage] Falha ao rolar para via alvo',
+                error: e,
+                stackTrace: stackTrace,
+              );
             }
           }
         }

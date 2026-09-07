@@ -4,8 +4,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/constants/network_constants.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:mocktail/mocktail.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockFirebaseRemoteConfig extends Mock implements FirebaseRemoteConfig {}
 
@@ -67,7 +69,10 @@ void main() {
       },
     );
 
-    test('initialize deve capturar erros de rede silenciosamente sem quebrar', () async {
+    test('initialize deve capturar erros transitórios de rede e registrar como logAviso', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
       when(
         () => mockFirebaseRemoteConfig.setDefaults(any()),
       ).thenAnswer((_) async {});
@@ -78,8 +83,32 @@ void main() {
         () => mockFirebaseRemoteConfig.fetchAndActivate(),
       ).thenThrow(Exception('Simulated network timeout'));
 
-      // Não deve lançar exceção
       await expectLater(service.initialize(), completes);
+
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedWarnings.first, contains('offline/timeout'));
+      expect(mockLogger.recordedErrors, isEmpty);
+    });
+
+    test('initialize deve registrar erros inesperados de configuração via logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(
+        () => mockFirebaseRemoteConfig.setDefaults(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirebaseRemoteConfig.setConfigSettings(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirebaseRemoteConfig.fetchAndActivate(),
+      ).thenThrow(const FormatException('Configurações inválidas'));
+
+      await expectLater(service.initialize(), completes);
+
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      expect(mockLogger.recordedErrors.first['contextMessage'], contains('Erro inesperado ao buscar configurações'));
+      expect(mockLogger.recordedErrors.first['stackTrace'], isNotNull);
     });
   });
 

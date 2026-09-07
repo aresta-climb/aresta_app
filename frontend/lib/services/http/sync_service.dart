@@ -178,10 +178,11 @@ class SyncService {
       final prefs = await SharedPreferences.getInstance();
       final cachedVersion = prefs.getInt('cached_data_version') ?? 0;
       return NetworkConstants.kDataVersion > cachedVersion;
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[SyncService] Falha ao verificar versão da base de dados',
         error: e,
+        stackTrace: stackTrace,
       );
       return false;
     }
@@ -192,7 +193,7 @@ class SyncService {
   Future<void> confirmMigrationComplete() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('cached_data_version', NetworkConstants.kDataVersion);
-    debugPrint(
+    AppLogger.instance.logInfo(
       '[SyncService] Nova versão de dados registrada com sucesso: ${NetworkConstants.kDataVersion}',
     );
   }
@@ -211,6 +212,7 @@ class SyncService {
           syncStatus.value == SyncStatus.offline) {
         AppLogger.instance.logError(
           '[SyncService] Falha ao sincronizar índice durante a migração',
+          stackTrace: StackTrace.current,
         );
         return false;
       }
@@ -221,7 +223,7 @@ class SyncService {
         final indice = datasetRepository.indiceData.value;
 
         if (indice != null && picosSalvos.isNotEmpty) {
-          debugPrint(
+          AppLogger.instance.logInfo(
             '[SyncService] Rebaixando ${picosSalvos.length} croquis salvos...',
           );
           for (final pico in picosSalvos) {
@@ -235,7 +237,7 @@ class SyncService {
       }
 
       await confirmMigrationComplete();
-      debugPrint('[SyncService] Migração executada com sucesso.');
+      AppLogger.instance.logInfo('[SyncService] Migração executada com sucesso.');
       return true;
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -255,7 +257,7 @@ class SyncService {
     final String url = resumo.caminhoRelativo;
 
     if (await isNetworkDisabled()) {
-      AppLogger.instance.logError(
+      AppLogger.instance.logAviso(
         'Download abortado: O aplicativo está em uma versão descontinuada.',
       );
       return false;
@@ -264,12 +266,13 @@ class SyncService {
     if (url.isEmpty || id.isEmpty) {
       AppLogger.instance.logError(
         'Tentativa de download do pico falhou: ID ou URL vazios. id=$id',
+        stackTrace: StackTrace.current,
       );
       return false;
     }
     downloadingCrags.value = {...downloadingCrags.value, id: 0.0};
     try {
-      debugPrint('Baixando pico $id de $url...');
+      AppLogger.instance.logInfo('Baixando pico $id de $url...');
 
       // Garanta que temos o indice local sincronizado com o remoto antes de
       // baixar o pico pra não ter erros de checksum após os downloads.
@@ -286,7 +289,7 @@ class SyncService {
       if (!success) {
         // Se falhou, pode ser devido a um Hash Mismatch (nosso índice local está obsoleto
         // e a CDN buscou um arquivo novo). Vamos forçar uma atualização do índice e tentar de novo.
-        debugPrint(
+        AppLogger.instance.logAviso(
           '🛑 [SyncService] Tentativa 1 de download de $id falhou. Forçando atualização do índice ignorando o cache...',
         );
         await syncIndex(auto: false, forceBypassCache: true);
@@ -297,7 +300,7 @@ class SyncService {
               .where((c) => c.id == id)
               .toList();
           if (updatedResumoList.isNotEmpty) {
-            debugPrint(
+            AppLogger.instance.logInfo(
               '[SyncService] Tentando download novamente com o índice atualizado para $id...',
             );
             updates = await _downloadOrUpdatePico(
@@ -309,11 +312,9 @@ class SyncService {
         }
 
         if (!success) {
-          debugPrint(
-            '🛑 [SyncService] Falha definitiva no download de $id. Arquivos não foram salvos.',
-          );
           AppLogger.instance.logFalhaSyncOuDownload(
             'Falha definitiva no download do croqui $id',
+            stackTrace: StackTrace.current,
           );
         }
       }
@@ -357,7 +358,7 @@ class SyncService {
     bool forceBypassCache = false,
   }) async {
     if (await isNetworkDisabled()) {
-      debugPrint(
+      AppLogger.instance.logAviso(
         '[SyncService] Sincronização em background abortada: App descontinuado.',
       );
       await _loadLocalIndiceAndNotify(
@@ -386,20 +387,21 @@ class SyncService {
       final baseUrl = baseUrlOverride ?? editorDeCroqui.activeBaseUrl;
 
       if (baseUrl.isEmpty) {
-        debugPrint(
-          '[SyncService] URL base vazia. Sincronização ignorada, carregando local...',
+        AppLogger.instance.logError(
+          '[SyncService] URL base vazia. Sincronização cancelada.',
+          stackTrace: StackTrace.current,
         );
         await _loadLocalIndiceAndNotify(localIndicePath);
         setUpdatedStatus();
         return failedPicos;
       }
 
-      debugPrint(
+      AppLogger.instance.logInfo(
         'Buscando banco de dados em tempo real de $baseUrl/indice.binarypb...',
       );
 
       final localEtag = await _storage.readETag(localEtagPath);
-      debugPrint(
+      AppLogger.instance.logInfo(
         '[SyncService] 🔍 ETag Local sendo enviado na requisição: $localEtag',
       );
       final result = await _network.fetchIndiceWithRetries(
@@ -446,19 +448,19 @@ class SyncService {
             // Isso previne que o aplicativo fique com dados e arquivos em estados inconsistentes caso
             // o índice mestre falhe ao ser baixado ou processado.
             if (globalUpdates.filesToRename.isNotEmpty) {
-              debugPrint(
+              AppLogger.instance.logInfo(
                 '🔄 [SyncService] Arquivos atualizados/renomeados no syncIndex (${globalUpdates.filesToRename.length}):',
               );
               for (final entrada in globalUpdates.filesToRename.entries) {
-                debugPrint('   • ${entrada.key} -> ${entrada.value}');
+                AppLogger.instance.logInfo('   • ${entrada.key} -> ${entrada.value}');
               }
             }
             if (globalUpdates.filesToDelete.isNotEmpty) {
-              debugPrint(
+              AppLogger.instance.logInfo(
                 '🗑️ [SyncService] Arquivos removidos no syncIndex (${globalUpdates.filesToDelete.length}):',
               );
               for (final arquivo in globalUpdates.filesToDelete) {
-                debugPrint('   • $arquivo');
+                AppLogger.instance.logInfo('   • $arquivo');
               }
             }
 
@@ -487,9 +489,10 @@ class SyncService {
           } else {
             AppLogger.instance.logError(
               '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
+              stackTrace: StackTrace.current,
             );
             if (!forceBypassCache) {
-              debugPrint(
+              AppLogger.instance.logAviso(
                 '[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...',
               );
               final fallbackFailedPicos = await syncIndex(
@@ -499,12 +502,16 @@ class SyncService {
               failedPicos.clear();
               failedPicos.addAll(fallbackFailedPicos);
             } else {
+              AppLogger.instance.logError(
+                '[SyncService] Falha definitiva na sincronização após tentativa de bypass de cache.',
+                stackTrace: StackTrace.current,
+              );
               syncStatus.value = SyncStatus.error;
               TelemetryService.instance.logResultadoSincronizacao('erro');
             }
           }
         case IndiceUnchanged():
-          debugPrint(
+          AppLogger.instance.logInfo(
             '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
           );
           if (datasetRepository.activeDataset.value == null) {
@@ -581,7 +588,7 @@ class SyncService {
     Indice newIndice,
   ) async {
     final updates = _SyncUpdates();
-    debugPrint('Checking for outdated picos...');
+    AppLogger.instance.logInfo('Checking for outdated picos...');
     syncStatus.value = SyncStatus.updating;
     final directory = await getApplicationDocumentsDirectory();
     final downloadsDir = Directory(
@@ -622,7 +629,7 @@ class SyncService {
           }
 
           if (needsUpdate) {
-            debugPrint(
+            AppLogger.instance.logInfo(
               'Pico ${newResumo.id} requires update (outdated or fallback). Updating...',
             );
             final picoUpdates = await _downloadOrUpdatePico(
@@ -639,15 +646,16 @@ class SyncService {
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro crítico durante atualização de picos',
         error: e,
+        stackTrace: stackTrace,
       );
       updates.hasErrors = true;
     }
 
-    debugPrint('Background update check complete.');
+    AppLogger.instance.logInfo('Background update check complete.');
     return updates;
   }
 
@@ -729,16 +737,17 @@ class SyncService {
 
       // Aguarda todos os downloads de thumbnails completarem paralelamente
       if (downloadTasks.isNotEmpty) {
-        debugPrint('Baixando ${downloadTasks.length} thumbnails...');
+        AppLogger.instance.logInfo('Baixando ${downloadTasks.length} thumbnails...');
         final results = await Future.wait(downloadTasks);
         if (results.any((success) => !success)) {
           updates.hasErrors = true;
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro ao sincronizar thumbnails globais',
         error: e,
+        stackTrace: stackTrace,
       );
       updates.hasErrors = true;
     }
@@ -765,6 +774,7 @@ class SyncService {
     if (latestResumoList.isEmpty) {
       AppLogger.instance.logError(
         'Croqui ${newResumo.id} não foi encontrado no índice atualizado.',
+        stackTrace: StackTrace.current,
       );
       updates.hasErrors = true;
       return updates;
@@ -775,6 +785,15 @@ class SyncService {
     final baseUrl =
         baseUrlOverride ?? datasetRepository.editorDeCroqui.activeBaseUrl;
     final id = latestResumo.id;
+
+    if (baseUrl.isEmpty) {
+      AppLogger.instance.logError(
+        'Base URL vazia ao tentar baixar croqui $id.',
+        stackTrace: StackTrace.current,
+      );
+      updates.hasErrors = true;
+      return updates;
+    }
     try {
       final receivePort = ReceivePort();
 
@@ -785,9 +804,7 @@ class SyncService {
         sendPort: receivePort.sendPort,
       );
 
-      if (kDebugMode) {
-        debugPrint('[SyncService] Iniciando download do croqui $id a partir de: $baseUrl');
-      }
+      AppLogger.instance.logInfo('[SyncService] Iniciando download do croqui $id a partir de: $baseUrl');
       if (mockIsolateSpawn != null) {
         await mockIsolateSpawn!(downloadIsolateMain, args);
       } else {
@@ -819,15 +836,16 @@ class SyncService {
             latestResumo.checksumSha256Croqui,
             latestResumo.timestampUpdate.toDateTime().toIso8601String(),
           );
-          debugPrint('Updated pico $id successfully (pending atomic apply).');
+          AppLogger.instance.logInfo('Updated pico $id successfully (pending atomic apply).');
           return updates;
         }
       }
       return updates;
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Erro crítico durante o download do pico $id',
         error: e,
+        stackTrace: stackTrace,
       );
       updates.hasErrors = true;
       return updates;
@@ -844,12 +862,9 @@ class SyncService {
   /// em vez de herdar acidentalmente a pilha de execução da thread da UI (Main Isolate).
   @visibleForTesting
   void tratarErroDownloadIsolate(String id, DownloadIsolateResult message) {
-    debugPrint(
-      '🛑 [SyncService] Erro no isolate de download do pico $id: ${message.error}',
-    );
-    final StackTrace? stackTrace = message.rastreamentoPilha != null
+    final StackTrace stackTrace = message.rastreamentoPilha != null
         ? StackTrace.fromString(message.rastreamentoPilha!)
-        : null;
+        : StackTrace.current;
     AppLogger.instance.logFalhaSyncOuDownload(
       'Erro no isolate de download do pico $id: ${message.error}',
       error: message.error,
@@ -891,7 +906,7 @@ class SyncService {
       );
 
       if (isTmpValid) {
-        debugPrint('Resumed existing .tmp file for $fileUrl (hash matches).');
+        AppLogger.instance.logInfo('Resumed existing .tmp file for $fileUrl (hash matches).');
         return true;
       }
 
@@ -902,12 +917,13 @@ class SyncService {
           ? '$fileUrl&v=$expectedHash'
           : '$fileUrl?v=$expectedHash';
 
-      debugPrint('Downloading file: $cacheBustingUrl to .tmp');
+      AppLogger.instance.logInfo('Downloading file: $cacheBustingUrl to .tmp');
       final bytes = await _network.downloadFile(cacheBustingUrl);
 
       if (bytes == null) {
         AppLogger.instance.logError(
           'Failed to download $fileUrl (null returned)',
+          stackTrace: StackTrace.current,
         );
         return false;
       }
@@ -915,15 +931,19 @@ class SyncService {
       await _storage.saveTmpFile(tmpFilePath, bytes);
 
       if (!await _storage.validateExistingTmpFile(tmpFilePath, expectedHash)) {
-        AppLogger.instance.logError('Hash mismatch for $fileUrl.');
+        AppLogger.instance.logError(
+          'Hash mismatch for $fileUrl.',
+          stackTrace: StackTrace.current,
+        );
         return false;
       }
 
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.instance.logError(
         'Exception downloading file $fileUrl',
         error: e,
+        stackTrace: stackTrace,
       );
       return false;
     }
