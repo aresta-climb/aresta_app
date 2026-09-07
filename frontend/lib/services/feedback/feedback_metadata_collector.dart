@@ -76,6 +76,20 @@ class FeedbackMetadataCollector {
   /// Retorna um objeto [FeedbackMetadata] fortemente tipado.
   /// Variáveis que falharem durante a coleta adotarão o valor `'unknown'`.
   Future<FeedbackMetadata> collect({BuildContext? context}) async {
+    String screenSize = 'unknown';
+    String isDarkMode = 'unknown';
+    String deviceOrientation = 'unknown';
+    try {
+      if (context != null) {
+        final size = MediaQuery.of(context).size;
+        screenSize = '${size.width.toInt()}x${size.height.toInt()}';
+        isDarkMode = Theme.of(context).brightness == Brightness.dark
+            ? 'true'
+            : 'false';
+        deviceOrientation = MediaQuery.of(context).orientation.name;
+      }
+    } catch (_) {}
+
     String? appInstanceId;
     try {
       if (getAppInstanceIdOverride != null) {
@@ -148,20 +162,6 @@ class FeedbackMetadataCollector {
         } else if (globalActiveNodeOverride != null) {
           navigationTree = globalActiveNodeOverride!;
         }
-      }
-    } catch (_) {}
-
-    String screenSize = 'unknown';
-    String isDarkMode = 'unknown';
-    String deviceOrientation = 'unknown';
-    try {
-      if (context != null) {
-        final size = MediaQuery.of(context).size;
-        screenSize = '${size.width.toInt()}x${size.height.toInt()}';
-        isDarkMode = Theme.of(context).brightness == Brightness.dark
-            ? 'true'
-            : 'false';
-        deviceOrientation = MediaQuery.of(context).orientation.name;
       }
     } catch (_) {}
 

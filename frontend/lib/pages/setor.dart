@@ -36,7 +36,6 @@ class SetorPage extends StatefulWidget {
 class _SetorPageState extends State<SetorPage> {
   EscaladaSortMode _sortMode = EscaladaSortMode.original;
   Future<ImageProvider?>? _coverProviderFuture;
-  String? _coverImagePath;
   GlobalKey? _targetKey;
 
   @override
@@ -109,7 +108,6 @@ class _SetorPageState extends State<SetorPage> {
 
     if (paths.isNotEmpty) {
       final firstPath = paths.first;
-      _coverImagePath = firstPath;
       return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
     }
 

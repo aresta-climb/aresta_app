@@ -17,6 +17,8 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../../mocks/mock_app_logger.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
@@ -252,6 +254,56 @@ void main() {
       }
     },
   );
+
+  group('Tratamento de Erros de Isolate com Rastreamento de Pilha', () {
+    test(
+      'tratarErroDownloadIsolate deve reconstruir StackTrace via StackTrace.fromString e repassar ao AppLogger',
+      () {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        const fakeStack = 'sync_isolate.dart:98\nsync_isolate.dart:234';
+        final resultado = DownloadIsolateResult(
+          filesToDelete: [],
+          filesToRename: {},
+          error: 'HTTP 504 ao baixar crag_sector_13.webp',
+          rastreamentoPilha: fakeStack,
+        );
+
+        syncService.tratarErroDownloadIsolate('pico_teste', resultado);
+
+        expect(mockLogger.recordedErrors.length, 1);
+        final recorded = mockLogger.recordedErrors.first;
+        expect(recorded['error'], 'HTTP 504 ao baixar crag_sector_13.webp');
+        expect(recorded['stackTrace'], isNotNull);
+        expect(
+          recorded['stackTrace'].toString(),
+          contains('sync_isolate.dart:98'),
+        );
+      },
+    );
+
+    test(
+      'tratarErroDownloadIsolate deve passar stackTrace nulo quando rastreamentoPilha não for fornecido',
+      () {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        final resultado = DownloadIsolateResult(
+          filesToDelete: [],
+          filesToRename: {},
+          error: 'Erro genérico sem stack',
+          rastreamentoPilha: null,
+        );
+
+        syncService.tratarErroDownloadIsolate('pico_teste_2', resultado);
+
+        expect(mockLogger.recordedErrors.length, 1);
+        final recorded = mockLogger.recordedErrors.first;
+        expect(recorded['stackTrace'], isNull);
+      },
+    );
+  });
 }
 
 class _SyncTestFakeClient extends http.BaseClient {

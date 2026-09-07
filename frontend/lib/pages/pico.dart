@@ -49,14 +49,12 @@ class PicoDetailsPage extends StatefulWidget {
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
   late PicoCategorizedData _categories;
-  late DateTime _tempoInicio;
   late ServicoCroquiOnline _servicoCroquiOnline;
   late bool _isInitiallyDownloaded;
 
   @override
   void initState() {
     super.initState();
-    _tempoInicio = DateTime.now();
     _categories = PicoCategorizedData(widget.croqui);
     _servicoCroquiOnline = ServicoCroquiOnline(
       sessaoOnline: widget.datasetRepo.gerenciadorSessaoOnline,
@@ -172,7 +170,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         nomePico: widget.pico.nome,
         tamanhoFormatado: tamanhoFormatado,
         onSalvar: () {
-          _iniciarDownload(context);
+          _iniciarDownload();
           tree.onBackInterceptor = null;
           if (context.mounted && AppNav.canGoBack(context)) {
             AppNav.back(context);
@@ -230,7 +228,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     super.dispose();
   }
 
-  void _iniciarDownload(BuildContext context) async {
+  void _iniciarDownload() async {
     final indice = widget.datasetRepo.indiceData.value;
     if (indice == null) return;
 
@@ -248,6 +246,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         ServicoDownloadSegundoPlano(syncService: syncService);
     final success = await servicoDownload.executarDownload(resumos.first);
 
+    if (!mounted) return;
+
     if (success) {
       _servicoCroquiOnline.cancelarPolling(widget.cragId);
       final currentTree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
@@ -255,27 +255,23 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       if (currentTree != null) {
         currentTree.onBackInterceptor = null;
       }
-      if (mounted) {
-        setState(() {
-          _isInitiallyDownloaded = true;
-        });
-      }
+      setState(() {
+        _isInitiallyDownloaded = true;
+      });
     }
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              success
-                  ? '${widget.pico.nome} salvo offline!'
-                  : 'Falha ao baixar ${widget.pico.nome}',
-            ),
-            backgroundColor: success ? Colors.green : Colors.red,
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? '${widget.pico.nome} salvo offline!'
+                : 'Falha ao baixar ${widget.pico.nome}',
           ),
-        );
-    }
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
   }
 
 
@@ -406,7 +402,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           nomePico: widget.pico.nome,
           tamanhoFormatado: tamanhoFormatado,
           onSalvar: () {
-            _iniciarDownload(context);
+            _iniciarDownload();
             if (context.mounted && AppNav.canGoBack(context)) {
               AppNav.back(context);
             }
@@ -536,8 +532,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                               tamanhoFormatado: tamanhoFormatado,
                               isDownloaded: isDownloaded,
                               progressoDownload: progresso,
-                              onSalvarOffline: () =>
-                                  _iniciarDownload(context),
+                              onSalvarOffline: _iniciarDownload,
                             );
                           },
                         );

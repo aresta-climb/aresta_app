@@ -75,21 +75,6 @@ Widget buildGrupoBody(
   );
 }
 
-/// Constrói um cabeçalho estilizado para seções dentro da página do Grupo.
-Widget _buildHeader(String title) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Text(
-      title,
-      style: TextStyle(
-        color: beastHide,
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  );
-}
-
 Widget buildGrupoSortGrid(
   BuildContext context,
   GrupoSortMode currentMode,

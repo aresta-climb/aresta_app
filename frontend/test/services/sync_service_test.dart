@@ -33,16 +33,13 @@ Future<void> setupLocalServer() async {
   localServer.listen((HttpRequest request) {
     final path = request.uri.path;
     requestedPaths.add(request.uri.toString());
-    print('LOCAL SERVER REQUEST: ');
     for (var entry in mockServerResponses.entries) {
       if (path.endsWith(entry.key)) {
-        print('LOCAL SERVER FOUND MATCH: ');
         request.response.add(entry.value);
         request.response.close();
         return;
       }
     }
-    print('LOCAL SERVER 404: ');
     request.response.statusCode = 404;
     request.response.close();
   });
@@ -364,7 +361,7 @@ void main() {
         };
 
         // Simulamos que a interface tem esse pico aberto!
-        syncService.pico_aberto_id.value = picoId;
+        syncService.picoAbertoId.value = picoId;
 
         await syncService.syncIndex();
 
@@ -601,7 +598,6 @@ void main() {
         final expectedHash = sha256
             .convert(newCroqui.writeToBuffer())
             .toString();
-        print('requestedPaths: $requestedPaths');
         final fullUrl = requestedPaths.firstWhere(
           (u) => u.contains('$picoId.binarypb'),
         );
@@ -827,7 +823,6 @@ void main() {
     test(
       'deve baixar thumbnails novas para picos listados no indice, mesmo se o pico nao estiver baixado',
       () async {
-        final oldIndice = Indice(); // Indice vazio antigo
         final newIndice = Indice()
           ..croquis.add(
             ResumoCroqui()
@@ -2394,12 +2389,12 @@ void main() {
               };
 
         // Simula que o usuário está com este croqui aberto na tela
-        syncService.pico_aberto_id.value = picoId;
+        syncService.picoAbertoId.value = picoId;
 
         await syncService.syncIndex();
 
         // No modo experimental (Hot Reload), NÃO deve haver recarga pendente
-        expect(syncService.recarga_pendente_pico_id.value, isNull);
+        expect(syncService.recargaPendentePicoId.value, isNull);
 
         // O arquivo local deve ter sido atualizado imediatamente
         final updatedLocalBytes = await localPicoFile.readAsBytes();

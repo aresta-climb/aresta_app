@@ -1,15 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import '../services/editor_croqui.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import 'common_functions.dart';
 
@@ -43,20 +40,9 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Directory>(
-      future: getApplicationDocumentsDirectory(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    String markdownData = widget.data;
 
-        final editor = EditorDeCroqui.instance;
-        final downloadsPath =
-            '${editor.downloadsPath(snapshot.data!.path)}/${widget.cragId}';
-
-        String markdownData = widget.data;
-
-        return MarkdownBody(
+    return MarkdownBody(
           data: markdownData,
           extensionSet: md.ExtensionSet.gitHubFlavored,
           onTapLink: (text, href, title) async {
@@ -184,7 +170,5 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
             tableBorder: TableBorder.all(color: Colors.transparent, width: 0),
           ),
         );
-      },
-    );
   }
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
@@ -36,7 +37,7 @@ class UpdateDownloader {
     for (final fileEntry in filesToUpdate) {
       final targetFile = File('${stagingDir.path}/${fileEntry.filename}');
 
-      print('Downloading ${fileEntry.filename}...');
+      debugPrint('Downloading ${fileEntry.filename}...');
 
       // 1. Baixa o arquivo diretamente para o diretório de preparação
       final response = await _client.get(Uri.parse(fileEntry.downloadUrl));
@@ -50,7 +51,7 @@ class UpdateDownloader {
       await targetFile.writeAsBytes(response.bodyBytes);
 
       // 2. Verifica o Checksum via Streaming
-      print('Verifying checksum for ${fileEntry.filename}...');
+      debugPrint('Verifying checksum for ${fileEntry.filename}...');
 
       final bool isChecksumValid = await _verifyFileChecksum(
         file: targetFile,
@@ -65,7 +66,7 @@ class UpdateDownloader {
         );
       }
 
-      print('Verified ${fileEntry.filename} successfully.');
+      debugPrint('Verified ${fileEntry.filename} successfully.');
     }
   }
 

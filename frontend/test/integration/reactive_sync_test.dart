@@ -50,14 +50,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
-      // O usuário está na Home, então o pico_aberto_id deve ser null.
-      expect(syncService.pico_aberto_id.value, isNull);
+      // O usuário está na Home, então o picoAbertoId deve ser null.
+      expect(syncService.picoAbertoId.value, isNull);
 
       // Simulamos uma pendência retida no SyncService mesmo sem o pico estar aberto
       // (Isso não deveria acontecer, pois ela seria commitada imediatamente se o pico não estivesse aberto, mas vamos simular)
 
       // Quando estamos na home e há uma pendência, não deve aparecer popup
-      syncService.recarga_pendente_pico_id.value = 'test_pico_1';
+      syncService.recargaPendentePicoId.value = 'test_pico_1';
       await tester.pump(const Duration(milliseconds: 500));
 
       // Na home, o popup "Croqui Atualizado" nunca é exibido

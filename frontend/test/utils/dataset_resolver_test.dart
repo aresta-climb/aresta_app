@@ -245,7 +245,6 @@ void main() {
 
   group('ResolvedDataset', () {
     test('should properly store and retrieve values', () {
-      final pico = Pico()..nome = 'Pico Teste';
       final grupo = Grupo()..nome = 'Grupo Teste';
       final setor = Setor()..nome = 'Setor Teste';
       final escalada = Escalada()

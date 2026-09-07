@@ -31,21 +31,32 @@ class DownloadIsolateArgs {
 
 /// Resultado final do processamento empacotado que o Isolate envia para a Main Thread.
 ///
-/// Contém o resumo das operações físicas (arquivos deletados e temporários a renomear)
-/// e o novo buffer de dados que o Dart (Main Isolate) usará para atualizar
-/// a memória do aplicativo de forma atômica e segura.
+/// Contém o resumo das operações físicas (arquivos deletados e temporários a renomear),
+/// o novo buffer de dados que o Dart (Main Isolate) usará para atualizar
+/// a memória do aplicativo de forma atômica e segura, e o [rastreamentoPilha]
+/// em caso de erro para diagnósticos no Crashlytics.
 class DownloadIsolateResult {
   final List<String> filesToDelete;
   final Map<String, String> filesToRename;
   final Uint8List? newPicoDataBytes;
   final String? error;
+  final String? rastreamentoPilha;
 
   DownloadIsolateResult({
     required this.filesToDelete,
     required this.filesToRename,
     this.newPicoDataBytes,
     this.error,
+    this.rastreamentoPilha,
   });
+}
+
+/// Identifica se um código HTTP indica falha de rede transitória passível de retentativa (502, 503, 504, 429).
+bool ehStatusTransitorio(int statusCode) {
+  return statusCode == 502 ||
+      statusCode == 503 ||
+      statusCode == 504 ||
+      statusCode == 429;
 }
 
 /// Ponto de entrada (Entrypoint) estático para o Isolate de download em background.
@@ -75,45 +86,78 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
 
     final List<String> errosDownloads = [];
+    String? ultimoRastreamentoPilha;
 
-    // Helper for atomic download
+    // Helper for atomic download with resilient retries
     Future<bool> downloadAtomic(
       String fileUrl,
       String tmpPath,
       String expectedHash,
     ) async {
-      try {
-        final isTmpValid = await storage.validateExistingTmpFile(
-          tmpPath,
-          expectedHash,
-        );
-        if (isTmpValid) return true;
-        final cacheBustingUrl = fileUrl.contains('?')
-            ? '$fileUrl&v=$expectedHash'
-            : '$fileUrl?v=$expectedHash';
-        final response = await client
-            .get(Uri.parse(cacheBustingUrl))
-            .timeout(args.timeoutDuration);
-        if (response.statusCode != 200) {
-          final erroMsg = 'HTTP ${response.statusCode} ao baixar $cacheBustingUrl';
-          debugPrint('🛑 [SyncIsolate] $erroMsg');
+      final isTmpValid = await storage.validateExistingTmpFile(
+        tmpPath,
+        expectedHash,
+      );
+      if (isTmpValid) return true;
+
+      final cacheBustingUrl = fileUrl.contains('?')
+          ? '$fileUrl&v=$expectedHash'
+          : '$fileUrl?v=$expectedHash';
+
+      int tentativa = 0;
+      const int maxTentativas = 3;
+
+      while (tentativa < maxTentativas) {
+        tentativa++;
+        try {
+          final response = await client
+              .get(Uri.parse(cacheBustingUrl))
+              .timeout(args.timeoutDuration);
+
+          if (response.statusCode != 200) {
+            final erroMsg =
+                'HTTP ${response.statusCode} ao baixar $cacheBustingUrl';
+            debugPrint('🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)');
+
+            if (ehStatusTransitorio(response.statusCode) &&
+                tentativa < maxTentativas) {
+              await Future.delayed(Duration(milliseconds: 150 * tentativa));
+              continue;
+            }
+
+            errosDownloads.add(erroMsg);
+            ultimoRastreamentoPilha = StackTrace.current.toString();
+            return false;
+          }
+
+          await storage.saveTmpFile(tmpPath, response.bodyBytes);
+          final valido =
+              await storage.validateExistingTmpFile(tmpPath, expectedHash);
+          if (!valido) {
+            final erroMsg =
+                'Checksum SHA-256 inválido para $tmpPath. Esperado: $expectedHash';
+            debugPrint('🛑 [SyncIsolate] $erroMsg');
+            errosDownloads.add(erroMsg);
+            ultimoRastreamentoPilha = StackTrace.current.toString();
+          }
+          return valido;
+        } catch (e, stack) {
+          final erroMsg = 'Exceção ao baixar $fileUrl: $e';
+          debugPrint(
+            '🛑 [SyncIsolate] $erroMsg (tentativa $tentativa/$maxTentativas)\n$stack',
+          );
+
+          if (tentativa < maxTentativas) {
+            await Future.delayed(Duration(milliseconds: 150 * tentativa));
+            continue;
+          }
+
           errosDownloads.add(erroMsg);
+          ultimoRastreamentoPilha = stack.toString();
           return false;
         }
-        await storage.saveTmpFile(tmpPath, response.bodyBytes);
-        final valido = await storage.validateExistingTmpFile(tmpPath, expectedHash);
-        if (!valido) {
-          final erroMsg = 'Checksum SHA-256 inválido para $tmpPath. Esperado: $expectedHash';
-          debugPrint('🛑 [SyncIsolate] $erroMsg');
-          errosDownloads.add(erroMsg);
-        }
-        return valido;
-      } catch (e, stack) {
-        final erroMsg = 'Exceção ao baixar $fileUrl: $e';
-        debugPrint('🛑 [SyncIsolate] $erroMsg\n$stack');
-        errosDownloads.add(erroMsg);
-        return false;
       }
+      return false;
     }
 
     // Progresso inicial de 5% para início do download do arquivo principal
@@ -130,6 +174,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
           filesToDelete: [],
           filesToRename: {},
           error: 'Falha ao baixar binarypb de $url',
+          rastreamentoPilha:
+              ultimoRastreamentoPilha ?? StackTrace.current.toString(),
         ),
       );
       return;
@@ -141,7 +187,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         DownloadIsolateResult(
           filesToDelete: [],
           filesToRename: {},
-          error: 'Falha ao ler novo binarypb',
+          error: 'Falha ao ler dados do croqui baixado em $tmpPicoFilePath',
+          rastreamentoPilha: StackTrace.current.toString(),
         ),
       );
       return;
@@ -267,6 +314,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
             filesToDelete: [],
             filesToRename: {},
             error: 'Falha em downloads de imagens$detalhe',
+            rastreamentoPilha:
+                ultimoRastreamentoPilha ?? StackTrace.current.toString(),
           ),
         );
         return;
@@ -280,12 +329,13 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         newPicoDataBytes: newPicoData.writeToBuffer(),
       ),
     );
-  } catch (e) {
+  } catch (e, stack) {
     args.sendPort.send(
       DownloadIsolateResult(
         filesToDelete: [],
         filesToRename: {},
         error: e.toString(),
+        rastreamentoPilha: stack.toString(),
       ),
     );
   } finally {

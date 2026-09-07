@@ -678,7 +678,7 @@ void main() {
     },
   );
   testWidgets(
-    'TreeNavigationWrapper atualiza pico_aberto_id quando a rota muda',
+    'TreeNavigationWrapper atualiza picoAbertoId quando a rota muda',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -698,7 +698,7 @@ void main() {
               as dynamic;
       final treeController = wrapperState.treeController;
 
-      expect(mockSync.pico_aberto_id.value, isNull);
+      expect(mockSync.picoAbertoId.value, isNull);
 
       // Navega para um Pico
       treeController.navigateTo(
@@ -706,13 +706,13 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(mockSync.pico_aberto_id.value, 'pico_99');
+      expect(mockSync.picoAbertoId.value, 'pico_99');
 
       // Volta para Home
       treeController.navigateTo(const HomeNode());
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(mockSync.pico_aberto_id.value, isNull);
+      expect(mockSync.picoAbertoId.value, isNull);
     },
   );
 

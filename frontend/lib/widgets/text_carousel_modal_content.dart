@@ -98,8 +98,6 @@ class _TextCarouselModalContentState extends State<TextCarouselModalContent> {
               return ValueListenableBuilder<int>(
                 valueListenable: _currentIndexNotifier,
                 builder: (context, currentIndex, child) {
-                  final isCurrentPage = index == currentIndex;
-
                   return ListView(
                     key: ValueKey(index),
                     primary: false,

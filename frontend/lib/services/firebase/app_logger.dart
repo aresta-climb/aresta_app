@@ -32,11 +32,17 @@ class AppLogger {
   })?
   crashlyticsOverride;
 
-  /// Verifica se o erro ou mensagem descreve uma falha transitória de conectividade ou timeout.
+  /// Verifica se o erro ou mensagem descreve uma falha transitória de conectividade,
+  /// timeout de socket ou instabilidade de gateway/servidor (HTTP 502, 503, 504, 429).
   static bool isFalhaConexaoOuTimeout(dynamic error) {
     if (error == null) return false;
 
-    // 1. Tipos de exceção conhecidos do Dart/HTTP
+    // 1. Códigos numéricos diretos de status HTTP transitório
+    if (error is int) {
+      return error == 502 || error == 503 || error == 504 || error == 429;
+    }
+
+    // 2. Tipos de exceção conhecidos do Dart/HTTP
     if (error is TimeoutException ||
         error is SocketException ||
         error is HttpException ||
@@ -46,8 +52,21 @@ class AppLogger {
       return true;
     }
 
-    // 2. Análise por mensagem textual
+    // 3. Análise por mensagem textual
     final msg = error.toString().toLowerCase();
+
+    // Códigos de erro HTTP transitórios (Gateway/CDN/Rate-limit)
+    if (msg.contains('504') ||
+        msg.contains('502') ||
+        msg.contains('503') ||
+        msg.contains('429') ||
+        msg.contains('gateway timeout') ||
+        msg.contains('bad gateway') ||
+        msg.contains('service unavailable') ||
+        msg.contains('too many requests')) {
+      return true;
+    }
+
     return msg.contains('timeout') ||
         msg.contains('timed out') ||
         msg.contains('socketexception') ||

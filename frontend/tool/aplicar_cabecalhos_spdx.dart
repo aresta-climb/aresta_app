@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 /// Cabeçalho padrão obrigatório de conformidade legal e licenciamento para o ano atual.

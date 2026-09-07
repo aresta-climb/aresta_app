@@ -10,8 +10,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
@@ -33,17 +31,6 @@ class FeedbackOrchestrator {
   static bool get isConfigured {
     if (debugIsConfiguredOverride != null) return debugIsConfiguredOverride!;
     return true;
-  }
-
-  /// Recupera o diretório da fila persistente de feedbacks.
-  static Future<Directory> _getQueueDirectory(
-    Future<Directory> Function()? override,
-  ) async {
-    final Directory baseDir = override != null
-        ? await override()
-        : await getApplicationSupportDirectory();
-
-    return Directory(p.join(baseDir.path, 'feedback_queue'));
   }
 
   /// Processa a fila de feedbacks utilizando Clean Architecture.

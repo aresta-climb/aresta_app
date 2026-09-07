@@ -16,8 +16,6 @@ void main() {
 
     final scaffoldFinder = find.byType(Scaffold);
     expect(scaffoldFinder, findsOneWidget);
-
-    final Scaffold scaffold = tester.widget(scaffoldFinder);
     expect(find.byType(SafeArea), findsWidgets);
 
     final safeAreas = tester.widgetList<SafeArea>(find.byType(SafeArea));

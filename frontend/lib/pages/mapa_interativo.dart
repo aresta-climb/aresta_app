@@ -3,7 +3,6 @@
 
 import 'dart:math' as math;
 import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/utils/croqui_map_index.dart';
 import 'package:flutter/material.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
@@ -459,8 +458,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     final double targetY = visualCenterY - (actualMarkerY * targetScale);
 
     final Matrix4 targetMatrix = Matrix4.identity()
-      ..translate(targetX, targetY)
-      ..scale(targetScale);
+      ..translateByDouble(targetX, targetY, 0.0, 1.0)
+      ..scaleByDouble(targetScale, targetScale, 1.0, 1.0);
 
     _zoomAnimation =
         Matrix4Tween(
@@ -503,8 +502,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           (viewportSize.height / 2) - (pontoNoConteudo.dy * escalaAlvo);
 
       targetMatrix = Matrix4.identity()
-        ..translate(targetX, targetY)
-        ..scale(escalaAlvo);
+        ..translateByDouble(targetX, targetY, 0.0, 1.0)
+        ..scaleByDouble(escalaAlvo, escalaAlvo, 1.0, 1.0);
     }
 
     _zoomAnimation =
@@ -678,12 +677,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
 
     final resolved = _refToResolved[ref];
-    List<IndexedMap> foundMaps = [];
-    if (resolved != null && resolved.escalada != null) {
-      final index = CroquiMapIndex(widget.pico);
-      foundMaps = index.getMapasForReference(resolved);
-    }
-
     return _buildBaseCard(
       title: title,
       subtitle: subtitle,
@@ -1823,9 +1816,9 @@ class MarkerPainter extends CustomPainter {
       );
 
       final matrix = Matrix4.identity()
-        ..translate(padding, padding)
-        ..scale(scaleX, scaleY)
-        ..translate(-minX, -minY);
+        ..translateByDouble(padding, padding, 0.0, 1.0)
+        ..scaleByDouble(scaleX, scaleY, 1.0, 1.0)
+        ..translateByDouble(-minX, -minY, 0.0, 1.0);
 
       final transformedPath = baseContinuous.transform(matrix.storage);
 

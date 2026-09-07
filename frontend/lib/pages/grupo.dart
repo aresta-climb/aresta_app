@@ -26,7 +26,6 @@ class GrupoPage extends StatefulWidget {
 class _GrupoPageState extends State<GrupoPage> {
   GrupoSortMode _sortMode = GrupoSortMode.original;
   Future<ImageProvider?>? _coverProviderFuture;
-  String? _coverImagePath;
 
   @override
   void initState() {
@@ -61,7 +60,6 @@ class _GrupoPageState extends State<GrupoPage> {
 
     if (paths.isNotEmpty) {
       final firstPath = paths.first;
-      _coverImagePath = firstPath;
       return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
     }
 

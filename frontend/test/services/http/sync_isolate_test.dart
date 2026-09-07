@@ -144,5 +144,149 @@ void main() {
         expect(progressList, contains(0.05));
       },
     );
+
+    test(
+      'downloadIsolateMain deve recuperar com sucesso na segunda tentativa após receber HTTP 504 transitório',
+      () async {
+        final imgBytes = utf8.encode('image-bytes-sucesso');
+        final imgHash = sha256.convert(imgBytes).toString();
+
+        final croqui = Croqui()
+          ..id = 'pico_retry_504'
+          ..nome = 'Pico Retry 504'
+          ..arquivosExternos.add(
+            ArquivoExterno()
+              ..caminho = 'foto_504.jpg'
+              ..checksumSha256 = imgHash,
+          );
+        final croquiBytes = croqui.writeToBuffer();
+        final croquiHash = sha256.convert(croquiBytes).toString();
+
+        int requisicoesFoto = 0;
+
+        localServer.listen((request) async {
+          if (request.uri.path.endsWith('pico_retry_504.binarypb')) {
+            request.response.headers.contentType = ContentType.binary;
+            request.response.statusCode = 200;
+            request.response.add(croquiBytes);
+            await request.response.close();
+          } else if (request.uri.path.contains('foto_504.jpg')) {
+            requisicoesFoto++;
+            if (requisicoesFoto == 1) {
+              // 1ª tentativa falha com 504 Gateway Timeout
+              request.response.statusCode = 504;
+              request.response.write('Gateway Timeout');
+              await request.response.close();
+            } else {
+              // 2ª tentativa responde 200 OK
+              request.response.statusCode = 200;
+              request.response.add(imgBytes);
+              await request.response.close();
+            }
+          }
+        });
+
+        final resumo = ResumoCroqui()
+          ..id = 'pico_retry_504'
+          ..nome = 'Pico Retry 504'
+          ..caminhoRelativo = 'picos/pico_retry_504/pico_retry_504.binarypb'
+          ..checksumSha256Croqui = croquiHash;
+
+        final receivePort = ReceivePort();
+        final args = DownloadIsolateArgs(
+          newResumoBytes: resumo.writeToBuffer(),
+          downloadsDirPath: tempDir.path,
+          baseUrl: 'http://${localServer.address.address}:${localServer.port}',
+          sendPort: receivePort.sendPort,
+          timeoutDuration: const Duration(seconds: 1),
+        );
+
+        final resultCompleter = Completer<DownloadIsolateResult>();
+
+        receivePort.listen((msg) {
+          if (msg is DownloadIsolateResult) {
+            resultCompleter.complete(msg);
+            receivePort.close();
+          }
+        });
+
+        await downloadIsolateMain(args);
+
+        final result = await resultCompleter.future.timeout(
+          const Duration(seconds: 5),
+        );
+
+        expect(result.error, isNull,
+            reason: 'O download deve se recuperar do HTTP 504 na segunda tentativa');
+        expect(requisicoesFoto, equals(2),
+            reason: 'Deve ter realizado exatamente 2 tentativas');
+        expect(result.newPicoDataBytes, isNotNull);
+      },
+    );
+
+    test(
+      'downloadIsolateMain deve preencher rastreamentoPilha no DownloadIsolateResult quando esgotar todas as tentativas de falha',
+      () async {
+        final croqui = Croqui()
+          ..id = 'pico_falha_persistente'
+          ..nome = 'Pico Falha Persistente'
+          ..arquivosExternos.add(
+            ArquivoExterno()
+              ..caminho = 'foto_invalida.jpg'
+              ..checksumSha256 = 'HASH_INEXISTENTE',
+          );
+        final croquiBytes = croqui.writeToBuffer();
+        final croquiHash = sha256.convert(croquiBytes).toString();
+
+        localServer.listen((request) async {
+          if (request.uri.path.endsWith('pico_falha_persistente.binarypb')) {
+            request.response.headers.contentType = ContentType.binary;
+            request.response.statusCode = 200;
+            request.response.add(croquiBytes);
+            await request.response.close();
+          } else if (request.uri.path.contains('foto_invalida.jpg')) {
+            // Falha persistente com 504 em todas as requisições
+            request.response.statusCode = 504;
+            request.response.write('Gateway Timeout Persistente');
+            await request.response.close();
+          }
+        });
+
+        final resumo = ResumoCroqui()
+          ..id = 'pico_falha_persistente'
+          ..nome = 'Pico Falha Persistente'
+          ..caminhoRelativo = 'picos/pico_falha_persistente/pico_falha_persistente.binarypb'
+          ..checksumSha256Croqui = croquiHash;
+
+        final receivePort = ReceivePort();
+        final args = DownloadIsolateArgs(
+          newResumoBytes: resumo.writeToBuffer(),
+          downloadsDirPath: tempDir.path,
+          baseUrl: 'http://${localServer.address.address}:${localServer.port}',
+          sendPort: receivePort.sendPort,
+          timeoutDuration: const Duration(milliseconds: 200),
+        );
+
+        final resultCompleter = Completer<DownloadIsolateResult>();
+
+        receivePort.listen((msg) {
+          if (msg is DownloadIsolateResult) {
+            resultCompleter.complete(msg);
+            receivePort.close();
+          }
+        });
+
+        await downloadIsolateMain(args);
+
+        final result = await resultCompleter.future.timeout(
+          const Duration(seconds: 5),
+        );
+
+        expect(result.error, isNotNull);
+        expect(result.rastreamentoPilha, isNotNull,
+            reason: 'O resultado com erro deve conter a rastreamentoPilha do isolate');
+        expect(result.rastreamentoPilha, contains('sync_isolate.dart'));
+      },
+    );
   });
 }

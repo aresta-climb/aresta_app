@@ -481,7 +481,7 @@ void showLinkOverlay(
                       Navigator.pop(context);
                     }
                   } catch (e) {
-                    print('Error launching url: ');
+                    debugPrint('Error launching url: $e');
                   }
                 }
               },

@@ -7,6 +7,19 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../theme/app_colors.dart';
 
+/// Converte um [ByteData] gerado a partir de um canvas em um [BitmapDescriptor] com fallback seguro.
+///
+/// Em ambientes com restrição de memória de textura ou GPUs sob pressão (como dispositivos
+/// móveis em transições ou falhas de superfície gráfica), o método `toByteData()` pode retornar nulo.
+/// Esta função trata a nulidade retornando [BitmapDescriptor.defaultMarker] em vez de disparar
+/// exceções de force-unwrap (`!`).
+BitmapDescriptor converterByteDataEmBitmap(ByteData? byteData) {
+  if (byteData == null) {
+    return BitmapDescriptor.defaultMarker;
+  }
+  return BitmapDescriptor.bytes(byteData.buffer.asUint8List());
+}
+
 /// Gera um BitmapDescriptor customizado com o formato de um pino de mapa (teardrop)
 /// contendo a imagem do logo do app dentro dele.
 Future<BitmapDescriptor> createCustomMarkerBitmap(
@@ -134,9 +147,8 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
   final ByteData? byteData = await markerAsImage.toByteData(
     format: ui.ImageByteFormat.png,
   );
-  final Uint8List uint8List = byteData!.buffer.asUint8List();
 
-  return BitmapDescriptor.fromBytes(uint8List);
+  return converterByteDataEmBitmap(byteData);
 }
 
 /// Gera um BitmapDescriptor customizado com texto acima do pino
@@ -335,7 +347,6 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   final ByteData? byteData = await markerAsImage.toByteData(
     format: ui.ImageByteFormat.png,
   );
-  final Uint8List uint8List = byteData!.buffer.asUint8List();
 
-  return BitmapDescriptor.fromBytes(uint8List);
+  return converterByteDataEmBitmap(byteData);
 }

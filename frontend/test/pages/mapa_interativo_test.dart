@@ -1132,8 +1132,8 @@ void main() {
         // Simulando que o usuário aplicou zoom manual de 4.5x centrado na tela (800x600)
         // x' = -1400 + 400 * 4.5 = 400, y' = -1050 + 300 * 4.5 = 300
         interactiveViewer.transformationController!.value = Matrix4.identity()
-          ..translate(-1400.0, -1050.0)
-          ..scale(4.5);
+          ..translateByDouble(-1400.0, -1050.0, 0.0, 1.0)
+          ..scaleByDouble(4.5, 4.5, 1.0, 1.0);
         await tester.pump();
 
         // Toca no marcador do ponto único
@@ -1271,8 +1271,8 @@ void main() {
           ScaleStartDetails(focalPoint: const Offset(400, 300)),
         );
         interactiveViewer.transformationController!.value = Matrix4.identity()
-          ..translate(-1120.0, -840.0) // centrado: 400 - 400 * 3.8 = -1120, 300 - 300 * 3.8 = -840
-          ..scale(3.8);
+          ..translateByDouble(-1120.0, -840.0, 0.0, 1.0) // centrado: 400 - 400 * 3.8 = -1120, 300 - 300 * 3.8 = -840
+          ..scaleByDouble(3.8, 3.8, 1.0, 1.0);
         interactiveViewer.onInteractionEnd?.call(
           ScaleEndDetails(velocity: Velocity.zero),
         );
@@ -1644,8 +1644,8 @@ void main() {
 
         // Modificar a matriz (pan/zoom)
         firstViewer.transformationController!.value = Matrix4.identity()
-          ..scale(2.0)
-          ..translate(10.0, 10.0);
+          ..scaleByDouble(2.0, 2.0, 1.0, 1.0)
+          ..translateByDouble(10.0, 10.0, 0.0, 1.0);
         final modifiedMatrix = firstViewer.transformationController!.value;
 
         // Deslizar para a página 1
@@ -2347,16 +2347,14 @@ void main() {
 }
 
 class RegistroCirculo {
-  final Offset centro;
   final double raio;
   final Paint paint;
-  RegistroCirculo(this.centro, this.raio, this.paint);
+  RegistroCirculo(this.raio, this.paint);
 }
 
 class RegistroCaminho {
-  final Path caminho;
   final Paint paint;
-  RegistroCaminho(this.caminho, this.paint);
+  RegistroCaminho(this.paint);
 }
 
 class CanvasRegistrador extends Fake implements Canvas {
@@ -2365,7 +2363,7 @@ class CanvasRegistrador extends Fake implements Canvas {
 
   @override
   void drawCircle(Offset c, double radius, Paint paint) {
-    circulos.add(RegistroCirculo(c, radius, Paint()
+    circulos.add(RegistroCirculo(radius, Paint()
       ..color = paint.color
       ..style = paint.style
       ..strokeWidth = paint.strokeWidth));
@@ -2373,7 +2371,7 @@ class CanvasRegistrador extends Fake implements Canvas {
 
   @override
   void drawPath(Path path, Paint paint) {
-    caminhos.add(RegistroCaminho(path, Paint()
+    caminhos.add(RegistroCaminho(Paint()
       ..color = paint.color
       ..style = paint.style
       ..strokeWidth = paint.strokeWidth));

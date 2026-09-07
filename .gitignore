@@ -8,6 +8,7 @@
 *.swp
 .buildlog/
 .history
+analyze_out.txt
 
 # Secrets
 .env

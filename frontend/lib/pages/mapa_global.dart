@@ -142,8 +142,10 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low,
-          timeLimit: const Duration(seconds: 3),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.low,
+            timeLimit: Duration(seconds: 3),
+          ),
         );
       } catch (e) {
         position = await Geolocator.getLastKnownPosition();
@@ -269,15 +271,19 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         },
         onCameraMove: (CameraPosition position) {
           if (mounted) {
-            // Only rebuild if we cross the zoom threshold (e.g., 4.0)
-            final bool wasZoomedIn = _currentZoom >= 4.0;
-            final bool isZoomedIn = position.zoom >= 4.0;
-            if (wasZoomedIn != isZoomedIn) {
-              setState(() {
+            try {
+              // Only rebuild if we cross the zoom threshold (e.g., 4.0)
+              final bool wasZoomedIn = _currentZoom >= 4.0;
+              final bool isZoomedIn = position.zoom >= 4.0;
+              if (wasZoomedIn != isZoomedIn) {
+                setState(() {
+                  _currentZoom = position.zoom;
+                });
+              } else {
                 _currentZoom = position.zoom;
-              });
-            } else {
-              _currentZoom = position.zoom;
+              }
+            } catch (e) {
+              // Ignora frames nulos ou incompletos emitidos por platform channels (OEM Android 11)
             }
           }
         },

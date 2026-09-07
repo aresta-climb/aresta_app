@@ -45,7 +45,13 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          
+
+      - name: Validate Flutter Analyze (Zero Warnings/Errors)
+        working-directory: ./frontend
+        run: |
+          flutter pub get
+          flutter analyze --fatal-infos --fatal-warnings
+
       - name: Bump Version and Create Tag
         id: bump
         run: |

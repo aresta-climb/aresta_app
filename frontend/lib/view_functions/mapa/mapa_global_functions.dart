@@ -62,6 +62,10 @@ void showCragModal({
 }
 
 /// Constrói o conjunto de marcadores para o mapa baseado na lista de picos disponíveis.
+///
+/// Trata de forma resiliente os ícones de texto ([textIcons]), garantindo que caso uma
+/// chave não exista ou resolva para nulo, seja utilizado o [customIcon] ou o marcador padrão,
+/// prevenindo exceções de `Null check operator` em tempo de execução.
 Set<Marker> buildMapMarkers({
   required BuildContext context,
   required List<Map<String, dynamic>> crags,
@@ -69,7 +73,7 @@ Set<Marker> buildMapMarkers({
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
   BitmapDescriptor? customIcon,
-  Map<String, BitmapDescriptor>? textIcons,
+  Map<String, BitmapDescriptor?>? textIcons,
   double currentZoom = 4.0,
 }) {
   final markers = <Marker>{};
@@ -82,8 +86,8 @@ Set<Marker> buildMapMarkers({
       final String id = crag['id'];
 
       BitmapDescriptor iconToUse = customIcon ?? BitmapDescriptor.defaultMarker;
-      if (showText && textIcons != null && textIcons.containsKey(id)) {
-        iconToUse = textIcons[id]!;
+      if (showText && textIcons != null) {
+        iconToUse = textIcons[id] ?? iconToUse;
       }
 
       markers.add(

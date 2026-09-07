@@ -66,6 +66,7 @@ class _BrowsePageState extends State<BrowsePage> {
       }
       return;
     }
+    if (!mounted) return;
 
     final indice = widget.datasetRepo.indiceData.value;
     if (indice == null) {

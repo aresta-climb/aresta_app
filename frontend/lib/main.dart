@@ -206,6 +206,94 @@ Future<bool> setupAppServices(
   return needsMigration;
 }
 
+/// Constrói o tema visual claro da aplicação Aresta Climb.
+///
+/// Define explicitamente estilos base para [IconButtonThemeData], [MenuButtonThemeData]
+/// e [PopupMenuThemeData] garantindo que operações de fusão de estilo ([ButtonStyle.merge])
+/// nunca recebam referências nulas durante mudanças de estado ou variações de tema no Material 3.
+ThemeData construirTemaClaro() {
+  final cores = AppColors.light;
+  return ThemeData(
+    fontFamily: 'Montserrat',
+    useMaterial3: true,
+    brightness: Brightness.light,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: cores.beastHide,
+      brightness: Brightness.light,
+      primary: cores.beastHide,
+    ),
+    scaffoldBackgroundColor: cores.slateStone,
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: cores.fishBone,
+      selectionColor: cores.beastHide.withValues(alpha: 0.3),
+      selectionHandleColor: cores.beastHide,
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: cores.fishBone,
+      ),
+    ),
+    menuButtonTheme: MenuButtonThemeData(
+      style: MenuItemButton.styleFrom(
+        foregroundColor: cores.fishBone,
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: cores.slateStone,
+      surfaceTintColor: Colors.transparent,
+      textStyle: TextStyle(
+        fontFamily: 'Montserrat',
+        color: cores.fishBone,
+      ),
+    ),
+    extensions: const [AppColors.light],
+  );
+}
+
+/// Constrói o tema visual escuro da aplicação Aresta Climb.
+///
+/// Define explicitamente estilos base para [IconButtonThemeData], [MenuButtonThemeData]
+/// e [PopupMenuThemeData] garantindo que operações de fusão de estilo ([ButtonStyle.merge])
+/// nunca recebam referências nulas durante mudanças de estado ou variações de tema no Material 3.
+ThemeData construirTemaEscuro() {
+  final cores = AppColors.dark;
+  return ThemeData(
+    fontFamily: 'Montserrat',
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: cores.beastHide,
+      brightness: Brightness.dark,
+      primary: cores.beastHide,
+    ),
+    scaffoldBackgroundColor: cores.deepBasalt,
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: cores.fishBone,
+      selectionColor: cores.beastHide.withValues(alpha: 0.3),
+      selectionHandleColor: cores.beastHide,
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: cores.fishBone,
+      ),
+    ),
+    menuButtonTheme: MenuButtonThemeData(
+      style: MenuItemButton.styleFrom(
+        foregroundColor: cores.fishBone,
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: cores.deepBasalt,
+      surfaceTintColor: Colors.transparent,
+      textStyle: TextStyle(
+        fontFamily: 'Montserrat',
+        color: cores.fishBone,
+      ),
+    ),
+    extensions: const [AppColors.dark],
+  );
+}
+
 class MyApp extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
@@ -328,42 +416,8 @@ class _MyAppState extends State<MyApp> {
             title: 'Aresta Climb',
             debugShowCheckedModeBanner: false,
             themeMode: ThemeMode.dark, // Temporary: locked to dark mode
-            theme: ThemeData(
-              fontFamily: 'Montserrat',
-              useMaterial3: true,
-              brightness: Brightness.light,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.light.beastHide,
-                brightness: Brightness.light,
-                primary: AppColors.light.beastHide,
-              ),
-              scaffoldBackgroundColor: AppColors.light.slateStone,
-              textSelectionTheme: TextSelectionThemeData(
-                cursorColor: AppColors.light.fishBone,
-                selectionColor: AppColors.light.beastHide.withValues(
-                  alpha: 0.3,
-                ),
-                selectionHandleColor: AppColors.light.beastHide,
-              ),
-              extensions: const [AppColors.light],
-            ),
-            darkTheme: ThemeData(
-              fontFamily: 'Montserrat',
-              useMaterial3: true,
-              brightness: Brightness.dark,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.dark.beastHide,
-                brightness: Brightness.dark,
-                primary: AppColors.dark.beastHide,
-              ),
-              scaffoldBackgroundColor: AppColors.dark.deepBasalt,
-              textSelectionTheme: TextSelectionThemeData(
-                cursorColor: AppColors.dark.fishBone,
-                selectionColor: AppColors.dark.beastHide.withValues(alpha: 0.3),
-                selectionHandleColor: AppColors.dark.beastHide,
-              ),
-              extensions: const [AppColors.dark],
-            ),
+            theme: construirTemaClaro(),
+            darkTheme: construirTemaEscuro(),
             // Banner global para modo experimental/editor que persiste em todas as telas
             builder: (context, child) {
               Widget effectiveChild = child!;
@@ -390,7 +444,7 @@ class _MyAppState extends State<MyApp> {
                         await widget.datasetRepo.editorDeCroqui.nukeExperimentalData();
                         await widget.datasetRepo.init();
                         final navContext = TreeNavigationWrapper.navKey.currentContext;
-                        if (navContext != null) {
+                        if (navContext != null && navContext.mounted) {
                           AppNav.home(navContext);
                         }
                       },
@@ -435,10 +489,14 @@ class TreeNavigationWrapper extends StatefulWidget {
   static final GlobalKey<TreeNavigationWrapperState> navKey =
       GlobalKey<TreeNavigationWrapperState>();
 
+  /// Permite que widgets filhos acessem o estado do Wrapper de forma segura.
+  // ignore: unreachable_from_main
   static TreeNavigationWrapperState? maybeOf(BuildContext context) {
     return context.findAncestorStateOfType<TreeNavigationWrapperState>();
   }
 
+  /// Permite que widgets filhos acessem o estado do Wrapper.
+  // ignore: unreachable_from_main
   static TreeNavigationWrapperState of(BuildContext context) {
     return context.findAncestorStateOfType<TreeNavigationWrapperState>()!;
   }
@@ -452,6 +510,7 @@ class TreeNavigationWrapper extends StatefulWidget {
   }
 
   /// Retorna o controlador de navegação atual (útil para extrair a árvore de navegação globalmente)
+  // ignore: unreachable_from_main
   static TreeNavigationController? get currentTreeController =>
       navKey.currentState?.treeController;
 }
@@ -459,6 +518,8 @@ class TreeNavigationWrapper extends StatefulWidget {
 class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
 
+  /// Expõe o SyncService para páginas filhas acessarem via TreeNavigationWrapper.of(context).
+  // ignore: unreachable_from_main
   SyncService get syncService => widget.syncService;
 
   @override
@@ -587,7 +648,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
       }
     }
 
-    widget.syncService.pico_aberto_id.value = currentCragId;
+    widget.syncService.picoAbertoId.value = currentCragId;
 
     setState(() {});
   }
@@ -969,19 +1030,15 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
     final navigator = Navigator(
       pages: pages,
-      // Define o comportamento de quando um comando imperativo como `Navigator.pop(context)` for chamado diretamente neste Navigator.
-      onPopPage: (route, result) {
-        if (!route.didPop(result)) {
-          return false; // Rejeitado
-        }
+      // Define o comportamento de quando uma página for removida deste Navigator.
+      onDidRemovePage: (page) {
         // Garante sincronia: a rota saiu da UI, devemos retirá-la da nossa Tree Controller
         treeController.goBack();
-        return true; // Sucesso, de acordo com as especificações do Flutter Navigator 2.0
       },
     );
     return PopScope(
-      canPop: false, // Never let the OS exit directly; handle it explicitly in onPopInvoked
-      onPopInvoked: (didPop) {
+      canPop: false, // Never let the OS exit directly; handle it explicitly in onPopInvokedWithResult
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
         // Check if feedback is currently open

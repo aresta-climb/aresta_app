@@ -395,7 +395,7 @@ Widget _buildRouteTile(
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(10),
-                    boxShadow: color.alpha == 0
+                    boxShadow: (color.a * 255.0).round().clamp(0, 255) == 0
                         ? null
                         : [
                             BoxShadow(

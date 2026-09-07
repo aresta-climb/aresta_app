@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/pages/settings.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/http/sync_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -29,7 +30,6 @@ void main() {
   late Directory tempDir;
   late DatasetRepository mockRepo;
   late EditorDeCroqui mockEditor;
-  late SyncService mockSync;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('settings_test_');
@@ -38,7 +38,6 @@ void main() {
 
     mockEditor = EditorDeCroqui();
     mockRepo = DatasetRepository(editorDeCroqui: mockEditor);
-    mockSync = SyncService(datasetRepository: mockRepo);
 
     PackageInfo.setMockInitialValues(
       appName: 'Aresta Climb',
@@ -53,5 +52,12 @@ void main() {
     if (tempDir.existsSync()) {
       await tempDir.delete(recursive: true);
     }
+  });
+
+  testWidgets('SettingsPage deve renderizar o título de configurações', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsPage(datasetRepo: mockRepo),
+    ));
+    expect(find.text('Configurações'), findsOneWidget);
   });
 }

@@ -2,24 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-
-class MockPathProviderPlatform extends PathProviderPlatform
-    with MockPlatformInterfaceMixin {
-  final String tempPath;
-  MockPathProviderPlatform(this.tempPath);
-
-  @override
-  Future<String?> getApplicationDocumentsPath() async => tempPath;
-  @override
-  Future<String?> getApplicationSupportPath() async => tempPath;
-  @override
-  Future<String?> getLibraryPath() async => tempPath;
-}
 
 void main() {
   group('CragListItem Widget Tests', () {

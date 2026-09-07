@@ -70,10 +70,10 @@ class FakeSyncService extends Fake implements SyncService {
   @override
   final ValueNotifier<bool> lastSyncWasAuto = ValueNotifier(false);
   @override
-  final ValueNotifier<String?> pico_aberto_id = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> picoAbertoId = ValueNotifier<String?>(null);
 
   @override
-  final ValueNotifier<String?> recarga_pendente_pico_id =
+  final ValueNotifier<String?> recargaPendentePicoId =
       ValueNotifier<String?>(null);
 
   @override

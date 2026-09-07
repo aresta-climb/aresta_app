@@ -199,5 +199,51 @@ void main() {
         expect(capturedReason, contains('pico_1'));
       },
     );
+
+    test('isFalhaConexaoOuTimeout identifica códigos de erro transitórios HTTP 502, 503, 504, 429 e Gateway Timeout', () {
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 504 ao baixar https://serving.arestaclimb.com/crags/1/crag_sector_13.webp'), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout('504 Gateway Timeout'), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 502 Bad Gateway'), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 503 Service Unavailable'), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 429 Too Many Requests'), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout(504), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout(502), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout(503), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout(429), isTrue);
+
+      // Erros não transitórios devem continuar retornando false
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 404 Not Found'), isFalse);
+      expect(AppLogger.isFalhaConexaoOuTimeout('HTTP 500 Internal Server Error'), isFalse);
+      expect(AppLogger.isFalhaConexaoOuTimeout(404), isFalse);
+      expect(AppLogger.isFalhaConexaoOuTimeout(500), isFalse);
+    });
+
+    test('logFalhaSyncOuDownload registra HTTP 504 com fatal = false', () async {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = false;
+
+      bool? capturedFatal;
+      dynamic capturedException;
+
+      AppLogger.instance.crashlyticsOverride = (
+        exception,
+        stack, {
+        reason,
+        printDetails = false,
+        fatal = false,
+      }) async {
+        capturedFatal = fatal;
+        capturedException = exception;
+      };
+
+      AppLogger.instance.logFalhaSyncOuDownload(
+        'Falha ao baixar imagem de setor: HTTP 504 ao baixar https://serving.arestaclimb.com/.../crag_sector_13.webp',
+        error: 'HTTP 504 ao baixar https://serving.arestaclimb.com/.../crag_sector_13.webp',
+      );
+
+      expect(capturedFatal, isFalse,
+          reason: 'Erros HTTP 504 transitórios não devem ser marcados como fatal');
+      expect(capturedException.toString(), contains('504'));
+    });
   });
 }

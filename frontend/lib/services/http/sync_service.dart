@@ -78,13 +78,13 @@ class SyncService {
   /// síncrona na Event Loop após o término do download no Isolate. Se o ID
   /// do pico baixado for igual a este, a atualização atômica de arquivos
   /// não deve ser aplicada instantaneamente, evitando _crashs_ de leitura.
-  final ValueNotifier<String?> pico_aberto_id = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> picoAbertoId = ValueNotifier<String?>(null);
 
   /// Se uma atualização atômica for impedida pelo fato de o pico alvo
-  /// estar aberto na tela (ver [pico_aberto_id]), seu ID será injetado
+  /// estar aberto na tela (ver [picoAbertoId]), seu ID será injetado
   /// nesta variável. A interface de mapa a ouve e projeta um Popup
   /// de bloqueio, exigindo do usuário a recarga manual via [commitPendenciasAtomaticas].
-  final ValueNotifier<String?> recarga_pendente_pico_id =
+  final ValueNotifier<String?> recargaPendentePicoId =
       ValueNotifier<String?>(null);
 
   /// Guarda atualizações atômicas deferidas pela UI
@@ -107,8 +107,8 @@ class SyncService {
       await datasetRepository.updateDatasetAfterDownload(id);
     }
 
-    if (recarga_pendente_pico_id.value == id) {
-      recarga_pendente_pico_id.value = null;
+    if (recargaPendentePicoId.value == id) {
+      recargaPendentePicoId.value = null;
     }
   }
 
@@ -138,8 +138,8 @@ class SyncService {
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
        _network = network ?? SyncNetwork(client ?? http.Client()) {
-    pico_aberto_id.addListener(() {
-      final currentOpenId = pico_aberto_id.value;
+    picoAbertoId.addListener(() {
+      final currentOpenId = picoAbertoId.value;
       final idsToCommit = _pendenciasAtomicas.keys
           .where((id) => id != currentOpenId)
           .toList();
@@ -599,7 +599,6 @@ class SyncService {
             '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
         if (await File(picoFilePath).exists()) {
           bool needsUpdate = false;
-          print('DEBUG: Checking pico ${newResumo.id}');
 
           if (oldIndice == null) {
             // Fallback de Breaking Change: o indice local antigo estava corrompido ou era ilegível.
@@ -611,22 +610,17 @@ class SyncService {
                 .where((c) => c.id == newResumo.id)
                 .toList();
 
-            print('DEBUG: oldResumoList is not empty for ${newResumo.id}');
             if (oldResumoList.isNotEmpty) {
               final oldResumo = oldResumoList.first;
               needsUpdate =
                   oldResumo.checksumSha256Croqui !=
                   newResumo.checksumSha256Croqui;
-              print(
-                'DEBUG: needsUpdate=$needsUpdate old=${oldResumo.checksumSha256Croqui} new=${newResumo.checksumSha256Croqui}',
-              );
             } else {
               // Pico existe no disco mas não estava no índice antigo. Pode ter sido um download incompleto.
               needsUpdate = true;
             }
           }
 
-          print('DEBUG: needsUpdate flag is $needsUpdate');
           if (needsUpdate) {
             debugPrint(
               'Pico ${newResumo.id} requires update (outdated or fallback). Updating...',
@@ -807,13 +801,7 @@ class SyncService {
           receivePort.close();
 
           if (message.error != null) {
-            debugPrint(
-              '🛑 [SyncService] Erro no isolate de download do pico $id: ${message.error}',
-            );
-            AppLogger.instance.logFalhaSyncOuDownload(
-              'Erro no isolate de download do pico $id: ${message.error}',
-              error: message.error,
-            );
+            tratarErroDownloadIsolate(id, message);
             updates.hasErrors = true;
             return updates;
           }
@@ -848,147 +836,25 @@ class SyncService {
     }
   }
 
-  /// Gerencia de maneira concorrente a sincronização das imagens externas
-  /// associadas ao croqui, baixando as que faltam/mudaram e montando a lista
-  /// de quais antigas deverão ser removidas.
-  Future<({List<String> filesToDelete, Map<String, String> filesToRename})?>
-  _syncExternalFiles({
-    required Croqui newPicoData,
-    required Croqui? oldPicoData,
-    required ResumoCroqui newResumo,
-    required String picoDirPath,
-    required String baseUrl,
-  }) async {
-    final newContent = {
-      for (var ext in newPicoData.arquivosExternos)
-        ext.caminho: ext.checksumSha256,
-    };
-    final oldContent = oldPicoData != null
-        ? {
-            for (var ext in oldPicoData.arquivosExternos)
-              ext.caminho: ext.checksumSha256,
-          }
-        : <String, String>{};
-
-    final filesToDelete = await _identifyFilesToDelete(
-      oldPicoData,
-      newContent,
-      picoDirPath,
-    );
-    final baseDir = _extractBaseDir(newResumo.caminhoRelativo);
-
-    final List<Future<bool>> downloadFutures = [];
-    final Map<String, String> filesToRename = {};
-
-    for (var newExt in newPicoData.arquivosExternos) {
-      String localPath = newExt.caminho;
-      if (localPath.startsWith('/')) localPath = localPath.substring(1);
-
-      bool needsDownload = false;
-      if (oldContent.containsKey(newExt.caminho)) {
-        // Caminho feliz: sabemos o hash antigo e comparamos direto com o novo.
-        needsDownload = oldContent[newExt.caminho] != newExt.checksumSha256;
-      } else {
-        // Fallback de Breaking Change: o oldPicoData não foi lido (retornou null),
-        // então não sabemos se a imagem no disco é a versão velha ou a nova.
-        // Para economizar banda e não rebaixar tudo, validamos o hash do arquivo
-        // que já está no disco. validateExistingTmpFile já deleta o arquivo se o hash não bater.
-        final existingFileValid = await _storage.validateExistingTmpFile(
-          '$picoDirPath/$localPath',
-          newExt.checksumSha256,
-        );
-        needsDownload = !existingFileValid;
-      }
-
-      if (needsDownload) {
-        String remotePath =
-            (baseDir.isNotEmpty && !localPath.startsWith(baseDir))
-            ? '$baseDir/$localPath'
-            : localPath;
-
-        downloadFutures.add(
-          _downloadFileAtomic(
-            '$baseUrl/$remotePath',
-            '$picoDirPath/$localPath.tmp',
-            newExt.checksumSha256,
-          ),
-        );
-
-        filesToRename['$picoDirPath/$localPath.tmp'] =
-            '$picoDirPath/$localPath';
-      }
-    }
-
-    if (downloadFutures.isNotEmpty) {
-      final results = await Future.wait(downloadFutures);
-      if (results.any((success) => !success)) {
-        AppLogger.instance.logError(
-          'Falha em downloads do croqui ${newResumo.id}. Abortando update.',
-        );
-        return null;
-      }
-    }
-
-    return (filesToDelete: filesToDelete, filesToRename: filesToRename);
-  }
-
-  /// Cruza a lista de caminhos do arquivo novo vs o antigo para retornar a lista de
-  /// arquivos descontinuados que precisam ser apagados do cache no fim do processo.
+  /// Trata o erro emitido pelo isolate de download em background, repassando ao [AppLogger].
   ///
-  /// Caso o `oldPicoData` seja nulo (ex: devido a um breaking change no schema do Protobuf
-  /// que tornou o arquivo antigo ilegível), a rotina entra num fallback que varre ativamente
-  /// a pasta do pico, apagando qualquer arquivo que não esteja declarado no `newContent`.
-  Future<List<String>> _identifyFilesToDelete(
-    Croqui? oldPicoData,
-    Map<String, String> newContent,
-    String picoDirPath,
-  ) async {
-    final List<String> filesToDelete = [];
-    if (oldPicoData != null) {
-      // Caminho feliz: temos a lista exata do que existia antes.
-      for (var oldExt in oldPicoData.arquivosExternos) {
-        if (!newContent.containsKey(oldExt.caminho)) {
-          filesToDelete.add('$picoDirPath/${oldExt.caminho}');
-        }
-      }
-    } else {
-      // Fallback de Breaking Change: não sabemos o que existia, então vasculhamos a pasta
-      // em busca de arquivos órfãos (arquivos que não fazem mais parte do novo croqui).
-      final dir = Directory(picoDirPath);
-      if (await dir.exists()) {
-        await for (var entity in dir.list(recursive: true)) {
-          if (entity is File) {
-            final filePath = entity.path;
-            if (filePath.endsWith('.binarypb') ||
-                filePath.endsWith('.binarypb.tmp')) {
-              continue;
-            }
-
-            bool isNeeded = false;
-            for (var key in newContent.keys) {
-              // Ensure we match the relative path accurately
-              if (filePath
-                  .replaceAll('\\', '/')
-                  .endsWith(key.replaceAll('\\', '/'))) {
-                isNeeded = true;
-                break;
-              }
-            }
-            if (!isNeeded) {
-              filesToDelete.add(filePath);
-            }
-          }
-        }
-      }
-    }
-    return filesToDelete;
-  }
-
-  /// Pega a URL do arquivo pai (`indice.binarypb` ou do pico) e extrai
-  /// apenas a parte pertencente ao diretório base.
-  String _extractBaseDir(String url) {
-    int lastSlash = url.lastIndexOf('/');
-    return (lastSlash != -1) ? url.substring(0, lastSlash) : '';
+  /// Reconstitui fielmente o [StackTrace] a partir de [DownloadIsolateResult.rastreamentoPilha]
+  /// utilizando [StackTrace.fromString], garantindo que relatórios do Firebase Crashlytics
+  /// apontem com precisão para as linhas do [sync_isolate.dart] onde ocorreu a falha,
+  /// em vez de herdar acidentalmente a pilha de execução da thread da UI (Main Isolate).
+  @visibleForTesting
+  void tratarErroDownloadIsolate(String id, DownloadIsolateResult message) {
+    debugPrint(
+      '🛑 [SyncService] Erro no isolate de download do pico $id: ${message.error}',
+    );
+    final StackTrace? stackTrace = message.rastreamentoPilha != null
+        ? StackTrace.fromString(message.rastreamentoPilha!)
+        : null;
+    AppLogger.instance.logFalhaSyncOuDownload(
+      'Erro no isolate de download do pico $id: ${message.error}',
+      error: message.error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Atualiza os campos de metadados de informações resumidas do Pico
