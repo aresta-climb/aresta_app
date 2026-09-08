@@ -30,23 +30,21 @@ class ConjuntoDadosCroqui {
   });
 
   static List<ResumoPico> _normalizarLista(dynamic lista) {
-    if (lista == null) return const [];
-    if (lista is List<ResumoPico>) return List.unmodifiable(lista);
+    if (lista == null) return [];
+    if (lista is List<ResumoPico>) return List<ResumoPico>.from(lista);
     if (lista is List) {
-      return List.unmodifiable(
-        lista.map((item) {
-          if (item is ResumoPico) return item;
-          if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
-          if (item is Map) {
-            return ResumoPico.deMapa(Map<String, dynamic>.from(item));
-          }
-          throw ArgumentError(
-            'Tipo inválido de item na lista de picos: ${item.runtimeType}',
-          );
-        }),
-      );
+      return lista.map((item) {
+        if (item is ResumoPico) return item;
+        if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
+        if (item is Map) {
+          return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+        }
+        throw ArgumentError(
+          'Tipo inválido de item na lista de picos: ${item.runtimeType}',
+        );
+      }).toList();
     }
-    return const [];
+    return [];
   }
 
   /// Apelido para manter compatibilidade com implementações legadas.
