@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
   group('NavNode path', () {
@@ -142,8 +143,8 @@ void main() {
     test('MapaGlobalNode toString()', () {
       const node = MapaGlobalNode(
         crags: [
-          {'id': 'pico1'},
-          {'id': 'pico2'},
+          ResumoPico(id: 'pico1', nome: 'Pico 1', local: 'Local 1'),
+          ResumoPico(id: 'pico2', nome: 'Pico 2', local: 'Local 2'),
         ],
         parent: HomeNode(),
       );
