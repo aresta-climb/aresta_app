@@ -11,6 +11,7 @@ import 'package:frontend/widgets/nearby_crags_carousel.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -72,6 +73,45 @@ void main() {
       TelemetryService.instance = mockTelemetry;
 
       final dummyPico = {'id': 'test-pico-1'};
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () =>
+                      handlePicoSelection(context, mockRepo, dummyPico),
+                  child: const Text('Go'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go'));
+
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection funciona com ResumoPico e dispara telemetria',
+    (WidgetTester tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      const dummyPico = ResumoPico(
+        id: 'pico-tipado-1',
+        nome: 'Pico Tipado',
+        local: 'Local Tipado',
+      );
 
       await tester.pumpWidget(
         MaterialApp(

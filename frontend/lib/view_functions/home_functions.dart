@@ -13,6 +13,7 @@ import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 
 import '../services/http/servico_croqui_online.dart';
 
@@ -20,10 +21,10 @@ import '../services/http/servico_croqui_online.dart';
 void handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
-  Map<String, dynamic> pico, {
+  dynamic pico, {
   String source = 'home',
 }) async {
-  final id = pico['id'];
+  final String? id = pico is ResumoPico ? pico.id : pico['id']?.toString();
   if (id == null) return;
 
   TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
@@ -40,7 +41,7 @@ void handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = pico['url']?.toString();
+    final url = pico is ResumoPico ? pico.url : pico['url']?.toString();
     if (url != null && url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
@@ -203,7 +204,8 @@ Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
               body: GlobalSearch(
                 datasetRepo: datasetRepo,
                 downloadedPicos:
-                    datasetRepo.activeDataset.value?.downloadedPicos ?? const [],
+                    datasetRepo.activeDataset.value?.downloadedPicos ??
+                        const <ResumoPico>[],
               ),
             ),
           ),
