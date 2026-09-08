@@ -9,6 +9,7 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../view_functions/home_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
@@ -35,7 +36,7 @@ class GlobalSearchResult {
 
 class GlobalSearch extends StatefulWidget {
   final DatasetRepository datasetRepo;
-  final List<Map<String, dynamic>> downloadedPicos;
+  final List<dynamic> downloadedPicos;
   final bool autoFocus;
 
   const GlobalSearch({
@@ -154,15 +155,20 @@ class _GlobalSearchState extends State<GlobalSearch> {
     try {
       // 1. Croquis Baixados
       for (var cragData in widget.downloadedPicos) {
-        final cragId = cragData['id'];
-        if (cragId == null) continue;
-        final cragIdStr = cragId.toString();
+        final cragIdStr = cragData is ResumoPico
+            ? cragData.id
+            : cragData['id']?.toString();
+        if (cragIdStr == null || cragIdStr.isEmpty) continue;
         processedCragIds.add(cragIdStr);
 
-        final picoNome = cragData['nome']?.toString() ?? 'Sem Nome';
-        final picoLocal = cragData['local']?.toString() ??
-            cragData['estado']?.toString() ??
-            '';
+        final picoNome = cragData is ResumoPico
+            ? cragData.nome
+            : (cragData['nome']?.toString() ?? 'Sem Nome');
+        final picoLocal = cragData is ResumoPico
+            ? cragData.local
+            : (cragData['local']?.toString() ??
+                cragData['estado']?.toString() ??
+                '');
         final picoSubtitle = picoLocal.isNotEmpty
             ? 'Pico • $picoLocal • Salvo offline'
             : 'Pico • Salvo offline';
@@ -302,14 +308,20 @@ class _GlobalSearchState extends State<GlobalSearch> {
       final availablePicos =
           widget.datasetRepo.activeDataset.value?.availablePicos ?? const [];
       for (final crag in availablePicos) {
-        final cragId = crag['id']?.toString();
-        if (cragId == null || processedCragIds.contains(cragId)) continue;
+        final cragId = crag is ResumoPico ? crag.id : crag['id']?.toString();
+        if (cragId == null || cragId.isEmpty || processedCragIds.contains(cragId)) {
+          continue;
+        }
         processedCragIds.add(cragId);
 
-        final cragNome = crag['nome']?.toString() ?? 'Sem Nome';
-        final cragLocal = crag['local']?.toString() ??
-            crag['estado']?.toString() ??
-            '';
+        final cragNome = crag is ResumoPico
+            ? crag.nome
+            : (crag['nome']?.toString() ?? 'Sem Nome');
+        final cragLocal = crag is ResumoPico
+            ? crag.local
+            : (crag['local']?.toString() ??
+                crag['estado']?.toString() ??
+                '');
         final cragSubtitle = cragLocal.isNotEmpty
             ? 'Pico • $cragLocal • Catálogo'
             : 'Pico • Catálogo';
