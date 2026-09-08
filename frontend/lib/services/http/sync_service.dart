@@ -899,10 +899,10 @@ class SyncService {
     if (picos == null) return;
 
     for (var p in picos) {
-      if (p['id'] == id) {
+      if (p.id == id) {
         await datasetRepository.updatePicoMetadata(
           id,
-          p,
+          p.paraMapa(),
           directory.path,
           parsedPico: newPicoData,
         );

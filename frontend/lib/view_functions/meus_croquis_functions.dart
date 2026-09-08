@@ -9,41 +9,37 @@ import '../widgets/provedor_imagem_aresta.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/registro_primeira_visita.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 
 class OfflineCragCard extends StatelessWidget {
-  final Map<String, dynamic> crag;
+  final ResumoPico crag;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
-  const OfflineCragCard({
+  OfflineCragCard({
     super.key,
-    required this.crag,
+    required dynamic crag,
     required this.datasetRepo,
     required this.syncService,
-  });
-
-  String _safeString(dynamic value, {String fallback = ''}) {
-    if (value == null) return fallback;
-    return value.toString();
-  }
+  }) : crag = crag is ResumoPico
+            ? crag
+            : ResumoPico.deMapa(crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map));
 
   @override
   Widget build(BuildContext context) {
-    final String id = _safeString(crag['id']);
-    final String nome = _safeString(
-      crag['nome'],
-      fallback: 'Sem Nome',
-    ).toUpperCase();
-    final String local = _safeString(
-      crag['local'],
-      fallback: 'Local Desconhecido',
-    ).toUpperCase();
+    final String id = crag.id;
+    final String nome =
+        (crag.nome.isEmpty ? 'Sem Nome' : crag.nome).toUpperCase();
+    final String local =
+        (crag.local.isEmpty ? 'Local Desconhecido' : crag.local).toUpperCase();
 
     String statsText = '0 setores • 0 escaladas';
-    if (crag['estatisticas'] != null) {
-      final stats = crag['estatisticas'];
-      final setores = stats['totalSetores'] ?? 0;
-      final vias = stats['totalVias'] ?? 0;
+    if (crag.estatisticas != null) {
+      final stats = crag.estatisticas!;
+      final setores = stats.totalSetores;
+      final vias = stats.totalVias;
       statsText = '$setores setores • $vias escaladas';
     }
 
