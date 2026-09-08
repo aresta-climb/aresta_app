@@ -54,5 +54,16 @@ void main() {
       expect(stats.totalEsportivas, equals(0));
       expect(stats.tamanhoDownloadBytes, equals(5000));
     });
+
+    test('implementa igualdade por valor e hashCode corretamente', () {
+      const statsA = EstatisticasPico(totalVias: 10, totalSetores: 2);
+      const statsB = EstatisticasPico(totalVias: 10, totalSetores: 2);
+      const statsC = EstatisticasPico(totalVias: 5, totalSetores: 1);
+
+      expect(statsA, equals(statsB));
+      expect(statsA.hashCode, equals(statsB.hashCode));
+      expect(statsA, isNot(equals(statsC)));
+      expect(statsA.toString(), contains('totalVias: 10'));
+    });
   });
 }

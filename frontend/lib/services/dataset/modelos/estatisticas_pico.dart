@@ -70,4 +70,34 @@ class EstatisticasPico {
           (mapa['tamanhoDownloadBytes'] as num?)?.toInt(),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EstatisticasPico &&
+          runtimeType == other.runtimeType &&
+          totalVias == other.totalVias &&
+          totalSetores == other.totalSetores &&
+          totalEsportivas == other.totalEsportivas &&
+          totalMoveis == other.totalMoveis &&
+          totalBoulders == other.totalBoulders &&
+          totalMultiplasEnfiadas == other.totalMultiplasEnfiadas &&
+          totalHighlines == other.totalHighlines &&
+          tamanhoDownloadBytes == other.tamanhoDownloadBytes;
+
+  @override
+  int get hashCode => Object.hash(
+        totalVias,
+        totalSetores,
+        totalEsportivas,
+        totalMoveis,
+        totalBoulders,
+        totalMultiplasEnfiadas,
+        totalHighlines,
+        tamanhoDownloadBytes,
+      );
+
+  @override
+  String toString() =>
+      'EstatisticasPico(totalVias: $totalVias, totalSetores: $totalSetores)';
 }
