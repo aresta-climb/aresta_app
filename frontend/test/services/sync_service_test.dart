@@ -21,6 +21,7 @@ import 'package:crypto/crypto.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -216,7 +217,9 @@ void main() {
 
     test('availablePicos e downloadedPicos são listas independentes', () {
       final dataset = TopoDataset(availablePicos: [], downloadedPicos: []);
-      dataset.availablePicos.add({'id': 'novo'});
+      dataset.availablePicos.add(
+        const ResumoPico(id: 'novo', nome: 'Novo', local: 'Local'),
+      );
       expect(dataset.downloadedPicos, isEmpty);
     });
   });
