@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'navigation_tree.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -109,7 +110,7 @@ class AppNav {
   /// Navega para o Mapa Global.
   static void toMapaGlobal(
     BuildContext context, {
-    required List<Map<String, dynamic>> crags,
+    required List<ResumoPico> crags,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
