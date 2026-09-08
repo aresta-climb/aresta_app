@@ -165,11 +165,11 @@ void registrarOuvintesLiveReload(
         final picosDisponiveis =
             datasetRepo.activeDataset.value?.picosDisponiveis ?? [];
         final picoItem = picosDisponiveis.firstWhere(
-          (p) => p['id'] == picoId,
-          orElse: () => <String, dynamic>{},
+          (p) => p.id == picoId,
+          orElse: () => const ResumoPico(id: '', nome: '', local: ''),
         );
-        final url = picoItem['url']?.toString();
-        if (url != null && url.isNotEmpty) {
+        final url = picoItem.url;
+        if (url.isNotEmpty) {
           await servicoOnline.recarregarCroquiOnline(url, picoId: picoId);
           datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
         }
