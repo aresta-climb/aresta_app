@@ -13,7 +13,6 @@ import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 
 import '../services/http/servico_croqui_online.dart';
 
