@@ -16,25 +16,45 @@ import '../theme/app_colors.dart';
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
 class MapaGlobalPage extends StatefulWidget {
   static bool hasShownLocationWarning = false;
-  final List<Map<String, dynamic>> crags;
+  final List<ResumoPico> crags;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
-  const MapaGlobalPage({
+  MapaGlobalPage({
     super.key,
-    required this.crags,
+    required dynamic crags,
     required this.datasetRepo,
     required this.syncService,
-  });
+  }) : crags = _normalizar(crags);
+
+  static List<ResumoPico> _normalizar(dynamic lista) {
+    if (lista == null) return const [];
+    if (lista is List<ResumoPico>) return List.unmodifiable(lista);
+    if (lista is List) {
+      return List.unmodifiable(
+        lista.map((item) {
+          if (item is ResumoPico) return item;
+          if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
+          if (item is Map) {
+            return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+          }
+          return const ResumoPico(id: '', nome: '', local: '');
+        }),
+      );
+    }
+    return const [];
+  }
 
   @override
   State<MapaGlobalPage> createState() => _MapaGlobalPageState();
 }
 
 class _MapaGlobalPageState extends State<MapaGlobalPage> {
-  void _handleDownload(Map<String, dynamic> crag) async {
-    final name = crag['nome'] ?? 'Pico';
-    final String id = crag['id'];
+  void _handleDownload(dynamic crag) async {
+    final name = crag is ResumoPico
+        ? (crag.nome.isEmpty ? 'Pico' : crag.nome)
+        : crag['nome'] ?? 'Pico';
+    final String id = crag is ResumoPico ? crag.id : crag['id'].toString();
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -209,7 +229,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
       // Gera ícones com texto para visão local em segundo plano
       for (final crag in widget.crags) {
-        final name = crag['nome'] ?? 'Pico';
+        final name = crag.nome.isEmpty ? 'Pico' : crag.nome;
         final textIcon = await createCustomMarkerBitmapWithText(
           'assets/logo_app.png',
           name,
@@ -217,7 +237,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         );
         if (mounted) {
           setState(() {
-            _textIcons[crag['id']] = textIcon;
+            _textIcons[crag.id] = textIcon;
           });
         }
       }
@@ -226,7 +246,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     }
   }
 
-  void _handleOpen(Map<String, dynamic> crag) {
+  void _handleOpen(dynamic crag) {
     handlePicoSelection(
       context,
       widget.datasetRepo,
@@ -242,8 +262,8 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     LatLng initialTarget = const LatLng(-14.2350, -51.9253);
     if (widget.crags.isNotEmpty) {
       final firstCrag = widget.crags.first;
-      if (firstCrag['latitude'] != null && firstCrag['longitude'] != null) {
-        initialTarget = LatLng(firstCrag['latitude'], firstCrag['longitude']);
+      if (firstCrag.latitude != null && firstCrag.longitude != null) {
+        initialTarget = LatLng(firstCrag.latitude!, firstCrag.longitude!);
       }
     }
 
