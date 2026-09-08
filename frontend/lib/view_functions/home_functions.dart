@@ -12,19 +12,20 @@ import '../view_functions/common_functions.dart';
 import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../widgets/micro_badge_beta.dart';
 import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
+import '../services/http/servico_croqui_online.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
-  Map<String, dynamic> pico, {
+  dynamic pico, {
   String source = 'home',
 }) async {
-  final id = pico['id'];
+  final String? id = pico is ResumoPico ? pico.id : pico['id']?.toString();
   if (id == null) return;
 
   TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
@@ -41,7 +42,7 @@ Future<void> handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = pico['url']?.toString();
+    final url = pico is ResumoPico ? pico.url : pico['url']?.toString();
     if (url != null && url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
@@ -246,7 +247,8 @@ Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
               body: GlobalSearch(
                 datasetRepo: datasetRepo,
                 downloadedPicos:
-                    datasetRepo.activeDataset.value?.downloadedPicos ?? const [],
+                    datasetRepo.activeDataset.value?.downloadedPicos ??
+                        const <ResumoPico>[],
               ),
             ),
           ),
