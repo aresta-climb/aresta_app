@@ -57,9 +57,11 @@ class _BrowsePageState extends State<BrowsePage> {
   /// Mostra um SnackBar durante o processo e outro para indicar
   /// sucesso ou falha após a conclusão.
   @visibleForTesting
-  void handleDownload(Map<String, dynamic> crag) async {
-    final name = safeString(crag['nome'], fallback: 'Pico');
-    final String id = crag['id'];
+  void handleDownload(dynamic crag) async {
+    final String name = crag is ResumoPico
+        ? (crag.nome.isEmpty ? 'Pico' : crag.nome)
+        : safeString(crag['nome'], fallback: 'Pico');
+    final String id = crag is ResumoPico ? crag.id : crag['id'].toString();
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
@@ -136,24 +138,24 @@ class _BrowsePageState extends State<BrowsePage> {
 
             final allCrags = dataset.availablePicos;
 
-            List<Map<String, dynamic>> filteredCrags;
+            List<ResumoPico> filteredCrags;
             if (_searchQuery.isEmpty) {
               filteredCrags = allCrags.toList();
             } else {
-              final fuse = Fuzzy<Map<String, dynamic>>(
+              final fuse = Fuzzy<ResumoPico>(
                 allCrags,
                 options: FuzzyOptions(
                   keys: [
                     WeightedKey(
                       name: 'nome',
-                      getter: (Map<String, dynamic> c) =>
-                          normalizeSearchString(safeString(c['nome'])),
+                      getter: (ResumoPico c) =>
+                          normalizeSearchString(c.nome),
                       weight: 1.0,
                     ),
                     WeightedKey(
                       name: 'local',
-                      getter: (Map<String, dynamic> c) =>
-                          normalizeSearchString(safeString(c['local'])),
+                      getter: (ResumoPico c) =>
+                          normalizeSearchString(c.local),
                       weight: 0.5,
                     ),
                   ],
@@ -170,15 +172,12 @@ class _BrowsePageState extends State<BrowsePage> {
 
             if (_sortOrder == SortOrder.alfabetico) {
               filteredCrags.sort(
-                (a, b) =>
-                    safeString(a['nome']).compareTo(safeString(b['nome'])),
+                (a, b) => a.nome.compareTo(b.nome),
               );
             } else if (_sortOrder == SortOrder.escaladas) {
               filteredCrags.sort((a, b) {
-                final statsA = a['estatisticas'] ?? {};
-                final statsB = b['estatisticas'] ?? {};
-                final viasA = (statsA['totalVias'] as num?)?.toInt() ?? 0;
-                final viasB = (statsB['totalVias'] as num?)?.toInt() ?? 0;
+                final viasA = a.estatisticas?.totalVias ?? 0;
+                final viasB = b.estatisticas?.totalVias ?? 0;
                 return viasB.compareTo(viasA);
               });
             }
