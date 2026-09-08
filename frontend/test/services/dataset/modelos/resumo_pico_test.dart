@@ -113,5 +113,16 @@ void main() {
       expect(mapaExportado['nome'], equals('Cipó'));
       expect(mapaExportado['isDownloaded'], isTrue);
     });
+
+    test('implementa igualdade por valor e hashCode corretamente', () {
+      const picoA = ResumoPico(id: 'p1', nome: 'Pico 1', local: 'Local 1');
+      const picoB = ResumoPico(id: 'p1', nome: 'Pico 1', local: 'Local 1');
+      const picoC = ResumoPico(id: 'p2', nome: 'Pico 2', local: 'Local 2');
+
+      expect(picoA, equals(picoB));
+      expect(picoA.hashCode, equals(picoB.hashCode));
+      expect(picoA, isNot(equals(picoC)));
+      expect(picoA.toString(), contains('id: p1'));
+    });
   });
 }
