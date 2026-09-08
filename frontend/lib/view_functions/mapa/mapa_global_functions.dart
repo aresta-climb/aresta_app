@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
+import '../../services/dataset/modelos/resumo_pico.dart';
 
 /// Coleção de funções de UI puras (view_functions) para o Mapa Global.
 ///
@@ -16,11 +17,17 @@ import '../browse_functions.dart';
 /// Exibe um modal inferior (BottomSheet) contendo o card expansível do crag selecionado.
 void showCragModal({
   required BuildContext context,
-  required Map<String, dynamic> crag,
+  required dynamic crag,
   required ValueListenable<Map<String, double>> downloadingCrags,
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
+  final ResumoPico pico = crag is ResumoPico
+      ? crag
+      : ResumoPico.deMapa(crag is Map<String, dynamic>
+          ? crag
+          : Map<String, dynamic>.from(crag as Map));
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -39,7 +46,7 @@ void showCragModal({
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: buildCragListItem(
-                  crag,
+                  pico,
                   downloadingCrags,
                   () {
                     onDownload();
@@ -68,10 +75,10 @@ void showCragModal({
 /// prevenindo exceções de `Null check operator` em tempo de execução.
 Set<Marker> buildMapMarkers({
   required BuildContext context,
-  required List<Map<String, dynamic>> crags,
+  required dynamic crags,
   required ValueListenable<Map<String, double>> downloadingCrags,
-  required Function(Map<String, dynamic>) onDownload,
-  Function(Map<String, dynamic>)? onOpen,
+  required Function(dynamic) onDownload,
+  Function(dynamic)? onOpen,
   BitmapDescriptor? customIcon,
   Map<String, BitmapDescriptor?>? textIcons,
   double currentZoom = 4.0,
@@ -79,11 +86,25 @@ Set<Marker> buildMapMarkers({
   final markers = <Marker>{};
   final bool showText = currentZoom >= 4.0;
 
-  for (final crag in crags) {
-    if (crag['latitude'] != null && crag['longitude'] != null) {
-      final double lat = crag['latitude'];
-      final double lng = crag['longitude'];
-      final String id = crag['id'];
+  final List<ResumoPico> picos;
+  if (crags is List<ResumoPico>) {
+    picos = crags;
+  } else if (crags is List) {
+    picos = crags.map((item) {
+      if (item is ResumoPico) return item;
+      if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
+      if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+      return const ResumoPico(id: '', nome: '', local: '');
+    }).toList();
+  } else {
+    picos = const [];
+  }
+
+  for (final crag in picos) {
+    if (crag.latitude != null && crag.longitude != null) {
+      final double lat = crag.latitude!;
+      final double lng = crag.longitude!;
+      final String id = crag.id;
 
       BitmapDescriptor iconToUse = customIcon ?? BitmapDescriptor.defaultMarker;
       if (showText && textIcons != null) {
