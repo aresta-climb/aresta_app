@@ -17,7 +17,6 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';

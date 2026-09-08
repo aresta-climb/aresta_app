@@ -9,7 +9,6 @@ import '../widgets/provedor_imagem_aresta.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/registro_primeira_visita.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 
 class OfflineCragCard extends StatelessWidget {
   final ResumoPico crag;
