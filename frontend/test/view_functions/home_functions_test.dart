@@ -11,7 +11,6 @@ import 'package:frontend/widgets/nearby_crags_carousel.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
