@@ -11,7 +11,6 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
 
@@ -309,27 +308,21 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     List<ResumoPico> cragsWithDistance = [];
 
-    for (var pico in availablePicos) {
-      final double? picoLat = pico is ResumoPico
-          ? pico.latitude
-          : (pico['latitude'] as num?)?.toDouble();
-      final double? picoLon = pico is ResumoPico
-          ? pico.longitude
-          : (pico['longitude'] as num?)?.toDouble();
+    for (final pico in availablePicos) {
+      final double? picoLat = pico.latitude;
+      final double? picoLon = pico.longitude;
 
       if (picoLat != null && picoLon != null) {
-        double distanceInMeters = Geolocator.distanceBetween(
+        final double distanceInMeters = Geolocator.distanceBetween(
           userLat,
           userLon,
           picoLat,
           picoLon,
         );
 
-        final ResumoPico picoTipado = pico is ResumoPico
-            ? pico.copyWith(distanciaKm: distanceInMeters / 1000)
-            : ResumoPico.deMapa(Map<String, dynamic>.from(pico as Map))
-                .copyWith(distanciaKm: distanceInMeters / 1000);
-        cragsWithDistance.add(picoTipado);
+        cragsWithDistance.add(
+          pico.copyWith(distanciaKm: distanceInMeters / 1000),
+        );
       }
     }
 
@@ -493,7 +486,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
             final isDownloaded =
                 dataset?.downloadedPicos.any(
-                  (p) => p is ResumoPico ? p.id == picoBase.id : p['id'] == picoBase.id,
+                  (p) => p.id == picoBase.id,
                 ) ??
                 false;
             final pico = picoBase.copyWith(isDownloaded: isDownloaded);
