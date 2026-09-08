@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///
@@ -15,15 +16,16 @@ import '../navigation/navigation_functions.dart';
 /// O callback [onDownload] é acionado quando o usuário toca no botão de download em um item de pico.
 Widget buildBrowseBody(
   BuildContext context,
-  List<Map<String, dynamic>> availableCrags,
+  dynamic availableCrags,
   ValueListenable<Map<String, double>> downloadingCrags, {
   required ValueChanged<String> onSearchChanged,
-  required Function(Map<String, dynamic>) onDownload,
-  Function(Map<String, dynamic>)? onOpen,
+  required Function(dynamic) onDownload,
+  Function(dynamic)? onOpen,
   VoidCallback? onAddExperimental,
   VoidCallback? onFilterPressed,
   VoidCallback? onSyncPressed,
 }) {
+  final List<ResumoPico> picos = _normalizarPicos(availableCrags);
   return Column(
     children: [
       const SizedBox(height: 10),
@@ -36,7 +38,7 @@ Widget buildBrowseBody(
       Expanded(
         child: _buildCragList(
           context,
-          availableCrags,
+          picos,
           downloadingCrags,
           onDownload,
           onOpen: onOpen,
@@ -47,12 +49,26 @@ Widget buildBrowseBody(
   );
 }
 
+List<ResumoPico> _normalizarPicos(dynamic lista) {
+  if (lista == null) return const [];
+  if (lista is List<ResumoPico>) return lista;
+  if (lista is List) {
+    return lista.map((item) {
+      if (item is ResumoPico) return item;
+      if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
+      if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+      return const ResumoPico(id: '', nome: '', local: '');
+    }).toList();
+  }
+  return const [];
+}
+
 Widget _buildCragList(
   BuildContext context,
-  List<Map<String, dynamic>> availableCrags,
+  List<ResumoPico> availableCrags,
   ValueListenable<Map<String, double>> downloadingCrags,
-  Function(Map<String, dynamic>) onDownload, {
-  Function(Map<String, dynamic>)? onOpen,
+  Function(dynamic) onDownload, {
+  Function(dynamic)? onOpen,
   VoidCallback? onAddExperimental,
 }) {
   return SingleChildScrollView(
@@ -229,7 +245,7 @@ class _AnimatedMapButtonState extends State<_AnimatedMapButton>
 
 /// Wrapper for _CragCard to maintain compatibility with other modules and tests.
 Widget buildCragListItem(
-  Map<String, dynamic> crag,
+  dynamic crag,
   ValueListenable<Map<String, double>> downloadingCrags,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
@@ -243,56 +259,58 @@ Widget buildCragListItem(
 }
 
 class CragCard extends StatelessWidget {
-  final Map<String, dynamic> crag;
+  final ResumoPico crag;
   final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
   final String? distanceStr;
   final bool showDetailedStats;
 
-  const CragCard({
+  CragCard({
     super.key,
-    required this.crag,
+    required dynamic crag,
     required this.downloadingCrags,
     required this.onDownload,
     this.onOpen,
     this.distanceStr,
     this.showDetailedStats = false,
-  });
+  }) : crag = crag is ResumoPico
+            ? crag
+            : ResumoPico.deMapa(crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map));
 
   @override
   Widget build(BuildContext context) {
-    final bool isDownloaded = crag['isDownloaded'] == true;
-    final String nome = safeString(
-      crag['nome'],
-      fallback: 'Sem Nome',
-    ).toUpperCase();
+    final bool isDownloaded = crag.isDownloaded;
+    final String nome =
+        crag.nome.isEmpty ? 'SEM NOME' : crag.nome.toUpperCase();
 
     // Attempt to extract sectors/routes count if available in description or another field
     String statsText = '0 setores • 0 escaladas';
-    if (crag['estatisticas'] != null) {
-      final stats = crag['estatisticas'];
-      final setores = stats['totalSetores'] ?? 0;
-      final vias = stats['totalVias'] ?? 0;
+    if (crag.estatisticas != null) {
+      final stats = crag.estatisticas!;
+      final setores = stats.totalSetores;
+      final vias = stats.totalVias;
 
       statsText = '$setores setores • $vias escaladas';
 
       if (showDetailedStats) {
         final List<String> modalidades = [];
-        if ((stats['totalBoulders'] ?? 0) > 0) {
-          modalidades.add('${stats['totalBoulders']} boulders');
+        if (stats.totalBoulders > 0) {
+          modalidades.add('${stats.totalBoulders} boulders');
         }
-        if ((stats['totalEsportivas'] ?? 0) > 0) {
-          modalidades.add('${stats['totalEsportivas']} esportivas');
+        if (stats.totalEsportivas > 0) {
+          modalidades.add('${stats.totalEsportivas} esportivas');
         }
-        if ((stats['totalMoveis'] ?? 0) > 0) {
-          modalidades.add('${stats['totalMoveis']} móveis');
+        if (stats.totalMoveis > 0) {
+          modalidades.add('${stats.totalMoveis} móveis');
         }
-        if ((stats['totalMultiplasEnfiadas'] ?? 0) > 0) {
-          modalidades.add('${stats['totalMultiplasEnfiadas']} múltiplas enfiadas');
+        if (stats.totalMultiplasEnfiadas > 0) {
+          modalidades.add('${stats.totalMultiplasEnfiadas} múltiplas enfiadas');
         }
-        if ((stats['totalHighlines'] ?? 0) > 0) {
-          modalidades.add('${stats['totalHighlines']} highlines');
+        if (stats.totalHighlines > 0) {
+          modalidades.add('${stats.totalHighlines} highlines');
         }
 
         if (modalidades.isNotEmpty) {
@@ -329,8 +347,8 @@ class CragCard extends StatelessWidget {
           children: [
             // Background Image
             buildCragBackground(
-              safeString(crag['thumbnailUrl']),
-              cragId: safeString(crag['id']),
+              crag.thumbnailUrl,
+              cragId: crag.id,
             ),
 
             // Gradient Overlay for readability
@@ -435,7 +453,7 @@ class CragCard extends StatelessWidget {
                       ValueListenableBuilder<Map<String, double>>(
                         valueListenable: downloadingCrags,
                         builder: (context, downloadingMap, child) {
-                          final progress = downloadingMap[crag['id']];
+                          final progress = downloadingMap[crag.id];
                           if (progress != null) {
                             return Container(
                               padding: const EdgeInsets.symmetric(
