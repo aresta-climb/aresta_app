@@ -235,4 +235,31 @@ class ResumoPico {
       distanciaKm: (mapa['distance'] as num?)?.toDouble(),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ResumoPico &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          nome == other.nome &&
+          local == other.local &&
+          url == other.url &&
+          isDownloaded == other.isDownloaded &&
+          tamanhoBytes == other.tamanhoBytes &&
+          distanciaKm == other.distanciaKm;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        nome,
+        local,
+        url,
+        isDownloaded,
+        tamanhoBytes,
+        distanciaKm,
+      );
+
+  @override
+  String toString() => 'ResumoPico(id: $id, nome: $nome, local: $local)';
 }
