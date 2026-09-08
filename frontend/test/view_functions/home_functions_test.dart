@@ -17,6 +17,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -226,11 +227,13 @@ void main() {
       File('${tempCacheDir.path}/compilado.binarypb.hash123')
           .writeAsBytesSync(dummyCroqui.writeToBuffer());
 
-      final dummyPico = {
-        'id': 'pico_online_1',
-        'url': 'https://serving.arestaclimb.com/v4/picos/pico_online_1/compilado.binarypb?v=hash123',
-        'checksum': 'hash123',
-      };
+      const dummyPico = ResumoPico(
+        id: 'pico_online_1',
+        nome: 'Pico Online',
+        local: '',
+        url: 'https://serving.arestaclimb.com/v4/picos/pico_online_1/compilado.binarypb?v=hash123',
+        checksum: 'hash123',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -264,6 +267,45 @@ void main() {
         TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
         isA<PicoNode>(),
       );
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection funciona com ResumoPico e dispara telemetria',
+    (WidgetTester tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      const dummyPico = ResumoPico(
+        id: 'pico-tipado-1',
+        nome: 'Pico Tipado',
+        local: 'Local Tipado',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () =>
+                      handlePicoSelection(context, mockRepo, dummyPico),
+                  child: const Text('Go'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go'));
+
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
     },
   );
 
