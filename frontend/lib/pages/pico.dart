@@ -162,13 +162,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       }
 
 
-      Map<String, dynamic>? picoItem;
+      ResumoPico? picoItem;
       try {
         picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
-            .firstWhere((p) => p['id'] == widget.cragId);
+            .firstWhere((p) => p.id == widget.cragId);
       } catch (_) {}
       final tamanhoFormatado =
-          picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+          picoItem?.tamanhoFormatado ?? 'Offline';
 
       ModalConfirmacaoSaida.mostrar(
         context: context,
@@ -365,15 +365,15 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
 
 
-    Map<String, dynamic>? picoItem;
+    ResumoPico? picoItem;
     try {
       picoItem = dataset?.picosDisponiveis.firstWhere(
-        (p) => p['id'] == widget.cragId,
+        (p) => p.id == widget.cragId,
       );
     } catch (_) {}
 
     final String tamanhoFormatado =
-        picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+        picoItem?.tamanhoFormatado ?? 'Offline';
 
     return PopScope(
       canPop: false,
