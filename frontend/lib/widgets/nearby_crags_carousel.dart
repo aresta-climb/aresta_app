@@ -11,6 +11,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
 
@@ -32,7 +33,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   double? _lastUserLat;
   double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
-  List<Map<String, dynamic>> _closestCrags = [];
+  List<ResumoPico> _closestCrags = [];
 
   @override
   void initState() {
@@ -60,9 +61,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   @visibleForTesting
-  void handleDownload(Map<String, dynamic> crag) async {
-    final name = crag['nome'] ?? 'Pico';
-    final String id = crag['id'];
+  void handleDownload(dynamic crag) async {
+    final String name = crag is ResumoPico ? crag.nome : (crag['nome'] ?? 'Pico');
+    final String id = crag is ResumoPico ? crag.id : crag['id'];
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -306,13 +307,17 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final availablePicos =
         datasetRepo?.activeDataset.value?.availablePicos ?? [];
 
-    List<Map<String, dynamic>> cragsWithDistance = [];
+    List<ResumoPico> cragsWithDistance = [];
 
     for (var pico in availablePicos) {
-      if (pico.containsKey('latitude') && pico.containsKey('longitude')) {
-        double picoLat = (pico['latitude'] as num).toDouble();
-        double picoLon = (pico['longitude'] as num).toDouble();
+      final double? picoLat = pico is ResumoPico
+          ? pico.latitude
+          : (pico['latitude'] as num?)?.toDouble();
+      final double? picoLon = pico is ResumoPico
+          ? pico.longitude
+          : (pico['longitude'] as num?)?.toDouble();
 
+      if (picoLat != null && picoLon != null) {
         double distanceInMeters = Geolocator.distanceBetween(
           userLat,
           userLon,
@@ -320,15 +325,17 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           picoLon,
         );
 
-        var picoCopy = Map<String, dynamic>.from(pico);
-        picoCopy['distanceMeters'] = distanceInMeters;
-        cragsWithDistance.add(picoCopy);
+        final ResumoPico picoTipado = pico is ResumoPico
+            ? pico.copyWith(distanciaKm: distanceInMeters / 1000)
+            : ResumoPico.deMapa(Map<String, dynamic>.from(pico as Map))
+                .copyWith(distanciaKm: distanceInMeters / 1000);
+        cragsWithDistance.add(picoTipado);
       }
     }
 
     cragsWithDistance.sort(
       (a, b) =>
-          (a['distanceMeters'] as double).compareTo(b['distanceMeters'] as double),
+          (a.distanciaKm ?? double.infinity).compareTo(b.distanciaKm ?? double.infinity),
     );
 
     if (mounted) {
@@ -481,16 +488,15 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           itemBuilder: (context, index) {
             final picoBase = _closestCrags[index];
             final distanceStr = _formatDistance(
-              picoBase['distanceMeters'] as double,
+              (picoBase.distanciaKm ?? 0) * 1000,
             );
 
             final isDownloaded =
                 dataset?.downloadedPicos.any(
-                  (p) => p['id'] == picoBase['id'],
+                  (p) => p is ResumoPico ? p.id == picoBase.id : p['id'] == picoBase.id,
                 ) ??
                 false;
-            final pico = Map<String, dynamic>.from(picoBase)
-              ..['isDownloaded'] = isDownloaded;
+            final pico = picoBase.copyWith(isDownloaded: isDownloaded);
 
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
