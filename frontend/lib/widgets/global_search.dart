@@ -9,7 +9,6 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/via_functions.dart';
 import '../view_functions/home_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
@@ -308,20 +307,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
       final availablePicos =
           widget.datasetRepo.activeDataset.value?.availablePicos ?? const [];
       for (final crag in availablePicos) {
-        final cragId = crag is ResumoPico ? crag.id : crag['id']?.toString();
-        if (cragId == null || cragId.isEmpty || processedCragIds.contains(cragId)) {
+        final cragId = crag.id;
+        if (cragId.isEmpty || processedCragIds.contains(cragId)) {
           continue;
         }
         processedCragIds.add(cragId);
 
-        final cragNome = crag is ResumoPico
-            ? crag.nome
-            : (crag['nome']?.toString() ?? 'Sem Nome');
-        final cragLocal = crag is ResumoPico
-            ? crag.local
-            : (crag['local']?.toString() ??
-                crag['estado']?.toString() ??
-                '');
+        final cragNome = crag.nome.isNotEmpty ? crag.nome : 'Sem Nome';
+        final cragLocal = crag.local;
         final cragSubtitle = cragLocal.isNotEmpty
             ? 'Pico • $cragLocal • Catálogo'
             : 'Pico • Catálogo';
