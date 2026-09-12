@@ -65,7 +65,33 @@ jobs:
           STORE_FILE: upload-keystore.jks
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 
-      - name: Upload Android Release Artifacts (AAB, Mappings e Símbolos Dart)
+      - name: Package Native Debug Symbols
+        working-directory: ./frontend
+        run: |
+          SRC_DIR="build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib"
+          if [ ! -d "$SRC_DIR" ]; then
+            SRC_DIR="build/app/intermediates/merged_native_libs/release/out/lib"
+          fi
+          if [ ! -d "$SRC_DIR" ]; then
+            SRC_DIR="build/app/intermediates/stripped_native_libs/release/out/lib"
+          fi
+          
+          echo "Buscando bibliotecas nativas em: $SRC_DIR"
+          mkdir -p build/native-debug-symbols
+          DEST_ZIP="$(pwd)/build/native-debug-symbols/native-debug-symbols.zip"
+          if [ -d "$SRC_DIR" ]; then
+            cd "$SRC_DIR"
+            zip -r "$DEST_ZIP" ./*
+            cd - > /dev/null
+            echo "Arquivo de símbolos nativos criado com sucesso em: $DEST_ZIP"
+          else
+            echo "::warning::Diretório de bibliotecas nativas não encontrado. Criando arquivo de símbolos vazio."
+            touch empty_symbol
+            zip -j "$DEST_ZIP" empty_symbol
+            rm empty_symbol
+          fi
+
+      - name: Upload Android Release Artifacts (AAB, Mappings, Símbolos Dart e Símbolos Nativos)
         uses: actions/upload-artifact@v7
         with:
           name: android-release-${{ inputs.tag_name }}
@@ -73,6 +99,7 @@ jobs:
             frontend/build/app/outputs/bundle/release/*.aab
             frontend/build/app/outputs/mapping/release/
             frontend/build/symbols
+            frontend/build/native-debug-symbols/native-debug-symbols.zip
           retention-days: 90
 
       - name: Upload Dart Symbols to Firebase Crashlytics
@@ -102,5 +129,6 @@ jobs:
           packageName: app.escalada.croquis
           releaseFiles: frontend/build/app/outputs/bundle/release/app-release.aab
           mappingFile: frontend/build/app/outputs/mapping/release/mapping.txt
+          debugSymbols: frontend/build/native-debug-symbols/native-debug-symbols.zip
           tracks: internal
           status: completed
