@@ -61,23 +61,64 @@ void showCragModal({
   );
 }
 
-/// Constrói o conjunto de marcadores para o mapa baseado na lista de picos disponíveis.
+/// Representa as faixas de zoom discretas do Mapa Global para escalonamento visual dos marcadores.
+enum FaixaZoomMapa {
+  /// Visão macro (zoom < 6.0): Pinos pequenos (40px) sem balão de texto.
+  macro,
+
+  /// Visão regional (6.0 <= zoom < 9.0): Pinos médios (65px) sem balão de texto.
+  regional,
+
+  /// Visão local (zoom >= 9.0): Pinos completos (85px) com balão de texto compacto.
+  local,
+}
+
+/// Classifica o nível de zoom da câmera na respectiva [FaixaZoomMapa].
+FaixaZoomMapa obterFaixaZoom(double zoom) {
+  if (zoom < 6.0) {
+    return FaixaZoomMapa.macro;
+  }
+  if (zoom < 9.0) {
+    return FaixaZoomMapa.regional;
+  }
+  return FaixaZoomMapa.local;
+}
+
+/// Constrói o conjunto de marcadores para o mapa baseado na lista de picos disponíveis
+/// e na faixa de zoom ativa.
 ///
-/// Trata de forma resiliente os ícones de texto ([textIcons]), garantindo que caso uma
-/// chave não exista ou resolva para nulo, seja utilizado o [customIcon] ou o marcador padrão,
-/// prevenindo exceções de `Null check operator` em tempo de execução.
+/// Trata de forma resiliente os ícones de texto ([textIcons]) e ícones das faixas ([macroIcon], [regionalIcon]),
+/// garantindo fallback para [customIcon] ou [BitmapDescriptor.defaultMarker], prevenindo exceções de
+/// `Null check operator` em tempo de execução.
 Set<Marker> buildMapMarkers({
   required BuildContext context,
   required List<Map<String, dynamic>> crags,
   required ValueListenable<Map<String, double>> downloadingCrags,
   required Function(Map<String, dynamic>) onDownload,
   Function(Map<String, dynamic>)? onOpen,
+  BitmapDescriptor? macroIcon,
+  BitmapDescriptor? regionalIcon,
   BitmapDescriptor? customIcon,
   Map<String, BitmapDescriptor?>? textIcons,
   double currentZoom = 4.0,
+  FaixaZoomMapa? faixaZoom,
 }) {
   final markers = <Marker>{};
-  final bool showText = currentZoom >= 4.0;
+  final faixa = faixaZoom ?? obterFaixaZoom(currentZoom);
+
+  // Determina o ícone de fallback baseado na faixa atual
+  BitmapDescriptor fallbackIcon;
+  switch (faixa) {
+    case FaixaZoomMapa.macro:
+      fallbackIcon = macroIcon ?? customIcon ?? BitmapDescriptor.defaultMarker;
+      break;
+    case FaixaZoomMapa.regional:
+      fallbackIcon = regionalIcon ?? customIcon ?? BitmapDescriptor.defaultMarker;
+      break;
+    case FaixaZoomMapa.local:
+      fallbackIcon = customIcon ?? regionalIcon ?? BitmapDescriptor.defaultMarker;
+      break;
+  }
 
   for (final crag in crags) {
     if (crag['latitude'] != null && crag['longitude'] != null) {
@@ -85,9 +126,10 @@ Set<Marker> buildMapMarkers({
       final double lng = crag['longitude'];
       final String id = crag['id'];
 
-      BitmapDescriptor iconToUse = customIcon ?? BitmapDescriptor.defaultMarker;
-      if (showText && textIcons != null) {
-        iconToUse = textIcons[id] ?? iconToUse;
+      BitmapDescriptor iconToUse = fallbackIcon;
+      // Rótulos de texto com nome só são exibidos na faixa local para evitar sobreposição
+      if (faixa == FaixaZoomMapa.local && textIcons != null) {
+        iconToUse = textIcons[id] ?? fallbackIcon;
       }
 
       markers.add(

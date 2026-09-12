@@ -1,4 +1,4 @@
-﻿## ADDED Requirements
+## Requirements
 
 ### Requirement: Android R8 e Redução de Recursos (Resource Shrinking)
 O sistema de build do Android DEVE compilar o aplicativo em modo release com minificação de código (R8), otimização de bytecode e redução de recursos não utilizados (resource shrinking) habilitados.

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Geração e Extração de Símbolos Dart de Release
 O pipeline de CI/CD DEVE compilar o código Flutter em modo release gerando tabelas de símbolos Dart de depuração em um diretório externo segregado.

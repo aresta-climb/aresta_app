@@ -72,14 +72,18 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     }
   }
 
+  BitmapDescriptor? _macroIcon;
+  BitmapDescriptor? _regionalIcon;
   BitmapDescriptor? _customIcon;
   final Map<String, BitmapDescriptor> _textIcons = {};
   double _currentZoom = 4.0;
+  FaixaZoomMapa _currentFaixaZoom = FaixaZoomMapa.macro;
   GoogleMapController? _mapController;
 
   @override
   void initState() {
     super.initState();
+    _currentFaixaZoom = obterFaixaZoom(_currentZoom);
     _loadCustomIcons();
     _initLocation(fromButton: false);
   }
@@ -180,23 +184,36 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
   Future<void> _loadCustomIcons() async {
     try {
-      final icon = await createCustomMarkerBitmap(
+      // Ícone para visão macro (40px)
+      final macro = await createCustomMarkerBitmap(
         'assets/logo_app.png',
-        size: 120,
+        size: 40,
+      );
+      // Ícone para visão regional (65px)
+      final regional = await createCustomMarkerBitmap(
+        'assets/logo_app.png',
+        size: 65,
+      );
+      // Ícone para visão local / base (85px)
+      final custom = await createCustomMarkerBitmap(
+        'assets/logo_app.png',
+        size: 85,
       );
       if (mounted) {
         setState(() {
-          _customIcon = icon;
+          _macroIcon = macro;
+          _regionalIcon = regional;
+          _customIcon = custom;
         });
       }
 
-      // Generate text icons for each crag in background
+      // Gera ícones com texto para visão local em segundo plano
       for (final crag in widget.crags) {
         final name = crag['nome'] ?? 'Pico';
         final textIcon = await createCustomMarkerBitmapWithText(
           'assets/logo_app.png',
           name,
-          size: 120,
+          size: 85,
         );
         if (mounted) {
           setState(() {
@@ -258,9 +275,12 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           downloadingCrags: widget.syncService.downloadingCrags,
           onDownload: _handleDownload,
           onOpen: _handleOpen,
+          macroIcon: _macroIcon,
+          regionalIcon: _regionalIcon,
           customIcon: _customIcon,
           textIcons: _textIcons,
           currentZoom: _currentZoom,
+          faixaZoom: _currentFaixaZoom,
         ),
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
@@ -272,15 +292,12 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         onCameraMove: (CameraPosition position) {
           if (mounted) {
             try {
-              // Only rebuild if we cross the zoom threshold (e.g., 4.0)
-              final bool wasZoomedIn = _currentZoom >= 4.0;
-              final bool isZoomedIn = position.zoom >= 4.0;
-              if (wasZoomedIn != isZoomedIn) {
+              final novaFaixa = obterFaixaZoom(position.zoom);
+              _currentZoom = position.zoom;
+              if (_currentFaixaZoom != novaFaixa) {
                 setState(() {
-                  _currentZoom = position.zoom;
+                  _currentFaixaZoom = novaFaixa;
                 });
-              } else {
-                _currentZoom = position.zoom;
               }
             } catch (e) {
               // Ignora frames nulos ou incompletos emitidos por platform channels (OEM Android 11)
