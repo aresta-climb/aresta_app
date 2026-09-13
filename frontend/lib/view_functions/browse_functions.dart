@@ -638,11 +638,17 @@ Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
 
 void showDownloadBottomSheet(
   BuildContext context,
-  Map<String, dynamic> crag,
+  dynamic crag,
   VoidCallback onDownload,
   ValueListenable<Map<String, double>> downloadingCrags, {
   VoidCallback? onOpen,
 }) {
+  final ResumoPico pico = crag is ResumoPico
+      ? crag
+      : ResumoPico.deMapa(crag is Map<String, dynamic>
+          ? crag
+          : Map<String, dynamic>.from(crag as Map));
+
   showModalBottomSheet(
     context: context,
     useRootNavigator: true,
@@ -671,7 +677,7 @@ void showDownloadBottomSheet(
               ),
               const SizedBox(height: 24),
               Text(
-                safeString(crag['nome'], fallback: 'Pico'),
+                pico.nome.isNotEmpty ? pico.nome : 'Pico',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -680,16 +686,15 @@ void showDownloadBottomSheet(
               ),
               const SizedBox(height: 8),
               Text(
-                safeString(crag['local'], fallback: 'Local Desconhecido'),
+                pico.local.isNotEmpty ? pico.local : 'Local Desconhecido',
                 style: TextStyle(color: context.colors.ashGrey, fontSize: 14),
               ),
               const SizedBox(height: 16),
-              if (crag['descricao'] != null &&
-                  crag['descricao'].toString().isNotEmpty) ...[
+              if (pico.descricao.isNotEmpty) ...[
                 Flexible(
                   child: SingleChildScrollView(
                     child: Text(
-                      crag['descricao'],
+                      pico.descricao,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 14,
@@ -703,7 +708,7 @@ void showDownloadBottomSheet(
               ValueListenableBuilder<Map<String, double>>(
                 valueListenable: downloadingCrags,
                 builder: (context, downloadingMap, child) {
-                  final progress = downloadingMap[crag['id']];
+                  final progress = downloadingMap[pico.id];
                   final isDownloading = progress != null;
 
                   if (isDownloading) {
@@ -741,7 +746,7 @@ void showDownloadBottomSheet(
                     );
                   }
 
-                  if (crag['isDownloaded'] == true && onOpen != null) {
+                  if (pico.isDownloaded && onOpen != null) {
                     return SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
