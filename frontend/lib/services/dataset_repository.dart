@@ -725,21 +725,30 @@ class DatasetRepository {
     );
   }
 
-  /// Auxiliar para compatibilidade legada ao atualizar metadados.
+  /// Auxiliar para atualizar metadados locais de um pico (tipado ou mapa legado).
   Future<void> updatePicoMetadata(
     String id,
-    Map<String, dynamic> picoData,
+    dynamic picoData,
     String docsPath, {
     Croqui? parsedPico,
   }) async {
     final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
-    await extratorMetadados.atualizarMetadadosPico(
-      id: id,
-      picoData: picoData,
-      downloadsPath: downloadsPath,
-      baseUrl: editorDeCroqui.activeBaseUrl,
-      parsedCroqui: parsedPico,
-    );
+    if (picoData is ResumoPico) {
+      await extratorMetadados.carregarMetadadosLocais(
+        pico: picoData,
+        downloadsPath: downloadsPath,
+        baseUrl: editorDeCroqui.activeBaseUrl,
+        parsedCroqui: parsedPico,
+      );
+    } else if (picoData is Map<String, dynamic>) {
+      await extratorMetadados.atualizarMetadadosPico(
+        id: id,
+        picoData: picoData,
+        downloadsPath: downloadsPath,
+        baseUrl: editorDeCroqui.activeBaseUrl,
+        parsedCroqui: parsedPico,
+      );
+    }
   }
 
   /// Dispara a notificação de reset visual na página Home.
