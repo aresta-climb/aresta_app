@@ -51,10 +51,15 @@ class MapaGlobalPage extends StatefulWidget {
 
 class _MapaGlobalPageState extends State<MapaGlobalPage> {
   void _handleDownload(dynamic crag) async {
-    final name = crag is ResumoPico
-        ? (crag.nome.isEmpty ? 'Pico' : crag.nome)
-        : crag['nome'] ?? 'Pico';
-    final String id = crag is ResumoPico ? crag.id : crag['id'].toString();
+    final ResumoPico pico = crag is ResumoPico
+        ? crag
+        : ResumoPico.deMapa(
+            crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map),
+          );
+    final name = pico.nome.isEmpty ? 'Pico' : pico.nome;
+    final String id = pico.id;
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -247,10 +252,17 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
   }
 
   void _handleOpen(dynamic crag) {
+    final ResumoPico pico = crag is ResumoPico
+        ? crag
+        : ResumoPico.deMapa(
+            crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map),
+          );
     handlePicoSelection(
       context,
       widget.datasetRepo,
-      crag,
+      pico,
       source: 'mapa_global',
     );
   }
