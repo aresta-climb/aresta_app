@@ -49,28 +49,28 @@ class PageListenableBuilder extends StatelessWidget {
           );
         }
 
-        // 1. Tenta encontrar o crag nos picos baixados
-        Map<String, dynamic>? cragData;
+        // 1. Tenta encontrar o pico nos picos baixados
+        Pico? pico;
+        Croqui? croqui;
         try {
           final crag = topoDataset.downloadedPicos.firstWhere(
-            (p) => p['id'] == cragId,
+            (p) => p.id == cragId,
           );
-          cragData = crag['data'] as Map<String, dynamic>?;
+          pico = crag.pico;
+          croqui = crag.croqui;
         } catch (_) {}
 
         // 2. Se não estiver baixado, tenta resolver da sessão online ativa
-        if (cragData == null) {
+        if (pico == null || croqui == null) {
           final croquiOnline =
               datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline(cragId);
           if (croquiOnline != null && croquiOnline.picos.isNotEmpty) {
-            cragData = {
-              'pico': croquiOnline.picos.first,
-              'croqui': croquiOnline,
-            };
+            pico = croquiOnline.picos.first;
+            croqui = croquiOnline;
           }
         }
 
-        if (cragData == null) {
+        if (pico == null || croqui == null) {
           // O pico foi apagado do dataset
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted && AppNav.canGoBack(context)) {
@@ -79,9 +79,6 @@ class PageListenableBuilder extends StatelessWidget {
           });
           return const Scaffold();
         }
-
-        final pico = cragData['pico'] as Pico;
-        final croqui = cragData['croqui'] as Croqui;
 
         try {
           final res = DatasetResolver.resolve(
