@@ -11,6 +11,7 @@ import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:yaml/yaml.dart';
 import 'editor_croqui/modelos/configuracao_editor.dart';
+import 'editor_croqui/modelos/metadados_previa.dart';
 
 /// Evento disparado quando o Editor Desktop solicita uma atualização em tempo real (Live Reload).
 class LiveReloadEvent {
@@ -180,8 +181,8 @@ class EditorDeCroqui {
           .timeout(const Duration(seconds: 3));
 
       if (infoResponse.statusCode == 200) {
-        final data = jsonDecode(infoResponse.body) as Map<String, dynamic>;
-        final localUrl = data['local_url'] as String?;
+        final metadados = MetadadosPrevia.deJson(infoResponse.body);
+        final localUrl = metadados.localUrl;
 
         if (localUrl != null && localUrl.isNotEmpty) {
           // 2. Dispara teste rápido na rede local (Direct LAN)
