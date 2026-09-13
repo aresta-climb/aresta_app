@@ -134,4 +134,139 @@ void main() {
       expect(onOpenCalled, isTrue);
     });
   });
+
+  group('FaixaZoomMapa e Seleção de Marcadores por Faixa de Zoom', () {
+    test('obterFaixaZoom deve classificar corretamente as faixas Macro, Regional e Local', () {
+      expect(obterFaixaZoom(3.5), equals(FaixaZoomMapa.macro));
+      expect(obterFaixaZoom(5.99), equals(FaixaZoomMapa.macro));
+      expect(obterFaixaZoom(6.0), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(7.5), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(8.99), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(9.0), equals(FaixaZoomMapa.local));
+      expect(obterFaixaZoom(15.0), equals(FaixaZoomMapa.local));
+    });
+
+    testWidgets('buildMapMarkers deve usar macroIcon e ignorar textIcons na faixa macro',
+        (WidgetTester tester) async {
+      final crags = [
+        {
+          'id': 'crag1',
+          'nome': 'Pico 1',
+          'latitude': -20.0,
+          'longitude': -40.0,
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final macroIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+                final textIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+
+                final markers = buildMapMarkers(
+                  context: context,
+                  crags: crags,
+                  downloadingCrags: ValueNotifier<Map<String, double>>({}),
+                  onDownload: (_) {},
+                  macroIcon: macroIcon,
+                  textIcons: {'crag1': textIcon},
+                  currentZoom: 5.0, // Faixa Macro
+                );
+
+                expect(markers.length, equals(1));
+                expect(markers.first.icon, equals(macroIcon),
+                    reason: 'Em zoom < 7.0 não deve usar textIcon, e sim macroIcon');
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('buildMapMarkers deve usar regionalIcon e ignorar textIcons na faixa regional',
+        (WidgetTester tester) async {
+      final crags = [
+        {
+          'id': 'crag1',
+          'nome': 'Pico 1',
+          'latitude': -20.0,
+          'longitude': -40.0,
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final regionalIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+                final textIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+
+                final markers = buildMapMarkers(
+                  context: context,
+                  crags: crags,
+                  downloadingCrags: ValueNotifier<Map<String, double>>({}),
+                  onDownload: (_) {},
+                  regionalIcon: regionalIcon,
+                  textIcons: {'crag1': textIcon},
+                  currentZoom: 7.5, // Faixa Regional
+                );
+
+                expect(markers.length, equals(1));
+                expect(markers.first.icon, equals(regionalIcon),
+                    reason: 'Em zoom regional (6.0 a 9.0) deve usar regionalIcon sem texto');
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('buildMapMarkers deve usar textIcons na faixa local (zoom >= 9)',
+        (WidgetTester tester) async {
+      final crags = [
+        {
+          'id': 'crag1',
+          'nome': 'Pico 1',
+          'latitude': -20.0,
+          'longitude': -40.0,
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final regionalIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+                final textIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+
+                final markers = buildMapMarkers(
+                  context: context,
+                  crags: crags,
+                  downloadingCrags: ValueNotifier<Map<String, double>>({}),
+                  onDownload: (_) {},
+                  regionalIcon: regionalIcon,
+                  textIcons: {'crag1': textIcon},
+                  currentZoom: 9.5, // Faixa Local (>= 9.0)
+                );
+
+                expect(markers.length, equals(1));
+                expect(markers.first.icon, equals(textIcon),
+                    reason: 'Em zoom local (>= 9.0) deve utilizar o textIcon correspondente');
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+    });
+  });
 }

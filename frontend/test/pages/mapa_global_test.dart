@@ -58,4 +58,57 @@ void main() {
     // Verifica se o GoogleMap é renderizado
     expect(find.byType(GoogleMap), findsOneWidget);
   });
+
+  testWidgets('MapaGlobalPage atualiza marcadores ao cruzar faixas de zoom no onCameraMove', (
+    WidgetTester tester,
+  ) async {
+    final mockEditor = EditorDeCroqui();
+    final mockRepo = FakeDatasetRepository(mockEditor);
+    final mockSync = FakeSyncService(mockRepo);
+
+    final crags = [
+      {
+        'id': 'crag1',
+        'nome': 'Pico 1',
+        'local': 'Local 1',
+        'latitude': -20.0,
+        'longitude': -40.0,
+      },
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapaGlobalPage(
+          crags: crags,
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+        ),
+      ),
+    );
+
+    final googleMapFinder = find.byType(GoogleMap);
+    expect(googleMapFinder, findsOneWidget);
+
+    GoogleMap mapWidget = tester.widget<GoogleMap>(googleMapFinder);
+    expect(mapWidget.markers.length, equals(1));
+
+    // Movimentação mantendo na mesma faixa (macro 4.0 -> 5.5): não deve alterar a faixa
+    mapWidget.onCameraMove?.call(const CameraPosition(target: LatLng(-20, -40), zoom: 5.5));
+    await tester.pump();
+
+    // Cruzando para a faixa regional (8.0): deve acionar rebuild para a nova faixa
+    mapWidget.onCameraMove?.call(const CameraPosition(target: LatLng(-20, -40), zoom: 8.0));
+    await tester.pump();
+
+    mapWidget = tester.widget<GoogleMap>(googleMapFinder);
+    expect(mapWidget.markers.length, equals(1));
+
+    // Cruzando para a faixa local (12.0): deve acionar rebuild para faixa local
+    mapWidget.onCameraMove?.call(const CameraPosition(target: LatLng(-20, -40), zoom: 12.0));
+    await tester.pump();
+
+    mapWidget = tester.widget<GoogleMap>(googleMapFinder);
+    expect(mapWidget.markers.length, equals(1));
+  });
 }
+

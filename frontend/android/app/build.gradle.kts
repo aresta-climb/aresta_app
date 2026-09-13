@@ -63,6 +63,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Símbolos nativos de depuração para desofuscar falhas e ANRs no Google Play Console:
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 }

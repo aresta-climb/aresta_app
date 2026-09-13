@@ -49,7 +49,7 @@ Inicializa os bindings do Flutter, cria instâncias do `DatasetRepository` e `Sy
 ### Páginas de Nível Superior
 - **`home.dart`**: Exibe um carrossel dos picos de maior prioridade e uma lista suspensa de todos os picos disponíveis localmente.
 - **`browse.dart`**: Lista todos os guias disponíveis no índice mestre com thumbnails dinâmicos, indicadores de download e ações de download inline.
-- **`mapa_global.dart`**: O "Mapa Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com interações de bottom sheet.
+- **`mapa_global.dart`**: O "Mapa Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com marcadores escalonados por faixas de zoom (Macro, Regional e Local), balões compactos com truncamento automático de texto e interações de bottom sheet.
 - **`comunidade.dart`**: Hub central com mídias, apoios e links interativos (WhatsApp, Instagram, Discord, GitHub).
 - **`settings.dart`**: Gerenciamento do aplicativo, cache e ferramentas de editor experimental.
 - **`terms_of_use.dart`**: Exibe a interface de visualização dos documentos legais do aplicativo (Termos de Uso e Privacidade).
