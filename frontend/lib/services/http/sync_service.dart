@@ -902,7 +902,7 @@ class SyncService {
       if (p.id == id) {
         await datasetRepository.updatePicoMetadata(
           id,
-          p.paraMapa(),
+          p,
           directory.path,
           parsedPico: newPicoData,
         );
