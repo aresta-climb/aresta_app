@@ -55,8 +55,8 @@ class ConjuntoDadosCroqui {
 
   /// Cria uma cópia com campos atualizados opcionalmente.
   ConjuntoDadosCroqui copyWith({
-    dynamic picosDisponiveis,
-    dynamic picosBaixados,
+    List<ResumoPico>? picosDisponiveis,
+    List<ResumoPico>? picosBaixados,
   }) {
     return ConjuntoDadosCroqui(
       picosDisponiveis: picosDisponiveis ?? this.picosDisponiveis,
