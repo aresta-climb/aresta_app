@@ -597,6 +597,263 @@ void main() {
         expect(configService.isExperimentalMode.value, isFalse);
       },
     );
+
+    testWidgets(
+      'ao clicar em ESCANEAR QR CODE, tela do scanner deve abrir no Root Navigator cobrindo o diálogo',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          construtorScannerQr: (context) => const Scaffold(
+            body: Center(child: Text('TELA SCANNER SIMULADA')),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Conectar Editor'), findsOneWidget);
+
+        await tester.tap(find.text('ESCANEAR QR CODE'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('TELA SCANNER SIMULADA'), findsOneWidget);
+
+        // A rota do diálogo deve ter sido sobreposta (isCurrent == false) e estar no mesmo Navigator raiz
+        final elementoDialogo = tester.element(find.text('Conectar Editor'));
+        final rotaDialogo = ModalRoute.of(elementoDialogo);
+        expect(rotaDialogo?.isCurrent, isFalse);
+
+        final elementoScanner = tester.element(find.text('TELA SCANNER SIMULADA'));
+        final rotaScanner = ModalRoute.of(elementoScanner);
+        expect(rotaScanner?.isCurrent, isTrue);
+        expect(rotaScanner?.navigator, equals(rotaDialogo?.navigator));
+      },
+    );
+
+    testWidgets(
+      'ao cancelar o scanner sem ler QR Code, deve retornar ao diálogo mantendo texto prévio inalterado',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: SyncService(datasetRepository: datasetRepo),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          construtorScannerQr: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: const Text('CANCELAR SCANNER'),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.enterText(find.byType(TextField), 'http://url-digitada-previamente.local');
+        await tester.pump();
+
+        await tester.tap(find.text('ESCANEAR QR CODE'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('CANCELAR SCANNER'), findsOneWidget);
+
+        await tester.tap(find.text('CANCELAR SCANNER'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Conectar Editor'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextField, 'http://url-digitada-previamente.local'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'ao escanear QR Code com sucesso, deve auto-conectar e navegar automaticamente para o croqui',
+      (WidgetTester tester) async {
+        final indice = Indice();
+        indice.croquis.add(
+          ResumoCroqui(
+            id: 'pico_qr_sucesso',
+            nome: 'Pedra do QR',
+            caminhoRelativo: 'pico_qr_sucesso.binarypb',
+          ),
+        );
+
+        final croqui = Croqui(id: 'pico_qr_sucesso', nome: 'Pedra do QR');
+        croqui.picos.add(Pico(nome: 'Pedra do QR'));
+
+        final mockHttpClient = MockClient((request) async {
+          if (request.url.path.endsWith('indice.binarypb')) {
+            return http.Response.bytes(indice.writeToBuffer(), 200);
+          } else if (request.url.path.endsWith('pico_qr_sucesso.binarypb')) {
+            return http.Response.bytes(croqui.writeToBuffer(), 200);
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepo,
+          client: mockHttpClient,
+        );
+        testSyncService.mockIsolateSpawn = (entryPoint, args) async {
+          args.sendPort.send(DownloadIsolateResult(
+            filesToDelete: [],
+            filesToRename: {},
+            newPicoDataBytes: croqui.writeToBuffer(),
+          ));
+        };
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: testSyncService,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          client: mockHttpClient,
+          syncService: testSyncService,
+          construtorScannerQr: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop('http://editor.local:8000'),
+                child: const Text('SIMULAR LEITURA QR'),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('ESCANEAR QR CODE'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('SIMULAR LEITURA QR'), findsOneWidget);
+
+        // Dispara a leitura do QR Code
+        await tester.tap(find.text('SIMULAR LEITURA QR'));
+        await tester.pump();
+
+        for (int i = 0; i < 100; i++) {
+          await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
+          await tester.pump(const Duration(milliseconds: 100));
+          if (find.text('Conectar Editor').evaluate().isEmpty) {
+            break;
+          }
+        }
+
+        // Diálogo deve ter sido fechado automaticamente pela auto-conexão
+        expect(find.text('Conectar Editor'), findsNothing);
+
+        final controller = TreeNavigationWrapper.currentTreeController;
+        expect(controller?.currentNode, isA<PicoNode>());
+        expect((controller?.currentNode as PicoNode).cragId, equals('pico_qr_sucesso'));
+
+        await configService.nukeExperimentalData();
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
+
+    testWidgets(
+      'ao escanear QR Code quando servidor falha, deve tentar auto-conectar e manter diálogo aberto com a URL no campo',
+      (WidgetTester tester) async {
+        final mockHttpClient = MockClient((request) async {
+          return http.Response('Server Error', 500);
+        });
+
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepo,
+          client: mockHttpClient,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: datasetRepo,
+              syncService: testSyncService,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final pageContext = tester.element(find.byType(Scaffold).first);
+
+        mostrarDialogConexao(
+          pageContext,
+          datasetRepo,
+          client: mockHttpClient,
+          syncService: testSyncService,
+          construtorScannerQr: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop('http://editor.falha.local:8000'),
+                child: const Text('SIMULAR QR FALHA'),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('ESCANEAR QR CODE'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        await tester.tap(find.text('SIMULAR QR FALHA'));
+        await tester.pump();
+
+        for (int i = 0; i < 20; i++) {
+          await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+
+        // Diálogo deve permanecer aberto e a URL escaneada deve estar no campo
+        expect(find.text('Conectar Editor'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextField, 'http://editor.falha.local:8000'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
 

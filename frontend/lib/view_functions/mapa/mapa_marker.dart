@@ -23,8 +23,9 @@ BitmapDescriptor converterByteDataEmBitmap(ByteData? byteData) {
 /// Gera um BitmapDescriptor customizado com o formato de um pino de mapa (teardrop)
 /// contendo a imagem do logo do app dentro dele.
 Future<BitmapDescriptor> createCustomMarkerBitmap(
-  String imagePath, {
+  String caminhoImagem, {
   int size = 150,
+  AssetBundle? bundle,
 }) async {
   final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(pictureRecorder);
@@ -80,12 +81,13 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
   );
 
   // Desenhar a borda externa preta
+  final double espessuraBorda = (size * 0.025).clamp(1.5, 3.0);
   canvas.drawPath(
     pinPath,
     Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0,
+      ..strokeWidth = espessuraBorda,
   );
 
   // Raio do círculo interno onde a imagem ficará
@@ -98,35 +100,38 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
     Paint()..color = Colors.white,
   );
 
-  try {
-    // Carregar a imagem
-    final ByteData data = await rootBundle.load(imagePath);
-    final ui.Codec codec = await ui.instantiateImageCodec(
-      data.buffer.asUint8List(),
-      targetWidth: (innerRadius * 2).toInt(),
-      targetHeight: (innerRadius * 2).toInt(),
-    );
-    final ui.FrameInfo fi = await codec.getNextFrame();
-    final ui.Image image = fi.image;
+  if (caminhoImagem.isNotEmpty) {
+    try {
+      // Carregar a imagem
+      final bundleParaUsar = bundle ?? rootBundle;
+      final ByteData data = await bundleParaUsar.load(caminhoImagem);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: (innerRadius * 2).toInt(),
+        targetHeight: (innerRadius * 2).toInt(),
+      );
+      final ui.FrameInfo fi = await codec.getNextFrame();
+      final ui.Image image = fi.image;
 
-    // Recortar e desenhar a imagem
-    canvas.save();
-    canvas.clipPath(
-      Path()..addOval(
-        Rect.fromCircle(
-          center: Offset(centerPoint, circleY),
-          radius: innerRadius,
+      // Recortar e desenhar a imagem
+      canvas.save();
+      canvas.clipPath(
+        Path()..addOval(
+          Rect.fromCircle(
+            center: Offset(centerPoint, circleY),
+            radius: innerRadius,
+          ),
         ),
-      ),
-    );
-    canvas.drawImage(
-      image,
-      Offset(centerPoint - image.width / 2, circleY - image.height / 2),
-      Paint(),
-    );
-    canvas.restore();
-  } catch (e) {
-    // Silently continue se a imagem falhar
+      );
+      canvas.drawImage(
+        image,
+        Offset(centerPoint - image.width / 2, circleY - image.height / 2),
+        Paint(),
+      );
+      canvas.restore();
+    } catch (e) {
+      // Silently continue se a imagem falhar
+    }
   }
 
   // Desenhar uma borda interna sutil para separar a imagem do pino
@@ -151,99 +156,171 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
   return converterByteDataEmBitmap(byteData);
 }
 
-/// Gera um BitmapDescriptor customizado com texto acima do pino
-Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
-  String imagePath,
-  String text, {
-  int size = 150,
-}) async {
-  final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
-  final Canvas canvas = Canvas(pictureRecorder);
+/// Dimensões calculadas para o balão de texto e o canvas do marcador com texto.
+class DimensoesMarcador {
+  /// Largura total do canvas gerado.
+  final double larguraCanvas;
 
-  // Setup text painter
+  /// Altura total do canvas gerado.
+  final double alturaCanvas;
+
+  /// Largura total do balão de texto.
+  final double larguraBalao;
+
+  /// Altura total do balão de texto.
+  final double alturaBalao;
+
+  /// Largura calculada estritamente para o texto.
+  final double larguraTexto;
+
+  /// Altura calculada estritamente para o texto.
+  final double alturaTexto;
+
+  /// Tamanho da fonte tipográfica utilizado no desenho.
+  final double tamanhoFonte;
+
+  const DimensoesMarcador({
+    required this.larguraCanvas,
+    required this.alturaCanvas,
+    required this.larguraBalao,
+    required this.alturaBalao,
+    required this.larguraTexto,
+    required this.alturaTexto,
+    required this.tamanhoFonte,
+  });
+}
+
+/// Calcula as dimensões proporcionais do balão e do canvas para um marcador com texto,
+/// aplicando limites de largura máxima e truncamento com reticências (`...`) para nomes longos.
+DimensoesMarcador calcularDimensoesMarcador({
+  required String texto,
+  required int tamanhoPino,
+  double larguraMaximaTexto = 200.0,
+}) {
+  // Tamanho de fonte proporcional contido (entre 11 e 15px) para preservar densidade visual
+  final double tamanhoFonte = (tamanhoPino * 0.16).clamp(11.0, 15.0);
+
   final textPainter = TextPainter(
     text: TextSpan(
-      text: text,
+      text: texto,
       style: TextStyle(
         color: Colors.white,
-        fontSize: size * 0.22,
+        fontSize: tamanhoFonte,
         fontWeight: FontWeight.bold,
       ),
     ),
     textDirection: TextDirection.ltr,
     textAlign: TextAlign.center,
+    maxLines: 1,
+    ellipsis: '...',
   );
 
-  textPainter.layout(
-    maxWidth: 800,
-  ); // Permite que o texto cresça até 800px de largura
+  textPainter.layout(maxWidth: larguraMaximaTexto);
 
   final double textWidth = textPainter.width;
   final double textHeight = textPainter.height;
 
-  // Define o espaçamento (padding) interno do balão de texto para que não fique colado nas bordas
-  final double bubblePaddingX = 16.0;
-  final double bubblePaddingY = 10.0;
-  // A largura e altura total do balão incluem o tamanho do texto mais o espaçamento
+  const double bubblePaddingX = 12.0;
+  const double bubblePaddingY = 6.0;
   final double bubbleWidth = textWidth + bubblePaddingX * 2;
   final double bubbleHeight = textHeight + bubblePaddingY * 2;
-  // Distância entre a base do balão e o topo do pino do mapa
-  final double spacingBetweenBubbleAndPin = 10.0;
+  const double spacingBetweenBubbleAndPin = 6.0;
 
-  // Calcula as dimensões finais do canvas.
-  // A largura deve ser o suficiente para acomodar o maior elemento (o balão ou o pino).
-  final double canvasWidth = bubbleWidth > size
-      ? bubbleWidth + 20
-      : size.toDouble();
-  // A altura do canvas deve acomodar o balão + espaço + pino + espaço para a sombra do pino
+  final double canvasWidth = bubbleWidth > tamanhoPino
+      ? bubbleWidth + 16.0
+      : tamanhoPino.toDouble() + 16.0;
   final double canvasHeight =
-      bubbleHeight +
-      spacingBetweenBubbleAndPin +
-      size.toDouble() +
-      5.0; // +5 para a margem da sombra
-  final double renderCenterX = canvasWidth / 2;
+      bubbleHeight + spacingBetweenBubbleAndPin + tamanhoPino.toDouble() + 5.0;
+
+  return DimensoesMarcador(
+    larguraCanvas: canvasWidth,
+    alturaCanvas: canvasHeight,
+    larguraBalao: bubbleWidth,
+    alturaBalao: bubbleHeight,
+    larguraTexto: textWidth,
+    alturaTexto: textHeight,
+    tamanhoFonte: tamanhoFonte,
+  );
+}
+
+/// Gera um BitmapDescriptor customizado com texto acima do pino,
+/// limitando a largura do balão para evitar sobreposição excessiva no mapa.
+Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
+  String caminhoImagem,
+  String texto, {
+  int size = 85,
+  double larguraMaximaTexto = 200.0,
+  AssetBundle? bundle,
+}) async {
+  final dimensoes = calcularDimensoesMarcador(
+    texto: texto,
+    tamanhoPino: size,
+    larguraMaximaTexto: larguraMaximaTexto,
+  );
+
+  final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(pictureRecorder);
+
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: texto,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: dimensoes.tamanhoFonte,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+    maxLines: 1,
+    ellipsis: '...',
+  );
+  textPainter.layout(maxWidth: larguraMaximaTexto);
+
+  final double renderCenterX = dimensoes.larguraCanvas / 2;
 
   // Desenhando o balão de texto na parte superior
   final bubbleRect = Rect.fromCenter(
-    center: Offset(renderCenterX, bubbleHeight / 2),
-    width: bubbleWidth,
-    height: bubbleHeight,
+    center: Offset(renderCenterX, dimensoes.alturaBalao / 2),
+    width: dimensoes.larguraBalao,
+    height: dimensoes.alturaBalao,
   );
 
   // Sombra do balão
   canvas.drawRRect(
     RRect.fromRectAndRadius(
-      bubbleRect.shift(const Offset(0, 4)),
-      const Radius.circular(12),
+      bubbleRect.shift(const Offset(0, 3)),
+      const Radius.circular(8),
     ),
     Paint()
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
   );
 
   // Fundo principal do balão
   canvas.drawRRect(
-    RRect.fromRectAndRadius(bubbleRect, const Radius.circular(12)),
-    Paint()..color = Colors.black.withValues(alpha: 0.75),
+    RRect.fromRectAndRadius(bubbleRect, const Radius.circular(8)),
+    Paint()..color = Colors.black.withValues(alpha: 0.8),
   );
 
   // Pinta o texto centralizado dentro do balão
   textPainter.paint(
     canvas,
-    Offset(renderCenterX - textWidth / 2, bubbleHeight / 2 - textHeight / 2),
+    Offset(
+      renderCenterX - dimensoes.larguraTexto / 2,
+      dimensoes.alturaBalao / 2 - dimensoes.alturaTexto / 2,
+    ),
   );
 
   // Desenhando o pino do mapa logo abaixo do balão
-  final double pinTopY = bubbleHeight + spacingBetweenBubbleAndPin;
+  const double spacingBetweenBubbleAndPin = 6.0;
+  final double pinTopY = dimensoes.alturaBalao + spacingBetweenBubbleAndPin;
   final double circleRadius = size * 0.35;
   final double circleY = pinTopY + size * 0.4;
-  // A ponta inferior do pino ficará quase no limite do canvas, deixando espaço apenas para a sombra.
-  // Como o "anchor" (âncora) padrão do Google Maps é (0.5, 1.0) - ou seja, inferior centro -
-  // deixar a ponta do pino na base garante que ele aponte exatamente para as coordenadas GPS no mapa.
+  // A ponta inferior do pino repousa na base para apontar com precisão ao GPS
   final double pinBottomY = pinTopY + size - 5.0;
 
   final Path pinPath = Path();
-  // Começa na ponta inferior
   pinPath.moveTo(renderCenterX, pinBottomY);
 
   pinPath.quadraticBezierTo(
@@ -269,10 +346,10 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
 
   // Sombra do pino
   canvas.drawPath(
-    pinPath.shift(const Offset(0, 4)),
+    pinPath.shift(const Offset(0, 3)),
     Paint()
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
   );
 
   // Pino
@@ -283,13 +360,14 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
       ..style = PaintingStyle.fill,
   );
 
-  // Borda
+  // Borda externa
+  final double espessuraBorda = (size * 0.025).clamp(1.5, 3.0);
   canvas.drawPath(
     pinPath,
     Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0,
+      ..strokeWidth = espessuraBorda,
   );
 
   final double innerRadius = circleRadius * 0.8;
@@ -301,33 +379,36 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
     Paint()..color = Colors.white,
   );
 
-  try {
-    final ByteData data = await rootBundle.load(imagePath);
-    final ui.Codec codec = await ui.instantiateImageCodec(
-      data.buffer.asUint8List(),
-      targetWidth: (innerRadius * 2).toInt(),
-      targetHeight: (innerRadius * 2).toInt(),
-    );
-    final ui.FrameInfo fi = await codec.getNextFrame();
-    final ui.Image image = fi.image;
+  if (caminhoImagem.isNotEmpty) {
+    try {
+      final bundleParaUsar = bundle ?? rootBundle;
+      final ByteData data = await bundleParaUsar.load(caminhoImagem);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: (innerRadius * 2).toInt(),
+        targetHeight: (innerRadius * 2).toInt(),
+      );
+      final ui.FrameInfo fi = await codec.getNextFrame();
+      final ui.Image image = fi.image;
 
-    canvas.save();
-    canvas.clipPath(
-      Path()..addOval(
-        Rect.fromCircle(
-          center: Offset(renderCenterX, circleY),
-          radius: innerRadius,
+      canvas.save();
+      canvas.clipPath(
+        Path()..addOval(
+          Rect.fromCircle(
+            center: Offset(renderCenterX, circleY),
+            radius: innerRadius,
+          ),
         ),
-      ),
-    );
-    canvas.drawImage(
-      image,
-      Offset(renderCenterX - image.width / 2, circleY - image.height / 2),
-      Paint(),
-    );
-    canvas.restore();
-  } catch (e) {
-    // Silently continue
+      );
+      canvas.drawImage(
+        image,
+        Offset(renderCenterX - image.width / 2, circleY - image.height / 2),
+        Paint(),
+      );
+      canvas.restore();
+    } catch (e) {
+      // Silently continue
+    }
   }
 
   // Borda interna
@@ -337,12 +418,12 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
     Paint()
       ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5,
+      ..strokeWidth = 1.0,
   );
 
   final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-    canvasWidth.toInt(),
-    canvasHeight.toInt(),
+    dimensoes.larguraCanvas.toInt(),
+    dimensoes.alturaCanvas.toInt(),
   );
   final ByteData? byteData = await markerAsImage.toByteData(
     format: ui.ImageByteFormat.png,
@@ -350,3 +431,4 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
 
   return converterByteDataEmBitmap(byteData);
 }
+

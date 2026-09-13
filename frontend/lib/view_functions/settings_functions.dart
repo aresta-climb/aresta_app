@@ -175,13 +175,33 @@ void navegarAposConexaoExperimental(
   }
 }
 
-/// Exibe o diálogo para inserir a URL do repositório do editor.
+/// Exibe o diálogo para conectar o aplicativo a um servidor do Editor Desktop.
+///
+/// Permite que o usuário digite manualmente a URL ou código de 8 caracteres gerado
+/// no Editor, ou escaneie o QR Code diretamente pela câmera.
+///
+/// Parâmetros:
+/// - [context]: O contexto de build da tela de origem (usado como fallback de navegação).
+/// - [datasetRepo]: Repositório de dados que gerencia a sessão e os índices de croquis.
+/// - [titulo]: Título opcional do diálogo (padrão: "Conectar Editor").
+/// - [client]: Cliente HTTP opcional para injeção de dependência em testes.
+/// - [syncService]: Serviço de sincronização opcional para download e atualização de índices.
+/// - [construtorScannerQr]: Construtor opcional de widget para a tela de escaneamento de QR Code.
+///   Permite injetar telas de simulação em testes automatizados, evitando acionar plugins nativos
+///   de câmera em ambientes headless. Por padrão, instancia [QRScannerPage].
+///
+/// Detalhes Arquiteturais de Navegação:
+/// O diálogo é exibido no `Navigator` raiz (`useRootNavigator: true`). Para garantir que a tela da câmera
+/// do scanner cubra completamente o diálogo e seu fundo sem sobreposições visuais, a rota do scanner
+/// é empilhada a partir do `dialogContext` no `Navigator` raiz. Ao ler um QR Code válido, a conexão
+/// é disparada automaticamente via [conectarEditor].
 void mostrarDialogConexao(
   BuildContext context,
   DatasetRepository datasetRepo, {
   String? titulo,
   http.Client? client,
   SyncService? syncService,
+  WidgetBuilder? construtorScannerQr,
 }) {
   final BuildContext parentContext = context;
   final EditorDeCroqui configService = datasetRepo.editorDeCroqui;
@@ -195,6 +215,39 @@ void mostrarDialogConexao(
     builder: (dialogContext) {
       return StatefulBuilder(
         builder: (dialogContext, setDialogState) {
+          Future<void> executarConexao(String urlAlvo) async {
+            final url = urlAlvo.trim();
+            if (url.isEmpty) return;
+
+            setDialogState(() => isLoading = true);
+
+            final success = await conectarEditor(
+              dialogContext,
+              datasetRepo,
+              configService,
+              url,
+              client: client,
+              syncService: syncService,
+            );
+            if (dialogContext.mounted) {
+              setDialogState(() => isLoading = false);
+              if (success) {
+                Navigator.of(dialogContext).pop();
+                final navContext =
+                    TreeNavigationWrapper.navKey.currentContext ??
+                    parentContext;
+                navegarAposConexaoExperimental(navContext, datasetRepo);
+                if (navContext.mounted) {
+                  ScaffoldMessenger.of(navContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Conectado ao repositório editor!'),
+                    ),
+                  );
+                }
+              }
+            }
+          }
+
           return AlertDialog(
             backgroundColor: context.colors.caveShadow,
             shape: RoundedRectangleBorder(
@@ -290,14 +343,19 @@ void mostrarDialogConexao(
                         TelemetryService.instance.logAcaoConfiguracoes(
                           'abrir_qr_scanner',
                         );
-                        final scannedUrl = await Navigator.push(
-                          context,
+                        // Abre o scanner no Root Navigator para sobrepor completamente o diálogo
+                        final urlEscaneada = await Navigator.of(dialogContext)
+                            .push<String>(
                           MaterialPageRoute(
-                            builder: (context) => const QRScannerPage(),
+                            builder: construtorScannerQr ??
+                                (context) => const QRScannerPage(),
                           ),
                         );
-                        if (scannedUrl != null && scannedUrl is String) {
-                          urlController.text = scannedUrl;
+                        if (!dialogContext.mounted) return;
+                        if (urlEscaneada != null &&
+                            urlEscaneada.trim().isNotEmpty) {
+                          urlController.text = urlEscaneada;
+                          await executarConexao(urlEscaneada);
                         }
                       },
                     ),
@@ -357,43 +415,11 @@ void mostrarDialogConexao(
               ),
               Builder(
                 builder: (buttonContext) {
-                  VoidCallback? onConnect;
-                  if (isLoading) {
-                    onConnect = null;
-                  } else {
-                    onConnect = () async {
-                      final url = urlController.text.trim();
-                      if (url.isEmpty) return;
-
-                      setDialogState(() => isLoading = true);
-
-                      final success = await conectarEditor(
-                        dialogContext,
-                        datasetRepo,
-                        configService,
-                        url,
-                        client: client,
-                        syncService: syncService,
-                      );
-                      if (dialogContext.mounted) {
-                        setDialogState(() => isLoading = false);
-                        if (success) {
-                          Navigator.of(dialogContext).pop();
-                          final navContext =
-                              TreeNavigationWrapper.navKey.currentContext ??
-                              parentContext;
-                          navegarAposConexaoExperimental(navContext, datasetRepo);
-                          if (navContext.mounted) {
-                            ScaffoldMessenger.of(navContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Conectado ao repositório editor!'),
-                              ),
-                            );
-                          }
-                        }
-                      }
-                    };
-                  }
+                  final VoidCallback? onConnect = isLoading
+                      ? null
+                      : () async {
+                          await executarConexao(urlController.text);
+                        };
 
                   Widget buttonChild;
                   if (isLoading) {
