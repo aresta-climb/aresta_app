@@ -18,6 +18,33 @@ class LiveReloadEvent {
   final DateTime timestamp;
 
   const LiveReloadEvent({this.setorId, required this.timestamp});
+
+  /// Instancia o evento a partir do payload bruto recebido via WebSocket.
+  static LiveReloadEvent? deMensagem(String mensagem) {
+    try {
+      final decodificado = jsonDecode(mensagem);
+      return decodificado is Map ? deMapa(decodificado) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Constrói o evento a partir do mapa do evento WebSocket.
+  static LiveReloadEvent? deMapa(Map<dynamic, dynamic> dados) {
+    final tipo = dados['tipo'];
+    final evento = dados['evento'];
+    if (tipo == 'recarregar' ||
+        evento == 'recarregar' ||
+        tipo == 'evento' ||
+        dados.containsKey('setor')) {
+      final subDados = dados['dados'] is Map ? dados['dados'] as Map : null;
+      final setorId = (dados['setor'] ??
+          subDados?['setor'] ??
+          subDados?['id_croqui'])?.toString();
+      return LiveReloadEvent(setorId: setorId, timestamp: DateTime.now());
+    }
+    return null;
+  }
 }
 
 /// Gerencia a conexão com um repositório editor externo (servidor local) e o modo experimental.
@@ -219,22 +246,12 @@ class EditorDeCroqui {
         ws.listen(
           (event) {
             try {
-              final dados =
-                  jsonDecode(event.toString()) as Map<String, dynamic>;
-              if (dados['tipo'] == 'recarregar' ||
-                  dados['evento'] == 'recarregar' ||
-                  dados['tipo'] == 'evento' ||
-                  dados.containsKey('setor')) {
-                final setorId = (dados['setor'] ??
-                    dados['dados']?['setor'] ??
-                    dados['dados']?['id_croqui']) as String?;
+              final reloadEvent = LiveReloadEvent.deMensagem(event.toString());
+              if (reloadEvent != null) {
                 AppLogger.instance.logInfo(
-                  '[EditorCroqui] ⚡ Evento Live Reload recebido! Setor/ID: $setorId',
+                  '[EditorCroqui] ⚡ Evento Live Reload recebido! Setor/ID: ${reloadEvent.setorId}',
                 );
-                eventoLiveReload.value = LiveReloadEvent(
-                  setorId: setorId,
-                  timestamp: DateTime.now(),
-                );
+                eventoLiveReload.value = reloadEvent;
                 dispararPulsoRecarregamento();
               }
             } catch (e, stackTrace) {
