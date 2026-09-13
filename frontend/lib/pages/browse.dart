@@ -58,10 +58,15 @@ class _BrowsePageState extends State<BrowsePage> {
   /// sucesso ou falha após a conclusão.
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final String name = crag is ResumoPico
-        ? (crag.nome.isEmpty ? 'Pico' : crag.nome)
-        : safeString(crag['nome'], fallback: 'Pico');
-    final String id = crag is ResumoPico ? crag.id : crag['id'].toString();
+    final ResumoPico pico = crag is ResumoPico
+        ? crag
+        : ResumoPico.deMapa(
+            crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map),
+          );
+    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
+    final String id = pico.id;
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
