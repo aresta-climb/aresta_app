@@ -432,6 +432,197 @@ void main() {
       // Toque no canto oposto vazio (0, 100), dist ~100dp
       expect(painter.hitTest(const Offset(4, 104)), isFalse);
     });
+
+    test('hitTest para LinhaTrajeto com zoom 1.0x aplica tolerância ergonômica mínima', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 1.0,
+        linha: LinhaTrajeto(espessura: 2),
+      );
+
+      // Distância de 12dp da linha: dentro do raio mínimo ergonômico de 16dp
+      expect(painter.hitTest(const Offset(54, 16)), isTrue);
+
+      // Distância de 22dp da linha: fora do raio mínimo ergonômico de 16dp
+      expect(painter.hitTest(const Offset(54, 26)), isFalse);
+    });
+
+    test('hitTest para LinhaTrajeto com zoom ampliado (4.0x) colapsa tolerância extra e segue o traçado', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 4.0,
+        linha: LinhaTrajeto(espessura: 2),
+      );
+
+      // No zoom 4.0x, a tolerância extra de tela colapsa para zero
+      // Toque a 12dp locais agora é rejeitado (em tela seria 12 * 4 = 48dp de distância!)
+      expect(painter.hitTest(const Offset(54, 16)), isFalse);
+
+      // Toque muito próximo à linha (distância local <= 2dp) é aceito
+      expect(painter.hitTest(const Offset(54, 5)), isTrue);
+    });
+
+    test('hitTest para LinhaTrajeto detecta toque próximo aos marcadores compilados com tolerância ergonômica', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 1.0,
+        linha: LinhaTrajeto(
+          espessura: 2,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 0 0 L 100 0',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 0,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '1',
+                raio: 12,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // O marcador está no ponto local (54, 4) com raio 12dp.
+      // Com tolerância ergonômica mínima de 22dp em tela:
+      // Toque a 18dp de distância do centro do marcador: deve retornar true
+      expect(painter.hitTest(const Offset(54, 22)), isTrue);
+
+      // Toque a 30dp de distância do centro do marcador (e da linha): deve retornar false
+      expect(painter.hitTest(const Offset(54, 34)), isFalse);
+    });
+
+    test('hitTest com polígono contendo pontos coincidentes l2 == 0 avalia distância ao ponto', () {
+      final polygon = [
+        const Offset(10, 10),
+        const Offset(10, 10),
+        const Offset(20, 20),
+      ];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 0.0,
+        isLinha: false,
+        zoomAtual: 1.0,
+      );
+
+      expect(painter.hitTest(const Offset(12, 12)), isTrue);
+      expect(painter.hitTest(const Offset(80, 80)), isFalse);
+    });
+
+    test('MarkerPainter shouldRepaint detecta alterações em zoomAtual, transformationController e linha', () {
+      final ctrl1 = TransformationController();
+      final ctrl2 = TransformationController();
+      final linha1 = LinhaTrajeto(espessura: 2);
+      final linha2 = LinhaTrajeto(espessura: 4);
+
+      final p1 = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+
+      final pIdentico = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+
+      expect(p1.shouldRepaint(pIdentico), isFalse);
+
+      final pZoomDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 2.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+      expect(p1.shouldRepaint(pZoomDiferente), isTrue);
+
+      final pCtrlDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl2,
+        linha: linha1,
+      );
+      expect(p1.shouldRepaint(pCtrlDiferente), isTrue);
+
+      final pLinhaDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha2,
+      );
+      expect(p1.shouldRepaint(pLinhaDiferente), isTrue);
+    });
   });
 
   group('MapaInterativoPage Widget Tests', () {
@@ -2298,9 +2489,9 @@ void main() {
         isTrue,
       );
 
-      // 2. Raio adaptativo escalado proporcionalmente dentro do clamp ergonômico (11.0 a 15.0dp)
-      // ao invés dos 18.0dp fixos antigos
-      expect(canvas.circulos.first.raio, inInclusiveRange(11.0, 15.0));
+      // 2. Raio estritamente proporcional 1:1 ao editor (raio 18 * scaleX 0.4 = 7.2dp)
+      // ao invés de clamps e multiplicadores arbitrários
+      expect(canvas.circulos.first.raio, closeTo(7.2, 0.01));
     });
 
     test('MarkerPainter _paintLinha desenha com espessura proporcional à escala e halos moderados', () {
@@ -2333,15 +2524,37 @@ void main() {
       final casingPath = canvas.caminhos[1];
       final corePath = canvas.caminhos[2];
 
-      // 1. O traço principal deve ter espessura proporcional (clamp entre 2.0 e 4.0dp),
-      // e NÃO os 6.0dp absolutos nominais
-      expect(corePath.paint.strokeWidth, inInclusiveRange(2.0, 4.0));
+      // 1. O traço principal deve ter espessura estritamente proporcional 1:1 (espessura 6 * scaleX 0.2 = 1.2dp),
+      // e NÃO os limites de clamp (2.0 a 4.0dp)
+      expect(corePath.paint.strokeWidth, closeTo(1.2, 0.01));
 
       // 2. O casing deve ser ligeiramente maior que o traço principal (+1.5dp)
       expect(casingPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 1.5, 0.01));
 
       // 3. O halo moderado de seleção deve ser espessuraVisual + 6.0dp (e não +12.0dp)
       expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 6.0, 0.01));
+    });
+
+    test('MarkerPainter _paintLinha desenha com fallback quando compilado não possui caminhoSvg', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(50, 50)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          espessura: 2,
+        ),
+      );
+
+      painter.paint(canvas, const Size(100, 100));
+      expect(canvas.caminhos.isNotEmpty, isTrue);
     });
   });
 }
