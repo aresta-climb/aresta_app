@@ -61,8 +61,15 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final String name = crag is ResumoPico ? crag.nome : (crag['nome'] ?? 'Pico');
-    final String id = crag is ResumoPico ? crag.id : crag['id'];
+    final ResumoPico pico = crag is ResumoPico
+        ? crag
+        : ResumoPico.deMapa(
+            crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map),
+          );
+    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
+    final String id = pico.id;
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
