@@ -28,6 +28,12 @@ class ConfiguracaoEditor {
   /// Instância padrão vazia.
   static const vazia = ConfiguracaoEditor();
 
+  /// Indica se a configuração está completamente vazia ou nos padrões.
+  bool get isEmpty => this == vazia;
+
+  /// Indica se a configuração possui algum valor modificado.
+  bool get isNotEmpty => !isEmpty;
+
   /// Cria uma cópia com campos atualizados seletivamente.
   ConfiguracaoEditor copyWith({
     String? editorUrl,
