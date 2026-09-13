@@ -35,7 +35,7 @@ class GlobalSearchResult {
 
 class GlobalSearch extends StatefulWidget {
   final DatasetRepository datasetRepo;
-  final List<dynamic> downloadedPicos;
+  final List<ResumoPico> downloadedPicos;
   final bool autoFocus;
 
   const GlobalSearch({
@@ -153,21 +153,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     try {
       // 1. Croquis Baixados
-      for (var cragData in widget.downloadedPicos) {
-        final cragIdStr = cragData is ResumoPico
-            ? cragData.id
-            : cragData['id']?.toString();
-        if (cragIdStr == null || cragIdStr.isEmpty) continue;
+      for (final cragData in widget.downloadedPicos) {
+        final cragIdStr = cragData.id;
+        if (cragIdStr.isEmpty) continue;
         processedCragIds.add(cragIdStr);
 
-        final picoNome = cragData is ResumoPico
-            ? cragData.nome
-            : (cragData['nome']?.toString() ?? 'Sem Nome');
-        final picoLocal = cragData is ResumoPico
-            ? cragData.local
-            : (cragData['local']?.toString() ??
-                cragData['estado']?.toString() ??
-                '');
+        final picoNome =
+            cragData.nome.isNotEmpty ? cragData.nome : 'Sem Nome';
+        final picoLocal = cragData.local;
         final picoSubtitle = picoLocal.isNotEmpty
             ? 'Pico • $picoLocal • Salvo offline'
             : 'Pico • Salvo offline';
