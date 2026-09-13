@@ -31,8 +31,15 @@ Future<void> handlePicoSelection(
   String source = 'home',
   RegistroPrimeiraVisita? registroPrimeiraVisita,
 }) async {
-  final String? id = pico is ResumoPico ? pico.id : pico['id']?.toString();
-  if (id == null) return;
+  final ResumoPico resumo = pico is ResumoPico
+      ? pico
+      : ResumoPico.deMapa(
+          pico is Map<String, dynamic>
+              ? pico
+              : Map<String, dynamic>.from(pico as Map),
+        );
+  final String id = resumo.id;
+  if (id.isEmpty) return;
 
   final registro = registroPrimeiraVisita ?? RegistroPrimeiraVisita.instancia;
   final primeiraVisita = await registro.registrarEVerificarPrimeiraVisita(id);
@@ -61,7 +68,7 @@ Future<void> handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = pico is ResumoPico ? pico.url : pico['url']?.toString();
+    final url = resumo.url;
     if (url != null && url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
