@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:yaml/yaml.dart';
+import 'editor_croqui/modelos/configuracao_editor.dart';
 
 /// Evento disparado quando o Editor Desktop solicita uma atualização em tempo real (Live Reload).
 class LiveReloadEvent {
@@ -320,16 +321,16 @@ class EditorDeCroqui {
     return editedDir.path;
   }
 
-  Future<Map<String, dynamic>> _readConfig() async {
+  Future<ConfiguracaoEditor> _readConfig() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final configFile = File('${directory.path}/$_configFileName');
-      if (!configFile.existsSync()) return {};
+      if (!configFile.existsSync()) return ConfiguracaoEditor.vazia;
       final content = configFile.readAsStringSync();
-      if (content.trim().isEmpty) return {};
+      if (content.trim().isEmpty) return ConfiguracaoEditor.vazia;
       final yamlDoc = loadYaml(content);
       if (yamlDoc is YamlMap) {
-        return Map<String, dynamic>.from(yamlDoc);
+        return ConfiguracaoEditor.deMapa(yamlDoc);
       }
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -338,16 +339,17 @@ class EditorDeCroqui {
         stackTrace: stackTrace,
       );
     }
-    return {};
+    return ConfiguracaoEditor.vazia;
   }
 
-  Future<void> _writeConfig(Map<String, dynamic> config) async {
+  Future<void> _writeConfig(ConfiguracaoEditor config) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final configFile = File('${directory.path}/$_configFileName');
 
+      final mapa = config.paraMapa();
       final lines = <String>[];
-      for (final entry in config.entries) {
+      for (final entry in mapa.entries) {
         if (entry.value == null) continue;
         if (entry.value is String) {
           lines.add('${entry.key}: "${entry.value}"');
@@ -379,9 +381,9 @@ class EditorDeCroqui {
 
       final config = await _readConfig();
       if (config.isNotEmpty) {
-        final url = config['editorUrl'] as String?;
-        final experimental = config['isExperimental'] as bool? ?? false;
-        final devMode = config['isDevMode'] as bool? ?? false;
+        final url = config.editorUrl;
+        final experimental = config.isExperimental;
+        final devMode = config.isDevMode;
 
         // Dev Mode sempre persiste
         if (devMode) {
@@ -391,7 +393,7 @@ class EditorDeCroqui {
           );
         }
 
-        final expiryStr = config['expiryTime'] as String?;
+        final expiryStr = config.expiryTime;
 
         // Se o app foi fechado em modo experimental, limpamos tudo ao abrir
         if (experimental) {
@@ -499,15 +501,14 @@ class EditorDeCroqui {
 
     try {
       final config = await _readConfig();
-      if (url != null) {
-        config['editorUrl'] = url;
-      } else {
-        config['editorUrl'] = null;
-      }
-      config['isExperimental'] = true;
-      config['expiryTime'] = _expirationTime?.toIso8601String();
+      final novaConfig = config.copyWith(
+        editorUrl: url,
+        clearEditorUrl: url == null,
+        isExperimental: true,
+        expiryTime: _expirationTime?.toIso8601String(),
+      );
 
-      await _writeConfig(config);
+      await _writeConfig(novaConfig);
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao persistir modo experimental',
@@ -521,8 +522,7 @@ class EditorDeCroqui {
     isDevModeEnabled.value = enabled;
     try {
       final config = await _readConfig();
-      config['isDevMode'] = enabled;
-      await _writeConfig(config);
+      await _writeConfig(config.copyWith(isDevMode: enabled));
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao persistir modo dev',
@@ -536,8 +536,7 @@ class EditorDeCroqui {
     encerrarEscutaLiveReload();
     try {
       final config = await _readConfig();
-      config['isExperimental'] = false;
-      await _writeConfig(config);
+      await _writeConfig(config.copyWith(isExperimental: false));
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao desconectar',
@@ -570,8 +569,7 @@ class EditorDeCroqui {
       }
 
       final config = await _readConfig();
-      config['editorUrl'] = null;
-      await _writeConfig(config);
+      await _writeConfig(config.copyWith(clearEditorUrl: true));
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao limpar dados',
