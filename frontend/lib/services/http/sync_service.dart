@@ -227,7 +227,7 @@ class SyncService {
             '[SyncService] Rebaixando ${picosSalvos.length} croquis salvos...',
           );
           for (final pico in picosSalvos) {
-            final String id = pico['id'] ?? '';
+            final String id = pico.id;
             final resumos = indice.croquis.where((r) => r.id == id).toList();
             if (resumos.isNotEmpty) {
               await downloadCrag(resumos.first);
