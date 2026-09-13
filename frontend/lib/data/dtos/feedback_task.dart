@@ -19,4 +19,11 @@ class FeedbackTask {
     required this.jsonContent,
     this.pngFile,
   });
+
+  /// Descrição textual informada pelo usuário.
+  String get description => jsonContent['description'] as String? ?? '';
+
+  /// Metadados estruturados coletados no momento do envio.
+  Map<String, dynamic> get metadata =>
+      (jsonContent['metadata'] as Map?)?.cast<String, dynamic>() ?? const {};
 }

@@ -144,14 +144,14 @@ class FeedbackOrchestrator {
           if (isDebug && (appCheckToken == null || appCheckToken.isEmpty)) {
             AppLogger.instance.logInfo(
               '📝 [DEBUG MOCK] Feedback concluído localmente (App Check não registrado em dev):\n'
-              '   Descrição: ${task.jsonContent['description']}\n'
-              '   Metadados: ${task.jsonContent['metadata']}\n'
+              '   Descrição: ${task.description}\n'
+              '   Metadados: ${task.metadata}\n'
               '   Dispatcher: $dispatcher',
             );
           } else {
             await networkService.sendFeedback(
-              description: task.jsonContent['description'] ?? '',
-              metadata: task.jsonContent['metadata'] ?? {},
+              description: task.description,
+              metadata: task.metadata,
               dispatcher: dispatcher,
               pngFile: task.pngFile,
               indiceFile: indiceFile,
