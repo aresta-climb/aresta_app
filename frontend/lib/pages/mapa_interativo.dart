@@ -16,6 +16,7 @@ import '../navigation/map_hierarchy_resolver.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../utils/pincel_destaque_mapa.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -1877,17 +1878,23 @@ class MarkerPainter extends CustomPainter {
     // Projeção estritamente proporcional 1:1 baseada na escala dos pixels da imagem no viewport,
     // sem multiplicadores arbitrários ou limites mínimos artificiais (clamps).
     final double espessuraVisual = espessuraNominal * scaleX;
-    final Color corLinha = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
+    final Color corBase = ConstrutorCaminhoTrajeto.converterCorHex(
+      corHex,
+      fallback: ConstrutorCaminhoTrajeto.corPadraoAmarelo,
+    );
 
-    // Camada 1: Halo de Seleção (glow difuso de largura moderada ao redor do traçado selecionado)
+    // Quando selecionado, a cor do traçado muda ativamente para alto contraste (ex: amarelo -> laranja)
+    final Color corLinha = isSelected ? PincelDestaqueMapa.obterCorDestaque(corBase) : corBase;
+
+    // Camada 1: Halo de Seleção (justo e bem pertinho do traçado para não dificultar a visualização da rocha)
     if (isSelected) {
       final haloPaint = Paint()
-        ..color = corLinha.withValues(alpha: 0.5)
+        ..color = corLinha.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraVisual + 6.0
+        ..strokeWidth = espessuraVisual + 2.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
       canvas.drawPath(localPath, haloPaint);
     }
 
@@ -1927,14 +1934,15 @@ class MarkerPainter extends CustomPainter {
     }
   }
 
-  /// Desenha os marcadores pré-posicionados ao longo da linha com fidelidade estética 1:1 ao editor.
+  /// Desenha os marcadores pré-posicionados ao longo da linha com fidelidade estética 1:1 ao editor (padrão Ouroboulder).
   ///
   /// Para círculos identificadores (`CIRCULO_IDENTIFICADOR` e `INICIO_AGACHADO`), aplica:
-  /// 1. Casing escuro externo para contraste sobre qualquer textura de rocha.
-  /// 2. Fundo preenchido com a cor da via ([corLinha]).
-  /// 3. Borda intermediária branca de alto contraste.
-  /// 4. Rótulo numérico/textual em branco em negrito centralizado.
-  /// 5. Raio e tipografia adaptativos escalados com base na escala do viewport.
+  /// 1. Repouso: Fundo preto neutro (#1A1A1A), texto branco e contorno escuro sutil (1.0px a 1.2px).
+  /// 2. Selecionado: Fundo sempre preto neutro (#1A1A1A), borda colorida com a cor de destaque ([corLinha]) e halo sutil e justo.
+  /// 3. Borda branca intermediária eliminada.
+  /// 4. Rótulo ampliado para preencher 75-80% do diâmetro útil do círculo.
+  ///
+  /// Para setas direcionais (`SETA_DIRECIONAL`), renderiza a geometria triangular orientada pelo ângulo da tangente.
   void _paintMarcadores(Canvas canvas, double scaleX, double scaleY, Color corLinha) {
     for (final m in linha!.compilado.marcadores) {
       final lx = ((m.x - minX) * scaleX) + padding;
@@ -1944,36 +1952,51 @@ class MarkerPainter extends CustomPainter {
       switch (m.tipo) {
         case NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR:
         case NoTrajeto_TipoNo.INICIO_AGACHADO:
-          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
+        case NoTrajeto_TipoNo.FIM_TOP:
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 19.0;
           // Escala estritamente proporcional 1:1 baseada nos pixels da imagem do editor
           final double r = baseR * scaleX;
 
-          // 1. Casing externo preto de alto contraste (para leitura sobre rochas claras ou escuras)
-          final casingCirclePaint = Paint()
-            ..color = Colors.black54
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3.0;
-          canvas.drawCircle(center, r, casingCirclePaint);
-
-          // 2. Fundo preenchido com a cor da via
+          // 1. Fundo do círculo: SEMPRE preto neutro (#1A1A1A), não muda para preenchimento colorido
           final fillPaint = Paint()
-            ..color = corLinha
+            ..color = const Color(0xFF1A1A1A)
             ..style = PaintingStyle.fill;
           canvas.drawCircle(center, r, fillPaint);
 
-          // 3. Borda intermediária branca
-          final borderPaint = Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5;
-          canvas.drawCircle(center, r, borderPaint);
+          // 2. Borda do círculo:
+          // - Quando selecionado: utiliza exatamente o mesmo pincel de borda luminosa dos círculos avulsos
+          // - Em repouso: contorno preto sutil (1.2px) para alto contraste com qualquer rocha
+          if (isSelected) {
+            final borderPaint = PincelDestaqueMapa.obterPincelBordaDestaque(corLinha);
+            canvas.drawCircle(center, r, borderPaint);
+          } else {
+            final borderCirclePaint = Paint()
+              ..color = Colors.black.withValues(alpha: 0.85)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.2;
+            canvas.drawCircle(center, r, borderCirclePaint);
 
-          // 4. Texto em branco em negrito centralizado com dimensionamento proporcional 1:1
+            // Pulso de highlight branco ao tocar fora de qualquer área do mapa
+            if (highlightIntensity > 0.0) {
+              final pulseBorder = PincelDestaqueMapa.obterPincelBordaPulso(
+                highlightIntensity,
+                espessuraBase: math.max(2.0, 2.5 * scaleX),
+              );
+              canvas.drawCircle(center, r, pulseBorder);
+            }
+          }
+
+          // 4. Texto em negrito centralizado com dimensionamento proporcional (~80% do diâmetro)
+          // Como o fundo é sempre #1A1A1A, a cor do texto é sempre branca!
           if (m.rotulo.isNotEmpty) {
+            final double fallbackFonte = m.rotulo.length <= 1
+                ? baseR * 1.50
+                : (m.rotulo.length == 2 ? baseR * 1.30 : baseR * 1.15);
             final double baseFonte = m.hasTamanhoFonte() && m.tamanhoFonte > 0
                 ? m.tamanhoFonte.toDouble()
-                : baseR * 0.95;
+                : math.max(9.0, fallbackFonte);
             final double fontSize = baseFonte * scaleX;
+
             final textSpan = TextSpan(
               text: m.rotulo,
               style: TextStyle(
@@ -1988,6 +2011,49 @@ class MarkerPainter extends CustomPainter {
             )..layout();
             tp.paint(canvas, Offset(lx - tp.width / 2.0, ly - tp.height / 2.0));
           }
+          break;
+
+        case NoTrajeto_TipoNo.SETA_DIRECIONAL:
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
+          final double r = baseR * scaleX;
+          final double angDeg = m.anguloGrausX100 / 100.0;
+          final double angRad = angDeg * (math.pi / 180.0);
+
+          canvas.save();
+          canvas.translate(lx, ly);
+          canvas.rotate(angRad);
+
+          final double factor = r / 12.0;
+          final setaPath = Path()
+            ..moveTo(8.0 * factor, 0.0)
+            ..lineTo(-6.0 * factor, -6.0 * factor)
+            ..lineTo(-3.0 * factor, 0.0)
+            ..lineTo(-6.0 * factor, 6.0 * factor)
+            ..close();
+
+          final fillSeta = Paint()
+            ..color = corLinha
+            ..style = PaintingStyle.fill;
+          canvas.drawPath(setaPath, fillSeta);
+
+          final strokeSeta = Paint()
+            ..color = Colors.black.withValues(alpha: 0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(1.0, 1.8 * factor)
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+          canvas.drawPath(setaPath, strokeSeta);
+
+          // Pulso de highlight branco ao tocar fora de qualquer área do mapa
+          if (!isSelected && highlightIntensity > 0.0) {
+            final pulseSeta = PincelDestaqueMapa.obterPincelBordaPulso(
+              highlightIntensity,
+              espessuraBase: math.max(1.5, 2.0 * factor),
+            );
+            canvas.drawPath(setaPath, pulseSeta);
+          }
+
+          canvas.restore();
           break;
 
         case NoTrajeto_TipoNo.PROTECAO_FIXA:
@@ -2060,37 +2126,18 @@ class MarkerPainter extends CustomPainter {
     final Color corBase = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
 
     if (isSelected) {
-      final fillPaint = Paint()
-        ..color = corBase.withValues(alpha: 0.5)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+      final fillPaint = PincelDestaqueMapa.obterPincelPreenchimentoDestaque(corBase);
       canvas.drawPath(path, fillPaint);
 
-      final borderPaint = Paint()
-        ..color = corBase.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
-        ..strokeJoin = StrokeJoin.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.5);
+      final borderPaint = PincelDestaqueMapa.obterPincelBordaDestaque(corBase);
       canvas.drawPath(path, borderPaint);
     } else {
       // Base faint glow for clickable areas (or highlighted glow if intensity > 0)
-      final baseAlpha = 0.25;
-      final highlightAlpha = 0.5;
-      final effectiveAlpha = baseAlpha + ((highlightAlpha - baseAlpha) * highlightIntensity);
-
-      final glowPaint = Paint()
-        ..color = Colors.white.withValues(alpha: effectiveAlpha)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+      final glowPaint = PincelDestaqueMapa.obterPincelPreenchimentoPulso(highlightIntensity);
       canvas.drawPath(path, glowPaint);
       
       if (highlightIntensity > 0.0) {
-        final highlightBorderPaint = Paint()
-          ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5 * highlightIntensity
-          ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.0);
+        final highlightBorderPaint = PincelDestaqueMapa.obterPincelBordaPulso(highlightIntensity);
         canvas.drawPath(path, highlightBorderPaint);
       }
     }

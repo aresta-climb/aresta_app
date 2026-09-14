@@ -149,6 +149,17 @@ void main() {
         fallbackEsperado,
       );
     });
+
+    test('deve usar amarelo #FFD600 como fallback padrão quando não informado', () {
+      expect(
+        ConstrutorCaminhoTrajeto.converterCorHex(null),
+        const Color(0xFFFFD600),
+      );
+      expect(
+        ConstrutorCaminhoTrajeto.converterCorHex(''),
+        const Color(0xFFFFD600),
+      );
+    });
   });
 
   group('ConstrutorCaminhoTrajeto - Amostragem de Curvas e Distância Euclidiana', () {

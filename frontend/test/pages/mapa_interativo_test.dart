@@ -2435,7 +2435,7 @@ void main() {
       expect((customPaint.painter as MarkerPainter).isSelected, isTrue);
     });
 
-    test('MarkerPainter _paintMarcadores pinta círculo identificador com cores fiéis ao editor e raio adaptativo', () {
+    test('MarkerPainter _paintMarcadores pinta círculo identificador no estilo Ouroboulder em repouso (fundo preto neutro, sem borda branca)', () {
       final canvas = CanvasRegistrador();
       final painter = MarkerPainter(
         polygon: [const Offset(10, 10), const Offset(90, 90)],
@@ -2468,30 +2468,213 @@ void main() {
 
       painter.paint(canvas, const Size(400, 400));
 
-      // 1. Deve desenhar 3 círculos: casing escuro, preenchimento com a cor da via e borda branca
-      expect(canvas.circulos.length, 3);
-
-      // Casing escuro externo
+      // 1. Fundo preto neutro (#1A1A1A) em repouso
       expect(
-        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.strokeWidth >= 2.5),
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
         isTrue,
       );
 
-      // Fundo preenchido com a cor da via (#00E5FF)
-      expect(
-        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF00E5FF),
-        isTrue,
-      );
-
-      // Borda intermediária branca
+      // 2. Não deve ter borda branca intermediária grossa
       expect(
         canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.color == Colors.white),
+        isFalse,
+      );
+
+      // 3. Casing escuro fino (1.0px a 1.2px)
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.strokeWidth <= 1.5),
         isTrue,
       );
 
-      // 2. Raio estritamente proporcional 1:1 ao editor (raio 18 * scaleX 0.4 = 7.2dp)
-      // ao invés de clamps e multiplicadores arbitrários
+      // 4. Raio estritamente proporcional 1:1 ao editor (raio 18 * scaleX 0.4 = 7.2dp)
       expect(canvas.circulos.first.raio, closeTo(7.2, 0.01));
+    });
+
+    test('MarkerPainter _paintMarcadores aplica raio padrão 19px e fonte ampliada quando não especificado', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '1',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // Raio padrão 19px * scaleX 0.4 = 7.6dp
+      expect(canvas.circulos.first.raio, closeTo(7.6, 0.01));
+    });
+
+    test('MarkerPainter _paintMarcadores pinta círculo identificador com fundo escuro e borda colorida quando isSelected', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: true,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '7A',
+                raio: 16,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // 1. Fundo preenchido SEMPRE com #1A1A1A mesmo quando selecionado
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
+        isTrue,
+      );
+
+      // 2. Borda colorida idêntica à de círculos avulsos (opacidade 70%, blur sólido 1.5 e espessura 2.0)
+      expect(
+        canvas.circulos.any((c) =>
+          c.paint.style == PaintingStyle.stroke &&
+          (c.paint.color.a - 0.7).abs() < 0.05 &&
+          c.paint.strokeWidth == 2.0 &&
+          c.paint.maskFilter == const MaskFilter.blur(BlurStyle.solid, 1.5)
+        ),
+        isTrue,
+      );
+
+      // 3. Não deve ter borda branca intermediária
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.color == Colors.white),
+        isFalse,
+      );
+    });
+
+    test('MarkerPainter _paintMarcadores desenha pulso de highlight branco no círculo quando highlightIntensity > 0 e não selecionado', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        highlightIntensity: 0.8,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '7A',
+                raio: 16,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // 1. Fundo do círculo permanece preto neutro (#1A1A1A)
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
+        isTrue,
+      );
+
+      // 2. Deve conter o traço do pulso de highlight branco ao redor do círculo
+      expect(
+        canvas.circulos.any((c) =>
+          c.paint.style == PaintingStyle.stroke &&
+          c.paint.color.r == 1.0 &&
+          c.paint.color.g == 1.0 &&
+          c.paint.color.b == 1.0 &&
+          (c.paint.color.a - (0.8 * 0.8)).abs() < 0.05 &&
+          c.paint.maskFilter == const MaskFilter.blur(BlurStyle.solid, 1.0)
+        ),
+        isTrue,
+      );
+    });
+
+    test('MarkerPainter _paintMarcadores renderiza nó SETA_DIRECIONAL orientado pelo ângulo da tangente', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.SETA_DIRECIONAL,
+                anguloGrausX100: 4500,
+                raio: 12,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // Deve registrar caminhos desenhados para a seta (preenchimento com cor da via e contorno)
+      expect(
+        canvas.caminhos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFFFFD600),
+        isTrue,
+      );
+      expect(
+        canvas.caminhos.any((c) => c.paint.style == PaintingStyle.stroke),
+        isTrue,
+      );
     });
 
     test('MarkerPainter _paintLinha desenha com espessura proporcional à escala e halos moderados', () {
@@ -2531,8 +2714,11 @@ void main() {
       // 2. O casing deve ser ligeiramente maior que o traço principal (+1.5dp)
       expect(casingPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 1.5, 0.01));
 
-      // 3. O halo moderado de seleção deve ser espessuraVisual + 6.0dp (e não +12.0dp)
-      expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 6.0, 0.01));
+      // 3. O halo moderado de seleção deve ser justo e rente ao traçado (espessuraVisual + 2.5dp)
+      expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 2.5, 0.01));
+
+      // 4. A cor do traço ao selecionar deve mudar para alto contraste (se rota não for amarela, vira amarela #FFD600)
+      expect(corePath.paint.color.toARGB32(), 0xFFFFD600);
     });
 
     test('MarkerPainter _paintLinha desenha com fallback quando compilado não possui caminhoSvg', () {
@@ -2579,7 +2765,8 @@ class CanvasRegistrador extends Fake implements Canvas {
     circulos.add(RegistroCirculo(radius, Paint()
       ..color = paint.color
       ..style = paint.style
-      ..strokeWidth = paint.strokeWidth));
+      ..strokeWidth = paint.strokeWidth
+      ..maskFilter = paint.maskFilter));
   }
 
   @override
@@ -2587,7 +2774,8 @@ class CanvasRegistrador extends Fake implements Canvas {
     caminhos.add(RegistroCaminho(Paint()
       ..color = paint.color
       ..style = paint.style
-      ..strokeWidth = paint.strokeWidth));
+      ..strokeWidth = paint.strokeWidth
+      ..maskFilter = paint.maskFilter));
   }
 
   @override
@@ -2601,4 +2789,10 @@ class CanvasRegistrador extends Fake implements Canvas {
 
   @override
   void restore() {}
+
+  @override
+  void translate(double dx, double dy) {}
+
+  @override
+  void rotate(double radians) {}
 }
