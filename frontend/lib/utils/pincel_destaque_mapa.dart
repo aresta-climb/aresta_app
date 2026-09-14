@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Biblioteca utilitária para padronização dos pincéis (Paint) de destaque e seleção em mapas.
@@ -35,7 +34,8 @@ class PincelDestaqueMapa {
   static Paint obterPincelPreenchimentoPulso(double intensidade) {
     const double baseAlpha = 0.25;
     const double highlightAlpha = 0.5;
-    final double effectiveAlpha = baseAlpha + ((highlightAlpha - baseAlpha) * intensidade);
+    final double effectiveAlpha =
+        baseAlpha + ((highlightAlpha - baseAlpha) * intensidade);
 
     return Paint()
       ..color = Colors.white.withValues(alpha: effectiveAlpha)
@@ -44,7 +44,10 @@ class PincelDestaqueMapa {
   }
 
   /// Retorna o pincel para a borda de pulso luminoso (ao tocar fora ou animar marcadores).
-  static Paint obterPincelBordaPulso(double intensidade, {double espessuraBase = 1.5}) {
+  static Paint obterPincelBordaPulso(
+    double intensidade, {
+    double espessuraBase = 1.5,
+  }) {
     return Paint()
       ..color = Colors.white.withValues(alpha: 0.8 * intensidade)
       ..style = PaintingStyle.stroke

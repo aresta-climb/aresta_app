@@ -28,6 +28,14 @@ on:
         required: true
         type: boolean
         default: true
+      android_track:
+        description: 'Faixa do Google Play'
+        required: true
+        type: choice
+        options:
+          - 'internal,production'
+          - 'internal'
+        default: 'internal,production'
 
 jobs:
   prepare_release:
@@ -145,6 +153,7 @@ jobs:
     uses: ./.github/workflows/build_android.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+      android_track: ${{ inputs.android_track }}
     secrets: inherit
 
   build_ios:

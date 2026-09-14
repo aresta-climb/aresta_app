@@ -2,13 +2,14 @@
 
 - [ ] 1.1 Escrever teste de integração de ponta a ponta em `test/integration/cache_imagens_online_test.dart` cobrindo o fluxo do usuário em `ExplorarLocalPage`: abertura de croqui online, espera do carregamento da capa, navegação de retorno (pop) e reabertura, esperando falha inicial (Red) por disparar requisições HTTP redundantes
 
-## 2. Motor de Cache Volátil e Integridade no ProvedorImagemAresta (TDD - Princípio IV)
+## 2. Motor de Cache Volátil e Integridade no ProvedorImagemAresta (TDD - Princípios I, II, IV e VI)
 
 - [ ] 2.1 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para validação de hash obrigatório (erro de telemetria e fallback direto para `NetworkImage` sem gravação em cache quando hash for ausente ou nulo) (Red)
 - [ ] 2.2 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para download e persistência atômica no formato `<caminho>.<hash>` em `temp_cache`, garantindo resolução instantânea sem requisição de rede em chamadas subsequentes (Red)
 - [ ] 2.3 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para expurgo automático de versões anteriores com hashes divergentes no mesmo diretório após conclusão de download (Red)
-- [ ] 2.4 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para resolução e cache de miniaturas globais sob `temp_cache/thumbnails/<picoId>.webp.<hash>` e consulta prioritária a `$docsDir/thumbnails/<picoId>.webp` (Red)
-- [ ] 2.5 Implementar no `ProvedorImagemAresta` (`lib/widgets/provedor_imagem_aresta.dart`) a lógica de download atômico, persistência em `temp_cache` com padrão `<caminho>.<hash>`, exigência estrita de hash, limpeza de versões antigas e suporte a miniaturas, com docstrings `///` em português brasileiro explicando a intenção (Green)
+- [ ] 2.4 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para deduplicação de downloads concorrentes (múltiplos widgets solicitando a mesma mídia em paralelo compartilham a mesma Future e disparam apenas 1 requisição HTTP) (Red)
+- [ ] 2.5 Escrever testes unitários em `test/widgets/provedor_imagem_aresta_test.dart` para resolução e cache de miniaturas globais sob `temp_cache/thumbnails/<picoId>.webp.<hash>` e consulta prioritária a `$docsDir/thumbnails/<picoId>.webp` (Red)
+- [ ] 2.6 Implementar no `ProvedorImagemAresta` (`lib/widgets/provedor_imagem_aresta.dart`) a lógica de download atômico, persistência em `temp_cache` com padrão `<caminho>.<hash>`, exigência estrita de hash, limpeza de versões antigas, deduplicação de downloads concorrentes e suporte a miniaturas, com docstrings `///` em português brasileiro explicando a intenção (Green)
 
 ## 3. Refinamento de Ciclo de Vida no OfflineMarkdown (TDD - Princípios IV e V)
 

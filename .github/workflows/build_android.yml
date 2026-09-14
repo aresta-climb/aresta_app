@@ -7,6 +7,11 @@ on:
         description: 'A tag do git para construir'
         required: true
         type: string
+      android_track:
+        description: 'Faixa do Google Play'
+        required: false
+        type: string
+        default: 'internal,production'
 
 jobs:
   build:
@@ -130,5 +135,5 @@ jobs:
           releaseFiles: frontend/build/app/outputs/bundle/release/app-release.aab
           mappingFile: frontend/build/app/outputs/mapping/release/mapping.txt
           debugSymbols: frontend/build/native-debug-symbols/native-debug-symbols.zip
-          tracks: internal
+          tracks: ${{ inputs.android_track }}
           status: completed

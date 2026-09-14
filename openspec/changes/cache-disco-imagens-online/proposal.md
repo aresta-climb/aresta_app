@@ -2,17 +2,25 @@
 
 Durante a navegação em croquis no modo online (sem download prévio para o armazenamento permanente), imagens como capas em Markdown, mapas e miniaturas são baixadas repetidamente pela rede sempre que o usuário navega entre telas ou fecha e reabre o aplicativo. Isso ocorre porque o `ProvedorImagemAresta` atualmente apenas consulta o `temp_cache`, mas nunca persiste nele os bytes baixados da CDN, delegando a exibição a um `NetworkImage` efêmero em RAM. Além disso, o widget `OfflineMarkdown` purga o cache de memória em qualquer reconstrução (`didUpdateWidget`), agravando o consumo de rede, bateria e frustrando escaladores que consultam o croqui antes da trilha e perdem o acesso visual ao chegar na base da rocha sem sinal de celular.
 
-Esta proposta resolve a persistência volátil e a unificação do ecossistema de imagens sob os princípios inegociáveis de engenharia estabelecidos em `PRINCIPIOS.md`: desenvolvimento estritamente guiado por testes (TDD), testes de widget/integração em primeiro lugar, 100% de cobertura, simplicidade sem abstrações prematuras, tudo em português brasileiro e documentação contínua abrangente.
+Esta proposta resolve a persistência volátil e a unificação do ecossistema de imagens sob os princípios inegociáveis de engenharia estabelecidos em `AGENTS.md`: desenvolvimento estritamente guiado por testes (TDD), testes de widget/integração em primeiro lugar, 100% de cobertura, simplicidade sem abstrações prematuras, tudo em português brasileiro e documentação contínua abrangente.
 
 ## What Changes
 
 - **Gravação Atômica no `temp_cache` pelo `ProvedorImagemAresta`**: Ao realizar o download de imagens remotas da CDN, o provedor persiste os bytes em disco sob o diretório volátil do SO (`temp_cache`) utilizando a convenção content-addressable `<caminho>.<hash>`.
 - **Exigência Estrita de Hash**: A presença do `checksumSha256` torna-se pré-requisito mandatório para gravação no `temp_cache`. A ausência de hash emite registro de erro via telemetria (`AppLogger.instance.logError`) e realiza fallback para streaming direto sem poluir o cache local.
 - **Limpeza de Hashes Anteriores em Background**: Ao concluir o download de uma nova versão de imagem com hash atualizado, versões anteriores do mesmo arquivo com hashes defasados no `temp_cache` são removidas sem onerar o caminho crítico de leitura.
+- **Deduplicação de Downloads Concorrentes**: Memoização de downloads em andamento em memória para evitar requisições de rede duplicadas para o mesmo arquivo quando múltiplos widgets requisitam a mesma mídia ao mesmo tempo.
 - **Suporte a Thumbnails Globais e Unificação de UI**: Extensão do `ProvedorImagemAresta` para resolver e cachear miniaturas globais sob `temp_cache/thumbnails/<picoId>.webp.<hash>`, migrando `browse_functions.dart` (`_CragBackgroundWidget`) e `meus_croquis_functions.dart` para o provedor centralizado com downsampling via `larguraAlvo`.
-- **Remoção de Evicção Incondicional no `OfflineMarkdown`**: Eliminação da chamada cega a `provider.evict()` em `OfflineMarkdown.didUpdateWidget`, delegando a invalidação reativa estritamente à variação do hash e conteúdo.
+- **Remoção de Evicção Incondicional no `OfflineMarkdown`**: Eliminação da chamada cega a `provider.evict()` em `OfflineMarkdown.didUpdateWidget`, delegando a invalidação reativa estritamente à variação do hash e conteúdo (`data` ou `cragId`).
 - **Aproveitamento de Cache no Download Offline (`SyncService`)**: O fluxo de download de croqui (`sync_isolate.dart`) passa a verificar se mídias já foram cacheadas no `temp_cache` com o hash esperado antes de realizar requisições HTTP, copiando-as diretamente para o armazenamento permanente.
-- **Conformidade Estrita com `PRINCIPIOS.md`**: Garantia de 100% de cobertura de testes, paridade de arquivos de teste para `meus_croquis_functions.dart`, priorização de testes de widget e integração, docstrings `///` em português brasileiro em todas as rotinas e atualização dos arquivos `README.md` pertinentes.
+- **Conformidade Estrita com `AGENTS.md`**:
+  - *Princípio I (Tudo em Português)*: Nomenclatura, documentação e parâmetros (`caminhoCacheVolatil`, métodos auxiliares) 100% em português brasileiro.
+  - *Princípio II (Componentes Independentes)*: Separação nítida de responsabilidades entre UI, provedor de mídia e serviço de sincronização.
+  - *Princípio III (100% Test Coverage)*: Cobertura integral e testes rigorosos para todos os cenários e caminhos de exceção.
+  - *Princípio IV (TDD)*: Ciclo Red-Green-Refactor estrito com criação de `test/view_functions/meus_croquis_functions_test.dart` para garantir espelhamento exato com `lib/`.
+  - *Princípio V (Testes de Widget em Primeiro Lugar)*: Priorização de testes de integração ponta a ponta e widget tests antes de rotinas de baixo nível.
+  - *Princípio VI (Simplicidade e Anti-Abstração)*: Uso direto de `dart:io`, verificação SHA-256 em $O(1)$ pelo nome do arquivo, sem dependências externas pesadas como `cached_network_image`.
+  - *Princípio VII (Documentação Contínua)*: Docstrings `///` em português em todas as rotinas explicando o porquê e atualização dos `README.md` pertinentes.
 
 ## Capabilities
 
