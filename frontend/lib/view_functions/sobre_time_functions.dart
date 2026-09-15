@@ -38,7 +38,7 @@ class MembroTime {
   });
 }
 
-Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
+Widget buildQuadrantCollapsedContent(BuildContext context, MembroTime data, int index) {
   // Place elements exactly at the geometric centroid of a quarter circle (4 / 3π ≈ 0.424)
   AlignmentGeometry align = Alignment.center;
   if (index == 0) {
@@ -60,7 +60,7 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
     child: CircleAvatar(
       radius: 20,
       backgroundColor: context.colors.slateBlue.withValues(alpha: 0.5),
-      backgroundImage: AssetImage(data['image']!),
+      backgroundImage: AssetImage(data.image),
     ),
   );
 
@@ -68,7 +68,7 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
     mainAxisSize: MainAxisSize.min,
     children: [
       Text(
-        data['collapsedRole'] ?? data['role']!,
+        data.collapsedRole ?? data.role,
         style: TextStyle(
           color: context.colors.chalkWhite,
           fontSize: 12,
@@ -115,36 +115,33 @@ Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> d
   );
 }
 
-const List<Map<String, String>> teamData = [
-  {
-    'role': 'Designer',
-    'name': 'Lorena Carla',
-    'linkedin': 'https://www.linkedin.com/in/lorenamelor/',
-    'github': '',
-    'image': 'assets/team/lorena.webp',
-  },
-  {
-    'role': 'Produto / Marketing',
-    'collapsedRole': 'Produto/\nMarketing',
-    'name': 'Evandro Jaconi',
-    'linkedin': 'https://www.linkedin.com/in/evandrojaconi/',
-    'github': '',
-    'image': 'assets/team/evandro.webp',
-  },
-  {
-    'role': 'Backend',
-    'name': 'Renato Utsch',
-    'linkedin': '',
-    'github': 'https://github.com/renatoutsch',
-    'image': 'assets/team/renato.webp',
-  },
-  {
-    'role': 'Frontend',
-    'name': 'Eduardo Utsch',
-    'linkedin': 'https://www.linkedin.com/in/eduardo-utsch-205745350/',
-    'github': 'https://github.com/eduardoutsch',
-    'image': 'assets/team/eduardo.webp',
-  },
+const List<MembroTime> teamData = [
+  MembroTime(
+    role: 'Designer',
+    name: 'Lorena Carla',
+    linkedin: 'https://www.linkedin.com/in/lorenamelor/',
+    image: 'assets/team/lorena.webp',
+  ),
+  MembroTime(
+    role: 'Produto / Marketing',
+    collapsedRole: 'Produto/\nMarketing',
+    name: 'Evandro Jaconi',
+    linkedin: 'https://www.linkedin.com/in/evandrojaconi/',
+    image: 'assets/team/evandro.webp',
+  ),
+  MembroTime(
+    role: 'Backend',
+    name: 'Renato Utsch',
+    github: 'https://github.com/renatoutsch',
+    image: 'assets/team/renato.webp',
+  ),
+  MembroTime(
+    role: 'Frontend',
+    name: 'Eduardo Utsch',
+    linkedin: 'https://www.linkedin.com/in/eduardo-utsch-205745350/',
+    github: 'https://github.com/eduardoutsch',
+    image: 'assets/team/eduardo.webp',
+  ),
 ];
 
 Widget buildAnimatedQuadrant({
@@ -231,7 +228,7 @@ Widget buildAnimatedQuadrant({
   }
 
 
-Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> data) {
+Widget buildQuadrantDetailedContent(BuildContext context, MembroTime data) {
   final double canvasSize = MediaQuery.of(context).size.width - 32;
   final double inscribedSquareSize = canvasSize * 0.707;
 
@@ -256,12 +253,12 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
               child: CircleAvatar(
                 radius: 36,
                 backgroundColor: context.colors.slateBlue.withValues(alpha: 0.8),
-                backgroundImage: AssetImage(data['image']!),
+                backgroundImage: AssetImage(data.image),
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              data['name']!.toUpperCase(),
+              data.name.toUpperCase(),
               style: TextStyle(
                 color: context.colors.chalkWhite,
                 fontSize: 18,
@@ -272,7 +269,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
             ),
             const SizedBox(height: 4),
             Text(
-              data['role']!,
+              data.role,
               style: TextStyle(
                 color: context.colors.dryMoss,
                 fontSize: 13,
@@ -286,11 +283,11 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
               spacing: 8.0,
               runSpacing: 8.0,
               children: [
-                if (data['linkedin']!.isNotEmpty)
+                if (data.linkedin.isNotEmpty)
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        await launchUrl(Uri.parse(data['linkedin']!), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(data.linkedin), mode: LaunchMode.externalApplication);
                       } catch (e, stackTrace) {
                         AppLogger.instance.logError(
                           'Erro ao abrir link do LinkedIn em sobre_time_functions',
@@ -307,11 +304,11 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
-                if (data['github']!.isNotEmpty)
+                if (data.github.isNotEmpty)
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        await launchUrl(Uri.parse(data['github']!), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(data.github), mode: LaunchMode.externalApplication);
                       } catch (e, stackTrace) {
                         AppLogger.instance.logError(
                           'Erro ao abrir link do GitHub em sobre_time_functions',
