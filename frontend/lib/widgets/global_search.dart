@@ -599,10 +599,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
           return item.originalItem is Setor;
         }
 
-        final original = item.originalItem;
-        if (original is Escalada) {
+        final esc = item.originalItem;
+        if (esc is Escalada) {
           if (_selectedFilter == 'Esportivas' &&
-              original.whichTipo() != Escalada_Tipo.viaEsportiva) {
+              esc.whichTipo() != Escalada_Tipo.viaEsportiva) {
             return false;
           }
           if (_selectedFilter == 'Móveis' &&

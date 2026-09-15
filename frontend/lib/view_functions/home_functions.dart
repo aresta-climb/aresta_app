@@ -69,7 +69,7 @@ Future<void> handlePicoSelection(
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
     final url = resumo.url;
-    if (url != null && url.isNotEmpty) {
+    if (url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
