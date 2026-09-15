@@ -2020,6 +2020,87 @@ void main() {
         expect(find.text('Target Via'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'Card da via exibe codenome correto (5-C) para caminho de linhas vetoriais e omite IDs tecnicos',
+      (WidgetTester tester) async {
+        final pontoLinha1 = Mapa_PontoDeInteresse(
+          id: 'linha_12',
+          linha: LinhaTrajeto(
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 10 10 L 20 20',
+              marcadores: [
+                MarcadorCompilado(
+                  x: 10,
+                  y: 10,
+                  tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                  rotulo: '5',
+                ),
+              ],
+            ),
+          ),
+        );
+        final pontoLinha2 = Mapa_PontoDeInteresse(
+          id: 'linha_21',
+          linha: LinhaTrajeto(
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 20 20 L 30 30',
+              marcadores: [
+                MarcadorCompilado(
+                  x: 30,
+                  y: 30,
+                  tipo: NoTrajeto_TipoNo.FIM_TOP,
+                  rotulo: 'C',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapa_poly.webp',
+          larguraMapa: 1000,
+          alturaMapa: 800,
+          pontosDeInteresse: [pontoLinha1, pontoLinha2],
+        );
+        mapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Polydance',
+            ids: ['linha_12', 'linha_21'],
+          ),
+        );
+
+        final pico = Pico()..nome = 'Pico Teste';
+        final setor = Setor()..nome = 'Setor Teste';
+        final esc = Escalada(boulder: Boulder(nome: 'Polydance'));
+        setor.escaladas.add(esc);
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaInterativoPage(
+                mapa: mapa,
+                pico: pico,
+                cragId: 'pico_1',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                initialSelectedId: 'linha_12',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Deve exibir o codenome "5-C" no card
+        expect(find.text('5-C'), findsOneWidget);
+        // NÃO deve exibir os IDs técnicos das linhas
+        expect(find.textContaining('linha_12'), findsNothing);
+        expect(find.textContaining('linha_21'), findsNothing);
+      },
+    );
   });
 
   group('MapaInterativoPage Overlay Navigation Tests', () {

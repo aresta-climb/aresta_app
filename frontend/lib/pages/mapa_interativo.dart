@@ -17,6 +17,7 @@ import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/pincel_destaque_mapa.dart';
+import '../utils/resolvedor_rotulos_referencia.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -666,21 +667,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
 
     String getLabelsForRef(Mapa_Referencia ref) {
-      if (ref.ids.isEmpty) return ref.nome;
-      List<String> labels = [];
-      for (var id in ref.ids) {
-        for (var p in widget.mapa.pontosDeInteresse) {
-          if (p.id == id) {
-            if (p.label.isNotEmpty) {
-              labels.add(p.label);
-            } else {
-              labels.add(id);
-            }
-            break;
-          }
-        }
-      }
-      return labels.isNotEmpty ? labels.join('-') : ref.nome;
+      return extrairRotuloReferencia(widget.mapa, ref);
     }
 
     final resolved = _refToResolved[ref];

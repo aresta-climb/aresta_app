@@ -10,6 +10,7 @@ import '../widgets/mapa_thumbnail.dart';
 import '../theme/app_colors.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../utils/resolvedor_rotulos_referencia.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
 ///
@@ -184,22 +185,7 @@ Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
       }
 
       if (matchingRef != null && matchingRef.ids.isNotEmpty) {
-        List<String> labels = [];
-        for (var id in matchingRef.ids) {
-          for (var p in mapa.pontosDeInteresse) {
-            if (p.id == id) {
-              if (p.label.isNotEmpty) {
-                labels.add(p.label);
-              } else {
-                labels.add(
-                  id,
-                ); // Fallback to id if label is empty but requested
-              }
-              break;
-            }
-          }
-        }
-        resolvedLabel = labels.join('-');
+        resolvedLabel = extrairRotuloReferencia(mapa, matchingRef);
         if (setor.mapas.length > 1) {
           mapIndicator = 'M${i + 1}';
         }
