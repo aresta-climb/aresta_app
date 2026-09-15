@@ -134,7 +134,7 @@ void main() {
         circulo: BoundingCirculo(x: 100, y: 100, raio: 50),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#1');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 50.0);
       expect(areaInfo.bounds.top, 50.0);
@@ -163,7 +163,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#2');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 70.0);
       expect(areaInfo.bounds.top, 80.0);
@@ -191,7 +191,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#3');
       expect(areaInfo, isNotNull);
 
       // 60x40 rotated 90 deg becomes 40x60 bounds
@@ -209,7 +209,7 @@ void main() {
         poligono: BoundingPoligono(coordenadas: [0, 0, 10, 0, 10, 10, 0, 10]),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#4');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 0.0);
       expect(areaInfo.bounds.top, 0.0);
@@ -226,7 +226,7 @@ void main() {
         poligono: BoundingPoligono(coordenadas: [0, 0, 1, 1]),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#5');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds, Rect.fromLTRB(0, 0, 1, 1));
       expect(areaInfo.polygon.length, 2);
@@ -244,7 +244,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#6');
       expect(areaInfo, isNotNull);
       // Should be same as 0 degrees
       expect(areaInfo!.bounds.left, closeTo(70.0, 0.001));
@@ -253,7 +253,7 @@ void main() {
 
     test('Invalid Area Type', () {
       final ponto = Mapa_PontoDeInteresse(id: '7');
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#7');
       expect(areaInfo, isNull);
     });
 
@@ -274,7 +274,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#linha_teste');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, closeTo(100.0, 1.0));
       expect(areaInfo.bounds.right, closeTo(160.0, 1.0));
@@ -298,7 +298,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#linha_conteudo');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 10.0);
       expect(areaInfo.bounds.right, 50.0);

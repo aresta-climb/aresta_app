@@ -60,7 +60,7 @@ void main() {
   });
 
   group('ServicoCroquiOnline', () {
-    test('carregarCroquiRemoto baixa, desserializa e registra na sessão online', () async {
+    test('carregarCroquiRemoto baixa, desserializa e registra na sessão online e salva no temp_cache com hash', () async {
       final croquiMock = Croqui(id: 'pico_online', nome: 'Pedra do Elefante');
       final bytes = croquiMock.writeToBuffer();
 
@@ -76,8 +76,9 @@ void main() {
       );
 
       final resultado = await servico.carregarCroquiRemoto(
-        'https://servidor.com/croquis/pico_online.binarypb',
+        'https://servidor.com/croquis/pico_online/compilado.binarypb?v=hash123',
         picoId: 'pico_online',
+        checksumSha256: 'hash123',
       );
 
       expect(resultado, isNotNull);
@@ -85,8 +86,59 @@ void main() {
       expect(sessaoOnline.obterCroquiOnline('pico_online'), isNotNull);
       expect(sessaoOnline.obterEtag('pico_online'), equals('"v1-hash"'));
 
-      final arquivoCache = File('${tempDir.path}/pico_online/pico_online.binarypb');
+      final arquivoCache = File('${tempDir.path}/pico_online/compilado.binarypb.hash123');
       expect(await arquivoCache.exists(), isTrue);
+    });
+
+    test('carregarCroquiRemoto reutiliza arquivo já existente no temp_cache sem fazer requisição HTTP', () async {
+      final croquiMock = Croqui(id: 'pico_cached', nome: 'Pico do Cache');
+      final bytes = croquiMock.writeToBuffer();
+
+      final cacheDir = Directory('${tempDir.path}/pico_cached')..createSync(recursive: true);
+      final arquivoCache = File('${cacheDir.path}/compilado.binarypb.hash999');
+      await arquivoCache.writeAsBytes(bytes);
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/pico_cached/compilado.binarypb?v=hash999',
+        picoId: 'pico_cached',
+        checksumSha256: 'hash999',
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico do Cache'));
+      expect(sessaoOnline.obterCroquiOnline('pico_cached'), isNotNull);
+
+      // Garante que NENHUMA chamada HTTP foi feita ao client
+      verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+    });
+
+    test('carregarCroquiRemoto expurga versões anteriores do compilado.binarypb no temp_cache', () async {
+      final cacheDir = Directory('${tempDir.path}/pico_expurgo')..createSync(recursive: true);
+      final arquivoAntigo = File('${cacheDir.path}/compilado.binarypb.hash_antigo');
+      await arquivoAntigo.writeAsBytes([1, 2, 3]);
+
+      final arquivoLegado = File('${cacheDir.path}/pico_expurgo.binarypb');
+      await arquivoLegado.writeAsBytes([4, 5, 6]);
+
+      expect(await arquivoAntigo.exists(), isTrue);
+      expect(await arquivoLegado.exists(), isTrue);
+
+      final croquiNovo = Croqui(id: 'pico_expurgo', nome: 'Pico Novo');
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response.bytes(croquiNovo.writeToBuffer(), 200));
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/pico_expurgo/compilado.binarypb?v=hash_novo',
+        picoId: 'pico_expurgo',
+        checksumSha256: 'hash_novo',
+      );
+
+      expect(resultado, isNotNull);
+
+      final arquivoNovo = File('${cacheDir.path}/compilado.binarypb.hash_novo');
+      expect(await arquivoNovo.exists(), isTrue);
+      expect(await arquivoAntigo.exists(), isFalse, reason: 'Versão antiga deve ser expurgada');
+      expect(await arquivoLegado.exists(), isFalse, reason: 'Arquivo legado deve ser expurgado');
     });
 
     test('carregarCroquiRemoto retorna null em caso de erro HTTP 404', () async {
@@ -309,7 +361,7 @@ void main() {
       expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_novo"'));
 
       // Deve ter salvo cópia no cache volátil
-      final arquivoCache = File('${tempDir.path}/pico_1/pico_1.binarypb');
+      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb');
       expect(await arquivoCache.exists(), isTrue);
       expect(await arquivoCache.readAsBytes(), equals(croquiAtualizado.writeToBuffer()));
     });
@@ -342,7 +394,7 @@ void main() {
       expect(sessaoOnline.obterCroquiOnline('pico_1')?.nome, equals('Pedra Recarregada'));
       expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_2"'));
 
-      final arquivoCache = File('${tempDir.path}/pico_1/pico_1.binarypb');
+      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb');
       expect(await arquivoCache.exists(), isTrue);
       expect(await arquivoCache.readAsBytes(), equals(croquiRecarregado.writeToBuffer()));
     });

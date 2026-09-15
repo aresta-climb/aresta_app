@@ -33,7 +33,15 @@ class ServicoCroquiOnline {
         _verificarPicoBaixado = verificarPicoBaixado,
         _aoAtualizarCroqui = aoAtualizarCroqui;
 
+  /// Retorna a instância do gerenciador de sessão online.
+  GerenciadorSessaoOnline get sessaoOnline => _sessaoOnline;
+
+  /// Retorna o caminho customizado para cache volátil, caso tenha sido configurado.
+  String? get caminhoCacheVolatil => _caminhoCacheVolatil;
+
   /// Obtém o diretório de cache temporário volátil do sistema operacional.
+  Future<String> obterDiretorioCache() => _obterDiretorioCache();
+
   Future<String> _obterDiretorioCache() async {
     if (_caminhoCacheVolatil != null) {
       return _caminhoCacheVolatil;
@@ -46,9 +54,41 @@ class ServicoCroquiOnline {
   Future<Croqui?> carregarCroquiRemoto(
     String url, {
     required String picoId,
+    String? checksumSha256,
   }) async {
     try {
-      final uri = Uri.parse(url);
+      String? hashEfetivo = checksumSha256;
+      final uriOriginal = Uri.parse(url);
+      if (hashEfetivo == null || hashEfetivo.isEmpty) {
+        hashEfetivo = uriOriginal.queryParameters['v'];
+      }
+
+      // Verificação prévia no cache volátil (temp_cache)
+      if (hashEfetivo != null && hashEfetivo.isNotEmpty) {
+        final cacheDir = await _obterDiretorioCache();
+        final arquivoCache = File('$cacheDir/$picoId/compilado.binarypb.$hashEfetivo');
+        if (await arquivoCache.exists()) {
+          try {
+            final bytes = await arquivoCache.readAsBytes();
+            final croqui = Croqui.fromBuffer(bytes);
+            _sessaoOnline.registrarCroquiOnline(picoId, croqui);
+            return croqui;
+          } catch (e) {
+            AppLogger.instance.logAviso(
+              '[ServicoCroquiOnline] Cache corrompido para $picoId, prosseguindo com download de rede: $e',
+            );
+          }
+        }
+      }
+
+      // Montagem da URL garantindo parâmetro de versão v=<hash>
+      Uri uri = uriOriginal;
+      if (hashEfetivo != null && hashEfetivo.isNotEmpty && !uri.queryParameters.containsKey('v')) {
+        final queryParams = Map<String, String>.from(uri.queryParameters);
+        queryParams['v'] = hashEfetivo;
+        uri = uri.replace(queryParameters: queryParams);
+      }
+
       final response = await _client.get(uri);
 
       if (response.statusCode == 200) {
@@ -56,7 +96,7 @@ class ServicoCroquiOnline {
         final bytes = response.bodyBytes;
 
         final croqui = Croqui.fromBuffer(bytes);
-        await _salvarEmCacheVolatil(picoId, bytes);
+        await _salvarEmCacheVolatil(picoId, bytes, checksumSha256: hashEfetivo);
 
         _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: etag);
         return croqui;
@@ -82,6 +122,7 @@ class ServicoCroquiOnline {
   Future<Croqui?> recarregarCroquiOnline(
     String url, {
     required String picoId,
+    String? checksumSha256,
   }) async {
     try {
       final uri = Uri.parse(url);
@@ -89,7 +130,7 @@ class ServicoCroquiOnline {
       queryParams['t'] = DateTime.now().millisecondsSinceEpoch.toString();
       final urlBypass = uri.replace(queryParameters: queryParams).toString();
 
-      return await carregarCroquiRemoto(urlBypass, picoId: picoId);
+      return await carregarCroquiRemoto(urlBypass, picoId: picoId, checksumSha256: checksumSha256);
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[ServicoCroquiOnline] Erro ao recarregar croqui online $picoId',
@@ -100,21 +141,56 @@ class ServicoCroquiOnline {
     }
   }
 
-  /// Salva uma cópia binária do croqui no diretório de cache volátil do sistema operacional.
-  Future<void> _salvarEmCacheVolatil(String picoId, Uint8List bytes) async {
+  /// Salva uma cópia binária do croqui no diretório de cache volátil do sistema operacional,
+  /// indexado pelo checksum quando disponível, e expurga versões anteriores divergentes.
+  Future<void> _salvarEmCacheVolatil(
+    String picoId,
+    Uint8List bytes, {
+    String? checksumSha256,
+  }) async {
     try {
       final cacheDir = await _obterDiretorioCache();
       final picoCacheDir = Directory('$cacheDir/$picoId');
       if (!await picoCacheDir.exists()) {
         await picoCacheDir.create(recursive: true);
       }
-      final cacheFile = File('${picoCacheDir.path}/$picoId.binarypb');
+      final nomeArquivo = (checksumSha256 != null && checksumSha256.isNotEmpty)
+          ? 'compilado.binarypb.$checksumSha256'
+          : 'compilado.binarypb';
+      final cacheFile = File('${picoCacheDir.path}/$nomeArquivo');
       await cacheFile.writeAsBytes(bytes);
+
+      _expurgarVersoesAntigas(picoCacheDir, nomeArquivo);
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[ServicoCroquiOnline] Falha ao gravar cache volátil',
         error: e,
         stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Expurga arquivos de versões anteriores do croqui no diretório de cache temporário.
+  void _expurgarVersoesAntigas(Directory picoCacheDir, String nomeArquivoSalvo) {
+    try {
+      if (!picoCacheDir.existsSync()) return;
+      for (final entity in picoCacheDir.listSync()) {
+        if (entity is File) {
+          final fileName = entity.path.replaceAll(r'\', '/').split('/').last;
+          if (fileName.startsWith('compilado.binarypb') && fileName != nomeArquivoSalvo) {
+            try {
+              entity.deleteSync();
+            } catch (_) {}
+          } else if (fileName.endsWith('.binarypb') && fileName != nomeArquivoSalvo) {
+            try {
+              entity.deleteSync();
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.instance.logAviso(
+        '[ServicoCroquiOnline] Erro ao expurgar versões antigas no cache volátil: $e',
       );
     }
   }

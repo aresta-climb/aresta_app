@@ -378,5 +378,76 @@ void main() {
         expect(requisicoesFoto, equals(0));
       },
     );
+
+    test(
+      'downloadIsolateMain deve salvar como compilado.binarypb e agendar deleção de arquivo legado se existir',
+      () async {
+        final downloadsDir = Directory('${tempDir.path}/downloads')..createSync(recursive: true);
+        final picoDir = Directory('${downloadsDir.path}/pico_canonico')..createSync(recursive: true);
+
+        // Cria o arquivo legado existente no disco
+        final arquivoLegado = File('${picoDir.path}/pico_canonico.binarypb');
+        arquivoLegado.writeAsBytesSync([1, 2, 3]);
+
+        final croqui = Croqui()
+          ..id = 'pico_canonico'
+          ..nome = 'Pico Canônico';
+        final croquiBytes = croqui.writeToBuffer();
+        final croquiHash = sha256.convert(croquiBytes).toString();
+
+        localServer.listen((request) async {
+          if (request.uri.path.endsWith('compilado.binarypb')) {
+            request.response.headers.contentType = ContentType.binary;
+            request.response.statusCode = 200;
+            request.response.add(croquiBytes);
+            await request.response.close();
+          }
+        });
+
+        final resumo = ResumoCroqui()
+          ..id = 'pico_canonico'
+          ..nome = 'Pico Canônico'
+          ..caminhoRelativo = 'picos/pico_canonico/compilado.binarypb'
+          ..checksumSha256Croqui = croquiHash;
+
+        final receivePort = ReceivePort();
+        final args = DownloadIsolateArgs(
+          newResumoBytes: resumo.writeToBuffer(),
+          downloadsDirPath: downloadsDir.path,
+          baseUrl: 'http://${localServer.address.address}:${localServer.port}',
+          sendPort: receivePort.sendPort,
+        );
+
+        final resultCompleter = Completer<DownloadIsolateResult>();
+
+        receivePort.listen((msg) {
+          if (msg is DownloadIsolateResult) {
+            resultCompleter.complete(msg);
+            receivePort.close();
+          }
+        });
+
+        await downloadIsolateMain(args);
+
+        final result = await resultCompleter.future.timeout(
+          const Duration(seconds: 5),
+        );
+
+        expect(result.error, isNull);
+        // filesToRename deve apontar para compilado.binarypb
+        expect(
+          result.filesToRename,
+          containsPair(
+            '${downloadsDir.path}/pico_canonico/compilado.binarypb.tmp',
+            '${downloadsDir.path}/pico_canonico/compilado.binarypb',
+          ),
+        );
+        // filesToDelete deve conter o arquivo legado
+        expect(
+          result.filesToDelete,
+          contains('${downloadsDir.path}/pico_canonico/pico_canonico.binarypb'),
+        );
+      },
+    );
   });
 }

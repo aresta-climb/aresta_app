@@ -17,7 +17,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/http/servico_croqui_online.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
-void handlePicoSelection(
+Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
   Map<String, dynamic> pico, {
@@ -45,7 +45,12 @@ void handlePicoSelection(
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
-      croqui = await servicoOnline.carregarCroquiRemoto(url, picoId: id);
+      final checksum = pico['checksum']?.toString();
+      croqui = await servicoOnline.carregarCroquiRemoto(
+        url,
+        picoId: id,
+        checksumSha256: checksum,
+      );
     }
   }
 
@@ -54,6 +59,9 @@ void handlePicoSelection(
   Navigator.of(context, rootNavigator: true).pop();
 
   if (croqui != null && croqui.picos.isNotEmpty) {
+    datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(id, croqui);
+    datasetRepo.indexarMidiasDoCroqui(id, croqui);
+
     AppNav.toPico(
       context,
       pico: croqui.picos.first,

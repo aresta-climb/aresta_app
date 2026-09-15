@@ -117,13 +117,20 @@ Future<bool> conectarEditor(
             final baseUrl = datasetRepo.editorDeCroqui.activeBaseUrl;
             final relPath = resumo.caminhoRelativo.isNotEmpty
                 ? resumo.caminhoRelativo
-                : '${resumo.id}.binarypb';
-            final croquiUrl = '$baseUrl/$relPath';
+                : 'picos/${resumo.id}/compilado.binarypb';
+            final checksum = resumo.checksumSha256Croqui;
+            final croquiUrl = checksum.isNotEmpty
+                ? '$baseUrl/$relPath?v=$checksum'
+                : '$baseUrl/$relPath';
             final servicoOnline = ServicoCroquiOnline(
               client: httpClient,
               sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
             );
-            await servicoOnline.carregarCroquiRemoto(croquiUrl, picoId: resumo.id);
+            await servicoOnline.carregarCroquiRemoto(
+              croquiUrl,
+              picoId: resumo.id,
+              checksumSha256: checksum.isNotEmpty ? checksum : null,
+            );
             datasetRepo.notificarAtualizacaoSessaoOnline(resumo.id);
           } catch (e, stackTrace) {
             AppLogger.instance.logError(

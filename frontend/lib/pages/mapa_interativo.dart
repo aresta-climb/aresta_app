@@ -353,7 +353,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     double maxY = double.negativeInfinity;
 
     for (var p in pontos) {
-      final areaInfo = AreaHelper.getAreaInfo(p);
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${p.id}';
+      final areaInfo = AreaHelper.getAreaInfo(p, chaveCache: chaveCanonica);
       if (areaInfo != null) {
         if (areaInfo.bounds.left < minX) minX = areaInfo.bounds.left;
         if (areaInfo.bounds.top < minY) minY = areaInfo.bounds.top;
@@ -545,7 +546,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) return [];
 
     return widget.mapa.pontosDeInteresse.map((ponto) {
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${ponto.id}';
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: chaveCanonica);
       if (areaInfo == null) return const SizedBox.shrink();
 
       final minX = areaInfo.bounds.left;
@@ -608,7 +610,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               isLinha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha,
               linha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha ? ponto.linha : null,
               corHex: ponto.cor.isNotEmpty ? ponto.cor : null,
-              chaveCache: ponto.id,
+              chaveCache: chaveCanonica,
               zoomAtual: _transformationController.value.getMaxScaleOnAxis(),
               transformationController: _transformationController,
             ),
@@ -1404,7 +1406,10 @@ class AreaInfo {
 class AreaHelper {
   /// Computes a list of vertices forming the polygon for a given marker,
   /// along with its encompassing AABB. Returns `null` if the shape is not supported.
-  static AreaInfo? getAreaInfo(Mapa_PontoDeInteresse ponto) {
+  static AreaInfo? getAreaInfo(
+    Mapa_PontoDeInteresse ponto, {
+    required String chaveCache,
+  }) {
     List<Offset> polygon = [];
     double minX, minY, maxX, maxY;
 
@@ -1494,7 +1499,7 @@ class AreaHelper {
         if (linha.hasCompilado() && linha.compilado.caminhoSvg.isNotEmpty) {
           final comp = linha.compilado;
           final caminho = ConstrutorCaminhoTrajeto.obterCaminho(
-            chaveCache: ponto.id,
+            chaveCache: chaveCache,
             caminhoSvg: comp.caminhoSvg,
             estilo: linha.estilo,
           );

@@ -6,10 +6,14 @@
 library;
 
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/main.dart'; // Para acessar TreeNavigationWrapper
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -28,6 +32,7 @@ import '../../data/models/feedback_metadata.dart';
 /// - Resolução da Tela e Modo Escuro
 /// - Status da Conexão com a Internet
 /// - Árvore de navegação atual (`TreeNavigationController`)
+/// - Auditoria de integridade criptográfica de hash (`indice.binarypb`, `compilado.binarypb`, `thumbnail.webp`)
 class FeedbackMetadataCollector {
   /// Override opcional para substituir a representação string do nó ativo (último nó da árvore)
   static String? globalActiveNodeOverride;
@@ -56,6 +61,15 @@ class FeedbackMetadataCollector {
   /// Função opcional para sobrescrever o UUID (útil para testes).
   final String Function()? getUuidOverride;
 
+  /// Função opcional para sobrescrever o diretório de documentos (útil para testes).
+  final Future<String> Function()? getDocsPathOverride;
+
+  /// Função opcional para sobrescrever o diretório de cache temporário (útil para testes).
+  final Future<String> Function()? getTempCachePathOverride;
+
+  /// Função opcional para sobrescrever o identificador do croqui ativo (útil para testes).
+  final String? Function()? getCragIdOverride;
+
   /// Cria um coletor de metadados de feedback.
   ///
   /// É possível passar funções *override* para facilitar o isolamento em testes unitários.
@@ -68,6 +82,9 @@ class FeedbackMetadataCollector {
     this.getConnectivityOverride,
     this.getTimestampOverride,
     this.getUuidOverride,
+    this.getDocsPathOverride,
+    this.getTempCachePathOverride,
+    this.getCragIdOverride,
   });
 
   /// Executa a coleta de todas as informações de metadados.
@@ -222,6 +239,160 @@ class FeedbackMetadataCollector {
           '$day de $monthName de $year às $hour:$minute:$second (GMT-3)';
     } catch (_) {}
 
+    // Coleta de auditoria criptográfica de integridade (índice, croqui e miniatura)
+    String? indiceSha256;
+    String? croquiId;
+    String? croquiSha256Esperado;
+    String? croquiSha256Real;
+    String? croquiStatus;
+    String? thumbnailSha256Esperado;
+    String? thumbnailSha256Real;
+    String? thumbnailStatus;
+
+    try {
+      final docsPath = getDocsPathOverride != null
+          ? await getDocsPathOverride!()
+          : (await getApplicationDocumentsDirectory()).path;
+
+      final tempCachePath = getTempCachePathOverride != null
+          ? await getTempCachePathOverride!()
+          : '${(await getTemporaryDirectory()).path}/temp_cache';
+
+      // 1. Auditoria do indice.binarypb local
+      final indiceFile = File('$docsPath/indice.binarypb');
+      Indice? indice;
+      if (await indiceFile.exists()) {
+        final indiceBytes = await indiceFile.readAsBytes();
+        indiceSha256 = sha256.convert(indiceBytes).toString();
+        try {
+          indice = Indice.fromBuffer(indiceBytes);
+        } catch (e) {
+          AppLogger.instance.logAviso(
+            '[FeedbackCollector] Erro ao decodificar indice.binarypb para auditoria: $e',
+          );
+        }
+      }
+
+      // Determina o cragId ativo em visualização
+      if (getCragIdOverride != null) {
+        croquiId = getCragIdOverride!();
+      } else {
+        final treeController = TreeNavigationWrapper.currentTreeController;
+        if (treeController != null) {
+          NavNode? current = treeController.currentNode;
+          while (current != null) {
+            if (current is PicoContextNode) {
+              croquiId = current.cragId;
+              break;
+            }
+            current = current.parent;
+          }
+        }
+      }
+
+      // 2. Se houver um croqui ativo, audita o croqui e a thumbnail
+      if (croquiId != null && croquiId.isNotEmpty) {
+        ResumoCroqui? resumo;
+        if (indice != null) {
+          for (final r in indice.croquis) {
+            if (r.id == croquiId) {
+              resumo = r;
+              break;
+            }
+          }
+        }
+
+        if (resumo != null) {
+          if (resumo.hasChecksumSha256Croqui() &&
+              resumo.checksumSha256Croqui.isNotEmpty) {
+            croquiSha256Esperado = resumo.checksumSha256Croqui;
+          }
+          if (resumo.hasChecksumSha256Thumbnail() &&
+              resumo.checksumSha256Thumbnail.isNotEmpty) {
+            thumbnailSha256Esperado = resumo.checksumSha256Thumbnail;
+          }
+        }
+
+        // Procura arquivo de croqui local (downloads permanente, legado ou temp_cache)
+        File? croquiFile;
+        final caminhoPermanente =
+            File('$docsPath/downloads/$croquiId/compilado.binarypb');
+        final caminhoLegado =
+            File('$docsPath/downloads/$croquiId/$croquiId.binarypb');
+
+        if (await caminhoPermanente.exists()) {
+          croquiFile = caminhoPermanente;
+        } else if (await caminhoLegado.exists()) {
+          croquiFile = caminhoLegado;
+        } else {
+          // Busca no temp_cache
+          if (croquiSha256Esperado != null) {
+            final cacheComHash = File(
+                '$tempCachePath/$croquiId/compilado.binarypb.$croquiSha256Esperado');
+            if (await cacheComHash.exists()) {
+              croquiFile = cacheComHash;
+            }
+          }
+          if (croquiFile == null) {
+            final cacheSemHash =
+                File('$tempCachePath/$croquiId/compilado.binarypb');
+            if (await cacheSemHash.exists()) {
+              croquiFile = cacheSemHash;
+            }
+          }
+        }
+
+        if (croquiFile != null && await croquiFile.exists()) {
+          final croquiBytes = await croquiFile.readAsBytes();
+          croquiSha256Real = sha256.convert(croquiBytes).toString();
+          if (croquiSha256Esperado != null &&
+              croquiSha256Esperado.isNotEmpty) {
+            croquiStatus = (croquiSha256Real == croquiSha256Esperado)
+                ? 'INTEGRO'
+                : 'DIVERGENTE';
+          } else {
+            croquiStatus = 'INTEGRO';
+          }
+        } else {
+          croquiStatus = 'NAO_BAIXADO';
+        }
+
+        // Procura arquivo de thumbnail local
+        File? thumbFile;
+        final thumbDocs = File('$docsPath/thumbnails/$croquiId.webp');
+        final thumbDownloads =
+            File('$docsPath/downloads/$croquiId/thumbnail.webp');
+        final thumbCache = File('$tempCachePath/thumbnails/$croquiId.webp');
+
+        if (await thumbDocs.exists()) {
+          thumbFile = thumbDocs;
+        } else if (await thumbDownloads.exists()) {
+          thumbFile = thumbDownloads;
+        } else if (await thumbCache.exists()) {
+          thumbFile = thumbCache;
+        }
+
+        if (thumbFile != null && await thumbFile.exists()) {
+          final thumbBytes = await thumbFile.readAsBytes();
+          thumbnailSha256Real = sha256.convert(thumbBytes).toString();
+          if (thumbnailSha256Esperado != null &&
+              thumbnailSha256Esperado.isNotEmpty) {
+            thumbnailStatus = (thumbnailSha256Real == thumbnailSha256Esperado)
+                ? 'INTEGRO'
+                : 'DIVERGENTE';
+          } else {
+            thumbnailStatus = 'INTEGRO';
+          }
+        } else {
+          thumbnailStatus = 'NAO_BAIXADO';
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logAviso(
+        '[FeedbackCollector] Falha ao coletar integridade criptográfica: $e\n$stackTrace',
+      );
+    }
+
     return FeedbackMetadata(
       navigationTree: navigationTree.isEmpty ? 'unknown' : navigationTree,
       submittedAt: submittedAt,
@@ -238,6 +409,14 @@ class FeedbackMetadataCollector {
       deviceOrientation: deviceOrientation,
       isDarkMode: isDarkMode,
       connectivity: connectivity,
+      indiceSha256: indiceSha256,
+      croquiId: croquiId,
+      croquiSha256Esperado: croquiSha256Esperado,
+      croquiSha256Real: croquiSha256Real,
+      croquiStatus: croquiStatus,
+      thumbnailSha256Esperado: thumbnailSha256Esperado,
+      thumbnailSha256Real: thumbnailSha256Real,
+      thumbnailStatus: thumbnailStatus,
     );
   }
 

@@ -85,8 +85,9 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     final id = newResumo.id;
     final url = '${args.baseUrl}/${newResumo.caminhoRelativo}';
     final picoDirPath = '${args.downloadsDirPath}/$id';
-    final picoFilePath = '$picoDirPath/$id.binarypb';
-    final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
+    final picoFilePath = '$picoDirPath/compilado.binarypb';
+    final tmpPicoFilePath = '$picoDirPath/compilado.binarypb.tmp';
+    final legacyPicoFilePath = '$picoDirPath/$id.binarypb';
 
     final List<String> errosDownloads = [];
     String? ultimoRastreamentoPilha;
@@ -237,7 +238,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
       return;
     }
 
-    final oldPicoData = await storage.readLocalCroqui(picoFilePath);
+    final oldPicoData = await storage.readLocalCroqui(picoFilePath) ??
+        await storage.readLocalCroqui(legacyPicoFilePath);
 
     final newContent = {
       for (var ext in newPicoData.arquivosExternos)
@@ -251,6 +253,9 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         : <String, String>{};
 
     final List<String> filesToDelete = [];
+    if (await File(legacyPicoFilePath).exists()) {
+      filesToDelete.add(legacyPicoFilePath);
+    }
     if (oldPicoData != null) {
       for (var oldExt in oldPicoData.arquivosExternos) {
         if (!newContent.containsKey(oldExt.caminho)) {

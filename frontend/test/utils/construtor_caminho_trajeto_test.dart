@@ -104,22 +104,54 @@ void main() {
       expect(identical(caminho1, caminho2), isTrue);
     });
 
-    test('limparCache deve invalidar as entradas cacheadas', () {
-      final caminho1 = ConstrutorCaminhoTrajeto.obterCaminho(
-        chaveCache: 'linha_cache_limpeza',
+    test('limparCache deve invalidar as entradas cacheadas de SVG e de viewport', () {
+      final caminhoBase = Path()..moveTo(0, 0)..lineTo(100, 0);
+      final caminhoSvg1 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'mapa_teste#linha_cache_limpeza',
         caminhoSvg: svgExemplo,
         estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+      final caminhoVp1 = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.TRACEJADO,
+        chaveCache: 'mapa_teste#linha_cache_viewport_limpeza',
       );
 
       ConstrutorCaminhoTrajeto.limparCache();
 
-      final caminho2 = ConstrutorCaminhoTrajeto.obterCaminho(
-        chaveCache: 'linha_cache_limpeza',
+      final caminhoSvg2 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'mapa_teste#linha_cache_limpeza',
         caminhoSvg: svgExemplo,
         estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
       );
+      final caminhoVp2 = ConstrutorCaminhoTrajeto.aplicarEstiloNoViewport(
+        caminhoBase,
+        LinhaTrajeto_EstiloTraco.TRACEJADO,
+        chaveCache: 'mapa_teste#linha_cache_viewport_limpeza',
+      );
 
-      expect(identical(caminho1, caminho2), isFalse);
+      expect(identical(caminhoSvg1, caminhoSvg2), isFalse);
+      expect(identical(caminhoVp1, caminhoVp2), isFalse);
+    });
+
+    test('deve isolar traçados de mapas distintos que utilizam mesmo id local via chave composta', () {
+      final caminhoMapa1 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'imagens/mapa1.webp#linha_1',
+        caminhoSvg: 'M 0 0 L 100 100',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+
+      final caminhoMapa2 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'imagens/mapa2.webp#linha_1',
+        caminhoSvg: 'M 500 500 L 900 900',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+
+      expect(identical(caminhoMapa1, caminhoMapa2), isFalse);
+      expect(caminhoMapa1.getBounds().left, closeTo(0.0, 0.1));
+      expect(caminhoMapa1.getBounds().right, closeTo(100.0, 0.1));
+      expect(caminhoMapa2.getBounds().left, closeTo(500.0, 0.1));
+      expect(caminhoMapa2.getBounds().right, closeTo(900.0, 0.1));
     });
   });
 

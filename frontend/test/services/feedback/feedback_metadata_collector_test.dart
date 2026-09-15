@@ -1,9 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -14,6 +18,8 @@ class MockAndroidDeviceInfo extends Mock implements AndroidDeviceInfo {}
 class MockAndroidBuildVersion extends Mock implements AndroidBuildVersion {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('FeedbackMetadataCollector', () {
     test('coleta todos os metadados com sucesso', () async {
       final mockVersion = MockAndroidBuildVersion();
@@ -129,6 +135,179 @@ void main() {
         setorSemGrupo.obterCaminhoCurto(),
         'Início -> Pico (bau) -> Setor (Falésia Sul)',
       );
+    });
+  });
+
+  group('Auditoria Criptográfica de Hashes', () {
+    late Directory tempDocsDir;
+    late Directory tempCacheDir;
+
+    setUp(() async {
+      tempDocsDir = await Directory.systemTemp.createTemp('feedback_docs_');
+      tempCacheDir = await Directory.systemTemp.createTemp('feedback_cache_');
+    });
+
+    tearDown(() async {
+      if (await tempDocsDir.exists()) {
+        await tempDocsDir.delete(recursive: true);
+      }
+      if (await tempCacheDir.exists()) {
+        await tempCacheDir.delete(recursive: true);
+      }
+    });
+
+    test('coleta hashes de auditoria com status INTEGRO quando arquivos coincidem com o índice', () async {
+      final croquiBytes = [10, 20, 30, 40];
+      final croquiHash = sha256.convert(croquiBytes).toString();
+
+      final thumbBytes = [50, 60, 70];
+      final thumbHash = sha256.convert(thumbBytes).toString();
+
+      final indice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_integro',
+            checksumSha256Croqui: croquiHash,
+            checksumSha256Thumbnail: thumbHash,
+          ),
+        ],
+      );
+      final indiceBytes = indice.writeToBuffer();
+      final indiceHash = sha256.convert(indiceBytes).toString();
+
+      final indiceFile = File('${tempDocsDir.path}/indice.binarypb');
+      await indiceFile.writeAsBytes(indiceBytes);
+
+      final croquiDir = Directory('${tempDocsDir.path}/downloads/pico_integro')..createSync(recursive: true);
+      await File('${croquiDir.path}/compilado.binarypb').writeAsBytes(croquiBytes);
+
+      final thumbDir = Directory('${tempDocsDir.path}/thumbnails')..createSync(recursive: true);
+      await File('${thumbDir.path}/pico_integro.webp').writeAsBytes(thumbBytes);
+
+      final collector = FeedbackMetadataCollector(
+        getAppInstanceIdOverride: () async => 'inst_1',
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_integro',
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.indiceSha256, equals(indiceHash));
+      expect(metadata.croquiId, equals('pico_integro'));
+      expect(metadata.croquiSha256Esperado, equals(croquiHash));
+      expect(metadata.croquiSha256Real, equals(croquiHash));
+      expect(metadata.croquiStatus, equals('INTEGRO'));
+      expect(metadata.thumbnailSha256Esperado, equals(thumbHash));
+      expect(metadata.thumbnailSha256Real, equals(thumbHash));
+      expect(metadata.thumbnailStatus, equals('INTEGRO'));
+    });
+
+    test('identifica status DIVERGENTE quando os arquivos locais divergem dos hashes do índice', () async {
+      final indice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_divergente',
+            checksumSha256Croqui: 'hash_esperado_croqui',
+            checksumSha256Thumbnail: 'hash_esperado_thumb',
+          ),
+        ],
+      );
+      await File('${tempDocsDir.path}/indice.binarypb').writeAsBytes(indice.writeToBuffer());
+
+      final croquiDir = Directory('${tempDocsDir.path}/downloads/pico_divergente')..createSync(recursive: true);
+      await File('${croquiDir.path}/compilado.binarypb').writeAsBytes([9, 9, 9]);
+
+      final thumbDir = Directory('${tempDocsDir.path}/thumbnails')..createSync(recursive: true);
+      await File('${thumbDir.path}/pico_divergente.webp').writeAsBytes([8, 8, 8]);
+
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_divergente',
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiStatus, equals('DIVERGENTE'));
+      expect(metadata.croquiSha256Esperado, equals('hash_esperado_croqui'));
+      expect(metadata.croquiSha256Real, equals(sha256.convert([9, 9, 9]).toString()));
+      expect(metadata.thumbnailStatus, equals('DIVERGENTE'));
+      expect(metadata.thumbnailSha256Esperado, equals('hash_esperado_thumb'));
+      expect(metadata.thumbnailSha256Real, equals(sha256.convert([8, 8, 8]).toString()));
+    });
+
+    test('identifica status NAO_BAIXADO quando os arquivos não existem localmente', () async {
+      final indice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_nao_baixado',
+            checksumSha256Croqui: 'hash_croqui_esperado',
+            checksumSha256Thumbnail: 'hash_thumb_esperado',
+          ),
+        ],
+      );
+      await File('${tempDocsDir.path}/indice.binarypb').writeAsBytes(indice.writeToBuffer());
+
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_nao_baixado',
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiStatus, equals('NAO_BAIXADO'));
+      expect(metadata.croquiSha256Real, isNull);
+      expect(metadata.thumbnailStatus, equals('NAO_BAIXADO'));
+      expect(metadata.thumbnailSha256Real, isNull);
+    });
+
+    test('coleta apenas indiceSha256 quando nenhum croqui ativo está em visualização', () async {
+      final indiceBytes = [1, 2, 3];
+      await File('${tempDocsDir.path}/indice.binarypb').writeAsBytes(indiceBytes);
+
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => null,
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.indiceSha256, equals(sha256.convert(indiceBytes).toString()));
+      expect(metadata.croquiId, isNull);
+      expect(metadata.croquiStatus, isNull);
+      expect(metadata.thumbnailStatus, isNull);
+    });
+
+    test('reconhece croqui ativo a partir de temp_cache indexado por hash', () async {
+      final croquiBytes = [7, 7, 7];
+      final croquiHash = sha256.convert(croquiBytes).toString();
+
+      final indice = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_cache',
+            checksumSha256Croqui: croquiHash,
+          ),
+        ],
+      );
+      await File('${tempDocsDir.path}/indice.binarypb').writeAsBytes(indice.writeToBuffer());
+
+      final cacheDir = Directory('${tempCacheDir.path}/pico_cache')..createSync(recursive: true);
+      await File('${cacheDir.path}/compilado.binarypb.$croquiHash').writeAsBytes(croquiBytes);
+
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_cache',
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiSha256Real, equals(croquiHash));
+      expect(metadata.croquiStatus, equals('INTEGRO'));
     });
   });
 }

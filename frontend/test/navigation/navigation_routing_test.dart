@@ -12,6 +12,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/navigation/navigation_functions.dart';
+import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 
 void main() {
   testWidgets(
@@ -475,6 +477,59 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byType(MapasCarrosselPage), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'AppNav.toBrowse e AppNav.home limpam o cache de ConstrutorCaminhoTrajeto',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        final syncService = SyncService(datasetRepository: datasetRepo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+              key: TreeNavigationWrapper.navKey,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        final context = tester.element(find.byType(TreeNavigationWrapper));
+
+        // 1. Testa toBrowse
+        final p1 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#nav_browse',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        AppNav.toBrowse(context);
+        await tester.pump(const Duration(seconds: 1));
+
+        final p2 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#nav_browse',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(p1, p2), isFalse);
+
+        // 2. Testa home
+        final p3 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#nav_home',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        AppNav.home(context);
+        await tester.pump(const Duration(seconds: 1));
+
+        final p4 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#nav_home',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(p3, p4), isFalse);
       },
     );
   });

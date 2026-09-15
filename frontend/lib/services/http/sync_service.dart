@@ -603,8 +603,11 @@ class SyncService {
     try {
       for (var newResumo in newIndice.croquis) {
         final picoFilePath =
+            '${downloadsDir.path}/${newResumo.id}/compilado.binarypb';
+        final legacyPicoFilePath =
             '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
-        if (await File(picoFilePath).exists()) {
+        if (await File(picoFilePath).exists() ||
+            await File(legacyPicoFilePath).exists()) {
           bool needsUpdate = false;
 
           if (oldIndice == null) {

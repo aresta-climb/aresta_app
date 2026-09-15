@@ -24,8 +24,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/constants/network_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/utils/construtor_caminho_trajeto.dart';
+import 'package:frontend/services/http/servico_croqui_online.dart';
 
 class MockAssetBundle extends Mock implements AssetBundle {}
+class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -38,6 +41,8 @@ class MockPathProviderPlatform extends PathProviderPlatform
   Future<String?> getApplicationSupportPath() async => tempPath;
   @override
   Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => '$tempPath/temp_cache';
 }
 
 void main() {
@@ -71,6 +76,21 @@ void main() {
       expect(repo.activeDataset.value, isNotNull);
       expect(repo.activeDataset.value!.availablePicos, isEmpty);
       expect(repo.activeDataset.value!.downloadedPicos, isEmpty);
+    });
+
+    test('loadEmpty deve invalidar cache de traçados de ConstrutorCaminhoTrajeto', () {
+      final p1 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'mapa#1',
+        caminhoSvg: 'M 0 0 L 10 10',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+      repo.loadEmpty();
+      final p2 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: 'mapa#1',
+        caminhoSvg: 'M 0 0 L 10 10',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+      expect(identical(p1, p2), isFalse);
     });
 
     test('triggerHomeReset deve incrementar homeResetTrigger', () {
@@ -164,7 +184,20 @@ void main() {
         final dummyCroqui = Croqui()..picos.add(dummyPico);
         await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
 
+        final p1 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#download',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+
         await repo.updateDatasetAfterDownload('pico_1');
+
+        final p2 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: 'mapa#download',
+          caminhoSvg: 'M 0 0 L 10 10',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(p1, p2), isFalse);
 
         final updatedAvailable = repo.activeDataset.value!.availablePicos;
         expect(updatedAvailable.first['isDownloaded'], isTrue);
@@ -254,6 +287,34 @@ void main() {
         final pico = available.first;
         final baseUrl = repo.editorDeCroqui.activeBaseUrl;
         expect(pico['thumbnailUrl'], equals('$baseUrl/thumbnails/br_mg_caete_pedra_filha.webp'));
+      },
+    );
+
+    test(
+      'loadIndiceToMemory constrói url com parâmetro mandatório de versão ?v=<checksumSha256Croqui>',
+      () async {
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'pico_versao',
+              nome: 'Pico Versão',
+              caminhoRelativo: 'picos/pico_versao/compilado.binarypb',
+              checksumSha256Croqui: 'hash_abc123',
+            ),
+          ],
+        );
+        repo.indiceData.value = indice;
+        await repo.loadIndiceToMemory(indice);
+
+        final available = repo.activeDataset.value!.availablePicos;
+        expect(available.length, 1);
+        final pico = available.first;
+        final baseUrl = repo.editorDeCroqui.activeBaseUrl;
+        expect(
+          pico['url'],
+          equals('$baseUrl/picos/pico_versao/compilado.binarypb?v=hash_abc123'),
+        );
+        expect(pico['checksum'], equals('hash_abc123'));
       },
     );
 
@@ -370,39 +431,148 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // Consulta de Croqui (Híbrido: Local ou Sessão Online)
+  // Consulta de Croqui (Hierarquia Estrita de 4 Etapas: RAM -> Downloads -> Temp Cache -> Rede)
   // ---------------------------------------------------------------------------
-  group('getCroqui (Híbrido Local e Sessão Online)', () {
-    test('retorna croqui do disco permanente se existir em /downloads', () async {
-      final picoId = 'pico_local';
-      final picoDir = Directory(
-        '${editor.downloadsPath(tempDir.path)}/$picoId',
+  group('getCroqui (Hierarquia Estrita de 4 Etapas)', () {
+    late MockServicoCroquiOnline mockServicoOnline;
+    late DatasetRepository repoHierarquico;
+
+    setUp(() {
+      mockServicoOnline = MockServicoCroquiOnline();
+      when(() => mockServicoOnline.caminhoCacheVolatil).thenReturn(null);
+      when(() => mockServicoOnline.obterDiretorioCache())
+          .thenAnswer((_) async => '${tempDir.path}/temp_cache');
+      repoHierarquico = DatasetRepository(
+        editorDeCroqui: editor,
+        servicoCroquiOnline: mockServicoOnline,
       );
-      await picoDir.create(recursive: true);
-
-      final croquiLocal = Croqui(id: picoId, nome: 'Pico Local');
-      final croquiFile = File('${picoDir.path}/$picoId.binarypb');
-      await croquiFile.writeAsBytes(croquiLocal.writeToBuffer());
-
-      final resultado = await repo.getCroqui(picoId);
-
-      expect(resultado, isNotNull);
-      expect(resultado!.nome, equals('Pico Local'));
     });
 
-    test('retorna croqui da sessão online se não estiver baixado localmente', () async {
-      final picoId = 'pico_remoto';
-      final croquiOnline = Croqui(id: picoId, nome: 'Pico Online em Memória');
-      repo.gerenciadorSessaoOnline.registrarCroquiOnline(picoId, croquiOnline);
+    test('Etapa 1: Retorna croqui da RAM mesmo se houver versões em /downloads e temp_cache', () async {
+      final picoId = 'pico_etapa1';
+      final croquiRam = Croqui(id: picoId, nome: 'Croqui da RAM');
+      repoHierarquico.gerenciadorSessaoOnline.registrarCroquiOnline(picoId, croquiRam);
 
-      final resultado = await repo.getCroqui(picoId);
+      // Cria também no downloads com nome diferente para provar prioridade da RAM
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId')..createSync(recursive: true);
+      final croquiDownloads = Croqui(id: picoId, nome: 'Croqui de Downloads');
+      File('${picoDir.path}/compilado.binarypb').writeAsBytesSync(croquiDownloads.writeToBuffer());
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
 
       expect(resultado, isNotNull);
-      expect(resultado!.nome, equals('Pico Online em Memória'));
+      expect(resultado!.nome, equals('Croqui da RAM'));
+      verifyZeroInteractions(mockServicoOnline);
     });
 
-    test('retorna null se o croqui não estiver nem em disco nem na sessão online', () async {
-      final resultado = await repo.getCroqui('pico_fantasma');
+    test('Etapa 2: Retorna croqui de /downloads se não estiver na RAM, sem consultar rede', () async {
+      final picoId = 'pico_etapa2';
+      final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId')..createSync(recursive: true);
+      final croquiDownloads = Croqui(id: picoId, nome: 'Croqui de Downloads');
+      File('${picoDir.path}/compilado.binarypb').writeAsBytesSync(croquiDownloads.writeToBuffer());
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Croqui de Downloads'));
+      verifyZeroInteractions(mockServicoOnline);
+    });
+
+    test('Etapa 3: Retorna croqui do temp_cache se não estiver na RAM nem em /downloads, sem chamar rede', () async {
+      final picoId = 'pico_etapa3';
+      final checksum = 'sha256_etapa3';
+
+      // Configura índice com o checksum
+      repoHierarquico.indiceData.value = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: picoId,
+            nome: 'Pico Etapa 3',
+            caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+            checksumSha256Croqui: checksum,
+          ),
+        ],
+      );
+
+      // Cria o arquivo no temp_cache
+      final tempCacheDir = Directory('${tempDir.path}/temp_cache/$picoId')..createSync(recursive: true);
+      final croquiTemp = Croqui(id: picoId, nome: 'Croqui do Temp Cache');
+      File('${tempCacheDir.path}/compilado.binarypb.$checksum').writeAsBytesSync(croquiTemp.writeToBuffer());
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Croqui do Temp Cache'));
+      expect(repoHierarquico.gerenciadorSessaoOnline.obterCroquiOnline(picoId)?.nome, equals('Croqui do Temp Cache'));
+      verifyNever(() => mockServicoOnline.carregarCroquiRemoto(
+            any(),
+            picoId: any(named: 'picoId'),
+            checksumSha256: any(named: 'checksumSha256'),
+          ));
+    });
+
+    test('Etapa 4: Busca via ServicoCroquiOnline com ?v=<checksum> quando não estiver em RAM, downloads nem temp_cache', () async {
+      final picoId = 'pico_etapa4';
+      final checksum = 'sha256_etapa4';
+
+      repoHierarquico.indiceData.value = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: picoId,
+            nome: 'Pico Etapa 4',
+            caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+            checksumSha256Croqui: checksum,
+          ),
+        ],
+      );
+
+      final croquiRede = Croqui(id: picoId, nome: 'Croqui da Rede');
+      final expectedUrl = '${editor.activeBaseUrl}/picos/$picoId/compilado.binarypb?v=$checksum';
+
+      when(() => mockServicoOnline.carregarCroquiRemoto(
+            expectedUrl,
+            picoId: picoId,
+            checksumSha256: checksum,
+          )).thenAnswer((_) async => croquiRede);
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Croqui da Rede'));
+      expect(
+        repoHierarquico.gerenciadorSessaoOnline.obterCroquiOnline(picoId)?.nome,
+        equals('Croqui da Rede'),
+      );
+      verify(() => mockServicoOnline.carregarCroquiRemoto(
+            expectedUrl,
+            picoId: picoId,
+            checksumSha256: checksum,
+          )).called(1);
+    });
+
+    test('Construtor padrão compartilha a mesma instância de GerenciadorSessaoOnline com ServicoCroquiOnline', () {
+      final repoPadrao = DatasetRepository(editorDeCroqui: editor);
+      expect(
+        identical(
+          repoPadrao.gerenciadorSessaoOnline,
+          repoPadrao.servicoCroquiOnline.sessaoOnline,
+        ),
+        isTrue,
+        reason: 'ServicoCroquiOnline deve compartilhar a mesma sessão online do repositório',
+      );
+    });
+
+    test('Retorna null se o croqui não for encontrado em nenhuma etapa e rede falhar', () async {
+      final picoId = 'pico_inexistente';
+
+      when(() => mockServicoOnline.carregarCroquiRemoto(
+            any(),
+            picoId: any(named: 'picoId'),
+            checksumSha256: any(named: 'checksumSha256'),
+          )).thenAnswer((_) async => null);
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
+
       expect(resultado, isNull);
     });
   });
