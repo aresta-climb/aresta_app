@@ -111,6 +111,7 @@ frontend/
 │       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa
 │       ├── feedback/
 │       │   └── custom_feedback_builder.dart - Construtor de interface customizada para formulário de in-app feedback
+│       ├── crag_card.dart               - Card interativo do pico com status, progresso de download e estatísticas
 │       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
 │       ├── global_search.dart           - Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
