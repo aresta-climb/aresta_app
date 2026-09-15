@@ -14,16 +14,12 @@ class OfflineCragCard extends StatelessWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
-  OfflineCragCard({
+  const OfflineCragCard({
     super.key,
-    required dynamic crag,
+    required this.crag,
     required this.datasetRepo,
     required this.syncService,
-  }) : crag = crag is ResumoPico
-            ? crag
-            : ResumoPico.deMapa(crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map));
+  });
 
   @override
   Widget build(BuildContext context) {
