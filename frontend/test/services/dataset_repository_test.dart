@@ -235,6 +235,29 @@ void main() {
     );
 
     test(
+      'loadIndiceToMemory mapeia thumbnailUrl com a rota canônica thumbnails/<picoId>.webp',
+      () async {
+        final indice = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'br_mg_caete_pedra_filha',
+              nome: 'Pedra da Filha',
+              caminhoRelativo: 'picos/br_mg_caete_pedra_filha/br_mg_caete_pedra_filha.binarypb',
+            ),
+          ],
+        );
+        repo.indiceData.value = indice;
+        await repo.loadIndiceToMemory(indice);
+
+        final available = repo.activeDataset.value!.availablePicos;
+        expect(available.length, 1);
+        final pico = available.first;
+        final baseUrl = repo.editorDeCroqui.activeBaseUrl;
+        expect(pico['thumbnailUrl'], equals('$baseUrl/thumbnails/br_mg_caete_pedra_filha.webp'));
+      },
+    );
+
+    test(
       'loadIndiceToMemory mapeia tamanho_download_bytes e tamanhoFormatado corretamente',
       () async {
         final precomputados = PrecomputadosResumoCroqui(

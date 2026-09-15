@@ -1,0 +1,49 @@
+# frozen_string_literal: true
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Aguardar processamento e submeter versão para revisão na App Store"
+  lane :submeter_revisao do |options|
+    versao = options[:versao]
+    build_num = options[:build_number]
+    notas = options[:notas]
+
+    UI.user_error!("O parâmetro :versao é obrigatório.") if versao.nil? || versao.empty?
+    UI.user_error!("O parâmetro :notas é obrigatório.") if notas.nil? || notas.empty?
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV['APPSTORE_KEY_ID'],
+      issuer_id: ENV['APPSTORE_ISSUER_ID'],
+      key_content: ENV['APPSTORE_PRIVATE_KEY'],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    UI.message("🚀 Iniciando submissão na App Store Connect")
+    UI.message("📦 Versão alvo: #{versao} (Build: #{build_num})")
+    UI.message("📝 Notas de lançamento: #{notas}")
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "app.escalada.croquis",
+      app_version: versao,
+      build_number: build_num,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      skip_app_version_update: false,
+      release_notes: {
+        'default' => notas,
+        'pt-BR' => notas
+      },
+      submit_for_review: true,
+      automatic_release: true,
+      phased_release: false,
+      force: true,
+      precheck_default_rule_check: false
+    )
+
+    UI.success("🎉 Versão #{versao} submetida com sucesso para revisão da Apple!")
+  end
+end

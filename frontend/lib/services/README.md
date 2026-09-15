@@ -72,10 +72,12 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### `SyncService` e `SyncIsolate`
 - Orquestra toda a checagem Delta via API.
-- Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates.
+- Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates (`downloadIsolateMain`).
+- **Reutilização de Cache Volátil (`temp_cache`)**: Ao realizar o download de croquis offline, o isolate recebe o caminho `tempCacheDirPath`. Caso uma mídia externa já tenha sido baixada previamente durante a navegação online sob demanda (persistida como `<temp_cache>/<picoId>/<caminho>.<hash>`), o isolate copia o arquivo localmente para o destino final via escrita atômica (`.tmp` seguido de renomeação), zerando requisições de rede redundantes para a CDN.
 - Reflete o progresso percentual diretamente via `DatasetRepository.instance!.downloadingCrags`.
 - Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para controle fino de notificações de atualização de dados offline na abertura do aplicativo.
 - No **Modo Experimental**, notificações intrusivas (SnackBar / toasts) são suprimidas para garantir atualização contínua e silenciosa enquanto o `BannerModoExperimental` pulsa visualmente.
+
 
 
 ### Módulo de In-App Feedback (`feedback/`)
@@ -92,7 +94,11 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 ### Componentes Chave:
 - **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), atualizando reativamente o estado sem exigir downloads prévios.
 - **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil, suporta re-fetch com bypass de cache HTTP (`recarregarCroquiOnline`) e processa respostas HTTP 200 OK no polling periódico de ETag, integrando-se diretamente ao ciclo de Live Reload.
-- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash, normalização de caminhos com `./` e `\`, fallback de timestamp de modificação `lastModifiedSync` para mídias locais e suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo`).
+- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em camadas com persistência em disco sob demanda:
+  1. Armazenamento local permanente (`/downloads` ou thumbnails permanentes em `/thumbnails/<picoId>.webp`).
+  2. Cache temporário volátil endereçado por conteúdo (`/temp_cache/<picoId>/<caminho>.<hash>` e `/temp_cache/thumbnails/<picoId>.webp.<hash>`).
+  3. Download atômico da CDN com streaming, validação de integridade por checksum SHA-256 obrigatório, expurgo de versões antigas do mesmo arquivo com hashes divergentes, deduplicação de downloads concorrentes e persistência imediata em disco no `/temp_cache` (com fallback para `NetworkImage` sem persistência e log de erro no `AppLogger` caso o hash esteja ausente).
+  4. Suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo` (padronizado em 300px para miniaturas de cartões e carrosséis).
 - **Invalidação Reativa de Cache em Live Reload**: Ao receber eventos de recarregamento push via WebSocket, o aplicativo purga o cache de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), garantindo a substituição visual instantânea de texturas na GPU sem necessidade de desempilhar ou reabrir telas, tanto para croquis baixados quanto para croquis em sessão online.
 - **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
 - **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.

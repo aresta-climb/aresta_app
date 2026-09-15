@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/provedor_imagem_aresta.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 
@@ -59,30 +60,32 @@ class OfflineCragCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail
+              // Miniatura unificada com downsampling para 300px via ProvedorImagemAresta
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   width: 60,
                   height: 60,
                   color: context.colors.graniteEdge,
-                  child: FutureBuilder<Directory>(
-                    future: getApplicationDocumentsDirectory(),
+                  child: FutureBuilder<ImageProvider?>(
+                    future: ProvedorImagemAresta.resolver(
+                      picoId: id,
+                      caminho: 'thumbnails/$id.webp',
+                      larguraAlvo: 300,
+                    ),
                     builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        final file = File(
-                          '${snapshot.data!.path}/thumbnails/$id.webp',
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Container(color: context.colors.graniteEdge);
+                      }
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return Image(
+                          image: snapshot.data!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Icon(
+                            Icons.terrain,
+                            color: context.colors.ashGrey,
+                          ),
                         );
-                        if (file.existsSync()) {
-                          return Image.file(
-                            file,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.terrain,
-                              color: context.colors.ashGrey,
-                            ),
-                          );
-                        }
                       }
                       return Icon(Icons.terrain, color: context.colors.ashGrey);
                     },

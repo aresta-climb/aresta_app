@@ -797,11 +797,18 @@ class SyncService {
     try {
       final receivePort = ReceivePort();
 
+      String? tempCacheDirPath;
+      try {
+        final tempDir = await getTemporaryDirectory();
+        tempCacheDirPath = '${tempDir.path}/temp_cache';
+      } catch (_) {}
+
       final args = DownloadIsolateArgs(
         newResumoBytes: latestResumo.writeToBuffer(),
         downloadsDirPath: downloadsDir.path,
         baseUrl: baseUrl,
         sendPort: receivePort.sendPort,
+        tempCacheDirPath: tempCacheDirPath,
       );
 
       AppLogger.instance.logInfo('[SyncService] Iniciando download do croqui $id a partir de: $baseUrl');

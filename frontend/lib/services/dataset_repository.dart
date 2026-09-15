@@ -296,18 +296,10 @@ class DatasetRepository {
                 .join(' ');
           }
 
-          String thumbnailUrl = '';
-          final url = resumo.caminhoRelativo;
-          final lastSlash = url.lastIndexOf('/');
-          final baseUrl = editorDeCroqui.activeBaseUrl;
-          if (lastSlash != -1) {
-            final baseDir = url.substring(0, lastSlash);
-            thumbnailUrl = '$baseUrl/$baseDir/imagens/thumbnail.webp';
-          } else {
-            thumbnailUrl = '$baseUrl/imagens/thumbnail.webp';
-          }
-
           final String picoId = resumo.id;
+          final baseUrl = editorDeCroqui.activeBaseUrl;
+          final String thumbnailUrl = '$baseUrl/thumbnails/$picoId.webp';
+
           final bool isStored = await gerenciadorArquivosLocais
               .verificarPicoBaixado(downloadsPath, picoId);
 

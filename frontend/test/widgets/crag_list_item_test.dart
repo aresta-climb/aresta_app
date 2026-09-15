@@ -98,7 +98,7 @@ void main() {
 
   group('_buildCragIcon Tests', () {
     testWidgets(
-      'Deve usar FutureBuilder<Directory> (tenta carregar arquivo local) se cragId existir',
+      'Deve usar FutureBuilder<ImageProvider?> (tenta carregar via ProvedorImagemAresta) se cragId existir',
       (WidgetTester tester) async {
         final Map<String, dynamic> crag = {
           'id': 'pico_offline',
@@ -119,7 +119,7 @@ void main() {
           ),
         );
 
-        final finder = find.byType(FutureBuilder<Directory>);
+        final finder = find.byType(FutureBuilder<ImageProvider?>);
         expect(finder, findsOneWidget);
       },
     );
@@ -131,7 +131,6 @@ void main() {
           'nome': 'Pico Sem ID',
           'thumbnailUrl': '',
         };
-
 
         await tester.pumpWidget(
           MaterialApp(
@@ -145,7 +144,7 @@ void main() {
           ),
         );
 
-        final futureBuilderFinder = find.byType(FutureBuilder<Directory>);
+        final futureBuilderFinder = find.byType(FutureBuilder<ImageProvider?>);
         expect(futureBuilderFinder, findsNothing);
 
         final imageFinder = find.byType(Image);

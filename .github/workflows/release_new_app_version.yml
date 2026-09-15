@@ -28,14 +28,15 @@ on:
         required: true
         type: boolean
         default: true
-      android_track:
-        description: 'Faixa do Google Play'
+      enviar_para_producao:
+        description: 'Enviar para Produção nas lojas (Google Play e App Store)?'
         required: true
-        type: choice
-        options:
-          - 'internal,production'
-          - 'internal'
-        default: 'internal,production'
+        type: boolean
+        default: true
+      release_notes:
+        description: 'Notas de lançamento (máx. 500 caracteres)'
+        required: true
+        type: string
 
 jobs:
   prepare_release:
@@ -45,7 +46,25 @@ jobs:
       contents: write # Permissão necessária para fazer commit e criar tags
     outputs:
       tag_name: ${{ steps.bump.outputs.tag_name }}
+      versao_release: ${{ steps.bump.outputs.versao_release }}
+      novo_build: ${{ steps.bump.outputs.novo_build }}
     steps:
+      - name: Validar Notas de Lançamento (Fail-Early)
+        env:
+          NOTAS_LANCAMENTO: ${{ inputs.release_notes }}
+        run: |
+          TAMANHO=${#NOTAS_LANCAMENTO}
+          echo "Validando tamanho das notas de lançamento: $TAMANHO caracteres."
+          if [ $TAMANHO -eq 0 ]; then
+            echo "::error::As notas de lançamento são obrigatórias e não podem estar vazias."
+            exit 1
+          fi
+          if [ $TAMANHO -gt 500 ]; then
+            echo "::error::As notas de lançamento excedem o limite de 500 caracteres da Play Store (tamanho atual: $TAMANHO). Reduza o texto antes de lançar."
+            exit 1
+          fi
+          echo "Notas de lançamento validadas com sucesso."
+
       - name: Generate GitHub App Token
         id: app-token
         uses: actions/create-github-app-token@v3
@@ -153,7 +172,8 @@ jobs:
     uses: ./.github/workflows/build_android.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
-      android_track: ${{ inputs.android_track }}
+      enviar_para_producao: ${{ inputs.enviar_para_producao }}
+      release_notes: ${{ inputs.release_notes }}
     secrets: inherit
 
   build_ios:
@@ -163,4 +183,16 @@ jobs:
     uses: ./.github/workflows/build_ios.yml
     with:
       tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+    secrets: inherit
+
+  submit_ios_review:
+    name: Submeter iOS para Revisão
+    needs: [prepare_release, build_ios]
+    if: ${{ inputs.deploy_ios && inputs.enviar_para_producao }}
+    uses: ./.github/workflows/submit_ios_review.yml
+    with:
+      tag_name: ${{ needs.prepare_release.outputs.tag_name }}
+      versao_release: ${{ needs.prepare_release.outputs.versao_release }}
+      novo_build: ${{ needs.prepare_release.outputs.novo_build }}
+      release_notes: ${{ inputs.release_notes }}
     secrets: inherit

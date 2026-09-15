@@ -1,0 +1,4 @@
+# frozen_string_literal: true
+
+app_identifier('app.escalada.croquis')
+apple_id('6776467893')
