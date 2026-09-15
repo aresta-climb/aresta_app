@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 
 /// Extrai e formata o rótulo identificador (codenome) de uma referência visual de mapa.
 ///

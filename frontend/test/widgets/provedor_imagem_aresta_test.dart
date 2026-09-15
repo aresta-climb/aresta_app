@@ -735,15 +735,11 @@ class _ClienteHttpComExcecao extends http.BaseClient {
 }
 
 class _ClienteHttpEspiao extends http.BaseClient {
-  final Map<String, List<int>> respostas;
-  final int statusCode;
   final Duration atraso;
   int chamadas = 0;
   final List<Uri> urlsRequisitadas = [];
 
   _ClienteHttpEspiao({
-    this.respostas = const {},
-    this.statusCode = 200,
     this.atraso = Duration.zero,
   });
 
@@ -755,19 +751,13 @@ class _ClienteHttpEspiao extends http.BaseClient {
       await Future.delayed(atraso);
     }
 
-    List<int> bytes = const [
+    const bytes = <int>[
       137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 10, 73, 68, 65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
     ];
-    for (var entry in respostas.entries) {
-      if (request.url.path.contains(entry.key)) {
-        bytes = entry.value;
-        break;
-      }
-    }
 
     return http.StreamedResponse(
       Stream.value(bytes),
-      statusCode,
+      200,
       contentLength: bytes.length,
       headers: {'content-type': 'image/png'},
     );

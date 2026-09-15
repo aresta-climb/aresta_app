@@ -116,11 +116,11 @@ void main() {
         ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
 
         final docsDir = Directory('${tempDir.path}/documents')..createSync();
-        final indiceFile = File('${docsDir.path}/indice.binarypb')..writeAsBytesSync([1, 2, 3]);
+        File('${docsDir.path}/indice.binarypb').writeAsBytesSync([1, 2, 3]);
         final croquiDir = Directory('${docsDir.path}/downloads/pico_teste')..createSync(recursive: true);
-        final croquiFile = File('${croquiDir.path}/compilado.binarypb')..writeAsBytesSync([4, 5, 6]);
+        File('${croquiDir.path}/compilado.binarypb').writeAsBytesSync([4, 5, 6]);
 
-        final pngFile = File('${queueDir.path}/uuid-anexos.png')..writeAsBytesSync([7, 8]);
+        File('${queueDir.path}/uuid-anexos.png').writeAsBytesSync([7, 8]);
         final jsonFile = File('${queueDir.path}/uuid-anexos.json');
         jsonFile.writeAsStringSync(
           jsonEncode({

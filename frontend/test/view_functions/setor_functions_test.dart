@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/view_functions/setor_functions.dart';
 
 void main() {

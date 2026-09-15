@@ -14,8 +14,6 @@ import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 
-import '../services/http/servico_croqui_online.dart';
-
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 Future<void> handlePicoSelection(
   BuildContext context,

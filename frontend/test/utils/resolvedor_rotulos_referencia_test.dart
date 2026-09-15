@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/utils/resolvedor_rotulos_referencia.dart';
 
 void main() {

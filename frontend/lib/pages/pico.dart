@@ -22,7 +22,6 @@ import '../utils/pico_categorization.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
-import '../services/http/servico_croqui_online.dart';
 import '../services/http/servico_download_segundo_plano.dart';
 
 class PicoDetailsPage extends StatefulWidget {

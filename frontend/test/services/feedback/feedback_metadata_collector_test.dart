@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';

@@ -25,7 +25,6 @@ import 'package:frontend/constants/network_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
-import 'package:frontend/services/http/servico_croqui_online.dart';
 
 class MockAssetBundle extends Mock implements AssetBundle {}
 class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}

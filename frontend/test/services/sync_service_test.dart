@@ -1457,7 +1457,7 @@ void main() {
       final downloadsDir = editor.downloadsPath(tempDir.path);
       final picoDir = Directory('$downloadsDir/$picoId');
 
-      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
       expect(File('${picoDir.path}/imagens/capa.webp').existsSync(), isTrue);
     });
 
@@ -1640,7 +1640,7 @@ void main() {
 
       expect(result, isTrue);
       // Main croqui should be downloaded
-      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
       // The tmp file should have been renamed to final file
       expect(File('${picoDir.path}/capa.webp').existsSync(), isTrue);
       expect(tmpFile.existsSync(), isFalse);
@@ -1698,7 +1698,7 @@ void main() {
 
       expect(result, isTrue);
       // Main croqui should be downloaded
-      expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+      expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
       // The tmp file should be deleted and final file downloaded correctly
       expect(File('${picoDir.path}/capa.webp').existsSync(), isTrue);
       expect(tmpFile.existsSync(), isFalse);
@@ -1744,7 +1744,7 @@ void main() {
         picoDir.createSync(recursive: true);
 
         // Create valid .tmp file manually for the main croqui
-        final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
+        final tmpFile = File('${picoDir.path}/compilado.binarypb.tmp');
         tmpFile.writeAsBytesSync(croquiBytes);
 
         final result = await syncServiceFake.downloadCrag(
@@ -1752,7 +1752,7 @@ void main() {
         );
 
         expect(result, isTrue);
-        expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+        expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
         expect(tmpFile.existsSync(), isFalse); // tmp should be renamed
       },
     );
@@ -1794,7 +1794,7 @@ void main() {
         picoDir.createSync(recursive: true);
 
         // Create INVALID .tmp file manually for the main croqui
-        final tmpFile = File('${picoDir.path}/$picoId.binarypb.tmp');
+        final tmpFile = File('${picoDir.path}/compilado.binarypb.tmp');
         tmpFile.writeAsBytesSync([9, 9, 9, 9]); // Junk bytes
 
         final result = await syncServiceFake.downloadCrag(
@@ -1802,14 +1802,14 @@ void main() {
         );
 
         expect(result, isTrue);
-        expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+        expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
         expect(
           tmpFile.existsSync(),
           isFalse,
         ); // tmp should be deleted and replaced
 
         final downloadedBytes = File(
-          '${picoDir.path}/$picoId.binarypb',
+          '${picoDir.path}/compilado.binarypb',
         ).readAsBytesSync();
         expect(downloadedBytes, croquiBytes);
       },
@@ -1879,7 +1879,7 @@ void main() {
 
         final downloadsDir = editor.downloadsPath(tempDir.path);
         final picoDir = Directory('$downloadsDir/$picoId');
-        expect(File('${picoDir.path}/$picoId.binarypb').existsSync(), isTrue);
+        expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
 
         // O índice em memória também deve ter sido atualizado com o hash correto
         expect(
@@ -2196,7 +2196,7 @@ void main() {
         );
 
         // O arquivo físico do croqui no disco do modo experimental deve ter sido atualizado com a nova versão
-        final updatedFileBytes = await File('${picoDir.path}/$picoId.binarypb').readAsBytes();
+        final updatedFileBytes = await File('${picoDir.path}/compilado.binarypb').readAsBytes();
         final updatedCroqui = Croqui.fromBuffer(updatedFileBytes);
         expect(updatedCroqui.picos.first.nome, 'Versao Nova Atualizada');
 
@@ -2349,7 +2349,7 @@ void main() {
         final oldCroqui = Croqui()..picos.add(Pico()..nome = 'Pico Antigo');
         final oldBytes = oldCroqui.writeToBuffer();
         final oldHash = sha256.convert(oldBytes).toString();
-        final localPicoFile = File('${picoDir.path}/$picoId.binarypb');
+        final localPicoFile = File('${picoDir.path}/compilado.binarypb');
         await localPicoFile.writeAsBytes(oldBytes);
 
         final oldIndice = Indice()
