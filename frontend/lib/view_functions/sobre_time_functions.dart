@@ -8,6 +8,37 @@ import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetry_service.dart';
 
+/// Representa um membro da equipe com seus metadados e redes sociais.
+class MembroTime {
+  /// Papel ou cargo principal do membro na equipe.
+  final String role;
+
+  /// Papel exibido de forma abreviada ou com quebra de linha quando recolhido.
+  final String? collapsedRole;
+
+  /// Nome completo do membro.
+  final String name;
+
+  /// URL de perfil do LinkedIn (vazia se inexistente).
+  final String linkedin;
+
+  /// URL de perfil do GitHub (vazia se inexistente).
+  final String github;
+
+  /// Caminho relativo do asset da foto do membro.
+  final String image;
+
+  /// Cria uma instância imutável de [MembroTime].
+  const MembroTime({
+    required this.role,
+    this.collapsedRole,
+    required this.name,
+    this.linkedin = '',
+    this.github = '',
+    required this.image,
+  });
+}
+
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
   // Place elements exactly at the geometric centroid of a quarter circle (4 / 3π ≈ 0.424)
   AlignmentGeometry align = Alignment.center;
