@@ -10,6 +10,9 @@ Esta pasta contém testes unitários das funções utilitárias compartilhadas e
 | `fuzzy_search_test.dart` | Busca Global | Testa a lógica do Fuzzy Search integrada com a normalização para ignorar acentos e pontuação em pesquisas. |
 | `via_functions_test.dart` | `getGrauString`, `getGrauValue` | Testa a extração e formatação do grau de vias em strings e valores numéricos utilizados para ordenação e busca por dificuldade. |
 | `browse_functions_test.dart` | `buildBrowseBody`, Interface de Exploração | Testa as funcionalidades da tela de exploração, como a exibição granular do progresso de download (`LinearProgressIndicator`), a renderização da descrição curta do pico e acionamento de telemetria de visualização do pico. |
+| `home_functions_test.dart` | `buildHomeBody`, Carrossel | Testa a renderização da tela inicial, busca de picos locais e reatividade de download com `ResumoPico`. |
+| `setor_functions_test.dart` | `resolveRouteLabels`, `buildRouteTile` | Testa resolução fortemente tipada de rótulos com `RotulosVia`, cores oficiais FEMEMG, graus de dificuldade e decomposição modular de itens de lista. |
+| `sobre_time_functions_test.dart` | `carregarMembrosTime`, `buildTeamMemberCard` | Testa o carregamento tipado de membros (`MembroTime`) e a renderização dos cartões no Sobre Nós. |
 | `mapa_global_functions_test.dart` | `buildMapMarkers`, `obterFaixaZoom`, Interface do Mapa Global | Testa a criação e montagem interativa do Mapa Global, resolução de faixas de zoom (Macro, Regional, Local), com interações de bottom sheet e navegação. |
 | `mapa_marker_test.dart` | `createCustomMarkerBitmap`, `createCustomMarkerBitmapWithText`, `calcularDimensoesMarcador` | Testa a geração de bitmaps customizados de marcadores com redimensionamento proporcional, truncamento automático de nomes extensos e resiliência de buffers de GPU. |
 
@@ -64,3 +67,17 @@ Funções utilitárias usadas para extrair informações de dificuldade das vias
 **Casos testados:**
 - Formatação de texto para vias esportivas, móveis, boulders e multienfiadas (`BR_` strips).
 - Obtenção do valor numérico (`int`) do enum Protobuf para ordenação de vias por grau de dificuldade de forma consistente.
+
+### `resolveRouteLabels(Escalada via)` e `RotulosVia`
+Extrai e formata os metadados de uma via em um modelo fortemente tipado `RotulosVia`.
+**Casos testados:**
+- Rótulo principal formatado com grau e extensão.
+- Rótulos secundários de atributos (conquistadores, proteções, estilo).
+- Atribuição de cores padronizadas da FEMEMG conforme o tipo de escalada.
+- Decomposição em funções puras sem aninhamentos condicionais profundos.
+
+### `carregarMembrosTime()` e `MembroTime`
+Carrega e mapeia a lista estática da equipe do projeto utilizando o modelo imutável `MembroTime`.
+**Casos testados:**
+- Mapeamento correto de nome, papel e links de contato.
+- Imutabilidade e validação de consistência dos dados do time.
