@@ -725,28 +725,30 @@ class DatasetRepository {
     );
   }
 
-  /// Auxiliar para atualizar metadados locais de um pico (tipado ou mapa legado).
+  /// Auxiliar para carregar e atualizar metadados locais de um [ResumoPico].
   Future<void> updatePicoMetadata(
     String id,
-    dynamic picoData,
+    ResumoPico picoData,
     String docsPath, {
     Croqui? parsedPico,
   }) async {
     final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
-    if (picoData is ResumoPico) {
-      await extratorMetadados.carregarMetadadosLocais(
-        pico: picoData,
-        downloadsPath: downloadsPath,
-        baseUrl: editorDeCroqui.activeBaseUrl,
-        parsedCroqui: parsedPico,
-      );
-    } else if (picoData is Map<String, dynamic>) {
-      await extratorMetadados.atualizarMetadadosPico(
-        id: id,
-        picoData: picoData,
-        downloadsPath: downloadsPath,
-        baseUrl: editorDeCroqui.activeBaseUrl,
-        parsedCroqui: parsedPico,
+    final atualizado = await extratorMetadados.carregarMetadadosLocais(
+      pico: picoData,
+      downloadsPath: downloadsPath,
+      baseUrl: editorDeCroqui.activeBaseUrl,
+      parsedCroqui: parsedPico,
+    );
+
+    final atual = activeDataset.value;
+    if (atual != null) {
+      final novosDisponiveis =
+          atual.availablePicos.map((p) => p.id == id ? atualizado : p).toList();
+      final novosBaixados =
+          atual.downloadedPicos.map((p) => p.id == id ? atualizado : p).toList();
+      activeDataset.value = atual.copyWith(
+        picosDisponiveis: novosDisponiveis,
+        picosBaixados: novosBaixados,
       );
     }
   }
