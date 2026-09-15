@@ -18,7 +18,7 @@ class GlobalSearchResult {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-  final dynamic originalItem;
+  final Object? originalItem;
   final bool isDownloaded;
   final bool isPico;
 
@@ -576,10 +576,10 @@ class _GlobalSearchState extends State<GlobalSearch> {
           return item.originalItem is Setor;
         }
 
-        if (item.originalItem is Escalada) {
-          final esc = item.originalItem as Escalada;
+        final original = item.originalItem;
+        if (original is Escalada) {
           if (_selectedFilter == 'Esportivas' &&
-              esc.whichTipo() != Escalada_Tipo.viaEsportiva) {
+              original.whichTipo() != Escalada_Tipo.viaEsportiva) {
             return false;
           }
           if (_selectedFilter == 'Móveis' &&
