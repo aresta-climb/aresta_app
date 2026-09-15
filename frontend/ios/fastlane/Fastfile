@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+opt_out_usage
+
 default_platform(:ios)
 
 platform :ios do
@@ -41,7 +43,7 @@ platform :ios do
       automatic_release: true,
       phased_release: false,
       force: true,
-      precheck_default_rule_check: false
+      run_precheck_before_submit: false
     )
 
     UI.success("🎉 Versão #{versao} submetida com sucesso para revisão da Apple!")
