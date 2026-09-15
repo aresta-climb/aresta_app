@@ -128,9 +128,19 @@ Widget _buildHeader(String title) {
   );
 }
 
-/// Resolve the map indicator and concatenated labels for a given Escalada.
-/// Returns a Map with 'mapIndicator' (e.g. 'M1') and 'resolvedLabel' (e.g. '1-X').
-Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
+/// Rótulos resolvidos para uma via de escalada em relação ao mapa do setor.
+class RotulosVia {
+  final String mapIndicator;
+  final String resolvedLabel;
+
+  const RotulosVia({
+    required this.mapIndicator,
+    required this.resolvedLabel,
+  });
+}
+
+/// Resolve o indicador do mapa e os rótulos concatenados para uma dada Escalada.
+RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
   String resolvedLabel = '';
   String mapIndicator = '';
 
@@ -194,7 +204,10 @@ Map<String, String> resolveRouteLabels(Escalada escalada, Setor setor) {
     }
   }
 
-  return {'mapIndicator': mapIndicator, 'resolvedLabel': resolvedLabel};
+  return RotulosVia(
+    mapIndicator: mapIndicator,
+    resolvedLabel: resolvedLabel,
+  );
 }
 
 /// Constrói um tile interativo para uma única via de escalada.
@@ -245,9 +258,9 @@ Widget _buildRouteTile(
       break;
   }
 
-  final labels = resolveRouteLabels(escalada, setor);
-  final mapIndicator = labels['mapIndicator']!;
-  final resolvedLabel = labels['resolvedLabel']!;
+  final rotulos = resolveRouteLabels(escalada, setor);
+  final mapIndicator = rotulos.mapIndicator;
+  final resolvedLabel = rotulos.resolvedLabel;
 
   Widget card = Stack(
     clipBehavior: Clip.none,
