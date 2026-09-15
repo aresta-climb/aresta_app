@@ -8,6 +8,8 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../../data/dtos/feedback_metadata_dto.dart';
+import '../../data/models/feedback_metadata.dart';
 
 /// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
 ///
@@ -35,7 +37,7 @@ class FeedbackNetworkService {
   /// permitindo que a fila persistente local e o Workmanager apliquem a política de retentativa com backoff.
   Future<void> sendFeedback({
     required String description,
-    required Map<String, dynamic> metadata,
+    required dynamic metadata,
     required String dispatcher,
     File? pngFile,
   }) async {
@@ -48,7 +50,9 @@ class FeedbackNetworkService {
 
     request.fields['description'] = description;
 
-    final finalMetadata = Map<String, dynamic>.from(metadata);
+    final Map<String, dynamic> finalMetadata = metadata is FeedbackMetadata
+        ? FeedbackMetadataDto.toJson(metadata)
+        : Map<String, dynamic>.from(metadata as Map);
     finalMetadata['dispatcher'] = dispatcher;
     request.fields['metadata'] = jsonEncode(finalMetadata);
 
