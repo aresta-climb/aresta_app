@@ -165,15 +165,16 @@ void main() {
               builder: (context, dataset, child) {
                 final isDownloaded =
                     dataset?.downloadedPicos.any(
-                      (p) => p['id'] == 'pico_sync_1',
+                      (p) => p.id == 'pico_sync_1',
                     ) ??
                     false;
                 return CragCard(
-                  crag: {
-                    'id': 'pico_sync_1',
-                    'nome': 'Pico Browse',
-                    'isDownloaded': isDownloaded,
-                  },
+                  crag: ResumoPico(
+                    id: 'pico_sync_1',
+                    nome: 'Pico Browse',
+                    local: 'Local Browse',
+                    isDownloaded: isDownloaded,
+                  ),
                   downloadingCrags: mockSync.downloadingCrags,
                   onDownload: () {},
                   onOpen: () {},
