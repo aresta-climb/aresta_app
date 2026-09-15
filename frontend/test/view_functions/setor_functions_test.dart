@@ -22,6 +22,33 @@ void main() {
       expect(rotulos.mapIndicator, 'M1');
       expect(rotulos.resolvedLabel, '1-A');
     });
+
+    test('resolve rótulos e indicador do mapa quando há mapas e pontos', () {
+      final mapa1 = Mapa(
+        referencias: [
+          Mapa_Referencia(
+            escalada: 'Via dos Sonhos',
+            ids: ['p1', 'p2'],
+          ),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(id: 'p1', label: '1'),
+          Mapa_PontoDeInteresse(id: 'p2', label: ''),
+        ],
+      );
+      final mapa2 = Mapa();
+      final setor = Setor(mapas: [mapa1, mapa2]);
+      final escalada = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via dos Sonhos',
+          indiceMapaPadrao: 0,
+        ),
+      );
+
+      final rotulos = resolveRouteLabels(escalada, setor);
+      expect(rotulos.mapIndicator, 'M1');
+      expect(rotulos.resolvedLabel, '1-p2');
+    });
   });
 
   group('buildEscaladaSortGrid', () {
