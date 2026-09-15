@@ -83,6 +83,7 @@ void main() {
     });
   });
 
+<<<<<<< HEAD
   group('resolveRouteLabels', () {
     test('retorna codenome correto para via com caminho vetorial de múltiplos segmentos', () {
       final via = Escalada(
@@ -143,7 +144,7 @@ void main() {
       );
 
       final result = resolveRouteLabels(via, setor);
-      expect(result['resolvedLabel'], '5-C');
+      expect(result.resolvedLabel, '5-C');
     });
 
     test('retorna vazio e sem IDs técnicos para linhas sem nós de círculo identificador', () {
@@ -179,7 +180,7 @@ void main() {
       );
 
       final result = resolveRouteLabels(via, setor);
-      expect(result['resolvedLabel'], '');
+      expect(result.resolvedLabel, '');
     });
 
     test('retorna rótulo de POI convencional', () {
@@ -207,11 +208,39 @@ void main() {
       );
 
       final result = resolveRouteLabels(via, setor);
-      expect(result['resolvedLabel'], '12');
+      expect(result.resolvedLabel, '12');
     });
   });
 
   group('buildSetorBody e modalidades de escalada', () {
+    testWidgets('renderiza vias e destaca via alvo', (WidgetTester tester) async {
+      final via = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Teste',
+          destaque: true,
+        ),
+      );
+      final setor = Setor(nome: 'Setor Principal');
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => buildSetorBody(
+              context,
+              setor,
+              'crag_1',
+              [via],
+              via,
+              GlobalKey(),
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text('Via Teste'), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+
     testWidgets('renderiza corretamente modalidades Mista, Móvel e Esportiva nos cards do setor', (
       WidgetTester tester,
     ) async {
