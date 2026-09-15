@@ -33,7 +33,7 @@ void main() {
         ],
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(id: 'p1', label: '1'),
-          Mapa_PontoDeInteresse(id: 'p2', label: ''),
+          Mapa_PontoDeInteresse(id: 'p2', label: 'A'),
         ],
       );
       final mapa2 = Mapa();
@@ -47,7 +47,7 @@ void main() {
 
       final rotulos = resolveRouteLabels(escalada, setor);
       expect(rotulos.mapIndicator, 'M1');
-      expect(rotulos.resolvedLabel, '1-p2');
+      expect(rotulos.resolvedLabel, '1-A');
     });
   });
 
@@ -110,6 +110,137 @@ void main() {
 
       expect(find.text('Via Teste'), findsOneWidget);
       expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+  });
+
+  group('resolveRouteLabels', () {
+    test('retorna codenome correto para via com caminho vetorial de múltiplos segmentos', () {
+      final via = Escalada(
+        viaEsportiva: ViaEsportiva(nome: 'Polydance'),
+      );
+      final setor = Setor(
+        mapas: [
+          Mapa(
+            pontosDeInteresse: [
+              Mapa_PontoDeInteresse(
+                id: 'linha_12',
+                linha: LinhaTrajeto(
+                  compilado: DadosCompiladosLinha(
+                    marcadores: [
+                      MarcadorCompilado(
+                        tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                        rotulo: '5',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Mapa_PontoDeInteresse(
+                id: 'linha_16',
+                linha: LinhaTrajeto(
+                  compilado: DadosCompiladosLinha(
+                    marcadores: [
+                      MarcadorCompilado(
+                        tipo: NoTrajeto_TipoNo.PASSAGEM,
+                        rotulo: '',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Mapa_PontoDeInteresse(
+                id: 'linha_21',
+                linha: LinhaTrajeto(
+                  compilado: DadosCompiladosLinha(
+                    marcadores: [
+                      MarcadorCompilado(
+                        tipo: NoTrajeto_TipoNo.FIM_TOP,
+                        rotulo: 'C',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            referencias: [
+              Mapa_Referencia(
+                escalada: 'Polydance',
+                ids: ['linha_12', 'linha_16', 'linha_21'],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final result = resolveRouteLabels(via, setor);
+      expect(result.resolvedLabel, '5-C');
+      expect(result['resolvedLabel'], '5-C');
+    });
+
+    test('retorna vazio e sem IDs técnicos para linhas sem nós de círculo identificador', () {
+      final via = Escalada(
+        viaEsportiva: ViaEsportiva(nome: 'Via Sem Circulo'),
+      );
+      final setor = Setor(
+        mapas: [
+          Mapa(
+            pontosDeInteresse: [
+              Mapa_PontoDeInteresse(
+                id: 'linha_curva',
+                linha: LinhaTrajeto(
+                  compilado: DadosCompiladosLinha(
+                    marcadores: [
+                      MarcadorCompilado(
+                        tipo: NoTrajeto_TipoNo.PASSAGEM,
+                        rotulo: '',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            referencias: [
+              Mapa_Referencia(
+                escalada: 'Via Sem Circulo',
+                ids: ['linha_curva'],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final result = resolveRouteLabels(via, setor);
+      expect(result.resolvedLabel, '');
+      expect(result['resolvedLabel'], '');
+    });
+
+    test('retorna rótulo de POI convencional', () {
+      final via = Escalada(
+        viaEsportiva: ViaEsportiva(nome: 'Via Tradicional'),
+      );
+      final setor = Setor(
+        mapas: [
+          Mapa(
+            pontosDeInteresse: [
+              Mapa_PontoDeInteresse(
+                id: 'p1',
+                label: '12',
+                circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
+              ),
+            ],
+            referencias: [
+              Mapa_Referencia(
+                escalada: 'Via Tradicional',
+                ids: ['p1'],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final result = resolveRouteLabels(via, setor);
+      expect(result.resolvedLabel, '12');
+      expect(result['resolvedLabel'], '12');
     });
   });
 }

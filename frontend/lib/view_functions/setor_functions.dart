@@ -10,6 +10,7 @@ import '../widgets/mapa_thumbnail.dart';
 import '../theme/app_colors.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../utils/resolvedor_rotulos_referencia.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
 ///
@@ -136,6 +137,13 @@ class RotulosVia {
     required this.mapIndicator,
     required this.resolvedLabel,
   });
+
+  /// Suporte a indexação por chave para compatibilidade retroativa.
+  dynamic operator [](String key) {
+    if (key == 'mapIndicator') return mapIndicator;
+    if (key == 'resolvedLabel') return resolvedLabel;
+    return null;
+  }
 }
 
 /// Extrai o nome da via e o índice do mapa padrão a partir da [Escalada].
@@ -180,20 +188,6 @@ Mapa_Referencia? _buscarReferenciaNoMapa(Mapa mapa, String escaladaNome) {
   return null;
 }
 
-/// Extrai os rótulos visuais dos pontos de interesse correspondentes aos IDs.
-List<String> _extrairRotulosDosPontos(Mapa mapa, List<String> ids) {
-  final List<String> rotulos = [];
-  for (final id in ids) {
-    for (final ponto in mapa.pontosDeInteresse) {
-      if (ponto.id == id) {
-        rotulos.add(ponto.label.isNotEmpty ? ponto.label : id);
-        break;
-      }
-    }
-  }
-  return rotulos;
-}
-
 /// Resolve o indicador do mapa e os rótulos concatenados para uma dada Escalada.
 RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
   if (setor.mapas.isEmpty) {
@@ -208,11 +202,11 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
     final referencia = _buscarReferenciaNoMapa(mapa, nome);
 
     if (referencia != null && referencia.ids.isNotEmpty) {
-      final rotulos = _extrairRotulosDosPontos(mapa, referencia.ids);
+      final resolvedLabel = extrairRotuloReferencia(mapa, referencia);
       final mapIndicator = setor.mapas.length > 1 ? 'M${i + 1}' : '';
       return RotulosVia(
         mapIndicator: mapIndicator,
-        resolvedLabel: rotulos.join('-'),
+        resolvedLabel: resolvedLabel,
       );
     }
   }

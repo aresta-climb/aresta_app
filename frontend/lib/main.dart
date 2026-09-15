@@ -26,7 +26,6 @@ import 'package:frontend/view_functions/common_functions.dart';
 import 'widgets/text_carousel_modal_content.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';

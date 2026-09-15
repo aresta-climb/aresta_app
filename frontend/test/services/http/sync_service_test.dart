@@ -68,6 +68,11 @@ class MockPathProviderPlatform extends Fake
   Future<String?> getApplicationDocumentsPath() async {
     return path;
   }
+
+  @override
+  Future<String?> getTemporaryPath() async {
+    return path;
+  }
 }
 
 void main() {
@@ -206,14 +211,17 @@ void main() {
         );
 
         testSyncService.mockIsolateSpawn = (mainFunc, args) async {
-          File('${picoDir.path}/$picoId.binarypb.tmp')
+          File('${picoDir.path}/compilado.binarypb.tmp')
               .createSync(recursive: true);
           args.sendPort.send(
             DownloadIsolateResult(
-              filesToDelete: ['${picoDir.path}/foto_antiga.jpg'],
+              filesToDelete: [
+                '${picoDir.path}/foto_antiga.jpg',
+                '${picoDir.path}/$picoId.binarypb',
+              ],
               filesToRename: {
-                '${picoDir.path}/$picoId.binarypb.tmp':
-                    '${picoDir.path}/$picoId.binarypb',
+                '${picoDir.path}/compilado.binarypb.tmp':
+                    '${picoDir.path}/compilado.binarypb',
               },
             ),
           );
@@ -232,7 +240,7 @@ void main() {
         expect(
           logs.any(
             (l) => l.contains(
-              '${picoDir.path}/$picoId.binarypb.tmp -> ${picoDir.path}/$picoId.binarypb',
+              '${picoDir.path}/compilado.binarypb.tmp -> ${picoDir.path}/compilado.binarypb',
             ),
           ),
           isTrue,
@@ -240,7 +248,7 @@ void main() {
         expect(
           logs.any(
             (l) => l.contains(
-              '🗑️ [SyncService] Arquivos removidos no syncIndex (1):',
+              '🗑️ [SyncService] Arquivos removidos no syncIndex (2):',
             ),
           ),
           isTrue,

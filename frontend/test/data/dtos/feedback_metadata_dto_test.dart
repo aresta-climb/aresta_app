@@ -22,6 +22,14 @@ void main() {
         deviceOrientation: 'portrait',
         isDarkMode: 'true',
         connectivity: 'wifi',
+        indiceSha256: 'hash_indice_123',
+        croquiId: 'pico_pedra_grande',
+        croquiSha256Esperado: 'hash_esperado_456',
+        croquiSha256Real: 'hash_real_456',
+        croquiStatus: 'INTEGRO',
+        thumbnailSha256Esperado: 'hash_thumb_exp_789',
+        thumbnailSha256Real: 'hash_thumb_real_789',
+        thumbnailStatus: 'INTEGRO',
       );
 
       final json = FeedbackMetadataDto.toJson(metadata);
@@ -39,6 +47,14 @@ void main() {
       expect(json['deviceOrientation'], 'portrait');
       expect(json['isDarkMode'], 'true');
       expect(json['connectivity'], 'wifi');
+      expect(json['indice_sha256'], 'hash_indice_123');
+      expect(json['croqui_id'], 'pico_pedra_grande');
+      expect(json['croqui_sha256_esperado'], 'hash_esperado_456');
+      expect(json['croqui_sha256_real'], 'hash_real_456');
+      expect(json['croqui_status'], 'INTEGRO');
+      expect(json['thumbnail_sha256_esperado'], 'hash_thumb_exp_789');
+      expect(json['thumbnail_sha256_real'], 'hash_thumb_real_789');
+      expect(json['thumbnail_status'], 'INTEGRO');
     });
 
     test('fromJson converte Map para FeedbackMetadata corretamente', () {
@@ -56,6 +72,14 @@ void main() {
         'deviceOrientation': 'portrait',
         'isDarkMode': 'true',
         'connectivity': 'wifi',
+        'indice_sha256': 'hash_indice_123',
+        'croqui_id': 'pico_pedra_grande',
+        'croqui_sha256_esperado': 'hash_esperado_456',
+        'croqui_sha256_real': 'hash_real_456',
+        'croqui_status': 'INTEGRO',
+        'thumbnail_sha256_esperado': 'hash_thumb_exp_789',
+        'thumbnail_sha256_real': 'hash_thumb_real_789',
+        'thumbnail_status': 'INTEGRO',
       };
 
       final metadata = FeedbackMetadataDto.fromJson(json);
@@ -73,6 +97,14 @@ void main() {
       expect(metadata.deviceOrientation, 'portrait');
       expect(metadata.isDarkMode, 'true');
       expect(metadata.connectivity, 'wifi');
+      expect(metadata.indiceSha256, 'hash_indice_123');
+      expect(metadata.croquiId, 'pico_pedra_grande');
+      expect(metadata.croquiSha256Esperado, 'hash_esperado_456');
+      expect(metadata.croquiSha256Real, 'hash_real_456');
+      expect(metadata.croquiStatus, 'INTEGRO');
+      expect(metadata.thumbnailSha256Esperado, 'hash_thumb_exp_789');
+      expect(metadata.thumbnailSha256Real, 'hash_thumb_real_789');
+      expect(metadata.thumbnailStatus, 'INTEGRO');
     });
 
     test('fromJson utiliza valores default para chaves ausentes', () {

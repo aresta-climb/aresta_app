@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
@@ -458,7 +459,309 @@ void main() {
       expect(provedor, isA<ImagemArquivoAresta>());
       expect(mockLogger.recordedErrors, isEmpty);
     });
+
+    group('Motor de Cache Volátil e Integridade (Tasks 2.1 - 2.5)', () {
+      test('TDD 2.1: exige checksumSha256 para salvar em temp_cache; na ausência, emite telemetria e recorre a NetworkImage', () async {
+        final cliente = _ClienteHttpEspiao();
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_remoto',
+          caminho: 'setor/foto.png',
+          checksumSha256: null,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(provedor, isA<NetworkImage>());
+        final netImg = provedor as NetworkImage;
+        expect(netImg.url, contains('foto.png'));
+        expect(netImg.url, isNot(contains('?v=')));
+
+        // Verifica que NENHUM arquivo foi gravado no temp_cache
+        final pastaPico = Directory('${tempCacheDir.path}/pico_remoto');
+        expect(pastaPico.existsSync(), isFalse);
+        expect(cliente.chamadas, equals(0));
+
+        // Verifica telemetria de erro
+        expect(mockLogger.recordedErrors.any((e) =>
+          e['contextMessage'].contains('ausente ou nulo') &&
+          e['contextMessage'].contains('pico_remoto')
+        ), isTrue);
+      });
+
+      test('TDD 2.2: baixa imagem da CDN, persiste em temp_cache com <caminho>.<hash> e resolve localmente na segunda chamada', () async {
+        final cliente = _ClienteHttpEspiao();
+        const hash = 'hash_sha256_valido_123';
+
+        // 1ª chamada: Baixa e salva no temp_cache
+        final provedor1 = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_remoto',
+          caminho: 'setor1/foto.png',
+          checksumSha256: hash,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(provedor1, isA<ImagemArquivoAresta>());
+        expect(cliente.chamadas, equals(1));
+
+        final arquivoCache = File('${tempCacheDir.path}/pico_remoto/setor1/foto.png.$hash');
+        expect(arquivoCache.existsSync(), isTrue);
+
+        // 2ª chamada: Lê do temp_cache sem chamar a rede
+        final provedor2 = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_remoto',
+          caminho: 'setor1/foto.png',
+          checksumSha256: hash,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(provedor2, isA<ImagemArquivoAresta>());
+        expect(cliente.chamadas, equals(1), reason: 'Não deve disparar requisição HTTP adicional');
+      });
+
+      test('TDD 2.3: expurga arquivos com hashes anteriores da mesma mídia após salvar nova versão', () async {
+        final pastaSetor = Directory('${tempCacheDir.path}/pico_remoto/setor1');
+        await pastaSetor.create(recursive: true);
+
+        final versaoAntiga = File('${pastaSetor.path}/foto.png.hash_antigo_000');
+        await versaoAntiga.writeAsBytes([1, 2, 3]);
+
+        final outraMidia = File('${pastaSetor.path}/outra.png.hash_outra_111');
+        await outraMidia.writeAsBytes([4, 5, 6]);
+
+        expect(versaoAntiga.existsSync(), isTrue);
+        expect(outraMidia.existsSync(), isTrue);
+
+        final cliente = _ClienteHttpEspiao();
+        await ProvedorImagemAresta.resolver(
+          picoId: 'pico_remoto',
+          caminho: 'setor1/foto.png',
+          checksumSha256: 'hash_novo_999',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        final versaoNova = File('${pastaSetor.path}/foto.png.hash_novo_999');
+        expect(versaoNova.existsSync(), isTrue);
+        expect(versaoAntiga.existsSync(), isFalse, reason: 'Versão antiga deve ser expurgada');
+        expect(outraMidia.existsSync(), isTrue, reason: 'Outras mídias não devem ser afetadas');
+      });
+
+      test('TDD 2.4: deduplica downloads concorrentes para a mesma mídia em paralelo', () async {
+        final cliente = _ClienteHttpEspiao(atraso: const Duration(milliseconds: 30));
+        const hash = 'hash_concorrente_888';
+
+        final resultados = await Future.wait([
+          ProvedorImagemAresta.resolver(
+            picoId: 'pico_remoto',
+            caminho: 'setor/concorrente.png',
+            checksumSha256: hash,
+            baseUrl: 'https://cdn.arestaclimb.com',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: cliente,
+          ),
+          ProvedorImagemAresta.resolver(
+            picoId: 'pico_remoto',
+            caminho: 'setor/concorrente.png',
+            checksumSha256: hash,
+            baseUrl: 'https://cdn.arestaclimb.com',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: cliente,
+          ),
+          ProvedorImagemAresta.resolver(
+            picoId: 'pico_remoto',
+            caminho: 'setor/concorrente.png',
+            checksumSha256: hash,
+            baseUrl: 'https://cdn.arestaclimb.com',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: cliente,
+          ),
+        ]);
+
+        expect(resultados.length, equals(3));
+        for (final res in resultados) {
+          expect(res, isA<ImagemArquivoAresta>());
+        }
+        expect(cliente.chamadas, equals(1), reason: 'Múltiplas chamadas simultâneas devem reutilizar a mesma Future');
+      });
+
+      test('TDD 2.5: resolve e cacheia miniatura global sob temp_cache/thumbnails/<picoId>.webp.<hash>', () async {
+        final cliente = _ClienteHttpEspiao();
+        const hashThumb = 'hash_thumb_777';
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_global',
+          caminho: 'thumbnails/pico_global.webp',
+          checksumSha256: hashThumb,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+        expect(cliente.chamadas, equals(1));
+
+        final arquivoThumb = File('${tempCacheDir.path}/thumbnails/pico_global.webp.$hashThumb');
+        expect(arquivoThumb.existsSync(), isTrue);
+
+        final provedor2 = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_global',
+          caminho: 'thumbnails/pico_global.webp',
+          checksumSha256: hashThumb,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+        expect(provedor2, isA<ImagemArquivoAresta>());
+        expect(cliente.chamadas, equals(1));
+      });
+
+      test('resolve caminho relativo com prefixo ./ e normaliza busca em diretório', () async {
+        final picoDir = Directory('${tempDownloadsDir.path}/pico_relativo');
+        await picoDir.create(recursive: true);
+        final img = File('${picoDir.path}/foto_ponto_barra.webp');
+        await img.writeAsBytes([10, 20, 30]);
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_relativo',
+          caminho: './foto_ponto_barra.webp',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          checksumSha256: 'hash_relativo',
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+      });
+
+      test('resolve miniatura em downloadsRoot quando nao existir na raiz de documentos', () async {
+        final thumbDownloadsDir = Directory('${tempDownloadsDir.path}/thumbnails');
+        await thumbDownloadsDir.create(recursive: true);
+        final thumbFile = File('${thumbDownloadsDir.path}/pico_secundario.webp');
+        await thumbFile.writeAsBytes([1, 2, 3, 4]);
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_secundario',
+          caminho: 'thumbnails/pico_secundario.webp',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          checksumSha256: 'hash_secundario',
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+      });
+
+      test('trata excecao de rede durante o download e recorre a NetworkImage sem falhar', () async {
+        final clienteQuebrado = _ClienteHttpComExcecao();
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_erro_rede',
+          caminho: 'foto_falha.webp',
+          checksumSha256: 'hash_falha',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: clienteQuebrado,
+        );
+
+        expect(provedor, isA<NetworkImage>());
+        expect(mockLogger.recordedErrors, isNotEmpty);
+      });
+
+      test('TDD: resolve miniatura local permanente quando caminho for URL remota legada contendo imagens/thumbnail.webp', () async {
+        final thumbDocsDir = Directory('${tempDownloadsDir.path}/thumbnails');
+        await thumbDocsDir.create(recursive: true);
+        final thumbFile = File('${thumbDocsDir.path}/pico_legado_local.webp');
+        await thumbFile.writeAsBytes([1, 2, 3, 4]);
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_legado_local',
+          caminho: 'https://serving.arestaclimb.com/v4/pico_legado_local/imagens/thumbnail.webp',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          checksumSha256: 'hash_legado_local',
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+        final img = provedor as ImagemArquivoAresta;
+        expect(img.arquivo.path.replaceAll(r'\', '/'), endsWith('thumbnails/pico_legado_local.webp'));
+      });
+
+      test('TDD: resolve e baixa miniatura remota sob thumbnails/<picoId>.webp quando caminho for imagens/thumbnail.webp', () async {
+        final cliente = _ClienteHttpEspiao();
+        const hashThumb = 'hash_thumb_canonica';
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_legado_remoto',
+          caminho: 'https://serving.arestaclimb.com/v4/pico_legado_remoto/imagens/thumbnail.webp',
+          checksumSha256: hashThumb,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+        expect(cliente.chamadas, equals(1));
+        // A requisição enviada à CDN DEVE usar a rota canônica /thumbnails/<picoId>.webp, NUNCA imagens/thumbnail.webp
+        expect(cliente.urlsRequisitadas.first.path, equals('/thumbnails/pico_legado_remoto.webp'));
+        expect(cliente.urlsRequisitadas.first.queryParameters['v'], equals(hashThumb));
+
+        final arquivoSalvo = File('${tempCacheDir.path}/thumbnails/pico_legado_remoto.webp.$hashThumb');
+        expect(arquivoSalvo.existsSync(), isTrue);
+      });
+    });
   });
+}
+
+class _ClienteHttpComExcecao extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    throw const SocketException('Conexão recusada na rede de teste');
+  }
+}
+
+class _ClienteHttpEspiao extends http.BaseClient {
+  final Duration atraso;
+  int chamadas = 0;
+  final List<Uri> urlsRequisitadas = [];
+
+  _ClienteHttpEspiao({
+    this.atraso = Duration.zero,
+  });
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    chamadas++;
+    urlsRequisitadas.add(request.url);
+    if (atraso > Duration.zero) {
+      await Future.delayed(atraso);
+    }
+
+    const bytes = <int>[
+      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 10, 73, 68, 65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+    ];
+
+    return http.StreamedResponse(
+      Stream.value(bytes),
+      200,
+      contentLength: bytes.length,
+      headers: {'content-type': 'image/png'},
+    );
+  }
 }
 
 

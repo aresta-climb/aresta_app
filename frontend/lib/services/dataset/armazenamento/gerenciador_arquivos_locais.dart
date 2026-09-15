@@ -8,12 +8,28 @@ import '../../firebase/app_logger.dart';
 /// Gerencia as operações de entrada/saída de arquivos no armazenamento permanente (`/downloads`).
 class GerenciadorArquivosLocais {
   /// Carrega e desserializa o [Croqui] completo a partir do diretório de downloads local.
+  ///
+  /// Prioriza o caminho canônico `compilado.binarypb`. Caso localize o arquivo legado `<picoId>.binarypb`,
+  /// executa uma migração transparente (*lazy rename*) no mesmo diretório antes de desserializar.
   Future<Croqui?> carregarCroqui(String downloadsPath, String picoId) async {
     try {
-      final file = File('$downloadsPath/$picoId/$picoId.binarypb');
-      if (await file.exists()) {
-        final bytes = await file.readAsBytes();
+      final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
+      if (await canonicalFile.exists()) {
+        final bytes = await canonicalFile.readAsBytes();
         return Croqui.fromBuffer(bytes);
+      }
+
+      final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
+      if (await legacyFile.exists()) {
+        try {
+          await legacyFile.rename(canonicalFile.path);
+          final bytes = await canonicalFile.readAsBytes();
+          return Croqui.fromBuffer(bytes);
+        } catch (_) {
+          // Se o rename falhar por permissão no SO, faz fallback seguro para o arquivo legado
+          final bytes = await legacyFile.readAsBytes();
+          return Croqui.fromBuffer(bytes);
+        }
       }
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -25,10 +41,13 @@ class GerenciadorArquivosLocais {
     return null;
   }
 
-  /// Verifica se o croqui do [picoId] está presente no diretório de downloads.
+  /// Verifica se o croqui do [picoId] está presente no diretório de downloads (canônico ou legado).
   Future<bool> verificarPicoBaixado(String downloadsPath, String picoId) async {
-    final file = File('$downloadsPath/$picoId/$picoId.binarypb');
-    return file.exists();
+    final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
+    if (await canonicalFile.exists()) return true;
+
+    final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
+    return legacyFile.exists();
   }
 
   /// Exclui a pasta do pico do armazenamento local.

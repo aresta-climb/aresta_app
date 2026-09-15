@@ -27,7 +27,7 @@ void main() {
       expect(croqui, isNull);
     });
 
-    test('carregarCroqui desserializa croqui existente com sucesso', () async {
+    test('carregarCroqui carrega compilado.binarypb canônico com sucesso', () async {
       final picoDir = Directory('${tempDir.path}/pico_1');
       await picoDir.create(recursive: true);
 
@@ -35,7 +35,7 @@ void main() {
         id: 'pico_1',
         nome: 'Pedra do Baú',
       );
-      final file = File('${picoDir.path}/pico_1.binarypb');
+      final file = File('${picoDir.path}/compilado.binarypb');
       await file.writeAsBytes(croquiMock.writeToBuffer());
 
       final carregado = await gerenciador.carregarCroqui(tempDir.path, 'pico_1');
@@ -43,21 +43,52 @@ void main() {
       expect(carregado!.nome, equals('Pedra do Baú'));
     });
 
-    test('verificarPicoBaixado identifica presença do arquivo .binarypb', () async {
+    test('carregarCroqui migra arquivo legado pico_1.binarypb para compilado.binarypb transparentemente', () async {
+      final picoDir = Directory('${tempDir.path}/pico_1');
+      await picoDir.create(recursive: true);
+
+      final croquiMock = Croqui(
+        id: 'pico_1',
+        nome: 'Pedra do Baú (Legado)',
+      );
+      final arquivoLegado = File('${picoDir.path}/pico_1.binarypb');
+      await arquivoLegado.writeAsBytes(croquiMock.writeToBuffer());
+
+      final arquivoNovo = File('${picoDir.path}/compilado.binarypb');
+      expect(await arquivoNovo.exists(), isFalse);
+      expect(await arquivoLegado.exists(), isTrue);
+
+      final carregado = await gerenciador.carregarCroqui(tempDir.path, 'pico_1');
+      expect(carregado, isNotNull);
+      expect(carregado!.nome, equals('Pedra do Baú (Legado)'));
+
+      // Verifica que o arquivo legado foi renomeado para o nome canônico
+      expect(await arquivoNovo.exists(), isTrue);
+      expect(await arquivoLegado.exists(), isFalse);
+    });
+
+    test('verificarPicoBaixado identifica presença de compilado.binarypb ou arquivo legado', () async {
       expect(await gerenciador.verificarPicoBaixado(tempDir.path, 'pico_1'), isFalse);
 
       final picoDir = Directory('${tempDir.path}/pico_1');
       await picoDir.create(recursive: true);
-      final file = File('${picoDir.path}/pico_1.binarypb');
-      await file.writeAsBytes([1, 2, 3]);
 
+      // Com arquivo legado
+      final arquivoLegado = File('${picoDir.path}/pico_1.binarypb');
+      await arquivoLegado.writeAsBytes([1, 2, 3]);
+      expect(await gerenciador.verificarPicoBaixado(tempDir.path, 'pico_1'), isTrue);
+
+      // Com arquivo canônico
+      await arquivoLegado.delete();
+      final arquivoCanonico = File('${picoDir.path}/compilado.binarypb');
+      await arquivoCanonico.writeAsBytes([1, 2, 3]);
       expect(await gerenciador.verificarPicoBaixado(tempDir.path, 'pico_1'), isTrue);
     });
 
     test('excluirPico remove a pasta do pico e retorna true', () async {
       final picoDir = Directory('${tempDir.path}/pico_1');
       await picoDir.create(recursive: true);
-      final file = File('${picoDir.path}/pico_1.binarypb');
+      final file = File('${picoDir.path}/compilado.binarypb');
       await file.writeAsBytes([1, 2, 3]);
 
       expect(await picoDir.exists(), isTrue);

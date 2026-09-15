@@ -20,6 +20,7 @@ class DownloadIsolateArgs {
   final String baseUrl;
   final SendPort sendPort;
   final Duration timeoutDuration;
+  final String? tempCacheDirPath;
 
   DownloadIsolateArgs({
     required this.newResumoBytes,
@@ -27,6 +28,7 @@ class DownloadIsolateArgs {
     required this.baseUrl,
     required this.sendPort,
     this.timeoutDuration = const Duration(seconds: 30),
+    this.tempCacheDirPath,
   });
 }
 
@@ -83,23 +85,64 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
     final id = newResumo.id;
     final url = '${args.baseUrl}/${newResumo.caminhoRelativo}';
     final picoDirPath = '${args.downloadsDirPath}/$id';
-    final picoFilePath = '$picoDirPath/$id.binarypb';
-    final tmpPicoFilePath = '$picoDirPath/$id.binarypb.tmp';
+    final picoFilePath = '$picoDirPath/compilado.binarypb';
+    final tmpPicoFilePath = '$picoDirPath/compilado.binarypb.tmp';
+    final legacyPicoFilePath = '$picoDirPath/$id.binarypb';
 
     final List<String> errosDownloads = [];
     String? ultimoRastreamentoPilha;
 
-    // Helper for atomic download with resilient retries
+    // Auxiliar para download atômico com aproveitamento do cache volátil (temp_cache) e retentativas resilientes.
     Future<bool> downloadAtomic(
       String fileUrl,
       String tmpPath,
-      String expectedHash,
-    ) async {
+      String expectedHash, {
+      String? caminhoRelativo,
+    }) async {
       final isTmpValid = await storage.validateExistingTmpFile(
         tmpPath,
         expectedHash,
       );
       if (isTmpValid) return true;
+
+      // 1. Verificação prévia no cache volátil (temp_cache):
+      // Se a mídia com o hash SHA-256 esperado já residir no cache temporário volátil,
+      // copia diretamente para o arquivo de destino temporário (.tmp) sem acionar requisição de rede.
+      if (args.tempCacheDirPath != null &&
+          args.tempCacheDirPath!.isNotEmpty &&
+          expectedHash.isNotEmpty &&
+          caminhoRelativo != null &&
+          caminhoRelativo.isNotEmpty) {
+        final caminhoLimpo = caminhoRelativo.startsWith('/')
+            ? caminhoRelativo.substring(1)
+            : caminhoRelativo;
+        final String caminhoNoCache;
+        if (caminhoLimpo.startsWith('thumbnails/')) {
+          caminhoNoCache =
+              '${args.tempCacheDirPath}/thumbnails/$id.webp.$expectedHash';
+        } else {
+          caminhoNoCache =
+              '${args.tempCacheDirPath}/$id/$caminhoLimpo.$expectedHash';
+        }
+
+        final arquivoCache = File(caminhoNoCache);
+        if (arquivoCache.existsSync()) {
+          try {
+            await File(tmpPath).parent.create(recursive: true);
+            await arquivoCache.copy(tmpPath);
+            final valido =
+                await storage.validateExistingTmpFile(tmpPath, expectedHash);
+            if (valido) {
+              return true;
+            }
+          } catch (e) {
+            // Em caso de falha de I/O na cópia, registra aviso de observabilidade e prossegue para o download HTTP resiliente
+            AppLogger.instance.logAviso(
+              '🛑 [SyncIsolate] Falha de I/O ao copiar mídia do cache volátil ($caminhoNoCache) para $tmpPath: $e. Prosseguindo com download HTTP.',
+            );
+          }
+        }
+      }
 
       final cacheBustingUrl = fileUrl.contains('?')
           ? '$fileUrl&v=$expectedHash'
@@ -195,7 +238,8 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
       return;
     }
 
-    final oldPicoData = await storage.readLocalCroqui(picoFilePath);
+    final oldPicoData = await storage.readLocalCroqui(picoFilePath) ??
+        await storage.readLocalCroqui(legacyPicoFilePath);
 
     final newContent = {
       for (var ext in newPicoData.arquivosExternos)
@@ -209,6 +253,9 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         : <String, String>{};
 
     final List<String> filesToDelete = [];
+    if (await File(legacyPicoFilePath).exists()) {
+      filesToDelete.add(legacyPicoFilePath);
+    }
     if (oldPicoData != null) {
       for (var oldExt in oldPicoData.arquivosExternos) {
         if (!newContent.containsKey(oldExt.caminho)) {
@@ -283,6 +330,7 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
             '${args.baseUrl}/$remotePath',
             '$picoDirPath/$localPath.tmp',
             newExt.checksumSha256,
+            caminhoRelativo: localPath,
           ).then((success) {
             if (success) {
               filesToRename['$picoDirPath/$localPath.tmp'] =

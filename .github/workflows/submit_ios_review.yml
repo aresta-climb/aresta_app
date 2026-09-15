@@ -1,0 +1,63 @@
+name: Submissão para Revisão na App Store
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Tag Git da release para checkout'
+        required: true
+        type: string
+      versao_release:
+        description: 'Versão SemVer oficial da release (ex: 1.0.0)'
+        required: true
+        type: string
+      novo_build:
+        description: 'Número de build oficial da release'
+        required: true
+        type: string
+      release_notes:
+        description: 'Notas de lançamento para a loja'
+        required: true
+        type: string
+
+jobs:
+  submit_review:
+    name: Submeter para Revisão na App Store
+    runs-on: ubuntu-latest
+    environment: appstore-review
+    timeout-minutes: 60
+
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag_name }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: frontend/ios
+
+      - name: Submeter para Revisão via Fastlane
+        working-directory: frontend/ios
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          echo "Iniciando Fastlane para monitoramento e submissão na App Store Connect..."
+          bundle exec fastlane submeter_revisao \
+            versao:"${{ inputs.versao_release }}" \
+            build_number:"${{ inputs.novo_build }}" \
+            notas:"${{ inputs.release_notes }}"

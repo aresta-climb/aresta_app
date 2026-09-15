@@ -32,10 +32,15 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
   @override
   void didUpdateWidget(OfflineMarkdown oldWidget) {
     super.didUpdateWidget(oldWidget);
-    for (var provider in _imageProviders) {
-      provider.evict();
+    // Condiciona o expurgo de imagens em memória à alteração real do conteúdo markdown
+    // ou do identificador do pico, prevenindo invalidação desnecessária e repinturas
+    // durante reconstruções de tela ou preservação de rolagem.
+    if (widget.data != oldWidget.data || widget.cragId != oldWidget.cragId) {
+      for (var provider in _imageProviders) {
+        provider.evict();
+      }
+      _imageProviders.clear();
     }
-    _imageProviders.clear();
   }
 
   @override

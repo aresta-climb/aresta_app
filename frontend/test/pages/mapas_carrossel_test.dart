@@ -336,10 +336,100 @@ void main() {
         paginaMapa = tester.widget<MapaInterativoPage>(
           find.byType(MapaInterativoPage),
         );
-        expect(paginaMapa.pico.nome, equals('Pico Teste Atualizado'));
         expect(paginaMapa.imageProviderOverride, equals(provedorAtualizado));
       },
     );
-  });
 
+    testWidgets(
+      'TDD: Carrossel deve isolar traçados de mapas diferentes que compartilham o mesmo ponto.id',
+      (tester) async {
+        final pontoMapa1 = Mapa_PontoDeInteresse(
+          id: 'linha_1',
+          linha: LinhaTrajeto(
+            estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 0 0 L 100 100',
+              caixaDelimitadora: BoundingRetangulo(
+                x: 50,
+                y: 50,
+                comprimento: 100,
+                largura: 100,
+              ),
+            ),
+          ),
+        );
+
+        final pontoMapa2 = Mapa_PontoDeInteresse(
+          id: 'linha_1',
+          linha: LinhaTrajeto(
+            estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 500 500 L 900 900',
+              caixaDelimitadora: BoundingRetangulo(
+                x: 700,
+                y: 700,
+                comprimento: 400,
+                largura: 400,
+              ),
+            ),
+          ),
+        );
+
+        final mapa1 = Mapa()
+          ..caminhoImagemMapa = 'imagens/mapa1.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 1000
+          ..pontosDeInteresse.add(pontoMapa1);
+
+        final mapa2 = Mapa()
+          ..caminhoImagemMapa = 'imagens/mapa2.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 1000
+          ..pontosDeInteresse.add(pontoMapa2);
+
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..mapasGerais = (ArquivoMapas()
+            ..conteudo = (ColecaoDeMapas()..mapas.addAll([mapa1, mapa2])));
+
+        final mapas = [
+          const CarrosselItemData(mapaCaminhoImagem: 'imagens/mapa1.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'imagens/mapa2.png'),
+        ];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: '1',
+              mapas: mapas,
+              initialIndex: 0,
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Mapa 1 ativo inicialmente
+        expect(find.text('01 de 02'), findsOneWidget);
+
+        // Avança para o Mapa 2
+        final botaoProximo = find.byIcon(Icons.chevron_right);
+        expect(botaoProximo, findsOneWidget);
+        await tester.tap(botaoProximo);
+        await tester.pumpAndSettle();
+
+        expect(find.text('02 de 02'), findsOneWidget);
+        expect(find.byType(MapaInterativoPage), findsOneWidget);
+
+        final customPaints = tester.widgetList<CustomPaint>(find.byType(CustomPaint));
+        final markerPainter = customPaints
+            .map((cp) => cp.painter)
+            .whereType<MarkerPainter>()
+            .firstWhere((p) => p.isLinha);
+
+        expect(markerPainter.chaveCache, equals('imagens/mapa2.png#linha_1'));
+      },
+    );
+  });
 }

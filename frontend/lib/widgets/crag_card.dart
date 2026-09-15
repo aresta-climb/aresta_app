@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import '../services/dataset/modelos/resumo_pico.dart';
 import '../theme/app_colors.dart';
+import 'provedor_imagem_aresta.dart';
 
 /// Card interativo que exibe um resumo visual do pico (croqui),
 /// incluindo thumbnail em cache, status de download, distância e estatísticas de vias.
@@ -272,8 +271,10 @@ class CragCard extends StatelessWidget {
   }
 }
 
-/// Widget interno para carregar o plano de fundo da imagem do pico,
-/// resolvendo primeiro do armazenamento local e caindo para rede se necessário.
+/// Widget de plano de fundo e miniatura para o cartão de pico na exploração.
+///
+/// Resolve miniaturas locais e remotas de forma unificada através do [ProvedorImagemAresta],
+/// aplicando downsampling com largura alvo de 300 pixels para preservar a memória gráfica.
 class _CragBackgroundWidget extends StatefulWidget {
   final String thumbnailUrl;
   final String? cragId;
@@ -285,12 +286,12 @@ class _CragBackgroundWidget extends StatefulWidget {
 }
 
 class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
-  Future<Directory>? _dirFuture;
+  Future<ImageProvider?>? _provedorImagemFuture;
 
   @override
   void initState() {
     super.initState();
-    _initFutures();
+    _inicializarProvedor();
   }
 
   @override
@@ -298,14 +299,45 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.thumbnailUrl != widget.thumbnailUrl ||
         oldWidget.cragId != widget.cragId) {
-      _initFutures();
+      _inicializarProvedor();
     }
   }
 
-  void _initFutures() {
-    _dirFuture = null;
-    if (widget.cragId != null && widget.cragId!.isNotEmpty) {
-      _dirFuture = getApplicationDocumentsDirectory();
+  /// Inicializa o provedor de imagem para o plano de fundo do pico.
+  ///
+  /// Sempre que [cragId] estiver disponível (ou puder ser inferido do caminho de miniatura),
+  /// delega a resolução para [ProvedorImagemAresta] utilizando o caminho canônico
+  /// `thumbnails/$cragId.webp`. Isso assegura que:
+  /// 1. Miniaturas locais em `/downloads/thumbnails` ou `/thumbnails` sejam priorizadas.
+  /// 2. O cache volátil seja consultado com base no hash do índice.
+  /// 3. Em caso de download remoto, a requisição seja direcionada para o endpoint
+  ///    canônico da CDN (`/thumbnails/<cragId>.webp`), evitando URLs legadas que retornam 404.
+  void _inicializarProvedor() {
+    _provedorImagemFuture = null;
+    String? cragId = widget.cragId;
+    if ((cragId == null || cragId.isEmpty) && widget.thumbnailUrl.isNotEmpty) {
+      final correspondencia = RegExp(r'thumbnails/([^/?#]+)\.webp').firstMatch(widget.thumbnailUrl);
+      if (correspondencia != null) {
+        cragId = correspondencia.group(1);
+      }
+    }
+
+    if (cragId != null && cragId.isNotEmpty) {
+      _provedorImagemFuture = ProvedorImagemAresta.resolver(
+        picoId: cragId,
+        caminho: 'thumbnails/$cragId.webp',
+        larguraAlvo: 300,
+      );
+    } else if (widget.thumbnailUrl.isNotEmpty &&
+        (widget.thumbnailUrl.startsWith('http://') ||
+            widget.thumbnailUrl.startsWith('https://'))) {
+      _provedorImagemFuture = Future.value(
+        ResizeImage.resizeIfNeeded(
+          300,
+          null,
+          NetworkImage(widget.thumbnailUrl),
+        ),
+      );
     }
   }
 
@@ -322,54 +354,24 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     );
   }
 
-  Widget _buildLocalFileImage() {
-    return FutureBuilder<Directory>(
-      future: _dirFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildPlaceholder();
-        }
-        if (snapshot.hasData) {
-          final file = File(
-            '${snapshot.data!.path}/thumbnails/${widget.cragId}.webp',
-          );
-          if (file.existsSync()) {
-            return Image.file(
-              file,
-              cacheWidth: 300,
+  @override
+  Widget build(BuildContext context) {
+    if (_provedorImagemFuture != null) {
+      return FutureBuilder<ImageProvider?>(
+        future: _provedorImagemFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildPlaceholder();
+          }
+          if (snapshot.hasData && snapshot.data != null) {
+            return Image(
+              image: snapshot.data!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
             );
           }
-        }
-        if (widget.thumbnailUrl.isNotEmpty &&
-            (widget.thumbnailUrl.startsWith('http://') ||
-                widget.thumbnailUrl.startsWith('https://'))) {
-          return Image.network(
-            widget.thumbnailUrl,
-            cacheWidth: 300,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-          );
-        }
-        return _buildPlaceholder();
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_dirFuture != null) {
-      return _buildLocalFileImage();
-    }
-    if (widget.thumbnailUrl.isNotEmpty &&
-        (widget.thumbnailUrl.startsWith('http://') ||
-            widget.thumbnailUrl.startsWith('https://'))) {
-      return Image.network(
-        widget.thumbnailUrl,
-        cacheWidth: 300,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+          return _buildPlaceholder();
+        },
       );
     }
     return _buildPlaceholder();

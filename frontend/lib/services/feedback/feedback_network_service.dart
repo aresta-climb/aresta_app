@@ -40,6 +40,8 @@ class FeedbackNetworkService {
     required dynamic metadata,
     required String dispatcher,
     File? pngFile,
+    File? indiceFile,
+    File? croquiFile,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse(edgeFunctionUrl));
 
@@ -59,6 +61,26 @@ class FeedbackNetworkService {
     if (pngFile != null && pngFile.existsSync()) {
       request.files.add(
         await http.MultipartFile.fromPath('screenshot', pngFile.path),
+      );
+    }
+
+    if (indiceFile != null && indiceFile.existsSync()) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'indice_file',
+          indiceFile.path,
+          filename: 'indice.binarypb',
+        ),
+      );
+    }
+
+    if (croquiFile != null && croquiFile.existsSync()) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'croqui_file',
+          croquiFile.path,
+          filename: 'compilado.binarypb',
+        ),
       );
     }
 

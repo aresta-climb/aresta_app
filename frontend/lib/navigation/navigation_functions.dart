@@ -6,6 +6,7 @@ import '../main.dart';
 import 'navigation_tree.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset/modelos/resumo_pico.dart';
+import '../utils/construtor_caminho_trajeto.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -221,6 +222,7 @@ class AppNav {
 
   /// Navega para a aba de exploração e catálogo de croquis (BrowseNode).
   static void toBrowse(BuildContext context) {
+    ConstrutorCaminhoTrajeto.limparCache();
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     ctrl.navigateTo(BrowseNode(ctrl.currentNode));
@@ -238,6 +240,7 @@ class AppNav {
 
   /// Volta todo o caminho de retorno para o nó Home (raiz).
   static void home(BuildContext context) {
+    ConstrutorCaminhoTrajeto.limparCache();
     _ctrl(context)?.goHome();
   }
 

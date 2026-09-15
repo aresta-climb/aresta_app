@@ -65,9 +65,12 @@ class ExtratorMetadadosCroqui {
       if (parsedCroqui != null) {
         croqui = parsedCroqui;
       } else {
-        final picoFile = File('$downloadsPath/$id/$id.binarypb');
+        File picoFile = File('$downloadsPath/$id/compilado.binarypb');
         if (!picoFile.existsSync()) {
-          return;
+          picoFile = File('$downloadsPath/$id/$id.binarypb');
+          if (!picoFile.existsSync()) {
+            return;
+          }
         }
         croqui = Croqui.fromBuffer(await picoFile.readAsBytes());
       }

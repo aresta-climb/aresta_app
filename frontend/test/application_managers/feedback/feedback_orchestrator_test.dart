@@ -109,6 +109,50 @@ void main() {
     );
 
     test(
+      'processa fila anexando indice_file e croqui_file quando presentes no diretório de documentos',
+      () async {
+        when(
+          () => mockClient.send(any()),
+        ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+        final docsDir = Directory('${tempDir.path}/documents')..createSync();
+        File('${docsDir.path}/indice.binarypb').writeAsBytesSync([1, 2, 3]);
+        final croquiDir = Directory('${docsDir.path}/downloads/pico_teste')..createSync(recursive: true);
+        File('${croquiDir.path}/compilado.binarypb').writeAsBytesSync([4, 5, 6]);
+
+        File('${queueDir.path}/uuid-anexos.png').writeAsBytesSync([7, 8]);
+        final jsonFile = File('${queueDir.path}/uuid-anexos.json');
+        jsonFile.writeAsStringSync(
+          jsonEncode({
+            'id': 'uuid-anexos',
+            'description': 'bug com binarios',
+            'metadata': {'croqui_id': 'pico_teste', 'feedbackId': 'uuid-anexos'},
+            'timestamp': DateTime.now().toIso8601String(),
+          }),
+        );
+
+        final result = await FeedbackOrchestrator.processFeedbackQueue(
+          client: mockClient,
+          getSupportDirectoryOverride: () async => tempDir,
+          getDocumentsDirectoryOverride: () async => docsDir,
+          getAppCheckTokenOverride: () async => 'test-token',
+          dispatcher: 'manual',
+          isDebugModeOverride: false,
+        );
+
+        expect(result, isTrue);
+
+        final captured = verify(() => mockClient.send(captureAny())).captured;
+        final request = captured.first as http.MultipartRequest;
+
+        final campos = request.files.map((f) => f.field).toList();
+        expect(campos, contains('screenshot'));
+        expect(campos, contains('indice_file'));
+        expect(campos, contains('croqui_file'));
+      },
+    );
+
+    test(
       'em modo debug sem token do App Check, executa mock gracioso e completa a tarefa',
       () async {
         createFeedbackFiles('uuid-dev');

@@ -54,7 +54,11 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 - Converte Protobuf em `Map<String, dynamic>` para consumo pela UI
 - Gerencia `recent_picos.yaml` para ordenação por prioridade
 - **Tabela de Dispersão $O(1)$ de Mídias**: Mantém tabela de dispersão `_tabelaSha256PorPico` populada em `loadIndiceToMemory` e `getCroqui`, indexando hashes SHA-256 de miniaturas (`Indice.checksumSha256Thumbnail`) e mídias de croqui (`Croqui.arquivosExternos`). Expõe `obterSha256DaMidia(picoId, caminho)` e `indexarMidiasDoCroqui(picoId, croqui)` para invalidação reativa de cache de imagens sem varreduras lineares.
-
+- **Hierarquia Estrita de Resolução de Croquis em 4 Etapas**: Em `getCroqui()`, resolve o binário sem recalcular hashes em tempo de execução para poupar CPU e bateria:
+  1. *RAM*: Consulta o `GerenciadorSessaoOnline`.
+  2. *Downloads*: Consulta `GerenciadorArquivosLocais` procurando `compilado.binarypb` (com *lazy rename* do formato legado `<picoId>.binarypb`).
+  3. *Cache Temporário*: Consulta `/temp_cache/<picoId>/compilado.binarypb.<sha256>`.
+  4. *Rede*: Baixa via `ServicoCroquiOnline` com URL contendo cache-busting mandatório (`?v=<sha256>`), salvando em `temp_cache` e expurgando versões divergentes de execuções anteriores.
 
 ### `EditorDeCroqui`
 - Singleton acessível via `EditorDeCroqui.instance`
@@ -72,16 +76,17 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### `SyncService` e `SyncIsolate`
 - Orquestra toda a checagem Delta via API.
-- Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates.
+- Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates (`downloadIsolateMain`).
+- **Padronização de Downloads e Limpeza de Resíduos**: Grava os dados do croqui permanentemente como `compilado.binarypb` (em substituição a `<picoId>.binarypb`) e remove resíduos de arquivos legados após a finalização atômica do commit no disco.
+- **Reutilização de Cache Volátil (`temp_cache`)**: Ao realizar o download de croquis offline, o isolate recebe o caminho `tempCacheDirPath`. Caso uma mídia externa já tenha sido baixada previamente durante a navegação online sob demanda (persistida como `<temp_cache>/<picoId>/<caminho>.<hash>`), o isolate copia o arquivo localmente para o destino final via escrita atômica (`.tmp` seguido de renomeação), zerando requisições de rede redundantes para a CDN.
 - Reflete o progresso percentual diretamente via `DatasetRepository.instance!.downloadingCrags`.
 - Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para controle fino de notificações de atualização de dados offline na abertura do aplicativo.
 - No **Modo Experimental**, notificações intrusivas (SnackBar / toasts) são suprimidas para garantir atualização contínua e silenciosa enquanto o `BannerModoExperimental` pulsa visualmente.
 
-
 ### Módulo de In-App Feedback (`feedback/`)
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
-- **`FeedbackOrchestrator`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions).
-- **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) para facilitar a depuração.
+- **`FeedbackOrchestrator`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
+- **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) e executa **Auditoria Criptográfica de Hashes sob demanda** (calculando SHA-256 do índice local, miniatura e croqui em visualização para rotular os estados como `INTEGRO`, `DIVERGENTE` ou `NAO_BAIXADO`).
 
 ---
 
@@ -92,7 +97,11 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 ### Componentes Chave:
 - **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), atualizando reativamente o estado sem exigir downloads prévios.
 - **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil, suporta re-fetch com bypass de cache HTTP (`recarregarCroquiOnline`) e processa respostas HTTP 200 OK no polling periódico de ETag, integrando-se diretamente ao ciclo de Live Reload.
-- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em 3 camadas (`/downloads` local $\rightarrow$ `/temp_cache` volátil $\rightarrow$ streaming CDN remoto com cache de hash, normalização de caminhos com `./` e `\`, fallback de timestamp de modificação `lastModifiedSync` para mídias locais e suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo`).
+- **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em camadas com persistência em disco sob demanda:
+  1. Armazenamento local permanente (`/downloads` ou thumbnails permanentes em `/thumbnails/<picoId>.webp`).
+  2. Cache temporário volátil endereçado por conteúdo (`/temp_cache/<picoId>/<caminho>.<hash>` e `/temp_cache/thumbnails/<picoId>.webp.<hash>`).
+  3. Download atômico da CDN com streaming, validação de integridade por checksum SHA-256 obrigatório, expurgo de versões antigas do mesmo arquivo com hashes divergentes, deduplicação de downloads concorrentes e persistência imediata em disco no `/temp_cache` (com fallback para `NetworkImage` sem persistência e log de erro no `AppLogger` caso o hash esteja ausente).
+  4. Suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo` (padronizado em 300px para miniaturas de cartões e carrosséis).
 - **Invalidação Reativa de Cache em Live Reload**: Ao receber eventos de recarregamento push via WebSocket, o aplicativo purga o cache de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), garantindo a substituição visual instantânea de texturas na GPU sem necessidade de desempilhar ou reabrir telas, tanto para croquis baixados quanto para croquis em sessão online.
 - **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
 - **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.

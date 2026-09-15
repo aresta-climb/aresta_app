@@ -10,6 +10,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'firebase/app_logger.dart';
 import '../utils/formatador_tamanho.dart';
+import '../utils/construtor_caminho_trajeto.dart';
 
 import 'dataset/modelos/conjunto_dados_croqui.dart';
 import 'dataset/modelos/resumo_pico.dart';
@@ -19,6 +20,7 @@ import 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 import 'dataset/armazenamento/extrator_assets_preload.dart';
 import 'dataset/metadados/extrator_metadados_croqui.dart';
 import 'dataset/sessao_online/gerenciador_sessao_online.dart';
+import 'http/servico_croqui_online.dart';
 
 export 'dataset/modelos/conjunto_dados_croqui.dart';
 export 'dataset/modelos/resumo_pico.dart';
@@ -28,6 +30,7 @@ export 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 export 'dataset/armazenamento/extrator_assets_preload.dart';
 export 'dataset/metadados/extrator_metadados_croqui.dart';
 export 'dataset/sessao_online/gerenciador_sessao_online.dart';
+export 'http/servico_croqui_online.dart';
 
 /// Gerenciador central e repositório de dados de escalada do aplicativo.
 ///
@@ -42,6 +45,7 @@ class DatasetRepository {
   final ExtratorAssetsPreload extratorAssets;
   final ExtratorMetadadosCroqui extratorMetadados;
   final GerenciadorSessaoOnline gerenciadorSessaoOnline;
+  final ServicoCroquiOnline servicoCroquiOnline;
 
   static DatasetRepository? _instance;
   static DatasetRepository? get instance => _instance;
@@ -54,6 +58,7 @@ class DatasetRepository {
     ExtratorAssetsPreload? extratorAssets,
     ExtratorMetadadosCroqui? extratorMetadados,
     GerenciadorSessaoOnline? gerenciadorSessaoOnline,
+    ServicoCroquiOnline? servicoCroquiOnline,
   })  : gerenciadorPrioridade =
             gerenciadorPrioridade ?? GerenciadorPrioridadePicos(),
         gerenciadorArquivosLocais =
@@ -61,7 +66,11 @@ class DatasetRepository {
         extratorAssets = extratorAssets ?? ExtratorAssetsPreload(),
         extratorMetadados = extratorMetadados ?? ExtratorMetadadosCroqui(),
         gerenciadorSessaoOnline =
-            gerenciadorSessaoOnline ?? GerenciadorSessaoOnline() {
+            gerenciadorSessaoOnline ??= GerenciadorSessaoOnline(),
+        servicoCroquiOnline = servicoCroquiOnline ??
+            ServicoCroquiOnline(
+              sessaoOnline: gerenciadorSessaoOnline,
+            ) {
     _instance = this;
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);
     editorDeCroqui.editorUrl.addListener(_handleModeChange);
@@ -205,6 +214,28 @@ class DatasetRepository {
       }
     }
 
+    // Fallback: Croqui baixado presente no activeDataset
+    final picosBaixados = activeDataset.value?.picosBaixados;
+    if (picosBaixados != null) {
+      for (final picoData in picosBaixados) {
+        if (picoData['id'] == picoId) {
+          final croqui = picoData['data']?['croqui'];
+          if (croqui is Croqui) {
+            indexarMidiasDoCroqui(picoId, croqui);
+            final mapa = _tabelaSha256PorPico[picoId];
+            if (mapa != null) {
+              if (mapa.containsKey(caminhoLimpo)) return mapa[caminhoLimpo];
+              final nomeArquivo = caminhoLimpo.split('/').last;
+              if (nomeArquivo.isNotEmpty && mapa.containsKey(nomeArquivo)) {
+                return mapa[nomeArquivo];
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -300,18 +331,10 @@ class DatasetRepository {
                 .join(' ');
           }
 
-          String thumbnailUrl = '';
-          final url = resumo.caminhoRelativo;
-          final lastSlash = url.lastIndexOf('/');
-          final baseUrl = editorDeCroqui.activeBaseUrl;
-          if (lastSlash != -1) {
-            final baseDir = url.substring(0, lastSlash);
-            thumbnailUrl = '$baseUrl/$baseDir/imagens/thumbnail.webp';
-          } else {
-            thumbnailUrl = '$baseUrl/imagens/thumbnail.webp';
-          }
-
           final String picoId = resumo.id;
+          final baseUrl = editorDeCroqui.activeBaseUrl;
+          final String thumbnailUrl = '$baseUrl/thumbnails/$picoId.webp';
+
           final bool isStored = await gerenciadorArquivosLocais
               .verificarPicoBaixado(downloadsPath, picoId);
 
@@ -341,7 +364,8 @@ class DatasetRepository {
             nome: resumo.nome,
             local: locationText,
             descricao: resumo.descricao,
-            url: '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}',
+            url:
+                '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=${resumo.checksumSha256Croqui}',
             checksum: resumo.checksumSha256Croqui,
             thumbnailUrl: thumbnailUrl,
             isDownloaded: isStored,
@@ -410,11 +434,13 @@ class DatasetRepository {
 
   /// Limpa os dados em memória definindo listas vazias.
   void loadEmpty() {
+    ConstrutorCaminhoTrajeto.limparCache();
     activeDataset.value = ConjuntoDadosCroqui.vazio();
   }
 
   /// Atualiza o conjunto de dados após a conclusão de um download.
   Future<void> updateDatasetAfterDownload(String id) async {
+    ConstrutorCaminhoTrajeto.limparCache();
     gerenciadorSessaoOnline.removerSessao(id);
     await _refreshActiveDataset();
   }
@@ -467,15 +493,26 @@ class DatasetRepository {
   }
 
   // ===========================================================================
-  // SECTION: Consulta de Croqui (Híbrido: Local ou Sessão Online)
+  // SECTION: Consulta de Croqui (Hierarquia Estrita de 4 Etapas)
   // ===========================================================================
 
-  /// Recupera o [Croqui] completo de um pico (seja local ou da sessão online ativa).
+  /// Recupera o [Croqui] completo de um pico seguindo a hierarquia estrita de quatro etapas:
+  /// 1. Memória RAM (Sessão Online ativa)
+  /// 2. Armazenamento permanente (`/downloads/<picoId>/compilado.binarypb`)
+  /// 3. Cache volátil (`/temp_cache/<picoId>/compilado.binarypb.<sha256>`)
+  /// 4. Rede remota (Download via CDN com `?v=<sha256>`)
   Future<Croqui?> getCroqui(String id) async {
+    // 1. Memória RAM (Sessão Online ativa)
+    final emMemoria = gerenciadorSessaoOnline.obterCroquiOnline(id);
+    if (emMemoria != null) {
+      indexarMidiasDoCroqui(id, emMemoria);
+      return emMemoria;
+    }
+
     final directory = await getApplicationDocumentsDirectory();
     final downloadsPath = editorDeCroqui.downloadsPath(directory.path);
 
-    // 1. Tenta carregar do disco permanente (/downloads)
+    // 2. Disco permanente (/downloads)
     final localCroqui =
         await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
     if (localCroqui != null) {
@@ -483,12 +520,59 @@ class DatasetRepository {
       return localCroqui;
     }
 
-    // 2. Se não estiver no disco permanente, consulta a sessão online ativa
-    final online = gerenciadorSessaoOnline.obterCroquiOnline(id);
-    if (online != null) {
-      indexarMidiasDoCroqui(id, online);
+    // Localiza o resumo correspondente no índice para obter o checksum cadastrado
+    ResumoCroqui? resumo;
+    final indice = indiceData.value;
+    if (indice != null) {
+      for (final r in indice.croquis) {
+        if (r.id == id) {
+          resumo = r;
+          break;
+        }
+      }
     }
-    return online;
+
+    final checksum = resumo?.checksumSha256Croqui;
+
+    // 3. Cache volátil (/temp_cache/<picoId>/compilado.binarypb.<sha256>)
+    if (checksum != null && checksum.isNotEmpty) {
+      final caminhoCache = await servicoCroquiOnline.obterDiretorioCache();
+      final arquivoCache =
+          File('$caminhoCache/$id/compilado.binarypb.$checksum');
+      if (await arquivoCache.exists()) {
+        try {
+          final bytes = await arquivoCache.readAsBytes();
+          final croquiCache = Croqui.fromBuffer(bytes);
+          gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiCache);
+          indexarMidiasDoCroqui(id, croquiCache);
+          return croquiCache;
+        } catch (e, stackTrace) {
+          AppLogger.instance.logError(
+            '[DatasetRepo] Erro ao carregar croqui do cache volátil para $id',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      }
+    }
+
+    // 4. Rede remota (CDN com ?v=<sha256>)
+    if (resumo != null && resumo.caminhoRelativo.isNotEmpty) {
+      final url =
+          '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=$checksum';
+      final croquiRemoto = await servicoCroquiOnline.carregarCroquiRemoto(
+        url,
+        picoId: id,
+        checksumSha256: checksum,
+      );
+      if (croquiRemoto != null) {
+        gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiRemoto);
+        indexarMidiasDoCroqui(id, croquiRemoto);
+        return croquiRemoto;
+      }
+    }
+
+    return null;
   }
 
 

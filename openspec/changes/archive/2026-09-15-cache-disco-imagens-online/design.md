@@ -4,7 +4,7 @@ O aplicativo Aresta adota uma abordagem híbrida para visualização de croquis:
 
 O `ProvedorImagemAresta` foi concebido para unificar essa resolução em três camadas (`/downloads` -> `/temp_cache` -> CDN). Contudo, a camada de persistência em `temp_cache` para imagens nunca foi implementada: a CDN simplesmente retorna uma instância de `NetworkImage` em memória. Adicionalmente, `OfflineMarkdown` expurga instâncias de imagem no `didUpdateWidget`, forçando downloads repetidos toda vez que o usuário navega entre telas. Por fim, telas como `browse_functions.dart` e `meus_croquis_functions.dart` ainda usam lógica manual de carregamento de miniaturas sem usufruir do provedor centralizado nem do cache volátil.
 
-Para manter a base de código coesa e sustentável, este design é estritamente orientado pelas diretrizes de engenharia de `PRINCIPIOS.md`.
+Para manter a base de código coesa e sustentável, este design é estritamente orientado pelas diretrizes de engenharia de `AGENTS.md`.
 
 ## Goals / Non-Goals
 
@@ -13,10 +13,10 @@ Para manter a base de código coesa e sustentável, este design é estritamente 
 - Tratar miniaturas globais de forma padronizada sob `temp_cache/thumbnails/<picoId>.webp.<hash>`.
 - Exigir `checksumSha256` estritamente para persistência no `temp_cache`; caso ausente, emitir log de erro e recorrer a streaming online sem cache.
 - Expurgar versões antigas com hashes divergentes do mesmo arquivo após o término de um novo download, mantendo o caminho crítico de leitura em $O(1)$.
-- Eliminar evicções cegas no `OfflineMarkdown.didUpdateWidget`, preservando a textura em memória RAM.
+- Eliminar evicções cegas no `OfflineMarkdown.didUpdateWidget`, preservando a textura em memória RAM quando o conteúdo for inalterado.
 - Unificar o carregamento de miniaturas em `browse_functions.dart` e `meus_croquis_functions.dart` através de `ProvedorImagemAresta.resolver`.
 - Reaproveitar mídias válidas já presentes no `temp_cache` durante o download permanente de croquis no `SyncService`/`DownloadIsolate`.
-- Cumprir integralmente os preceitos de `PRINCIPIOS.md`: nomenclatura e documentação 100% em português brasileiro, 100% de cobertura de testes, ciclo TDD estrito com testes de widget e integração em primeiro lugar, paridade de arquivos de teste para `meus_croquis_functions.dart` e docstrings abrangentes explicando o porquê.
+- Cumprir integralmente os preceitos de `AGENTS.md`: nomenclatura e documentação 100% em português brasileiro, 100% de cobertura de testes, ciclo TDD estrito com testes de widget e integração em primeiro lugar, paridade de arquivos de teste para `meus_croquis_functions.dart` e docstrings abrangentes explicando o porquê.
 
 **Non-Goals:**
 - Modificar a estrutura ou comportamento do armazenamento permanente offline (`/downloads/<picoId>/`).
@@ -56,13 +56,15 @@ Para manter a base de código coesa e sustentável, este design é estritamente 
 - **Decisão**: Migrar `_CragBackgroundWidget` em `browse_functions.dart` e `meus_croquis_functions.dart` para chamar `ProvedorImagemAresta.resolver(picoId: id, caminho: 'thumbnails/$id.webp', larguraAlvo: 300)`. O provedor consultará `$docsDir/thumbnails/$id.webp` (camada 1) e `temp_cache/thumbnails/$id.webp.<hash>` (camada 2).
 - **Racional**: Centralização em uma única arquitetura, eliminação de código duplicado e aplicação uniforme de downsampling de memória.
 
-### 7. Estrutura de Testes e Conformidade com PRINCIPIOS.md
+### 7. Estrutura de Testes e Conformidade com AGENTS.md
 - **Decisão**: 
-  - **Princípio V (Testes de Widget em Primeiro Lugar)**: O desenvolvimento inicia pela escrita de um teste de integração de fronteira que simula o fluxo do usuário em `ExplorarLocalPage` abrindo a capa, saindo e reabrindo (reproduzindo a falha em Red).
-  - **Princípio IV (TDD & Espelhamento)**: Cada arquivo `.dart` modificado ou criado possui seu arquivo `_test.dart` correspondente na pasta `test/` espelhando a estrutura exata do `lib/`. Será criado `test/view_functions/meus_croquis_functions_test.dart` para sanar a ausência de cobertura nesse componente.
-  - **Princípio I (Tudo em Português)**: Todas as docstrings, nomes de funções, comentários e documentação técnica estão em português brasileiro.
-  - **Princípio III (100% de Cobertura)**: Todas as branches e cenários de sucesso, erro e ausência de hash serão cobertos com asserções rigorosas.
-  - **Princípio VII (Documentação Contínua)**: Docstrings `///` em todos os métodos criados e atualizações no `README.md` de serviços e widgets.
+  - **Princípio I (Tudo em Português)**: Todas as docstrings, nomes de funções, comentários, variáveis e documentação técnica estão estritamente em português brasileiro (ex: `caminhoCacheVolatil`, `_expurgarVersoesAntigas`, `_downloadsEmAndamento`).
+  - **Princípio II (Componentes Independentes - Feature-First)**: Componentes com propósitos claros e desacoplados. A lógica de cache fica no `ProvedorImagemAresta`; a UI (`OfflineMarkdown`, `meus_croquis_functions`, `browse_functions`) consome o provedor de forma declarativa e simples; o `SyncService` apenas reaproveita os arquivos sem acoplamento direto de UI.
+  - **Princípio III (100% de Test Coverage)**: Cobertura total de testes unitários e de widget para todas as novas linhas e ramificações condicionais (hash nulo, erro de rede, arquivo existente, download atômico, evicção condicional, fallback de segurança).
+  - **Princípio IV (Imperativo do Teste em Primeiro Lugar - TDD)**: Cada arquivo `.dart` modificado ou criado possui seu arquivo `_test.dart` correspondente na pasta `test/` espelhando a estrutura exata do `lib/`. Será criado `test/view_functions/meus_croquis_functions_test.dart` para sanar a ausência de cobertura nesse componente antes de alterar `meus_croquis_functions.dart`. Todo o ciclo segue estritamente Red-Green-Refactor.
+  - **Princípio V (Testes de Widget em Primeiro Lugar)**: O desenvolvimento inicia pela escrita de um teste de integração de ponta a ponta em `test/integration/cache_imagens_online_test.dart` simulando o fluxo real do usuário em `ExplorarLocalPage` abrindo a capa online, saindo e reabrindo, e testes de widget nas fronteiras antes de unidades isoladas.
+  - **Princípio VI (Simplicidade e Anti-Abstração)**: Abordagem declarativa utilizando primitivas padrão do Dart (`dart:io`, `http.Client`) e identificação content-addressable direta via nome do arquivo `<caminho>.<hash>`, sem adicionar bibliotecas complexas ou camadas desnecessárias de abstração.
+  - **Princípio VII (Documentação Contínua e Abrangente)**: Docstrings abrangentes em blocos `///` explicando a intenção (*o porquê*) em cada método e classe, além de atualização dos arquivos `README.md` pertinentes (`frontend/lib/services/README.md` e `frontend/lib/widgets/README.md`).
 
 ## Risks / Trade-offs
 

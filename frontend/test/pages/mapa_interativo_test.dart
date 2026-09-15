@@ -134,7 +134,7 @@ void main() {
         circulo: BoundingCirculo(x: 100, y: 100, raio: 50),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#1');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 50.0);
       expect(areaInfo.bounds.top, 50.0);
@@ -163,7 +163,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#2');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 70.0);
       expect(areaInfo.bounds.top, 80.0);
@@ -191,7 +191,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#3');
       expect(areaInfo, isNotNull);
 
       // 60x40 rotated 90 deg becomes 40x60 bounds
@@ -209,7 +209,7 @@ void main() {
         poligono: BoundingPoligono(coordenadas: [0, 0, 10, 0, 10, 10, 0, 10]),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#4');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 0.0);
       expect(areaInfo.bounds.top, 0.0);
@@ -226,7 +226,7 @@ void main() {
         poligono: BoundingPoligono(coordenadas: [0, 0, 1, 1]),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#5');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds, Rect.fromLTRB(0, 0, 1, 1));
       expect(areaInfo.polygon.length, 2);
@@ -244,7 +244,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#6');
       expect(areaInfo, isNotNull);
       // Should be same as 0 degrees
       expect(areaInfo!.bounds.left, closeTo(70.0, 0.001));
@@ -253,7 +253,7 @@ void main() {
 
     test('Invalid Area Type', () {
       final ponto = Mapa_PontoDeInteresse(id: '7');
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#7');
       expect(areaInfo, isNull);
     });
 
@@ -274,7 +274,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#linha_teste');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, closeTo(100.0, 1.0));
       expect(areaInfo.bounds.right, closeTo(160.0, 1.0));
@@ -298,7 +298,7 @@ void main() {
         ),
       );
 
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: 'mapa_teste#linha_conteudo');
       expect(areaInfo, isNotNull);
       expect(areaInfo!.bounds.left, 10.0);
       expect(areaInfo.bounds.right, 50.0);
@@ -431,6 +431,197 @@ void main() {
 
       // Toque no canto oposto vazio (0, 100), dist ~100dp
       expect(painter.hitTest(const Offset(4, 104)), isFalse);
+    });
+
+    test('hitTest para LinhaTrajeto com zoom 1.0x aplica tolerância ergonômica mínima', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 1.0,
+        linha: LinhaTrajeto(espessura: 2),
+      );
+
+      // Distância de 12dp da linha: dentro do raio mínimo ergonômico de 16dp
+      expect(painter.hitTest(const Offset(54, 16)), isTrue);
+
+      // Distância de 22dp da linha: fora do raio mínimo ergonômico de 16dp
+      expect(painter.hitTest(const Offset(54, 26)), isFalse);
+    });
+
+    test('hitTest para LinhaTrajeto com zoom ampliado (4.0x) colapsa tolerância extra e segue o traçado', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 4.0,
+        linha: LinhaTrajeto(espessura: 2),
+      );
+
+      // No zoom 4.0x, a tolerância extra de tela colapsa para zero
+      // Toque a 12dp locais agora é rejeitado (em tela seria 12 * 4 = 48dp de distância!)
+      expect(painter.hitTest(const Offset(54, 16)), isFalse);
+
+      // Toque muito próximo à linha (distância local <= 2dp) é aceito
+      expect(painter.hitTest(const Offset(54, 5)), isTrue);
+    });
+
+    test('hitTest para LinhaTrajeto detecta toque próximo aos marcadores compilados com tolerância ergonômica', () {
+      final polygon = [const Offset(0, 0), const Offset(100, 0)];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 200,
+        mapHeight: 200,
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        zoomAtual: 1.0,
+        linha: LinhaTrajeto(
+          espessura: 2,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 0 0 L 100 0',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 0,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '1',
+                raio: 12,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // O marcador está no ponto local (54, 4) com raio 12dp.
+      // Com tolerância ergonômica mínima de 22dp em tela:
+      // Toque a 18dp de distância do centro do marcador: deve retornar true
+      expect(painter.hitTest(const Offset(54, 22)), isTrue);
+
+      // Toque a 30dp de distância do centro do marcador (e da linha): deve retornar false
+      expect(painter.hitTest(const Offset(54, 34)), isFalse);
+    });
+
+    test('hitTest com polígono contendo pontos coincidentes l2 == 0 avalia distância ao ponto', () {
+      final polygon = [
+        const Offset(10, 10),
+        const Offset(10, 10),
+        const Offset(20, 20),
+      ];
+      final painter = MarkerPainter(
+        polygon: polygon,
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 0.0,
+        isLinha: false,
+        zoomAtual: 1.0,
+      );
+
+      expect(painter.hitTest(const Offset(12, 12)), isTrue);
+      expect(painter.hitTest(const Offset(80, 80)), isFalse);
+    });
+
+    test('MarkerPainter shouldRepaint detecta alterações em zoomAtual, transformationController e linha', () {
+      final ctrl1 = TransformationController();
+      final ctrl2 = TransformationController();
+      final linha1 = LinhaTrajeto(espessura: 2);
+      final linha2 = LinhaTrajeto(espessura: 4);
+
+      final p1 = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+
+      final pIdentico = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+
+      expect(p1.shouldRepaint(pIdentico), isFalse);
+
+      final pZoomDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 2.0,
+        transformationController: ctrl1,
+        linha: linha1,
+      );
+      expect(p1.shouldRepaint(pZoomDiferente), isTrue);
+
+      final pCtrlDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl2,
+        linha: linha1,
+      );
+      expect(p1.shouldRepaint(pCtrlDiferente), isTrue);
+
+      final pLinhaDiferente = MarkerPainter(
+        polygon: [const Offset(0, 0)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        zoomAtual: 1.0,
+        transformationController: ctrl1,
+        linha: linha2,
+      );
+      expect(p1.shouldRepaint(pLinhaDiferente), isTrue);
     });
   });
 
@@ -1829,6 +2020,87 @@ void main() {
         expect(find.text('Target Via'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'Card da via exibe codenome correto (5-C) para caminho de linhas vetoriais e omite IDs tecnicos',
+      (WidgetTester tester) async {
+        final pontoLinha1 = Mapa_PontoDeInteresse(
+          id: 'linha_12',
+          linha: LinhaTrajeto(
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 10 10 L 20 20',
+              marcadores: [
+                MarcadorCompilado(
+                  x: 10,
+                  y: 10,
+                  tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                  rotulo: '5',
+                ),
+              ],
+            ),
+          ),
+        );
+        final pontoLinha2 = Mapa_PontoDeInteresse(
+          id: 'linha_21',
+          linha: LinhaTrajeto(
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 20 20 L 30 30',
+              marcadores: [
+                MarcadorCompilado(
+                  x: 30,
+                  y: 30,
+                  tipo: NoTrajeto_TipoNo.FIM_TOP,
+                  rotulo: 'C',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapa_poly.webp',
+          larguraMapa: 1000,
+          alturaMapa: 800,
+          pontosDeInteresse: [pontoLinha1, pontoLinha2],
+        );
+        mapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Polydance',
+            ids: ['linha_12', 'linha_21'],
+          ),
+        );
+
+        final pico = Pico()..nome = 'Pico Teste';
+        final setor = Setor()..nome = 'Setor Teste';
+        final esc = Escalada(boulder: Boulder(nome: 'Polydance'));
+        setor.escaladas.add(esc);
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaInterativoPage(
+                mapa: mapa,
+                pico: pico,
+                cragId: 'pico_1',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                initialSelectedId: 'linha_12',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Deve exibir o codenome "5-C" no card
+        expect(find.text('5-C'), findsOneWidget);
+        // NÃO deve exibir os IDs técnicos das linhas
+        expect(find.textContaining('linha_12'), findsNothing);
+        expect(find.textContaining('linha_21'), findsNothing);
+      },
+    );
   });
 
   group('MapaInterativoPage Overlay Navigation Tests', () {
@@ -2244,7 +2516,7 @@ void main() {
       expect((customPaint.painter as MarkerPainter).isSelected, isTrue);
     });
 
-    test('MarkerPainter _paintMarcadores pinta círculo identificador com cores fiéis ao editor e raio adaptativo', () {
+    test('MarkerPainter _paintMarcadores pinta círculo identificador no estilo Ouroboulder em repouso (fundo preto neutro, sem borda branca)', () {
       final canvas = CanvasRegistrador();
       final painter = MarkerPainter(
         polygon: [const Offset(10, 10), const Offset(90, 90)],
@@ -2277,30 +2549,213 @@ void main() {
 
       painter.paint(canvas, const Size(400, 400));
 
-      // 1. Deve desenhar 3 círculos: casing escuro, preenchimento com a cor da via e borda branca
-      expect(canvas.circulos.length, 3);
-
-      // Casing escuro externo
+      // 1. Fundo preto neutro (#1A1A1A) em repouso
       expect(
-        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.strokeWidth >= 2.5),
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
         isTrue,
       );
 
-      // Fundo preenchido com a cor da via (#00E5FF)
-      expect(
-        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF00E5FF),
-        isTrue,
-      );
-
-      // Borda intermediária branca
+      // 2. Não deve ter borda branca intermediária grossa
       expect(
         canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.color == Colors.white),
+        isFalse,
+      );
+
+      // 3. Casing escuro fino (1.0px a 1.2px)
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.strokeWidth <= 1.5),
         isTrue,
       );
 
-      // 2. Raio adaptativo escalado proporcionalmente dentro do clamp ergonômico (11.0 a 15.0dp)
-      // ao invés dos 18.0dp fixos antigos
-      expect(canvas.circulos.first.raio, inInclusiveRange(11.0, 15.0));
+      // 4. Raio estritamente proporcional 1:1 ao editor (raio 18 * scaleX 0.4 = 7.2dp)
+      expect(canvas.circulos.first.raio, closeTo(7.2, 0.01));
+    });
+
+    test('MarkerPainter _paintMarcadores aplica raio padrão 19px e fonte ampliada quando não especificado', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '1',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // Raio padrão 19px * scaleX 0.4 = 7.6dp
+      expect(canvas.circulos.first.raio, closeTo(7.6, 0.01));
+    });
+
+    test('MarkerPainter _paintMarcadores pinta círculo identificador com fundo escuro e borda colorida quando isSelected', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: true,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '7A',
+                raio: 16,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // 1. Fundo preenchido SEMPRE com #1A1A1A mesmo quando selecionado
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
+        isTrue,
+      );
+
+      // 2. Borda colorida idêntica à de círculos avulsos (opacidade 70%, blur sólido 1.5 e espessura 2.0)
+      expect(
+        canvas.circulos.any((c) =>
+          c.paint.style == PaintingStyle.stroke &&
+          (c.paint.color.a - 0.7).abs() < 0.05 &&
+          c.paint.strokeWidth == 2.0 &&
+          c.paint.maskFilter == const MaskFilter.blur(BlurStyle.solid, 1.5)
+        ),
+        isTrue,
+      );
+
+      // 3. Não deve ter borda branca intermediária
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.stroke && c.paint.color == Colors.white),
+        isFalse,
+      );
+    });
+
+    test('MarkerPainter _paintMarcadores desenha pulso de highlight branco no círculo quando highlightIntensity > 0 e não selecionado', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        highlightIntensity: 0.8,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                rotulo: '7A',
+                raio: 16,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // 1. Fundo do círculo permanece preto neutro (#1A1A1A)
+      expect(
+        canvas.circulos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFF1A1A1A),
+        isTrue,
+      );
+
+      // 2. Deve conter o traço do pulso de highlight branco ao redor do círculo
+      expect(
+        canvas.circulos.any((c) =>
+          c.paint.style == PaintingStyle.stroke &&
+          c.paint.color.r == 1.0 &&
+          c.paint.color.g == 1.0 &&
+          c.paint.color.b == 1.0 &&
+          (c.paint.color.a - (0.8 * 0.8)).abs() < 0.05 &&
+          c.paint.maskFilter == const MaskFilter.blur(BlurStyle.solid, 1.0)
+        ),
+        isTrue,
+      );
+    });
+
+    test('MarkerPainter _paintMarcadores renderiza nó SETA_DIRECIONAL orientado pelo ângulo da tangente', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(90, 90)],
+        minX: 10,
+        minY: 10,
+        mapWidth: 1000,
+        mapHeight: 1000,
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        corHex: '#FFD600',
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          compilado: DadosCompiladosLinha(
+            caminhoSvg: 'M 10 10 L 90 90',
+            marcadores: [
+              MarcadorCompilado(
+                x: 50,
+                y: 50,
+                tipo: NoTrajeto_TipoNo.SETA_DIRECIONAL,
+                anguloGrausX100: 4500,
+                raio: 12,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      painter.paint(canvas, const Size(400, 400));
+
+      // Deve registrar caminhos desenhados para a seta (preenchimento com cor da via e contorno)
+      expect(
+        canvas.caminhos.any((c) => c.paint.style == PaintingStyle.fill && c.paint.color.toARGB32() == 0xFFFFD600),
+        isTrue,
+      );
+      expect(
+        canvas.caminhos.any((c) => c.paint.style == PaintingStyle.stroke),
+        isTrue,
+      );
     });
 
     test('MarkerPainter _paintLinha desenha com espessura proporcional à escala e halos moderados', () {
@@ -2333,15 +2788,40 @@ void main() {
       final casingPath = canvas.caminhos[1];
       final corePath = canvas.caminhos[2];
 
-      // 1. O traço principal deve ter espessura proporcional (clamp entre 2.0 e 4.0dp),
-      // e NÃO os 6.0dp absolutos nominais
-      expect(corePath.paint.strokeWidth, inInclusiveRange(2.0, 4.0));
+      // 1. O traço principal deve ter espessura estritamente proporcional 1:1 (espessura 6 * scaleX 0.2 = 1.2dp),
+      // e NÃO os limites de clamp (2.0 a 4.0dp)
+      expect(corePath.paint.strokeWidth, closeTo(1.2, 0.01));
 
       // 2. O casing deve ser ligeiramente maior que o traço principal (+1.5dp)
       expect(casingPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 1.5, 0.01));
 
-      // 3. O halo moderado de seleção deve ser espessuraVisual + 6.0dp (e não +12.0dp)
-      expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 6.0, 0.01));
+      // 3. O halo moderado de seleção deve ser justo e rente ao traçado (espessuraVisual + 2.5dp)
+      expect(haloPath.paint.strokeWidth, closeTo(corePath.paint.strokeWidth + 2.5, 0.01));
+
+      // 4. A cor do traço ao selecionar deve mudar para alto contraste (se rota não for amarela, vira amarela #FFD600)
+      expect(corePath.paint.color.toARGB32(), 0xFFFFD600);
+    });
+
+    test('MarkerPainter _paintLinha desenha com fallback quando compilado não possui caminhoSvg', () {
+      final canvas = CanvasRegistrador();
+      final painter = MarkerPainter(
+        polygon: [const Offset(10, 10), const Offset(50, 50)],
+        minX: 0,
+        minY: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+        isSelected: false,
+        padding: 4.0,
+        isLinha: true,
+        linha: LinhaTrajeto(
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+          espessura: 2,
+        ),
+      );
+
+      painter.paint(canvas, const Size(100, 100));
+      expect(canvas.caminhos.isNotEmpty, isTrue);
     });
   });
 }
@@ -2366,7 +2846,8 @@ class CanvasRegistrador extends Fake implements Canvas {
     circulos.add(RegistroCirculo(radius, Paint()
       ..color = paint.color
       ..style = paint.style
-      ..strokeWidth = paint.strokeWidth));
+      ..strokeWidth = paint.strokeWidth
+      ..maskFilter = paint.maskFilter));
   }
 
   @override
@@ -2374,7 +2855,8 @@ class CanvasRegistrador extends Fake implements Canvas {
     caminhos.add(RegistroCaminho(Paint()
       ..color = paint.color
       ..style = paint.style
-      ..strokeWidth = paint.strokeWidth));
+      ..strokeWidth = paint.strokeWidth
+      ..maskFilter = paint.maskFilter));
   }
 
   @override
@@ -2388,4 +2870,10 @@ class CanvasRegistrador extends Fake implements Canvas {
 
   @override
   void restore() {}
+
+  @override
+  void translate(double dx, double dy) {}
+
+  @override
+  void rotate(double radians) {}
 }

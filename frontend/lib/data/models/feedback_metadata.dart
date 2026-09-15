@@ -20,6 +20,30 @@ class FeedbackMetadata {
   final String isDarkMode;
   final String connectivity;
 
+  /// Checksum SHA-256 do arquivo `indice.binarypb` local.
+  final String? indiceSha256;
+
+  /// Identificador do croqui/pico ativo em visualização no momento do feedback.
+  final String? croquiId;
+
+  /// Checksum SHA-256 esperado do croqui conforme informado no índice mestre.
+  final String? croquiSha256Esperado;
+
+  /// Checksum SHA-256 real calculado a partir do binário local do croqui.
+  final String? croquiSha256Real;
+
+  /// Status de integridade do croqui ('INTEGRO', 'DIVERGENTE' ou 'NAO_BAIXADO').
+  final String? croquiStatus;
+
+  /// Checksum SHA-256 esperado da thumbnail conforme informado no índice mestre.
+  final String? thumbnailSha256Esperado;
+
+  /// Checksum SHA-256 real calculado a partir do arquivo de thumbnail local.
+  final String? thumbnailSha256Real;
+
+  /// Status de integridade da thumbnail ('INTEGRO', 'DIVERGENTE' ou 'NAO_BAIXADO').
+  final String? thumbnailStatus;
+
   const FeedbackMetadata({
     required this.navigationTree,
     required this.submittedAt,
@@ -34,5 +58,13 @@ class FeedbackMetadata {
     required this.deviceOrientation,
     required this.isDarkMode,
     required this.connectivity,
+    this.indiceSha256,
+    this.croquiId,
+    this.croquiSha256Esperado,
+    this.croquiSha256Real,
+    this.croquiStatus,
+    this.thumbnailSha256Esperado,
+    this.thumbnailSha256Real,
+    this.thumbnailStatus,
   });
 }

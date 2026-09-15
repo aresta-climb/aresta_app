@@ -7,6 +7,16 @@ on:
         description: 'A tag do git para construir'
         required: true
         type: string
+      enviar_para_producao:
+        description: 'Enviar para Produção nas lojas?'
+        required: false
+        type: boolean
+        default: true
+      release_notes:
+        description: 'Notas de lançamento da versão'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -122,6 +132,14 @@ jobs:
             --app="1:737982062809:android:e168a4e15cd353e1d5dec8" \
             build/symbols
 
+      - name: Preparar Notas de Versão para Google Play
+        env:
+          NOTAS_LANCAMENTO: ${{ inputs.release_notes }}
+        run: |
+          mkdir -p frontend/build/whatsnew
+          echo "$NOTAS_LANCAMENTO" > frontend/build/whatsnew/whatsnew-pt-BR
+          echo "Arquivo whatsnew-pt-BR criado com sucesso em frontend/build/whatsnew/whatsnew-pt-BR"
+
       - name: Upload to Google Play Console
         uses: r0adkll/upload-google-play@v1
         with:
@@ -130,5 +148,6 @@ jobs:
           releaseFiles: frontend/build/app/outputs/bundle/release/app-release.aab
           mappingFile: frontend/build/app/outputs/mapping/release/mapping.txt
           debugSymbols: frontend/build/native-debug-symbols/native-debug-symbols.zip
-          tracks: internal
+          tracks: ${{ inputs.enviar_para_producao && 'internal,production' || 'internal' }}
+          whatsNewDirectory: frontend/build/whatsnew
           status: completed

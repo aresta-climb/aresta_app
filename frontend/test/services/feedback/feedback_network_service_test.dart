@@ -155,5 +155,49 @@ void main() {
         throwsA(isA<Exception>()),
       );
     });
+
+    test('sendFeedback anexa indice_file e croqui_file quando fornecidos', () async {
+      when(() => mockHttpClient.send(any())).thenAnswer(
+        (_) async => http.StreamedResponse(
+          Stream.value(utf8.encode('{"success":true}')),
+          200,
+        ),
+      );
+
+      final screenshotFile = File('${tempDir.path}/screenshot.png');
+      await screenshotFile.writeAsBytes([1, 2, 3]);
+
+      final indiceFile = File('${tempDir.path}/indice.binarypb');
+      await indiceFile.writeAsBytes([4, 5, 6]);
+
+      final croquiFile = File('${tempDir.path}/compilado.binarypb');
+      await croquiFile.writeAsBytes([7, 8, 9]);
+
+      await service.sendFeedback(
+        description: 'Teste com binários',
+        metadata: {'croqui_id': 'pico_anexo'},
+        dispatcher: 'manual',
+        pngFile: screenshotFile,
+        indiceFile: indiceFile,
+        croquiFile: croquiFile,
+      );
+
+      final captured = verify(() => mockHttpClient.send(captureAny())).captured;
+      expect(captured.length, 1);
+
+      final request = captured.first as http.MultipartRequest;
+      expect(request.files.length, 3);
+
+      final camposArquivos = request.files.map((f) => f.field).toList();
+      expect(camposArquivos, contains('screenshot'));
+      expect(camposArquivos, contains('indice_file'));
+      expect(camposArquivos, contains('croqui_file'));
+
+      final arquivoIndice = request.files.firstWhere((f) => f.field == 'indice_file');
+      expect(arquivoIndice.filename, 'indice.binarypb');
+
+      final arquivoCroqui = request.files.firstWhere((f) => f.field == 'croqui_file');
+      expect(arquivoCroqui.filename, 'compilado.binarypb');
+    });
   });
 }

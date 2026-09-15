@@ -23,6 +23,14 @@ class FeedbackMetadataDto {
       deviceOrientation: json['deviceOrientation'] as String? ?? 'unknown',
       isDarkMode: json['isDarkMode'] as String? ?? 'unknown',
       connectivity: json['connectivity'] as String? ?? 'unknown',
+      indiceSha256: (json['indice_sha256'] ?? json['indiceSha256']) as String?,
+      croquiId: (json['croqui_id'] ?? json['croquiId']) as String?,
+      croquiSha256Esperado: (json['croqui_sha256_esperado'] ?? json['croquiSha256Esperado']) as String?,
+      croquiSha256Real: (json['croqui_sha256_real'] ?? json['croquiSha256Real']) as String?,
+      croquiStatus: (json['croqui_status'] ?? json['croquiStatus']) as String?,
+      thumbnailSha256Esperado: (json['thumbnail_sha256_esperado'] ?? json['thumbnailSha256Esperado']) as String?,
+      thumbnailSha256Real: (json['thumbnail_sha256_real'] ?? json['thumbnailSha256Real']) as String?,
+      thumbnailStatus: (json['thumbnail_status'] ?? json['thumbnailStatus']) as String?,
     );
   }
 
@@ -41,6 +49,14 @@ class FeedbackMetadataDto {
       'deviceOrientation': metadata.deviceOrientation,
       'isDarkMode': metadata.isDarkMode,
       'connectivity': metadata.connectivity,
+      if (metadata.indiceSha256 != null) 'indice_sha256': metadata.indiceSha256,
+      if (metadata.croquiId != null) 'croqui_id': metadata.croquiId,
+      if (metadata.croquiSha256Esperado != null) 'croqui_sha256_esperado': metadata.croquiSha256Esperado,
+      if (metadata.croquiSha256Real != null) 'croqui_sha256_real': metadata.croquiSha256Real,
+      if (metadata.croquiStatus != null) 'croqui_status': metadata.croquiStatus,
+      if (metadata.thumbnailSha256Esperado != null) 'thumbnail_sha256_esperado': metadata.thumbnailSha256Esperado,
+      if (metadata.thumbnailSha256Real != null) 'thumbnail_sha256_real': metadata.thumbnailSha256Real,
+      if (metadata.thumbnailStatus != null) 'thumbnail_status': metadata.thumbnailStatus,
     };
   }
 }

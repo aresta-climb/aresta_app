@@ -16,6 +16,8 @@ import '../navigation/map_hierarchy_resolver.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../utils/pincel_destaque_mapa.dart';
+import '../utils/resolvedor_rotulos_referencia.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -351,7 +353,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     double maxY = double.negativeInfinity;
 
     for (var p in pontos) {
-      final areaInfo = AreaHelper.getAreaInfo(p);
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${p.id}';
+      final areaInfo = AreaHelper.getAreaInfo(p, chaveCache: chaveCanonica);
       if (areaInfo != null) {
         if (areaInfo.bounds.left < minX) minX = areaInfo.bounds.left;
         if (areaInfo.bounds.top < minY) minY = areaInfo.bounds.top;
@@ -543,7 +546,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) return [];
 
     return widget.mapa.pontosDeInteresse.map((ponto) {
-      final areaInfo = AreaHelper.getAreaInfo(ponto);
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${ponto.id}';
+      final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: chaveCanonica);
       if (areaInfo == null) return const SizedBox.shrink();
 
       final minX = areaInfo.bounds.left;
@@ -606,7 +610,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               isLinha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha,
               linha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha ? ponto.linha : null,
               corHex: ponto.cor.isNotEmpty ? ponto.cor : null,
-              chaveCache: ponto.id,
+              chaveCache: chaveCanonica,
+              zoomAtual: _transformationController.value.getMaxScaleOnAxis(),
+              transformationController: _transformationController,
             ),
           ),
         ),
@@ -663,21 +669,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
 
     String getLabelsForRef(Mapa_Referencia ref) {
-      if (ref.ids.isEmpty) return ref.nome;
-      List<String> labels = [];
-      for (var id in ref.ids) {
-        for (var p in widget.mapa.pontosDeInteresse) {
-          if (p.id == id) {
-            if (p.label.isNotEmpty) {
-              labels.add(p.label);
-            } else {
-              labels.add(id);
-            }
-            break;
-          }
-        }
-      }
-      return labels.isNotEmpty ? labels.join('-') : ref.nome;
+      return extrairRotuloReferencia(widget.mapa, ref);
     }
 
     final resolved = _refToResolved[ref];
@@ -1414,7 +1406,10 @@ class AreaInfo {
 class AreaHelper {
   /// Computes a list of vertices forming the polygon for a given marker,
   /// along with its encompassing AABB. Returns `null` if the shape is not supported.
-  static AreaInfo? getAreaInfo(Mapa_PontoDeInteresse ponto) {
+  static AreaInfo? getAreaInfo(
+    Mapa_PontoDeInteresse ponto, {
+    required String chaveCache,
+  }) {
     List<Offset> polygon = [];
     double minX, minY, maxX, maxY;
 
@@ -1504,7 +1499,7 @@ class AreaHelper {
         if (linha.hasCompilado() && linha.compilado.caminhoSvg.isNotEmpty) {
           final comp = linha.compilado;
           final caminho = ConstrutorCaminhoTrajeto.obterCaminho(
-            chaveCache: ponto.id,
+            chaveCache: chaveCache,
             caminhoSvg: comp.caminhoSvg,
             estilo: linha.estilo,
           );
@@ -1748,12 +1743,13 @@ class MapHelper {
   }
 }
 
-/// A `CustomPainter` responsible for drawing map markers and precisely detecting taps.
+/// Pintor customizado (`CustomPainter`) responsável por desenhar marcadores e traçados vetoriais do mapa,
+/// além de realizar detecção precisa de toques (`hitTest`).
 ///
-/// It operates in the local coordinate space established by the `Positioned` widget
-/// which acts as an Axis-Aligned Bounding Box (AABB) around the marker. The polygon's
-/// absolute map coordinates are translated by `minX`/`minY` and scaled down to the
-/// UI `constraints` proportionally based on the original `mapWidth`/`mapHeight`.
+/// Opera no espaço de coordenadas local delimitado pelo widget `Positioned`, que atua como
+/// uma caixa delimitadora alinhada aos eixos (AABB) ao redor do marcador. As coordenadas absolutas
+/// do mapa são transladadas por `minX`/`minY` e escaladas para as restrições da interface (`constraints`)
+/// proporcionalmente com base nas dimensões originais da imagem (`mapWidth`/`mapHeight`).
 class MarkerPainter extends CustomPainter {
   final List<Offset> polygon;
   final double minX;
@@ -1768,6 +1764,8 @@ class MarkerPainter extends CustomPainter {
   final LinhaTrajeto? linha;
   final String? corHex;
   final String? chaveCache;
+  final double zoomAtual;
+  final TransformationController? transformationController;
 
   MarkerPainter({
     required this.polygon,
@@ -1783,7 +1781,21 @@ class MarkerPainter extends CustomPainter {
     this.linha,
     this.corHex,
     this.chaveCache,
+    this.zoomAtual = 1.0,
+    this.transformationController,
   });
+
+  /// Fator de zoom efetivo da visualização atual.
+  ///
+  /// Prioriza o valor extraído diretamente da matriz do [transformationController] se
+  /// fornecido, ou o [zoomAtual] informado manualmente (ex: em testes unitários).
+  double get _zoomEfetivo {
+    if (transformationController != null) {
+      final double scale = transformationController!.value.getMaxScaleOnAxis();
+      if (scale > 0) return scale;
+    }
+    return zoomAtual > 0 ? zoomAtual : 1.0;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1855,19 +1867,26 @@ class MarkerPainter extends CustomPainter {
     final double espessuraNominal = (linha?.hasEspessura() == true && linha!.espessura > 0)
         ? linha!.espessura.toDouble()
         : 3.0;
-    // Escala proporcional da espessura baseada na proporção do viewport com limites confortáveis (2.0 a 4.0dp)
-    final double espessuraVisual = (espessuraNominal * scaleX * 2.2).clamp(2.0, 4.0);
-    final Color corLinha = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
+    // Projeção estritamente proporcional 1:1 baseada na escala dos pixels da imagem no viewport,
+    // sem multiplicadores arbitrários ou limites mínimos artificiais (clamps).
+    final double espessuraVisual = espessuraNominal * scaleX;
+    final Color corBase = ConstrutorCaminhoTrajeto.converterCorHex(
+      corHex,
+      fallback: ConstrutorCaminhoTrajeto.corPadraoAmarelo,
+    );
 
-    // Camada 1: Halo de Seleção (glow difuso de largura moderada ao redor do traçado selecionado)
+    // Quando selecionado, a cor do traçado muda ativamente para alto contraste (ex: amarelo -> laranja)
+    final Color corLinha = isSelected ? PincelDestaqueMapa.obterCorDestaque(corBase) : corBase;
+
+    // Camada 1: Halo de Seleção (justo e bem pertinho do traçado para não dificultar a visualização da rocha)
     if (isSelected) {
       final haloPaint = Paint()
-        ..color = corLinha.withValues(alpha: 0.5)
+        ..color = corLinha.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraVisual + 6.0
+        ..strokeWidth = espessuraVisual + 2.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
       canvas.drawPath(localPath, haloPaint);
     }
 
@@ -1907,14 +1926,15 @@ class MarkerPainter extends CustomPainter {
     }
   }
 
-  /// Desenha os marcadores pré-posicionados ao longo da linha com fidelidade estética 1:1 ao editor.
+  /// Desenha os marcadores pré-posicionados ao longo da linha com fidelidade estética 1:1 ao editor (padrão Ouroboulder).
   ///
   /// Para círculos identificadores (`CIRCULO_IDENTIFICADOR` e `INICIO_AGACHADO`), aplica:
-  /// 1. Casing escuro externo para contraste sobre qualquer textura de rocha.
-  /// 2. Fundo preenchido com a cor da via ([corLinha]).
-  /// 3. Borda intermediária branca de alto contraste.
-  /// 4. Rótulo numérico/textual em branco em negrito centralizado.
-  /// 5. Raio e tipografia adaptativos escalados com base na escala do viewport.
+  /// 1. Repouso: Fundo preto neutro (#1A1A1A), texto branco e contorno escuro sutil (1.0px a 1.2px).
+  /// 2. Selecionado: Fundo sempre preto neutro (#1A1A1A), borda colorida com a cor de destaque ([corLinha]) e halo sutil e justo.
+  /// 3. Borda branca intermediária eliminada.
+  /// 4. Rótulo ampliado para preencher 75-80% do diâmetro útil do círculo.
+  ///
+  /// Para setas direcionais (`SETA_DIRECIONAL`), renderiza a geometria triangular orientada pelo ângulo da tangente.
   void _paintMarcadores(Canvas canvas, double scaleX, double scaleY, Color corLinha) {
     for (final m in linha!.compilado.marcadores) {
       final lx = ((m.x - minX) * scaleX) + padding;
@@ -1924,33 +1944,51 @@ class MarkerPainter extends CustomPainter {
       switch (m.tipo) {
         case NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR:
         case NoTrajeto_TipoNo.INICIO_AGACHADO:
-          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
-          // Escala proporcional ao viewport com limites ergonômicos de legibilidade e toque (11.0 a 15.0dp)
-          final double r = (baseR * scaleX * 2.2).clamp(11.0, 15.0);
+        case NoTrajeto_TipoNo.FIM_TOP:
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 19.0;
+          // Escala estritamente proporcional 1:1 baseada nos pixels da imagem do editor
+          final double r = baseR * scaleX;
 
-          // 1. Casing externo preto de alto contraste (para leitura sobre rochas claras ou escuras)
-          final casingCirclePaint = Paint()
-            ..color = Colors.black54
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3.0;
-          canvas.drawCircle(center, r, casingCirclePaint);
-
-          // 2. Fundo preenchido com a cor da via
+          // 1. Fundo do círculo: SEMPRE preto neutro (#1A1A1A), não muda para preenchimento colorido
           final fillPaint = Paint()
-            ..color = corLinha
+            ..color = const Color(0xFF1A1A1A)
             ..style = PaintingStyle.fill;
           canvas.drawCircle(center, r, fillPaint);
 
-          // 3. Borda intermediária branca
-          final borderPaint = Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5;
-          canvas.drawCircle(center, r, borderPaint);
+          // 2. Borda do círculo:
+          // - Quando selecionado: utiliza exatamente o mesmo pincel de borda luminosa dos círculos avulsos
+          // - Em repouso: contorno preto sutil (1.2px) para alto contraste com qualquer rocha
+          if (isSelected) {
+            final borderPaint = PincelDestaqueMapa.obterPincelBordaDestaque(corLinha);
+            canvas.drawCircle(center, r, borderPaint);
+          } else {
+            final borderCirclePaint = Paint()
+              ..color = Colors.black.withValues(alpha: 0.85)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.2;
+            canvas.drawCircle(center, r, borderCirclePaint);
 
-          // 4. Texto em branco em negrito centralizado
+            // Pulso de highlight branco ao tocar fora de qualquer área do mapa
+            if (highlightIntensity > 0.0) {
+              final pulseBorder = PincelDestaqueMapa.obterPincelBordaPulso(
+                highlightIntensity,
+                espessuraBase: math.max(2.0, 2.5 * scaleX),
+              );
+              canvas.drawCircle(center, r, pulseBorder);
+            }
+          }
+
+          // 4. Texto em negrito centralizado com dimensionamento proporcional (~80% do diâmetro)
+          // Como o fundo é sempre #1A1A1A, a cor do texto é sempre branca!
           if (m.rotulo.isNotEmpty) {
-            final double fontSize = (r * 0.95).clamp(9.0, 13.0);
+            final double fallbackFonte = m.rotulo.length <= 1
+                ? baseR * 1.50
+                : (m.rotulo.length == 2 ? baseR * 1.30 : baseR * 1.15);
+            final double baseFonte = m.hasTamanhoFonte() && m.tamanhoFonte > 0
+                ? m.tamanhoFonte.toDouble()
+                : math.max(9.0, fallbackFonte);
+            final double fontSize = baseFonte * scaleX;
+
             final textSpan = TextSpan(
               text: m.rotulo,
               style: TextStyle(
@@ -1965,6 +2003,49 @@ class MarkerPainter extends CustomPainter {
             )..layout();
             tp.paint(canvas, Offset(lx - tp.width / 2.0, ly - tp.height / 2.0));
           }
+          break;
+
+        case NoTrajeto_TipoNo.SETA_DIRECIONAL:
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
+          final double r = baseR * scaleX;
+          final double angDeg = m.anguloGrausX100 / 100.0;
+          final double angRad = angDeg * (math.pi / 180.0);
+
+          canvas.save();
+          canvas.translate(lx, ly);
+          canvas.rotate(angRad);
+
+          final double factor = r / 12.0;
+          final setaPath = Path()
+            ..moveTo(8.0 * factor, 0.0)
+            ..lineTo(-6.0 * factor, -6.0 * factor)
+            ..lineTo(-3.0 * factor, 0.0)
+            ..lineTo(-6.0 * factor, 6.0 * factor)
+            ..close();
+
+          final fillSeta = Paint()
+            ..color = corLinha
+            ..style = PaintingStyle.fill;
+          canvas.drawPath(setaPath, fillSeta);
+
+          final strokeSeta = Paint()
+            ..color = Colors.black.withValues(alpha: 0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(1.0, 1.8 * factor)
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+          canvas.drawPath(setaPath, strokeSeta);
+
+          // Pulso de highlight branco ao tocar fora de qualquer área do mapa
+          if (!isSelected && highlightIntensity > 0.0) {
+            final pulseSeta = PincelDestaqueMapa.obterPincelBordaPulso(
+              highlightIntensity,
+              espessuraBase: math.max(1.5, 2.0 * factor),
+            );
+            canvas.drawPath(setaPath, pulseSeta);
+          }
+
+          canvas.restore();
           break;
 
         case NoTrajeto_TipoNo.PROTECAO_FIXA:
@@ -2037,45 +2118,62 @@ class MarkerPainter extends CustomPainter {
     final Color corBase = ConstrutorCaminhoTrajeto.converterCorHex(corHex, fallback: rustIron);
 
     if (isSelected) {
-      final fillPaint = Paint()
-        ..color = corBase.withValues(alpha: 0.5)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+      final fillPaint = PincelDestaqueMapa.obterPincelPreenchimentoDestaque(corBase);
       canvas.drawPath(path, fillPaint);
 
-      final borderPaint = Paint()
-        ..color = corBase.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
-        ..strokeJoin = StrokeJoin.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.5);
+      final borderPaint = PincelDestaqueMapa.obterPincelBordaDestaque(corBase);
       canvas.drawPath(path, borderPaint);
     } else {
       // Base faint glow for clickable areas (or highlighted glow if intensity > 0)
-      final baseAlpha = 0.25;
-      final highlightAlpha = 0.5;
-      final effectiveAlpha = baseAlpha + ((highlightAlpha - baseAlpha) * highlightIntensity);
-
-      final glowPaint = Paint()
-        ..color = Colors.white.withValues(alpha: effectiveAlpha)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+      final glowPaint = PincelDestaqueMapa.obterPincelPreenchimentoPulso(highlightIntensity);
       canvas.drawPath(path, glowPaint);
       
       if (highlightIntensity > 0.0) {
-        final highlightBorderPaint = Paint()
-          ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5 * highlightIntensity
-          ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 1.0);
+        final highlightBorderPaint = PincelDestaqueMapa.obterPincelBordaPulso(highlightIntensity);
         canvas.drawPath(path, highlightBorderPaint);
       }
     }
   }
 
+  /// Detecta toques sobre o marcador ou traçado com tolerância ergonômica adaptativa.
+  ///
+  /// **Racional da Hitbox Adaptativa ao Tamanho em Tela:**
+  /// - Para linhas e nós, garante-se uma área de toque mínima confortável para o dedo humano
+  ///   (16.0 dp para linhas e 22.0 dp para círculos/nós) quando a visualização está no panorama (zoom 1.0x).
+  /// - Conforme o usuário aproxima o zoom, o elemento visual cresce na tela física. A tolerância extra
+  ///   em tela colapsa progressivamente para zero assim que o tamanho visual atinge a dimensão ergonômica mínima.
+  /// - Isso assegura que no panorama o clique seja fácil e tolerante, enquanto no zoom aproximado a seleção
+  ///   seja cirúrgica e respeite estritamente a geometria visual do traçado.
   @override
   bool? hitTest(Offset position) {
+    final double zoom = _zoomEfetivo;
+
     if (isLinha) {
+      final scaleX = constraints.maxWidth / mapWidth;
+      final scaleY = constraints.maxHeight / mapHeight;
+
+      // 1. Verifica se o toque atingiu algum dos marcadores compilados da linha (círculos identificadores, crux, etc.)
+      if (linha != null && linha!.hasCompilado() && linha!.compilado.marcadores.isNotEmpty) {
+        for (final m in linha!.compilado.marcadores) {
+          final lx = ((m.x - minX) * scaleX) + padding;
+          final ly = ((m.y - minY) * scaleY) + padding;
+          final markerPos = Offset(lx, ly);
+
+          final double baseR = m.hasRaio() && m.raio > 0 ? m.raio.toDouble() : 12.0;
+          final double rVisualLocal = baseR * scaleX;
+          final double rVisualTela = rVisualLocal * zoom;
+
+          // Área mínima de toque ergonômica para nós/círculos na tela: 22.0 dp
+          const double raioMinimoTela = 22.0;
+          final double tolExtraTela = math.max(0.0, raioMinimoTela - rVisualTela);
+          final double distanciaMaxima = rVisualLocal + (tolExtraTela / zoom);
+
+          if ((position - markerPos).distance <= distanciaMaxima) {
+            return true;
+          }
+        }
+      }
+
       if (polygon.isEmpty) return false;
 
       final localPolygon = <Offset>[];
@@ -2088,13 +2186,24 @@ class MarkerPainter extends CustomPainter {
         localPolygon.add(Offset(localX, localY));
       }
 
-      // Tolerância ergonômica para toque com o dedo: 16.0dp
-      const double tolerance = 16.0;
+      // 2. Verifica a distância ao traçado da linha com tolerância adaptativa:
+      final double espessuraNominal = (linha?.hasEspessura() == true && linha!.espessura > 0)
+          ? linha!.espessura.toDouble()
+          : 3.0;
+      final double espessuraVisualLocal = espessuraNominal * scaleX;
+      final double raioVisualLocal = espessuraVisualLocal / 2.0;
+      final double raioVisualTela = raioVisualLocal * zoom;
+
+      // Raio mínimo ergonômico para linhas na tela: 16.0 dp
+      const double raioMinimoLinhaTela = 16.0;
+      final double tolExtraTela = math.max(0.0, raioMinimoLinhaTela - raioVisualTela);
+      final double distanciaMaxima = raioVisualLocal + (tolExtraTela / zoom);
+
       final double distance = ConstrutorCaminhoTrajeto.calcularDistanciaAoCaminho(
         position,
         localPolygon,
       );
-      return distance <= tolerance;
+      return distance <= distanciaMaxima;
     }
 
     final path = Path();
@@ -2117,13 +2226,12 @@ class MarkerPainter extends CustomPainter {
     }
     path.close();
 
-    // First, check if the point is strictly inside the mathematical bounds.
+    // Primeiro, verifica se o ponto está estritamente dentro dos limites matemáticos da área.
     if (path.contains(position)) return true;
 
-    // Inflate path for easier tapping by checking distance to all polygon segments.
-    // A tolerance of 10.0 units is reasonable for finger taps.
-    const double tolerance = 10.0;
-    const double toleranceSq = tolerance * tolerance;
+    // Se estiver fora, aplica tolerância ergonômica adaptativa para toques próximos às bordas do polígono.
+    final double toleranciaLocal = 10.0 / zoom;
+    final double toleranceSq = toleranciaLocal * toleranciaLocal;
 
     for (int i = 0; i < localPolygon.length; i++) {
       final p1 = localPolygon[i];
@@ -2163,6 +2271,9 @@ class MarkerPainter extends CustomPainter {
         oldDelegate.highlightIntensity != highlightIntensity ||
         oldDelegate.constraints != constraints ||
         oldDelegate.corHex != corHex ||
-        oldDelegate.isLinha != isLinha;
+        oldDelegate.isLinha != isLinha ||
+        oldDelegate.linha != linha ||
+        oldDelegate.zoomAtual != zoomAtual ||
+        oldDelegate.transformationController != transformationController;
   }
 }

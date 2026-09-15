@@ -158,12 +158,15 @@ class ConstrutorCaminhoTrajeto {
     return caminhoFinal;
   }
 
+  /// Cor amarela padrão (#FFD600) alinhada ao estilo Ouroboulder e ao editor de mapas.
+  static const Color corPadraoAmarelo = Color(0xFFFFD600);
+
   /// Converte uma string hexadecimal (#RRGGBB ou RRGGBB) para uma instância de [Color].
   ///
   /// Retorna [fallback] caso a string seja nula, vazia ou inválida.
   static Color converterCorHex(
     String? hexString, {
-    Color fallback = const Color(0xFFE27D60),
+    Color fallback = corPadraoAmarelo,
   }) {
     if (hexString == null || hexString.trim().isEmpty) {
       return fallback;

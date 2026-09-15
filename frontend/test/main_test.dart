@@ -11,7 +11,6 @@ import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/navigation/page_listenable_builder.dart';

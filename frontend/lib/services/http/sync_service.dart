@@ -603,8 +603,11 @@ class SyncService {
     try {
       for (var newResumo in newIndice.croquis) {
         final picoFilePath =
+            '${downloadsDir.path}/${newResumo.id}/compilado.binarypb';
+        final legacyPicoFilePath =
             '${downloadsDir.path}/${newResumo.id}/${newResumo.id}.binarypb';
-        if (await File(picoFilePath).exists()) {
+        if (await File(picoFilePath).exists() ||
+            await File(legacyPicoFilePath).exists()) {
           bool needsUpdate = false;
 
           if (oldIndice == null) {
@@ -797,11 +800,18 @@ class SyncService {
     try {
       final receivePort = ReceivePort();
 
+      String? tempCacheDirPath;
+      try {
+        final tempDir = await getTemporaryDirectory();
+        tempCacheDirPath = '${tempDir.path}/temp_cache';
+      } catch (_) {}
+
       final args = DownloadIsolateArgs(
         newResumoBytes: latestResumo.writeToBuffer(),
         downloadsDirPath: downloadsDir.path,
         baseUrl: baseUrl,
         sendPort: receivePort.sendPort,
+        tempCacheDirPath: tempCacheDirPath,
       );
 
       AppLogger.instance.logInfo('[SyncService] Iniciando download do croqui $id a partir de: $baseUrl');
