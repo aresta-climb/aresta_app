@@ -138,90 +138,86 @@ class RotulosVia {
   });
 }
 
-/// Resolve o indicador do mapa e os rótulos concatenados para uma dada Escalada.
-RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
-  String resolvedLabel = '';
-  String mapIndicator = '';
-
-  String escaladaNome = '';
-  int indiceMapaPadrao = 0;
-
+/// Extrai o nome da via e o índice do mapa padrão a partir da [Escalada].
+(String nome, int indiceMapaPadrao) _extrairNomeEIndiceMapa(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      escaladaNome = escalada.viaEsportiva.nome;
-      indiceMapaPadrao = escalada.viaEsportiva.indiceMapaPadrao;
-      break;
+      return (escalada.viaEsportiva.nome, escalada.viaEsportiva.indiceMapaPadrao);
     case Escalada_Tipo.viaMovel:
-      escaladaNome = escalada.viaMovel.nome;
-      indiceMapaPadrao = escalada.viaMovel.indiceMapaPadrao;
-      break;
+      return (escalada.viaMovel.nome, escalada.viaMovel.indiceMapaPadrao);
     case Escalada_Tipo.boulder:
-      escaladaNome = escalada.boulder.nome;
-      indiceMapaPadrao = escalada.boulder.indiceMapaPadrao;
-      break;
+      return (escalada.boulder.nome, escalada.boulder.indiceMapaPadrao);
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      escaladaNome = escalada.viaMultiplasEnfiadas.nome;
-      indiceMapaPadrao = escalada.viaMultiplasEnfiadas.indiceMapaPadrao;
-      break;
+      return (escalada.viaMultiplasEnfiadas.nome, escalada.viaMultiplasEnfiadas.indiceMapaPadrao);
     case Escalada_Tipo.highline:
-      escaladaNome = escalada.highline.nome;
-      indiceMapaPadrao = escalada.highline.indiceMapaPadrao;
-      break;
+      return (escalada.highline.nome, escalada.highline.indiceMapaPadrao);
     default:
-      break;
+      return ('', 0);
   }
+}
 
-  if (setor.mapas.isNotEmpty) {
-    List<int> searchOrder = [];
-    if (indiceMapaPadrao >= 0 && indiceMapaPadrao < setor.mapas.length) {
-      searchOrder.add(indiceMapaPadrao);
+/// Calcula a ordem de busca nos mapas priorizando o índice padrão configurado.
+List<int> _calcularOrdemBuscaMapas(int indicePadrao, int totalMapas) {
+  final List<int> ordem = [];
+  if (indicePadrao >= 0 && indicePadrao < totalMapas) {
+    ordem.add(indicePadrao);
+  }
+  for (int i = 0; i < totalMapas; i++) {
+    if (!ordem.contains(i)) {
+      ordem.add(i);
     }
-    for (int i = 0; i < setor.mapas.length; i++) {
-      if (!searchOrder.contains(i)) {
-        searchOrder.add(i);
-      }
+  }
+  return ordem;
+}
+
+/// Localiza a primeira referência associada ao nome da escalada no mapa.
+Mapa_Referencia? _buscarReferenciaNoMapa(Mapa mapa, String escaladaNome) {
+  for (final ref in mapa.referencias) {
+    if (ref.escalada == escaladaNome) {
+      return ref;
     }
+  }
+  return null;
+}
 
-    for (int i in searchOrder) {
-      final mapa = setor.mapas[i];
-
-      Mapa_Referencia? matchingRef;
-      for (final ref in mapa.referencias) {
-        if (ref.escalada == escaladaNome) {
-          matchingRef = ref;
-          break;
-        }
-      }
-
-      if (matchingRef != null && matchingRef.ids.isNotEmpty) {
-        List<String> labels = [];
-        for (var id in matchingRef.ids) {
-          for (var p in mapa.pontosDeInteresse) {
-            if (p.id == id) {
-              if (p.label.isNotEmpty) {
-                labels.add(p.label);
-              } else {
-                labels.add(
-                  id,
-                ); // Fallback to id if label is empty but requested
-              }
-              break;
-            }
-          }
-        }
-        resolvedLabel = labels.join('-');
-        if (setor.mapas.length > 1) {
-          mapIndicator = 'M${i + 1}';
-        }
+/// Extrai os rótulos visuais dos pontos de interesse correspondentes aos IDs.
+List<String> _extrairRotulosDosPontos(Mapa mapa, List<String> ids) {
+  final List<String> rotulos = [];
+  for (final id in ids) {
+    for (final ponto in mapa.pontosDeInteresse) {
+      if (ponto.id == id) {
+        rotulos.add(ponto.label.isNotEmpty ? ponto.label : id);
         break;
       }
     }
   }
+  return rotulos;
+}
 
-  return RotulosVia(
-    mapIndicator: mapIndicator,
-    resolvedLabel: resolvedLabel,
-  );
+/// Resolve o indicador do mapa e os rótulos concatenados para uma dada Escalada.
+RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
+  if (setor.mapas.isEmpty) {
+    return const RotulosVia(mapIndicator: '', resolvedLabel: '');
+  }
+
+  final (nome, indicePadrao) = _extrairNomeEIndiceMapa(escalada);
+  final ordem = _calcularOrdemBuscaMapas(indicePadrao, setor.mapas.length);
+
+  for (final i in ordem) {
+    final mapa = setor.mapas[i];
+    final referencia = _buscarReferenciaNoMapa(mapa, nome);
+
+    if (referencia != null && referencia.ids.isNotEmpty) {
+      final rotulos = _extrairRotulosDosPontos(mapa, referencia.ids);
+      final mapIndicator = setor.mapas.length > 1 ? 'M${i + 1}' : '';
+      return RotulosVia(
+        mapIndicator: mapIndicator,
+        resolvedLabel: rotulos.join('-'),
+      );
+    }
+  }
+
+  return const RotulosVia(mapIndicator: '', resolvedLabel: '');
 }
 
 /// Constrói um tile interativo para uma única via de escalada.
