@@ -220,6 +220,160 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
   return const RotulosVia(mapIndicator: '', resolvedLabel: '');
 }
 
+/// Extrai nome, informação de modalidade/grau e status de destaque da via.
+(String nome, String info, bool destaque) _extrairInfoEscalada(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      return (
+        escalada.viaEsportiva.nome,
+        'Esportiva | ${getGrauString(escalada)}',
+        escalada.viaEsportiva.destaque,
+      );
+    case Escalada_Tipo.viaMovel:
+      return (
+        escalada.viaMovel.nome,
+        'Móvel | ${getGrauString(escalada)}',
+        escalada.viaMovel.destaque,
+      );
+    case Escalada_Tipo.boulder:
+      return (
+        escalada.boulder.nome,
+        'Boulder | ${getGrauString(escalada)}',
+        escalada.boulder.destaque,
+      );
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      return (
+        escalada.viaMultiplasEnfiadas.nome,
+        'Multipitch | ${getGrauString(escalada)}',
+        escalada.viaMultiplasEnfiadas.destaque,
+      );
+    case Escalada_Tipo.highline:
+      return (
+        escalada.highline.nome,
+        'Highline | ${escalada.highline.distancia}m',
+        escalada.highline.destaque,
+      );
+    case Escalada_Tipo.notSet:
+      return ('Sem Nome', '', false);
+  }
+}
+
+/// Constrói o badge indicador visual com número do mapa e rótulo da via.
+Widget _buildBadgeRotulos(BuildContext context, RotulosVia rotulos) {
+  if (rotulos.resolvedLabel.isEmpty) {
+    return Icon(Icons.terrain_outlined, color: beastHide);
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    constraints: const BoxConstraints(minWidth: 40, maxWidth: 60),
+    height: 40,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: context.colors.deepBasalt,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+    ),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (rotulos.mapIndicator.isNotEmpty)
+            Text(
+              rotulos.mapIndicator,
+              style: TextStyle(
+                color: fishBone.withValues(alpha: 0.8),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          Text(
+            rotulos.resolvedLabel,
+            style: TextStyle(
+              color: fishBone,
+              fontWeight: FontWeight.bold,
+              fontSize: rotulos.resolvedLabel.length > 3 ? 12 : 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Constrói o selo de estrela para vias em destaque.
+Widget _buildIconeDestaque(BuildContext context) {
+  return Positioned(
+    top: -6,
+    left: -6,
+    child: Container(
+      decoration: BoxDecoration(
+        color: context.colors.deepBasalt,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.star, color: Colors.amber, size: 20),
+    ),
+  );
+}
+
+/// Animação de realce suave quando a via é o alvo direto de busca ou navegação.
+Widget _buildEfeitoRealceAlvo({required Widget child, required bool isTarget}) {
+  if (!isTarget) return child;
+
+  return TweenAnimationBuilder<double>(
+    tween: Tween<double>(begin: 0.0, end: 1.0),
+    duration: const Duration(milliseconds: 2500),
+    builder: (context, value, childWidget) {
+      final double fadeProgress = value < 0.40 ? 0.0 : (value - 0.40) / 0.60;
+      final Color color = value < 0.40
+          ? Colors.transparent
+          : AppColors.brandColor.withValues(alpha: 0.3 * (1.0 - fadeProgress));
+
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          childWidget!,
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 10,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: (color.a * 255.0).round().clamp(0, 255) == 0
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: AppColors.brandColor.withValues(
+                              alpha: 0.6 * (1.0 - fadeProgress),
+                            ),
+                            blurRadius: 15 * (1.0 - fadeProgress),
+                            spreadRadius: 2 * (1.0 - fadeProgress),
+                          ),
+                        ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+    child: child,
+  );
+}
+
 /// Constrói um tile interativo para uma única via de escalada.
 ///
 /// Ele determina o tipo da via para buscar o nome e grau apropriados,
@@ -231,46 +385,10 @@ Widget _buildRouteTile(
   Setor setor, {
   bool isTarget = false,
 }) {
-  String nome = '';
-  String info = '';
-  bool destaque = false;
-
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      nome = escalada.viaEsportiva.nome;
-      info = 'Esportiva | ${getGrauString(escalada)}';
-      destaque = escalada.viaEsportiva.destaque;
-      break;
-    case Escalada_Tipo.viaMovel:
-      nome = escalada.viaMovel.nome;
-      info = 'Móvel | ${getGrauString(escalada)}';
-      destaque = escalada.viaMovel.destaque;
-      break;
-    case Escalada_Tipo.boulder:
-      nome = escalada.boulder.nome;
-      info = 'Boulder | ${getGrauString(escalada)}';
-      destaque = escalada.boulder.destaque;
-      break;
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      nome = escalada.viaMultiplasEnfiadas.nome;
-      info = 'Multipitch | ${getGrauString(escalada)}';
-      destaque = escalada.viaMultiplasEnfiadas.destaque;
-      break;
-    case Escalada_Tipo.highline:
-      nome = escalada.highline.nome;
-      info = 'Highline | ${escalada.highline.distancia}m';
-      destaque = escalada.highline.destaque;
-      break;
-    case Escalada_Tipo.notSet:
-      nome = 'Sem Nome';
-      break;
-  }
-
+  final (nome, info, destaque) = _extrairInfoEscalada(escalada);
   final rotulos = resolveRouteLabels(escalada, setor);
-  final mapIndicator = rotulos.mapIndicator;
-  final resolvedLabel = rotulos.resolvedLabel;
 
-  Widget card = Stack(
+  final card = Stack(
     clipBehavior: Clip.none,
     children: [
       Padding(
@@ -283,50 +401,7 @@ Widget _buildRouteTile(
           ),
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-            leading: resolvedLabel.isNotEmpty
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    constraints: const BoxConstraints(
-                      minWidth: 40,
-                      maxWidth: 60,
-                    ),
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: context.colors.deepBasalt,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: beastHide.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (mapIndicator.isNotEmpty)
-                            Text(
-                              mapIndicator,
-                              style: TextStyle(
-                                color: fishBone.withValues(alpha: 0.8),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          Text(
-                            resolvedLabel,
-                            style: TextStyle(
-                              color: fishBone,
-                              fontWeight: FontWeight.bold,
-                              fontSize: resolvedLabel.length > 3 ? 12 : 14,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : Icon(Icons.terrain_outlined, color: beastHide),
+            leading: _buildBadgeRotulos(context, rotulos),
             title: Text(nome, style: TextStyle(color: fishBone, fontSize: 16)),
             subtitle: Text(
               info,
@@ -349,84 +424,11 @@ Widget _buildRouteTile(
           ),
         ),
       ),
-      if (destaque)
-        Positioned(
-          top: -6,
-          left: -6,
-          child: Container(
-            decoration: BoxDecoration(
-              color: context.colors.deepBasalt,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.star, color: Colors.amber, size: 20),
-          ),
-        ),
+      if (destaque) _buildIconeDestaque(context),
     ],
   );
 
-  if (isTarget) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(
-        milliseconds: 2500,
-      ), // 1000ms scroll delay + 1500ms fade
-      builder: (context, value, child) {
-        Color color;
-        double fadeProgress = 0.0;
-        // 1000ms / 2500ms = 0.40
-        if (value < 0.40) {
-          color = Colors.transparent;
-        } else {
-          fadeProgress = (value - 0.40) / 0.60;
-          color = AppColors.brandColor.withValues(
-            alpha: 0.3 * (1.0 - fadeProgress),
-          );
-        }
-
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            child!,
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 10, // Match the margin bottom of the card
-              child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: (color.a * 255.0).round().clamp(0, 255) == 0
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: AppColors.brandColor.withValues(
-                                alpha: 0.6 * (1.0 - fadeProgress),
-                              ),
-                              blurRadius: 15 * (1.0 - fadeProgress),
-                              spreadRadius: 2 * (1.0 - fadeProgress),
-                            ),
-                          ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      child: card,
-    );
-  }
-
-  return card;
+  return _buildEfeitoRealceAlvo(child: card, isTarget: isTarget);
 }
 
 enum EscaladaSortMode {

@@ -82,4 +82,34 @@ void main() {
       expect(selectedMode, EscaladaSortMode.gradeAsc);
     });
   });
+
+  group('buildSetorBody', () {
+    testWidgets('renderiza vias e destaca via alvo', (WidgetTester tester) async {
+      final via = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Teste',
+          destaque: true,
+        ),
+      );
+      final setor = Setor(nome: 'Setor Principal');
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => buildSetorBody(
+              context,
+              setor,
+              'crag_1',
+              [via],
+              via,
+              GlobalKey(),
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text('Via Teste'), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsOneWidget);
+    });
+  });
 }
