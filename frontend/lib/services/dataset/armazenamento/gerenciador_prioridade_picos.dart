@@ -42,8 +42,10 @@ class GerenciadorPrioridadePicos {
       } else if (await jsonFile.exists()) {
         // Migração de JSON legado para YAML
         final content = await jsonFile.readAsString();
-        final List<dynamic> jsonList = jsonDecode(content);
-        final list = jsonList.cast<String>();
+        final dynamic decoded = jsonDecode(content);
+        final list = (decoded is List)
+            ? decoded.map((e) => e.toString()).toList()
+            : <String>[];
 
         final yamlContent = list.map((id) => '- "$id"').join('\n');
         await yamlFile.writeAsString(yamlContent);
