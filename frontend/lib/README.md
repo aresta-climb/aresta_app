@@ -91,7 +91,7 @@ Expõe a API pública estática **`AppNav`**, que simplifica a navegação no ap
 
 Para evitar arquivos de página monolíticos, todos os construtores de UI complexos, estilização e callbacks são extraídos para o diretório `view_functions/`.
 
-- **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`.
+- **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, `setor_functions.dart`, `sobre_time_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`. Com foco em arquitetura limpa, estruturas dinâmicas foram migradas para modelos fortemente tipados (`RotulosVia`, `MembroTime`, `ResumoPico`) e blocos aninhados foram decompostos em funções puras testáveis.
 - **`mapa/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapa_global_functions.dart` e o `mapa_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
 - **`common_functions.dart`**: Sistema de design genérico. Define componentes como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária. Obs: O controle mestre de cores passou para o diretório `theme/app_colors.dart`.
 - **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
@@ -103,6 +103,7 @@ Para evitar arquivos de página monolíticos, todos os construtores de UI comple
 
 Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e comportamento específico.
 
+- **`crag_card.dart`**: Card modular interativo para exibição de picos na grade ou listagem (usado no Explorar/Browse). Encapsula status de download, exibição de progresso granular com `LinearProgressIndicator`, contagem de setores/vias e acionamento de telemetria de visualização.
 - **`linha_credito_autor.dart`**: Widget padronizado para exibição dos créditos de autores e conquistadores do croqui. Suporta quebra automática em múltiplas linhas para listas longas, mantendo o ícone `Icons.person_outline` alinhado ao topo.
 - **`feedback/`**: Contém o `custom_feedback_builder.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
 - **`global_search.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
