@@ -70,22 +70,22 @@ void showCragModal({
 
 /// Representa as faixas de zoom discretas do Mapa Global para escalonamento visual dos marcadores.
 enum FaixaZoomMapa {
-  /// Visão macro (zoom < 6.0): Pinos pequenos (40px) sem balão de texto.
+  /// Visão macro (zoom < 7.0): Pinos pequenos (20px) sem balão de texto.
   macro,
 
-  /// Visão regional (6.0 <= zoom < 9.0): Pinos médios (65px) sem balão de texto.
+  /// Visão regional (7.0 <= zoom < 10.0): Pinos médios (26px) sem balão de texto.
   regional,
 
-  /// Visão local (zoom >= 9.0): Pinos completos (85px) com balão de texto compacto.
+  /// Visão local (zoom >= 10.0): Pinos completos (32px) com balão de texto compacto.
   local,
 }
 
 /// Classifica o nível de zoom da câmera na respectiva [FaixaZoomMapa].
 FaixaZoomMapa obterFaixaZoom(double zoom) {
-  if (zoom < 6.0) {
+  if (zoom < 7.0) {
     return FaixaZoomMapa.macro;
   }
-  if (zoom < 9.0) {
+  if (zoom < 10.0) {
     return FaixaZoomMapa.regional;
   }
   return FaixaZoomMapa.local;
