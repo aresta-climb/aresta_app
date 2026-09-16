@@ -723,4 +723,110 @@ void main() {
       },
     );
   });
+
+  group('NearbyCragsCarousel - Testes Unitários de Funções Puras', () {
+    test('formatarDistancia deve formatar distâncias menores que 1000m em metros inteiros', () {
+      expect(NearbyCragsCarousel.formatarDistancia(0), equals('0m'));
+      expect(NearbyCragsCarousel.formatarDistancia(350.4), equals('350m'));
+      expect(NearbyCragsCarousel.formatarDistancia(999.4), equals('999m'));
+    });
+
+    test('formatarDistancia deve formatar distâncias iguais ou maiores que 1000m em quilômetros com 1 casa decimal', () {
+      expect(NearbyCragsCarousel.formatarDistancia(1000), equals('1.0km'));
+      expect(NearbyCragsCarousel.formatarDistancia(2450), equals('2.5km'));
+      expect(NearbyCragsCarousel.formatarDistancia(15432), equals('15.4km'));
+    });
+
+    test('calcularIndiceCircular deve retornar índice com wrap correto', () {
+      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 6), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(5, 6), equals(5));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(6, 6), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(7, 6), equals(1));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(13, 6), equals(1));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 0), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(5, -1), equals(0));
+    });
+
+    test('calcularPicosMaisProximos deve filtrar picos sem coordenadas', () {
+      const picos = [
+        ResumoPico(id: '1', nome: 'Sem Lat', local: '', longitude: -44.0),
+        ResumoPico(id: '2', nome: 'Sem Long', local: '', latitude: -20.0),
+        ResumoPico(id: '3', nome: 'Sem Ambas', local: ''),
+        ResumoPico(id: '4', nome: 'Com Ambas', local: '', latitude: -20.0, longitude: -44.0),
+      ];
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+
+      expect(resultado.length, equals(1));
+      expect(resultado.first.id, equals('4'));
+    });
+
+    test('calcularPicosMaisProximos deve ordenar por distância crescente e limitar a 6 itens por padrão', () {
+      final picos = List.generate(10, (i) {
+        return ResumoPico(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          local: 'Local $i',
+          latitude: -20.0 + (i * 0.1),
+          longitude: -44.0 + (i * 0.1),
+        );
+      });
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+
+      expect(resultado.length, equals(6));
+      expect(resultado.map((p) => p.id).toList(), equals([
+        'pico_0',
+        'pico_1',
+        'pico_2',
+        'pico_3',
+        'pico_4',
+        'pico_5',
+      ]));
+
+      // Valida que as distâncias calculadas estão em ordem estritamente crescente
+      for (int i = 0; i < resultado.length - 1; i++) {
+        expect(resultado[i].distanciaKm!, lessThanOrEqualTo(resultado[i + 1].distanciaKm!));
+      }
+    });
+
+    test('calcularPicosMaisProximos com limite customizado deve respeitar o limite passado', () {
+      final picos = List.generate(5, (i) {
+        return ResumoPico(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          local: 'Local $i',
+          latitude: -20.0 + (i * 0.1),
+          longitude: -44.0 + (i * 0.1),
+        );
+      });
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+        limite: 3,
+      );
+
+      expect(resultado.length, equals(3));
+    });
+
+    test('calcularPicosMaisProximos com lista vazia deve retornar lista vazia', () {
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: const [],
+      );
+
+      expect(resultado, isEmpty);
+    });
+  });
 }
