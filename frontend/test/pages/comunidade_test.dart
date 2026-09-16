@@ -212,4 +212,36 @@ void main() {
 
     expect(find.textContaining('• Beta Aberto'), findsOneWidget);
   });
+
+  testWidgets('Todos os links externos disparados pela ComunidadePage possuem formato HTTPS e hosts válidos', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    final List<(String, String)> cardsEHosts = [
+      ('GRUPO DO WHATSAPP', 'chat.whatsapp.com'),
+      ('INSTAGRAM OFICIAL', 'www.instagram.com'),
+      ('LINKEDIN DO PROJETO', 'www.linkedin.com'),
+      ('DISCORD DOS DESENVOLVEDORES', 'discord.gg'),
+      ('GITHUB DO ARESTA', 'github.com'),
+    ];
+
+    for (final (cardTitle, expectedHost) in cardsEHosts) {
+      mockLauncher.shouldThrow = false;
+      mockLauncher.lastLaunchedUrl = null;
+
+      await tester.ensureVisible(find.text(cardTitle));
+      await tester.tap(find.text(cardTitle));
+      await tester.pumpAndSettle();
+
+      final launchedUrl = mockLauncher.lastLaunchedUrl;
+      expect(launchedUrl, isNotNull, reason: 'Card "$cardTitle" deve disparar uma URL');
+
+      final uri = Uri.tryParse(launchedUrl!);
+      expect(uri, isNotNull, reason: 'URL "$launchedUrl" deve ser um URI bem formado');
+      expect(uri!.isAbsolute, isTrue, reason: 'URL deve ser absoluta');
+      expect(uri.scheme, 'https', reason: 'URL deve usar HTTPS');
+      expect(uri.host, expectedHost, reason: 'URL deve ter o host $expectedHost');
+    }
+  });
 }

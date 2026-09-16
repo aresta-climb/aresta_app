@@ -39,4 +39,31 @@ void main() {
       expect(membro.image, 'assets/team/beltrana.webp');
     });
   });
+
+  group('Validação dos links e integridade do teamData', () {
+    test('todos os membros do time possuem links externos HTTPS válidos quando configurados', () {
+      expect(teamData, isNotEmpty);
+      for (final membro in teamData) {
+        expect(membro.name, isNotEmpty);
+        expect(membro.role, isNotEmpty);
+        expect(membro.image, isNotEmpty);
+
+        if (membro.linkedin.isNotEmpty) {
+          final uri = Uri.tryParse(membro.linkedin);
+          expect(uri, isNotNull, reason: 'LinkedIn de ${membro.name} deve ser um URI válido');
+          expect(uri!.isAbsolute, isTrue);
+          expect(uri.scheme, 'https');
+          expect(uri.host, contains('linkedin.com'));
+        }
+
+        if (membro.github.isNotEmpty) {
+          final uri = Uri.tryParse(membro.github);
+          expect(uri, isNotNull, reason: 'GitHub de ${membro.name} deve ser um URI válido');
+          expect(uri!.isAbsolute, isTrue);
+          expect(uri.scheme, 'https');
+          expect(uri.host, contains('github.com'));
+        }
+      }
+    });
+  });
 }
