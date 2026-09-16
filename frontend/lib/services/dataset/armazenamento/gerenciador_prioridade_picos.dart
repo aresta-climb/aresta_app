@@ -84,19 +84,15 @@ class GerenciadorPrioridadePicos {
   }
 
   /// Ordena a lista de [picos] com base na [listaPrioridade].
-  /// Suporta tanto objetos fortemente tipados [ResumoPico] quanto estruturas dinâmicas.
   /// Picos não presentes na lista recebem prioridade mais baixa e são colocados no final.
-  List<T> ordenarPorPrioridade<T>(
-    List<T> picos,
+  List<ResumoPico> ordenarPorPrioridade(
+    List<ResumoPico> picos,
     List<String> listaPrioridade,
   ) {
-    final List<T> ordenados = List.from(picos);
+    final List<ResumoPico> ordenados = List.from(picos);
     ordenados.sort((a, b) {
-      final String idA = _extrairId(a);
-      final String idB = _extrairId(b);
-
-      int indexA = listaPrioridade.indexOf(idA);
-      int indexB = listaPrioridade.indexOf(idB);
+      int indexA = listaPrioridade.indexOf(a.id);
+      int indexB = listaPrioridade.indexOf(b.id);
 
       if (indexA == -1) indexA = 999999;
       if (indexB == -1) indexB = 999999;
@@ -104,11 +100,5 @@ class GerenciadorPrioridadePicos {
       return indexA.compareTo(indexB);
     });
     return ordenados;
-  }
-
-  static String _extrairId(dynamic item) {
-    if (item is ResumoPico) return item.id;
-    if (item is Map) return item['id']?.toString() ?? '';
-    return '';
   }
 }

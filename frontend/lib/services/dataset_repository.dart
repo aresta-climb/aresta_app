@@ -397,7 +397,7 @@ class DatasetRepository {
       }
 
       final ordenados =
-          gerenciadorPrioridade.ordenarPorPrioridade<ResumoPico>(downloaded, priorityList);
+          gerenciadorPrioridade.ordenarPorPrioridade(downloaded, priorityList);
 
       final List<ResumoPico> ordenadosCarregados = await Future.wait(
         ordenados.map((picoItem) async {
@@ -475,7 +475,7 @@ class DatasetRepository {
       }
 
       final ordenados =
-          gerenciadorPrioridade.ordenarPorPrioridade<ResumoPico>(baixados, priorityList);
+          gerenciadorPrioridade.ordenarPorPrioridade(baixados, priorityList);
 
       final ordenadosCarregados = await Future.wait(
         ordenados.map((p) => extratorMetadados.carregarMetadadosLocais(
@@ -621,7 +621,7 @@ class DatasetRepository {
 
     final List<String> priorityList =
         await gerenciadorPrioridade.obterListaPrioridade(docsPath);
-    final ordenados = gerenciadorPrioridade.ordenarPorPrioridade<ResumoPico>(
+    final ordenados = gerenciadorPrioridade.ordenarPorPrioridade(
         updatedDownloaded, priorityList);
 
     final ordenadosCarregados = await Future.wait(
