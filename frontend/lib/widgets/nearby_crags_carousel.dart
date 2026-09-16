@@ -27,12 +27,18 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   static const String _kLastKnownLatKey = 'last_known_latitude';
   static const String _kLastKnownLonKey = 'last_known_longitude';
 
+  /// Limite máximo de picos exibidos no carrossel de mais próximos.
+  static const int kLimitePicosProximos = 6;
+
   bool _isLoading = true;
   bool _permissionDenied = false;
   double? _lastUserLat;
   double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
   List<ResumoPico> _closestCrags = [];
+
+  @visibleForTesting
+  List<ResumoPico> get closestCrags => _closestCrags;
 
   @override
   void initState() {
@@ -340,7 +346,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     if (mounted) {
       setState(() {
-        _closestCrags = cragsWithDistance;
+        _closestCrags = cragsWithDistance.take(kLimitePicosProximos).toList();
         _isLoading = false;
         _permissionDenied = false;
       });
@@ -480,13 +486,16 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       valueListenable:
           DatasetRepository.instance?.activeDataset ?? ValueNotifier(null),
       builder: (context, dataset, child) {
+        final int? totalItens =
+            _closestCrags.length > 1 ? null : _closestCrags.length;
+
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
           scrollDirection: Axis.horizontal,
-          itemCount: _closestCrags.length,
+          itemCount: totalItens,
           padding: const EdgeInsets.only(left: 24, right: 8),
           itemBuilder: (context, index) {
-            final picoBase = _closestCrags[index];
+            final picoBase = _closestCrags[index % _closestCrags.length];
             final distanceStr = _formatDistance(
               (picoBase.distanciaKm ?? 0) * 1000,
             );
