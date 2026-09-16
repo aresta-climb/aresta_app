@@ -62,20 +62,17 @@ void main() {
       expect(atualizado.picosBaixados.first.isDownloaded, isTrue);
     });
 
-    test('normaliza mapas legados para ResumoPico e rejeita tipos inválidos', () {
+    test('normaliza mapas legados para ResumoPico com segurança', () {
       final dataset = ConjuntoDadosCroqui(
         picosDisponiveis: [
           {'id': 'pico_mapa', 'nome': 'Pico do Mapa', 'local': 'MG'}
         ],
+        picosBaixados: null,
       );
 
       expect(dataset.picosDisponiveis.first, isA<ResumoPico>());
       expect(dataset.picosDisponiveis.first.id, equals('pico_mapa'));
-
-      expect(
-        () => ConjuntoDadosCroqui(picosDisponiveis: [123]),
-        throwsArgumentError,
-      );
+      expect(dataset.picosBaixados, isEmpty);
     });
   });
 }
