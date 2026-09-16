@@ -29,22 +29,20 @@ void main() {
       expect(dataset.picosBaixados.first.nome, equals('Pico 1'));
     });
 
-    test('normaliza mapas legados para List<ResumoPico>', () {
-      final mapas = [
-        {
-          'id': 'pico_mapa',
-          'nome': 'Pico do Mapa',
-          'local': 'MG',
-        }
+    test('suporta construtor com aliases availablePicos e downloadedPicos', () {
+      final picos = [
+        const ResumoPico(id: 'pico_alias', nome: 'Pico Alias', local: 'MG'),
       ];
 
       final dataset = ConjuntoDadosCroqui(
-        picosDisponiveis: mapas,
+        availablePicos: picos,
+        downloadedPicos: picos,
       );
 
-      expect(dataset.picosDisponiveis.first, isA<ResumoPico>());
-      expect(dataset.picosDisponiveis.first.id, equals('pico_mapa'));
-      expect(dataset.picosDisponiveis.first.nome, equals('Pico do Mapa'));
+      expect(dataset.picosDisponiveis.first.id, equals('pico_alias'));
+      expect(dataset.picosBaixados.first.nome, equals('Pico Alias'));
+      expect(dataset.availablePicos.first.id, equals('pico_alias'));
+      expect(dataset.downloadedPicos.first.nome, equals('Pico Alias'));
     });
 
     test('suporta copyWith mantendo tipagem', () {
@@ -62,6 +60,22 @@ void main() {
 
       expect(atualizado.picosDisponiveis.length, equals(1));
       expect(atualizado.picosBaixados.first.isDownloaded, isTrue);
+    });
+
+    test('normaliza mapas legados para ResumoPico e rejeita tipos inválidos', () {
+      final dataset = ConjuntoDadosCroqui(
+        picosDisponiveis: [
+          {'id': 'pico_mapa', 'nome': 'Pico do Mapa', 'local': 'MG'}
+        ],
+      );
+
+      expect(dataset.picosDisponiveis.first, isA<ResumoPico>());
+      expect(dataset.picosDisponiveis.first.id, equals('pico_mapa'));
+
+      expect(
+        () => ConjuntoDadosCroqui(picosDisponiveis: [123]),
+        throwsArgumentError,
+      );
     });
   });
 }
