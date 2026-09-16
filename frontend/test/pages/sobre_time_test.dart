@@ -5,10 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
-import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import '../mocks/mock_telemetry_service.dart';
+
+class FakeRemoteConfigService extends Fake implements RemoteConfigService {
+  String discordUrl = 'https://discord.gg/NT9uSKJWYs';
+
+  @override
+  String get discordCommunityUrl => discordUrl;
+}
 
 class MockUrlLauncherPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -25,12 +32,15 @@ class MockUrlLauncherPlatform extends Fake
 void main() {
   late MockTelemetryService mockTelemetria;
   late MockUrlLauncherPlatform mockLauncher;
+  late FakeRemoteConfigService fakeRemoteConfig;
 
   setUp(() {
     mockTelemetria = MockTelemetryService();
     TelemetryService.instance = mockTelemetria;
     mockLauncher = MockUrlLauncherPlatform();
     UrlLauncherPlatform.instance = mockLauncher;
+    fakeRemoteConfig = FakeRemoteConfigService();
+    RemoteConfigService.instance = fakeRemoteConfig;
   });
   Widget createTestWidget() {
     return MaterialApp(
@@ -143,7 +153,7 @@ void main() {
     var params = mockTelemetria.recordedParams['link_externo']!;
     expect(params['acao'], 'abrir_link_externo');
     expect(params['origem'], 'sobre_time');
-    expect(params['detalhe'], 'https://discord.gg/3KDTwcxHK');
+    expect(params['detalhe'], fakeRemoteConfig.discordCommunityUrl);
 
     // 2. Expande o quadrante Frontend (Eduardo)
     await tester.tap(find.text('Frontend'), warnIfMissed: false);
@@ -170,5 +180,19 @@ void main() {
     expect(params['acao'], 'abrir_link_externo');
     expect(params['origem'], 'sobre_time');
     expect(params['detalhe'], 'https://github.com/eduardoutsch');
+  });
+
+  testWidgets('Ao clicar no banner inferior de contribuição, abre o link do Discord via RemoteConfigService', (WidgetTester tester) async {
+    setScreenSize(tester);
+    fakeRemoteConfig.discordUrl = 'https://discord.gg/NT9uSKJWYs';
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('O ARESTA É OPEN SOURCE'));
+    await tester.tap(find.text('O ARESTA É OPEN SOURCE'));
+    await tester.pumpAndSettle();
+
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NT9uSKJWYs');
+  });
   });
 }

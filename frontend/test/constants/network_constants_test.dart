@@ -24,6 +24,10 @@ void main() {
         NetworkConstants.kDefaultWhatsappCommunityUrl,
         'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA',
       );
+      expect(
+        NetworkConstants.kDefaultDiscordCommunityUrl,
+        'https://discord.gg/NT9uSKJWYs',
+      );
     });
   });
 }

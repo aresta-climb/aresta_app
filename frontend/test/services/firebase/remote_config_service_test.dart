@@ -59,6 +59,10 @@ void main() {
           defaultsMap['whatsapp_community_url'],
           NetworkConstants.kDefaultWhatsappCommunityUrl,
         );
+        expect(
+          defaultsMap['discord_community_url'],
+          NetworkConstants.kDefaultDiscordCommunityUrl,
+        );
 
         // 2. setConfigSettings chamado com intervalo saudável de cache (12 horas)
         final capturedSettings = verify(
@@ -186,6 +190,16 @@ void main() {
       );
     });
 
+    test('Acessar discordCommunityUrl retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('discord_community_url'),
+      ).thenReturn('https://discord.gg/custom');
+      expect(
+        RemoteConfigService.instance.discordCommunityUrl,
+        'https://discord.gg/custom',
+      );
+    });
+
     test('Acessar officialServerUrl combina servingBaseUrl com a versão de dados', () {
       when(
         () => mockFirebaseRemoteConfig.getString('serving_base_url'),
@@ -215,6 +229,10 @@ void main() {
         RemoteConfigService.instance.whatsappCommunityUrl,
         NetworkConstants.kDefaultWhatsappCommunityUrl,
       );
+      expect(
+        RemoteConfigService.instance.discordCommunityUrl,
+        NetworkConstants.kDefaultDiscordCommunityUrl,
+      );
     });
 
     test('Getters tratam exceções retornando valores padrão seguros', () {
@@ -240,6 +258,10 @@ void main() {
       expect(
         RemoteConfigService.instance.whatsappCommunityUrl,
         NetworkConstants.kDefaultWhatsappCommunityUrl,
+      );
+      expect(
+        RemoteConfigService.instance.discordCommunityUrl,
+        NetworkConstants.kDefaultDiscordCommunityUrl,
       );
     });
   });

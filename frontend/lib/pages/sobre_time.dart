@@ -9,6 +9,7 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/sobre_time_functions.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/remote_config_service.dart';
 import '../main.dart';
 
 class SobreTimePage extends StatefulWidget {
@@ -173,7 +174,8 @@ class _SobreTimePageState extends State<SobreTimePage>
               const Spacer(),
               GestureDetector(
                 onTap: () async {
-                  const url = 'https://discord.gg/3KDTwcxHK';
+                  final url =
+                      RemoteConfigService.instance.discordCommunityUrl;
                   TelemetryService.instance.logLinkExterno(
                     url,
                     'sobre_time',
@@ -183,7 +185,7 @@ class _SobreTimePageState extends State<SobreTimePage>
                     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                   } catch (e, stackTrace) {
                     AppLogger.instance.logError(
-                      'Erro ao abrir link do Discord em SobreTimePage',
+                      'Erro ao abrir link do Discord em SobreTimePage ($url)',
                       error: e,
                       stackTrace: stackTrace,
                     );
