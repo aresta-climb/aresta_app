@@ -40,6 +40,7 @@ class MapaInterativoPage extends StatefulWidget {
   final String cragId;
   final bool autoZoomEnabled;
   final ImageProvider? imageProviderOverride;
+  final Future<ImageProvider?>? imageProviderFutureOverride;
   final String? initialSelectedId;
   final Setor? setorContext;
   final Grupo? grupoContext;
@@ -71,6 +72,7 @@ class MapaInterativoPage extends StatefulWidget {
     required this.cragId,
     this.autoZoomEnabled = true,
     this.imageProviderOverride,
+    this.imageProviderFutureOverride,
     this.initialSelectedId,
     this.setorContext,
     this.grupoContext,
@@ -170,9 +172,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
     _updateFeedbackNode();
 
-    _imageProviderFuture = widget.imageProviderOverride != null
-        ? Future.value(widget.imageProviderOverride)
-        : _resolveImageProvider();
+    _imageProviderFuture = widget.imageProviderFutureOverride ??
+        (widget.imageProviderOverride != null
+            ? Future.value(widget.imageProviderOverride)
+            : _resolveImageProvider());
   }
 
   @override
@@ -180,9 +183,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     super.didUpdateWidget(oldWidget);
     _buildReferenceMaps();
     setState(() {
-      _imageProviderFuture = widget.imageProviderOverride != null
-          ? Future.value(widget.imageProviderOverride)
-          : _resolveImageProvider();
+      _imageProviderFuture = widget.imageProviderFutureOverride ??
+          (widget.imageProviderOverride != null
+              ? Future.value(widget.imageProviderOverride)
+              : _resolveImageProvider());
     });
   }
 
@@ -635,37 +639,57 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     }
   }
 
+  /// Constrói o cartão flutuante para uma [Escalada], enriquecendo o subtítulo com modalidade,
+  /// grau e proteções intermediárias e de parada (`X+Y`), além de incluir prévia higienizada da descrição.
   Widget _buildEscaladaCard(Mapa_Referencia ref, Escalada escalada) {
     String title = '';
     String subtitle = '';
+    String? descricao;
+
+    final modalidade = getModalidadeEscalada(escalada);
+    final protecoes = getProtecoesString(escalada);
 
     switch (escalada.whichTipo()) {
       case Escalada_Tipo.viaEsportiva:
         title = escalada.viaEsportiva.nome;
-        subtitle =
-            'Esportiva | ${formatGradeString(escalada.viaEsportiva.dificuldade.name)}';
+        final grau = formatGradeString(escalada.viaEsportiva.dificuldade.name);
+        subtitle = protecoes.isNotEmpty
+            ? '$modalidade | $grau | $protecoes'
+            : '$modalidade | $grau';
+        descricao = escalada.viaEsportiva.descricao;
         break;
       case Escalada_Tipo.boulder:
         title = escalada.boulder.nome;
-        subtitle =
-            'Boulder | ${formatGradeString(escalada.boulder.dificuldade.name)}';
+        final grau = formatGradeString(escalada.boulder.dificuldade.name);
+        subtitle = '$modalidade | $grau';
+        descricao = escalada.boulder.descricao;
         break;
       case Escalada_Tipo.viaMovel:
         title = escalada.viaMovel.nome;
-        subtitle =
-            'Móvel | ${formatGradeString(escalada.viaMovel.dificuldade.name)}';
+        final grau = formatGradeString(escalada.viaMovel.dificuldade.name);
+        subtitle = protecoes.isNotEmpty
+            ? '$modalidade | $grau | $protecoes'
+            : '$modalidade | $grau';
+        descricao = escalada.viaMovel.descricao;
         break;
       case Escalada_Tipo.viaMultiplasEnfiadas:
         title = escalada.viaMultiplasEnfiadas.nome;
-        subtitle =
-            'Tradicional | ${formatGradeString(escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name)}';
+        final grau = formatGradeString(escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
+        subtitle = '$modalidade | $grau';
+        descricao = escalada.viaMultiplasEnfiadas.descricao;
         break;
       case Escalada_Tipo.highline:
         title = escalada.highline.nome;
-        subtitle = 'Highline | ${escalada.highline.distancia}m';
+        subtitle = '$modalidade | ${escalada.highline.distancia}m';
+        descricao = escalada.highline.descricao;
         break;
       default:
         break;
+    }
+
+    String previewDescricao = '';
+    if (descricao != null && descricao.isNotEmpty) {
+      previewDescricao = stripMarkdownForSubtitle(descricao);
     }
 
     String getLabelsForRef(Mapa_Referencia ref) {
@@ -676,6 +700,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     return _buildBaseCard(
       title: title,
       subtitle: subtitle,
+      description: previewDescricao.isNotEmpty ? previewDescricao : null,
       resolvedLabel: getLabelsForRef(ref),
       onClose: () {
         setState(() {
@@ -859,9 +884,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     );
   }
 
+  /// Constrói o cartão base flutuante para itens selecionados no mapa (vias, setores e grupos).
+  ///
+  /// Quando [description] for fornecido, exibe uma prévia textual de até 2 linhas com reticências
+  /// sem comprometer a visibilidade do mapa.
   Widget _buildBaseCard({
     required String title,
     required String subtitle,
+    String? description,
     required String resolvedLabel,
     required VoidCallback onClose,
     required String actionLabel,
@@ -929,6 +959,18 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                           style: TextStyle(
                             color: context.colors.ashGrey,
                             fontSize: 14,
+                          ),
+                        ),
+                      ],
+                      if (description != null && description.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -1134,226 +1176,233 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           viewportConstraints.maxWidth,
           viewportConstraints.maxHeight,
         );
-        return FutureBuilder<ImageProvider?>(
-          future: _imageProviderFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator(color: rustIron));
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) {
+            final agora = DateTime.now();
+            if (_ultimoToqueTimestamp != null &&
+                agora.difference(_ultimoToqueTimestamp!) <
+                    const Duration(milliseconds: 300) &&
+                _ultimaPosicaoToque != null &&
+                (details.localPosition - _ultimaPosicaoToque!).distance <
+                    40.0) {
+              _ultimoToqueTimestamp = null;
+              _ultimaPosicaoToque = null;
+              _aoExecutarDuploToque(details, viewportSize);
+              return;
             }
-
-            if (!snapshot.hasData || snapshot.data == null) {
-              return const SizedBox.shrink();
+            _ultimoToqueTimestamp = agora;
+            _ultimaPosicaoToque = details.localPosition;
+          },
+          onTap: () {
+            if (_selectedId != null) {
+              setState(() {
+                _selectedId = null;
+                _updateFeedbackNode();
+              });
+            } else {
+              _highlightController.forward(from: 0.0).then((_) {
+                _highlightController.reverse();
+              });
             }
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Camada 1: Canvas do Mapa com revelação coordenada após carregamento
+              FutureBuilder<ImageProvider?>(
+                future: _imageProviderFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(color: rustIron),
+                    );
+                  }
 
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapDown: (details) {
-                final agora = DateTime.now();
-                if (_ultimoToqueTimestamp != null &&
-                    agora.difference(_ultimoToqueTimestamp!) <
-                        const Duration(milliseconds: 300) &&
-                    _ultimaPosicaoToque != null &&
-                    (details.localPosition - _ultimaPosicaoToque!).distance <
-                        40.0) {
-                  _ultimoToqueTimestamp = null;
-                  _ultimaPosicaoToque = null;
-                  _aoExecutarDuploToque(details, viewportSize);
-                  return;
-                }
-                _ultimoToqueTimestamp = agora;
-                _ultimaPosicaoToque = details.localPosition;
-              },
-              onTap: () {
-                if (_selectedId != null) {
-                  setState(() {
-                    _selectedId = null;
-                    _updateFeedbackNode();
-                  });
-                } else {
-                  _highlightController.forward(from: 0.0).then((_) {
-                    _highlightController.reverse();
-                  });
-                }
-              },
-              child: Stack(
-                children: [
-                  // Camada 1: Mapa e Marcadores
-                  InteractiveViewer(
-                    transformationController: _transformationController,
-                    boundaryMargin: EdgeInsets.zero,
-                    minScale: 1.0,
-                    maxScale: 10.0,
-                    constrained: true,
-                    onInteractionStart: (details) {
-                      _escalaNoInicioDoGesto =
-                          _transformationController.value.getMaxScaleOnAxis();
-                    },
-                    onInteractionEnd: (details) {
-                      final double escalaFinal =
-                          _transformationController.value.getMaxScaleOnAxis();
-                      if ((escalaFinal - _escalaNoInicioDoGesto).abs() > 0.05) {
-                        _usuarioAjustouZoomManualmente = true;
-                      }
-                    },
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio:
-                            widget.mapa.larguraMapa / widget.mapa.alturaMapa,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            _imageSize = Size(
-                              constraints.maxWidth,
-                              constraints.maxHeight,
-                            );
-                            if (!_initialZoom &&
-                                _selectedId != null &&
-                                _autoZoomEnabled) {
-                              _initialZoom = true;
-                              Mapa_PontoDeInteresse? targetMarker;
-                              for (var p in widget.mapa.pontosDeInteresse) {
-                                if (p.id == _selectedId) {
-                                  targetMarker = p;
-                                  break;
+                  if (!snapshot.hasData || snapshot.data == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return AnimatedOpacity(
+                    opacity: 1.0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeIn,
+                    child: InteractiveViewer(
+                      transformationController: _transformationController,
+                      boundaryMargin: EdgeInsets.zero,
+                      minScale: 1.0,
+                      maxScale: 10.0,
+                      constrained: true,
+                      onInteractionStart: (details) {
+                        _escalaNoInicioDoGesto =
+                            _transformationController.value.getMaxScaleOnAxis();
+                      },
+                      onInteractionEnd: (details) {
+                        final double escalaFinal =
+                            _transformationController.value.getMaxScaleOnAxis();
+                        if ((escalaFinal - _escalaNoInicioDoGesto).abs() > 0.05) {
+                          _usuarioAjustouZoomManualmente = true;
+                        }
+                      },
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio:
+                              widget.mapa.larguraMapa / widget.mapa.alturaMapa,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              _imageSize = Size(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              );
+                              if (!_initialZoom &&
+                                  _selectedId != null &&
+                                  _autoZoomEnabled) {
+                                _initialZoom = true;
+                                Mapa_PontoDeInteresse? targetMarker;
+                                for (var p in widget.mapa.pontosDeInteresse) {
+                                  if (p.id == _selectedId) {
+                                    targetMarker = p;
+                                    break;
+                                  }
+                                }
+                                if (targetMarker != null) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (mounted) {
+                                      _onMarkerTap(
+                                        targetMarker!,
+                                        constraints,
+                                        viewportSize,
+                                        isUserInteraction: false,
+                                      );
+                                    }
+                                  });
                                 }
                               }
-                              if (targetMarker != null) {
-                                WidgetsBinding.instance.addPostFrameCallback((
-                                  _,
-                                ) {
-                                  if (mounted) {
-                                    _onMarkerTap(
-                                      targetMarker!,
-                                      constraints,
-                                      viewportSize,
-                                      isUserInteraction: false,
-                                    );
-                                  }
-                                });
-                              }
-                            }
-
-                            return Stack(
-                              children: [
-                                Image(
-                                  image: snapshot.data!,
-                                  fit: BoxFit.contain,
-                                  width: constraints.maxWidth,
-                                  height: constraints.maxHeight,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: Colors.grey,
-                                          size: 50,
+                              return Stack(
+                                children: [
+                                  Image(
+                                    image: snapshot.data!,
+                                    fit: BoxFit.contain,
+                                    width: constraints.maxWidth,
+                                    height: constraints.maxHeight,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            color: Colors.grey,
+                                            size: 50,
+                                          ),
                                         ),
-                                      ),
-                                ),
-                                ..._buildMarkers(constraints, viewportSize),
-                              ],
+                                  ),
+                                  ..._buildMarkers(constraints, viewportSize),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              // Camada 2: Card Flutuante
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                bottom: _selectedId != null
+                    ? 20 + MediaQuery.of(context).padding.bottom
+                    : -150,
+                left: 20,
+                right: 20,
+                child: _buildFloatingCard(
+                  viewportConstraints,
+                  viewportSize,
+                ),
+              ),
+              // Camada 3: Botão de Recentralizar Imagem (Estilo Mapa Global / FloatingActionButton)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                bottom: _selectedId != null
+                    ? 220 + MediaQuery.of(context).padding.bottom
+                    : 20 + MediaQuery.of(context).padding.bottom,
+                right: 20,
+                child: FloatingActionButton(
+                  heroTag: 'recentralizar_mapa_interativo',
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? context.colors.caveShadow
+                          : context.colors.chalkWhite,
+                  foregroundColor: AppColors.brandColor,
+                  mini: true,
+                  onPressed: _recentralizarImagem,
+                  tooltip: 'Centralizar imagem',
+                  child: const Icon(Icons.my_location),
+                ),
+              ),
+              // Camada 4: Botão de Navegação "Subir" (Up)
+              // Um botão dinâmico exibido apenas quando existe um mapa
+              // de nível hierárquico superior (ex: Setor -> Grupo, ou Grupo -> Geral).
+              Builder(
+                builder: (context) {
+                  final upDest = MapHierarchyResolver.resolveUpDestination(
+                    pico: widget.pico,
+                    setorContext: widget.setorContext,
+                    grupoContext: widget.grupoContext,
+                  );
+
+                  if (upDest == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Positioned(
+                    top: 10,
+                    left: 10,
+                    child: SafeArea(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth:
+                              MediaQuery.of(context).size.width * 0.45,
+                        ),
+                        child: ActionChip(
+                          side: BorderSide.none,
+                          backgroundColor: AppColors.brandColor,
+                          avatar: Icon(
+                            Icons.turn_left_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          label: Text(
+                            upDest.label,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onPressed: () {
+                            TelemetryService.instance
+                                .logNavegacaoHierarquica(
+                                  widget.cragId,
+                                  upDest.label,
+                                );
+                            AppNav.toMapas(
+                              context,
+                              cragId: widget.cragId,
+                              mapas: upDest.mapasData,
                             );
                           },
                         ),
                       ),
                     ),
-                  ),
-
-                  // Camada 2: Card Flutuante
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    bottom: _selectedId != null
-                        ? 20 + MediaQuery.of(context).padding.bottom
-                        : -150,
-                    left: 20,
-                    right: 20,
-                    child: _buildFloatingCard(
-                      viewportConstraints,
-                      viewportSize,
-                    ),
-                  ),
-                  // Camada 3: Botão de Recentralizar Imagem (Estilo Mapa Global / FloatingActionButton)
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    bottom: _selectedId != null
-                        ? 220 + MediaQuery.of(context).padding.bottom
-                        : 20 + MediaQuery.of(context).padding.bottom,
-                    right: 20,
-                    child: FloatingActionButton(
-                      heroTag: 'recentralizar_mapa_interativo',
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? context.colors.caveShadow
-                              : context.colors.chalkWhite,
-                      foregroundColor: AppColors.brandColor,
-                      mini: true,
-                      onPressed: _recentralizarImagem,
-                      tooltip: 'Centralizar imagem',
-                      child: const Icon(Icons.my_location),
-                    ),
-                  ),
-                  // Camada 4: Botão de Navegação "Subir" (Up)
-                  // Um botão dinâmico exibido apenas quando existe um mapa
-                  // de nível hierárquico superior (ex: Setor -> Grupo, ou Grupo -> Geral).
-                  Builder(
-                    builder: (context) {
-                      final upDest = MapHierarchyResolver.resolveUpDestination(
-                        pico: widget.pico,
-                        setorContext: widget.setorContext,
-                        grupoContext: widget.grupoContext,
-                      );
-
-                      if (upDest == null) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Positioned(
-                        top: 10,
-                        left: 10,
-                        child: SafeArea(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.of(context).size.width * 0.45,
-                            ),
-                            child: ActionChip(
-                              side: BorderSide.none,
-                              backgroundColor: AppColors.brandColor,
-                              avatar: Icon(
-                                Icons.turn_left_outlined,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              label: Text(
-                                upDest.label,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onPressed: () {
-                                TelemetryService.instance
-                                    .logNavegacaoHierarquica(
-                                      widget.cragId,
-                                      upDest.label,
-                                    );
-                                AppNav.toMapas(
-                                  context,
-                                  cragId: widget.cragId,
-                                  mapas: upDest.mapasData,
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                  );
+                },
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );

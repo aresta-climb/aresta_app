@@ -43,6 +43,99 @@ void main() {
     });
   });
 
+  group('getModalidadeEscalada', () {
+    test('deve retornar "Esportiva" para via esportiva', () {
+      final escalada = Escalada()..viaEsportiva = ViaEsportiva(nome: 'Via A');
+      expect(getModalidadeEscalada(escalada), 'Esportiva');
+    });
+
+    test('deve retornar "Móvel" para via móvel sem proteções fixas intermediárias', () {
+      final escalada = Escalada()..viaMovel = ViaMovel(nome: 'Fenda Pura', quantidadeProtecoesIntermediarias: 0);
+      expect(getModalidadeEscalada(escalada), 'Móvel');
+    });
+
+    test('deve retornar "Mista" para via móvel com proteções fixas intermediárias', () {
+      final escalada = Escalada()..viaMovel = ViaMovel(nome: 'Vale Perdido', quantidadeProtecoesIntermediarias: 3);
+      expect(getModalidadeEscalada(escalada), 'Mista');
+    });
+
+    test('deve retornar "Boulder" para boulder', () {
+      final escalada = Escalada()..boulder = Boulder(nome: 'Bloco');
+      expect(getModalidadeEscalada(escalada), 'Boulder');
+    });
+
+    test('deve retornar "Multipitch" para via de múltiplas enfiadas comum', () {
+      final escalada = Escalada()
+        ..viaMultiplasEnfiadas = ViaMultiplasEnfiadas(
+          nome: 'Paredão',
+          tipoViaMultiplasEnfiadas: ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.TODA_FIXA,
+        );
+      expect(getModalidadeEscalada(escalada), 'Multipitch');
+    });
+
+    test('deve retornar "Mista" para via de múltiplas enfiadas mista', () {
+      final escalada = Escalada()
+        ..viaMultiplasEnfiadas = ViaMultiplasEnfiadas(
+          nome: 'Paredão Misto',
+          tipoViaMultiplasEnfiadas: ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA,
+        );
+      expect(getModalidadeEscalada(escalada), 'Mista');
+    });
+
+    test('deve retornar "Highline" para highline', () {
+      final escalada = Escalada()..highline = Highline(nome: 'Fita no Céu');
+      expect(getModalidadeEscalada(escalada), 'Highline');
+    });
+
+    test('deve retornar string vazia para escalada não definida', () {
+      final escalada = Escalada();
+      expect(getModalidadeEscalada(escalada), '');
+    });
+  });
+
+  group('getProtecoesString', () {
+    test('deve formatar X+Y quando via esportiva tiver proteções intermediárias e na parada', () {
+      final escalada = Escalada()
+        ..viaEsportiva = ViaEsportiva(
+          quantidadeProtecoesIntermediarias: 9,
+          quantidadeProtecoesParada: 2,
+        );
+      expect(getProtecoesString(escalada), '9+2');
+    });
+
+    test('deve formatar X+0 quando via esportiva tiver apenas intermediárias', () {
+      final escalada = Escalada()
+        ..viaEsportiva = ViaEsportiva(
+          quantidadeProtecoesIntermediarias: 5,
+          quantidadeProtecoesParada: 0,
+        );
+      expect(getProtecoesString(escalada), '5+0');
+    });
+
+    test('deve formatar 0+Y quando via móvel tiver apenas parada', () {
+      final escalada = Escalada()
+        ..viaMovel = ViaMovel(
+          quantidadeProtecoesIntermediarias: 0,
+          quantidadeProtecoesParada: 2,
+        );
+      expect(getProtecoesString(escalada), '0+2');
+    });
+
+    test('deve retornar string vazia quando não houver proteções cadastradas', () {
+      final escalada = Escalada()
+        ..viaEsportiva = ViaEsportiva(
+          quantidadeProtecoesIntermediarias: 0,
+          quantidadeProtecoesParada: 0,
+        );
+      expect(getProtecoesString(escalada), '');
+    });
+
+    test('deve retornar string vazia para boulder', () {
+      final escalada = Escalada()..boulder = Boulder();
+      expect(getProtecoesString(escalada), '');
+    });
+  });
+
   group('formatGradeString', () {
     test('deve formatar grau puro sem sufixo', () {
       expect(formatGradeString('BR_4'), '4º');

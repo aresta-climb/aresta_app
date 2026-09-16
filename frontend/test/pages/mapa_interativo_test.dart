@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
@@ -677,13 +678,22 @@ void main() {
       Mapa mapa, {
       bool autoZoom = true,
       bool hideAppBar = false,
+      Future<ImageProvider?>? imageProviderFutureOverride,
+      ImageProvider? imageProviderOverride,
+      Pico? picoOverride,
+      Setor? setorContext,
+      Grupo? grupoContext,
     }) {
-      final pico = Pico()..nome = 'Pico Teste';
-      final setor = Setor()..nome = 'Setor Teste';
-      setor.escaladas.addAll(escaladas);
-      pico.setoresOuGrupos.add(
-        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
-      );
+      final pico = picoOverride ?? (Pico()..nome = 'Pico Teste');
+      if (picoOverride == null) {
+        final setor = setorContext ?? (Setor()..nome = 'Setor Teste');
+        if (setorContext == null) {
+          setor.escaladas.addAll(escaladas);
+        }
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+      }
 
       return MaterialApp(
         home: MapaInterativoPage(
@@ -692,7 +702,12 @@ void main() {
           cragId: 'test_crag',
           autoZoomEnabled: autoZoom,
           hideAppBar: hideAppBar,
-          imageProviderOverride: mockImage,
+          setorContext: setorContext,
+          grupoContext: grupoContext,
+          imageProviderOverride: imageProviderFutureOverride != null
+              ? null
+              : (imageProviderOverride ?? mockImage),
+          imageProviderFutureOverride: imageProviderFutureOverride,
         ),
       );
     }
@@ -862,6 +877,157 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Via Teste'), findsNothing);
+    });
+
+    testWidgets('Cartão flutuante exibe subtítulo enriquecido para via esportiva com proteções X+Y', (
+      WidgetTester tester,
+    ) async {
+      final escEsportiva = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Esportiva Teste',
+          dificuldade: GrauVia_GrauVia.BR_5,
+          quantidadeProtecoesIntermediarias: 5,
+          quantidadeProtecoesParada: 2,
+        ),
+      );
+
+      mockMapa.referencias.add(
+        Mapa_Referencia(
+          setor: 'Setor Teste',
+          escalada: 'Via Esportiva Teste',
+          ids: ['p1'],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp([escEsportiva], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Via Esportiva Teste'), findsOneWidget);
+      expect(find.text('Esportiva | 5º | 5+2'), findsOneWidget);
+    });
+
+    testWidgets('Cartão flutuante exibe modalidade Mista quando via móvel possui proteções fixas intermediárias', (
+      WidgetTester tester,
+    ) async {
+      final escMista = Escalada(
+        viaMovel: ViaMovel(
+          nome: 'Via Mista Teste',
+          dificuldade: GrauVia_GrauVia.BR_6SUP,
+          quantidadeProtecoesIntermediarias: 3,
+          quantidadeProtecoesParada: 2,
+        ),
+      );
+
+      mockMapa.referencias.add(
+        Mapa_Referencia(
+          setor: 'Setor Teste',
+          escalada: 'Via Mista Teste',
+          ids: ['p1'],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp([escMista], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Via Mista Teste'), findsOneWidget);
+      expect(find.text('Mista | 6ºsup | 3+2'), findsOneWidget);
+    });
+
+    testWidgets('Cartão flutuante omite segmento de proteções para boulder sem proteções', (
+      WidgetTester tester,
+    ) async {
+      final escBoulder = Escalada(
+        boulder: Boulder(
+          nome: 'Bloco Teste',
+          dificuldade: GrauBoulder_GrauBoulder.V3,
+        ),
+      );
+
+      mockMapa.referencias.add(
+        Mapa_Referencia(
+          setor: 'Setor Teste',
+          escalada: 'Bloco Teste',
+          ids: ['p1'],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp([escBoulder], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Bloco Teste'), findsOneWidget);
+      expect(find.text('Boulder | v3'), findsOneWidget);
+    });
+
+    testWidgets('Cartão flutuante exibe prévia da descrição higienizada com até 2 linhas e reticências', (
+      WidgetTester tester,
+    ) async {
+      final escComDescricao = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via com Descricao',
+          dificuldade: GrauVia_GrauVia.BR_5,
+          descricao:
+              '## Dica de segurança\nSegurar na **agarra invertida** e costurar com calma.',
+        ),
+      );
+
+      mockMapa.referencias.add(
+        Mapa_Referencia(
+          setor: 'Setor Teste',
+          escalada: 'Via com Descricao',
+          ids: ['p1'],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp([escComDescricao], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+
+      final expectedText =
+          'Dica de segurança Segurar na agarra invertida e costurar com calma.';
+      final textFinder = find.text(expectedText);
+      expect(textFinder, findsOneWidget);
+
+      final Text textWidget = tester.widget(textFinder);
+      expect(textWidget.maxLines, 2);
+      expect(textWidget.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('Cartão flutuante omite prévia quando a via não possui descrição', (
+      WidgetTester tester,
+    ) async {
+      final escSemDescricao = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Sem Descricao',
+          dificuldade: GrauVia_GrauVia.BR_5,
+          descricao: '',
+        ),
+      );
+
+      mockMapa.referencias.add(
+        Mapa_Referencia(
+          setor: 'Setor Teste',
+          escalada: 'Via Sem Descricao',
+          ids: ['p1'],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp([escSemDescricao], mockMapa));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marker_p1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Via Sem Descricao'), findsOneWidget);
+      // Confirma que não há texto de descrição adicional além do título, subtítulo e ações
+      expect(find.text('Mais Info'), findsOneWidget);
     });
 
     testWidgets('Handles zero-size map gracefully', (
@@ -2823,6 +2989,154 @@ void main() {
       painter.paint(canvas, const Size(100, 100));
       expect(canvas.caminhos.isNotEmpty, isTrue);
     });
+  });
+
+  group('Carregamento Imediato e Revelação Atômica (Latência Zero)', () {
+    testWidgets(
+      '3.1 Scaffold, AppBar e casca do canvas são montados imediatamente no primeiro frame enquanto a imagem carrega',
+      (WidgetTester tester) async {
+        final completer = Completer<ImageProvider?>();
+
+        final picoComGrupo = Pico()..nome = 'Pico Teste';
+        final grupo = Grupo()..nome = 'Grupo Teste';
+        grupo.mapas.add(Mapa()..caminhoImagemMapa = 'mapa_grupo.webp');
+        final setor = Setor()..nome = 'Setor Teste';
+        grupo.setores.add(ArquivoSetor()..conteudo = setor);
+        picoComGrupo.setoresOuGrupos.add(
+          SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo),
+        );
+
+        final mapaTeste = Mapa(
+          caminhoImagemMapa: 'mapa_setor.webp',
+          larguraMapa: 1000,
+          alturaMapa: 800,
+          pontosDeInteresse: [
+            Mapa_PontoDeInteresse(
+              id: 'p1',
+              label: 'Ponto 1',
+              retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
+            ),
+          ],
+          referencias: [
+            Mapa_Referencia(
+              setor: 'Setor Teste',
+              ids: ['p1'],
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapaTeste,
+              pico: picoComGrupo,
+              cragId: 'test_crag',
+              setorContext: setor,
+              grupoContext: grupo,
+              imageProviderFutureOverride: completer.future,
+            ),
+          ),
+        );
+
+        // Frame 0: o future ainda não resolveu!
+        await tester.pump();
+
+        // 1. Scaffold e AppBar existem imediatamente
+        expect(find.byType(Scaffold), findsOneWidget);
+        expect(find.byType(AppBar), findsOneWidget);
+        expect(find.text('Croqui Interativo'), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+
+        // 2. Indicador sutil de carregamento está visível no centro do canvas
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        // 3. Botão de subir na hierarquia (ActionChip) está montado na casca visual imediatamente
+        expect(find.byType(ActionChip), findsOneWidget);
+        expect(find.text('Grupo Teste'), findsOneWidget);
+
+        // 4. Marcadores e InteractiveViewer NÃO devem estar visíveis no frame 0
+        expect(find.byType(InteractiveViewer), findsNothing);
+
+        // Quando a imagem resolver:
+        completer.complete(MemoryImage(kTransparentImage));
+        await tester.pumpAndSettle();
+
+        // O indicador some e o mapa interativo completo é revelado
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(InteractiveViewer), findsOneWidget);
+        expect(find.byType(ActionChip), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '3.2 Marcadores e traçados vetoriais permanecem ocultos durante o carregamento e são revelados de forma atômica com a imagem',
+      (WidgetTester tester) async {
+        final completer = Completer<ImageProvider?>();
+
+        final mapaComLinha = Mapa(
+          caminhoImagemMapa: 'mapa_linha.webp',
+          larguraMapa: 1000,
+          alturaMapa: 800,
+          pontosDeInteresse: [
+            Mapa_PontoDeInteresse(
+              id: 'p1',
+              label: 'Ponto 1',
+              retangulo: BoundingRetangulo(x: 100, y: 100, comprimento: 50, largura: 50),
+            ),
+            Mapa_PontoDeInteresse(
+              id: 'linha_1',
+              linha: LinhaTrajeto(
+                estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+                compilado: DadosCompiladosLinha(
+                  caminhoSvg: 'M 10 10 L 90 90',
+                  caixaDelimitadora: BoundingRetangulo(x: 50, y: 50, comprimento: 80, largura: 80),
+                ),
+              ),
+            ),
+          ],
+          referencias: [
+            Mapa_Referencia(
+              setor: 'Setor Teste',
+              ids: ['p1'],
+            ),
+          ],
+        );
+
+        final pico = Pico()..nome = 'Pico Teste';
+        final setor = Setor()..nome = 'Setor Teste';
+        pico.setoresOuGrupos.add(SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapaComLinha,
+              pico: pico,
+              cragId: 'test_crag',
+              imageProviderFutureOverride: completer.future,
+            ),
+          ),
+        );
+
+        // Frame 0: imagem em carregamento
+        await tester.pump();
+
+        // Marcadores de ponto e de linha NÃO devem existir no frame 0
+        expect(find.byKey(const Key('marker_p1')), findsNothing);
+        expect(find.byKey(const Key('marker_linha_1')), findsNothing);
+        expect(find.byType(InteractiveViewer), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        // Resolução da imagem concluída
+        completer.complete(MemoryImage(kTransparentImage));
+        await tester.pumpAndSettle();
+
+        // Agora imagem, marcadores e traçados vetoriais aparecem juntos
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(InteractiveViewer), findsOneWidget);
+        expect(find.byKey(const Key('marker_p1')), findsOneWidget);
+        expect(find.byKey(const Key('marker_linha_1')), findsOneWidget);
+      },
+    );
   });
 }
 

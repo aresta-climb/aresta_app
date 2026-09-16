@@ -20,6 +20,10 @@ void main() {
         NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
         'https://gawgqiqzptckwghgqypt.supabase.co/functions/v1/app-feedback',
       );
+      expect(
+        NetworkConstants.kDefaultWhatsappCommunityUrl,
+        'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA',
+      );
     });
   });
 }

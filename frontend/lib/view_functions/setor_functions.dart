@@ -211,31 +211,32 @@ Widget _buildRouteTile(
   String nome = '';
   String info = '';
   bool destaque = false;
+  final modalidade = getModalidadeEscalada(escalada);
 
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       nome = escalada.viaEsportiva.nome;
-      info = 'Esportiva | ${getGrauString(escalada)}';
+      info = '$modalidade | ${getGrauString(escalada)}';
       destaque = escalada.viaEsportiva.destaque;
       break;
     case Escalada_Tipo.viaMovel:
       nome = escalada.viaMovel.nome;
-      info = 'Móvel | ${getGrauString(escalada)}';
+      info = '$modalidade | ${getGrauString(escalada)}';
       destaque = escalada.viaMovel.destaque;
       break;
     case Escalada_Tipo.boulder:
       nome = escalada.boulder.nome;
-      info = 'Boulder | ${getGrauString(escalada)}';
+      info = '$modalidade | ${getGrauString(escalada)}';
       destaque = escalada.boulder.destaque;
       break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
       nome = escalada.viaMultiplasEnfiadas.nome;
-      info = 'Multipitch | ${getGrauString(escalada)}';
+      info = '$modalidade | ${getGrauString(escalada)}';
       destaque = escalada.viaMultiplasEnfiadas.destaque;
       break;
     case Escalada_Tipo.highline:
       nome = escalada.highline.nome;
-      info = 'Highline | ${escalada.highline.distancia}m';
+      info = '$modalidade | ${escalada.highline.distancia}m';
       destaque = escalada.highline.destaque;
       break;
     case Escalada_Tipo.notSet:

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,10 @@ import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -236,6 +241,122 @@ void main() {
       expect(resize.width, equals(600));
       expect(resize.height, equals(400));
     });
+  });
+
+  group('Renderização Imediata e Não-Bloqueante (Latência Zero)', () {
+    testWidgets(
+      'renderiza moldura e botão Abrir Mapa Interativo no primeiro frame enquanto imagem está pendente',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_pendente.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag1',
+                imageProviderFutureOverride: completer.future,
+              ),
+            ),
+          ),
+        );
+
+        // Apenas 1 frame inicial (sem pumpAndSettle)
+        await tester.pump();
+
+        // O botão DEVE estar presente imediatamente mesmo enquanto a imagem estiver pendente!
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+        expect(find.byIcon(Icons.map), findsOneWidget);
+
+        // O container deve respeitar a proporção
+        final aspectRatioFinder = find.byType(AspectRatio);
+        expect(aspectRatioFinder, findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'toque no botão durante o carregamento assíncrono navega para toMapas sem esperar a imagem',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final editor = EditorDeCroqui();
+        final repo = DatasetRepository(editorDeCroqui: editor);
+        final sync = SyncService(datasetRepository: repo);
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_pendente.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: sync,
+              child: Scaffold(
+                body: MapaThumbnail(
+                  mapas: [mapa],
+                  cragId: 'crag1',
+                  imageProviderFutureOverride: completer.future,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Toca no botão que já está visível no frame inicial
+        await tester.tap(find.text('Abrir Mapa Interativo'));
+        await tester.pump();
+
+        // Verifica se a navegação em árvore foi acionada para MapasCarrosselNode
+        expect(
+          TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
+          isA<MapasCarrosselNode>(),
+        );
+      },
+    );
+
+    testWidgets(
+      'imagem de fundo é apresentada por trás do botão quando a resolução é concluída',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_completa.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag1',
+                imageProviderFutureOverride: completer.future,
+              ),
+            ),
+          ),
+        );
+
+        // Inicialmente o botão já está lá, mas a imagem ainda não
+        await tester.pump();
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+        expect(find.byType(Image), findsNothing);
+
+        // Quando a imagem é resolvida
+        completer.complete(MemoryImage(kTransparentImage));
+        await tester.pumpAndSettle();
+
+        // Imagem e botão convivem no mesmo Stack
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+      },
+    );
   });
 }
 

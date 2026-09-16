@@ -87,6 +87,7 @@ Widget buildOutlineStatCard(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

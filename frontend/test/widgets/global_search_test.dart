@@ -10,6 +10,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/widgets/global_search.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
@@ -124,6 +125,62 @@ void main() {
 
       expect(find.text('Serra do Cipo'), findsOneWidget);
       expect(find.textContaining('Catálogo'), findsOneWidget);
+    });
+
+    testWidgets('Busca de vias exibe modalidade correta (incluindo Mista para via móvel com fixas)', (
+      WidgetTester tester,
+    ) async {
+      final croqui = Croqui();
+      final pico = Pico()..nome = 'Pico Teste';
+      final setor = Setor()..nome = 'Setor Sol';
+      setor.escaladas.addAll([
+        Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Esportiva da Tarde',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        ),
+        Escalada(
+          viaMovel: ViaMovel(
+            nome: 'Fenda da Manhã',
+            dificuldade: GrauVia_GrauVia.BR_6SUP,
+            quantidadeProtecoesIntermediarias: 3,
+          ),
+        ),
+      ]);
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+      );
+      croqui.picos.add(pico);
+
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('crag_teste', croqui);
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GlobalSearch(
+                datasetRepo: repo,
+                downloadedPicos: const [],
+              ),
+            ),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+
+      // Busca via esportiva
+      await tester.enterText(find.byType(TextField), 'Esportiva');
+      await tester.pump();
+      expect(find.text('Esportiva da Tarde'), findsOneWidget);
+      expect(find.textContaining('Esportiva | 5º • Setor Sol • Pico Teste'), findsOneWidget);
+
+      // Busca via mista (via móvel com fixas)
+      await tester.enterText(find.byType(TextField), 'Fenda');
+      await tester.pump();
+      expect(find.text('Fenda da Manhã'), findsOneWidget);
+      expect(find.textContaining('Mista | 6ºsup • Setor Sol • Pico Teste'), findsOneWidget);
     });
   });
 }

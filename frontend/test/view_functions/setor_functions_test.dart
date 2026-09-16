@@ -166,4 +166,70 @@ void main() {
       expect(result['resolvedLabel'], '12');
     });
   });
+
+  group('buildSetorBody e modalidades de escalada', () {
+    testWidgets('renderiza corretamente modalidades Mista, Móvel e Esportiva nos cards do setor', (
+      WidgetTester tester,
+    ) async {
+      final viaEsportiva = Escalada(
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Esportiva Teste',
+          dificuldade: GrauVia_GrauVia.BR_7A,
+        ),
+      );
+      final viaMovelPura = Escalada(
+        viaMovel: ViaMovel(
+          nome: 'Fenda Pura',
+          dificuldade: GrauVia_GrauVia.BR_5SUP,
+          quantidadeProtecoesIntermediarias: 0,
+        ),
+      );
+      final viaMovelMista = Escalada(
+        viaMovel: ViaMovel(
+          nome: 'Fenda com Grampo',
+          dificuldade: GrauVia_GrauVia.BR_6SUP,
+          quantidadeProtecoesIntermediarias: 2,
+        ),
+      );
+      final viaMultipitchMista = Escalada(
+        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(
+          nome: 'Paredão Misto',
+          dificuldadeMaxima: GrauVia_GrauVia.BR_7A,
+          tipoViaMultiplasEnfiadas:
+              ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA,
+        ),
+      );
+
+      final setor = Setor(nome: 'Setor Central');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => buildSetorBody(
+                context,
+                setor,
+                'crag_teste',
+                [viaEsportiva, viaMovelPura, viaMovelMista, viaMultipitchMista],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Via Esportiva Teste'), findsOneWidget);
+      expect(find.text('Esportiva | 7a'), findsOneWidget);
+
+      expect(find.text('Fenda Pura'), findsOneWidget);
+      expect(find.text('Móvel | 5ºsup'), findsOneWidget);
+
+      expect(find.text('Fenda com Grampo'), findsOneWidget);
+      expect(find.text('Mista | 6ºsup'), findsOneWidget);
+
+      expect(find.text('Paredão Misto'), findsOneWidget);
+      expect(find.text('Mista | 7a'), findsOneWidget);
+    });
+  });
 }
+

@@ -32,6 +32,62 @@ String getEscaladaNome(Escalada escalada) {
   }
 }
 
+/// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multipitch', 'Highline').
+/// Vias móveis que possuam proteções intermediárias fixas são identificadas como 'Mista'.
+String getModalidadeEscalada(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      return 'Esportiva';
+    case Escalada_Tipo.viaMovel:
+      if (escalada.viaMovel.quantidadeProtecoesIntermediarias > 0) {
+        return 'Mista';
+      }
+      return 'Móvel';
+    case Escalada_Tipo.boulder:
+      return 'Boulder';
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      if (escalada.viaMultiplasEnfiadas.tipoViaMultiplasEnfiadas ==
+          ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA) {
+        return 'Mista';
+      }
+      return 'Multipitch';
+    case Escalada_Tipo.highline:
+      return 'Highline';
+    case Escalada_Tipo.notSet:
+      return '';
+  }
+}
+
+/// Retorna a string formatada de proteções na notação X+Y (`<intermediárias>+<parada>`).
+/// Retorna string vazia se nenhuma proteção for cadastrada.
+String getProtecoesString(Escalada escalada) {
+  int intermediarias = 0;
+  int parada = 0;
+
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      intermediarias = escalada.viaEsportiva.quantidadeProtecoesIntermediarias;
+      parada = escalada.viaEsportiva.quantidadeProtecoesParada;
+      break;
+    case Escalada_Tipo.viaMovel:
+      intermediarias = escalada.viaMovel.quantidadeProtecoesIntermediarias;
+      parada = escalada.viaMovel.quantidadeProtecoesParada;
+      break;
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      intermediarias =
+          escalada.viaMultiplasEnfiadas.quantidadeCosturasIntermediarias;
+      parada = escalada.viaMultiplasEnfiadas.quantidadeEquipamentosParada;
+      break;
+    default:
+      return '';
+  }
+
+  if (intermediarias > 0 || parada > 0) {
+    return '$intermediarias+$parada';
+  }
+  return '';
+}
+
 /// Retorna a string formatada do grau/dificuldade da escalada.
 String getGrauString(Escalada escalada) {
   switch (escalada.whichTipo()) {
@@ -316,13 +372,13 @@ Widget _buildViaEsportiva(
       ),
     );
   }
-  if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0) {
+  if (via.quantidadeProtecoesIntermediarias > 0 ||
+      via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
         'Proteções',
-        via.quantidadeProtecoesIntermediarias.toString(),
+        '${via.quantidadeProtecoesIntermediarias}+${via.quantidadeProtecoesParada}',
         Icons.shield_outlined,
       ),
     );
@@ -334,16 +390,6 @@ Widget _buildViaEsportiva(
         'Exposição',
         _fmtEnum(via.exposicao),
         Icons.warning_amber_rounded,
-      ),
-    );
-  }
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Paradas',
-        via.quantidadeProtecoesParada.toString(),
-        Icons.anchor,
       ),
     );
   }
@@ -409,12 +455,15 @@ Widget _buildViaEsportiva(
               .toList(),
         ),
 
-      if (via.hasQuantidadeProtecoesParada() ||
-          (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
+      if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Informações'),
-        if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)
-          _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
+        _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
 
       if (historyRows.isNotEmpty) ...[
@@ -472,11 +521,6 @@ Widget _buildViaEsportiva(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -518,13 +562,13 @@ Widget _buildViaMovel(
       ),
     );
   }
-  if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0) {
+  if (via.quantidadeProtecoesIntermediarias > 0 ||
+      via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
-        'Proteções Fixas',
-        via.quantidadeProtecoesIntermediarias.toString(),
+        'Proteções',
+        '${via.quantidadeProtecoesIntermediarias}+${via.quantidadeProtecoesParada}',
         Icons.shield_outlined,
       ),
     );
@@ -536,16 +580,6 @@ Widget _buildViaMovel(
         'Exposição',
         _fmtEnum(via.exposicao),
         Icons.warning_amber_rounded,
-      ),
-    );
-  }
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Paradas',
-        via.quantidadeProtecoesParada.toString(),
-        Icons.anchor,
       ),
     );
   }
@@ -621,6 +655,11 @@ Widget _buildViaMovel(
               .toList(),
         ),
 
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (via.hasProtecoesMoveis() && via.protecoesMoveis.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Peças Móveis'),
@@ -630,12 +669,10 @@ Widget _buildViaMovel(
         ),
       ],
 
-      if (via.hasQuantidadeProtecoesParada() ||
-          (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
+      if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Parada & Ancoragem'),
-        if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)
-          _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
+        _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
 
       if (historyRows.isNotEmpty) ...[
@@ -693,11 +730,6 @@ Widget _buildViaMovel(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -783,6 +815,11 @@ Widget _buildBoulder(
               .toList(),
         ),
 
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (historyRows.isNotEmpty) ...[
         const SizedBox(height: 12),
         Container(
@@ -838,11 +875,6 @@ Widget _buildBoulder(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -924,14 +956,14 @@ Widget _buildMultipitch(
       ),
     );
   }
-  if (via.hasQuantidadeEquipamentosParada() &&
+  if (via.quantidadeCosturasIntermediarias > 0 ||
       via.quantidadeEquipamentosParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
-        'Paradas',
-        via.quantidadeEquipamentosParada.toString(),
-        Icons.anchor,
+        'Proteções',
+        '${via.quantidadeCosturasIntermediarias}+${via.quantidadeEquipamentosParada}',
+        Icons.shield_outlined,
       ),
     );
   }
@@ -1011,6 +1043,11 @@ Widget _buildMultipitch(
               )
               .toList(),
         ),
+
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
 
       if (via.hasEquipamentoRecomendado() &&
           via.equipamentoRecomendado.isNotEmpty) ...[
@@ -1092,10 +1129,6 @@ Widget _buildMultipitch(
           color: Colors.blueAccent,
         ),
 
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
       if (via.enfiadas.isNotEmpty) ...[
         _buildHeader('Enfiadas'),
         ...via.enfiadas.asMap().entries.map((entry) {
@@ -1223,6 +1256,19 @@ Widget _buildHighline(
               .toList(),
         ),
 
+      if (via.hasDescricaoAcesso() && via.descricaoAcesso.isNotEmpty) ...[
+        _buildHeader('Descrição do Acesso'),
+        OfflineMarkdown(data: via.descricaoAcesso, cragId: cragId),
+      ],
+      if (via.hasDescricaoAncoragem() && via.descricaoAncoragem.isNotEmpty) ...[
+        _buildHeader('Descrição da Ancoragem'),
+        OfflineMarkdown(data: via.descricaoAncoragem, cragId: cragId),
+      ],
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (historyRows.isNotEmpty) ...[
         const SizedBox(height: 12),
         Container(
@@ -1278,19 +1324,6 @@ Widget _buildHighline(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricaoAcesso() && via.descricaoAcesso.isNotEmpty) ...[
-        _buildHeader('Descrição do Acesso'),
-        OfflineMarkdown(data: via.descricaoAcesso, cragId: cragId),
-      ],
-      if (via.hasDescricaoAncoragem() && via.descricaoAncoragem.isNotEmpty) ...[
-        _buildHeader('Descrição da Ancoragem'),
-        OfflineMarkdown(data: via.descricaoAncoragem, cragId: cragId),
-      ],
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }

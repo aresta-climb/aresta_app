@@ -39,6 +39,7 @@ platform :ios do
         'default' => notas,
         'pt-BR' => notas
       },
+      reject_if_possible: true,
       submit_for_review: true,
       automatic_release: true,
       phased_release: false,

@@ -16,4 +16,8 @@ class NetworkConstants {
   /// URL padrão do endpoint seguro de feedback do aplicativo (Edge Function Supabase).
   static const String kDefaultFeedbackEdgeFunctionUrl =
       'https://gawgqiqzptckwghgqypt.supabase.co/functions/v1/app-feedback';
+
+  /// URL oficial padrão de convite para a comunidade do WhatsApp.
+  static const String kDefaultWhatsappCommunityUrl =
+      'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
 }
