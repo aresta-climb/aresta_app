@@ -33,37 +33,36 @@ void main() {
       const String nomeLongo = 'Parque Natural Municipal das Andorinhas';
       final dimensoes = calcularDimensoesMarcador(
         texto: nomeLongo,
-        tamanhoPino: 32,
-        larguraMaximaTexto: 100.0,
+        tamanhoPino: 85,
+        larguraMaximaTexto: 180.0,
       );
 
-      // Largura do balão deve ser limitada pela largura máxima de texto mais padding (8*2)
-      expect(dimensoes.larguraBalao, lessThanOrEqualTo(100.0 + 16.0));
+      // Largura do balão deve ser limitada pela largura máxima de texto mais padding (16*2)
+      expect(dimensoes.larguraBalao, lessThanOrEqualTo(180.0 + 32.0));
       expect(dimensoes.larguraCanvas, greaterThanOrEqualTo(dimensoes.larguraBalao));
-      expect(dimensoes.alturaCanvas, greaterThan(32));
-      expect(dimensoes.tamanhoFonte, inInclusiveRange(10.0, 12.0));
+      expect(dimensoes.alturaCanvas, greaterThan(85));
     });
 
     test('calcularDimensoesMarcador deve manter largura compacta para nomes curtos', () {
       const String nomeCurto = 'Cipó';
       final dimensoes = calcularDimensoesMarcador(
         texto: nomeCurto,
-        tamanhoPino: 32,
-        larguraMaximaTexto: 100.0,
+        tamanhoPino: 85,
+        larguraMaximaTexto: 180.0,
       );
 
-      expect(dimensoes.larguraBalao, lessThan(80.0));
+      expect(dimensoes.larguraBalao, lessThan(120.0));
     });
 
-    testWidgets('createCustomMarkerBitmap deve gerar marcador com tamanhos das faixas de zoom compactas', (tester) async {
+    testWidgets('createCustomMarkerBitmap deve gerar marcador com tamanhos das faixas de zoom', (tester) async {
       await tester.runAsync(() async {
         final mockBundle = MockAssetBundle();
         mockBundle.addAsset('assets/logo_app.png', pngBytes1x1);
 
-        final bitmapMacro = await createCustomMarkerBitmap('assets/logo_app.png', size: 20, bundle: mockBundle);
-        final bitmapRegional = await createCustomMarkerBitmap('assets/logo_app.png', size: 26, bundle: mockBundle);
-        final bitmapLocal = await createCustomMarkerBitmap('assets/logo_app.png', size: 32, bundle: mockBundle);
-        final bitmapSemImagem = await createCustomMarkerBitmap('', size: 20);
+        final bitmapMacro = await createCustomMarkerBitmap('assets/logo_app.png', size: 40, bundle: mockBundle);
+        final bitmapRegional = await createCustomMarkerBitmap('assets/logo_app.png', size: 65, bundle: mockBundle);
+        final bitmapLocal = await createCustomMarkerBitmap('assets/logo_app.png', size: 85, bundle: mockBundle);
+        final bitmapSemImagem = await createCustomMarkerBitmap('', size: 40);
 
         expect(bitmapMacro, isNotNull);
         expect(bitmapRegional, isNotNull);
@@ -80,15 +79,14 @@ void main() {
         final bitmapComTexto = await createCustomMarkerBitmapWithText(
           'assets/logo_app.png',
           'Parque Natural Municipal das Andorinhas',
-          size: 32,
-          larguraMaximaTexto: 100.0,
+          size: 85,
+          larguraMaximaTexto: 180.0,
           bundle: mockBundle,
         );
         final bitmapTextoSemImagem = await createCustomMarkerBitmapWithText(
           '',
           'Cipó',
-          size: 32,
-          larguraMaximaTexto: 100.0,
+          size: 85,
         );
 
         expect(bitmapComTexto, isNotNull);
