@@ -209,20 +209,20 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
   Future<void> _loadCustomIcons() async {
     try {
-      // Ícone para visão macro (40px)
+      // Ícone para visão macro (20px)
       final macro = await createCustomMarkerBitmap(
         'assets/logo_app.png',
-        size: 40,
+        size: 20,
       );
-      // Ícone para visão regional (65px)
+      // Ícone para visão regional (26px)
       final regional = await createCustomMarkerBitmap(
         'assets/logo_app.png',
-        size: 65,
+        size: 26,
       );
-      // Ícone para visão local / base (85px)
+      // Ícone para visão local / base (32px)
       final custom = await createCustomMarkerBitmap(
         'assets/logo_app.png',
-        size: 85,
+        size: 32,
       );
       if (mounted) {
         setState(() {
@@ -238,7 +238,8 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         final textIcon = await createCustomMarkerBitmapWithText(
           'assets/logo_app.png',
           name,
-          size: 85,
+          size: 32,
+          larguraMaximaTexto: 100.0,
         );
         if (mounted) {
           setState(() {

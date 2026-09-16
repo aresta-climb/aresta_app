@@ -24,7 +24,7 @@ BitmapDescriptor converterByteDataEmBitmap(ByteData? byteData) {
 /// contendo a imagem do logo do app dentro dele.
 Future<BitmapDescriptor> createCustomMarkerBitmap(
   String caminhoImagem, {
-  int size = 150,
+  int size = 32,
   AssetBundle? bundle,
 }) async {
   final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
@@ -37,8 +37,8 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
   final double circleY = size * 0.4;
 
   final Path pinPath = Path();
-  // Começa na ponta inferior (deixando 5px de margem para a sombra)
-  pinPath.moveTo(centerPoint, size.toDouble() - 5.0);
+  // Começa na ponta inferior (deixando 2px de margem para a sombra)
+  pinPath.moveTo(centerPoint, size.toDouble() - 2.0);
 
   // Curva subindo para o lado direito do círculo
   pinPath.quadraticBezierTo(
@@ -60,16 +60,16 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
     centerPoint - circleRadius,
     size.toDouble() - circleRadius,
     centerPoint,
-    size.toDouble() - 5.0,
+    size.toDouble() - 2.0,
   );
   pinPath.close();
 
-  // Desenhar a sombra
+  // Desenhar a sombra suave
   canvas.drawPath(
-    pinPath.shift(const Offset(0, 4)),
+    pinPath.shift(const Offset(0, 2)),
     Paint()
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0),
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
   );
 
   // Desenhar o pino principal (Cor da Logomarca)
@@ -81,7 +81,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
   );
 
   // Desenhar a borda externa preta
-  final double espessuraBorda = (size * 0.025).clamp(1.5, 3.0);
+  final double espessuraBorda = (size * 0.04).clamp(1.0, 2.0);
   canvas.drawPath(
     pinPath,
     Paint()
@@ -141,7 +141,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
     Paint()
       ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5,
+      ..strokeWidth = 1.0,
   );
 
   // Converter o canvas em uma imagem PNG
@@ -195,10 +195,10 @@ class DimensoesMarcador {
 DimensoesMarcador calcularDimensoesMarcador({
   required String texto,
   required int tamanhoPino,
-  double larguraMaximaTexto = 200.0,
+  double larguraMaximaTexto = 100.0,
 }) {
-  // Tamanho de fonte proporcional contido (entre 11 e 15px) para preservar densidade visual
-  final double tamanhoFonte = (tamanhoPino * 0.16).clamp(11.0, 15.0);
+  // Tamanho de fonte proporcional contido (entre 10 e 12px) para preservar densidade visual
+  final double tamanhoFonte = (tamanhoPino * 0.35).clamp(10.0, 12.0);
 
   final textPainter = TextPainter(
     text: TextSpan(
@@ -220,17 +220,17 @@ DimensoesMarcador calcularDimensoesMarcador({
   final double textWidth = textPainter.width;
   final double textHeight = textPainter.height;
 
-  const double bubblePaddingX = 12.0;
-  const double bubblePaddingY = 6.0;
+  const double bubblePaddingX = 8.0;
+  const double bubblePaddingY = 3.0;
   final double bubbleWidth = textWidth + bubblePaddingX * 2;
   final double bubbleHeight = textHeight + bubblePaddingY * 2;
-  const double spacingBetweenBubbleAndPin = 6.0;
+  const double spacingBetweenBubbleAndPin = 3.0;
 
   final double canvasWidth = bubbleWidth > tamanhoPino
-      ? bubbleWidth + 16.0
-      : tamanhoPino.toDouble() + 16.0;
+      ? bubbleWidth + 8.0
+      : tamanhoPino.toDouble() + 8.0;
   final double canvasHeight =
-      bubbleHeight + spacingBetweenBubbleAndPin + tamanhoPino.toDouble() + 5.0;
+      bubbleHeight + spacingBetweenBubbleAndPin + tamanhoPino.toDouble() + 4.0;
 
   return DimensoesMarcador(
     larguraCanvas: canvasWidth,
@@ -248,8 +248,8 @@ DimensoesMarcador calcularDimensoesMarcador({
 Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   String caminhoImagem,
   String texto, {
-  int size = 85,
-  double larguraMaximaTexto = 200.0,
+  int size = 32,
+  double larguraMaximaTexto = 100.0,
   AssetBundle? bundle,
 }) async {
   final dimensoes = calcularDimensoesMarcador(
@@ -286,21 +286,21 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
     height: dimensoes.alturaBalao,
   );
 
-  // Sombra do balão
+  // Sombra suave do balão
   canvas.drawRRect(
     RRect.fromRectAndRadius(
-      bubbleRect.shift(const Offset(0, 3)),
-      const Radius.circular(8),
+      bubbleRect.shift(const Offset(0, 2)),
+      const Radius.circular(6),
     ),
     Paint()
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
   );
 
   // Fundo principal do balão
   canvas.drawRRect(
-    RRect.fromRectAndRadius(bubbleRect, const Radius.circular(8)),
-    Paint()..color = Colors.black.withValues(alpha: 0.8),
+    RRect.fromRectAndRadius(bubbleRect, const Radius.circular(6)),
+    Paint()..color = Colors.black.withValues(alpha: 0.85),
   );
 
   // Pinta o texto centralizado dentro do balão
@@ -313,12 +313,12 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   );
 
   // Desenhando o pino do mapa logo abaixo do balão
-  const double spacingBetweenBubbleAndPin = 6.0;
+  const double spacingBetweenBubbleAndPin = 3.0;
   final double pinTopY = dimensoes.alturaBalao + spacingBetweenBubbleAndPin;
   final double circleRadius = size * 0.35;
   final double circleY = pinTopY + size * 0.4;
   // A ponta inferior do pino repousa na base para apontar com precisão ao GPS
-  final double pinBottomY = pinTopY + size - 5.0;
+  final double pinBottomY = pinTopY + size - 2.0;
 
   final Path pinPath = Path();
   pinPath.moveTo(renderCenterX, pinBottomY);
@@ -346,10 +346,10 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
 
   // Sombra do pino
   canvas.drawPath(
-    pinPath.shift(const Offset(0, 3)),
+    pinPath.shift(const Offset(0, 2)),
     Paint()
       ..color = Colors.black.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
   );
 
   // Pino
@@ -361,7 +361,7 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   );
 
   // Borda externa
-  final double espessuraBorda = (size * 0.025).clamp(1.5, 3.0);
+  final double espessuraBorda = (size * 0.04).clamp(1.0, 2.0);
   canvas.drawPath(
     pinPath,
     Paint()

@@ -138,11 +138,11 @@ void main() {
   group('FaixaZoomMapa e Seleção de Marcadores por Faixa de Zoom', () {
     test('obterFaixaZoom deve classificar corretamente as faixas Macro, Regional e Local', () {
       expect(obterFaixaZoom(3.5), equals(FaixaZoomMapa.macro));
-      expect(obterFaixaZoom(5.99), equals(FaixaZoomMapa.macro));
-      expect(obterFaixaZoom(6.0), equals(FaixaZoomMapa.regional));
-      expect(obterFaixaZoom(7.5), equals(FaixaZoomMapa.regional));
-      expect(obterFaixaZoom(8.99), equals(FaixaZoomMapa.regional));
-      expect(obterFaixaZoom(9.0), equals(FaixaZoomMapa.local));
+      expect(obterFaixaZoom(6.99), equals(FaixaZoomMapa.macro));
+      expect(obterFaixaZoom(7.0), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(8.5), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(9.99), equals(FaixaZoomMapa.regional));
+      expect(obterFaixaZoom(10.0), equals(FaixaZoomMapa.local));
       expect(obterFaixaZoom(15.0), equals(FaixaZoomMapa.local));
     });
 
@@ -213,12 +213,12 @@ void main() {
                   onDownload: (_) {},
                   regionalIcon: regionalIcon,
                   textIcons: {'crag1': textIcon},
-                  currentZoom: 7.5, // Faixa Regional
+                  currentZoom: 8.5, // Faixa Regional (7.0 a 10.0)
                 );
 
                 expect(markers.length, equals(1));
                 expect(markers.first.icon, equals(regionalIcon),
-                    reason: 'Em zoom regional (6.0 a 9.0) deve usar regionalIcon sem texto');
+                    reason: 'Em zoom regional (7.0 a 10.0) deve usar regionalIcon sem texto');
 
                 return const SizedBox.shrink();
               },
@@ -228,7 +228,7 @@ void main() {
       );
     });
 
-    testWidgets('buildMapMarkers deve usar textIcons na faixa local (zoom >= 9)',
+    testWidgets('buildMapMarkers deve usar textIcons na faixa local (zoom >= 10)',
         (WidgetTester tester) async {
       final crags = [
         {
@@ -254,12 +254,12 @@ void main() {
                   onDownload: (_) {},
                   regionalIcon: regionalIcon,
                   textIcons: {'crag1': textIcon},
-                  currentZoom: 9.5, // Faixa Local (>= 9.0)
+                  currentZoom: 10.5, // Faixa Local (>= 10.0)
                 );
 
                 expect(markers.length, equals(1));
                 expect(markers.first.icon, equals(textIcon),
-                    reason: 'Em zoom local (>= 9.0) deve utilizar o textIcon correspondente');
+                    reason: 'Em zoom local (>= 10.0) deve utilizar o textIcon correspondente');
 
                 return const SizedBox.shrink();
               },
