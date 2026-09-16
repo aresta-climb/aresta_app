@@ -59,6 +59,8 @@ class RemoteConfigService extends ChangeNotifier {
         "serving_base_url": NetworkConstants.kDefaultServingBaseUrl,
         "whatsapp_community_url":
             NetworkConstants.kDefaultWhatsappCommunityUrl,
+        "discord_community_url":
+            NetworkConstants.kDefaultDiscordCommunityUrl,
       });
 
       // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
@@ -158,6 +160,14 @@ class RemoteConfigService extends ChangeNotifier {
     return value.isNotEmpty
         ? value
         : NetworkConstants.kDefaultWhatsappCommunityUrl;
+  }
+
+  /// URL de convite para o servidor oficial do Discord dos desenvolvedores.
+  String get discordCommunityUrl {
+    final value = getString('discord_community_url');
+    return value.isNotEmpty
+        ? value
+        : NetworkConstants.kDefaultDiscordCommunityUrl;
   }
 
   /// URL combinada do servidor de dados com a versão atual de dados.
