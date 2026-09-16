@@ -25,6 +25,15 @@ void main() {
 
       expect(resultado, isNotNull);
       expect(resultado, isA<BitmapDescriptor>());
+
+      // Testa suporte aos parâmetros de alta resolução da google_maps_flutter
+      final descriptorComPixelRatio = BitmapDescriptor.bytes(
+        bytesExemplo,
+        imagePixelRatio: 3.0,
+        width: 40.0,
+        height: 40.0,
+      );
+      expect(descriptorComPixelRatio, isNotNull);
     });
   });
 
@@ -54,15 +63,15 @@ void main() {
       expect(dimensoes.larguraBalao, lessThan(120.0));
     });
 
-    testWidgets('createCustomMarkerBitmap deve gerar marcador com tamanhos das faixas de zoom', (tester) async {
+    testWidgets('createCustomMarkerBitmap deve gerar marcador com tamanhos das faixas de zoom e alta definição', (tester) async {
       await tester.runAsync(() async {
         final mockBundle = MockAssetBundle();
         mockBundle.addAsset('assets/logo_app.png', pngBytes1x1);
 
-        final bitmapMacro = await createCustomMarkerBitmap('assets/logo_app.png', size: 40, bundle: mockBundle);
-        final bitmapRegional = await createCustomMarkerBitmap('assets/logo_app.png', size: 65, bundle: mockBundle);
-        final bitmapLocal = await createCustomMarkerBitmap('assets/logo_app.png', size: 85, bundle: mockBundle);
-        final bitmapSemImagem = await createCustomMarkerBitmap('', size: 40);
+        final bitmapMacro = await createCustomMarkerBitmap('assets/logo_app.png', size: 40, pixelRatio: 3.0, bundle: mockBundle);
+        final bitmapRegional = await createCustomMarkerBitmap('assets/logo_app.png', size: 65, pixelRatio: 3.0, bundle: mockBundle);
+        final bitmapLocal = await createCustomMarkerBitmap('assets/logo_app.png', size: 85, pixelRatio: 3.0, bundle: mockBundle);
+        final bitmapSemImagem = await createCustomMarkerBitmap('', size: 40, pixelRatio: 3.0);
 
         expect(bitmapMacro, isNotNull);
         expect(bitmapRegional, isNotNull);
@@ -71,7 +80,7 @@ void main() {
       });
     });
 
-    testWidgets('createCustomMarkerBitmapWithText deve gerar marcador contido com texto', (tester) async {
+    testWidgets('createCustomMarkerBitmapWithText deve gerar marcador contido com texto em alta resolução', (tester) async {
       await tester.runAsync(() async {
         final mockBundle = MockAssetBundle();
         mockBundle.addAsset('assets/logo_app.png', pngBytes1x1);
@@ -81,12 +90,15 @@ void main() {
           'Parque Natural Municipal das Andorinhas',
           size: 85,
           larguraMaximaTexto: 180.0,
+          pixelRatio: 3.0,
           bundle: mockBundle,
         );
         final bitmapTextoSemImagem = await createCustomMarkerBitmapWithText(
           '',
           'Cipó',
           size: 85,
+          larguraMaximaTexto: 180.0,
+          pixelRatio: 3.0,
         );
 
         expect(bitmapComTexto, isNotNull);
