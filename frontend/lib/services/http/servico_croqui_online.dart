@@ -252,11 +252,17 @@ class ServicoCroquiOnline {
         return true;
       }
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        '[ServicoCroquiOnline] Erro durante verificação de ETag para $picoId',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          '[ServicoCroquiOnline] Verificação de ETag ignorada: sem conexão com a internet ($picoId)',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '[ServicoCroquiOnline] Erro durante verificação de ETag para $picoId',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
     return false;
   }

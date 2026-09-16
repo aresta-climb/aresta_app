@@ -19,7 +19,7 @@ O sistema DEVE (MUST) permitir a recuperação e desserialização direta do arq
 - **AND** não insere o croqui no estado ativo de navegação.
 
 ### Requirement: Polling Periódico com ETag para Atualizações Online
-Enquanto o usuário estiver ativamente navegando nas telas de um croqui em modo online (não baixado), o sistema DEVE (MUST) executar verificações periódicas leves (a cada 30 a 60 segundos) enviando o cabeçalho `If-None-Match: <etag>` para a URL do `.binarypb`. Caso o servidor retorne status `304 Not Modified`, nenhum dado de corpo deve ser trafegado. Caso o servidor retorne status `200 OK`, o sistema DEVE consumir o buffer retornado no corpo da resposta para desserializar a nova instância de `Croqui`, atualizar o `GerenciadorSessaoOnline`, persistir a cópia atualizada no cache volátil (`/temp_cache`), reindexar os hashes SHA-256 de arquivos externos no `DatasetRepository` e emitir notificação para atualização da interface. Se a atualização ocorrer fora do modo experimental, a interface DEVE exibir uma notificação visual informando que o croqui foi atualizado. Se a atualização ocorrer em modo experimental, a recarga da tela DEVE ser imediata e silenciosa com pulso visual no banner. O timer de polling DEVE ser cancelado assim que o usuário sair das telas do referido pico.
+Enquanto o usuário estiver ativamente navegando nas telas de um croqui em modo online (não baixado), o sistema DEVE (MUST) executar verificações periódicas leves (a cada 30 a 60 segundos) enviando o cabeçalho `If-None-Match: <etag>` para a URL do `.binarypb`. Caso o servidor retorne status `304 Not Modified`, nenhum dado de corpo deve ser trafegado. Caso o servidor retorne status `200 OK`, o sistema DEVE consumir o buffer retornado no corpo da resposta para desserializar a nova instância de `Croqui`, atualizar o `GerenciadorSessaoOnline`, persistir a cópia atualizada no cache volátil (`/temp_cache`), reindexar os hashes SHA-256 de arquivos externos no `DatasetRepository` e emitir notificação para atualização da interface. Se a atualização ocorrer fora do modo experimental, a interface DEVE exibir uma notificação visual informando que o croqui foi atualizado. Se a atualização ocorrer em modo experimental, a recarga da tela DEVE ser imediata e silenciosa com pulso visual no banner. Em caso de perda de conexão com a internet ou timeout durante a verificação de ETag, o sistema DEVE tratar o evento como operacional esperado emitindo apenas `logAviso` (breadcrumb), abstendo-se de emitir `logError` para o Crashlytics. O timer de polling DEVE ser cancelado assim que o usuário sair das telas do referido pico.
 
 #### Scenario: Nenhuma modificação no servidor remoto (304)
 - **WHEN** o timer de polling dispara enquanto o croqui online está aberto
@@ -37,6 +37,12 @@ Enquanto o usuário estiver ativamente navegando nas telas de um croqui em modo 
 - **WHEN** o timer de polling dispara durante o modo experimental ativo e uma nova versão do `.binarypb` é recebida
 - **THEN** o sistema atualiza o `GerenciadorSessaoOnline`, reindexa as mídias e atualiza a tela imediatamente sem exibir popups intrusivos
 - **AND** o banner de modo experimental emite um pulso luminoso de recarga.
+
+#### Scenario: Falha de conexão transitória durante a verificação de ETag
+- **WHEN** o timer de polling dispara enquanto o dispositivo está em modo avião ou sem conectividade com a internet
+- **THEN** o `ServicoCroquiOnline` DEVE classificar o erro via `AppLogger.isFalhaConexaoOuTimeout`
+- **AND** registrar o aviso via `AppLogger.instance.logAviso`
+- **AND** NÃO DEVE invocar `logError` para o Crashlytics.
 
 ### Requirement: Resolução Híbrida de Imagens e Mídias com Cache Volátil
 O provedor de imagens do sistema DEVE (MUST) resolver requisições de mídias externas seguindo a ordem de precedência:

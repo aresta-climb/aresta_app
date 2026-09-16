@@ -473,29 +473,21 @@ class _GlobalSearchState extends State<GlobalSearch> {
     bool isDownloaded = true,
   }) {
     String escaladaNome = getEscaladaNome(escalada);
-    String tipoStr = 'Via';
+    String tipoStr = getModalidadeEscalada(escalada);
     IconData icon = Icons.trending_up;
 
     switch (escalada.whichTipo()) {
-      case Escalada_Tipo.viaEsportiva:
-        tipoStr = 'Esportiva';
-        break;
-      case Escalada_Tipo.viaMovel:
-        tipoStr = 'Móvel';
-        break;
       case Escalada_Tipo.boulder:
-        tipoStr = 'Boulder';
         icon = Icons.landscape;
         break;
-      case Escalada_Tipo.viaMultiplasEnfiadas:
-        tipoStr = 'Multipitch';
-        break;
       case Escalada_Tipo.highline:
-        tipoStr = 'Highline';
         icon = Icons.straighten;
         break;
-      default:
+      case Escalada_Tipo.notSet:
         tipoStr = 'Outro';
+        break;
+      default:
+        break;
     }
 
     final grauStr = getGrauString(escalada);

@@ -113,6 +113,9 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 - **`provedor_imagem_aresta.dart`**: Provedor unificado com resolução em camadas (downloads permanente, cache volátil e streaming remoto CDN com query `?v=<sha256>`). Realiza auto-resolução de SHA-256 via `DatasetRepository`.
 - **`imagem_arquivo_aresta.dart`**: Implementação especializada de `ImageProvider<ChaveImagemArquivoAresta>` que substitui o `FileImage` do Flutter, indexando a chave de cache nativa por caminho, escala e `checksumSha256` para invalidar texturas em disco reativamente sem piscar a UI.
 - **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.
+- **`micro_badge_beta.dart`**: Micro-badge ultracompacto para sinalização do estágio de "Beta Aberto" no cabeçalho da Home com proteção contra overflow em larguras a partir de 320dp e abertura interativa do modal informativo.
+- **`modal_beta_aberto.dart`**: Modal explicativo em BottomSheet com título em destaque, tópicos do estágio comunitário do projeto, botões em largura total com forte ênfase para o Instagram Oficial, Comunidade no WhatsApp e acionamento nativo de feedback (`BetterFeedback`).
+- **`badges_modalidades.dart`**: Renderiza chips compactos e responsivos (`Wrap`) com as contagens e nomes das modalidades de escalada presentes em um setor ou grupo (esportivas, móveis, boulders, multienfiadas, highlines), com concordância gramatical automática (singular/plural) e cores do tema.
 
 ---
 
@@ -120,6 +123,7 @@ Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e
 
 Reúne utilitários de domínio para manipulação de dados, resolução de índices e renderização vetorial.
 
+- **`consolidador_modalidades.dart`**: Utilitário puro responsável pela agregação quantitativa de modalidades de escalada em setores e grupos, tratamento de singular e plural para cada modalidade, formatação do resumo quantitativo de grupos (`"X setores • Y escaladas"`) e fallback automático para dados pré-computados quando disponíveis.
 - **`formatador_creditos.dart`**: Validação de placeholders genéricos e formatação de listas de autores/créditos em frases amigáveis (`"Croqui por ..."`).
 - **`construtor_caminho_trajeto.dart`**: Barreira arquitetural exclusiva para o subsistema de desenho vetorial com `package:path_drawing/`. Converte dados compilados SVG (`M ... C ...`) em `ui.Path` nativo, aplica estilos de traçado FEMEMG (sólido, tracejado, pontilhado), mantém cache em memória por rota/estilo para garantir 60/120 FPS no `InteractiveViewer`, realiza conversão defensiva de cores hexadecimais (`ponto.cor`) e amostra polilinhas para detecção ergonômica de toques (hit-testing por menor distância euclidiana com tolerância de 16dp).
 - **`croqui_map_index.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.

@@ -505,6 +505,47 @@ void main() {
 
       servicoComErroCache.dispose();
     });
+
+    test('verificarAtualizacaoEtag com SocketException registra logAviso e não dispara logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      sessaoOnline.registrarCroquiOnline('pico_offline', Croqui(id: 'pico_offline'), etag: '"etag_1"');
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenThrow(
+        const SocketException('Failed host lookup: serving.arestaclimb.com'),
+      );
+
+      final resultado = await servico.verificarAtualizacaoEtag(
+        'pico_offline',
+        'https://servidor.com/croqui.binarypb',
+      );
+
+      expect(resultado, isFalse);
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(
+        mockLogger.recordedWarnings.any((w) => w.contains('Verificação de ETag ignorada: sem conexão com a internet')),
+        isTrue,
+      );
+    });
+
+    test('verificarAtualizacaoEtag com erro inesperado registra logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      sessaoOnline.registrarCroquiOnline('pico_inesperado', Croqui(id: 'pico_inesperado'), etag: '"etag_1"');
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenThrow(
+        const FormatException('Malformed payload'),
+      );
+
+      final resultado = await servico.verificarAtualizacaoEtag(
+        'pico_inesperado',
+        'https://servidor.com/croqui.binarypb',
+      );
+
+      expect(resultado, isFalse);
+      expect(mockLogger.recordedErrors, isNotEmpty);
+    });
   });
 }
 

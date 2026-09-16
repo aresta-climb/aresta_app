@@ -9,6 +9,9 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/widgets/micro_badge_beta.dart';
+import 'package:frontend/widgets/modal_beta_aberto.dart';
+import 'package:frontend/theme/app_colors.dart';
 
 class MockDatasetRepository extends Mock implements DatasetRepository {}
 
@@ -21,6 +24,9 @@ void main() {
 
   Widget createTestWidget(DatasetRepository repo, SyncService syncService) {
     return MaterialApp(
+      theme: ThemeData(
+        extensions: const [AppColors.dark],
+      ),
       home: HomePage(
         datasetRepo: repo,
         syncService: syncService,
@@ -108,4 +114,52 @@ void main() {
       verify(() => mockSync.syncIndex(auto: false)).called(1);
     },
   );
+
+  testWidgets('HomePage exibe MicroBadgeBeta no cabeçalho e abre o modal ao tocar', (tester) async {
+    final mockRepo = MockDatasetRepository();
+    final mockSync = MockSyncService();
+    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
+      TopoDataset(availablePicos: [], downloadedPicos: []),
+    );
+
+    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
+    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+
+    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pump();
+
+    final badgeFinder = find.byType(MicroBadgeBeta);
+    expect(badgeFinder, findsOneWidget);
+
+    await tester.tap(badgeFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(ModalBetaAberto), findsOneWidget);
+  });
+
+  testWidgets('HomePage exibe ARESTA CLIMB no cabeçalho e abre o modal ao tocar no texto da marca', (tester) async {
+    final mockRepo = MockDatasetRepository();
+    final mockSync = MockSyncService();
+    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
+      TopoDataset(availablePicos: [], downloadedPicos: []),
+    );
+
+    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
+    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+
+    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pump();
+
+    final brandFinder = find.text('ARESTA CLIMB');
+    expect(brandFinder, findsOneWidget);
+
+    await tester.tap(brandFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(ModalBetaAberto), findsOneWidget);
+  });
 }

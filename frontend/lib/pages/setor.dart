@@ -200,6 +200,7 @@ class _SetorPageState extends State<SetorPage> {
                                       Image(
                                         image: snapshot.data!,
                                         fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                                       ),
                                       Positioned(
                                         top: 0,

@@ -6,9 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/comunidade.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../mocks/mock_app_logger.dart';
+
+class FakeRemoteConfigService extends Fake implements RemoteConfigService {
+  String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
+
+  @override
+  String get whatsappCommunityUrl => url;
+}
 
 class MockUrlLauncherPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -29,12 +37,15 @@ class MockUrlLauncherPlatform extends Fake
 void main() {
   late MockAppLogger mockLogger;
   late MockUrlLauncherPlatform mockLauncher;
+  late FakeRemoteConfigService fakeRemoteConfig;
 
   setUp(() {
     mockLogger = MockAppLogger();
     AppLogger.instance = mockLogger;
     mockLauncher = MockUrlLauncherPlatform();
     UrlLauncherPlatform.instance = mockLauncher;
+    fakeRemoteConfig = FakeRemoteConfigService();
+    RemoteConfigService.instance = fakeRemoteConfig;
   });
 
   Widget createTestWidget() {
@@ -81,13 +92,27 @@ void main() {
     // WhatsApp
     await tester.tap(find.text('GRUPO DO WHATSAPP'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv');
+    expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA');
     expect(mockLogger.recordedErrors, isEmpty);
 
     // Instagram
     await tester.tap(find.text('INSTAGRAM OFICIAL'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(mockLauncher.lastLaunchedUrl, 'https://www.instagram.com/arestaclimb/');
+    expect(mockLogger.recordedErrors, isEmpty);
+  });
+
+  testWidgets('Ao clicar no card do WhatsApp, consome dinamicamente a URL do RemoteConfigService', (WidgetTester tester) async {
+    setScreenSize(tester);
+    fakeRemoteConfig.url = 'https://chat.whatsapp.com/NovaComunidade123';
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockLauncher.shouldThrow = false;
+    await tester.tap(find.text('GRUPO DO WHATSAPP'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/NovaComunidade123');
     expect(mockLogger.recordedErrors, isEmpty);
   });
 
@@ -104,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       mockLogger.recordedErrors.any(
-        (e) => e['contextMessage'].contains('https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv'),
+        (e) => e['contextMessage'].contains('https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA'),
       ),
       isTrue,
     );
@@ -152,5 +177,13 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('ComunidadePage renderiza rodapé de versão com indicação de Beta Aberto', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('• Beta Aberto'), findsOneWidget);
   });
 }

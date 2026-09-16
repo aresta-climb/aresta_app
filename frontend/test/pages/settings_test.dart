@@ -11,6 +11,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/widgets/modal_beta_aberto.dart';
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -59,5 +61,23 @@ void main() {
       home: SettingsPage(datasetRepo: mockRepo),
     ));
     expect(find.text('Configurações'), findsOneWidget);
+  });
+
+  testWidgets('SettingsPage deve exibir a versão com (Beta Aberto) e abrir o modal ao tocar', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        extensions: const [AppColors.dark],
+      ),
+      home: SettingsPage(datasetRepo: mockRepo),
+    ));
+    await tester.pumpAndSettle();
+
+    final versaoFinder = find.text('Aresta Climb v1.2.3 (Beta Aberto)');
+    expect(versaoFinder, findsOneWidget);
+
+    await tester.tap(versaoFinder);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ModalBetaAberto), findsOneWidget);
   });
 }

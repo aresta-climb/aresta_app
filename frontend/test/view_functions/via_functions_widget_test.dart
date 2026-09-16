@@ -93,4 +93,115 @@ void main() {
       },
     );
   });
+
+  group('via_functions layout e seções', () {
+    testWidgets(
+      'deve exibir cartão unificado de proteções X+Y e não exibir cartão de paradas',
+      (WidgetTester tester) async {
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Vale Perdido'
+            ..dificuldade = GrauVia_GrauVia.BR_6SUP
+            ..quantidadeProtecoesIntermediarias = 3
+            ..quantidadeProtecoesParada = 2);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('PROTEÇÕES'), findsOneWidget);
+        expect(find.text('3+2'), findsOneWidget);
+        expect(find.text('PARADAS'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deve posicionar Descrição antes de Informações/Histórico e ações no rodapé',
+      (WidgetTester tester) async {
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Vale Perdido'
+            ..dificuldade = GrauVia_GrauVia.BR_6SUP
+            ..quantidadeProtecoesIntermediarias = 3
+            ..quantidadeProtecoesParada = 2
+            ..tipoAncoragem = 'Dupla com corrente'
+            ..descricao = 'Via mista, laçar a ponte de pedra.'
+            ..conquistadores.add('Emerson Alves')
+            ..dataAbertura = '1993'
+            ..chavePixManutencao = 'pix@aresta.app');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: Builder(
+                  builder: (context) => buildViaBody(
+                    context,
+                    escalada,
+                    'crag1',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final dyDescricao = tester.getTopLeft(find.text('Descrição')).dy;
+        final dyInformacoes = tester.getTopLeft(find.text('Informações')).dy;
+        final dyHistorico = tester.getTopLeft(find.text('HISTÓRICO & CONQUISTA')).dy;
+        final dyAcoes = tester.getTopLeft(find.textContaining('Apoie a Manutenção')).dy;
+
+        // Descrição deve vir antes de Informações e Histórico
+        expect(dyDescricao < dyInformacoes, isTrue,
+            reason: 'Descrição ($dyDescricao) deve vir antes de Informações ($dyInformacoes)');
+        expect(dyInformacoes < dyHistorico, isTrue,
+            reason: 'Informações ($dyInformacoes) deve vir antes de Histórico ($dyHistorico)');
+        // Ações devem vir após Histórico
+        expect(dyHistorico < dyAcoes, isTrue,
+            reason: 'Histórico ($dyHistorico) deve vir antes das Ações ($dyAcoes)');
+      },
+    );
+
+    testWidgets(
+      'não deve exibir cartão de Dificuldade nem de Proteções quando forem indefinidos ou zero',
+      (WidgetTester tester) async {
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Via Sem Grau Nem Protecao'
+            ..dificuldade = GrauVia_GrauVia.INDEFINIDO
+            ..quantidadeProtecoesIntermediarias = 0
+            ..quantidadeProtecoesParada = 0);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('DIFICULDADE'), findsNothing);
+        expect(find.text('PROTEÇÕES'), findsNothing);
+        expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
+      },
+    );
+  });
 }
+

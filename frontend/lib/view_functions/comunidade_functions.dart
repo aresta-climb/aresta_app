@@ -144,7 +144,7 @@ Widget buildFooter(BuildContext context) {
         child: Column(
           children: [
             Text(
-              'Aresta Climb v$version',
+              'Aresta Climb v$version • Beta Aberto',
               style: TextStyle(
                 color: context.colors.dryMoss,
                 fontSize: 12,

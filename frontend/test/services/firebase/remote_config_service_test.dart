@@ -49,8 +49,16 @@ void main() {
 
         await service.initialize();
 
-        // 1. setDefaults chamado
-        verify(() => mockFirebaseRemoteConfig.setDefaults(any())).called(1);
+        // 1. setDefaults chamado com chave da comunidade do WhatsApp
+        final capturedDefaults = verify(
+          () => mockFirebaseRemoteConfig.setDefaults(captureAny()),
+        ).captured;
+        expect(capturedDefaults.isNotEmpty, isTrue);
+        final defaultsMap = capturedDefaults.first as Map<String, dynamic>;
+        expect(
+          defaultsMap['whatsapp_community_url'],
+          NetworkConstants.kDefaultWhatsappCommunityUrl,
+        );
 
         // 2. setConfigSettings chamado com intervalo saudável de cache (12 horas)
         final capturedSettings = verify(
@@ -168,6 +176,16 @@ void main() {
       );
     });
 
+    test('Acessar whatsappCommunityUrl retorna valor do mock', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('whatsapp_community_url'),
+      ).thenReturn('https://chat.whatsapp.com/custom');
+      expect(
+        RemoteConfigService.instance.whatsappCommunityUrl,
+        'https://chat.whatsapp.com/custom',
+      );
+    });
+
     test('Acessar officialServerUrl combina servingBaseUrl com a versão de dados', () {
       when(
         () => mockFirebaseRemoteConfig.getString('serving_base_url'),
@@ -193,6 +211,10 @@ void main() {
         RemoteConfigService.instance.feedbackEdgeFunctionUrl,
         NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
       );
+      expect(
+        RemoteConfigService.instance.whatsappCommunityUrl,
+        NetworkConstants.kDefaultWhatsappCommunityUrl,
+      );
     });
 
     test('Getters tratam exceções retornando valores padrão seguros', () {
@@ -214,6 +236,10 @@ void main() {
       expect(
         RemoteConfigService.instance.feedbackEdgeFunctionUrl,
         NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+      );
+      expect(
+        RemoteConfigService.instance.whatsappCommunityUrl,
+        NetworkConstants.kDefaultWhatsappCommunityUrl,
       );
     });
   });

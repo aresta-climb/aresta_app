@@ -13,6 +13,9 @@ import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../widgets/micro_badge_beta.dart';
+import '../widgets/modal_beta_aberto.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 Future<void> handlePicoSelection(
@@ -121,54 +124,78 @@ Widget _buildHeader(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Image.asset(
-                'assets/logo_app.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800, // Darker grey background
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                'ARESTA',
-                style: TextStyle(
-                  fontFamily: 'BebasNeue',
-                  fontSize: 26,
-                  letterSpacing: 1.5,
-                  height: 1.2,
-                  color: Colors.black,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/logo_app_trace.svg',
+                      height: 26,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => exibirModalBetaAberto(context),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Stack(
+                        alignment: Alignment.centerLeft,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 6),
+                            child: Text(
+                              'ARESTA CLIMB',
+                              style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                                letterSpacing: 0.5,
+                                color: context.colors.chalkWhite,
+                              ),
+                            ),
+                          ),
+                          const Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: MicroBadgeBeta(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const Spacer(),
-            IconButton(
-              icon: Icon(Icons.sync, color: context.colors.ashGrey),
-              tooltip: 'Sincronizar catálogo e croquis',
-              onPressed: () async {
-                await handleManualSync(
-                  context,
-                  datasetRepo,
-                  syncService,
-                );
-              },
-            ),
-            buildFeedbackButton(context, color: context.colors.ashGrey),
-            IconButton(
-              icon: Icon(Icons.settings, color: context.colors.ashGrey),
-              onPressed: () {
-                TreeNavigationWrapper.of(
-                  context,
-                ).treeController.navigateTo(SettingsNode(const HomeNode()));
-              },
+            const SizedBox(width: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.sync, color: context.colors.ashGrey),
+                  tooltip: 'Sincronizar catálogo e croquis',
+                  onPressed: () async {
+                    await handleManualSync(
+                      context,
+                      datasetRepo,
+                      syncService,
+                    );
+                  },
+                ),
+                buildFeedbackButton(context, color: context.colors.ashGrey),
+                IconButton(
+                  icon: Icon(Icons.settings, color: context.colors.ashGrey),
+                  onPressed: () {
+                    TreeNavigationWrapper.of(
+                      context,
+                    ).treeController.navigateTo(SettingsNode(const HomeNode()));
+                  },
+                ),
+              ],
             ),
           ],
         ),

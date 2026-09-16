@@ -2,7 +2,7 @@ name: frontend
 description: "Aplicativo de escalada para centralizar informações de picos"
 publish_to: 'none'
 
-version: 0.2.10-dev+77
+version: 0.3.1-dev+79
 
 environment:
   sdk: ^3.11.3
@@ -43,6 +43,7 @@ dependencies:
   firebase_app_check: ^0.4.6
   flutter_local_notifications: ^22.3.0
   fixnum: ^1.1.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -63,8 +64,10 @@ flutter:
     - legal/repo/public/docs/termos-de-uso.md
     - legal/repo/public/docs/politica-de-privacidade.md
     - assets/logo_app.png
+    - assets/logo_app_app_details2.png
     - assets/logo_in_app.jpg
     - assets/logo_splash.png
+    - assets/logo_app_trace.svg
     - assets/preload/
     - assets/preload/thumbnails/
 

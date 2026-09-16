@@ -57,6 +57,8 @@ class RemoteConfigService extends ChangeNotifier {
         "feedback_edge_function_url":
             NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
         "serving_base_url": NetworkConstants.kDefaultServingBaseUrl,
+        "whatsapp_community_url":
+            NetworkConstants.kDefaultWhatsappCommunityUrl,
       });
 
       // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
@@ -148,6 +150,14 @@ class RemoteConfigService extends ChangeNotifier {
     return value.isNotEmpty
         ? value
         : NetworkConstants.kDefaultServingBaseUrl;
+  }
+
+  /// URL de convite para a comunidade oficial do WhatsApp.
+  String get whatsappCommunityUrl {
+    final value = getString('whatsapp_community_url');
+    return value.isNotEmpty
+        ? value
+        : NetworkConstants.kDefaultWhatsappCommunityUrl;
   }
 
   /// URL combinada do servidor de dados com a versão atual de dados.

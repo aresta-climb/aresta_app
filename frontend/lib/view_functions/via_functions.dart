@@ -32,6 +32,62 @@ String getEscaladaNome(Escalada escalada) {
   }
 }
 
+/// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multipitch', 'Highline').
+/// Vias móveis que possuam proteções intermediárias fixas são identificadas como 'Mista'.
+String getModalidadeEscalada(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      return 'Esportiva';
+    case Escalada_Tipo.viaMovel:
+      if (escalada.viaMovel.quantidadeProtecoesIntermediarias > 0) {
+        return 'Mista';
+      }
+      return 'Móvel';
+    case Escalada_Tipo.boulder:
+      return 'Boulder';
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      if (escalada.viaMultiplasEnfiadas.tipoViaMultiplasEnfiadas ==
+          ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA) {
+        return 'Mista';
+      }
+      return 'Multipitch';
+    case Escalada_Tipo.highline:
+      return 'Highline';
+    case Escalada_Tipo.notSet:
+      return '';
+  }
+}
+
+/// Retorna a string formatada de proteções na notação X+Y (`<intermediárias>+<parada>`).
+/// Retorna string vazia se nenhuma proteção for cadastrada.
+String getProtecoesString(Escalada escalada) {
+  int intermediarias = 0;
+  int parada = 0;
+
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      intermediarias = escalada.viaEsportiva.quantidadeProtecoesIntermediarias;
+      parada = escalada.viaEsportiva.quantidadeProtecoesParada;
+      break;
+    case Escalada_Tipo.viaMovel:
+      intermediarias = escalada.viaMovel.quantidadeProtecoesIntermediarias;
+      parada = escalada.viaMovel.quantidadeProtecoesParada;
+      break;
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      intermediarias =
+          escalada.viaMultiplasEnfiadas.quantidadeCosturasIntermediarias;
+      parada = escalada.viaMultiplasEnfiadas.quantidadeEquipamentosParada;
+      break;
+    default:
+      return '';
+  }
+
+  if (intermediarias > 0 || parada > 0) {
+    return '$intermediarias+$parada';
+  }
+  return '';
+}
+
 /// Retorna a string formatada do grau/dificuldade da escalada.
 String getGrauString(Escalada escalada) {
   switch (escalada.whichTipo()) {
@@ -50,7 +106,11 @@ String getGrauString(Escalada escalada) {
 }
 
 /// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
+/// Retorna string vazia se o grau for indefinido ou não informado.
 String formatGradeString(String name) {
+  if (name.isEmpty || name.toUpperCase().contains('INDEFINIDO')) {
+    return '';
+  }
   String g = name
       .replaceAll('BR_', '')
       .replaceAll('_BARRA_', '/')
@@ -262,8 +322,11 @@ Widget _buildContentForEscalada(
 
 String _fmtEnum(dynamic e) {
   if (e == null) return '';
-  String text = e.name
-      .toString()
+  final nameStr = e.name?.toString() ?? '';
+  if (nameStr.toUpperCase().contains('INDEFINIDO')) {
+    return '';
+  }
+  String text = nameStr
       .replaceAll(
         RegExp(
           r'^(BR_|GRAU_EXPOSICAO_|TIPO_PAREDE_|GRAU_DURACAO_|TIPO_VIA_MULTIPLAS_ENFIADAS_|GRAU_BOULDER_|GRAU_ARTIFICIAL_)',
@@ -292,14 +355,17 @@ Widget _buildViaEsportiva(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
@@ -307,55 +373,54 @@ Widget _buildViaEsportiva(
     );
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
-  if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0) {
+  if (via.quantidadeProtecoesIntermediarias > 0 ||
+      via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
         'Proteções',
-        via.quantidadeProtecoesIntermediarias.toString(),
+        '${via.quantidadeProtecoesIntermediarias}+${via.quantidadeProtecoesParada}',
         Icons.shield_outlined,
       ),
     );
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
-  }
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Paradas',
-        via.quantidadeProtecoesParada.toString(),
-        Icons.anchor,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -409,12 +474,15 @@ Widget _buildViaEsportiva(
               .toList(),
         ),
 
-      if (via.hasQuantidadeProtecoesParada() ||
-          (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
+      if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Informações'),
-        if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)
-          _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
+        _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
 
       if (historyRows.isNotEmpty) ...[
@@ -472,11 +540,6 @@ Widget _buildViaEsportiva(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -494,14 +557,17 @@ Widget _buildViaMovel(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
@@ -509,65 +575,67 @@ Widget _buildViaMovel(
     );
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
-  if (via.hasQuantidadeProtecoesIntermediarias() &&
-      via.quantidadeProtecoesIntermediarias > 0) {
+  if (via.quantidadeProtecoesIntermediarias > 0 ||
+      via.quantidadeProtecoesParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
-        'Proteções Fixas',
-        via.quantidadeProtecoesIntermediarias.toString(),
+        'Proteções',
+        '${via.quantidadeProtecoesIntermediarias}+${via.quantidadeProtecoesParada}',
         Icons.shield_outlined,
       ),
     );
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
-  }
-  if (via.hasQuantidadeProtecoesParada() && via.quantidadeProtecoesParada > 0) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Paradas',
-        via.quantidadeProtecoesParada.toString(),
-        Icons.anchor,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificialEmLivre()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Art. em Livre',
-        _fmtEnum(via.dificuldadeArtificialEmLivre),
-        Icons.back_hand,
-      ),
-    );
+    final artLivre = _fmtEnum(via.dificuldadeArtificialEmLivre);
+    if (artLivre.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Art. em Livre',
+          artLivre,
+          Icons.back_hand,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -621,6 +689,11 @@ Widget _buildViaMovel(
               .toList(),
         ),
 
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (via.hasProtecoesMoveis() && via.protecoesMoveis.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Peças Móveis'),
@@ -630,12 +703,10 @@ Widget _buildViaMovel(
         ),
       ],
 
-      if (via.hasQuantidadeProtecoesParada() ||
-          (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)) ...[
+      if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty) ...[
         const SizedBox(height: 10),
         _buildHeader('Parada & Ancoragem'),
-        if (via.hasTipoAncoragem() && via.tipoAncoragem.isNotEmpty)
-          _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
+        _buildInfoRow('Tipo de Ancoragem', via.tipoAncoragem),
       ],
 
       if (historyRows.isNotEmpty) ...[
@@ -693,11 +764,6 @@ Widget _buildViaMovel(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -715,24 +781,30 @@ Widget _buildBoulder(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -783,6 +855,11 @@ Widget _buildBoulder(
               .toList(),
         ),
 
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (historyRows.isNotEmpty) ...[
         const SizedBox(height: 12),
         Container(
@@ -838,11 +915,6 @@ Widget _buildBoulder(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }
@@ -860,59 +932,77 @@ Widget _buildMultipitch(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldadeMaxima()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade Máx',
-        formatGradeString(via.dificuldadeMaxima.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldadeMaxima.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade Máx',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeMedia()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade Média',
-        formatGradeString(via.dificuldadeMedia.name),
-        Icons.trending_flat,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldadeMedia.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade Média',
+          grau,
+          Icons.trending_flat,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificialEmLivre()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Art. em Livre',
-        _fmtEnum(via.dificuldadeArtificialEmLivre),
-        Icons.back_hand,
-      ),
-    );
+    final artLivre = _fmtEnum(via.dificuldadeArtificialEmLivre);
+    if (artLivre.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Art. em Livre',
+          artLivre,
+          Icons.back_hand,
+        ),
+      );
+    }
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDuracao()) {
-    statCards.add(
-      _buildStatCard(context, 'Duração', _fmtEnum(via.duracao), Icons.timer),
-    );
+    final duracao = _fmtEnum(via.duracao);
+    if (duracao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(context, 'Duração', duracao, Icons.timer),
+      );
+    }
   }
   if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0) {
     statCards.add(
@@ -924,14 +1014,14 @@ Widget _buildMultipitch(
       ),
     );
   }
-  if (via.hasQuantidadeEquipamentosParada() &&
+  if (via.quantidadeCosturasIntermediarias > 0 ||
       via.quantidadeEquipamentosParada > 0) {
     statCards.add(
       _buildStatCard(
         context,
-        'Paradas',
-        via.quantidadeEquipamentosParada.toString(),
-        Icons.anchor,
+        'Proteções',
+        '${via.quantidadeCosturasIntermediarias}+${via.quantidadeEquipamentosParada}',
+        Icons.shield_outlined,
       ),
     );
   }
@@ -956,14 +1046,17 @@ Widget _buildMultipitch(
     );
   }
   if (via.hasTipoViaMultiplasEnfiadas()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Tipo',
-        _fmtEnum(via.tipoViaMultiplasEnfiadas),
-        Icons.merge_type,
-      ),
-    );
+    final tipo = _fmtEnum(via.tipoViaMultiplasEnfiadas);
+    if (tipo.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Tipo',
+          tipo,
+          Icons.merge_type,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -1011,6 +1104,11 @@ Widget _buildMultipitch(
               )
               .toList(),
         ),
+
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
 
       if (via.hasEquipamentoRecomendado() &&
           via.equipamentoRecomendado.isNotEmpty) ...[
@@ -1092,10 +1190,6 @@ Widget _buildMultipitch(
           color: Colors.blueAccent,
         ),
 
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
       if (via.enfiadas.isNotEmpty) ...[
         _buildHeader('Enfiadas'),
         ...via.enfiadas.asMap().entries.map((entry) {
@@ -1223,6 +1317,19 @@ Widget _buildHighline(
               .toList(),
         ),
 
+      if (via.hasDescricaoAcesso() && via.descricaoAcesso.isNotEmpty) ...[
+        _buildHeader('Descrição do Acesso'),
+        OfflineMarkdown(data: via.descricaoAcesso, cragId: cragId),
+      ],
+      if (via.hasDescricaoAncoragem() && via.descricaoAncoragem.isNotEmpty) ...[
+        _buildHeader('Descrição da Ancoragem'),
+        OfflineMarkdown(data: via.descricaoAncoragem, cragId: cragId),
+      ],
+      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
+        _buildHeader('Descrição'),
+        OfflineMarkdown(data: via.descricao, cragId: cragId),
+      ],
+
       if (historyRows.isNotEmpty) ...[
         const SizedBox(height: 12),
         Container(
@@ -1278,19 +1385,6 @@ Widget _buildHighline(
           () {},
           color: Colors.blueAccent,
         ),
-
-      if (via.hasDescricaoAcesso() && via.descricaoAcesso.isNotEmpty) ...[
-        _buildHeader('Descrição do Acesso'),
-        OfflineMarkdown(data: via.descricaoAcesso, cragId: cragId),
-      ],
-      if (via.hasDescricaoAncoragem() && via.descricaoAncoragem.isNotEmpty) ...[
-        _buildHeader('Descrição da Ancoragem'),
-        OfflineMarkdown(data: via.descricaoAncoragem, cragId: cragId),
-      ],
-      if (via.hasDescricao() && via.descricao.isNotEmpty) ...[
-        _buildHeader('Descrição'),
-        OfflineMarkdown(data: via.descricao, cragId: cragId),
-      ],
     ],
   );
 }

@@ -22,7 +22,7 @@ O `DatasetRepository` MUST manter uma tabela de dispersão indexada $O(1)$ mapea
 - **THEN** o sistema DEVE indexar imediatamente os `arquivosExternos` do croqui online em memória e retornar o hash correspondente
 
 ### Requirement: Provedor de Imagem Aresta com Cache-Busting Unificado
-O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas chaves incorporem o `checksumSha256` da mídia para diferenciar instantaneamente versões antigas e novas, tanto para arquivos armazenados no disco quanto para streaming remoto da CDN. Ao transmitir imagens remotas da CDN para croquis em modo online ou miniaturas globais, o provedor DEVE (MUST) persistir os bytes recebidos no cache volátil do sistema operacional (`temp_cache`) utilizando a convenção `<caminho>.<checksumSha256>`, exceto para miniaturas globais que DEVEM ser salvas como `temp_cache/thumbnails/<picoId>.webp.<checksumSha256>`. A existência de um `checksumSha256` válido é estritamente obrigatória para gravação em disco; caso o hash seja nulo ou vazio, o sistema DEVE registrar erro na telemetria via `AppLogger.instance.logError` e realizar fallback direto para `NetworkImage` sem salvar no `temp_cache`. Após salvar uma nova versão de mídia com hash atualizado, o sistema DEVE expurgar versões anteriores com hashes divergentes do mesmo arquivo na mesma pasta.
+O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas chaves incorporem o `checksumSha256` da mídia para diferenciar instantaneamente versões antigas e novas, tanto para arquivos armazenados no disco quanto para streaming remoto da CDN. Ao transmitir imagens remotas da CDN para croquis em modo online ou miniaturas globais, o provedor DEVE (MUST) persistir os bytes recebidos no cache volátil do sistema operacional (`temp_cache`) utilizando a convenção `<caminho>.<checksumSha256>`, exceto para miniaturas globais que DEVEM ser salvas como `temp_cache/thumbnails/<picoId>.webp.<checksumSha256>`. A existência de um `checksumSha256` válido é estritamente obrigatória para gravação em disco; caso o hash seja nulo ou vazio, o sistema DEVE registrar erro na telemetria via `AppLogger.instance.logError` e realizar fallback direto para `NetworkImage` sem salvar no `temp_cache`. Caso o download da mídia remota falhe (seja por queda de conexão, socket fechado, timeout ou status HTTP diferente de 200), o provedor DEVE retornar `null` (em vez de recorrer a `NetworkImage`). Falhas operacionais de conectividade ou timeout DEVEM ser registradas via `AppLogger.instance.logAviso` sem emissão de `logError` para o Crashlytics. Após salvar uma nova versão de mídia com hash atualizado, o sistema DEVE expurgar versões anteriores com hashes divergentes do mesmo arquivo na mesma pasta.
 
 #### Scenario: Resolução de imagem remota com query parameter de versão e persistência atômica em cache volátil
 - **WHEN** uma imagem não baixada permanentemente for resolvida para streaming remoto
@@ -65,6 +65,12 @@ O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas ch
 #### Scenario: Limpeza de versões com hash antigo após download bem-sucedido
 - **WHEN** o download de uma nova versão de imagem `<caminho>.<novoHash>` for concluído com sucesso em `temp_cache`
 - **THEN** o sistema DEVE remover do mesmo diretório qualquer arquivo irmão do mesmo caminho base que contenha hash anterior divergente.
+
+#### Scenario: Falha de conectividade ou rede durante download de imagem remota
+- **WHEN** a tentativa de download atômico falhar devido a queda de conexão, socket inacessível (`SocketException`), timeout ou indisponibilidade de DNS
+- **THEN** o `ProvedorImagemAresta` DEVE registrar o aviso como `logAviso` contextual
+- **AND** NÃO DEVE invocar `logError` para o Crashlytics
+- **AND** DEVE retornar `null` (não retornando `NetworkImage`).
 
 ### Requirement: Invalidação e Atualização Reativa em Hot Reload
 O sistema MUST substituir na interface imediatamente qualquer imagem cujo `checksumSha256` tenha sido modificado após um evento de recarregamento (*Live Reload*) ou sincronização, purgar o cache ativo de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), e manter inalteradas e cacheadas na GPU todas as imagens cujo hash permaneceu idêntico.

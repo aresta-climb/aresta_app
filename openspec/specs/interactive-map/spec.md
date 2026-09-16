@@ -158,4 +158,98 @@ O `MapaInterativoPage` DEVE renderizar visualmente no mapa todos os pontos de in
 - **THEN** a linha é selecionada visualmente (`isSelected == true`)
 - **THEN** o sistema aplica o enquadramento de auto-zoom para a caixa delimitadora da linha
 
+### Requirement: Prévia Textual da Descrição no Cartão Flutuante
+O cartão flutuante do mapa interativo SHALL exibir uma prévia textual da descrição da via selecionada, formatada em texto simples (removendo marcações Markdown através de `stripMarkdownForSubtitle`), limitada a no máximo 2 linhas com reticências (`maxLines: 2, overflow: TextOverflow.ellipsis`), mantendo a altura compacta do cartão e preservando a visibilidade do croqui.
 
+#### Scenario: Via selecionada no mapa com descrição cadastrada
+- **WHEN** o usuário seleciona um ponto de interesse que resolve para uma via com `descricao` não vazia
+- **THEN** o cartão flutuante exibe o texto da descrição limpo de marcações Markdown
+- **AND** o texto é truncado com reticências após 2 linhas caso exceda o espaço
+- **AND** o botão "Mais Info" continua disponível para abrir a visualização completa
+
+#### Scenario: Via selecionada no mapa sem descrição cadastrada
+- **WHEN** o usuário seleciona uma via cuja `descricao` é vazia
+- **THEN** o cartão flutuante não exibe a área de texto de prévia, mantendo o espaçamento compacto original
+
+### Requirement: Exibição de Proteções e Modalidade no Subtítulo do Cartão Flutuante
+O subtítulo do cartão flutuante da via no mapa interativo SHALL incluir a quantidade de proteções na notação `<intermediárias>+<parada>` adjacente à modalidade e ao grau (ex: `Esportiva | 6°sup | 3+2` ou `Mista | 6°sup | 3+2`).
+
+#### Scenario: Via com proteções cadastradas selecionada no mapa
+- **WHEN** uma via esportiva ou móvel possui `quantidadeProtecoesIntermediarias > 0` ou `quantidadeProtecoesParada > 0`
+- **THEN** o subtítulo do cartão exibe `[Modalidade] | [Grau] | <intermediárias>+<parada>`
+- **AND** se a via for móvel com proteções intermediárias fixas, a modalidade exibida SHALL ser "Mista"
+
+#### Scenario: Via sem proteções cadastradas selecionada no mapa
+- **WHEN** a via selecionada não possui proteções intermediárias nem na parada (ex: boulder)
+- **THEN** o subtítulo exibe apenas `[Modalidade] | [Grau]` sem o segmento de proteções
+
+### Requirement: Renderização Imediata e Não-Bloqueante do Botão de Mapa no Setor
+O componente de miniatura de mapa no setor SHALL renderizar imediatamente no primeiro frame o container com a proporção exata (`larguraMapa / alturaMapa`) e o botão de abertura do mapa interativo, permitindo toque e navegação instantânea para a tela cheia do mapa sem aguardar o download ou decodificação da imagem de fundo.
+
+#### Scenario: Visualização do setor com mapa enquanto a imagem está baixando
+- **WHEN** o usuário acessa um setor que possui mapas em um croqui online
+- **AND** a imagem do mapa ainda não foi baixada ou está em processo de resolução
+- **THEN** o card do mapa exibe imediatamente um container estilizado com cantos arredondados na proporção correta
+- **AND** o botão "Abrir Mapa Interativo" é renderizado centralizado e habilitado para toque no primeiro frame
+- **AND** o término do download da miniatura exibe a imagem em segundo plano com transição suave (fade-in) sem reconstruir ou piscar o botão
+
+#### Scenario: Toque no botão de mapa antes do término do download da miniatura
+- **WHEN** o usuário toca no botão "Abrir Mapa Interativo" no setor
+- **AND** a miniatura do mapa ainda não completou seu download
+- **THEN** o sistema aciona a navegação para a tela de mapas (`toMapas`) imediatamente sem reter o usuário no setor
+
+### Requirement: Montagem Estrutural Imediata e Revelação Atômica no Mapa Interativo
+A página do mapa interativo SHALL montar imediatamente sua estrutura visual (Scaffold, AppBar com título e controles de navegação, e tela de visualização com fundo escuro) no primeiro frame, mantendo um indicador de carregamento sutil enquanto a imagem em alta resolução é obtida, e revelando a imagem junto com os marcadores e traçados vetoriais de forma atômica e coordenada.
+
+#### Scenario: Abertura da tela cheia do mapa interativo online
+- **WHEN** a tela do mapa interativo é aberta e a imagem correspondente ainda está sendo obtida pela rede ou disco
+- **AND** o modo headless não está ativo
+- **THEN** a barra superior (AppBar) com botão de retorno e identificação do mapa/setor é exibida instantaneamente
+- **AND** o canvas do mapa exibe um fundo escuro com indicador de carregamento centralizado
+- **AND** os marcadores (POIs) e traçados vetoriais permanecem ocultos até que a imagem esteja pronta para exibição
+
+#### Scenario: Revelação coordenada ao concluir o carregamento da imagem
+- **WHEN** o carregamento e decodificação da imagem do mapa são concluídos
+- **THEN** a imagem da rocha, os marcadores de interesse (POIs) e os traçados vetoriais são exibidos simultaneamente com transição suave de fade-in
+- **AND** os controles de interação (zoom, pan, duplo toque) tornam-se plenamente operacionais
+
+### Requirement: Pré-download Leve para Cache em Disco de Mapas de Setor e Carrossel
+O sistema DEVE (MUST) disponibilizar o método `ProvedorImagemAresta.preCarregarNoDisco` com propriedades de idempotência, deduplicação e ausência de decodificação de imagem em RAM. O sistema DEVE disparar o pré-download assíncrono em segundo plano das páginas subsequentes de mapas tanto ao renderizar a miniatura do setor (`MapaThumbnail`) quanto ao abrir a visualização em carrossel (`MapasCarrosselPage`), garantindo disponibilidade local e navegação fluida mesmo sem conectividade na rocha.
+
+#### Scenario: Execução de ProvedorImagemAresta.preCarregarNoDisco sem carregar em RAM
+- **QUANDO** o método `ProvedorImagemAresta.preCarregarNoDisco` é invocado para uma imagem remota com checksum SHA-256 válido
+- **THEN** o sistema baixa os bytes compactados da CDN e grava atomicamente em disco sob `temp_cache`
+- **AND** a imagem NÃO DEVE ser decodificada na GPU nem inserida no `ImageCache` da memória RAM
+- **AND** o método retorna a referência ao `File` salvo no disco
+
+#### Scenario: Idempotência de pré-download para arquivos já presentes no disco
+- **QUANDO** o método `preCarregarNoDisco` for chamado para uma imagem que já exista em `/downloads` ou `/temp_cache`
+- **THEN** nenhuma requisição de rede HTTP deve ser realizada
+- **AND** o arquivo local existente é retornado imediatamente
+
+#### Scenario: Pré-download das páginas subsequentes ao exibir o Setor
+- **QUANDO** o usuário visualiza a página de um setor (`SetorPage`) cujo `MapaThumbnail` possui múltiplos mapas (`mapas.length > 1`)
+- **THEN** a miniatura renderiza o primeiro mapa normalmente
+- **AND** o sistema agenda em segundo plano o download de todas as páginas subsequentes (índice 1 em diante) para o disco via `preCarregarNoDisco`
+
+#### Scenario: Pré-download complementar de garantia ao abrir o carrossel
+- **QUANDO** o usuário abre a visualização em carrossel (`MapasCarrosselPage`)
+- **THEN** a página ativa é exibida na tela
+- **AND** o sistema aciona em segundo plano a verificação e o pré-download das demais páginas para assegurar que estejam disponíveis em disco mesmo em acessos diretos
+
+### Requirement: Salvaguarda Visual contra Falhas de Carregamento em Miniaturas e Capas
+Os widgets `MapaThumbnail`, bem como as capas de `SetorPage` e `GrupoPage`, MUST fornecer salvaguarda visual defensiva com `errorBuilder` em seus componentes `Image`, prevenindo que falhas assíncronas de rede ou decodificação de imagem resultem na renderização do `ErrorWidget` do Flutter (caixa preta com linhas cruzadas vermelhas e texto cru de `SocketException`). Em caso de falha no carregamento do stream da imagem, o widget DEVE degradar graciosamente para o fundo sólido escuro do tema (`deepBasalt`), mantendo a legibilidade, o botão central de abertura de mapas e os elementos de interface totalmente operacionais.
+
+#### Scenario: Falha de rede durante exibição do thumbnail do mapa
+- **WHEN** o `MapaThumbnail` receber um provedor de imagem que falha ao carregar pela rede (offline)
+- **THEN** o `errorBuilder` DEVE interceptar o erro silenciosamente
+- **AND** renderizar `const SizedBox.shrink()` sobre a camada de fundo sólido do tema
+- **AND** o botão de ação (ex: "Mapas Interativos") DEVE permanecer visível e interativo.
+
+#### Scenario: Resolução nula de imagem de mapa quando offline
+- **WHEN** o futuro de resolução de imagem retornar `null` devido à ausência de mídia baixada e falta de internet
+- **THEN** o `MapaThumbnail` DEVE exibir a camada de fundo sólido (`deepBasalt`) e o botão central de ação sem instanciar o widget `Image`.
+
+#### Scenario: Falha de rede na imagem de capa de setor ou grupo
+- **WHEN** a imagem de capa de um setor ou grupo falhar ao carregar via streaming remoto
+- **THEN** a tela DEVE manter a cor de fundo do tema e o gradiente escuro de cabeçalho sem exibir caixas de erro do framework.

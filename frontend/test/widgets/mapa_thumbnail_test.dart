@@ -2,13 +2,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -237,5 +242,247 @@ void main() {
       expect(resize.height, equals(400));
     });
   });
+
+  group('Renderização Imediata e Não-Bloqueante (Latência Zero)', () {
+    testWidgets(
+      'renderiza moldura e botão Abrir Mapa Interativo no primeiro frame enquanto imagem está pendente',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_pendente.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag1',
+                imageProviderFutureOverride: completer.future,
+              ),
+            ),
+          ),
+        );
+
+        // Apenas 1 frame inicial (sem pumpAndSettle)
+        await tester.pump();
+
+        // O botão DEVE estar presente imediatamente mesmo enquanto a imagem estiver pendente!
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+        expect(find.byIcon(Icons.map), findsOneWidget);
+
+        // O container deve respeitar a proporção
+        final aspectRatioFinder = find.byType(AspectRatio);
+        expect(aspectRatioFinder, findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'toque no botão durante o carregamento assíncrono navega para toMapas sem esperar a imagem',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final editor = EditorDeCroqui();
+        final repo = DatasetRepository(editorDeCroqui: editor);
+        final sync = SyncService(datasetRepository: repo);
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_pendente.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: sync,
+              child: Scaffold(
+                body: MapaThumbnail(
+                  mapas: [mapa],
+                  cragId: 'crag1',
+                  imageProviderFutureOverride: completer.future,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Toca no botão que já está visível no frame inicial
+        await tester.tap(find.text('Abrir Mapa Interativo'));
+        await tester.pump();
+
+        // Verifica se a navegação em árvore foi acionada para MapasCarrosselNode
+        expect(
+          TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
+          isA<MapasCarrosselNode>(),
+        );
+      },
+    );
+
+    testWidgets(
+      'imagem de fundo é apresentada por trás do botão quando a resolução é concluída',
+      (tester) async {
+        final completer = Completer<ImageProvider?>();
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagem_completa.png'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag1',
+                imageProviderFutureOverride: completer.future,
+              ),
+            ),
+          ),
+        );
+
+        // Inicialmente o botão já está lá, mas a imagem ainda não
+        await tester.pump();
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+        expect(find.byType(Image), findsNothing);
+
+        // Quando a imagem é resolvida
+        completer.complete(MemoryImage(kTransparentImage));
+        await tester.pumpAndSettle();
+
+        // Imagem e botão convivem no mesmo Stack
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'dispara preCarregarNoDisco para mapas subsequentes ao montar com múltiplos mapas',
+      (tester) async {
+        final mapa1 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p1.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+        final mapa2 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p2.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+        final mapa3 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p3.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        final caminhosPreCarregados = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa1, mapa2, mapa3],
+                cragId: 'crag_teste',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                preCarregadorDisco: ({required String picoId, required String caminho}) async {
+                  expect(picoId, equals('crag_teste'));
+                  caminhosPreCarregados.add(caminho);
+                  return null;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Mapa 1 é a miniatura ativa, então apenas mapas 2 e 3 devem ser pré-carregados
+        expect(caminhosPreCarregados, equals(['mapa_p2.webp', 'mapa_p3.webp']));
+      },
+    );
+
+    testWidgets(
+      'não dispara pré-carregamento quando houver apenas 1 mapa',
+      (tester) async {
+        final mapa1 = Mapa()
+          ..caminhoImagemMapa = 'mapa_unico.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        final caminhosPreCarregados = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa1],
+                cragId: 'crag_teste',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                preCarregadorDisco: ({required String picoId, required String caminho}) async {
+                  caminhosPreCarregados.add(caminho);
+                  return null;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        expect(caminhosPreCarregados, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'quando o ImageProvider falha com erro de conexão, errorBuilder impede renderização de ErrorWidget',
+      (tester) async {
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'mapa_teste.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag_teste',
+                imageProviderOverride: const ProvedorImagemComFalha(),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byType(ErrorWidget), findsNothing);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+      },
+    );
+  });
 }
+
+/// Provedor de imagem simulado para testes que dispara erro assíncrono de rede na carga.
+class ProvedorImagemComFalha extends ImageProvider<ProvedorImagemComFalha> {
+  const ProvedorImagemComFalha();
+
+  @override
+  Future<ProvedorImagemComFalha> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<ProvedorImagemComFalha>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    ProvedorImagemComFalha key,
+    ImageDecoderCallback decode,
+  ) {
+    final completer = OneFrameImageStreamCompleter(
+      Future<ImageInfo>.error(
+        const SocketException('Failed host lookup: serving.arestaclimb.com'),
+      ),
+    );
+    return completer;
+  }
+}
+
 

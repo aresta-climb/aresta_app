@@ -8,6 +8,7 @@ import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/firebase/remote_config_service.dart';
 import '../view_functions/common_functions.dart';
 
 class ComunidadePage extends StatelessWidget {
@@ -64,7 +65,8 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
                 onTap: () async {
-                  const url = 'https://chat.whatsapp.com/Ip28rjQj4YbHgPgtN5Arcv';
+                  final url =
+                      RemoteConfigService.instance.whatsappCommunityUrl;
                   try {
                     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                   } catch (e, stackTrace) {
