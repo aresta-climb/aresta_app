@@ -117,7 +117,8 @@ class ComunidadePage extends StatelessWidget {
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
                 onTap: () async {
-                  const url = 'https://discord.gg/3KDTwcxHK';
+                  final url =
+                      RemoteConfigService.instance.discordCommunityUrl;
                   try {
                     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                   } catch (e, stackTrace) {

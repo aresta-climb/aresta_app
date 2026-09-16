@@ -13,9 +13,13 @@ import '../mocks/mock_app_logger.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
+  String discordUrl = 'https://discord.gg/NT9uSKJWYs';
 
   @override
   String get whatsappCommunityUrl => url;
+
+  @override
+  String get discordCommunityUrl => discordUrl;
 }
 
 class MockUrlLauncherPlatform extends Fake
@@ -100,6 +104,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(mockLauncher.lastLaunchedUrl, 'https://www.instagram.com/arestaclimb/');
     expect(mockLogger.recordedErrors, isEmpty);
+
+    // Discord
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NT9uSKJWYs');
+    expect(mockLogger.recordedErrors, isEmpty);
   });
 
   testWidgets('Ao clicar no card do WhatsApp, consome dinamicamente a URL do RemoteConfigService', (WidgetTester tester) async {
@@ -113,6 +124,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/NovaComunidade123');
+    expect(mockLogger.recordedErrors, isEmpty);
+  });
+
+  testWidgets('Ao clicar no card do Discord, consome dinamicamente a URL do RemoteConfigService', (WidgetTester tester) async {
+    setScreenSize(tester);
+    fakeRemoteConfig.discordUrl = 'https://discord.gg/NovoDiscord123';
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockLauncher.shouldThrow = false;
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NovoDiscord123');
     expect(mockLogger.recordedErrors, isEmpty);
   });
 
@@ -162,7 +188,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       mockLogger.recordedErrors.any(
-        (e) => e['contextMessage'].contains('https://discord.gg/3KDTwcxHK'),
+        (e) => e['contextMessage'].contains('https://discord.gg/NT9uSKJWYs'),
       ),
       isTrue,
     );
