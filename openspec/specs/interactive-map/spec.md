@@ -213,5 +213,43 @@ A página do mapa interativo SHALL montar imediatamente sua estrutura visual (Sc
 - **THEN** a imagem da rocha, os marcadores de interesse (POIs) e os traçados vetoriais são exibidos simultaneamente com transição suave de fade-in
 - **AND** os controles de interação (zoom, pan, duplo toque) tornam-se plenamente operacionais
 
+### Requirement: Pré-download Leve para Cache em Disco de Mapas de Setor e Carrossel
+O sistema DEVE (MUST) disponibilizar o método `ProvedorImagemAresta.preCarregarNoDisco` com propriedades de idempotência, deduplicação e ausência de decodificação de imagem em RAM. O sistema DEVE disparar o pré-download assíncrono em segundo plano das páginas subsequentes de mapas tanto ao renderizar a miniatura do setor (`MapaThumbnail`) quanto ao abrir a visualização em carrossel (`MapasCarrosselPage`), garantindo disponibilidade local e navegação fluida mesmo sem conectividade na rocha.
 
+#### Scenario: Execução de ProvedorImagemAresta.preCarregarNoDisco sem carregar em RAM
+- **QUANDO** o método `ProvedorImagemAresta.preCarregarNoDisco` é invocado para uma imagem remota com checksum SHA-256 válido
+- **THEN** o sistema baixa os bytes compactados da CDN e grava atomicamente em disco sob `temp_cache`
+- **AND** a imagem NÃO DEVE ser decodificada na GPU nem inserida no `ImageCache` da memória RAM
+- **AND** o método retorna a referência ao `File` salvo no disco
 
+#### Scenario: Idempotência de pré-download para arquivos já presentes no disco
+- **QUANDO** o método `preCarregarNoDisco` for chamado para uma imagem que já exista em `/downloads` ou `/temp_cache`
+- **THEN** nenhuma requisição de rede HTTP deve ser realizada
+- **AND** o arquivo local existente é retornado imediatamente
+
+#### Scenario: Pré-download das páginas subsequentes ao exibir o Setor
+- **QUANDO** o usuário visualiza a página de um setor (`SetorPage`) cujo `MapaThumbnail` possui múltiplos mapas (`mapas.length > 1`)
+- **THEN** a miniatura renderiza o primeiro mapa normalmente
+- **AND** o sistema agenda em segundo plano o download de todas as páginas subsequentes (índice 1 em diante) para o disco via `preCarregarNoDisco`
+
+#### Scenario: Pré-download complementar de garantia ao abrir o carrossel
+- **QUANDO** o usuário abre a visualização em carrossel (`MapasCarrosselPage`)
+- **THEN** a página ativa é exibida na tela
+- **AND** o sistema aciona em segundo plano a verificação e o pré-download das demais páginas para assegurar que estejam disponíveis em disco mesmo em acessos diretos
+
+### Requirement: Salvaguarda Visual contra Falhas de Carregamento em Miniaturas e Capas
+Os widgets `MapaThumbnail`, bem como as capas de `SetorPage` e `GrupoPage`, MUST fornecer salvaguarda visual defensiva com `errorBuilder` em seus componentes `Image`, prevenindo que falhas assíncronas de rede ou decodificação de imagem resultem na renderização do `ErrorWidget` do Flutter (caixa preta com linhas cruzadas vermelhas e texto cru de `SocketException`). Em caso de falha no carregamento do stream da imagem, o widget DEVE degradar graciosamente para o fundo sólido escuro do tema (`deepBasalt`), mantendo a legibilidade, o botão central de abertura de mapas e os elementos de interface totalmente operacionais.
+
+#### Scenario: Falha de rede durante exibição do thumbnail do mapa
+- **WHEN** o `MapaThumbnail` receber um provedor de imagem que falha ao carregar pela rede (offline)
+- **THEN** o `errorBuilder` DEVE interceptar o erro silenciosamente
+- **AND** renderizar `const SizedBox.shrink()` sobre a camada de fundo sólido do tema
+- **AND** o botão de ação (ex: "Mapas Interativos") DEVE permanecer visível e interativo.
+
+#### Scenario: Resolução nula de imagem de mapa quando offline
+- **WHEN** o futuro de resolução de imagem retornar `null` devido à ausência de mídia baixada e falta de internet
+- **THEN** o `MapaThumbnail` DEVE exibir a camada de fundo sólido (`deepBasalt`) e o botão central de ação sem instanciar o widget `Image`.
+
+#### Scenario: Falha de rede na imagem de capa de setor ou grupo
+- **WHEN** a imagem de capa de um setor ou grupo falhar ao carregar via streaming remoto
+- **THEN** a tela DEVE manter a cor de fundo do tema e o gradiente escuro de cabeçalho sem exibir caixas de erro do framework.

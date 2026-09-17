@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
@@ -18,6 +19,7 @@ class MapaThumbnail extends StatefulWidget {
   final String? nomeContexto;
   final ImageProvider? imageProviderOverride;
   final Future<ImageProvider?>? imageProviderFutureOverride;
+  final Future<File?> Function({required String picoId, required String caminho})? preCarregadorDisco;
 
   const MapaThumbnail({
     super.key,
@@ -28,6 +30,7 @@ class MapaThumbnail extends StatefulWidget {
     this.nomeContexto,
     this.imageProviderOverride,
     this.imageProviderFutureOverride,
+    this.preCarregadorDisco,
   });
 
   @override
@@ -41,6 +44,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
   void initState() {
     super.initState();
     _imageProviderFuture = _resolveImageProvider();
+    _iniciarPreCarregamentoMapasSubsequentes();
   }
 
   @override
@@ -49,6 +53,24 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
     setState(() {
       _imageProviderFuture = _resolveImageProvider();
     });
+    if (widget.mapas != oldWidget.mapas || widget.cragId != oldWidget.cragId) {
+      _iniciarPreCarregamentoMapasSubsequentes();
+    }
+  }
+
+  void _iniciarPreCarregamentoMapasSubsequentes() {
+    if (widget.mapas.length <= 1) return;
+
+    final preCarregador = widget.preCarregadorDisco ?? ProvedorImagemAresta.preCarregarNoDisco;
+    for (int i = 1; i < widget.mapas.length; i++) {
+      final mapa = widget.mapas[i];
+      if (mapa.caminhoImagemMapa.isNotEmpty) {
+        preCarregador(
+          picoId: widget.cragId,
+          caminho: mapa.caminhoImagemMapa,
+        );
+      }
+    }
   }
 
 
@@ -115,6 +137,7 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                     return Image(
                       image: snapshot.data!,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                       frameBuilder:
                           (context, child, frame, wasSynchronouslyLoaded) {
                         if (wasSynchronouslyLoaded) return child;

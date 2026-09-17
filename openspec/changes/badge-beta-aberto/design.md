@@ -27,7 +27,7 @@ O aplicativo Aresta Climb utiliza `flutter_native_splash` para geração de spla
 
 ### 2. Componente Modular Desacoplado `ModalBetaAberto`
 * **Decisão**: Desenvolver o widget `ModalBetaAberto` (e função auxiliar `exibirModalBetaAberto(BuildContext context)`) em arquivo isolado na camada de widgets (`frontend/lib/widgets/modal_beta_aberto.dart`), seguindo rigorosamente os Princípios de Engenharia (Feature-First e tudo em português). O modal utiliza `showModalBottomSheet` com cantos superiores arredondados e fundo `deepBasalt`.
-* **Ação de Feedback**: O botão primário "ENVIAR FEEDBACK OU SUGESTÃO" fecha o bottom sheet e aciona imediatamente `BetterFeedback.of(context).show(...)`.
+* **Ação de Feedback**: O botão primário "Enviar Sugestão" fecha o bottom sheet e aciona imediatamente `BetterFeedback.of(context).show(...)`.
 
 ### 3. Splash Screen com Lettering no Asset Central
 * **Decisão**: Atualizar `frontend/assets/logo_splash.png` substituindo `CLIMB` por `CLIMB • BETA` na composição gráfica e executar `dart run flutter_native_splash:create`.

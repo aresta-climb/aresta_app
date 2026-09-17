@@ -137,9 +137,20 @@ class ProvedorImagemAresta {
         cacheRoot = '${tempDir.path}/temp_cache';
       }
 
+      String caminhoLocalCache = cleanPath;
+      if (caminhoLocalCache.startsWith('http://') || caminhoLocalCache.startsWith('https://')) {
+        final uri = Uri.tryParse(caminhoLocalCache);
+        if (uri != null) {
+          caminhoLocalCache = uri.path;
+          while (caminhoLocalCache.startsWith('/')) {
+            caminhoLocalCache = caminhoLocalCache.substring(1);
+          }
+        }
+      }
+
       final String caminhoDestinoCache = ehThumbnail
           ? '$cacheRoot/thumbnails/$picoId.webp${hashEfetivo != null && hashEfetivo.isNotEmpty ? '.$hashEfetivo' : ''}'
-          : '$cacheRoot/$picoId/$cleanPath${hashEfetivo != null && hashEfetivo.isNotEmpty ? '.$hashEfetivo' : ''}';
+          : '$cacheRoot/$picoId/$caminhoLocalCache${hashEfetivo != null && hashEfetivo.isNotEmpty ? '.$hashEfetivo' : ''}';
 
       if (provedorBase == null) {
         if (hashEfetivo != null && hashEfetivo.isNotEmpty) {
@@ -238,11 +249,61 @@ class ProvedorImagemAresta {
 
       return provedorBase;
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        'Erro ao resolver provedor de imagem para $picoId em $caminho',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          'Falha de conexão ao resolver provedor de imagem para $picoId em $caminho: $e',
+        );
+      } else {
+        AppLogger.instance.logError(
+          'Erro ao resolver provedor de imagem para $picoId em $caminho',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    return null;
+  }
+
+  /// Pré-carrega uma imagem diretamente para o armazenamento local ou cache em disco (`temp_cache`),
+  /// sem decodificar o bitmap para a memória RAM e sem registrá-la no [ImageCache] do Flutter.
+  ///
+  /// Possui três propriedades garantidas:
+  /// 1. **Idempotente**: Se o arquivo já existe no disco (`/downloads` ou `/temp_cache`), retorna
+  ///    o [File] imediatamente sem nenhuma requisição de rede.
+  /// 2. **Deduplicado**: Aproveita o mapa interno [_downloadsEmAndamento] para reutilizar conexões HTTP
+  ///    ativas caso múltiplas rotinas solicitem a mesma mídia simultaneamente.
+  /// 3. **Leve**: Grava os bytes compactados brutos diretamente no disco via I/O de arquivo. Não chama
+  ///    `precacheImage`, não cria texturas e não consome memória de vídeo ou processamento de GPU.
+  ///
+  /// Retorna a referência ao [File] salvo em disco em caso de sucesso, ou `null` se houver falha
+  /// de conexão ou dados inválidos.
+  static Future<File?> preCarregarNoDisco({
+    required String picoId,
+    required String caminho,
+    String? checksumSha256,
+    String? baseUrl,
+    String? caminhoDownloads,
+    String? caminhoCacheVolatil,
+    DatasetRepository? datasetRepository,
+    http.Client? clienteHttp,
+  }) async {
+    if (picoId.trim().isEmpty || caminho.trim().isEmpty) return null;
+
+    final provedor = await resolver(
+      picoId: picoId,
+      caminho: caminho,
+      checksumSha256: checksumSha256,
+      baseUrl: baseUrl,
+      caminhoDownloads: caminhoDownloads,
+      caminhoCacheVolatil: caminhoCacheVolatil,
+      datasetRepository: datasetRepository,
+      clienteHttp: clienteHttp,
+    );
+
+    if (provedor is ImagemArquivoAresta) {
+      return provedor.arquivo;
+    } else if (provedor is FileImage) {
+      return provedor.file;
     }
     return null;
   }
@@ -273,17 +334,23 @@ class ProvedorImagemAresta {
         AppLogger.instance.logAviso('HTTP ${response.statusCode} ao baixar imagem $urlFinal');
       }
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        'Falha ao baixar e persistir imagem em cache volátil: $urlFinal',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          'Falha de conexão ao baixar e persistir imagem em cache volátil: $urlFinal ($e)',
+        );
+      } else {
+        AppLogger.instance.logError(
+          'Falha ao baixar e persistir imagem em cache volátil: $urlFinal',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     } finally {
       if (deveFecharCliente) {
         client.close();
       }
     }
-    return NetworkImage(urlFinal);
+    return null;
   }
 
   /// Expurga arquivos de versões anteriores da mesma mídia que possuam hashes divergentes.

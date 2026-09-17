@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/widgets/badges_modalidades.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89,
@@ -3135,6 +3136,175 @@ void main() {
         expect(find.byType(InteractiveViewer), findsOneWidget);
         expect(find.byKey(const Key('marker_p1')), findsOneWidget);
         expect(find.byKey(const Key('marker_linha_1')), findsOneWidget);
+      },
+    );
+
+    testWidgets('exibe badges de modalidades ao selecionar setor no mapa interativo', (
+      WidgetTester tester,
+    ) async {
+      final pontoSetor = Mapa_PontoDeInteresse(
+        id: 'poi_setor_1',
+        label: 'S1',
+        circulo: BoundingCirculo(x: 100, y: 100, raio: 50),
+      );
+      final refSetor = Mapa_Referencia(
+        ids: ['poi_setor_1'],
+        setor: 'Setor Sol',
+      );
+      final mapa = Mapa(
+        larguraMapa: 500,
+        alturaMapa: 500,
+        pontosDeInteresse: [pontoSetor],
+        referencias: [refSetor],
+      );
+
+      final setor = Setor()
+        ..nome = 'Setor Sol'
+        ..escaladas.addAll([
+          Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'E1'),
+          Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'E2'),
+          Escalada()..viaMovel = (ViaMovel()..nome = 'M1'),
+        ]);
+
+      final pico = Pico()..nome = 'Pico Teste';
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaInterativoPage(
+            mapa: mapa,
+            pico: pico,
+            cragId: 'test_crag',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+            initialSelectedId: 'poi_setor_1',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Setor Sol'), findsOneWidget);
+      expect(find.byType(BadgesModalidades), findsOneWidget);
+      expect(find.text('2 esportivas'), findsOneWidget);
+      expect(find.text('1 móvel'), findsOneWidget);
+    });
+
+    testWidgets('exibe resumo quantitativo e badges ao selecionar grupo no mapa interativo', (
+      WidgetTester tester,
+    ) async {
+      final pontoGrupo = Mapa_PontoDeInteresse(
+        id: 'poi_grupo_1',
+        label: 'G1',
+        circulo: BoundingCirculo(x: 200, y: 200, raio: 50),
+      );
+      final refGrupo = Mapa_Referencia(
+        ids: ['poi_grupo_1'],
+        grupo: 'Vale Secreto',
+      );
+      final mapa = Mapa(
+        larguraMapa: 500,
+        alturaMapa: 500,
+        pontosDeInteresse: [pontoGrupo],
+        referencias: [refGrupo],
+      );
+
+      final setor1 = Setor()
+        ..nome = 'Bloco 1'
+        ..escaladas.addAll([
+          Escalada()..boulder = (Boulder()..nome = 'B1'),
+        ]);
+      final setor2 = Setor()
+        ..nome = 'Bloco 2'
+        ..escaladas.addAll([
+          Escalada()..boulder = (Boulder()..nome = 'B2'),
+          Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'E1'),
+        ]);
+
+      final grupo = Grupo()
+        ..nome = 'Vale Secreto'
+        ..setores.addAll([
+          ArquivoSetor()..conteudo = setor1,
+          ArquivoSetor()..conteudo = setor2,
+        ]);
+
+      final pico = Pico()..nome = 'Pico Teste';
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupo),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaInterativoPage(
+            mapa: mapa,
+            pico: pico,
+            cragId: 'test_crag',
+            imageProviderOverride: MemoryImage(kTransparentImage),
+            initialSelectedId: 'poi_grupo_1',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vale Secreto'), findsOneWidget);
+      expect(find.text('2 setores • 3 escaladas'), findsOneWidget);
+      expect(find.byType(BadgesModalidades), findsOneWidget);
+      expect(find.text('2 boulders'), findsOneWidget);
+      expect(find.text('1 esportiva'), findsOneWidget);
+    });
+
+    testWidgets(
+      'não exibe "indefinido" ao selecionar via com grau indefinido no mapa interativo',
+      (WidgetTester tester) async {
+        final pontoVia = Mapa_PontoDeInteresse(
+          id: 'poi_via_indefinida',
+          label: '1',
+          circulo: BoundingCirculo(x: 100, y: 100, raio: 50),
+        );
+        final refVia = Mapa_Referencia(
+          ids: ['poi_via_indefinida'],
+          setor: 'Setor Teste',
+          escalada: 'Via Sem Grau',
+        );
+        final mapa = Mapa(
+          larguraMapa: 500,
+          alturaMapa: 500,
+          pontosDeInteresse: [pontoVia],
+          referencias: [refVia],
+        );
+
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Via Sem Grau'
+            ..dificuldade = GrauVia_GrauVia.INDEFINIDO
+            ..quantidadeProtecoesIntermediarias = 0
+            ..quantidadeProtecoesParada = 0);
+
+        final setor = Setor()
+          ..nome = 'Setor Teste'
+          ..escaladas.add(escalada);
+
+        final pico = Pico()..nome = 'Pico Teste';
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'test_crag',
+              imageProviderOverride: MemoryImage(kTransparentImage),
+              initialSelectedId: 'poi_via_indefinida',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Via Sem Grau'), findsOneWidget);
+        expect(find.text('Esportiva'), findsOneWidget);
+        expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
       },
     );
   });

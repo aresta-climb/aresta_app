@@ -34,6 +34,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   context: context,
                   datasetRepo: widget.datasetRepo,
                 ),
+                const SizedBox(height: 24),
+                buildVersaoBetaFooter(context),
               ],
             ),
           ),

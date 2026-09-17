@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -96,7 +97,8 @@ void main() {
     });
 
 
-    test('resolve para NetworkImage com baseDir padrão e hash de cache-busting quando não existir localmente', () async {
+    test('resolve para ImagemArquivoAresta com baseDir padrão e hash de cache-busting quando baixada da CDN', () async {
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: 'imagens/setor.webp',
@@ -104,34 +106,35 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
+      expect(provedor, isA<ImagemArquivoAresta>());
       expect(
-        netImg.url,
+        cliente.urlsRequisitadas.first.toString(),
         equals('https://cdn.arestaclimb.com/picos/pico_1/imagens/setor.webp?v=abc123hash'),
       );
     });
 
     test('preserva URLs já absolutas que comecem com http ou https', () async {
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: 'https://cdn.externa.com/fotos/via.jpg',
         checksumSha256: 'xyz789',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
+      expect(provedor, isA<ImagemArquivoAresta>());
       expect(
-        netImg.url,
+        cliente.urlsRequisitadas.first.toString(),
         equals('https://cdn.externa.com/fotos/via.jpg?v=xyz789'),
       );
     });
 
-    test('resolve para NetworkImage usando baseDir do Indice quando disponível no DatasetRepository', () async {
+    test('resolve para ImagemArquivoAresta usando baseDir do Indice quando disponível no DatasetRepository', () async {
       final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       repo.indiceData.value = Indice()
         ..croquis.add(
@@ -140,6 +143,7 @@ void main() {
             ..caminhoRelativo = 'picos/br_mg_igarape_pedra_grande/compilado.binarypb',
         );
 
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pedra_grande',
         caminho: 'imagens/setor.webp',
@@ -147,12 +151,12 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
+      expect(provedor, isA<ImagemArquivoAresta>());
       expect(
-        netImg.url,
+        cliente.urlsRequisitadas.first.toString(),
         equals('https://cdn.arestaclimb.com/picos/br_mg_igarape_pedra_grande/imagens/setor.webp?v=abc123hash'),
       );
     });
@@ -163,6 +167,7 @@ void main() {
     });
 
     test('normaliza caminhos com barras iniciais corretamente', () async {
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: '/imagens/setor.webp',
@@ -170,29 +175,30 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
+      expect(provedor, isA<ImagemArquivoAresta>());
       expect(
-        netImg.url,
+        cliente.urlsRequisitadas.first.toString(),
         equals('https://cdn.arestaclimb.com/picos/pico_1/imagens/setor.webp?v=hash123'),
       );
     });
 
     test('adiciona &v=<hash> se a URL remota já possuir parâmetros de query', () async {
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: 'https://servidor.com/imagem.webp?token=abc',
         checksumSha256: 'xyz999',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
+      expect(provedor, isA<ImagemArquivoAresta>());
       expect(
-        netImg.url,
+        cliente.urlsRequisitadas.first.toString(),
         equals('https://servidor.com/imagem.webp?token=abc&v=xyz999'),
       );
     });
@@ -225,7 +231,7 @@ void main() {
       expect(imgAresta.checksumSha256, equals('sha_auto_local_999'));
     });
 
-    test('auto-resolve checksumSha256 a partir do DatasetRepository para NetworkImage', () async {
+    test('auto-resolve checksumSha256 a partir do DatasetRepository para download da CDN', () async {
       final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final croqui = Croqui()
         ..arquivosExternos.add(
@@ -236,20 +242,21 @@ void main() {
         );
       repo.indexarMidiasDoCroqui('pico_1', croqui);
 
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_1',
         caminho: 'fotos/via.jpg',
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
-      expect(netImg.url, contains('?v=sha_auto_remote_888'));
+      expect(provedor, isA<ImagemArquivoAresta>());
+      expect(cliente.urlsRequisitadas.first.toString(), contains('?v=sha_auto_remote_888'));
     });
 
-    test('TDD 3.3: auto-resolve checksumSha256 para NetworkImage a partir de sessão online com fallback dinâmico', () async {
+    test('TDD 3.3: auto-resolve checksumSha256 para download da CDN a partir de sessão online com fallback dinâmico', () async {
       final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final croqui = Croqui()
         ..arquivosExternos.add(
@@ -260,6 +267,7 @@ void main() {
         );
       repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_teste', croqui);
 
+      final cliente = _ClienteHttpEspiao();
       final provedor = await ProvedorImagemAresta.resolver(
         picoId: 'pico_online_teste',
         caminho: 'mapas/mapa_online.webp',
@@ -267,11 +275,11 @@ void main() {
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
         datasetRepository: repo,
+        clienteHttp: cliente,
       );
 
-      expect(provedor, isA<NetworkImage>());
-      final netImg = provedor as NetworkImage;
-      expect(netImg.url, contains('?v=sha_online_live_reload'));
+      expect(provedor, isA<ImagemArquivoAresta>());
+      expect(cliente.urlsRequisitadas.first.toString(), contains('?v=sha_online_live_reload'));
     });
 
     test('resolve usando caminhos padrão quando caminhoDownloads e caminhoCacheVolatil são nulos', () async {
@@ -664,7 +672,7 @@ void main() {
         expect(provedor, isA<ImagemArquivoAresta>());
       });
 
-      test('trata excecao de rede durante o download e recorre a NetworkImage sem falhar', () async {
+      test('quando o download remoto falha com SocketException, retorna null e emite logAviso sem chamar logError', () async {
         final clienteQuebrado = _ClienteHttpComExcecao();
 
         final provedor = await ProvedorImagemAresta.resolver(
@@ -677,7 +685,65 @@ void main() {
           clienteHttp: clienteQuebrado,
         );
 
-        expect(provedor, isA<NetworkImage>());
+        expect(provedor, isNull);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(
+          mockLogger.recordedWarnings.any((w) => w.contains('Falha de conexão') || w.contains('SocketException')),
+          isTrue,
+        );
+      });
+
+      test('quando o download remoto falha com TimeoutException, retorna null e emite logAviso sem chamar logError', () async {
+        final clienteTimeout = _ClienteHttpComTimeout();
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_timeout',
+          caminho: 'foto_timeout.webp',
+          checksumSha256: 'hash_timeout',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: clienteTimeout,
+        );
+
+        expect(provedor, isNull);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+      });
+
+      test('quando o download remoto retorna HTTP 404 ou 500, retorna null e emite logAviso sem chamar logError', () async {
+        final cliente404 = _ClienteHttpComStatus(404);
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_404',
+          caminho: 'foto_404.webp',
+          checksumSha256: 'hash_404',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente404,
+        );
+
+        expect(provedor, isNull);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings.any((w) => w.contains('HTTP 404')), isTrue);
+      });
+
+      test('quando o download remoto falha com erro não relacionado a rede, registra logError e retorna null', () async {
+        final clienteErroGrave = _ClienteHttpComErroGrave();
+
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_erro_grave',
+          caminho: 'foto_grave.webp',
+          checksumSha256: 'hash_grave',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: clienteErroGrave,
+        );
+
+        expect(provedor, isNull);
         expect(mockLogger.recordedErrors, isNotEmpty);
       });
 
@@ -724,6 +790,127 @@ void main() {
         expect(arquivoSalvo.existsSync(), isTrue);
       });
     });
+
+    group('preCarregarNoDisco', () {
+      test('baixa imagem da CDN e grava atomicamente em temp_cache sem registrar no imageCache da RAM', () async {
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        final cliente = _ClienteHttpEspiao();
+        const hashPre = 'hash_disco_123';
+
+        final arquivo = await ProvedorImagemAresta.preCarregarNoDisco(
+          picoId: 'pico_disco',
+          caminho: 'mapas/mapa_2.webp',
+          checksumSha256: hashPre,
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(arquivo, isNotNull);
+        expect(arquivo!.existsSync(), isTrue);
+        expect(arquivo.path.replaceAll(r'\', '/'), contains('pico_disco/mapas/mapa_2.webp.$hashPre'));
+        expect(cliente.chamadas, equals(1));
+
+        // Assegura que o ImageCache do Flutter na memória RAM permaneceu completamente vazio (0 bytes)
+        expect(PaintingBinding.instance.imageCache.currentSizeBytes, equals(0));
+        expect(PaintingBinding.instance.imageCache.currentSize, equals(0));
+      });
+
+      test('idempotência: retorna o arquivo de /downloads sem disparar requisição HTTP', () async {
+        final cliente = _ClienteHttpEspiao();
+        final dirPico = Directory('${tempDownloadsDir.path}/pico_disco/mapas');
+        await dirPico.create(recursive: true);
+        final arquivoLocal = File('${dirPico.path}/mapa_1.webp');
+        await arquivoLocal.writeAsBytes([10, 20, 30]);
+
+        final arquivo = await ProvedorImagemAresta.preCarregarNoDisco(
+          picoId: 'pico_disco',
+          caminho: 'mapas/mapa_1.webp',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(arquivo, isNotNull);
+        expect(arquivo!.existsSync(), isTrue);
+        expect(arquivo.path, equals(arquivoLocal.path));
+        expect(cliente.chamadas, equals(0));
+      });
+
+      test('idempotência: retorna o arquivo já existente em /temp_cache sem disparar requisição HTTP', () async {
+        final cliente = _ClienteHttpEspiao();
+        final dirCache = Directory('${tempCacheDir.path}/pico_disco/mapas');
+        await dirCache.create(recursive: true);
+        final arquivoCache = File('${dirCache.path}/mapa_cache.webp.hash_existente');
+        await arquivoCache.writeAsBytes([40, 50, 60]);
+
+        final arquivo = await ProvedorImagemAresta.preCarregarNoDisco(
+          picoId: 'pico_disco',
+          caminho: 'mapas/mapa_cache.webp',
+          checksumSha256: 'hash_existente',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(arquivo, isNotNull);
+        expect(arquivo!.existsSync(), isTrue);
+        expect(arquivo.path, equals(arquivoCache.path));
+        expect(cliente.chamadas, equals(0));
+      });
+
+      test('deduplicação: requisições concorrentes para a mesma mídia executam apenas um download HTTP', () async {
+        final cliente = _ClienteHttpEspiao(atraso: const Duration(milliseconds: 50));
+        const hashConcorrente = 'hash_concorrente';
+
+        final futuros = await Future.wait<File?>([
+          ProvedorImagemAresta.preCarregarNoDisco(
+            picoId: 'pico_disco',
+            caminho: 'mapas/concorrente.webp',
+            checksumSha256: hashConcorrente,
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: cliente,
+          ),
+          ProvedorImagemAresta.preCarregarNoDisco(
+            picoId: 'pico_disco',
+            caminho: 'mapas/concorrente.webp',
+            checksumSha256: hashConcorrente,
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: cliente,
+          ),
+        ]);
+
+        expect(futuros[0], isNotNull);
+        expect(futuros[1], isNotNull);
+        expect(futuros[0]!.path, equals(futuros[1]!.path));
+        expect(cliente.chamadas, equals(1));
+      });
+
+      test('retorna null silenciosamente e registra aviso em caso de falha de conexão', () async {
+        final cliente = _ClienteHttpComExcecao();
+
+        final arquivo = await ProvedorImagemAresta.preCarregarNoDisco(
+          picoId: 'pico_disco',
+          caminho: 'mapas/offline.webp',
+          checksumSha256: 'hash_offline',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: cliente,
+        );
+
+        expect(arquivo, isNull);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(mockLogger.recordedErrors, isEmpty);
+      });
+
+      test('retorna null se picoId ou caminho forem vazios', () async {
+        expect(await ProvedorImagemAresta.preCarregarNoDisco(picoId: '', caminho: 'mapa.webp'), isNull);
+        expect(await ProvedorImagemAresta.preCarregarNoDisco(picoId: 'pico', caminho: '   '), isNull);
+      });
+    });
   });
 }
 
@@ -731,6 +918,33 @@ class _ClienteHttpComExcecao extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     throw const SocketException('Conexão recusada na rede de teste');
+  }
+}
+
+class _ClienteHttpComTimeout extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    throw TimeoutException('Tempo de conexão esgotado');
+  }
+}
+
+class _ClienteHttpComStatus extends http.BaseClient {
+  final int statusCode;
+  _ClienteHttpComStatus(this.statusCode);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(
+      Stream.value([]),
+      statusCode,
+    );
+  }
+}
+
+class _ClienteHttpComErroGrave extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    throw const FormatException('Dado corrompido');
   }
 }
 

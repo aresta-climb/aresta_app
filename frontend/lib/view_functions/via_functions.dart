@@ -106,7 +106,11 @@ String getGrauString(Escalada escalada) {
 }
 
 /// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
+/// Retorna string vazia se o grau for indefinido ou não informado.
 String formatGradeString(String name) {
+  if (name.isEmpty || name.toUpperCase().contains('INDEFINIDO')) {
+    return '';
+  }
   String g = name
       .replaceAll('BR_', '')
       .replaceAll('_BARRA_', '/')
@@ -318,8 +322,11 @@ Widget _buildContentForEscalada(
 
 String _fmtEnum(dynamic e) {
   if (e == null) return '';
-  String text = e.name
-      .toString()
+  final nameStr = e.name?.toString() ?? '';
+  if (nameStr.toUpperCase().contains('INDEFINIDO')) {
+    return '';
+  }
+  String text = nameStr
       .replaceAll(
         RegExp(
           r'^(BR_|GRAU_EXPOSICAO_|TIPO_PAREDE_|GRAU_DURACAO_|TIPO_VIA_MULTIPLAS_ENFIADAS_|GRAU_BOULDER_|GRAU_ARTIFICIAL_)',
@@ -348,14 +355,17 @@ Widget _buildViaEsportiva(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
@@ -363,14 +373,17 @@ Widget _buildViaEsportiva(
     );
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
   if (via.quantidadeProtecoesIntermediarias > 0 ||
       via.quantidadeProtecoesParada > 0) {
@@ -384,24 +397,30 @@ Widget _buildViaEsportiva(
     );
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -538,14 +557,17 @@ Widget _buildViaMovel(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasExtensao() && via.extensao > 0) {
     statCards.add(
@@ -553,14 +575,17 @@ Widget _buildViaMovel(
     );
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
   if (via.quantidadeProtecoesIntermediarias > 0 ||
       via.quantidadeProtecoesParada > 0) {
@@ -574,34 +599,43 @@ Widget _buildViaMovel(
     );
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificialEmLivre()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Art. em Livre',
-        _fmtEnum(via.dificuldadeArtificialEmLivre),
-        Icons.back_hand,
-      ),
-    );
+    final artLivre = _fmtEnum(via.dificuldadeArtificialEmLivre);
+    if (artLivre.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Art. em Livre',
+          artLivre,
+          Icons.back_hand,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -747,24 +781,30 @@ Widget _buildBoulder(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldade()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade',
-        formatGradeString(via.dificuldade.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldade.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasTipoParede()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Parede',
-        _fmtEnum(via.tipoParede),
-        Icons.terrain,
-      ),
-    );
+    final parede = _fmtEnum(via.tipoParede);
+    if (parede.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Parede',
+          parede,
+          Icons.terrain,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];
@@ -892,59 +932,77 @@ Widget _buildMultipitch(
 ) {
   List<Widget> statCards = [];
   if (via.hasDificuldadeMaxima()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade Máx',
-        formatGradeString(via.dificuldadeMaxima.name),
-        Icons.trending_up,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldadeMaxima.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade Máx',
+          grau,
+          Icons.trending_up,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeMedia()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Dificuldade Média',
-        formatGradeString(via.dificuldadeMedia.name),
-        Icons.trending_flat,
-      ),
-    );
+    final grau = formatGradeString(via.dificuldadeMedia.name);
+    if (grau.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Dificuldade Média',
+          grau,
+          Icons.trending_flat,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificial()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Artificial',
-        _fmtEnum(via.dificuldadeArtificial),
-        Icons.architecture,
-      ),
-    );
+    final artificial = _fmtEnum(via.dificuldadeArtificial);
+    if (artificial.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Artificial',
+          artificial,
+          Icons.architecture,
+        ),
+      );
+    }
   }
   if (via.hasDificuldadeArtificialEmLivre()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Art. em Livre',
-        _fmtEnum(via.dificuldadeArtificialEmLivre),
-        Icons.back_hand,
-      ),
-    );
+    final artLivre = _fmtEnum(via.dificuldadeArtificialEmLivre);
+    if (artLivre.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Art. em Livre',
+          artLivre,
+          Icons.back_hand,
+        ),
+      );
+    }
   }
   if (via.hasExposicao()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Exposição',
-        _fmtEnum(via.exposicao),
-        Icons.warning_amber_rounded,
-      ),
-    );
+    final exposicao = _fmtEnum(via.exposicao);
+    if (exposicao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Exposição',
+          exposicao,
+          Icons.warning_amber_rounded,
+        ),
+      );
+    }
   }
   if (via.hasDuracao()) {
-    statCards.add(
-      _buildStatCard(context, 'Duração', _fmtEnum(via.duracao), Icons.timer),
-    );
+    final duracao = _fmtEnum(via.duracao);
+    if (duracao.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(context, 'Duração', duracao, Icons.timer),
+      );
+    }
   }
   if (via.hasNumeroEnfiadas() && via.numeroEnfiadas > 0) {
     statCards.add(
@@ -988,14 +1046,17 @@ Widget _buildMultipitch(
     );
   }
   if (via.hasTipoViaMultiplasEnfiadas()) {
-    statCards.add(
-      _buildStatCard(
-        context,
-        'Tipo',
-        _fmtEnum(via.tipoViaMultiplasEnfiadas),
-        Icons.merge_type,
-      ),
-    );
+    final tipo = _fmtEnum(via.tipoViaMultiplasEnfiadas);
+    if (tipo.isNotEmpty) {
+      statCards.add(
+        _buildStatCard(
+          context,
+          'Tipo',
+          tipo,
+          Icons.merge_type,
+        ),
+      );
+    }
   }
 
   List<Widget> historyRows = [];

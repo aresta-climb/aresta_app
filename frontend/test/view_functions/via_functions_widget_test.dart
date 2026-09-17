@@ -171,6 +171,37 @@ void main() {
             reason: 'Histórico ($dyHistorico) deve vir antes das Ações ($dyAcoes)');
       },
     );
+
+    testWidgets(
+      'não deve exibir cartão de Dificuldade nem de Proteções quando forem indefinidos ou zero',
+      (WidgetTester tester) async {
+        final escalada = Escalada()
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Via Sem Grau Nem Protecao'
+            ..dificuldade = GrauVia_GrauVia.INDEFINIDO
+            ..quantidadeProtecoesIntermediarias = 0
+            ..quantidadeProtecoesParada = 0);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('DIFICULDADE'), findsNothing);
+        expect(find.text('PROTEÇÕES'), findsNothing);
+        expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
+      },
+    );
   });
 }
 

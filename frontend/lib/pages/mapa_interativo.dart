@@ -15,7 +15,9 @@ import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
+import '../widgets/badges_modalidades.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/resolvedor_rotulos_referencia.dart';
 
@@ -653,29 +655,44 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       case Escalada_Tipo.viaEsportiva:
         title = escalada.viaEsportiva.nome;
         final grau = formatGradeString(escalada.viaEsportiva.dificuldade.name);
-        subtitle = protecoes.isNotEmpty
-            ? '$modalidade | $grau | $protecoes'
-            : '$modalidade | $grau';
+        final partes = [
+          modalidade,
+          if (grau.isNotEmpty) grau,
+          if (protecoes.isNotEmpty) protecoes,
+        ];
+        subtitle = partes.join(' | ');
         descricao = escalada.viaEsportiva.descricao;
         break;
       case Escalada_Tipo.boulder:
         title = escalada.boulder.nome;
         final grau = formatGradeString(escalada.boulder.dificuldade.name);
-        subtitle = '$modalidade | $grau';
+        final partes = [
+          modalidade,
+          if (grau.isNotEmpty) grau,
+        ];
+        subtitle = partes.join(' | ');
         descricao = escalada.boulder.descricao;
         break;
       case Escalada_Tipo.viaMovel:
         title = escalada.viaMovel.nome;
         final grau = formatGradeString(escalada.viaMovel.dificuldade.name);
-        subtitle = protecoes.isNotEmpty
-            ? '$modalidade | $grau | $protecoes'
-            : '$modalidade | $grau';
+        final partes = [
+          modalidade,
+          if (grau.isNotEmpty) grau,
+          if (protecoes.isNotEmpty) protecoes,
+        ];
+        subtitle = partes.join(' | ');
         descricao = escalada.viaMovel.descricao;
         break;
       case Escalada_Tipo.viaMultiplasEnfiadas:
         title = escalada.viaMultiplasEnfiadas.nome;
         final grau = formatGradeString(escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
-        subtitle = '$modalidade | $grau';
+        final partes = [
+          modalidade,
+          if (grau.isNotEmpty) grau,
+          if (protecoes.isNotEmpty) protecoes,
+        ];
+        subtitle = partes.join(' | ');
         descricao = escalada.viaMultiplasEnfiadas.descricao;
         break;
       case Escalada_Tipo.highline:
@@ -741,15 +758,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     );
   }
 
+  /// Constrói o cartão flutuante de visualização rápida para um setor selecionado no mapa,
+  /// exibindo as badges consolidadas de modalidades de escalada disponíveis.
   Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
-    int numEscaladas = setor.escaladas.length;
-    bool boulderArea = isBoulderArea(setor.escaladas);
-    String typeLabel = boulderArea ? 'boulder' : 'via';
-    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+    final itens = ConsolidadorModalidades.consolidarSetor(setor);
 
     return _buildBaseCard(
       title: setor.nome,
-      subtitle: subtitle,
+      badges: itens.isNotEmpty ? BadgesModalidades(itens: itens) : null,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -811,22 +827,29 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     );
   }
 
+  /// Constrói o cartão flutuante de visualização rápida para um grupo selecionado no mapa,
+  /// exibindo uma linha de resumo quantitativo ('X setores • Y escaladas') e os badges de modalidades.
   Widget _buildGrupoCard(Mapa_Referencia ref, Grupo grupo) {
-    int numEscaladas = 0;
-    List<Escalada> allEscaladas = [];
-    for (var s in grupo.setores) {
+    final itens = ConsolidadorModalidades.consolidarGrupo(grupo);
+    int totalEscaladas = 0;
+    for (final s in grupo.setores) {
       if (s.hasConteudo()) {
-        numEscaladas += s.conteudo.escaladas.length;
-        allEscaladas.addAll(s.conteudo.escaladas);
+        totalEscaladas += s.conteudo.escaladas.length;
       }
     }
-    bool boulderArea = isBoulderArea(allEscaladas);
-    String typeLabel = boulderArea ? 'boulder' : 'via';
-    String subtitle = '$numEscaladas $typeLabel${numEscaladas == 1 ? '' : 's'}';
+    if (totalEscaladas == 0 && grupo.hasPrecomputados()) {
+      totalEscaladas = grupo.precomputados.totalEscaladas;
+    }
+    final totalSetores = grupo.setores.length;
+    final resumoTexto = ConsolidadorModalidades.formatarResumoGrupo(
+      totalSetores: totalSetores,
+      totalEscaladas: totalEscaladas,
+    );
 
     return _buildBaseCard(
       title: grupo.nome,
-      subtitle: subtitle,
+      subtitle: resumoTexto,
+      badges: itens.isNotEmpty ? BadgesModalidades(itens: itens) : null,
       resolvedLabel: ref.nome,
       onClose: () {
         setState(() {
@@ -890,7 +913,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   /// sem comprometer a visibilidade do mapa.
   Widget _buildBaseCard({
     required String title,
-    required String subtitle,
+    String? subtitle,
+    Widget? badges,
     String? description,
     required String resolvedLabel,
     required VoidCallback onClose,
@@ -952,7 +976,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             ),
                         ],
                       ),
-                      if (subtitle.isNotEmpty) ...[
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           subtitle,
@@ -961,6 +985,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                             fontSize: 14,
                           ),
                         ),
+                      ],
+                      if (badges != null) ...[
+                        const SizedBox(height: 6),
+                        badges,
                       ],
                       if (description != null && description.isNotEmpty) ...[
                         const SizedBox(height: 6),

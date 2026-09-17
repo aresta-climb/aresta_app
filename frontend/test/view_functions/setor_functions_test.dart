@@ -230,6 +230,40 @@ void main() {
       expect(find.text('Paredão Misto'), findsOneWidget);
       expect(find.text('Mista | 7a'), findsOneWidget);
     });
+
+    testWidgets(
+      'não exibe "indefinido" e omite separador quando a via tiver grau indefinido',
+      (WidgetTester tester) async {
+        final viaSemGrau = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Sem Grau',
+            dificuldade: GrauVia_GrauVia.INDEFINIDO,
+          ),
+        );
+        final setor = Setor(nome: 'Setor Teste');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildSetorBody(
+                  context,
+                  setor,
+                  'crag_teste',
+                  [viaSemGrau],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Via Sem Grau'), findsOneWidget);
+        expect(find.text('Esportiva'), findsOneWidget);
+        expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
+        expect(find.textContaining('Esportiva |'), findsNothing);
+      },
+    );
   });
 }
 

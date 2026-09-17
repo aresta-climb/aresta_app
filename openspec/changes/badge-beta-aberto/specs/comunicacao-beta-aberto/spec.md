@@ -26,7 +26,7 @@ A página inicial (Home) DEVE (MUST) exibir um micro-badge compacto com o texto 
 O modal informativo de Beta Aberto DEVE (MUST) explicar que o aplicativo é uma iniciativa independente em desenvolvimento ativo com a comunidade, destacar que novos recursos estão sendo adicionados continuamente e fornecer um botão de ação primário para envio de feedback.
 
 #### Scenario: Toque no botão de envio de feedback no modal de beta
-- **WHEN** o usuário visualiza o modal de Beta Aberto e clica no botão "ENVIAR FEEDBACK OU SUGESTÃO"
+- **WHEN** o usuário visualiza o modal de Beta Aberto e clica no botão "Enviar Sugestão"
 - **THEN** o modal é fechado e o fluxo de captura e envio do `BetterFeedback` é imediatamente acionado na tela
 
 ### Requirement: Sinalização de Versão Beta em Configurações e Comunidade

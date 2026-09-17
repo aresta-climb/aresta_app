@@ -178,4 +178,12 @@ void main() {
       isTrue,
     );
   });
+
+  testWidgets('ComunidadePage renderiza rodapé de versão com indicação de Beta Aberto', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('• Beta Aberto'), findsOneWidget);
+  });
 }

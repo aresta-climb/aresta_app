@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
-import 'dart:typed_data';
 
 // Dummy widget to inject as MapasCarrosselPage's mapBuilder to avoid complex MapHelper dependencies in tests.
 class DummyMapaInterativo extends StatelessWidget {
@@ -429,6 +431,76 @@ void main() {
             .firstWhere((p) => p.isLinha);
 
         expect(markerPainter.chaveCache, equals('imagens/mapa2.png#linha_1'));
+      },
+    );
+
+    testWidgets(
+      'dispara preCarregarNoDisco em segundo plano para todas as páginas ao carregar o carrossel',
+      (tester) async {
+        final pico = Pico()..nome = 'Pico Teste';
+        final mapas = [
+          const CarrosselItemData(mapaCaminhoImagem: 'mapa_c1.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'mapa_c2.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'mapa_c3.png'),
+        ];
+
+        final caminhosBaixados = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: 'crag_carrossel',
+              mapas: mapas,
+              initialIndex: 0,
+              mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+              preCarregadorDisco: ({required String picoId, required String caminho}) async {
+                caminhosBaixados.add(caminho);
+                return null;
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+        expect(caminhosBaixados, equals(['mapa_c1.png', 'mapa_c2.png', 'mapa_c3.png']));
+      },
+    );
+
+    testWidgets(
+      'permanece resiliente se o pré-carregamento falhar ou o widget for descartado rapidamente',
+      (tester) async {
+        final pico = Pico()..nome = 'Pico Teste';
+        final mapas = [
+          const CarrosselItemData(mapaCaminhoImagem: 'mapa_c1.png'),
+          const CarrosselItemData(mapaCaminhoImagem: 'mapa_c2.png'),
+        ];
+
+        final completer = Completer<File?>();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: 'crag_carrossel',
+              mapas: mapas,
+              initialIndex: 0,
+              mapBuilder: (context, index, item) => DummyMapaInterativo(index),
+              preCarregadorDisco: ({required String picoId, required String caminho}) {
+                return completer.future;
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+        expect(find.text('MapaInterativo 0'), findsOneWidget);
+
+        // Descarta o widget antes da conclusão do Future
+        await tester.pumpWidget(const SizedBox.shrink());
+        completer.completeError(const SocketException('Sem internet'));
+        await tester.pump();
+        // Não deve lançar exceções não tratadas
       },
     );
   });

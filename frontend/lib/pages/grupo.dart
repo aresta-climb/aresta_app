@@ -137,10 +137,11 @@ class _GrupoPageState extends State<GrupoPage> {
                                   return Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      Image(
-                                        image: snapshot.data!,
-                                        fit: BoxFit.cover,
-                                      ),
+                                       Image(
+                                         image: snapshot.data!,
+                                         fit: BoxFit.cover,
+                                         errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                                       ),
                                       Positioned(
                                         top: 0,
                                         left: 0,

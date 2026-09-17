@@ -17,6 +17,8 @@ import '../theme/app_colors.dart';
 import 'package:frontend/widgets/app_version_checker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../navigation/navigation_functions.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../widgets/modal_beta_aberto.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
 @visibleForTesting
@@ -1153,3 +1155,32 @@ Widget buildLegalLinks(BuildContext context) {
   );
 }
 */
+
+/// Constrói o rodapé informativo de versão com o rótulo de Beta Aberto na tela de Configurações.
+///
+/// Ao ser tocado, exibe o [ModalBetaAberto] com detalhes do projeto e atalho para envio de feedback.
+Widget buildVersaoBetaFooter(BuildContext context) {
+  return FutureBuilder<PackageInfo>(
+    future: PackageInfo.fromPlatform(),
+    builder: (context, snapshot) {
+      final versao = snapshot.data?.version ?? '0.2.8';
+      return Center(
+        child: InkWell(
+          onTap: () => exibirModalBetaAberto(context),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              'Aresta Climb v$versao (Beta Aberto)',
+              style: TextStyle(
+                color: context.colors.ashGrey,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}

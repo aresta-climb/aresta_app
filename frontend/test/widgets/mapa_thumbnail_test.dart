@@ -3,8 +3,8 @@
 
 import 'dart:io';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -357,6 +357,132 @@ void main() {
         expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'dispara preCarregarNoDisco para mapas subsequentes ao montar com múltiplos mapas',
+      (tester) async {
+        final mapa1 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p1.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+        final mapa2 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p2.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+        final mapa3 = Mapa()
+          ..caminhoImagemMapa = 'mapa_p3.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        final caminhosPreCarregados = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa1, mapa2, mapa3],
+                cragId: 'crag_teste',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                preCarregadorDisco: ({required String picoId, required String caminho}) async {
+                  expect(picoId, equals('crag_teste'));
+                  caminhosPreCarregados.add(caminho);
+                  return null;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Mapa 1 é a miniatura ativa, então apenas mapas 2 e 3 devem ser pré-carregados
+        expect(caminhosPreCarregados, equals(['mapa_p2.webp', 'mapa_p3.webp']));
+      },
+    );
+
+    testWidgets(
+      'não dispara pré-carregamento quando houver apenas 1 mapa',
+      (tester) async {
+        final mapa1 = Mapa()
+          ..caminhoImagemMapa = 'mapa_unico.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        final caminhosPreCarregados = <String>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa1],
+                cragId: 'crag_teste',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+                preCarregadorDisco: ({required String picoId, required String caminho}) async {
+                  caminhosPreCarregados.add(caminho);
+                  return null;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        expect(caminhosPreCarregados, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'quando o ImageProvider falha com erro de conexão, errorBuilder impede renderização de ErrorWidget',
+      (tester) async {
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'mapa_teste.webp'
+          ..larguraMapa = 400
+          ..alturaMapa = 200;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MapaThumbnail(
+                mapas: [mapa],
+                cragId: 'crag_teste',
+                imageProviderOverride: const ProvedorImagemComFalha(),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byType(ErrorWidget), findsNothing);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+      },
+    );
   });
 }
+
+/// Provedor de imagem simulado para testes que dispara erro assíncrono de rede na carga.
+class ProvedorImagemComFalha extends ImageProvider<ProvedorImagemComFalha> {
+  const ProvedorImagemComFalha();
+
+  @override
+  Future<ProvedorImagemComFalha> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<ProvedorImagemComFalha>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    ProvedorImagemComFalha key,
+    ImageDecoderCallback decode,
+  ) {
+    final completer = OneFrameImageStreamCompleter(
+      Future<ImageInfo>.error(
+        const SocketException('Failed host lookup: serving.arestaclimb.com'),
+      ),
+    );
+    return completer;
+  }
+}
+
 

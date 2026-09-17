@@ -13,6 +13,8 @@ import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../theme/app_colors.dart';
+import '../widgets/badges_modalidades.dart';
+import '../utils/consolidador_modalidades.dart';
 
 /// Filtra e retorna apenas os botões que possuem destino do tipo seção textual.
 List<Botao> getSecaoBotoes(Croqui croqui) {
@@ -169,6 +171,8 @@ Widget buildSectorTile(
   String cragId, {
   Grupo? grupoContext,
 }) {
+  final itens = ConsolidadorModalidades.consolidarSetor(setor);
+
   return Padding(
     padding: const EdgeInsets.only(bottom: 15),
     child: Material(
@@ -187,6 +191,12 @@ Widget buildSectorTile(
             fontWeight: FontWeight.w600,
           ),
         ),
+        subtitle: itens.isNotEmpty
+            ? Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: BadgesModalidades(itens: itens),
+              )
+            : null,
         trailing: Icon(Icons.chevron_right, color: beastHide),
         onTap: () {
           TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
@@ -198,6 +208,22 @@ Widget buildSectorTile(
 }
 
 Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
+  final itens = ConsolidadorModalidades.consolidarGrupo(grupo);
+  int totalEscaladas = 0;
+  for (final s in grupo.setores) {
+    if (s.hasConteudo()) {
+      totalEscaladas += s.conteudo.escaladas.length;
+    }
+  }
+  if (totalEscaladas == 0 && grupo.hasPrecomputados()) {
+    totalEscaladas = grupo.precomputados.totalEscaladas;
+  }
+  final totalSetores = grupo.setores.length;
+  final resumoTexto = ConsolidadorModalidades.formatarResumoGrupo(
+    totalSetores: totalSetores,
+    totalEscaladas: totalEscaladas,
+  );
+
   return Padding(
     padding: const EdgeInsets.only(bottom: 15),
     child: Material(
@@ -214,6 +240,27 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
             color: fishBone,
             fontSize: 18,
             fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                resumoTexto,
+                style: TextStyle(
+                  color: context.colors.ashGrey,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (itens.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                BadgesModalidades(itens: itens),
+              ],
+            ],
           ),
         ),
         trailing: Icon(Icons.format_list_bulleted, color: beastHide),

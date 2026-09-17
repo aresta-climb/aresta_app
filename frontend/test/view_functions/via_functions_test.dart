@@ -41,6 +41,25 @@ void main() {
       final escalada = Escalada()..highline = Highline();
       expect(getGrauString(escalada), '');
     });
+
+    test('deve retornar string vazia quando a dificuldade for INDEFINIDO', () {
+      final esportiva = Escalada()
+        ..viaEsportiva = (ViaEsportiva()..dificuldade = GrauVia_GrauVia.INDEFINIDO);
+      expect(getGrauString(esportiva), '');
+
+      final movel = Escalada()
+        ..viaMovel = (ViaMovel()..dificuldade = GrauVia_GrauVia.INDEFINIDO);
+      expect(getGrauString(movel), '');
+
+      final boulder = Escalada()
+        ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.INDEFINIDO);
+      expect(getGrauString(boulder), '');
+
+      final multi = Escalada()
+        ..viaMultiplasEnfiadas = (ViaMultiplasEnfiadas()
+          ..dificuldadeMaxima = GrauVia_GrauVia.INDEFINIDO);
+      expect(getGrauString(multi), '');
+    });
   });
 
   group('getModalidadeEscalada', () {
@@ -160,6 +179,13 @@ void main() {
 
     test('deve retornar string vazia ou inalterada se não fizer match (ex: strings puras)', () {
       expect(formatGradeString('lixo'), 'lixo');
+    });
+
+    test('deve retornar string vazia para grau INDEFINIDO ou em branco', () {
+      expect(formatGradeString('INDEFINIDO'), '');
+      expect(formatGradeString('BR_INDEFINIDO'), '');
+      expect(formatGradeString('indefinido'), '');
+      expect(formatGradeString(''), '');
     });
   });
 

@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/navigation/navigation_functions.dart';
+import '../widgets/provedor_imagem_aresta.dart';
 
 typedef MapBuilder =
     Widget Function(BuildContext context, int index, CarrosselItemData item);
@@ -18,6 +20,7 @@ class MapasCarrosselPage extends StatefulWidget {
   final int initialIndex;
   final MapBuilder? mapBuilder;
   final ImageProvider? imageProviderOverride;
+  final Future<File?> Function({required String picoId, required String caminho})? preCarregadorDisco;
 
   const MapasCarrosselPage({
     super.key,
@@ -27,6 +30,7 @@ class MapasCarrosselPage extends StatefulWidget {
     this.initialIndex = 0,
     this.mapBuilder,
     this.imageProviderOverride,
+    this.preCarregadorDisco,
   });
 
   @override
@@ -42,6 +46,10 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _iniciarPreCarregamentoMapasCarrossel();
+    });
   }
 
   @override
@@ -56,6 +64,27 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
         }
       }
     });
+    if (widget.mapas != oldWidget.mapas || widget.cragId != oldWidget.cragId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _iniciarPreCarregamentoMapasCarrossel();
+      });
+    }
+  }
+
+  void _iniciarPreCarregamentoMapasCarrossel() {
+    final preCarregador = widget.preCarregadorDisco ?? ProvedorImagemAresta.preCarregarNoDisco;
+    for (final mapa in widget.mapas) {
+      if (mapa.mapaCaminhoImagem.isNotEmpty) {
+        preCarregador(
+          picoId: widget.cragId,
+          caminho: mapa.mapaCaminhoImagem,
+        ).catchError((e, stack) {
+          // Captura erros de I/O ou conexão graciosamente sem interferir na UI
+          return null;
+        });
+      }
+    }
   }
 
   @override
