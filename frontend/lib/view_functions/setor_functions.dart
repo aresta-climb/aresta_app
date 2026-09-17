@@ -216,40 +216,43 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
 
 /// Extrai nome, informação de modalidade/grau e status de destaque da via.
 (String nome, String info, bool destaque) _extrairInfoEscalada(Escalada escalada) {
+  String nome = '';
+  String info = '';
+  bool destaque = false;
+  final modalidade = getModalidadeEscalada(escalada);
+  final grau = getGrauString(escalada);
+
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
-      return (
-        escalada.viaEsportiva.nome,
-        'Esportiva | ${getGrauString(escalada)}',
-        escalada.viaEsportiva.destaque,
-      );
+      nome = escalada.viaEsportiva.nome;
+      info = grau.isNotEmpty ? '$modalidade | $grau' : modalidade;
+      destaque = escalada.viaEsportiva.destaque;
+      break;
     case Escalada_Tipo.viaMovel:
-      return (
-        escalada.viaMovel.nome,
-        'Móvel | ${getGrauString(escalada)}',
-        escalada.viaMovel.destaque,
-      );
+      nome = escalada.viaMovel.nome;
+      info = grau.isNotEmpty ? '$modalidade | $grau' : modalidade;
+      destaque = escalada.viaMovel.destaque;
+      break;
     case Escalada_Tipo.boulder:
-      return (
-        escalada.boulder.nome,
-        'Boulder | ${getGrauString(escalada)}',
-        escalada.boulder.destaque,
-      );
+      nome = escalada.boulder.nome;
+      info = grau.isNotEmpty ? '$modalidade | $grau' : modalidade;
+      destaque = escalada.boulder.destaque;
+      break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return (
-        escalada.viaMultiplasEnfiadas.nome,
-        'Multipitch | ${getGrauString(escalada)}',
-        escalada.viaMultiplasEnfiadas.destaque,
-      );
+      nome = escalada.viaMultiplasEnfiadas.nome;
+      info = grau.isNotEmpty ? '$modalidade | $grau' : modalidade;
+      destaque = escalada.viaMultiplasEnfiadas.destaque;
+      break;
     case Escalada_Tipo.highline:
-      return (
-        escalada.highline.nome,
-        'Highline | ${escalada.highline.distancia}m',
-        escalada.highline.destaque,
-      );
+      nome = escalada.highline.nome;
+      info = '$modalidade | ${escalada.highline.distancia}m';
+      destaque = escalada.highline.destaque;
+      break;
     case Escalada_Tipo.notSet:
-      return ('Sem Nome', '', false);
+      nome = 'Sem Nome';
+      break;
   }
+  return (nome, info, destaque);
 }
 
 /// Constrói o badge indicador visual com número do mapa e rótulo da via.
