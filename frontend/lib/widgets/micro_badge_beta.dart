@@ -7,7 +7,7 @@ import 'modal_beta_aberto.dart';
 
 /// Micro-indicador textual para sinalização do estágio de "Beta Aberto" no cabeçalho da Home.
 ///
-/// Apresenta o texto `BETA` em laranja vibrante (`#E95440` / [AppColors.brandColor]) com tipografia em Montserrat 9pt e tracking espaçado,
+/// Apresenta o texto `BETA` em laranja vibrante (`#E95440` / [AppColors.brandColor]) com tipografia em Montserrat 8pt e tracking espaçado,
 /// posicionado estrategicamente sob o texto `CLIMB` e abrindo o [ModalBetaAberto] ao ser tocado.
 class MicroBadgeBeta extends StatelessWidget {
   /// Callback opcional disparado ao tocar no micro-badge.
@@ -17,10 +17,14 @@ class MicroBadgeBeta extends StatelessWidget {
   /// Cor opcional para o texto BETA. Padrão: `#E95440` (laranja da marca).
   final Color? corTexto;
 
+  /// Tamanho da fonte do texto BETA. Padrão: `8.0`.
+  final double tamanhoFonte;
+
   const MicroBadgeBeta({
     super.key,
     this.aoTocar,
     this.corTexto,
+    this.tamanhoFonte = 8.0,
   });
 
   @override
@@ -37,8 +41,8 @@ class MicroBadgeBeta extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Montserrat',
               fontWeight: FontWeight.w700,
-              fontSize: 9.0,
-              letterSpacing: 1.5,
+              fontSize: tamanhoFonte,
+              letterSpacing: 1.3,
               color: corTexto ?? const Color(0xFFE95440),
               height: 1.0,
             ),

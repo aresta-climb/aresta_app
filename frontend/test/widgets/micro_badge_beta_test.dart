@@ -94,6 +94,20 @@ void main() {
 
     final widgetTexto = tester.widget<Text>(find.text('BETA'));
     expect(widgetTexto.style?.color, equals(corCustomizada));
+    expect(widgetTexto.style?.fontSize, equals(8.0));
+  });
+
+  testWidgets('Aplica tamanhoFonte customizado quando fornecido', (tester) async {
+    await tester.pumpWidget(
+      criarAppTeste(
+        child: const Center(
+          child: MicroBadgeBeta(tamanhoFonte: 10.5),
+        ),
+      ),
+    );
+
+    final widgetTexto = tester.widget<Text>(find.text('BETA'));
+    expect(widgetTexto.style?.fontSize, equals(10.5));
   });
 
   testWidgets('Não causa overflow em tela estreita de 320dp com container protetivo', (tester) async {

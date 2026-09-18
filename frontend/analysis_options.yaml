@@ -17,6 +17,7 @@ analyzer:
     - macos/**
     - linux/**
     - tool/legal_updater/**
+    - lib/aresta_api/proto/generated/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

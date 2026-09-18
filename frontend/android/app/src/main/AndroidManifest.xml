@@ -33,6 +33,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Android App Links para app.arestaclimb.com (Setores, Vias e Picos) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="app.arestaclimb.com" />
+            </intent-filter>
+
             <!-- Android App Links para previa.arestaclimb.com -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -51,6 +61,16 @@
                 <data
                     android:scheme="aresta"
                     android:host="previa" />
+            </intent-filter>
+
+            <!-- Custom Scheme Deep Link aresta://app.arestaclimb.com/* (Fallback sem necessidade de verificação de domínio) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="aresta"
+                    android:host="app.arestaclimb.com" />
             </intent-filter>
         </activity>
         <receiver

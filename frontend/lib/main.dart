@@ -30,6 +30,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/navigation/navigation_functions.dart';
+import 'package:frontend/navigation/deep_link_navigator_service.dart';
+import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/widgets/banner_modo_experimental.dart';
 import 'package:frontend/navigation/modal_bottom_sheet_page.dart';
 import 'package:frontend/view_functions/offline_markdown.dart';
@@ -476,6 +478,7 @@ class TreeNavigationWrapper extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final SyncService syncService;
   final TreeNavigationController? treeController;
+  final GerenciadorDeepLinks? gerenciadorDeepLinks;
   final Widget? child; // Utilizado puramente para injeção em testes
 
   const TreeNavigationWrapper({
@@ -483,6 +486,7 @@ class TreeNavigationWrapper extends StatefulWidget {
     required this.datasetRepo,
     required this.syncService,
     this.treeController,
+    this.gerenciadorDeepLinks,
     this.child,
   });
 
@@ -517,6 +521,8 @@ class TreeNavigationWrapper extends StatefulWidget {
 
 class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
+  late final DeepLinkNavigatorService deepLinkNavigator;
+  late final GerenciadorDeepLinks gerenciadorDeepLinks;
 
   /// Expõe o SyncService para páginas filhas acessarem via TreeNavigationWrapper.of(context).
   // ignore: unreachable_from_main
@@ -529,6 +535,14 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     treeController.addListener(_onNodeChanged);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.addListener(_onCroquiOnlineAtualizado);
+
+    deepLinkNavigator = DeepLinkNavigatorService(
+      datasetRepo: widget.datasetRepo,
+      treeController: treeController,
+    );
+    gerenciadorDeepLinks = widget.gerenciadorDeepLinks ??
+        GerenciadorDeepLinks(navigatorService: deepLinkNavigator);
+    gerenciadorDeepLinks.inicializar();
   }
 
   FeedbackController? _feedbackController;
@@ -562,6 +576,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
   @override
   void dispose() {
+    gerenciadorDeepLinks.dispose();
     _feedbackController?.removeListener(_onFeedbackChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.removeListener(_onCroquiOnlineAtualizado);
     widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);

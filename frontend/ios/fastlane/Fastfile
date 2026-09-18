@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'fastlane_core/build_watcher'
+
 opt_out_usage
 
 default_platform(:ios)
@@ -25,6 +27,20 @@ platform :ios do
     UI.message("🚀 Iniciando submissão na App Store Connect")
     UI.message("📦 Versão alvo: #{versao} (Build: #{build_num})")
     UI.message("📝 Notas de lançamento: #{notas}")
+
+    app = Spaceship::ConnectAPI::App.find("app.escalada.croquis")
+    app_id = app ? app.id : "6776467893"
+
+    if build_num && !build_num.to_s.empty?
+      UI.message("⏳ Aguardando a Apple concluir o processamento da build #{build_num} (versão #{versao})...")
+      FastlaneCore::BuildWatcher.wait_for_build_processing_to_be_complete(
+        app_id: app_id,
+        platform: :ios,
+        app_version: versao,
+        build_version: build_num.to_s,
+        poll_interval: 30
+      )
+    end
 
     deliver(
       api_key: api_key,

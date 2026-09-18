@@ -10,6 +10,10 @@ import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
 import 'common_functions.dart';
 
+/// Constrói um card de ação interativo para a página de Comunidade no tema escuro.
+///
+/// Utiliza a superfície [caveShadow] com bordas sutis [graniteEdge] para evitar ofuscamento,
+/// tipografia em [chalkWhite] para legibilidade ideal e ícone com fundo em destaque.
 Widget buildActionCard(
   BuildContext context, {
   required String title,
@@ -23,8 +27,11 @@ Widget buildActionCard(
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.caveShadow,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.colors.graniteEdge.withValues(alpha: 0.8),
+        ),
       ),
       child: Row(
         children: [
@@ -34,6 +41,10 @@ Widget buildActionCard(
             decoration: BoxDecoration(
               color: iconBgColor,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
+              ),
             ),
             child: Icon(iconData, color: Colors.white, size: 24),
           ),
@@ -45,7 +56,7 @@ Widget buildActionCard(
                 Text(
                   title,
                   style: TextStyle(
-                    color: context.colors.slateBlue,
+                    color: context.colors.chalkWhite,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
@@ -54,7 +65,11 @@ Widget buildActionCard(
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(color: context.colors.ashGrey, fontSize: 12),
+                  style: TextStyle(
+                    color: context.colors.ashGrey,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -65,14 +80,20 @@ Widget buildActionCard(
   );
 }
 
+/// Constrói o card de Termos de Uso e Privacidade no tema escuro nativo.
+///
+/// Abre o modal [showTermsBottomSheet] ao ser tocado pelo usuário.
 Widget buildTermsCard(BuildContext context) {
   return GestureDetector(
     onTap: () => showTermsBottomSheet(context),
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.caveShadow,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.colors.graniteEdge.withValues(alpha: 0.8),
+        ),
       ),
       child: Row(
         children: [
@@ -80,9 +101,12 @@ Widget buildTermsCard(BuildContext context) {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFC05244).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: const Color(0xFFC05244).withValues(alpha: 0.5),
+                width: 1.2,
+              ),
             ),
             child: const Icon(
               Icons.shield_outlined,
@@ -98,17 +122,19 @@ Widget buildTermsCard(BuildContext context) {
                 Text(
                   'Termos de Uso e Privacidade',
                   style: TextStyle(
-                    color: context.colors.slateBlue,
+                    color: context.colors.chalkWhite,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Controle voluntário de riscos e diretrizes de privacidade offline.',
                   style: TextStyle(
-                    color: context.colors.slateBlue.withValues(alpha: 0.7),
+                    color: context.colors.ashGrey,
                     fontSize: 12,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -116,7 +142,7 @@ Widget buildTermsCard(BuildContext context) {
           ),
           Icon(
             Icons.chevron_right,
-            color: context.colors.slateBlue.withValues(alpha: 0.5),
+            color: context.colors.ashGrey.withValues(alpha: 0.7),
           ),
         ],
       ),

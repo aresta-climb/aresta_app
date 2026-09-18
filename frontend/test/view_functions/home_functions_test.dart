@@ -11,6 +11,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/widgets/nearby_crags_carousel.dart';
+import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:geolocator/geolocator.dart';
@@ -96,8 +97,56 @@ void main() {
       expect(find.byIcon(Icons.search), findsNWidgets(2));
       expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
 
+      // Verify Welcome and H1 text
+      expect(find.text('BEM VINDO!'), findsOneWidget);
+      expect(find.text('BORA PRA PEDRA?'), findsOneWidget);
+      expect(
+        find.text(
+          'O guia definitivo para facilitar a sua escalada. Explore setores, vias e boulders locais e salve os croquis para acessar totalmente offline.',
+        ),
+        findsOneWidget,
+      );
+
       // Verify NearbyCragsCarousel exists
       expect(find.byType(NearbyCragsCarousel), findsOneWidget);
+
+      // Verify Guia Rápido em Dark Mode com 4 passos
+      expect(find.text('GUIA RÁPIDO DO ARESTA'), findsOneWidget);
+      expect(
+        find.text('Quatro passos pra você sair do app direto pro paredão.'),
+        findsOneWidget,
+      );
+      expect(find.text('ENCONTRE O PICO'), findsOneWidget);
+      expect(find.text('SALVE OFFLINE'), findsOneWidget);
+      expect(find.text('CROQUI INTERATIVO'), findsOneWidget);
+      expect(find.text('COMPARTILHE'), findsOneWidget);
+
+      // Validação do novo layout refinado:
+      // 1. Container externo do Guia Rápido tem fundo transparente/cor do app
+      final guiaTitleFinder = find.text('GUIA RÁPIDO DO ARESTA');
+      final guiaOuterContainerFinder = find.ancestor(
+        of: guiaTitleFinder,
+        matching: find.byType(Container),
+      ).first;
+      final Container guiaOuterContainer = tester.widget(guiaOuterContainerFinder);
+      final BoxDecoration outerBox = guiaOuterContainer.decoration as BoxDecoration;
+      expect(outerBox.color, equals(Colors.transparent));
+
+      // 2. O card de texto (ao redor de 'ENCONTRE O PICO') tem fundo caveShadow e NÃO engloba o ícone
+      final stepTitleFinder = find.text('ENCONTRE O PICO');
+      final textCardFinder = find.ancestor(
+        of: stepTitleFinder,
+        matching: find.byType(Container),
+      ).first;
+      final Container textCard = tester.widget(textCardFinder);
+      final BoxDecoration textBox = textCard.decoration as BoxDecoration;
+      expect(textBox.color, equals(AppColors.dark.caveShadow));
+
+      // O ícone de busca NÃO é descendente do textCard
+      expect(
+        find.descendant(of: textCardFinder, matching: find.byIcon(Icons.search)),
+        findsNothing,
+      );
     },
   );
 
