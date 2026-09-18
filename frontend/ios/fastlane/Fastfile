@@ -33,12 +33,15 @@ platform :ios do
 
     if build_num && !build_num.to_s.empty?
       UI.message("⏳ Aguardando a Apple concluir o processamento da build #{build_num} (versão #{versao})...")
+      # return_spaceship_testflight_build: false evita que o Fastlane tente converter o retorno para
+      # a classe legada Spaceship::TestFlight::Build, a qual exige login interativo de usuário/senha (Tunes.login).
       FastlaneCore::BuildWatcher.wait_for_build_processing_to_be_complete(
         app_id: app_id,
         platform: :ios,
         app_version: versao,
         build_version: build_num.to_s,
-        poll_interval: 30
+        poll_interval: 30,
+        return_spaceship_testflight_build: false
       )
     end
 
