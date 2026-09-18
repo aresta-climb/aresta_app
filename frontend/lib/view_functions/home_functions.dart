@@ -21,11 +21,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
-  Map<String, dynamic> pico, {
+  dynamic pico, {
   String source = 'home',
 }) async {
-  final id = pico['id'];
-  if (id == null) return;
+  final ResumoPico resumo = pico is ResumoPico
+      ? pico
+      : ResumoPico.deMapa(
+          pico is Map<String, dynamic>
+              ? pico
+              : Map<String, dynamic>.from(pico as Map),
+        );
+  final String id = resumo.id;
+  if (id.isEmpty) return;
 
   TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
 
@@ -41,12 +48,12 @@ Future<void> handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = pico['url']?.toString();
-    if (url != null && url.isNotEmpty) {
+    final url = resumo.url;
+    if (url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
-      final checksum = pico['checksum']?.toString();
+      final checksum = resumo.checksum;
       croqui = await servicoOnline.carregarCroquiRemoto(
         url,
         picoId: id,
@@ -246,7 +253,8 @@ Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
               body: GlobalSearch(
                 datasetRepo: datasetRepo,
                 downloadedPicos:
-                    datasetRepo.activeDataset.value?.downloadedPicos ?? const [],
+                    datasetRepo.activeDataset.value?.downloadedPicos ??
+                        const <ResumoPico>[],
               ),
             ),
           ),

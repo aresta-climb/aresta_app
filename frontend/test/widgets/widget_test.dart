@@ -38,6 +38,8 @@ class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigServ
   @override
   String get whatsappCommunityUrl => "";
   @override
+  String get discordCommunityUrl => "";
+  @override
   String get servingBaseUrl => "";
   @override
   String get officialServerUrl => "";

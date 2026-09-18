@@ -215,7 +215,9 @@ void main() {
 
     test('availablePicos e downloadedPicos são listas independentes', () {
       final dataset = TopoDataset(availablePicos: [], downloadedPicos: []);
-      dataset.availablePicos.add({'id': 'novo'});
+      dataset.availablePicos.add(
+        const ResumoPico(id: 'novo', nome: 'Novo', local: 'Local'),
+      );
       expect(dataset.downloadedPicos, isEmpty);
     });
   });

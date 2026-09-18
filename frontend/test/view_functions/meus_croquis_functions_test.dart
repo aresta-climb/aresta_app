@@ -52,20 +52,20 @@ void main() {
     } catch (_) {}
   });
 
-  group('OfflineCragCard - Renderização de Miniaturas', () {
-    testWidgets('renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300', (
+  group('OfflineCragCard Widget Tests', () {
+    testWidgets('OfflineCragCard renderiza dados tipados de ResumoPico', (
       WidgetTester tester,
     ) async {
-      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
-      final thumbFile = File('${thumbDir.path}/pico_1.webp');
-      thumbFile.writeAsBytesSync(bytesPng1);
-
-      final crag = {
-        'id': 'pico_1',
-        'nome': 'Pico da Falésia',
-        'local': 'Serra do Cipó',
-        'estatisticas': {'totalSetores': 3, 'totalVias': 15},
-      };
+      const crag = ResumoPico(
+        id: 'pico_offline_1',
+        nome: 'Pico das Galinhas',
+        local: 'Minas Gerais',
+        estatisticas: EstatisticasPico(
+          totalSetores: 3,
+          totalVias: 25,
+        ),
+        isDownloaded: true,
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -79,41 +79,77 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.pumpAndSettle();
 
-      final imageFinder = find.byType(Image);
-      expect(imageFinder, findsOneWidget);
-
-      final Image imageWidget = tester.widget(imageFinder);
-      expect(imageWidget.image, isA<ResizeImage>());
-      final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(300));
+      expect(find.text('PICO DAS GALINHAS'), findsOneWidget);
+      expect(find.text('MINAS GERAIS'), findsOneWidget);
+      expect(find.text('3 setores • 25 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
     });
 
-    testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
-      WidgetTester tester,
-    ) async {
-      final crag = {
-        'id': 'pico_sem_thumb',
-        'nome': 'Pico Sem Foto',
-        'local': 'Itatiaia',
-      };
+    testWidgets(
+      'renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300',
+      (WidgetTester tester) async {
+        final thumbDir = Directory('${tempDir.path}/thumbnails')
+          ..createSync(recursive: true);
+        final thumbFile = File('${thumbDir.path}/pico_1.webp');
+        thumbFile.writeAsBytesSync(bytesPng1);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: OfflineCragCard(
-              crag: crag,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+        const crag = ResumoPico(
+          id: 'pico_1',
+          nome: 'Pico da Falésia',
+          local: 'Serra do Cipó',
+          estatisticas: EstatisticasPico(totalSetores: 3, totalVias: 15),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: OfflineCragCard(
+                crag: crag,
+                datasetRepo: repositorio,
+                syncService: servicoSync,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
-      await tester.pumpAndSettle();
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.terrain), findsOneWidget);
-    });
+        final imageFinder = find.byType(Image);
+        expect(imageFinder, findsOneWidget);
+
+        final Image imageWidget = tester.widget(imageFinder);
+        expect(imageWidget.image, isA<ResizeImage>());
+        final resize = imageWidget.image as ResizeImage;
+        expect(resize.width, equals(300));
+      },
+    );
+
+    testWidgets(
+      'exibe ícone de fallback terrain quando miniatura não existe',
+      (WidgetTester tester) async {
+        const crag = ResumoPico(
+          id: 'pico_sem_thumb',
+          nome: 'Pico Sem Foto',
+          local: 'Itatiaia',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: OfflineCragCard(
+                crag: crag,
+                datasetRepo: repositorio,
+                syncService: servicoSync,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.terrain), findsOneWidget);
+      },
+    );
   });
 }

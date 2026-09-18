@@ -14,10 +14,67 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
 
+/// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário,
+/// permitindo rolagem contínua (looping) e limitando a seleção a no máximo 6 picos.
 class NearbyCragsCarousel extends StatefulWidget {
+  /// Limite padrão de picos exibidos no carrossel de mais próximos.
+  static const int kLimitePicosProximos = 6;
+
   final SyncService syncService;
 
   const NearbyCragsCarousel({super.key, required this.syncService});
+
+  /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
+  /// retornando os [limite] picos mais próximos ordenados por distância crescente.
+  static List<ResumoPico> calcularPicosMaisProximos({
+    required double userLat,
+    required double userLon,
+    required List<ResumoPico> picosDisponiveis,
+    int limite = kLimitePicosProximos,
+  }) {
+    final List<ResumoPico> picosComDistancia = [];
+
+    for (final pico in picosDisponiveis) {
+      final double? picoLat = pico.latitude;
+      final double? picoLon = pico.longitude;
+
+      if (picoLat != null && picoLon != null) {
+        final double distanceInMeters = Geolocator.distanceBetween(
+          userLat,
+          userLon,
+          picoLat,
+          picoLon,
+        );
+
+        picosComDistancia.add(
+          pico.copyWith(distanciaKm: distanceInMeters / 1000),
+        );
+      }
+    }
+
+    picosComDistancia.sort(
+      (a, b) =>
+          (a.distanciaKm ?? double.infinity).compareTo(b.distanciaKm ?? double.infinity),
+    );
+
+    return picosComDistancia.take(limite).toList();
+  }
+
+  /// Formata uma distância em metros para uma string amigável ao usuário (ex: '350m' ou '12.4km').
+  static String formatarDistancia(double metros) {
+    if (metros < 1000) {
+      return '${metros.round()}m';
+    } else {
+      final double km = metros / 1000;
+      return '${km.toStringAsFixed(1)}km';
+    }
+  }
+
+  /// Calcula o índice circular para permitir rolagem contínua (loop infinito) no carrossel.
+  static int calcularIndiceCircular(int index, int totalItens) {
+    if (totalItens <= 0) return 0;
+    return index % totalItens;
+  }
 
   @override
   State<NearbyCragsCarousel> createState() => _NearbyCragsCarouselState();
@@ -32,7 +89,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   double? _lastUserLat;
   double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
-  List<Map<String, dynamic>> _closestCrags = [];
+  List<ResumoPico> _closestCrags = [];
+
+  @visibleForTesting
+  List<ResumoPico> get closestCrags => _closestCrags;
 
   @override
   void initState() {
@@ -60,9 +120,16 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   @visibleForTesting
-  void handleDownload(Map<String, dynamic> crag) async {
-    final name = crag['nome'] ?? 'Pico';
-    final String id = crag['id'];
+  void handleDownload(dynamic crag) async {
+    final ResumoPico pico = crag is ResumoPico
+        ? crag
+        : ResumoPico.deMapa(
+            crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map),
+          );
+    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
+    final String id = pico.id;
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -306,46 +373,18 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final availablePicos =
         datasetRepo?.activeDataset.value?.availablePicos ?? [];
 
-    List<Map<String, dynamic>> cragsWithDistance = [];
-
-    for (var pico in availablePicos) {
-      if (pico.containsKey('latitude') && pico.containsKey('longitude')) {
-        double picoLat = (pico['latitude'] as num).toDouble();
-        double picoLon = (pico['longitude'] as num).toDouble();
-
-        double distanceInMeters = Geolocator.distanceBetween(
-          userLat,
-          userLon,
-          picoLat,
-          picoLon,
-        );
-
-        var picoCopy = Map<String, dynamic>.from(pico);
-        picoCopy['distanceMeters'] = distanceInMeters;
-        cragsWithDistance.add(picoCopy);
-      }
-    }
-
-    cragsWithDistance.sort(
-      (a, b) =>
-          (a['distanceMeters'] as double).compareTo(b['distanceMeters'] as double),
+    final picosOrdenados = NearbyCragsCarousel.calcularPicosMaisProximos(
+      userLat: userLat,
+      userLon: userLon,
+      picosDisponiveis: availablePicos,
     );
 
     if (mounted) {
       setState(() {
-        _closestCrags = cragsWithDistance;
+        _closestCrags = picosOrdenados;
         _isLoading = false;
         _permissionDenied = false;
       });
-    }
-  }
-
-  String _formatDistance(double meters) {
-    if (meters < 1000) {
-      return '${meters.round()}m';
-    } else {
-      double km = meters / 1000;
-      return '${km.toStringAsFixed(1)}km';
     }
   }
 
@@ -473,24 +512,30 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       valueListenable:
           DatasetRepository.instance?.activeDataset ?? ValueNotifier(null),
       builder: (context, dataset, child) {
+        final int? totalItens =
+            _closestCrags.length > 1 ? null : _closestCrags.length;
+
         return ListView.builder(
           physics: const BouncingScrollPhysics(),
           scrollDirection: Axis.horizontal,
-          itemCount: _closestCrags.length,
+          itemCount: totalItens,
           padding: const EdgeInsets.only(left: 24, right: 8),
           itemBuilder: (context, index) {
-            final picoBase = _closestCrags[index];
-            final distanceStr = _formatDistance(
-              picoBase['distanceMeters'] as double,
+            final int indiceReal = NearbyCragsCarousel.calcularIndiceCircular(
+              index,
+              _closestCrags.length,
+            );
+            final picoBase = _closestCrags[indiceReal];
+            final distanceStr = NearbyCragsCarousel.formatarDistancia(
+              (picoBase.distanciaKm ?? 0) * 1000,
             );
 
             final isDownloaded =
                 dataset?.downloadedPicos.any(
-                  (p) => p['id'] == picoBase['id'],
+                  (p) => p.id == picoBase.id,
                 ) ??
                 false;
-            final pico = Map<String, dynamic>.from(picoBase)
-              ..['isDownloaded'] = isDownloaded;
+            final pico = picoBase.copyWith(isDownloaded: isDownloaded);
 
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
