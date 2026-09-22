@@ -867,6 +867,102 @@ void main() {
 
       expect(nomeNotificado, equals('Pedra do Baú'));
     });
+
+    group('DatasetRepository - Invalidação de Croquis e Trajetos Obsoletos', () {
+      test('deve limpar o cache estático de caminhos em ConstrutorCaminhoTrajeto', () {
+        const chave = 'mapa_teste#linha_1';
+        final caminho1 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chave,
+          caminhoSvg: 'M 0 0 L 100 100',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+
+        // Confirma que estava no cache
+        final mesmoCaminho = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chave,
+          caminhoSvg: 'M 0 0 L 100 100',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(caminho1, mesmoCaminho), isTrue);
+
+        repo.invalidarCroquisObsoletos();
+
+        // Após invalidar, o cache deve ter sido limpo
+        final caminhoAposLimpeza = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chave,
+          caminhoSvg: 'M 0 0 L 100 100',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(caminho1, caminhoAposLimpeza), isFalse);
+      });
+
+      test('deve remover da sessão online os picos com checksum divergente no novo índice quando fechados', () {
+        final croquiDesatualizado = Croqui(id: 'pico_desatualizado');
+        final croquiInalterado = Croqui(id: 'pico_inalterado');
+
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+          'pico_desatualizado',
+          croquiDesatualizado,
+          checksumSha256: 'sha_antigo_123',
+        );
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+          'pico_inalterado',
+          croquiInalterado,
+          checksumSha256: 'sha_constante_456',
+        );
+
+        final novoIndice = Indice()
+          ..croquis.addAll([
+            ResumoCroqui(
+              id: 'pico_desatualizado',
+              checksumSha256Croqui: 'sha_novo_999',
+            ),
+            ResumoCroqui(
+              id: 'pico_inalterado',
+              checksumSha256Croqui: 'sha_constante_456',
+            ),
+          ]);
+
+        repo.invalidarCroquisObsoletos(novoIndice: novoIndice);
+
+        expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_desatualizado'), isNull);
+        expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_inalterado'), isNotNull);
+      });
+
+      test('deve remover da sessão online os picos listados em picosAtualizados', () {
+        final croqui = Croqui(id: 'pico_disco');
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_disco', croqui);
+
+        repo.invalidarCroquisObsoletos(picosAtualizados: ['pico_disco']);
+
+        expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_disco'), isNull);
+      });
+
+      test('não deve remover da sessão online o pico que estiver atualmente aberto (picoAbertoId)', () {
+        final croqui = Croqui(id: 'pico_em_uso');
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+          'pico_em_uso',
+          croqui,
+          checksumSha256: 'sha_antigo',
+        );
+
+        final novoIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui(
+              id: 'pico_em_uso',
+              checksumSha256Croqui: 'sha_novo',
+            ),
+          );
+
+        repo.invalidarCroquisObsoletos(
+          novoIndice: novoIndice,
+          picosAtualizados: ['pico_em_uso'],
+          picoAbertoId: 'pico_em_uso',
+        );
+
+        expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_em_uso'), isNotNull);
+      });
+    });
   });
 }
 

@@ -444,6 +444,61 @@ class DatasetRepository {
     await _refreshActiveDataset();
   }
 
+  /// Invalida caches em memória de traçados gráficos e expurga croquis da sessão online
+  /// que estejam obsoletos em relação ao [novoIndice] ou à lista de [picosAtualizados].
+  ///
+  /// Executa três ações defensivas essenciais:
+  /// 1. Limpa o cache estático de [Path] e traçados de viewport em [ConstrutorCaminhoTrajeto].
+  /// 2. Identifica e expurga instâncias defasadas de [Croqui] mantidas no [gerenciadorSessaoOnline].
+  /// 3. Preserva a sessão de qualquer pico cujo identificador seja igual a [picoAbertoId],
+  ///    garantindo que o usuário não tenha sua navegação ativa interrompida abruptamente.
+  void invalidarCroquisObsoletos({
+    Indice? oldIndice,
+    Indice? novoIndice,
+    List<String>? picosAtualizados,
+    String? picoAbertoId,
+  }) {
+    ConstrutorCaminhoTrajeto.limparCache();
+
+    final idsParaRemover = <String>{};
+
+    if (picosAtualizados != null) {
+      idsParaRemover.addAll(picosAtualizados);
+    }
+
+    if (novoIndice != null) {
+      final mapaNovosChecksums = {
+        for (final r in novoIndice.croquis) r.id: r.checksumSha256Croqui,
+      };
+
+      for (final id in gerenciadorSessaoOnline.croquisEmMemoria.keys) {
+        final novoChecksum = mapaNovosChecksums[id];
+        if (novoChecksum == null) {
+          // Pico removido do catálogo
+          idsParaRemover.add(id);
+        } else {
+          final checksumMemoria = gerenciadorSessaoOnline.obterChecksum(id);
+          if (checksumMemoria != null && checksumMemoria.isNotEmpty) {
+            if (checksumMemoria != novoChecksum) {
+              idsParaRemover.add(id);
+            }
+          } else if (oldIndice != null) {
+            final oldResumo = oldIndice.croquis.where((c) => c.id == id).firstOrNull;
+            if (oldResumo != null && oldResumo.checksumSha256Croqui != novoChecksum) {
+              idsParaRemover.add(id);
+            }
+          }
+        }
+      }
+    }
+
+    for (final id in idsParaRemover) {
+      if (id != picoAbertoId) {
+        gerenciadorSessaoOnline.removerSessao(id);
+      }
+    }
+  }
+
   /// Retorna se o pico com [picoId] está baixado no armazenamento local.
   bool isPicoDownloaded(String picoId) {
     return activeDataset.value?.picosBaixados.any((p) => p['id'] == picoId) ?? false;

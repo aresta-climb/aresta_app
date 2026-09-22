@@ -19,6 +19,7 @@ import '../theme/app_colors.dart';
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
 import '../widgets/pico_menu_card.dart';
 import '../utils/pico_categorization.dart';
+import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
@@ -222,6 +223,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
   @override
   void dispose() {
+    ConstrutorCaminhoTrajeto.limparCache();
     widget.datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
     final tree = TreeNavigationWrapper.currentTreeController;
     if (tree != null) {

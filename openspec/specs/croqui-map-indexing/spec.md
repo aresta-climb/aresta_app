@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Global O(1) map index for resolving entities across pico hierarchies.
+
+## Requirements
 
 ### Requirement: Indexing all maps in a Pico
 The system SHALL create a global map index (`CroquiMapIndex`) when a Pico is loaded, scanning all maps across all hierarchy levels (Pico, Grupo, Setor).

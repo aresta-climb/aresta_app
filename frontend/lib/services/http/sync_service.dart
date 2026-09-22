@@ -483,6 +483,15 @@ class SyncService {
               responseBytes,
               result.newEtag,
             );
+
+            // Invalida caches estáticos de trajetos e expurga croquis obsoletos da sessão online
+            datasetRepository.invalidarCroquisObsoletos(
+              oldIndice: oldIndice,
+              novoIndice: newIndice,
+              picosAtualizados: globalUpdates.picosAtualizadosComSucesso,
+              picoAbertoId: picoAbertoId.value,
+            );
+
             quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value =
                 globalUpdates.picosAtualizadosComSucesso.length;
             setUpdatedStatus();

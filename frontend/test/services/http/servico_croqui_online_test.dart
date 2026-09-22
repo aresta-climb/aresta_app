@@ -10,6 +10,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/dataset/sessao_online/gerenciador_sessao_online.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../../mocks/mock_app_logger.dart';
@@ -545,6 +546,41 @@ void main() {
 
       expect(resultado, isFalse);
       expect(mockLogger.recordedErrors, isNotEmpty);
+    });
+
+    test('verificarAtualizacaoEtag com 200 OK deve limpar o cache de caminhos em ConstrutorCaminhoTrajeto', () async {
+      const picoId = 'pico_etag_200';
+      sessaoOnline.registrarCroquiOnline(picoId, Croqui(id: picoId), etag: '"etag_velho"');
+
+      const chaveLinha = 'mapa_teste#linha_etag';
+      final path1 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: chaveLinha,
+        caminhoSvg: 'M 0 0 L 20 20',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+
+      final novoCroqui = Croqui(id: picoId)..picos.add(Pico()..nome = 'Versão Nova');
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer(
+        (_) async => http.Response(
+          String.fromCharCodes(novoCroqui.writeToBuffer()),
+          200,
+          headers: {'etag': '"etag_novo"'},
+        ),
+      );
+
+      final resultado = await servico.verificarAtualizacaoEtag(
+        picoId,
+        'https://servidor.com/croqui.binarypb',
+      );
+
+      expect(resultado, isTrue);
+
+      final path2 = ConstrutorCaminhoTrajeto.obterCaminho(
+        chaveCache: chaveLinha,
+        caminhoSvg: 'M 0 0 L 20 20',
+        estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+      );
+      expect(identical(path1, path2), isFalse);
     });
   });
 }

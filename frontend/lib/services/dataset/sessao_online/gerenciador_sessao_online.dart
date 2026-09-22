@@ -11,6 +11,7 @@ import '../../../aresta_api/proto/generated/croqui.pb.dart';
 class GerenciadorSessaoOnline {
   final Map<String, Croqui> _croquisEmMemoria = {};
   final Map<String, String> _etagsEmMemoria = {};
+  final Map<String, String> _checksumsEmMemoria = {};
 
   /// Notifica a interface sobre picos com atualizações remotas detectadas (picoId -> novoEtag).
   final ValueNotifier<Map<String, String>> atualizacoesPendentes = ValueNotifier({});
@@ -24,10 +25,18 @@ class GerenciadorSessaoOnline {
   }
 
   /// Registra um [Croqui] em memória para acesso durante a sessão online.
-  void registrarCroquiOnline(String picoId, Croqui croqui, {String? etag}) {
+  void registrarCroquiOnline(
+    String picoId,
+    Croqui croqui, {
+    String? etag,
+    String? checksumSha256,
+  }) {
     _croquisEmMemoria[picoId] = croqui;
     if (etag != null && etag.isNotEmpty) {
       _etagsEmMemoria[picoId] = etag;
+    }
+    if (checksumSha256 != null && checksumSha256.isNotEmpty) {
+      _checksumsEmMemoria[picoId] = checksumSha256;
     }
   }
 
@@ -51,10 +60,16 @@ class GerenciadorSessaoOnline {
     return _etagsEmMemoria[picoId];
   }
 
+  /// Obtém o checksum SHA-256 atualmente associado ao croqui online em memória.
+  String? obterChecksum(String picoId) {
+    return _checksumsEmMemoria[picoId];
+  }
+
   /// Remove a sessão online do pico indicado.
   void removerSessao(String picoId) {
     _croquisEmMemoria.remove(picoId);
     _etagsEmMemoria.remove(picoId);
+    _checksumsEmMemoria.remove(picoId);
     limparAtualizacaoPendente(picoId);
   }
 
@@ -62,6 +77,7 @@ class GerenciadorSessaoOnline {
   void limparTudo() {
     _croquisEmMemoria.clear();
     _etagsEmMemoria.clear();
+    _checksumsEmMemoria.clear();
     atualizacoesPendentes.value = {};
   }
 }

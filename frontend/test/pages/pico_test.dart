@@ -12,6 +12,7 @@ import 'package:frontend/widgets/modal_confirmacao_saida.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
+import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 
@@ -475,6 +476,54 @@ void main() {
 
     // Com o pico baixado, o interceptor de saída deve ser cancelado automaticamente
     expect(treeController.onBackInterceptor, isNull);
+  });
+
+  testWidgets('PicoDetailsPage deve limpar o cache de caminhos ao ser descartada (dispose)', (
+    tester,
+  ) async {
+    const chaveLinha = 'mapa_teste#linha_pico_dispose';
+    final path1 = ConstrutorCaminhoTrajeto.obterCaminho(
+      chaveCache: chaveLinha,
+      caminhoSvg: 'M 0 0 L 30 30',
+      estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+    );
+
+    expect(
+      identical(
+        path1,
+        ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chaveLinha,
+          caminhoSvg: 'M 0 0 L 30 30',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        ),
+      ),
+      isTrue,
+    );
+
+    final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PicoDetailsPage(
+          pico: Pico()..nome = 'Pico Descarte',
+          croqui: Croqui(),
+          cragId: 'crag_descarte',
+          datasetRepo: datasetRepo,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Descarta a página substituindo o widget na árvore
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    final pathNovo = ConstrutorCaminhoTrajeto.obterCaminho(
+      chaveCache: chaveLinha,
+      caminhoSvg: 'M 0 0 L 30 30',
+      estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+    );
+    expect(identical(path1, pathNovo), isFalse);
   });
 }
 

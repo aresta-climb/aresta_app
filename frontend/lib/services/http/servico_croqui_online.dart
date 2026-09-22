@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../firebase/app_logger.dart';
 import '../dataset/sessao_online/gerenciador_sessao_online.dart';
+import '../../utils/construtor_caminho_trajeto.dart';
 
 /// Serviço responsável pelo carregamento sob demanda de arquivos `.binarypb` via HTTP
 /// e verificação periódica de ETag para atualizações em tempo real durante a navegação online.
@@ -239,6 +240,7 @@ class ServicoCroquiOnline {
             final croqui = Croqui.fromBuffer(bytes);
             await _salvarEmCacheVolatil(picoId, bytes);
             _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: novoEtag);
+            ConstrutorCaminhoTrajeto.limparCache();
             _aoAtualizarCroqui?.call(picoId, croqui);
             aoAtualizar?.call(picoId, croqui);
           } catch (e, stackTrace) {

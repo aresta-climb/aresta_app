@@ -22,6 +22,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 late HttpServer localServer;
@@ -2400,6 +2401,99 @@ void main() {
         final updatedLocalBytes = await localPicoFile.readAsBytes();
         final updatedCroqui = Croqui.fromBuffer(updatedLocalBytes);
         expect(updatedCroqui.picos.first.nome, 'Pico Novo');
+      },
+    );
+
+    test(
+      'syncIndex deve invalidar o cache de caminhos e croquis obsoletos ao sincronizar atualizações com sucesso',
+      () async {
+        const picoId = 'pico_sync_invalida';
+        final picoDir = Directory('${tempDir.path}/downloads/$picoId');
+        await picoDir.create(recursive: true);
+
+        final oldCroqui = Croqui(id: picoId)..picos.add(Pico()..nome = 'Versão 1');
+        final oldBytes = oldCroqui.writeToBuffer();
+        final oldHash = sha256.convert(oldBytes).toString();
+        final localPicoFile = File('${picoDir.path}/compilado.binarypb');
+        await localPicoFile.writeAsBytes(oldBytes);
+
+        // Preenche a sessão online com o croqui antigo
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+          picoId,
+          oldCroqui,
+          checksumSha256: oldHash,
+        );
+
+        // Preenche o cache de caminhos estáticos
+        const chaveLinha = 'mapa_teste#linha_sync';
+        final path1 = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chaveLinha,
+          caminhoSvg: 'M 0 0 L 50 50',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(
+          identical(
+            path1,
+            ConstrutorCaminhoTrajeto.obterCaminho(
+              chaveCache: chaveLinha,
+              caminhoSvg: 'M 0 0 L 50 50',
+              estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+            ),
+          ),
+          isTrue,
+        );
+
+        final oldIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Teste'
+              ..caminhoRelativo = '$picoId/compilado.binarypb'
+              ..checksumSha256Croqui = oldHash,
+          );
+
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(oldIndice.writeToBuffer());
+
+        final newCroqui = Croqui(id: picoId)..picos.add(Pico()..nome = 'Versão 2');
+        final newBytes = newCroqui.writeToBuffer();
+        final newHash = sha256.convert(newBytes).toString();
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Teste Atualizado'
+              ..caminhoRelativo = '$picoId/compilado.binarypb'
+              ..checksumSha256Croqui = newHash,
+          );
+
+        final fakeClient = FakeClient(newIndice, {
+          '$picoId/compilado.binarypb': newBytes,
+        });
+
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        // Usuário está na Home (pico não está aberto)
+        syncService.picoAbertoId.value = null;
+
+        await syncService.syncIndex();
+
+        // 1. O cache de caminhos em ConstrutorCaminhoTrajeto DEVE ter sido limpo
+        final pathNovo = ConstrutorCaminhoTrajeto.obterCaminho(
+          chaveCache: chaveLinha,
+          caminhoSvg: 'M 0 0 L 50 50',
+          estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+        );
+        expect(identical(path1, pathNovo), isFalse);
+
+        // 2. A sessão online antiga do pico DEVE ter sido expurgada da RAM
+        expect(repo.gerenciadorSessaoOnline.obterCroquiOnline(picoId), isNull);
       },
     );
   });
