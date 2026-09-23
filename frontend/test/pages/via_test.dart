@@ -61,4 +61,54 @@ void main() {
       expect(page.grupo?.nome, 'Grupo Teste');
     },
   );
+
+  testWidgets(
+    'ViaPage exibe LinhaLocalizacaoSetor com hierarquia Grupo > Setor e botão de salto',
+    (tester) async {
+      final pico = Pico()..nome = 'Pedra do Baú';
+      final grupo = Grupo(nome: 'Face Leste');
+      final setor = Setor(nome: 'Setor da Divisa');
+      final escalada = Escalada()
+        ..viaEsportiva = (ViaEsportiva()..nome = 'Sol e Chuva');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ViaPage(
+            escalada: escalada,
+            cragId: 'crag1',
+            pico: pico,
+            setor: setor,
+            grupo: grupo,
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Face Leste > Setor da Divisa'), findsOneWidget);
+      expect(find.text('Ver no croqui'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'ViaPage exibe LinhaLocalizacaoSetor apenas com Setor quando grupo for nulo',
+    (tester) async {
+      final pico = Pico()..nome = 'Pedra do Baú';
+      final setor = Setor(nome: 'Setor Principal');
+      final escalada = Escalada()
+        ..viaEsportiva = (ViaEsportiva()..nome = 'Normal do Baú');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ViaPage(
+            escalada: escalada,
+            cragId: 'crag1',
+            pico: pico,
+            setor: setor,
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Setor Principal'), findsOneWidget);
+      expect(find.text('Ver no croqui'), findsOneWidget);
+    },
+  );
 }

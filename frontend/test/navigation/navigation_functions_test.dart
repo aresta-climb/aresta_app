@@ -59,6 +59,9 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
 
   @override
   bool isPicoDownloaded(String picoId) => false;
+
+  @override
+  DateTime? obterDataAtualizacaoCroqui(String cragId) => null;
 }
 
 

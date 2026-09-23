@@ -16,6 +16,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:fixnum/fixnum.dart';
 import '../mocks/mock_telemetry_service.dart';
 import '../mocks/mock_app_logger.dart';
@@ -963,8 +964,54 @@ void main() {
         expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_em_uso'), isNotNull);
       });
     });
+
+    group('obterDataAtualizacaoCroqui', () {
+      test('retorna DateTime a partir do resumo em indiceData', () {
+        final timestampProto = Timestamp.fromDateTime(DateTime.utc(2026, 9, 18, 1, 54, 49));
+        final indice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_18_set'
+              ..timestampUpdate = timestampProto,
+          );
+        repo.indiceData.value = indice;
+
+        final data = repo.obterDataAtualizacaoCroqui('pico_18_set');
+        expect(data, isNotNull);
+        expect(data?.toUtc().year, 2026);
+        expect(data?.toUtc().month, 9);
+        expect(data?.toUtc().day, 18);
+      });
+
+      test('retorna DateTime a partir de activeDataset (picosDisponiveis)', () {
+        repo.indiceData.value = null;
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosDisponiveis: [
+            {
+              'id': 'pico_ativo',
+              'dataUpdate': '2026-09-18T01:54:49.000Z',
+            },
+          ],
+          picosBaixados: [],
+        );
+
+        final data = repo.obterDataAtualizacaoCroqui('pico_ativo');
+        expect(data, isNotNull);
+        expect(data?.toUtc().year, 2026);
+        expect(data?.toUtc().month, 9);
+        expect(data?.toUtc().day, 18);
+      });
+
+      test('retorna null se o pico não for encontrado', () {
+        repo.indiceData.value = Indice();
+        repo.activeDataset.value = ConjuntoDadosCroqui.vazio();
+
+        expect(repo.obterDataAtualizacaoCroqui('pico_inexistente'), isNull);
+      });
+    });
   });
 }
+
 
 
 

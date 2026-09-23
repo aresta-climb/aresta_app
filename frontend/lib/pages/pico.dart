@@ -691,28 +691,65 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Main Hub Cards
-                  PicoMenuCard(
-                    title: 'Setores',
-                    subtitle: 'Croquis detalhados, grau e vias',
-                    icon: Icons.landscape,
-                    iconColor: context.colors.rustIron,
-                    backgroundColor: context.colors.caveShadow,
-                    titleColor: context.colors.chalkWhite,
-                    subtitleColor: context.colors.fishBone,
-                    onTap: () {
-                      TreeNavigationWrapper.of(
-                        context,
-                      ).treeController.navigateTo(
-                        SetoresNode(
-                          cragId: widget.cragId,
-                          parent: TreeNavigationWrapper.of(
-                            context,
-                          ).treeController.currentNode,
+                  // Main Hub Cards (Grade de 2 colunas com Setores e Índice de Escaladas)
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: PicoMenuCard(
+                            isCompact: true,
+                            title: 'Setores',
+                            subtitle: 'Croquis detalhados e mapas de cada setor',
+                            icon: Icons.landscape,
+                            iconColor: context.colors.rustIron,
+                            backgroundColor: context.colors.caveShadow,
+                            titleColor: context.colors.chalkWhite,
+                            subtitleColor: context.colors.fishBone,
+                            onTap: () {
+                              TreeNavigationWrapper.of(
+                                context,
+                              ).treeController.navigateTo(
+                                SetoresNode(
+                                  cragId: widget.cragId,
+                                  parent: TreeNavigationWrapper.of(
+                                    context,
+                                  ).treeController.currentNode,
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      );
-                    },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: PicoMenuCard(
+                            isCompact: true,
+                            title: 'Índice de Escaladas',
+                            subtitle:
+                                'Todas as vias e boulders filtrados por grau e tipo',
+                            icon: Icons.format_list_bulleted,
+                            iconColor: context.colors.beastHide,
+                            backgroundColor: context.colors.caveShadow,
+                            titleColor: context.colors.chalkWhite,
+                            subtitleColor: context.colors.fishBone,
+                            onTap: () {
+                              TreeNavigationWrapper.of(
+                                context,
+                              ).treeController.navigateTo(
+                                IndiceEscaladasNode(
+                                  cragId: widget.cragId,
+                                  parent: TreeNavigationWrapper.of(
+                                    context,
+                                  ).treeController.currentNode,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 12),
 
                   PicoMenuCard(
                     title: 'Explorar Local',
@@ -835,7 +872,9 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
-                      'Última atualização: Hoje',
+                      formatarTextoUltimaAtualizacao(
+                        widget.datasetRepo.obterDataAtualizacaoCroqui(widget.cragId),
+                      ),
                       style: TextStyle(
                         color: context.colors.ashGrey,
                         fontSize: 12,

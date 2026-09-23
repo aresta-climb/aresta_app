@@ -73,4 +73,40 @@ void main() {
       expect(delegate.searchFieldLabel, 'Buscar escalada (ex: 7a) ou setor...');
     },
   );
+
+  group('formatarTextoUltimaAtualizacao', () {
+    test('retorna "Última atualização: Não informada" quando a data é nula', () {
+      expect(
+        formatarTextoUltimaAtualizacao(null),
+        'Última atualização: Não informada',
+      );
+    });
+
+    test('retorna "Última atualização: Hoje às HH:mm" para data de hoje', () {
+      final now = DateTime.now();
+      final hoje = DateTime(now.year, now.month, now.day, 14, 30);
+      expect(
+        formatarTextoUltimaAtualizacao(hoje),
+        'Última atualização: Hoje às 14:30',
+      );
+    });
+
+    test('retorna "Última atualização: Ontem às HH:mm" para data de ontem', () {
+      final now = DateTime.now();
+      final ontem = DateTime(now.year, now.month, now.day, 9, 15).subtract(const Duration(days: 1));
+      expect(
+        formatarTextoUltimaAtualizacao(ontem),
+        'Última atualização: Ontem às 09:15',
+      );
+    });
+
+    test('retorna formato DD/MM/YYYY às HH:mm para datas anteriores', () {
+      final dataPassada = DateTime(2026, 9, 18, 1, 54);
+      expect(
+        formatarTextoUltimaAtualizacao(dataPassada),
+        'Última atualização: 18/09/2026 às 01:54',
+      );
+    });
+  });
 }
+

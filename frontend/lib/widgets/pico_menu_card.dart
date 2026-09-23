@@ -13,6 +13,7 @@ class PicoMenuCard extends StatelessWidget {
   final Color titleColor;
   final Color subtitleColor;
   final VoidCallback onTap;
+  final bool isCompact;
 
   const PicoMenuCard({
     super.key,
@@ -24,6 +25,7 @@ class PicoMenuCard extends StatelessWidget {
     required this.titleColor,
     required this.subtitleColor,
     required this.onTap,
+    this.isCompact = false,
   });
 
   @override
@@ -31,8 +33,8 @@ class PicoMenuCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.only(bottom: isCompact ? 0 : 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(16),
@@ -41,52 +43,104 @@ class PicoMenuCard extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Row(
-          children: [
-            // Icon box
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(width: 16),
-            // Text content
-            Expanded(
-              child: Column(
+        child: isCompact
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: titleColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: iconColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: iconColor, size: 20),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: titleColor.withValues(alpha: 0.5),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: titleColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: subtitleColor,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  // Icon box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  // Text content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: titleColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: subtitleColor,
+                            fontSize: 12,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: subtitleColor,
-                      fontSize: 12,
-                      height: 1.3,
-                    ),
+                  const SizedBox(width: 12),
+                  // Chevron
+                  Icon(
+                    Icons.chevron_right,
+                    color: titleColor.withValues(alpha: 0.5),
+                    size: 20,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            // Chevron
-            Icon(
-              Icons.chevron_right,
-              color: titleColor.withValues(alpha: 0.5),
-              size: 20,
-            ),
-          ],
-        ),
       ),
     );
   }

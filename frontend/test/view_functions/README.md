@@ -62,5 +62,5 @@ Testa se a integração do pacote `fuzzy` com a função `normalizeSearchString`
 ### `getGrauString` e `getGrauValue`
 Funções utilitárias usadas para extrair informações de dificuldade das vias.
 **Casos testados:**
-- Formatação de texto para vias esportivas, móveis, boulders e multipitch (`BR_` strips).
+- Formatação de texto para vias esportivas, móveis, boulders e multienfiadas (`BR_` strips).
 - Obtenção do valor numérico (`int`) do enum Protobuf para ordenação de vias por grau de dificuldade de forma consistente.

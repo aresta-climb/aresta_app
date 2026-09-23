@@ -176,6 +176,28 @@ class AppNav {
     );
   }
 
+  /// Navega para a página do Índice de Escaladas.
+  /// Herda automaticamente cragId a partir do nó atual, se não fornecido.
+  static void toIndiceEscaladas(
+    BuildContext context, {
+    String? cragId,
+  }) {
+    final ctrl = _ctrl(context);
+    if (ctrl == null) return;
+    final ctx = _picoCtx(ctrl.currentNode);
+
+    final finalCragId = cragId ?? (ctx?.cragId);
+
+    if (finalCragId == null) return;
+
+    ctrl.navigateTo(
+      IndiceEscaladasNode(
+        cragId: finalCragId,
+        parent: ctrl.currentNode,
+      ),
+    );
+  }
+
   /// Navega para a página de uma Via (Escalada).
   /// Herda automaticamente pico/croqui/cragId a partir do nó atual, se não fornecidos.
   static void toVia(

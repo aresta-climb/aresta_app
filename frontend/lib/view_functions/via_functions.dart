@@ -8,6 +8,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'common_functions.dart';
 import 'offline_markdown.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../widgets/linha_localizacao_setor.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../utils/croqui_map_index.dart';
@@ -32,7 +33,7 @@ String getEscaladaNome(Escalada escalada) {
   }
 }
 
-/// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multipitch', 'Highline').
+/// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multienfiada', 'Highline').
 /// Vias móveis que possuam proteções intermediárias fixas são identificadas como 'Mista'.
 String getModalidadeEscalada(Escalada escalada) {
   switch (escalada.whichTipo()) {
@@ -50,7 +51,7 @@ String getModalidadeEscalada(Escalada escalada) {
           ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA) {
         return 'Mista';
       }
-      return 'Multipitch';
+      return 'Multienfiada';
     case Escalada_Tipo.highline:
       return 'Highline';
     case Escalada_Tipo.notSet:
@@ -289,7 +290,7 @@ Widget _buildContentForEscalada(
         fromMapaPage,
       );
     case Escalada_Tipo.viaMultiplasEnfiadas:
-      return _buildMultipitch(
+      return _buildMultienfiada(
         context,
         escalada,
         escalada.viaMultiplasEnfiadas,
@@ -919,7 +920,7 @@ Widget _buildBoulder(
   );
 }
 
-Widget _buildMultipitch(
+Widget _buildMultienfiada(
   BuildContext context,
   Escalada escalada,
   ViaMultiplasEnfiadas via,
@@ -1090,7 +1091,7 @@ Widget _buildMultipitch(
         _buildHeader('Mapas'),
         _buildMapas(via.mapas, cragId, via.enfiadas, setor),
       ],
-      _buildHeader('Informações da Multipitch'),
+      _buildHeader('Informações da Multienfiada'),
       if (statCards.isNotEmpty)
         Wrap(
           spacing: 12,
@@ -1529,47 +1530,11 @@ Widget _buildTopBadges(
 
   if (setor != null && setor.nome.isNotEmpty) {
     badges.add(
-      GestureDetector(
-        onTap: () {
-          TelemetryService.instance.logAcaoEscalada(
-            cragId,
-            setor.nome,
-            getEscaladaNome(escalada),
-            'abrir_setor',
-            'detalhes_via',
-          );
-          AppNav.toSetor(
-            context,
-            setor: setor,
-            grupoContext: grupo,
-            scrollToEscalada: escalada,
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: context.colors.mossRock.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: context.colors.mossRock.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.location_on, size: 14, color: context.colors.mossRock),
-              const SizedBox(width: 6),
-              Text(
-                setor.nome.toUpperCase(),
-                style: TextStyle(
-                  color: fishBone,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+      LinhaLocalizacaoSetor(
+        cragId: cragId,
+        setor: setor,
+        grupo: grupo,
+        escalada: escalada,
       ),
     );
   }
@@ -1577,10 +1542,10 @@ Widget _buildTopBadges(
   if (isDestaque) {
     badges.add(
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.amber.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         ),
         child: Row(
@@ -1606,7 +1571,12 @@ Widget _buildTopBadges(
 
   return Padding(
     padding: const EdgeInsets.only(bottom: 20, top: 10),
-    child: Wrap(spacing: 8, runSpacing: 8, children: badges),
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: badges,
+    ),
   );
 }
 

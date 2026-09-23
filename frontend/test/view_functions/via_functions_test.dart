@@ -83,13 +83,13 @@ void main() {
       expect(getModalidadeEscalada(escalada), 'Boulder');
     });
 
-    test('deve retornar "Multipitch" para via de múltiplas enfiadas comum', () {
+    test('deve retornar "Multienfiada" para via de múltiplas enfiadas comum', () {
       final escalada = Escalada()
         ..viaMultiplasEnfiadas = ViaMultiplasEnfiadas(
           nome: 'Paredão',
           tipoViaMultiplasEnfiadas: ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.TODA_FIXA,
         );
-      expect(getModalidadeEscalada(escalada), 'Multipitch');
+      expect(getModalidadeEscalada(escalada), 'Multienfiada');
     });
 
     test('deve retornar "Mista" para via de múltiplas enfiadas mista', () {

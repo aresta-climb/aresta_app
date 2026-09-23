@@ -504,6 +504,39 @@ class DatasetRepository {
     return activeDataset.value?.picosBaixados.any((p) => p['id'] == picoId) ?? false;
   }
 
+  /// Retorna a data e hora ([DateTime]) da última atualização do croqui [cragId]
+  /// com base nos dados do índice (indice.binarypb) ou do dataset ativo.
+  DateTime? obterDataAtualizacaoCroqui(String cragId) {
+    // 1. Tenta obter diretamente do Indice Protobuf em memória
+    final croquis = indiceData.value?.croquis;
+    if (croquis != null) {
+      for (final resumo in croquis) {
+        if (resumo.id == cragId && resumo.hasTimestampUpdate()) {
+          return resumo.timestampUpdate.toDateTime().toLocal();
+        }
+      }
+    }
+
+    // 2. Fallback para activeDataset (picosDisponiveis / picosBaixados)
+    final dataset = activeDataset.value;
+    if (dataset != null) {
+      for (final p in dataset.picosDisponiveis) {
+        if (p['id'] == cragId && p['dataUpdate'] != null) {
+          final dt = DateTime.tryParse(p['dataUpdate'].toString());
+          if (dt != null) return dt.toLocal();
+        }
+      }
+      for (final p in dataset.picosBaixados) {
+        if (p['id'] == cragId && p['dataUpdate'] != null) {
+          final dt = DateTime.tryParse(p['dataUpdate'].toString());
+          if (dt != null) return dt.toLocal();
+        }
+      }
+    }
+
+    return null;
+  }
+
 
   // ===========================================================================
   // SECTION: Prioridade e Navegação

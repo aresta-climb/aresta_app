@@ -14,7 +14,8 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
   - Contenção rígida de limites (`boundaryMargin: EdgeInsets.zero`) e zoom mínimo (`minScale: 1.0`) para evitar perda do mapa em telas pretas.
   - Botão de recentralização ergonômico no canto inferior direito com a mesma identidade visual do Mapa Global.
 - **Leitura Offline e Streaming Online**: Textos, imagens de alta resolução e betas funcionam 100% offline após o download ou em modo streaming online sob demanda (com guardião de saída para salvar offline).
-- **Formatação Padronizada de Graus**: Dificuldades de escalada esportiva, móvel, boulder e multipitch formatadas no padrão brasileiro com barras diagonais (ex: `7b/7c`, `4º/5º`, `6ºsup/7a`, `10a/10b`).
+- **Formatação Padronizada de Graus**: Dificuldades de escalada esportiva, móvel, boulder e multienfiada formatadas no padrão brasileiro com barras diagonais (ex: `7b/7c`, `4º/5º`, `6ºsup/7a`, `10a/10b`).
+- **Índice de Escaladas (Catálogo e Filtros)**: Aba dedicada ao catálogo de vias e boulders de cada pico com abas dinâmicas por modalidade existente (`Esportivas`, `Boulders`, `Móveis`, `Multienfiadas`), painel colapsável de filtros rápidos e avançados (grau, setor, autor, clássicas), busca textual em tempo real e atalho direto ao croqui do setor.
 - **Créditos e Conquistadores**: Componente `LinhaCreditoAutor` com quebra automática em múltiplas linhas e higienização de placeholders genéricos (`FormatadorCreditos`).
 - **Live Reload & Modo Experimental**: Conexão WebSocket e sincronização em tempo real com o Editor Desktop (vida útil de 20 minutos com Nuke automático ao expirar).
 - **Importação via QR Code**: Leitura rápida de QR codes para emparelhamento instantâneo com o editor em rede local ou relay.

@@ -56,6 +56,27 @@ class SetoresNode extends PicoContextNode {
   String toString() => 'SetoresNode';
 }
 
+/// Nó que representa o índice e catálogo de todas as escaladas de um pico.
+class IndiceEscaladasNode extends PicoContextNode {
+  const IndiceEscaladasNode({
+    required super.cragId,
+    required super.parent,
+  });
+
+  @override
+  NavNode copyWithMergedAncestor(covariant IndiceEscaladasNode matchingAncestor) =>
+      IndiceEscaladasNode(cragId: cragId, parent: matchingAncestor.parent);
+
+  @override
+  String get rotuloAmigavel => 'Índice de Escaladas';
+
+  @override
+  String obterCaminhoCurto() => 'Início -> Pico ($cragId) -> Índice de Escaladas';
+
+  @override
+  String toString() => 'IndiceEscaladasNode';
+}
+
 /// Nó que representa a tela de detalhes de um Setor específico dentro de um Pico (SetorView).
 class SetorNode extends PicoContextNode {
   final String setorNome;

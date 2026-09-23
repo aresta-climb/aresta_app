@@ -568,3 +568,36 @@ Widget buildBotaoTile(BuildContext context, Botao botao, String cragId) {
     ),
   );
 }
+
+/// Formata a data e hora da última atualização para exibição no rodapé da página do croqui.
+///
+/// Se [data] for nula, retorna 'Última atualização: Não informada'.
+/// Se [data] for no mesmo dia civil, exibe 'Última atualização: Hoje às HH:mm'.
+/// Se [data] for no dia civil anterior, exibe 'Última atualização: Ontem às HH:mm'.
+/// Caso contrário, exibe 'Última atualização: DD/MM/YYYY às HH:mm'.
+String formatarTextoUltimaAtualizacao(DateTime? data) {
+  if (data == null) {
+    return 'Última atualização: Não informada';
+  }
+  final now = DateTime.now();
+  final localData = data.toLocal();
+  final hoje = DateTime(now.year, now.month, now.day);
+  final diaData = DateTime(localData.year, localData.month, localData.day);
+  final diferencaDias = hoje.difference(diaData).inDays;
+
+  final h = localData.hour.toString().padLeft(2, '0');
+  final min = localData.minute.toString().padLeft(2, '0');
+  final horario = '$h:$min';
+
+  if (diferencaDias == 0) {
+    return 'Última atualização: Hoje às $horario';
+  } else if (diferencaDias == 1) {
+    return 'Última atualização: Ontem às $horario';
+  } else {
+    final d = localData.day.toString().padLeft(2, '0');
+    final m = localData.month.toString().padLeft(2, '0');
+    final y = localData.year.toString();
+    return 'Última atualização: $d/$m/$y às $horario';
+  }
+}
+

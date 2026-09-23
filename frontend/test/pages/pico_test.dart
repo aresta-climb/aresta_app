@@ -4,6 +4,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
@@ -525,5 +527,91 @@ void main() {
     );
     expect(identical(path1, pathNovo), isFalse);
   });
+
+  testWidgets(
+    'PicoDetailsPage renderiza cartões Setores e Índice de Escaladas lado a lado e navega para IndiceEscaladasNode',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final tree = TreeNavigationController(
+        estadoInicial: const ArvoreNavegacao(
+          noAtual: PicoNode(cragId: 'crag1', parent: HomeNode()),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: tree,
+            child: Scaffold(
+              body: PicoDetailsPage(
+                pico: Pico()..nome = 'Pico do Baú',
+                croqui: Croqui(),
+                cragId: 'crag1',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Setores'), findsOneWidget);
+      expect(find.text('Índice de Escaladas'), findsOneWidget);
+      expect(find.text('Croquis detalhados e mapas de cada setor'), findsOneWidget);
+      expect(find.text('Todas as vias e boulders filtrados por grau e tipo'), findsOneWidget);
+
+      await tester.tap(find.text('Índice de Escaladas'));
+      await tester.pumpAndSettle();
+
+      expect(tree.currentNode, isA<IndiceEscaladasNode>());
+      final node = tree.currentNode as IndiceEscaladasNode;
+      expect(node.cragId, 'crag1');
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage exibe data de última atualização lida do índice e não texto estático',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      datasetRepo.indiceData.value = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'crag1'
+            ..timestampUpdate = Timestamp.fromDateTime(DateTime(2026, 9, 18, 12, 0)),
+        );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(
+              pico: Pico()..nome = 'Pico Teste',
+              croqui: Croqui(),
+              cragId: 'crag1',
+              datasetRepo: datasetRepo,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Última atualização: 18/09/2026 às 12:00'), findsOneWidget);
+      expect(find.textContaining('Hoje'), findsNothing);
+    },
+  );
 }
+
 

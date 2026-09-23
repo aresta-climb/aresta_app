@@ -22,6 +22,7 @@ import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/mapa_global.dart';
+import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'widgets/text_carousel_modal_content.dart';
 import 'package:frontend/services/dataset_repository.dart';
@@ -731,6 +732,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   Widget _buildNodeAsWidget(NavNode node) {
     if (node is PicoNode ||
         node is SetoresNode ||
+        node is IndiceEscaladasNode ||
         node is ExplorarLocalNode ||
         node is ComunidadePicoNode ||
         node is ApoiePicoNode ||
@@ -792,6 +794,12 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
             );
           } else if (node is SetoresNode) {
             return SetoresPage(pico: pico, cragId: cragId);
+          } else if (node is IndiceEscaladasNode) {
+            return IndiceEscaladasPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: cragId,
+            );
           } else if (node is ExplorarLocalNode) {
             return ExplorarLocalPage(
               pico: pico,
