@@ -52,7 +52,7 @@ void main() {
     } catch (_) {}
   });
 
-  group('OfflineCragCard - Renderização de Miniaturas', () {
+  group('OfflineCragCard - Renderização e Tipagem', () {
     testWidgets('renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300', (
       WidgetTester tester,
     ) async {
@@ -60,12 +60,12 @@ void main() {
       final thumbFile = File('${thumbDir.path}/pico_1.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
-      final crag = {
-        'id': 'pico_1',
-        'nome': 'Pico da Falésia',
-        'local': 'Serra do Cipó',
-        'estatisticas': {'totalSetores': 3, 'totalVias': 15},
-      };
+      const crag = ResumoPico(
+        id: 'pico_1',
+        nome: 'Pico da Falésia',
+        local: 'Serra do Cipó',
+        estatisticas: EstatisticasPico(totalSetores: 3, totalVias: 15),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -93,11 +93,11 @@ void main() {
     testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
       WidgetTester tester,
     ) async {
-      final crag = {
-        'id': 'pico_sem_thumb',
-        'nome': 'Pico Sem Foto',
-        'local': 'Itatiaia',
-      };
+      const crag = ResumoPico(
+        id: 'pico_sem_thumb',
+        nome: 'Pico Sem Foto',
+        local: 'Itatiaia',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -114,6 +114,39 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.terrain), findsOneWidget);
+    });
+
+    testWidgets('OfflineCragCard renderiza dados tipados de ResumoPico', (
+      WidgetTester tester,
+    ) async {
+      const crag = ResumoPico(
+        id: 'pico_offline_1',
+        nome: 'Pico das Galinhas',
+        local: 'Minas Gerais',
+        estatisticas: EstatisticasPico(
+          totalSetores: 3,
+          totalVias: 25,
+        ),
+        isDownloaded: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              crag: crag,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('PICO DAS GALINHAS'), findsOneWidget);
+      expect(find.text('MINAS GERAIS'), findsOneWidget);
+      expect(find.text('3 setores • 25 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
     });
   });
 }

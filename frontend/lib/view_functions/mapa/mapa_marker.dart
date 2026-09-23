@@ -7,28 +7,44 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../theme/app_colors.dart';
 
-/// Converte um [ByteData] gerado a partir de um canvas em um [BitmapDescriptor] com fallback seguro.
+/// Converte um [ByteData] gerado a partir de um canvas em um [BitmapDescriptor] com fallback seguro
+/// e suporte a especificações de densidade de pixels (Retina / High-DPI).
 ///
 /// Em ambientes com restrição de memória de textura ou GPUs sob pressão (como dispositivos
 /// móveis em transições ou falhas de superfície gráfica), o método `toByteData()` pode retornar nulo.
 /// Esta função trata a nulidade retornando [BitmapDescriptor.defaultMarker] em vez de disparar
 /// exceções de force-unwrap (`!`).
-BitmapDescriptor converterByteDataEmBitmap(ByteData? byteData) {
+BitmapDescriptor converterByteDataEmBitmap(
+  ByteData? byteData, {
+  double? imagePixelRatio,
+  double? width,
+  double? height,
+}) {
   if (byteData == null) {
     return BitmapDescriptor.defaultMarker;
   }
-  return BitmapDescriptor.bytes(byteData.buffer.asUint8List());
+  return BitmapDescriptor.bytes(
+    byteData.buffer.asUint8List(),
+    imagePixelRatio: imagePixelRatio,
+    width: width,
+    height: height,
+  );
 }
 
 /// Gera um BitmapDescriptor customizado com o formato de um pino de mapa (teardrop)
-/// contendo a imagem do logo do app dentro dele.
+/// contendo a imagem do logo do app dentro dele, com suporte a renderização vetorial de alta definição ([pixelRatio]).
 Future<BitmapDescriptor> createCustomMarkerBitmap(
   String caminhoImagem, {
   int size = 150,
+  double pixelRatio = 3.0,
   AssetBundle? bundle,
 }) async {
+  final double rasterSize = size * pixelRatio;
   final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(pictureRecorder);
+
+  // Escala todo o canvas pelo pixelRatio para garantir nitidez máxima (Retina / High-DPI)
+  canvas.scale(pixelRatio);
 
   final double centerPoint = size / 2;
   // O raio da parte superior do pino
@@ -102,18 +118,19 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
 
   if (caminhoImagem.isNotEmpty) {
     try {
-      // Carregar a imagem
+      // Carregar a imagem com resolução proporcional ao pixelRatio para máxima fidelidade visual
       final bundleParaUsar = bundle ?? rootBundle;
       final ByteData data = await bundleParaUsar.load(caminhoImagem);
+      final int targetPixelSize = (innerRadius * 2 * pixelRatio).toInt().clamp(1, 4096);
       final ui.Codec codec = await ui.instantiateImageCodec(
         data.buffer.asUint8List(),
-        targetWidth: (innerRadius * 2).toInt(),
-        targetHeight: (innerRadius * 2).toInt(),
+        targetWidth: targetPixelSize,
+        targetHeight: targetPixelSize,
       );
       final ui.FrameInfo fi = await codec.getNextFrame();
       final ui.Image image = fi.image;
 
-      // Recortar e desenhar a imagem
+      // Recortar e desenhar a imagem com alta qualidade de filtragem
       canvas.save();
       canvas.clipPath(
         Path()..addOval(
@@ -123,10 +140,14 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
           ),
         ),
       );
-      canvas.drawImage(
+      canvas.drawImageRect(
         image,
-        Offset(centerPoint - image.width / 2, circleY - image.height / 2),
-        Paint(),
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromCircle(
+          center: Offset(centerPoint, circleY),
+          radius: innerRadius,
+        ),
+        Paint()..filterQuality = FilterQuality.high,
       );
       canvas.restore();
     } catch (e) {
@@ -144,16 +165,21 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
       ..strokeWidth = 1.5,
   );
 
-  // Converter o canvas em uma imagem PNG
+  // Converter o canvas em uma imagem PNG em alta resolução física
   final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-    size,
-    size,
+    rasterSize.toInt(),
+    rasterSize.toInt(),
   );
   final ByteData? byteData = await markerAsImage.toByteData(
     format: ui.ImageByteFormat.png,
   );
 
-  return converterByteDataEmBitmap(byteData);
+  return converterByteDataEmBitmap(
+    byteData,
+    imagePixelRatio: pixelRatio,
+    width: size.toDouble(),
+    height: size.toDouble(),
+  );
 }
 
 /// Dimensões calculadas para o balão de texto e o canvas do marcador com texto.
@@ -244,12 +270,13 @@ DimensoesMarcador calcularDimensoesMarcador({
 }
 
 /// Gera um BitmapDescriptor customizado com texto acima do pino,
-/// limitando a largura do balão para evitar sobreposição excessiva no mapa.
+/// limitando a largura do balão para evitar sobreposição excessiva no mapa e renderizando em alta definição ([pixelRatio]).
 Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   String caminhoImagem,
   String texto, {
   int size = 85,
   double larguraMaximaTexto = 200.0,
+  double pixelRatio = 3.0,
   AssetBundle? bundle,
 }) async {
   final dimensoes = calcularDimensoesMarcador(
@@ -258,8 +285,14 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
     larguraMaximaTexto: larguraMaximaTexto,
   );
 
+  final double rasterWidth = dimensoes.larguraCanvas * pixelRatio;
+  final double rasterHeight = dimensoes.alturaCanvas * pixelRatio;
+
   final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(pictureRecorder);
+
+  // Escala todo o canvas pelo pixelRatio para garantir nitidez máxima (Retina / High-DPI)
+  canvas.scale(pixelRatio);
 
   final textPainter = TextPainter(
     text: TextSpan(
@@ -383,10 +416,11 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
     try {
       final bundleParaUsar = bundle ?? rootBundle;
       final ByteData data = await bundleParaUsar.load(caminhoImagem);
+      final int targetPixelSize = (innerRadius * 2 * pixelRatio).toInt().clamp(1, 4096);
       final ui.Codec codec = await ui.instantiateImageCodec(
         data.buffer.asUint8List(),
-        targetWidth: (innerRadius * 2).toInt(),
-        targetHeight: (innerRadius * 2).toInt(),
+        targetWidth: targetPixelSize,
+        targetHeight: targetPixelSize,
       );
       final ui.FrameInfo fi = await codec.getNextFrame();
       final ui.Image image = fi.image;
@@ -400,10 +434,14 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
           ),
         ),
       );
-      canvas.drawImage(
+      canvas.drawImageRect(
         image,
-        Offset(renderCenterX - image.width / 2, circleY - image.height / 2),
-        Paint(),
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromCircle(
+          center: Offset(renderCenterX, circleY),
+          radius: innerRadius,
+        ),
+        Paint()..filterQuality = FilterQuality.high,
       );
       canvas.restore();
     } catch (e) {
@@ -422,13 +460,18 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   );
 
   final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-    dimensoes.larguraCanvas.toInt(),
-    dimensoes.alturaCanvas.toInt(),
+    rasterWidth.toInt(),
+    rasterHeight.toInt(),
   );
   final ByteData? byteData = await markerAsImage.toByteData(
     format: ui.ImageByteFormat.png,
   );
 
-  return converterByteDataEmBitmap(byteData);
+  return converterByteDataEmBitmap(
+    byteData,
+    imagePixelRatio: pixelRatio,
+    width: dimensoes.larguraCanvas,
+    height: dimensoes.alturaCanvas,
+  );
 }
 

@@ -237,12 +237,9 @@ class DeepLinkNavigatorService {
 
     // 1. Tenta recuperar dos picos baixados no cache local
     if (active != null) {
-      for (final p in active.downloadedPicos) {
-        if (p['id'] == picoId) {
-          final data = p['data'] as Map<String, dynamic>?;
-          if (data != null && data['pico'] is Pico && data['croqui'] is Croqui) {
-            return _DadosPico(data['pico'] as Pico, data['croqui'] as Croqui);
-          }
+      for (final p in active.picosBaixados) {
+        if (p.id == picoId && p.pico != null && p.croqui != null) {
+          return _DadosPico(p.pico!, p.croqui!);
         }
       }
     }
@@ -256,11 +253,10 @@ class DeepLinkNavigatorService {
 
     // 3. Tenta carregar online sob demanda se houver URL registrada no catálogo
     if (active != null) {
-      final picoItem = active.picosDisponiveis.firstWhere(
-        (p) => p['id'] == picoId,
-        orElse: () => <String, dynamic>{},
-      );
-      final url = picoItem['url']?.toString();
+      final picoItem = active.picosDisponiveis
+          .where((p) => p.id == picoId)
+          .firstOrNull;
+      final url = picoItem?.url;
       if (url != null && url.isNotEmpty) {
         final croquiCarregado =
             await datasetRepo.servicoCroquiOnline.carregarCroquiRemoto(

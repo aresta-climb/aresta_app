@@ -71,10 +71,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     if (!_isInitiallyDownloaded && dataset != null) {
       try {
         final picoItem = dataset.picosDisponiveis.firstWhere(
-          (p) => p['id'] == widget.cragId,
+          (p) => p.id == widget.cragId,
         );
-        final url = picoItem['url']?.toString();
-        if (url != null && url.isNotEmpty) {
+        final url = picoItem.url;
+        if (url.isNotEmpty) {
           _servicoCroquiOnline.iniciarPollingEtag(
             widget.cragId,
             url,
@@ -162,13 +162,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       }
 
 
-      Map<String, dynamic>? picoItem;
+      ResumoPico? picoItem;
       try {
         picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
-            .firstWhere((p) => p['id'] == widget.cragId);
+            .firstWhere((p) => p.id == widget.cragId);
       } catch (_) {}
       final tamanhoFormatado =
-          picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+          picoItem?.tamanhoFormatado ?? 'Offline';
 
       ModalConfirmacaoSaida.mostrar(
         context: context,
@@ -308,7 +308,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     int totalMultiplasEnfiadas = 0;
     int totalHighlines = 0;
 
-    void processEscaladas(Iterable<dynamic> escaladas) {
+    void processEscaladas(Iterable<Escalada> escaladas) {
       for (var escalada in escaladas) {
         totalVias++;
         switch (escalada.whichTipo()) {
@@ -366,15 +366,15 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
 
 
-    Map<String, dynamic>? picoItem;
+    ResumoPico? picoItem;
     try {
       picoItem = dataset?.picosDisponiveis.firstWhere(
-        (p) => p['id'] == widget.cragId,
+        (p) => p.id == widget.cragId,
       );
     } catch (_) {}
 
     final String tamanhoFormatado =
-        picoItem?['tamanhoFormatado']?.toString() ?? 'Offline';
+        picoItem?.tamanhoFormatado ?? 'Offline';
 
     return PopScope(
       canPop: false,
@@ -393,7 +393,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         }
 
         final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
-                .any((p) => p['id'] == widget.cragId) ??
+                .any((p) => p.id == widget.cragId) ??
             false;
 
         if (isBaixado) {

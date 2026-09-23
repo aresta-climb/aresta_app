@@ -12,20 +12,28 @@ import '../view_functions/common_functions.dart';
 import '../widgets/nearby_crags_carousel.dart';
 import '../widgets/global_search.dart';
 import '../services/http/sync_service.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../widgets/micro_badge_beta.dart';
 import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/http/servico_croqui_online.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
-  Map<String, dynamic> pico, {
+  dynamic pico, {
   String source = 'home',
 }) async {
-  final id = pico['id'];
-  if (id == null) return;
+  final ResumoPico resumo = pico is ResumoPico
+      ? pico
+      : ResumoPico.deMapa(
+          pico is Map<String, dynamic>
+              ? pico
+              : Map<String, dynamic>.from(pico as Map),
+        );
+  final String id = resumo.id;
+  if (id.isEmpty) return;
 
   TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
 
@@ -41,8 +49,8 @@ Future<void> handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = pico['url']?.toString();
-    if (url != null && url.isNotEmpty) {
+    final url = resumo.url;
+    if (url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
@@ -246,7 +254,8 @@ Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
               body: GlobalSearch(
                 datasetRepo: datasetRepo,
                 downloadedPicos:
-                    datasetRepo.activeDataset.value?.downloadedPicos ?? const [],
+                    datasetRepo.activeDataset.value?.downloadedPicos ??
+                        const <ResumoPico>[],
               ),
             ),
           ),

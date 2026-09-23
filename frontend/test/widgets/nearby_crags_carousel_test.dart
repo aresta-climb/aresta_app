@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/widgets/nearby_crags_carousel.dart';
+import 'package:frontend/widgets/crag_card.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -29,6 +30,8 @@ class MockPathProviderPlatform extends PathProviderPlatform
   Future<String?> getApplicationSupportPath() async => tempPath;
   @override
   Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
 }
 
 class FakeSyncService extends Fake implements SyncService {
@@ -145,7 +148,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('MAIS PRÓXIMOS DE VOCÊ'), findsOneWidget);
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getDouble('last_known_latitude'), -20.0);
@@ -174,7 +177,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
         expect(find.byIcon(Icons.location_on), findsOneWidget);
       },
     );
@@ -218,7 +221,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
       },
     );
 
@@ -263,7 +266,7 @@ void main() {
         await tester.tap(find.text('Permitir Localização'));
         await tester.pumpAndSettle();
 
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
       },
     );
 
@@ -358,7 +361,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Deve ter recalculado as distâncias e exibido o Pico A!
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
       },
     );
 
@@ -389,7 +392,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
       },
     );
 
@@ -431,7 +434,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
         expect(mockGeolocator.lastStreamSettings?.accuracy, equals(LocationAccuracy.high));
         await streamController.close();
       },
@@ -465,7 +468,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(mockGeolocator.lastCurrentPositionSettings?.accuracy, equals(LocationAccuracy.high));
-        expect(find.text('PICO A'), findsOneWidget);
+        expect(find.text('PICO A'), findsWidgets);
       },
     );
 
@@ -554,8 +557,8 @@ void main() {
         await tester.pumpAndSettle();
 
         // Toca no Pico B (que está marcado como isDownloaded)
-        expect(find.text('PICO B'), findsOneWidget);
-        await tester.tap(find.text('PICO B'));
+        expect(find.text('PICO B'), findsWidgets);
+        await tester.tap(find.text('PICO B').first);
         await tester.pump();
       },
     );
@@ -598,5 +601,232 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'Deve limitar a exibição a no máximo 6 picos mais próximos quando houver mais de 6 disponíveis',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository.instance!;
+        // Cria 8 picos com distâncias progressivas a partir de (-20.0, -44.0)
+        final picosVariados = List.generate(8, (i) {
+          return <String, dynamic>{
+            'id': 'pico_$i',
+            'nome': 'Pico $i',
+            'caminhoRelativo': 'picos/pico_$i/pico_$i.binarypb',
+            'latitude': -20.0 + (i * 0.1),
+            'longitude': -44.0 + (i * 0.1),
+            'isDownloaded': false,
+            'thumbnailUrl': '',
+          };
+        });
+
+        datasetRepo.activeDataset.value = TopoDataset(
+          availablePicos: picosVariados,
+          downloadedPicos: [],
+        );
+
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Deve conter os 6 primeiros picos mais próximos (Pico 0 a 5)
+        // e NÃO deve conter o 7º e 8º (Pico 6 e 7)
+        final carouselState = tester.state(find.byType(NearbyCragsCarousel)) as dynamic;
+        final List<ResumoPico> picosExibidos = carouselState.closestCrags;
+        expect(picosExibidos.length, equals(6));
+        expect(picosExibidos.map((p) => p.id).toList(), equals([
+          'pico_0',
+          'pico_1',
+          'pico_2',
+          'pico_3',
+          'pico_4',
+          'pico_5',
+        ]));
+      },
+    );
+
+    testWidgets(
+      'Deve fazer loop contínuo do carrossel ao rolar horizontalmente além do último pico',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository.instance!;
+        final picos = List.generate(6, (i) {
+          return <String, dynamic>{
+            'id': 'pico_loop_$i',
+            'nome': 'Pico Loop $i',
+            'caminhoRelativo': 'picos/pico_loop_$i/pico_loop_$i.binarypb',
+            'latitude': -20.0 + (i * 0.05),
+            'longitude': -44.0 + (i * 0.05),
+            'isDownloaded': false,
+            'thumbnailUrl': '',
+          };
+        });
+
+        datasetRepo.activeDataset.value = TopoDataset(
+          availablePicos: picos,
+          downloadedPicos: [],
+        );
+
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(syncService: fakeSyncService),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Inicialmente o Pico Loop 0 é visível
+        expect(find.text('PICO LOOP 0'), findsOneWidget);
+
+        // Rola horizontalmente por uma distância correspondente a mais de 6 cards (6 * 356px)
+        final listViewFinder = find.byType(ListView);
+        expect(listViewFinder, findsOneWidget);
+
+        // Rola para a direita ultrapassando os 6 itens
+        await tester.drag(listViewFinder, const Offset(-2500, 0));
+        await tester.pumpAndSettle();
+
+        // Após rolar além dos 6 itens, o carrossel reinicia o ciclo (looping) e exibe novamente os picos
+        expect(find.byType(CragCard), findsWidgets);
+      },
+    );
+  });
+
+  group('NearbyCragsCarousel - Testes Unitários de Funções Puras', () {
+    test('formatarDistancia deve formatar distâncias menores que 1000m em metros inteiros', () {
+      expect(NearbyCragsCarousel.formatarDistancia(0), equals('0m'));
+      expect(NearbyCragsCarousel.formatarDistancia(350.4), equals('350m'));
+      expect(NearbyCragsCarousel.formatarDistancia(999.4), equals('999m'));
+    });
+
+    test('formatarDistancia deve formatar distâncias iguais ou maiores que 1000m em quilômetros com 1 casa decimal', () {
+      expect(NearbyCragsCarousel.formatarDistancia(1000), equals('1.0km'));
+      expect(NearbyCragsCarousel.formatarDistancia(2450), equals('2.5km'));
+      expect(NearbyCragsCarousel.formatarDistancia(15432), equals('15.4km'));
+    });
+
+    test('calcularIndiceCircular deve retornar índice com wrap correto', () {
+      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 6), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(5, 6), equals(5));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(6, 6), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(7, 6), equals(1));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(13, 6), equals(1));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 0), equals(0));
+      expect(NearbyCragsCarousel.calcularIndiceCircular(5, -1), equals(0));
+    });
+
+    test('calcularPicosMaisProximos deve filtrar picos sem coordenadas', () {
+      const picos = [
+        ResumoPico(id: '1', nome: 'Sem Lat', local: '', longitude: -44.0),
+        ResumoPico(id: '2', nome: 'Sem Long', local: '', latitude: -20.0),
+        ResumoPico(id: '3', nome: 'Sem Ambas', local: ''),
+        ResumoPico(id: '4', nome: 'Com Ambas', local: '', latitude: -20.0, longitude: -44.0),
+      ];
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+
+      expect(resultado.length, equals(1));
+      expect(resultado.first.id, equals('4'));
+    });
+
+    test('calcularPicosMaisProximos deve ordenar por distância crescente e limitar a 6 itens por padrão', () {
+      final picos = List.generate(10, (i) {
+        return ResumoPico(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          local: 'Local $i',
+          latitude: -20.0 + (i * 0.1),
+          longitude: -44.0 + (i * 0.1),
+        );
+      });
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+
+      expect(resultado.length, equals(6));
+      expect(resultado.map((p) => p.id).toList(), equals([
+        'pico_0',
+        'pico_1',
+        'pico_2',
+        'pico_3',
+        'pico_4',
+        'pico_5',
+      ]));
+
+      // Valida que as distâncias calculadas estão em ordem estritamente crescente
+      for (int i = 0; i < resultado.length - 1; i++) {
+        expect(resultado[i].distanciaKm!, lessThanOrEqualTo(resultado[i + 1].distanciaKm!));
+      }
+    });
+
+    test('calcularPicosMaisProximos com limite customizado deve respeitar o limite passado', () {
+      final picos = List.generate(5, (i) {
+        return ResumoPico(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          local: 'Local $i',
+          latitude: -20.0 + (i * 0.1),
+          longitude: -44.0 + (i * 0.1),
+        );
+      });
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+        limite: 3,
+      );
+
+      expect(resultado.length, equals(3));
+    });
+
+    test('calcularPicosMaisProximos com lista vazia deve retornar lista vazia', () {
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: const [],
+      );
+
+      expect(resultado, isEmpty);
+    });
   });
 }

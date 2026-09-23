@@ -13,6 +13,8 @@ import '../utils/formatador_tamanho.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 
 import 'dataset/modelos/conjunto_dados_croqui.dart';
+import 'dataset/modelos/resumo_pico.dart';
+import 'dataset/modelos/estatisticas_pico.dart';
 import 'dataset/armazenamento/gerenciador_prioridade_picos.dart';
 import 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 import 'dataset/armazenamento/extrator_assets_preload.dart';
@@ -21,6 +23,8 @@ import 'dataset/sessao_online/gerenciador_sessao_online.dart';
 import 'http/servico_croqui_online.dart';
 
 export 'dataset/modelos/conjunto_dados_croqui.dart';
+export 'dataset/modelos/resumo_pico.dart';
+export 'dataset/modelos/estatisticas_pico.dart';
 export 'dataset/armazenamento/gerenciador_prioridade_picos.dart';
 export 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 export 'dataset/armazenamento/extrator_assets_preload.dart';
@@ -307,8 +311,8 @@ class DatasetRepository {
       final List<String> priorityList =
           await gerenciadorPrioridade.obterListaPrioridade(docsPath);
 
-      final List<Map<String, dynamic>> parsedPicos = [];
-      final List<Map<String, dynamic>> downloaded = [];
+      final List<ResumoPico> parsedPicos = [];
+      final List<ResumoPico> downloaded = [];
 
       for (var resumo in indice.croquis) {
         try {
@@ -340,41 +344,47 @@ class DatasetRepository {
             tamanhoBytes = resumo.precomputados.tamanhoDownloadBytes.toInt();
           }
 
-          final Map<String, dynamic> picoMap = {
-            'nome': resumo.nome,
-            'local': locationText,
-            'descricao': resumo.descricao,
-            'id': picoId,
-            'url': '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=${resumo.checksumSha256Croqui}',
-            'checksum': resumo.checksumSha256Croqui,
-            'thumbnailUrl': thumbnailUrl,
-            'isDownloaded': isStored,
-            'tamanhoBytes': tamanhoBytes,
-            'tamanhoFormatado': FormatadorTamanho.formatarBytes(tamanhoBytes),
-            'dataUpdate': resumo.hasTimestampUpdate()
+          EstatisticasPico? estatisticas;
+          if (resumo.hasPrecomputados()) {
+            estatisticas = EstatisticasPico(
+              totalVias: resumo.precomputados.totalEscaladas,
+              totalSetores: resumo.precomputados.totalSetores,
+              totalEsportivas: resumo.precomputados.totalEsportivas,
+              totalMoveis: resumo.precomputados.totalMoveis,
+              totalBoulders: resumo.precomputados.totalBoulders,
+              totalMultiplasEnfiadas:
+                  resumo.precomputados.totalMultiplasEnfiadas,
+              totalHighlines: resumo.precomputados.totalHighlines,
+              tamanhoDownloadBytes: tamanhoBytes,
+            );
+          }
+
+          final picoItem = ResumoPico(
+            id: picoId,
+            nome: resumo.nome,
+            local: locationText,
+            descricao: resumo.descricao,
+            url: '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=${resumo.checksumSha256Croqui}',
+            checksum: resumo.checksumSha256Croqui,
+            thumbnailUrl: thumbnailUrl,
+            isDownloaded: isStored,
+            tamanhoBytes: tamanhoBytes,
+            tamanhoFormatado: FormatadorTamanho.formatarBytes(tamanhoBytes),
+            dataUpdate: resumo.hasTimestampUpdate()
                 ? resumo.timestampUpdate.toDateTime().toIso8601String()
                 : null,
-            if (resumo.hasLocalizacao())
-              'latitude': resumo.localizacao.latitude / 10000000.0,
-            if (resumo.hasLocalizacao())
-              'longitude': resumo.localizacao.longitude / 10000000.0,
-            if (resumo.hasPrecomputados())
-              'estatisticas': {
-                'totalVias': resumo.precomputados.totalEscaladas,
-                'totalSetores': resumo.precomputados.totalSetores,
-                'totalEsportivas': resumo.precomputados.totalEsportivas,
-                'totalMoveis': resumo.precomputados.totalMoveis,
-                'totalBoulders': resumo.precomputados.totalBoulders,
-                'totalMultiplasEnfiadas':
-                    resumo.precomputados.totalMultiplasEnfiadas,
-                'totalHighlines': resumo.precomputados.totalHighlines,
-                'tamanhoDownloadBytes': ?tamanhoBytes,
-              },
-          };
+            latitude: resumo.hasLocalizacao()
+                ? resumo.localizacao.latitude / 10000000.0
+                : null,
+            longitude: resumo.hasLocalizacao()
+                ? resumo.localizacao.longitude / 10000000.0
+                : null,
+            estatisticas: estatisticas,
+          );
 
-          parsedPicos.add(picoMap);
+          parsedPicos.add(picoItem);
           if (isStored) {
-            downloaded.add(picoMap);
+            downloaded.add(picoItem);
           }
         } catch (itemEx, stackTrace) {
           AppLogger.instance.logError(
@@ -388,35 +398,25 @@ class DatasetRepository {
       final ordenados =
           gerenciadorPrioridade.ordenarPorPrioridade(downloaded, priorityList);
 
-      await Future.wait(
-        ordenados.map((picoData) async {
-          try {
-            await extratorMetadados.atualizarMetadadosPico(
-              id: picoData['id'],
-              picoData: picoData,
-              downloadsPath: downloadsPath,
-              baseUrl: editorDeCroqui.activeBaseUrl,
-            );
-          } catch (e, stackTrace) {
-            AppLogger.instance.logError(
-              'Erro ao atualizar metadados do pico ${picoData['id']}',
-              error: e,
-              stackTrace: stackTrace,
-            );
-          }
+      final List<ResumoPico> ordenadosCarregados = await Future.wait(
+        ordenados.map((picoItem) async {
+          return await extratorMetadados.carregarMetadadosLocais(
+            pico: picoItem,
+            downloadsPath: downloadsPath,
+            baseUrl: editorDeCroqui.activeBaseUrl,
+          );
         }),
       );
 
-      for (final picoData in ordenados) {
-        final croqui = picoData['data']?['croqui'];
-        if (croqui is Croqui) {
-          indexarMidiasDoCroqui(picoData['id'] as String, croqui);
+      for (final picoItem in ordenadosCarregados) {
+        if (picoItem.croqui != null) {
+          indexarMidiasDoCroqui(picoItem.id, picoItem.croqui!);
         }
       }
 
       activeDataset.value = ConjuntoDadosCroqui(
         picosDisponiveis: parsedPicos,
-        picosBaixados: ordenados,
+        picosBaixados: ordenadosCarregados,
       );
 
     } catch (e, stackTrace) {
@@ -501,7 +501,7 @@ class DatasetRepository {
 
   /// Retorna se o pico com [picoId] está baixado no armazenamento local.
   bool isPicoDownloaded(String picoId) {
-    return activeDataset.value?.picosBaixados.any((p) => p['id'] == picoId) ?? false;
+    return activeDataset.value?.picosBaixados.any((p) => p.id == picoId) ?? false;
   }
 
   /// Retorna a data e hora ([DateTime]) da última atualização do croqui [cragId]
@@ -521,14 +521,14 @@ class DatasetRepository {
     final dataset = activeDataset.value;
     if (dataset != null) {
       for (final p in dataset.picosDisponiveis) {
-        if (p['id'] == cragId && p['dataUpdate'] != null) {
-          final dt = DateTime.tryParse(p['dataUpdate'].toString());
+        if (p.id == cragId && p.dataUpdate != null) {
+          final dt = DateTime.tryParse(p.dataUpdate.toString());
           if (dt != null) return dt.toLocal();
         }
       }
       for (final p in dataset.picosBaixados) {
-        if (p['id'] == cragId && p['dataUpdate'] != null) {
-          final dt = DateTime.tryParse(p['dataUpdate'].toString());
+        if (p.id == cragId && p.dataUpdate != null) {
+          final dt = DateTime.tryParse(p.dataUpdate.toString());
           if (dt != null) return dt.toLocal();
         }
       }
@@ -553,20 +553,28 @@ class DatasetRepository {
       final List<String> priorityList =
           await gerenciadorPrioridade.obterListaPrioridade(docsPath);
 
-      final List<Map<String, dynamic>> baixados = [];
+      final List<ResumoPico> baixados = [];
       for (var pico in activeDataset.value!.picosDisponiveis) {
         if (await gerenciadorArquivosLocais.verificarPicoBaixado(
-            downloadsPath, pico['id'])) {
-          baixados.add(pico);
+            downloadsPath, pico.id)) {
+          baixados.add(pico.copyWith(isDownloaded: true));
         }
       }
 
       final ordenados =
           gerenciadorPrioridade.ordenarPorPrioridade(baixados, priorityList);
 
+      final ordenadosCarregados = await Future.wait(
+        ordenados.map((p) => extratorMetadados.carregarMetadadosLocais(
+              pico: p,
+              downloadsPath: downloadsPath,
+              baseUrl: editorDeCroqui.activeBaseUrl,
+            )),
+      );
+
       activeDataset.value = ConjuntoDadosCroqui(
         picosDisponiveis: activeDataset.value!.picosDisponiveis,
-        picosBaixados: ordenados,
+        picosBaixados: ordenadosCarregados,
       );
     }
   }
@@ -685,15 +693,16 @@ class DatasetRepository {
     final docsPath = directory.path;
     final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
 
-    final List<Map<String, dynamic>> updatedDownloaded = [];
+    final List<ResumoPico> updatedAvailable = [];
+    final List<ResumoPico> updatedDownloaded = [];
     for (var pico in currentAvailable) {
-      final String picoId = pico['id']?.toString() ?? '';
       final bool isStored = await gerenciadorArquivosLocais
-          .verificarPicoBaixado(downloadsPath, picoId);
+          .verificarPicoBaixado(downloadsPath, pico.id);
 
-      pico['isDownloaded'] = isStored;
+      final atualizado = pico.copyWith(isDownloaded: isStored);
+      updatedAvailable.add(atualizado);
       if (isStored) {
-        updatedDownloaded.add(pico);
+        updatedDownloaded.add(atualizado);
       }
     }
 
@@ -702,36 +711,46 @@ class DatasetRepository {
     final ordenados = gerenciadorPrioridade.ordenarPorPrioridade(
         updatedDownloaded, priorityList);
 
-    await Future.wait(
-      ordenados.map((p) => extratorMetadados.atualizarMetadadosPico(
-            id: p['id'],
-            picoData: p,
+    final ordenadosCarregados = await Future.wait(
+      ordenados.map((p) => extratorMetadados.carregarMetadadosLocais(
+            pico: p,
             downloadsPath: downloadsPath,
             baseUrl: editorDeCroqui.activeBaseUrl,
           )),
     );
 
     activeDataset.value = ConjuntoDadosCroqui(
-      picosDisponiveis: currentAvailable,
-      picosBaixados: ordenados,
+      picosDisponiveis: updatedAvailable,
+      picosBaixados: ordenadosCarregados,
     );
   }
 
-  /// Auxiliar para compatibilidade legada ao atualizar metadados.
+  /// Auxiliar para carregar e atualizar metadados locais de um [ResumoPico].
   Future<void> updatePicoMetadata(
     String id,
-    Map<String, dynamic> picoData,
+    ResumoPico picoData,
     String docsPath, {
     Croqui? parsedPico,
   }) async {
     final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
-    await extratorMetadados.atualizarMetadadosPico(
-      id: id,
-      picoData: picoData,
+    final atualizado = await extratorMetadados.carregarMetadadosLocais(
+      pico: picoData,
       downloadsPath: downloadsPath,
       baseUrl: editorDeCroqui.activeBaseUrl,
       parsedCroqui: parsedPico,
     );
+
+    final atual = activeDataset.value;
+    if (atual != null) {
+      final novosDisponiveis =
+          atual.availablePicos.map((p) => p.id == id ? atualizado : p).toList();
+      final novosBaixados =
+          atual.downloadedPicos.map((p) => p.id == id ? atualizado : p).toList();
+      activeDataset.value = atual.copyWith(
+        picosDisponiveis: novosDisponiveis,
+        picosBaixados: novosBaixados,
+      );
+    }
   }
 
   /// Dispara a notificação de reset visual na página Home.

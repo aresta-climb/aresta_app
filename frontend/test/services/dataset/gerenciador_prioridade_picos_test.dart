@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/dataset/armazenamento/gerenciador_prioridade_picos.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
   late Directory tempDir;
@@ -55,12 +56,12 @@ void main() {
       expect(await yamlFile.exists(), isTrue);
     });
 
-    test('ordena lista de picos com base na lista de prioridade', () {
+    test('ordena lista de ResumoPico com base na lista de prioridade colocando picos não listados ao final', () {
       final picos = [
-        {'id': 'pico_3'},
-        {'id': 'pico_1'},
-        {'id': 'pico_2'},
-        {'id': 'pico_invalido'},
+        const ResumoPico(id: 'pico_3', nome: 'Pico 3', local: 'L3'),
+        const ResumoPico(id: 'pico_1', nome: 'Pico 1', local: 'L1'),
+        const ResumoPico(id: 'pico_2', nome: 'Pico 2', local: 'L2'),
+        const ResumoPico(id: 'pico_invalido', nome: 'Pico Inválido', local: 'LI'),
       ];
 
       final ordenados = gerenciador.ordenarPorPrioridade(
@@ -68,7 +69,7 @@ void main() {
         ['pico_1', 'pico_2', 'pico_3'],
       );
 
-      expect(ordenados.map((p) => p['id']).toList(), [
+      expect(ordenados.map((p) => p.id).toList(), [
         'pico_1',
         'pico_2',
         'pico_3',

@@ -20,4 +20,8 @@ class NetworkConstants {
   /// URL oficial padrão de convite para a comunidade do WhatsApp.
   static const String kDefaultWhatsappCommunityUrl =
       'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
+
+  /// URL oficial padrão de convite para o servidor do Discord dos desenvolvedores.
+  static const String kDefaultDiscordCommunityUrl =
+      'https://discord.gg/NT9uSKJWYs';
 }

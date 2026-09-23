@@ -3,10 +3,41 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/sobre_time.dart';
+import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 
+class FakeRemoteConfigService extends Fake implements RemoteConfigService {
+  String discordUrl = 'https://discord.gg/NT9uSKJWYs';
+
+  @override
+  String get discordCommunityUrl => discordUrl;
+}
+
+class MockUrlLauncherPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements UrlLauncherPlatform {
+  String? lastLaunchedUrl;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    lastLaunchedUrl = url;
+    return true;
+  }
+}
+
 void main() {
+  late MockUrlLauncherPlatform mockLauncher;
+  late FakeRemoteConfigService fakeRemoteConfig;
+
+  setUp(() {
+    mockLauncher = MockUrlLauncherPlatform();
+    UrlLauncherPlatform.instance = mockLauncher;
+    fakeRemoteConfig = FakeRemoteConfigService();
+    RemoteConfigService.instance = fakeRemoteConfig;
+  });
   Widget createTestWidget() {
     return MaterialApp(
       home: Theme(
@@ -102,5 +133,18 @@ void main() {
     // Verify it collapsed instead of popping
     expect(find.text('LORENA CARLA'), findsNothing);
     expect(find.text('Designer'), findsOneWidget);
+  });
+
+  testWidgets('Ao clicar no banner inferior de contribuição, abre o link do Discord via RemoteConfigService', (WidgetTester tester) async {
+    setScreenSize(tester);
+    fakeRemoteConfig.discordUrl = 'https://discord.gg/NT9uSKJWYs';
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('O ARESTA É OPEN SOURCE'));
+    await tester.tap(find.text('O ARESTA É OPEN SOURCE'));
+    await tester.pumpAndSettle();
+
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NT9uSKJWYs');
   });
 }

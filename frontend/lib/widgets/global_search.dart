@@ -18,7 +18,7 @@ class GlobalSearchResult {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-  final dynamic originalItem;
+  final Object? originalItem;
   final bool isDownloaded;
   final bool isPico;
 
@@ -35,7 +35,7 @@ class GlobalSearchResult {
 
 class GlobalSearch extends StatefulWidget {
   final DatasetRepository datasetRepo;
-  final List<Map<String, dynamic>> downloadedPicos;
+  final List<ResumoPico> downloadedPicos;
   final bool autoFocus;
 
   const GlobalSearch({
@@ -153,16 +153,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     try {
       // 1. Croquis Baixados
-      for (var cragData in widget.downloadedPicos) {
-        final cragId = cragData['id'];
-        if (cragId == null) continue;
-        final cragIdStr = cragId.toString();
+      for (final cragData in widget.downloadedPicos) {
+        final cragIdStr = cragData.id;
+        if (cragIdStr.isEmpty) continue;
         processedCragIds.add(cragIdStr);
 
-        final picoNome = cragData['nome']?.toString() ?? 'Sem Nome';
-        final picoLocal = cragData['local']?.toString() ??
-            cragData['estado']?.toString() ??
-            '';
+        final picoNome =
+            cragData.nome.isNotEmpty ? cragData.nome : 'Sem Nome';
+        final picoLocal = cragData.local;
         final picoSubtitle = picoLocal.isNotEmpty
             ? 'Pico • $picoLocal • Salvo offline'
             : 'Pico • Salvo offline';
@@ -302,14 +300,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
       final availablePicos =
           widget.datasetRepo.activeDataset.value?.availablePicos ?? const [];
       for (final crag in availablePicos) {
-        final cragId = crag['id']?.toString();
-        if (cragId == null || processedCragIds.contains(cragId)) continue;
+        final cragId = crag.id;
+        if (cragId.isEmpty || processedCragIds.contains(cragId)) {
+          continue;
+        }
         processedCragIds.add(cragId);
 
-        final cragNome = crag['nome']?.toString() ?? 'Sem Nome';
-        final cragLocal = crag['local']?.toString() ??
-            crag['estado']?.toString() ??
-            '';
+        final cragNome = crag.nome.isNotEmpty ? crag.nome : 'Sem Nome';
+        final cragLocal = crag.local;
         final cragSubtitle = cragLocal.isNotEmpty
             ? 'Pico • $cragLocal • Catálogo'
             : 'Pico • Catálogo';
@@ -578,8 +576,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
           return item.originalItem is Setor;
         }
 
-        if (item.originalItem is Escalada) {
-          final esc = item.originalItem as Escalada;
+        final esc = item.originalItem;
+        if (esc is Escalada) {
           if (_selectedFilter == 'Esportivas' &&
               esc.whichTipo() != Escalada_Tipo.viaEsportiva) {
             return false;

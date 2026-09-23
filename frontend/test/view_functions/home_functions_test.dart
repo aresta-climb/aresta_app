@@ -214,11 +214,13 @@ void main() {
       File('${tempCacheDir.path}/compilado.binarypb.hash123')
           .writeAsBytesSync(dummyCroqui.writeToBuffer());
 
-      final dummyPico = {
-        'id': 'pico_online_1',
-        'url': 'https://serving.arestaclimb.com/v4/picos/pico_online_1/compilado.binarypb?v=hash123',
-        'checksum': 'hash123',
-      };
+      const dummyPico = ResumoPico(
+        id: 'pico_online_1',
+        nome: 'Pico Online',
+        local: '',
+        url: 'https://serving.arestaclimb.com/v4/picos/pico_online_1/compilado.binarypb?v=hash123',
+        checksum: 'hash123',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -256,6 +258,45 @@ void main() {
   );
 
   testWidgets(
+    'handlePicoSelection funciona com ResumoPico e dispara telemetria',
+    (WidgetTester tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      const dummyPico = ResumoPico(
+        id: 'pico-tipado-1',
+        nome: 'Pico Tipado',
+        local: 'Local Tipado',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () =>
+                      handlePicoSelection(context, mockRepo, dummyPico),
+                  child: const Text('Go'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go'));
+
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
+    },
+  );
+
+  testWidgets(
     'Downloads from activeDataset update Home download cards reactively',
     (WidgetTester tester) async {
       mockRepo.activeDataset.value = TopoDataset(
@@ -281,15 +322,16 @@ void main() {
               builder: (context, dataset, child) {
                 final isDownloaded =
                     dataset?.downloadedPicos.any(
-                      (p) => p['id'] == 'pico_sync_1',
+                      (p) => p.id == 'pico_sync_1',
                     ) ??
                     false;
                 return CragCard(
-                  crag: {
-                    'id': 'pico_sync_1',
-                    'nome': 'Pico Browse',
-                    'isDownloaded': isDownloaded,
-                  },
+                  crag: ResumoPico(
+                    id: 'pico_sync_1',
+                    nome: 'Pico Browse',
+                    local: 'Local Browse',
+                    isDownloaded: isDownloaded,
+                  ),
                   downloadingCrags: mockSync.downloadingCrags,
                   onDownload: () {},
                   onOpen: () {},
