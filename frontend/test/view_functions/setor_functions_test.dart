@@ -33,7 +33,7 @@ void main() {
         ],
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(id: 'p1', label: '1'),
-          Mapa_PontoDeInteresse(id: 'p2', label: ''),
+          Mapa_PontoDeInteresse(id: 'p2', label: '2'),
         ],
       );
       final mapa2 = Mapa();
@@ -47,7 +47,7 @@ void main() {
 
       final rotulos = resolveRouteLabels(escalada, setor);
       expect(rotulos.mapIndicator, 'M1');
-      expect(rotulos.resolvedLabel, '1-p2');
+      expect(rotulos.resolvedLabel, '1-2');
     });
   });
 
@@ -83,7 +83,6 @@ void main() {
     });
   });
 
-<<<<<<< HEAD
   group('resolveRouteLabels', () {
     test('retorna codenome correto para via com caminho vetorial de múltiplos segmentos', () {
       final via = Escalada(
