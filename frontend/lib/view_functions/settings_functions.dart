@@ -64,20 +64,6 @@ Future<bool> conectarEditor(
     );
     String checkUrl = normalizeEditorUrl(resolvedUrl);
 
-    if (checkUrl.toLowerCase().endsWith('.zip') ||
-        checkUrl.toLowerCase().endsWith('.croqui')) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Aviso: Importação de arquivos locais foi descontinuada. Conecte diretamente via Live Reload / URL.',
-            ),
-          ),
-        );
-      }
-      return false;
-    }
-
     final httpClient = client ?? http.Client();
     final response = await httpClient
         .get(Uri.parse('$checkUrl/indice.binarypb'))
@@ -86,7 +72,6 @@ Future<bool> conectarEditor(
     if (response.statusCode == 200) {
       await configService.activateExperimental(
         url: checkUrl,
-        forceResetTimer: false,
       );
       final servicoSync = syncService ??
           SyncService(
@@ -503,7 +488,7 @@ Widget buildEditorCard({
             statusIcon = Icons.science;
             statusLabel = 'MODO EXPERIMENTAL / PRÉVIA';
             description =
-                'Visualizando croquis transmitidos em tempo real pelo Editor Desktop ou arquivo importado.';
+                'Visualizando croquis sincronizados em tempo real com o Editor Desktop.';
             buttonText = 'VOLTAR PARA MODO OFICIAL';
           } else {
             statusIcon = Icons.verified;

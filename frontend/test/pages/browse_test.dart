@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -53,6 +54,7 @@ void main() {
   late MockTelemetryService mockTelemetry;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     mockEditor = EditorDeCroqui();
     mockRepo = FakeDatasetRepository(mockEditor);
     mockSync = FakeSyncService(mockRepo);
@@ -198,7 +200,8 @@ void main() {
       // Tapping a downloaded crag directly opens it (triggers AppNav.toPico which shows indicator in tests)
       await tester.tap(find.text('PICO BAIXADO'));
 
-      // Pump just ONE frame to see the dialog/indicator
+      // Process microtasks from async first-visit check and pump dialog frame
+      await tester.pump();
       await tester.pump();
 
       // The CircularProgressIndicator should be visible
@@ -263,8 +266,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Select Alphabetical
+      mockTelemetry.clear();
       await tester.tap(find.text('Alfabético (A-Z)'));
       await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
+      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
+      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'alfabetico');
 
       // Alphabetical order: A, B, C
       expect(
@@ -283,8 +291,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Select Route Count
+      mockTelemetry.clear();
       await tester.tap(find.text('Por número de escaladas'));
       await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
+      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
+      expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'escaladas');
 
       // Route count order (descending): B (50), C (10), A (5)
       expect(

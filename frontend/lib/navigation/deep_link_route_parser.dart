@@ -11,9 +11,13 @@ class RotaDeepLink {
   /// Segmentos hierárquicos filhos do pico normalizados em formato de slug.
   final List<String> segmentos;
 
+  /// Parâmetros de consulta (query parameters) preservados da URL (ex: parâmetros UTM).
+  final Map<String, String> parametros;
+
   const RotaDeepLink({
     required this.picoId,
     required this.segmentos,
+    this.parametros = const {},
   });
 
   /// Retorna a quantidade de níveis de profundidade após o pico (0 = apenas o pico).
@@ -29,7 +33,8 @@ class RotaDeepLink {
   String? get terceiroSegmento => segmentos.length > 2 ? segmentos[2] : null;
 
   @override
-  String toString() => 'RotaDeepLink(picoId: $picoId, segmentos: $segmentos)';
+  String toString() =>
+      'RotaDeepLink(picoId: $picoId, segmentos: $segmentos, parametros: $parametros)';
 
   @override
   bool operator ==(Object other) =>
@@ -37,15 +42,27 @@ class RotaDeepLink {
       other is RotaDeepLink &&
           runtimeType == other.runtimeType &&
           picoId == other.picoId &&
-          _listasIguais(segmentos, other.segmentos);
+          _listasIguais(segmentos, other.segmentos) &&
+          _mapasIguais(parametros, other.parametros);
 
   @override
-  int get hashCode => picoId.hashCode ^ Object.hashAll(segmentos);
+  int get hashCode =>
+      picoId.hashCode ^
+      Object.hashAll(segmentos) ^
+      Object.hashAll(parametros.entries);
 
   static bool _listasIguais(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
       if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  static bool _mapasIguais(Map<String, String> a, Map<String, String> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
     }
     return true;
   }
@@ -104,6 +121,7 @@ class DeepLinkRouteParser {
     return RotaDeepLink(
       picoId: picoId,
       segmentos: subSegmentos,
+      parametros: Map<String, String>.from(uri.queryParameters),
     );
   }
 }

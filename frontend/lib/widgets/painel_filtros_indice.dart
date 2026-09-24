@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/filtro_grau_escalada.dart';
 
@@ -9,6 +10,9 @@ import '../utils/filtro_grau_escalada.dart';
 /// do Índice de Escaladas, com RangeSlider para graus, seletores dropdown
 /// que empilham chips removíveis para setores e conquistadores, e filtro de clássicas.
 class PainelFiltrosIndice extends StatefulWidget {
+  /// Identificador do croqui/pico para eventos de telemetria.
+  final String? cragId;
+
   /// O estado atual dos filtros ativos.
   final EstadoFiltrosIndice estado;
 
@@ -35,6 +39,7 @@ class PainelFiltrosIndice extends StatefulWidget {
 
   const PainelFiltrosIndice({
     super.key,
+    this.cragId,
     required this.estado,
     required this.modalidade,
     required this.setoresDisponiveis,
@@ -51,6 +56,17 @@ class PainelFiltrosIndice extends StatefulWidget {
 
 class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
   late bool _expandido;
+
+  void _logTelemetria(String acao, {String? detalhe}) {
+    if (widget.cragId != null && widget.cragId!.isNotEmpty) {
+      TelemetryService.instance.logAcaoIndiceEscaladas(
+        widget.cragId!,
+        acao,
+        modalidade: widget.modalidade,
+        detalhe: detalhe,
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -97,8 +113,12 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           // Cabeçalho acionável (colapsa / expande)
           InkWell(
             onTap: () {
+              final novoExpandido = !_expandido;
+              _logTelemetria(
+                novoExpandido ? 'expandir_filtros' : 'colapsar_filtros',
+              );
               setState(() {
-                _expandido = !_expandido;
+                _expandido = novoExpandido;
               });
             },
             child: Padding(
@@ -217,6 +237,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                                   : colors.graniteEdge,
                             ),
                             onSelected: (selecionado) {
+                              _logTelemetria(
+                                'filtrar_classicas',
+                                detalhe: selecionado ? 'true' : 'false',
+                              );
                               widget.onFiltrosChanged(
                                 widget.estado.copyWith(apenasClassicas: selecionado),
                               );
@@ -226,6 +250,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                         if (totalAtivos > 0)
                           TextButton.icon(
                             onPressed: () {
+                              _logTelemetria('limpar_filtros');
                               widget.onFiltrosChanged(
                                 const EstadoFiltrosIndice(),
                               );
@@ -288,6 +313,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           side: BorderSide(color: colors.rustIron),
           deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
           onDeleted: () {
+            _logTelemetria('filtrar_grau', detalhe: 'Todos os graus');
             widget.onFiltrosChanged(
               widget.estado.copyWith(
                 clearMinGrau: true,
@@ -311,6 +337,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           side: BorderSide(color: colors.rustIron),
           deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
           onDeleted: () {
+            _logTelemetria('filtrar_setor', detalhe: s);
             final novos = Set<String>.from(widget.estado.setores)..remove(s);
             widget.onFiltrosChanged(widget.estado.copyWith(setores: novos));
           },
@@ -330,6 +357,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           side: BorderSide(color: colors.rustIron),
           deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
           onDeleted: () {
+            _logTelemetria('filtrar_conquistador', detalhe: c);
             final novos = Set<String>.from(widget.estado.conquistadores)..remove(c);
             widget.onFiltrosChanged(widget.estado.copyWith(conquistadores: novos));
           },
@@ -353,6 +381,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           side: const BorderSide(color: Colors.amber),
           deleteIcon: const Icon(Icons.close, size: 16, color: Colors.amber),
           onDeleted: () {
+            _logTelemetria('filtrar_classicas', detalhe: 'false');
             widget.onFiltrosChanged(
               widget.estado.copyWith(apenasClassicas: false),
             );
@@ -450,6 +479,16 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             opcoes[startIdx].rotulo,
             opcoes[endIdx].rotulo,
           ),
+          onChangeEnd: (novos) {
+            final s = novos.start.round();
+            final e = novos.end.round();
+            final rotulo = (s == 0 && e == maxIndex)
+                ? 'Todos os graus'
+                : (s == e
+                    ? opcoes[s].rotulo
+                    : '${opcoes[s].rotulo} a ${opcoes[e].rotulo}');
+            _logTelemetria('filtrar_grau', detalhe: rotulo);
+          },
           onChanged: (novos) {
             final s = novos.start.round();
             final e = novos.end.round();
@@ -545,6 +584,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               onChanged: habilitado
                   ? (novo) {
                       if (novo != null) {
+                        _logTelemetria('filtrar_setor', detalhe: novo);
                         final novos = Set<String>.from(widget.estado.setores)
                           ..add(novo);
                         widget.onFiltrosChanged(
@@ -571,6 +611,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                 side: BorderSide(color: colors.rustIron),
                 deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
                 onDeleted: () {
+                  _logTelemetria('filtrar_setor', detalhe: s);
                   final novos = Set<String>.from(widget.estado.setores)..remove(s);
                   widget.onFiltrosChanged(widget.estado.copyWith(setores: novos));
                 },
@@ -652,6 +693,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               onChanged: habilitado
                   ? (novo) {
                       if (novo != null) {
+                        _logTelemetria('filtrar_conquistador', detalhe: novo);
                         final novos = Set<String>.from(widget.estado.conquistadores)
                           ..add(novo);
                         widget.onFiltrosChanged(
@@ -678,6 +720,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                 side: BorderSide(color: colors.rustIron),
                 deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
                 onDeleted: () {
+                  _logTelemetria('filtrar_conquistador', detalhe: c);
                   final novos = Set<String>.from(widget.estado.conquistadores)
                     ..remove(c);
                   widget.onFiltrosChanged(

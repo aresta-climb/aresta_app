@@ -3,10 +3,14 @@
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Banner visual posicionado no topo ou na página de detalhes do pico
 /// indicando navegação em modo online e permitindo salvamento offline com 1 toque.
 class BannerModoOnline extends StatelessWidget {
+  /// Identificador do croqui/pico para fins de telemetria (opcional).
+  final String? cragId;
+
   /// Tamanho pré-formatado do download (opcional).
   final String? tamanhoFormatado;
 
@@ -21,6 +25,7 @@ class BannerModoOnline extends StatelessWidget {
 
   const BannerModoOnline({
     super.key,
+    this.cragId,
     this.tamanhoFormatado,
     required this.isDownloaded,
     this.progressoDownload,
@@ -138,7 +143,12 @@ class BannerModoOnline extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onSalvarOffline,
+                onPressed: () {
+                  if (cragId != null) {
+                    TelemetryService.instance.logSalvarOfflineBanner(cragId!);
+                  }
+                  onSalvarOffline();
+                },
                 icon: const Icon(
                   Icons.download_rounded,
                   size: 18,

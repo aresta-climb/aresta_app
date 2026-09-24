@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   testWidgets('GrupoPage should wrap body in SafeArea', (tester) async {
@@ -44,6 +46,35 @@ void main() {
       ),
     );
     await tester.pump();
+  });
+
+  testWidgets('GrupoPage dispara logAlterarOrdenacao ao alternar critérios de ordenação', (tester) async {
+    final mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
+
+    final grupo = Grupo()
+      ..nome = 'Grupo Ordenação'
+      ..setores.addAll([
+        ArquivoSetor(conteudo: Setor(nome: 'Setor B')),
+        ArquivoSetor(conteudo: Setor(nome: 'Setor A')),
+      ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GrupoPage(grupo: grupo, cragId: 'crag1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    mockTelemetria.clear();
+    await tester.tap(find.text('ALFABÉTICO'));
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
+    final params = mockTelemetria.recordedParams['alterar_ordenacao']!;
+    expect(params['acao'], 'alterar_ordenacao');
+    expect(params['origem'], 'grupo');
+    expect(params['detalhe'], 'alphaAsc');
   });
 }
 

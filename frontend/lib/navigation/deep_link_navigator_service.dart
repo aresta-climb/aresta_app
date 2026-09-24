@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
+import '../services/firebase/telemetry_service.dart';
 import '../utils/dataset_resolver.dart';
 import '../utils/slug_utils.dart';
 import 'deep_link_route_parser.dart';
@@ -14,6 +15,7 @@ import 'navigation_tree.dart';
 class DeepLinkNavigatorService {
   final DatasetRepository datasetRepo;
   final TreeNavigationController treeController;
+  final TelemetryService telemetryService;
 
   /// Callback para emissão de mensagens de aviso/erro à interface (opcional).
   void Function(String mensagem)? onMensagemAviso;
@@ -22,21 +24,37 @@ class DeepLinkNavigatorService {
     required this.datasetRepo,
     required this.treeController,
     this.onMensagemAviso,
-  });
+    TelemetryService? telemetryService,
+  }) : telemetryService = telemetryService ?? TelemetryService.instance;
 
   /// Processa uma URL ou Uri de deep link.
   ///
   /// Retorna `true` se o link foi processado e a navegação executada com sucesso,
   /// ou `false` caso o link seja inválido, o croqui não possa ser carregado ou o pico não exista.
-  Future<bool> processarLink(dynamic link, {BuildContext? context}) async {
+  Future<bool> processarLink(
+    dynamic link, {
+    BuildContext? context,
+    String? tipoStart,
+  }) async {
     final rota = DeepLinkRouteParser.parse(link);
     if (rota == null) {
       return false;
     }
 
+    final parametrosUtm = rota.parametros.isEmpty ? null : rota.parametros;
+
     // 1. Resolve o Pico e Croqui correspondente
     final dadosPico = await _obterPicoECroqui(rota.picoId);
     if (dadosPico == null) {
+      await telemetryService.logDeepLinkAberto(
+        idCroqui: rota.picoId,
+        destino: _inferirDestino(rota),
+        sucesso: false,
+        tipoStart: tipoStart,
+        motivoErro: 'pico_nao_encontrado_ou_sem_conexao',
+        parametrosUtm: parametrosUtm,
+      );
+
       final mensagem =
           'Não foi possível abrir o croqui de "${rota.picoId}". Verifique sua conexão à internet ou baixe o pico previamente.';
       if (context != null && !context.mounted) {
@@ -55,10 +73,22 @@ class DeepLinkNavigatorService {
     final NavNode raiz = const HomeNode();
     final picoNode = PicoNode(cragId: rota.picoId, parent: raiz);
 
+    // Função auxiliar para navegar e registrar telemetria de sucesso
+    Future<bool> navegarPara(NavNode node, String destino) async {
+      treeController.navigateTo(node);
+      await telemetryService.logDeepLinkAberto(
+        idCroqui: rota.picoId,
+        destino: destino,
+        sucesso: true,
+        tipoStart: tipoStart,
+        parametrosUtm: parametrosUtm,
+      );
+      return true;
+    }
+
     // Se o link aponta apenas para o Pico (nível 1)
     if (rota.profundidade == 0) {
-      treeController.navigateTo(picoNode);
-      return true;
+      return navegarPara(picoNode, 'pico');
     }
 
     // 3. Procura se o primeiro segmento é um Grupo
@@ -83,8 +113,7 @@ class DeepLinkNavigatorService {
 
       // Link aponta para o Grupo (nível 2)
       if (rota.profundidade == 1) {
-        treeController.navigateTo(grupoNode);
-        return true;
+        return navegarPara(grupoNode, 'grupo');
       }
 
       // Procura Setor dentro do Grupo (nível 3)
@@ -109,8 +138,7 @@ class DeepLinkNavigatorService {
 
         // Link aponta para o Setor dentro de Grupo (nível 3)
         if (rota.profundidade == 2) {
-          treeController.navigateTo(setorNode);
-          return true;
+          return navegarPara(setorNode, 'setor');
         }
 
         // Procura Via dentro do Setor do Grupo (nível 4)
@@ -130,18 +158,15 @@ class DeepLinkNavigatorService {
             cragId: rota.picoId,
             parent: setorNode,
           );
-          treeController.navigateTo(viaNode);
-          return true;
+          return navegarPara(viaNode, 'via');
         }
 
         // Fallback para o setor se a via não for encontrada
-        treeController.navigateTo(setorNode);
-        return true;
+        return navegarPara(setorNode, 'setor');
       }
 
       // Fallback para o grupo se o setor não for encontrado
-      treeController.navigateTo(grupoNode);
-      return true;
+      return navegarPara(grupoNode, 'grupo');
     }
 
     // 4. Se não for Grupo, procura se o primeiro segmento é um Setor direto
@@ -197,8 +222,7 @@ class DeepLinkNavigatorService {
 
       // Link aponta para o Setor (nível 2)
       if (rota.profundidade == 1) {
-        treeController.navigateTo(setorNode);
-        return true;
+        return navegarPara(setorNode, 'setor');
       }
 
       // Procura Via dentro do Setor (nível 3)
@@ -218,18 +242,21 @@ class DeepLinkNavigatorService {
           cragId: rota.picoId,
           parent: setorNode,
         );
-        treeController.navigateTo(viaNode);
-        return true;
+        return navegarPara(viaNode, 'via');
       }
 
       // Fallback para o setor se a via não for encontrada
-      treeController.navigateTo(setorNode);
-      return true;
+      return navegarPara(setorNode, 'setor');
     }
 
     // Se nenhum grupo ou setor for encontrado, abre o Pico como fallback
-    treeController.navigateTo(picoNode);
-    return true;
+    return navegarPara(picoNode, 'pico');
+  }
+
+  String _inferirDestino(RotaDeepLink rota) {
+    if (rota.profundidade >= 2) return 'via';
+    if (rota.profundidade == 1) return 'setor';
+    return 'pico';
   }
 
   Future<_DadosPico?> _obterPicoECroqui(String picoId) async {

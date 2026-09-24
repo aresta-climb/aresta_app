@@ -52,11 +52,19 @@ class MockTelemetryService implements TelemetryService {
     String idCroqui,
     String acao, {
     String? origem,
+    String? modoAcesso,
+    bool? primeiraVisita,
   }) async {
     recordedEvents.add('acao_croqui');
     final params = <String, dynamic>{'id_croqui': idCroqui, 'acao': acao};
     if (origem != null) {
       params['origem'] = origem;
+    }
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (primeiraVisita != null) {
+      params['primeira_visita'] = primeiraVisita ? 'true' : 'false';
     }
     recordedParams['acao_croqui'] = params;
   }
@@ -157,9 +165,139 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
-  Future<void> logLinkExterno(String url, String origem) async {
+  Future<void> logLinkExterno(String url, String origem, {String? detalhe}) async {
     recordedEvents.add('link_externo');
-    recordedParams['link_externo'] = {'url': url, 'origem': origem};
+    recordedParams['link_externo'] = {
+      'acao': 'abrir_link_externo',
+      'url': url,
+      'origem': origem,
+      'detalhe': detalhe ?? url,
+    };
+  }
+
+  @override
+  Future<void> logAcaoIndiceEscaladas(
+    String idCroqui,
+    String acao, {
+    required String modalidade,
+    String? detalhe,
+  }) async {
+    recordedEvents.add('acao_indice_escaladas');
+    final origemModalidade = modalidade.toLowerCase().startsWith('indice_')
+        ? modalidade.toLowerCase()
+        : 'indice_${modalidade.toLowerCase()}';
+    final params = <String, dynamic>{
+      'id_croqui': idCroqui,
+      'acao': acao,
+      'origem': origemModalidade,
+    };
+    if (detalhe != null) {
+      params['detalhe'] = detalhe;
+    }
+    recordedParams['acao_indice_escaladas'] = params;
+  }
+
+  @override
+  Future<void> logDeepLinkAberto({
+    required String idCroqui,
+    required String destino,
+    required bool sucesso,
+    String? tipoStart,
+    String? motivoErro,
+    Map<String, String>? parametrosUtm,
+  }) async {
+    recordedEvents.add('deep_link_aberto');
+    final params = <String, dynamic>{
+      'id_croqui': idCroqui,
+      'acao': destino,
+      'destino': destino,
+      'sucesso': sucesso ? 'true' : 'false',
+    };
+    if (tipoStart != null) {
+      params['tipo_start'] = tipoStart;
+      params['origem'] = tipoStart;
+    }
+    if (motivoErro != null) {
+      params['motivo_erro'] = motivoErro;
+    }
+    if (parametrosUtm != null) {
+      params.addAll(parametrosUtm);
+    }
+    recordedParams['deep_link_aberto'] = params;
+  }
+
+  @override
+  Future<void> logAcaoBetaAberto(
+    String acao, {
+    String? origem,
+    String? canal,
+    String? detalhe,
+  }) async {
+    recordedEvents.add('acao_beta_aberto');
+    final params = <String, dynamic>{
+      'acao': acao,
+      'origem': origem ?? 'modal_beta',
+    };
+    if (canal != null) {
+      params['canal'] = canal;
+    }
+    final infoDetalhe = detalhe ?? canal;
+    if (infoDetalhe != null) {
+      params['detalhe'] = infoDetalhe;
+    }
+    recordedParams['acao_beta_aberto'] = params;
+  }
+
+  @override
+  Future<void> logApoioPix(String idCroqui) async {
+    recordedEvents.add('apoio_pico');
+    recordedParams['apoio_pico'] = {
+      'id_croqui': idCroqui,
+      'acao': 'copiar_pix',
+      'origem': 'apoie_pico',
+    };
+  }
+
+  @override
+  Future<void> logAcaoGuardiaoSaida(String idCroqui, String acao) async {
+    recordedEvents.add('guardiao_saida');
+    recordedParams['guardiao_saida'] = {
+      'id_croqui': idCroqui,
+      'acao': acao,
+      'origem': 'guardiao_saida',
+      'modo_acesso': 'online',
+    };
+  }
+
+  @override
+  Future<void> logSalvarOfflineBanner(String idCroqui) async {
+    recordedEvents.add('banner_modo_online');
+    recordedParams['banner_modo_online'] = {
+      'id_croqui': idCroqui,
+      'acao': 'banner_salvar_offline',
+      'origem': 'banner_online',
+      'modo_acesso': 'online',
+    };
+  }
+
+  @override
+  Future<void> logNavegacaoPicoHub(String idCroqui, String secao) async {
+    recordedEvents.add('navegacao_pico_hub');
+    recordedParams['navegacao_pico_hub'] = {
+      'id_croqui': idCroqui,
+      'acao': secao,
+      'origem': 'pico_hub',
+    };
+  }
+
+  @override
+  Future<void> logAlterarOrdenacao(String contexto, String modo) async {
+    recordedEvents.add('alterar_ordenacao');
+    recordedParams['alterar_ordenacao'] = {
+      'acao': 'alterar_ordenacao',
+      'origem': contexto,
+      'detalhe': modo,
+    };
   }
 
   @override

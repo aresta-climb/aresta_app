@@ -321,6 +321,7 @@ class _BrowsePageState extends State<BrowsePage> {
     final isSelected = _sortOrder == order;
     return InkWell(
       onTap: () {
+        TelemetryService.instance.logAlterarOrdenacao('browse', order.name);
         setState(() {
           _sortOrder = order;
         });

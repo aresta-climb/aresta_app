@@ -112,6 +112,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   late bool _autoZoomEnabled;
   bool _initialZoom = false;
   Size? _imageSize;
+  Size? _viewportSize;
   int _focusedItemIndex = 0;
   bool _usuarioAjustouZoomManualmente = false;
   double _escalaNoInicioDoGesto = 1.0;
@@ -184,12 +185,72 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   void didUpdateWidget(MapaInterativoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     _buildReferenceMaps();
-    setState(() {
+
+    // 1. Apenas re-resolve a imagem se o caminho físico ou overrides realmente mudaram
+    final imageChanged = widget.mapa.caminhoImagemMapa != oldWidget.mapa.caminhoImagemMapa ||
+        widget.imageProviderOverride != oldWidget.imageProviderOverride ||
+        widget.imageProviderFutureOverride != oldWidget.imageProviderFutureOverride;
+
+    if (imageChanged) {
       _imageProviderFuture = widget.imageProviderFutureOverride ??
           (widget.imageProviderOverride != null
               ? Future.value(widget.imageProviderOverride)
               : _resolveImageProvider());
-    });
+    }
+
+    // 2. Se a via ou o POI inicial mudaram, atualiza o foco e a seleção de forma reativa
+    final selectionChanged = widget.initialSelectedId != oldWidget.initialSelectedId ||
+        widget.escaladaContextNome != oldWidget.escaladaContextNome;
+
+    if (selectionChanged) {
+      _selectedId = widget.initialSelectedId;
+      int targetIndex = 0;
+
+      if (widget.escaladaContextNome != null && _selectedId != null) {
+        final refs = _poiToRefs[_selectedId!];
+        if (refs != null) {
+          for (int i = 0; i < refs.length; i++) {
+            final resolved = _refToResolved[refs[i]];
+            if (resolved?.escalada != null &&
+                getEscaladaNome(resolved!.escalada!) ==
+                    widget.escaladaContextNome) {
+              targetIndex = i;
+              break;
+            }
+          }
+        }
+      }
+
+      _focusedItemIndex = targetIndex;
+      _usuarioAjustouZoomManualmente = false;
+      _updateFeedbackNode();
+
+      // 3. Translada e anima o zoom para os pontos da nova via selecionada
+      if (_autoZoomEnabled && _selectedId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Mapa_PontoDeInteresse? targetMarker;
+          for (var p in widget.mapa.pontosDeInteresse) {
+            if (p.id == _selectedId) {
+              targetMarker = p;
+              break;
+            }
+          }
+          if (targetMarker != null && _imageSize != null && _viewportSize != null) {
+            final refs = _poiToRefs[targetMarker.id];
+            if (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length) {
+              final ref = refs[_focusedItemIndex];
+              final pontos = _getPontosForRef(ref);
+              _zoomToPoints(pontos, _imageSize!, _viewportSize!, ref: ref);
+            } else {
+              _zoomToPoints([targetMarker], _imageSize!, _viewportSize!);
+            }
+          }
+        });
+      }
+    }
+
+    setState(() {});
   }
 
 
@@ -231,7 +292,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       FeedbackMetadataCollector.globalActiveNodeOverride = null;
     } else {
       final refs = _poiToRefs[_selectedId];
-      final ref = refs != null && refs.isNotEmpty ? refs.first : null;
+      final ref = (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length)
+          ? refs[_focusedItemIndex]
+          : (refs != null && refs.isNotEmpty ? refs.first : null);
       final viaName = ref?.nome ?? _selectedId;
       final fileName = widget.mapa.caminhoImagemMapa.split('/').last;
       FeedbackMetadataCollector.globalActiveNodeOverride =
@@ -1204,6 +1267,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           viewportConstraints.maxWidth,
           viewportConstraints.maxHeight,
         );
+        _viewportSize = viewportSize;
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) {

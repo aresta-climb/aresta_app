@@ -3,9 +3,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/widgets/banner_modo_online.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
+  late MockTelemetryService mockTelemetria;
+
+  setUp(() {
+    mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
+  });
+
   group('BannerModoOnline', () {
     testWidgets('exibe modo online e botão de salvar offline', (tester) async {
       bool clicouSalvar = false;
@@ -83,6 +92,32 @@ void main() {
 
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+    });
+
+    testWidgets('dispara telemetria banner_modo_online ao salvar com cragId informado', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BannerModoOnline(
+              cragId: 'crag_banner_teste',
+              tamanhoFormatado: '18.4 MB',
+              isDownloaded: false,
+              progressoDownload: null,
+              onSalvarOffline: () {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Salvar Offline (18.4 MB)'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetria.recordedEvents, contains('banner_modo_online'));
+      final params = mockTelemetria.recordedParams['banner_modo_online']!;
+      expect(params['id_croqui'], 'crag_banner_teste');
+      expect(params['acao'], 'banner_salvar_offline');
+      expect(params['origem'], 'banner_online');
+      expect(params['modo_acesso'], 'online');
     });
   });
 }

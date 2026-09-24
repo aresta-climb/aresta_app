@@ -6,8 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/utils/indexador_escaladas.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   Widget criarAmbiente({
@@ -248,6 +250,54 @@ void main() {
 
       // Agora não há clássicas com autor Bruno: o botão deve ser ocultado
       expect(find.text('Apenas Clássicas (★)'), findsNothing);
+    });
+
+    testWidgets('dispara telemetria ao alternar abas de modalidade', (tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      await tester.pumpWidget(
+        criarAmbiente(pico: pico, croqui: croqui, cragId: 'crag-1'),
+      );
+      await tester.pumpAndSettle();
+
+      // Alterna para aba Boulders
+      await tester.tap(find.textContaining('Boulders'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag-1');
+      expect(params['acao'], 'trocar_aba');
+      expect(params['origem'], 'indice_boulder');
+      expect(params['detalhe'], 'Boulder');
+    });
+
+    testWidgets('dispara telemetria ao tocar em um card de escalada', (tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          pico: pico,
+          croqui: croqui,
+          cragId: 'crag-1',
+          onViaTap: (_) {},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Clica no card da via 'Sol Nascente'
+      await tester.tap(find.text('Sol Nascente'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      final params = mockTelemetry.recordedParams['acao_escalada']!;
+      expect(params['id_croqui'], 'crag-1');
+      expect(params['nome_setor'], 'Setor Principal');
+      expect(params['nome_escalada'], 'Sol Nascente');
+      expect(params['acao'], 'abrir_detalhes');
+      expect(params['origem'], 'indice_esportiva');
     });
   });
 }

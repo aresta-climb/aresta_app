@@ -173,6 +173,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       ModalConfirmacaoSaida.mostrar(
         context: context,
         nomePico: widget.pico.nome,
+        cragId: widget.cragId,
         tamanhoFormatado: tamanhoFormatado,
         onSalvar: () {
           _iniciarDownload();
@@ -535,6 +536,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             final progresso = downloadingMap[widget.cragId];
 
                             return BannerModoOnline(
+                              cragId: widget.cragId,
                               tamanhoFormatado: tamanhoFormatado,
                               isDownloaded: isDownloaded,
                               progressoDownload: progresso,
@@ -707,6 +709,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             titleColor: context.colors.chalkWhite,
                             subtitleColor: context.colors.fishBone,
                             onTap: () {
+                              TelemetryService.instance.logNavegacaoPicoHub(
+                                widget.cragId,
+                                'abrir_setores',
+                              );
                               TreeNavigationWrapper.of(
                                 context,
                               ).treeController.navigateTo(
@@ -733,6 +739,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             titleColor: context.colors.chalkWhite,
                             subtitleColor: context.colors.fishBone,
                             onTap: () {
+                              TelemetryService.instance.logNavegacaoPicoHub(
+                                widget.cragId,
+                                'abrir_indice_escaladas',
+                              );
                               TreeNavigationWrapper.of(
                                 context,
                               ).treeController.navigateTo(
@@ -761,6 +771,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     titleColor: context.colors.chalkWhite,
                     subtitleColor: context.colors.fishBone,
                     onTap: () {
+                      TelemetryService.instance.logNavegacaoPicoHub(
+                        widget.cragId,
+                        'abrir_explorar_local',
+                      );
                       TreeNavigationWrapper.of(
                         context,
                       ).treeController.navigateTo(
@@ -784,6 +798,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     titleColor: context.colors.chalkWhite,
                     subtitleColor: context.colors.fishBone,
                     onTap: () {
+                      TelemetryService.instance.logNavegacaoPicoHub(
+                        widget.cragId,
+                        'abrir_regras',
+                      );
                       showRegrasBottomSheet(
                         context,
                         _categories.regras,
@@ -802,6 +820,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     titleColor: context.colors.chalkWhite,
                     subtitleColor: context.colors.fishBone,
                     onTap: () {
+                      TelemetryService.instance.logNavegacaoPicoHub(
+                        widget.cragId,
+                        'abrir_comunidade',
+                      );
                       TreeNavigationWrapper.of(
                         context,
                       ).treeController.navigateTo(
@@ -852,6 +874,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                         titleColor: context.colors.chalkWhite,
                         subtitleColor: context.colors.fishBone,
                         onTap: () {
+                          TelemetryService.instance.logNavegacaoPicoHub(
+                            widget.cragId,
+                            'abrir_creditos',
+                          );
                           TreeNavigationWrapper.of(
                             context,
                           ).treeController.navigateTo(

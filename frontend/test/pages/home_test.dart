@@ -156,10 +156,17 @@ void main() {
     final brandFinder = find.text('ARESTA CLIMB');
     expect(brandFinder, findsOneWidget);
 
+    final mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
+
     await tester.tap(brandFinder);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(ModalBetaAberto), findsOneWidget);
+    expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
+    final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
+    expect(params['acao'], 'abrir_modal_beta');
+    expect(params['origem'], 'home_header');
   });
 }

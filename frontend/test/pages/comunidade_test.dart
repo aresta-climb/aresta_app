@@ -9,7 +9,9 @@ import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_app_logger.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
@@ -38,8 +40,11 @@ void main() {
   late MockAppLogger mockLogger;
   late MockUrlLauncherPlatform mockLauncher;
   late FakeRemoteConfigService fakeRemoteConfig;
+  late MockTelemetryService mockTelemetria;
 
   setUp(() {
+    mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
     mockLogger = MockAppLogger();
     AppLogger.instance = mockLogger;
     mockLauncher = MockUrlLauncherPlatform();
@@ -185,5 +190,61 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('• Beta Aberto'), findsOneWidget);
+  });
+
+  testWidgets('ComunidadePage dispara logLinkExterno com detalhe ao clicar nos cards sociais', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    // 1. WhatsApp
+    mockTelemetria.clear();
+    await tester.tap(find.text('GRUPO DO WHATSAPP'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    var params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['acao'], 'abrir_link_externo');
+    expect(params['origem'], 'comunidade');
+    expect(params['detalhe'], 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA');
+
+    // 2. Instagram
+    mockTelemetria.clear();
+    await tester.tap(find.text('INSTAGRAM OFICIAL'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['acao'], 'abrir_link_externo');
+    expect(params['origem'], 'comunidade');
+    expect(params['detalhe'], 'https://www.instagram.com/arestaclimb/');
+
+    // 3. LinkedIn
+    mockTelemetria.clear();
+    await tester.ensureVisible(find.text('LINKEDIN DO PROJETO'));
+    await tester.tap(find.text('LINKEDIN DO PROJETO'));
+    await tester.pumpAndSettle();
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['origem'], 'comunidade');
+    expect(params['detalhe'], 'https://www.linkedin.com/company/arestaclimb/');
+
+    // 4. Discord
+    mockTelemetria.clear();
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['origem'], 'comunidade');
+    expect(params['detalhe'], 'https://discord.gg/3KDTwcxHK');
+
+    // 5. GitHub
+    mockTelemetria.clear();
+    await tester.ensureVisible(find.text('GITHUB DO ARESTA'));
+    await tester.tap(find.text('GITHUB DO ARESTA'));
+    await tester.pumpAndSettle();
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['origem'], 'comunidade');
+    expect(params['detalhe'], 'https://github.com/aresta-climb');
   });
 }

@@ -1,4 +1,8 @@
-## MODIFIED Requirements
+## Purpose
+
+Interface e navegação sequencial entre múltiplos mapas interativos no aplicativo.
+
+## Requirements
 
 ### Requirement: Qualidade, Cobertura (TDD) e Docstrings
 O sistema DEVE ser desenvolvido utilizando Test-Driven Development (TDD), com o código alcançando obrigatoriamente 100% de cobertura nos testes unitários e de widget das lógicas e componentes modificados. O código alterado DEVE ser bem comentado, adotando docstrings descritivas nas classes e métodos.

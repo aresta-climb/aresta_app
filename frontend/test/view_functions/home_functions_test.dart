@@ -22,6 +22,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -50,6 +51,8 @@ void main() {
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    RegistroPrimeiraVisita.resetForTesting();
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
     tempDir = await Directory.systemTemp.createTemp('home_fn_test');
     PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
@@ -151,7 +154,7 @@ void main() {
   );
 
   testWidgets(
-    'handlePicoSelection dispara telemetria de abrir_croqui com origem',
+    'handlePicoSelection dispara telemetria de abrir_croqui com origem, modoAcesso e primeiraVisita',
     (WidgetTester tester) async {
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
@@ -161,20 +164,18 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return ElevatedButton(
-                  onPressed: () =>
-                      handlePicoSelection(context, mockRepo, dummyPico),
-                  child: const Text('Go'),
-                );
-              },
-            ),
+            body: Container(),
           ),
         ),
       );
 
-      await tester.tap(find.text('Go'));
+      final context = tester.element(find.byType(Container));
+
+      await tester.runAsync(() async {
+        await handlePicoSelection(context, mockRepo, dummyPico, source: 'home');
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
       expect(
@@ -182,6 +183,17 @@ void main() {
         'abrir_croqui',
       );
       expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'home');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'online');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
+
+      // Segunda visita ao mesmo pico: primeira_visita deve ser 'false'
+      await tester.runAsync(() async {
+        await handlePicoSelection(context, mockRepo, dummyPico, source: 'home');
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'false');
     },
   );
 

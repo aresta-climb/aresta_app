@@ -63,7 +63,7 @@ frontend/
 │   ├── view_functions/                  - Builders de UI, callbacks e funções por página
 │   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
 │   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
-│   │   ├── settings_functions.dart      - Importação de .croqui, QR code, conexão com editor
+│   │   ├── settings_functions.dart      - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
 │   │   ├── mapa/
 │   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
 │   │   │   └── mapa_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa

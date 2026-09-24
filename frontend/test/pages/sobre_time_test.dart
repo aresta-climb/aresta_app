@@ -3,10 +3,35 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/sobre_time.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/app_colors.dart';
+import '../mocks/mock_telemetry_service.dart';
+
+class MockUrlLauncherPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements UrlLauncherPlatform {
+  String? lastLaunchedUrl;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    lastLaunchedUrl = url;
+    return true;
+  }
+}
 
 void main() {
+  late MockTelemetryService mockTelemetria;
+  late MockUrlLauncherPlatform mockLauncher;
+
+  setUp(() {
+    mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
+    mockLauncher = MockUrlLauncherPlatform();
+    UrlLauncherPlatform.instance = mockLauncher;
+  });
   Widget createTestWidget() {
     return MaterialApp(
       home: Theme(
@@ -102,5 +127,48 @@ void main() {
     // Verify it collapsed instead of popping
     expect(find.text('LORENA CARLA'), findsNothing);
     expect(find.text('Designer'), findsOneWidget);
+  });
+
+  testWidgets('SobreTimePage dispara logLinkExterno ao tocar no Discord e links dos membros', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    // 1. Toca no card do Discord no rodapé
+    mockTelemetria.clear();
+    await tester.tap(find.text('O ARESTA É OPEN SOURCE'));
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    var params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['acao'], 'abrir_link_externo');
+    expect(params['origem'], 'sobre_time');
+    expect(params['detalhe'], 'https://discord.gg/3KDTwcxHK');
+
+    // 2. Expande o quadrante Frontend (Eduardo)
+    await tester.tap(find.text('Frontend'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // 3. Toca em LinkedIn
+    mockTelemetria.clear();
+    await tester.tap(find.text('LinkedIn'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['acao'], 'abrir_link_externo');
+    expect(params['origem'], 'sobre_time');
+    expect(params['detalhe'], 'https://www.linkedin.com/in/eduardo-utsch-205745350/');
+
+    // 4. Toca em GitHub
+    mockTelemetria.clear();
+    await tester.tap(find.text('GitHub'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('link_externo'));
+    params = mockTelemetria.recordedParams['link_externo']!;
+    expect(params['acao'], 'abrir_link_externo');
+    expect(params['origem'], 'sobre_time');
+    expect(params['detalhe'], 'https://github.com/eduardoutsch');
   });
 }

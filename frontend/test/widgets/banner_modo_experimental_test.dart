@@ -36,11 +36,10 @@ void main() {
     expect(find.textContaining('MODO EXPERIMENTAL'), findsNothing);
   });
 
-  testWidgets('deve renderizar o banner e o tempo restante quando em modo experimental', (
-    WidgetTester tester,
-  ) async {
+  testWidgets(
+      'deve renderizar o banner de forma limpa sem temporizador quando em modo experimental',
+      (WidgetTester tester) async {
     editorDeCroqui.isExperimentalMode.value = true;
-    editorDeCroqui.timeRemaining.value = const Duration(minutes: 18, seconds: 30);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -57,8 +56,8 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('MODO EXPERIMENTAL ATIVO'), findsOneWidget);
-    expect(find.textContaining('(18:30)'), findsOneWidget);
+    expect(find.text('MODO EXPERIMENTAL ATIVO'), findsOneWidget);
+    expect(find.textContaining('('), findsNothing);
     expect(find.textContaining('SAIR'), findsOneWidget);
   });
 

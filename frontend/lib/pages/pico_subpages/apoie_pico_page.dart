@@ -10,6 +10,7 @@ import '../../utils/pico_categorization.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/app_colors.dart';
 import '../../navigation/navigation_tree.dart';
+import '../../services/firebase/telemetry_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ApoiePicoPage extends StatelessWidget {
@@ -67,6 +68,7 @@ class ApoiePicoPage extends StatelessWidget {
                   Clipboard.setData(
                     ClipboardData(text: pico.chavePixManutencao),
                   );
+                  TelemetryService.instance.logApoioPix(cragId);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text(

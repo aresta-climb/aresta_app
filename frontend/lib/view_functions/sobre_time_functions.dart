@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/firebase/telemetry_service.dart';
 
 Widget buildQuadrantCollapsedContent(BuildContext context, Map<String, String> data, int index) {
   // Place elements exactly at the geometric centroid of a quarter circle (4 / 3π ≈ 0.424)
@@ -258,8 +259,14 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                 if (data['linkedin']!.isNotEmpty)
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final url = data['linkedin']!;
+                      TelemetryService.instance.logLinkExterno(
+                        url,
+                        'sobre_time',
+                        detalhe: url,
+                      );
                       try {
-                        await launchUrl(Uri.parse(data['linkedin']!), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       } catch (e, stackTrace) {
                         AppLogger.instance.logError(
                           'Erro ao abrir link do LinkedIn em sobre_time_functions',
@@ -279,8 +286,14 @@ Widget buildQuadrantDetailedContent(BuildContext context, Map<String, String> da
                 if (data['github']!.isNotEmpty)
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final url = data['github']!;
+                      TelemetryService.instance.logLinkExterno(
+                        url,
+                        'sobre_time',
+                        detalhe: url,
+                      );
                       try {
-                        await launchUrl(Uri.parse(data['github']!), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       } catch (e, stackTrace) {
                         AppLogger.instance.logError(
                           'Erro ao abrir link do GitHub em sobre_time_functions',

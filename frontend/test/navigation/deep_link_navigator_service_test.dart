@@ -7,12 +7,15 @@ import 'package:frontend/navigation/deep_link_navigator_service.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   late EditorDeCroqui editorDeCroqui;
   late DatasetRepository datasetRepo;
   late TreeNavigationController treeController;
   late DeepLinkNavigatorService service;
+  late MockTelemetryService mockTelemetry;
 
   late Pico picoTeste;
   late Croqui croquiTeste;
@@ -23,6 +26,8 @@ void main() {
   late Escalada viaNoGrupoSetor;
 
   setUp(() {
+    mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
     editorDeCroqui = EditorDeCroqui();
     datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
     treeController = TreeNavigationController();
@@ -236,6 +241,41 @@ void main() {
     test('retorna false se a URL for invalida ou de outro dominio', () async {
       final sucesso = await service.processarLink('https://outrodominio.com/teste');
       expect(sucesso, isFalse);
+    });
+  });
+
+  group('DeepLinkNavigatorService - Telemetria', () {
+    test('dispara logDeepLinkAberto com sucesso, destino via, cold_start e parametros UTM', () async {
+      final sucesso = await service.processarLink(
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_do_bloco/via_do_bloco?utm_source=placa_pedra&utm_medium=qrcode',
+        tipoStart: 'cold_start',
+      );
+
+      expect(sucesso, isTrue);
+      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('br_mg_igarape_pedra_grande'));
+      expect(params['destino'], equals('via'));
+      expect(params['sucesso'], equals('true'));
+      expect(params['tipo_start'], equals('cold_start'));
+      expect(params['utm_source'], equals('placa_pedra'));
+      expect(params['utm_medium'], equals('qrcode'));
+    });
+
+    test('dispara logDeepLinkAberto com falha e motivo do erro quando croqui nao for encontrado', () async {
+      final sucesso = await service.processarLink(
+        'https://app.arestaclimb.com/pico_inexistente?utm_source=teste',
+        tipoStart: 'warm_start',
+      );
+
+      expect(sucesso, isFalse);
+      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('pico_inexistente'));
+      expect(params['sucesso'], equals('false'));
+      expect(params['tipo_start'], equals('warm_start'));
+      expect(params['motivo_erro'], isNotNull);
+      expect(params['utm_source'], equals('teste'));
     });
   });
 }

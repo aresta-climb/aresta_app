@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/registro_primeira_visita.dart';
 
 class OfflineCragCard extends StatelessWidget {
   final Map<String, dynamic> crag;
@@ -133,12 +134,17 @@ class OfflineCragCard extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final primeiraVisita = await RegistroPrimeiraVisita.instancia
+                        .registrarEVerificarPrimeiraVisita(id);
                     TelemetryService.instance.logAcaoCroqui(
                       id,
                       'abrir_croqui',
                       origem: 'meus_croquis',
+                      modoAcesso: 'offline',
+                      primeiraVisita: primeiraVisita,
                     );
+                    if (!context.mounted) return;
                     AppNav.toPico(context, cragId: id);
                     datasetRepo.updatePriorityAfterNavigation(id);
                   },

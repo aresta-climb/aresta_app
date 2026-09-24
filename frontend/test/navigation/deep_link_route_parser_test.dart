@@ -101,5 +101,25 @@ void main() {
       expect(rota.primeiroSegmento, equals('setor_estacionamento'));
       expect(rota.profundidade, equals(1));
     });
+
+    test('extrai queryParameters incluindo parametros UTM', () {
+      final rota = DeepLinkRouteParser.parse(
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_estacionamento?utm_source=placa_pedra&utm_medium=qrcode&utm_campaign=guia_2026',
+      );
+      expect(rota, isNotNull);
+      expect(rota!.parametros, equals({
+        'utm_source': 'placa_pedra',
+        'utm_medium': 'qrcode',
+        'utm_campaign': 'guia_2026',
+      }));
+    });
+
+    test('retorna mapa de parametros vazio quando URL nao possui queryParameters', () {
+      final rota = DeepLinkRouteParser.parse(
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
+      );
+      expect(rota, isNotNull);
+      expect(rota!.parametros, isEmpty);
+    });
   });
 }

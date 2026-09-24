@@ -152,6 +152,7 @@ class _MapasCarrosselPageState extends State<MapasCarrosselPage> {
       mapa: result.mapa,
       cragId: widget.cragId,
       initialSelectedId: item.initialSelectedId,
+      escaladaContextNome: item.escaladaContextNome,
       setorContext: resolvedSetor,
       grupoContext: resolvedGrupo,
       imageProviderOverride: widget.imageProviderOverride,

@@ -31,9 +31,13 @@ class GerenciadorDeepLinks {
       if (initialUri != null) {
         AppLogger.instance.logInfo('[DeepLinks] Cold Start detectado: $initialUri');
         if (context != null && !context.mounted) {
-          await _navigatorService.processarLink(initialUri);
+          await _navigatorService.processarLink(initialUri, tipoStart: 'cold_start');
         } else {
-          await _navigatorService.processarLink(initialUri, context: context);
+          await _navigatorService.processarLink(
+            initialUri,
+            context: context,
+            tipoStart: 'cold_start',
+          );
         }
       }
     } catch (e, st) {
@@ -52,10 +56,14 @@ class GerenciadorDeepLinks {
         (uri) async {
           AppLogger.instance.logInfo('[DeepLinks] Warm Start recebido: $uri');
           if (context != null && !context.mounted) {
-            await _navigatorService.processarLink(uri);
+            await _navigatorService.processarLink(uri, tipoStart: 'warm_start');
             return;
           }
-          await _navigatorService.processarLink(uri, context: context);
+          await _navigatorService.processarLink(
+            uri,
+            context: context,
+            tipoStart: 'warm_start',
+          );
         },
         onError: (e, st) {
           if (e is! MissingPluginException) {

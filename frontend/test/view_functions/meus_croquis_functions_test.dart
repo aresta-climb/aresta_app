@@ -8,6 +8,10 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view_functions/meus_croquis_functions.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/registro_primeira_visita.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../mocks/mock_telemetry_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -37,6 +41,8 @@ void main() {
   ];
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    RegistroPrimeiraVisita.resetForTesting();
     tempDir = await Directory.systemTemp.createTemp('meus_croquis_test_');
     PathProviderPlatform.instance = _PlataformaCaminhosMock(tempDir.path);
     final editor = EditorDeCroqui();
@@ -114,6 +120,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.terrain), findsOneWidget);
+    });
+
+    testWidgets('ao clicar em ABRIR OFFLINE dispara telemetria com modo_acesso offline e primeira_visita', (
+      WidgetTester tester,
+    ) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final crag = {
+        'id': 'pico_telemetria',
+        'nome': 'Pico Telemetria',
+        'local': 'Cipó',
+      };
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              crag: crag,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ABRIR OFFLINE'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(mockTelemetry.recordedParams['acao_croqui']!['id_croqui'], 'pico_telemetria');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'meus_croquis');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'offline');
+      expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
     });
   });
 }

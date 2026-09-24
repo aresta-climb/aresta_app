@@ -503,5 +503,91 @@ void main() {
         // Não deve lançar exceções não tratadas
       },
     );
+
+    testWidgets(
+      'TDD: Carrossel repassa escaladaContextNome para MapaInterativoPage focando na via correta quando POI é compartilhado',
+      (tester) async {
+        final pontoCompartilhado = Mapa_PontoDeInteresse(
+          id: 'poi_compartilhado',
+          retangulo: BoundingRetangulo(
+            x: 100,
+            y: 100,
+            comprimento: 50,
+            largura: 50,
+          ),
+        );
+
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via 1',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        );
+        final esc2 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via 2',
+            dificuldade: GrauVia_GrauVia.BR_6,
+          ),
+        );
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagens/mapa_setor.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 800
+          ..pontosDeInteresse.add(pontoCompartilhado)
+          ..referencias.addAll([
+            Mapa_Referencia(
+              setor: 'Setor A',
+              escalada: 'Via 1',
+              ids: ['poi_compartilhado'],
+            ),
+            Mapa_Referencia(
+              setor: 'Setor A',
+              escalada: 'Via 2',
+              ids: ['poi_compartilhado'],
+            ),
+          ]);
+
+        final setor = Setor()
+          ..nome = 'Setor A'
+          ..escaladas.addAll([esc1, esc2]);
+
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+          );
+
+        // Adiciona o mapa ao setor no pico
+        setor.mapas.add(mapa);
+
+        final mapas = [
+          const CarrosselItemData(
+            mapaCaminhoImagem: 'imagens/mapa_setor.png',
+            setorContextNome: 'Setor A',
+            escaladaContextNome: 'Via 2',
+            initialSelectedId: 'poi_compartilhado',
+          ),
+        ];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapasCarrosselPage(
+              pico: pico,
+              cragId: 'crag_teste',
+              mapas: mapas,
+              initialIndex: 0,
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // O card exibido deve ser o da 'Via 2', e NÃO da 'Via 1'
+        expect(find.text('Via 2'), findsOneWidget);
+        expect(find.text('Via 1'), findsNothing);
+      },
+    );
   });
 }
+

@@ -25,8 +25,8 @@ O Modo Experimental permite testar croquis e alterações em tempo real diretame
 ### Acesso e Segurança
 
 - **Easter Egg**: As opções de desenvolvedor ficam ocultas. O usuário precisa tocar **7 vezes seguidas** no ícone de status da página de Configurações para desbloqueá-las.
-- **Temporizador de Auto-Destruição**: Uma vez ativado, o modo experimental tem vida útil de **20 minutos**. Um cronômetro regressivo é exibido no banner global e, ao chegar em zero, executa um "Nuke" completo dos dados de teste.
-- **Nuke on Startup**: Todos os dados experimentais são apagados automaticamente quando o app é completamente fechado e reaberto.
+- **Sem Limite de Tempo**: O modo experimental permanece ativo durante toda a sessão de uso no aplicativo, sem contagem regressiva ou auto-destruição automática.
+- **Sessão Volátil (Nuke on Startup)**: Para garantir a integridade da base oficial e evitar que o usuário fique preso em dados de teste desatualizados, todos os dados experimentais são limpos automaticamente quando o app é fechado e reaberto do zero.
 
 ### Isolamento de Dados
 
@@ -62,7 +62,7 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### `EditorDeCroqui`
 - Singleton acessível via `EditorDeCroqui.instance`
-- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `timeRemaining`, `notificadorGatilhoRecarregamento`
+- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `notificadorGatilhoRecarregamento`
 - `activeBaseUrl` retorna a URL correta para o modo ativo
 - `downloadsPath(docsPath)` e `indicePath(docsPath)` retornam os caminhos corretos por modo
 - Gerencia o listener de WebSocket para Live Reload e emite `dispararPulsoRecarregamento()` ao receber atualizações
@@ -70,7 +70,7 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### `BannerModoExperimental` (Widget Global)
 - Exibido via `MaterialApp.builder` no topo de toda a árvore de navegação
-- Apresenta o temporizador de contagem regressiva em tempo real
+- Apresenta o indicador textual limpo do modo experimental ativo sem contagem regressiva
 - Fornece botão de saída rápida `[ SAIR ✕ ]` que aciona `nukeExperimentalData()`, restaura o índice oficial e redireciona para a raiz (`HomeNode`)
 - Animação de pulso luminoso (300ms) reativa disparada quando o WebSocket recebe eventos de Hot Reload
 
@@ -107,6 +107,13 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 - **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.
 - **`GerenciadorNotificacaoDownload` (`notificacoes/gerenciador_notificacao_download.dart`)**: Gestão de notificações nativas na barra de status do sistema operacional. No Android, ancora a execução a um Foreground Service nativo ininterrupto com notificação contínua sticky (`ongoing: true`) e barra de progresso, transitando atomicamente para uma notificação dispensável de sucesso/erro. No iOS, emite a notificação nativa ao concluir o salvamento.
 - **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves no pipeline de download offline e sincronização de índice são tratadas com a mesma seriedade de um crash (`logCrash`, `fatal: true`), impactando imediatamente as métricas de estabilidade no Firebase Crashlytics e disparando alertas para a equipe de desenvolvimento.
+- **`TelemetryService` e Analytics (`firebase/telemetry_service.dart`)**: Rastreamento de telemetria analítica com taxonomia padronizada em português via GA4:
+  - *Deep Links & QR Codes*: `logDeepLinkAberto` captura parâmetros de rota, tipo de inicialização (`cold_start`/`warm_start`), status de sucesso/falha e dimensões UTM (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
+  - *Índice de Escaladas*: `logAcaoIndiceEscaladas` instrumenta alternância de abas de modalidade e aplicação de filtros dinâmicos de graduação (`filtrar_grau`), setor (`filtrar_setor`), conquistadores (`filtrar_conquistador`), clássicas (`filtrar_classicas`) e limpeza (`limpar_filtros`) com valores no parâmetro `detalhe`.
+  - *Pico Hub e Subpáginas*: `logNavegacaoPicoHub` para os cards centrais (Setores, Explorar Local, Regras, Comunidade, Créditos, Índice) e `logApoioPix` para cópia de chave PIX em Apoie o Pico.
+  - *Guardião de Saída e Banner*: `logAcaoGuardiaoSaida` e `logSalvarOfflineBanner` para monitorar a conversão de salvamento offline antes de ir à pedra.
+  - *Interações Gerais*: `logAcaoBetaAberto` para o modal de beta, `logLinkExterno` para abertura de redes sociais e referências de desenvolvedores, e `logAlterarOrdenacao` para alternância de ordenação de listas em setores, grupos e catálogo.
+  - *Registro de Primeira Visita*: `RegistroPrimeiraVisita` (`registro_primeira_visita.dart`) gerencia a persistência de croquis já visitados pelo usuário para enriquecer o evento `abrir_croqui`.
 
 ## Manutenção e Debug
 

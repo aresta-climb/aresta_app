@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Modal de confirmação e conscientização ("Guardião de Saída") exibido
 /// quando o usuário tenta sair de um croqui explorado online sem tê-lo salvo offline.
@@ -43,6 +44,7 @@ class ModalConfirmacaoSaida extends StatelessWidget {
   static Future<void> mostrar({
     required BuildContext context,
     required String nomePico,
+    String? cragId,
     String? tamanhoFormatado,
     required VoidCallback onSalvar,
     required VoidCallback onSairSemSalvar,
@@ -53,6 +55,8 @@ class ModalConfirmacaoSaida extends StatelessWidget {
       return Future.value();
     }
     exibiuNestaSessao = true;
+    final idCroqui = cragId ?? nomePico;
+    TelemetryService.instance.logAcaoGuardiaoSaida(idCroqui, 'exibir_modal');
 
     return showModalBottomSheet(
       context: context,
@@ -65,10 +69,12 @@ class ModalConfirmacaoSaida extends StatelessWidget {
         nomePico: nomePico,
         tamanhoFormatado: tamanhoFormatado,
         onSalvar: () {
+          TelemetryService.instance.logAcaoGuardiaoSaida(idCroqui, 'guardiao_salvar_offline');
           Navigator.pop(ctx);
           onSalvar();
         },
         onSairSemSalvar: () {
+          TelemetryService.instance.logAcaoGuardiaoSaida(idCroqui, 'guardiao_sair_sem_salvar');
           Navigator.pop(ctx);
           onSairSemSalvar();
         },

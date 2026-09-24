@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/navigation/arvore/pico_nodes.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/pages/pico.dart';
@@ -151,7 +150,7 @@ void main() {
           );
         } else if (node is SetorNode) {
           return Scaffold(
-            appBar: AppBar(title: Text(node.setorNome ?? 'Setor')),
+            appBar: AppBar(title: Text(node.setorNome)),
             body: Center(
               child: Text('PÁGINA DO SETOR: ${node.setorNome}'),
             ),
@@ -177,6 +176,7 @@ void main() {
 
                 return Navigator(
                   key: const ValueKey('NavTesteStack'),
+                  // ignore: deprecated_member_use
                   onPopPage: (route, result) {
                     if (!route.didPop(result)) return false;
                     treeController.goBack();

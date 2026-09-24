@@ -4,8 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   Widget criarAmbiente(Widget child) {
@@ -347,6 +349,195 @@ void main() {
       );
 
       expect(find.text('Apenas Clássicas (★)'), findsOneWidget);
+    });
+  });
+
+  group('PainelFiltrosIndice - Telemetria', () {
+    late MockTelemetryService mockTelemetry;
+
+    setUp(() {
+      mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+    });
+
+    testWidgets('dispara expandir_filtros e colapsar_filtros ao tocar no cabeçalho', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const ['Setor 1'],
+            conquistadoresDisponiveis: const [],
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Expande
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      var params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'expandir_filtros');
+      expect(params['origem'], 'indice_esportiva');
+
+      // Colapsa
+      mockTelemetry.clear();
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'colapsar_filtros');
+      expect(params['origem'], 'indice_esportiva');
+    });
+
+    testWidgets('dispara filtrar_setor ao selecionar setor no dropdown', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const ['Setor Alpha'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButton<String>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Setor Alpha').last);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_setor');
+      expect(params['origem'], 'indice_esportiva');
+      expect(params['detalhe'], 'Setor Alpha');
+    });
+
+    testWidgets('dispara filtrar_conquistador ao selecionar conquistador no dropdown', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const ['Carlos'],
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButton<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Carlos').last);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_conquistador');
+      expect(params['origem'], 'indice_esportiva');
+      expect(params['detalhe'], 'Carlos');
+    });
+
+    testWidgets('dispara filtrar_classicas ao alternar botão de clássicas', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(apenasClassicas: false),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            temClassicasDisponiveis: true,
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Apenas Clássicas (★)'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_classicas');
+      expect(params['origem'], 'indice_esportiva');
+      expect(params['detalhe'], 'true');
+    });
+
+    testWidgets('dispara filtrar_grau ao ajustar RangeSlider', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final rangeSliderFinder = find.byType(RangeSlider);
+      expect(rangeSliderFinder, findsOneWidget);
+
+      final slider = tester.widget<RangeSlider>(rangeSliderFinder);
+      slider.onChangeEnd?.call(const RangeValues(3, 7));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_grau');
+      expect(params['origem'], 'indice_esportiva');
+      expect(params['detalhe'], isNotNull);
+    });
+
+    testWidgets('dispara limpar_filtros ao tocar no botão Limpar', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estado: const EstadoFiltrosIndice(apenasClassicas: true),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Limpar'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'limpar_filtros');
+      expect(params['origem'], 'indice_esportiva');
     });
   });
 }

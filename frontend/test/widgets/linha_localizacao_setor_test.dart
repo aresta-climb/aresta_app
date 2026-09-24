@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/navigation/arvore/pico_nodes.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';

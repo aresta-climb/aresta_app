@@ -579,6 +579,201 @@ void main() {
   );
 
   testWidgets(
+    'PicoDetailsPage dispara telemetria ao tocar no card Índice de Escaladas',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final tree = TreeNavigationController(
+        estadoInicial: const ArvoreNavegacao(
+          noAtual: PicoNode(cragId: 'crag1', parent: HomeNode()),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: tree,
+            child: Scaffold(
+              body: PicoDetailsPage(
+                pico: Pico()..nome = 'Pico do Baú',
+                croqui: Croqui(),
+                cragId: 'crag1',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Índice de Escaladas'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      final params = mockTelemetry.recordedParams['navegacao_pico_hub']!;
+      expect(params['id_croqui'], 'crag1');
+      expect(params['acao'], 'abrir_indice_escaladas');
+      expect(params['origem'], 'pico_hub');
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage dispara telemetria ao tocar nos cards de Setores, Explorar Local, Regras e Comunidade',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final tree = TreeNavigationController(
+        estadoInicial: ArvoreNavegacao(
+          noAtual: PicoNode(
+            cragId: 'crag1',
+            parent: const HomeNode(),
+          ),
+        ),
+      );
+
+      final croqui = Croqui()
+        ..botoes.add(
+          Botao()
+            ..texto = 'Créditos e Autores'
+            ..destino = (DestinoBotao()..secaoTextual = ArquivoMarkdown(conteudo: 'Texto autores')),
+        );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: tree,
+            child: Scaffold(
+              body: PicoDetailsPage(
+                pico: Pico()..nome = 'Pico do Baú',
+                croqui: croqui,
+                cragId: 'crag1',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Teste Setores
+      mockTelemetry.clear();
+      await tester.tap(find.text('Setores'));
+      await tester.pumpAndSettle();
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_setores');
+
+      // Teste Explorar Local
+      mockTelemetry.clear();
+      await tester.tap(find.text('Explorar Local'));
+      await tester.pumpAndSettle();
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_explorar_local');
+
+      // Teste Regras
+      mockTelemetry.clear();
+      await tester.tap(find.text('Regras e recomendações'));
+      await tester.pumpAndSettle();
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_regras');
+
+      // Fecha o bottom sheet de regras
+      Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+      await tester.pumpAndSettle();
+
+      // Teste Comunidade
+      mockTelemetry.clear();
+      await tester.tap(find.text('Comunidade'));
+      await tester.pumpAndSettle();
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_comunidade');
+
+      // Teste Créditos
+      mockTelemetry.clear();
+      await tester.tap(find.text('Créditos e Autores'));
+      await tester.pumpAndSettle();
+      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_creditos');
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage dispara telemetria ao tocar em Salvar Offline no BannerModoOnline',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final tree = TreeNavigationController(
+        estadoInicial: ArvoreNavegacao(
+          noAtual: PicoNode(
+            cragId: 'crag1',
+            parent: const HomeNode(),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: tree,
+            child: Scaffold(
+              body: PicoDetailsPage(
+                pico: Pico()..nome = 'Pico Online',
+                croqui: Croqui(),
+                cragId: 'crag1',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+      await tester.tap(find.text('Salvar Offline'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('banner_modo_online'));
+      final params = mockTelemetry.recordedParams['banner_modo_online']!;
+      expect(params['id_croqui'], 'crag1');
+      expect(params['acao'], 'banner_salvar_offline');
+      expect(params['origem'], 'banner_online');
+      expect(params['modo_acesso'], 'online');
+    },
+  );
+
+  testWidgets(
     'PicoDetailsPage exibe data de última atualização lida do índice e não texto estático',
     (tester) async {
       tester.view.physicalSize = const Size(800, 1200);

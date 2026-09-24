@@ -7,6 +7,7 @@ import '../services/dataset_repository.dart';
 import '../navigation/navigation_tree.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/registro_primeira_visita.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
 import '../widgets/nearby_crags_carousel.dart';
@@ -18,16 +19,34 @@ import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
+///
+/// Registra evento de telemetria [abrir_croqui] com a [source] de origem, o [modoAcesso]
+/// (`'offline'` se estiver previamente baixado ou `'online'` se sob demanda) e se é
+/// a [primeiraVisita] do usuário a este croqui.
 Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
   Map<String, dynamic> pico, {
   String source = 'home',
+  RegistroPrimeiraVisita? registroPrimeiraVisita,
 }) async {
   final id = pico['id'];
   if (id == null) return;
 
-  TelemetryService.instance.logAcaoCroqui(id, 'abrir_croqui', origem: source);
+  final registro = registroPrimeiraVisita ?? RegistroPrimeiraVisita.instancia;
+  final primeiraVisita = await registro.registrarEVerificarPrimeiraVisita(id);
+  final isBaixado = datasetRepo.isPicoDownloaded(id);
+  final modoAcesso = isBaixado ? 'offline' : 'online';
+
+  TelemetryService.instance.logAcaoCroqui(
+    id,
+    'abrir_croqui',
+    origem: source,
+    modoAcesso: modoAcesso,
+    primeiraVisita: primeiraVisita,
+  );
+
+  if (!context.mounted) return;
 
   showDialog(
     context: context,

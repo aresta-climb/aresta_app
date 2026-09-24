@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'indexador_escaladas.dart';
-import '../view_functions/pico_functions.dart';
 import '../view_functions/common_functions.dart';
 
 /// Define uma faixa de grau rápida pré-configurada para seleção imediata.

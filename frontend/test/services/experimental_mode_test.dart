@@ -31,71 +31,38 @@ void main() {
 
   group('Experimental Mode Behavior', () {
     test(
-      'Timer do modo experimental continua rodando no background após disconnect',
+      'activateExperimental ativa isExperimentalMode e configura a URL sem expiração temporizada',
       () async {
         final editor = EditorDeCroqui();
 
-        // Inicia o modo experimental e o timer de 20 minutos
-        await editor.activateExperimental(url: 'someUrl');
+        await editor.activateExperimental(url: 'https://test.local');
 
-        // Aguarda o primeiro tick do timer
-        await Future.delayed(const Duration(milliseconds: 1500));
+        expect(editor.isExperimentalMode.value, isTrue);
+        expect(editor.editorUrl.value, 'https://test.local');
 
-        expect(editor.timeRemaining.value, isNotNull);
-        final initialRemaining = editor.timeRemaining.value!;
-
-        // Simula a desconexão (voltar pro modo oficial)
+        // Desconecta manualmente
         await editor.disconnect();
-
-        // Garante que desconectou
         expect(editor.isExperimentalMode.value, isFalse);
-
-        // Aguarda mais um pouco para provar que o timer ainda está rodando no background
-        await Future.delayed(const Duration(milliseconds: 2500));
-
-        // O tempo restante deve ter diminuído
-        final newRemaining = editor.timeRemaining.value!;
-        expect(newRemaining, isNotNull);
-        expect(newRemaining.inSeconds, lessThan(initialRemaining.inSeconds));
-
-        // A interface deve continuar no modo oficial, sem o nuke prematuro
-        expect(editor.isExperimentalMode.value, isFalse);
+        expect(editor.editorUrl.value, 'https://test.local');
       },
     );
 
     test(
-      'activateExperimental com forceResetTimer=false não zera o timer se já estiver ativo',
+      'loadFromDisk executa Nuke compulsório se isExperimental estiver salvo no boot (Sessão Volátil)',
       () async {
         final editor = EditorDeCroqui();
-        await editor.activateExperimental(url: 'someUrl');
-        await Future.delayed(const Duration(milliseconds: 1500));
-        final remaining1 = editor.timeRemaining.value!;
+        await editor.activateExperimental(url: 'https://test.local');
+        expect(editor.isExperimentalMode.value, isTrue);
 
-        // Ativa novamente sem forçar reset
-        await editor.activateExperimental(
-          url: 'otherUrl',
-          forceResetTimer: false,
-        );
-        final remaining2 = editor.timeRemaining.value!;
+        // Simula reinicialização do aplicativo
+        final novoEditor = EditorDeCroqui();
+        await novoEditor.loadFromDisk();
 
-        // O timer não deve ter voltado para 20 minutos (1200 segundos), mas continuado a diminuir
-        expect(remaining2.inSeconds, lessThanOrEqualTo(remaining1.inSeconds));
+        // No boot, o modo experimental deve ser resetado com segurança
+        expect(novoEditor.isExperimentalMode.value, isFalse);
+        expect(novoEditor.editorUrl.value, isNull);
       },
     );
-
-    test('activateExperimental com forceResetTimer=true zera o timer', () async {
-      final editor = EditorDeCroqui();
-      await editor.activateExperimental(url: 'someUrl');
-      await Future.delayed(const Duration(milliseconds: 1500));
-      final remaining1 = editor.timeRemaining.value!;
-
-      // Ativa novamente forçando reset
-      await editor.activateExperimental(url: 'otherUrl', forceResetTimer: true);
-      final remaining2 = editor.timeRemaining.value!;
-
-      // O timer deve ter voltado para perto de 20 minutos (maior que o remaining1)
-      expect(remaining2.inSeconds, greaterThan(remaining1.inSeconds));
-    });
 
     test(
       'disconnect desliga isExperimentalMode mas mantém a URL configurada',
@@ -118,13 +85,11 @@ void main() {
         await editor.activateExperimental(url: 'someUrl');
         expect(editor.isExperimentalMode.value, isTrue);
         expect(editor.editorUrl.value, isNotNull);
-        expect(editor.timeRemaining.value, isNotNull);
 
         await editor.nukeExperimentalData();
 
         expect(editor.isExperimentalMode.value, isFalse);
         expect(editor.editorUrl.value, isNull);
-        expect(editor.timeRemaining.value, isNull);
       },
     );
 

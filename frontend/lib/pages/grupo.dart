@@ -9,6 +9,7 @@ import '../view_functions/grupo_functions.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/browse_functions.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../services/firebase/telemetry_service.dart';
 
 /// Uma página que exibe informações detalhadas sobre um grupo específico de setores.
 ///
@@ -332,6 +333,7 @@ class _GrupoPageState extends State<GrupoPage> {
                 _sortedSetores,
                 _sortMode,
                 (mode) {
+                  TelemetryService.instance.logAlterarOrdenacao('grupo', mode.name);
                   setState(() {
                     _sortMode = mode;
                   });

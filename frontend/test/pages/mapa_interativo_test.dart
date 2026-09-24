@@ -15,6 +15,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/badges_modalidades.dart';
+import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
   0x89,
@@ -3307,8 +3308,276 @@ void main() {
         expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
       },
     );
+
+    testWidgets(
+      'TDD: didUpdateWidget atualiza _selectedId e _focusedItemIndex na mesma imagem sem recriar o estado',
+      (tester) async {
+        final ponto1 = Mapa_PontoDeInteresse(
+          id: 'poi_1',
+          retangulo: BoundingRetangulo(
+            x: 100,
+            y: 100,
+            comprimento: 50,
+            largura: 50,
+          ),
+        );
+
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Alpha',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        );
+        final esc2 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Beta',
+            dificuldade: GrauVia_GrauVia.BR_6,
+          ),
+        );
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagens/parede.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 800
+          ..pontosDeInteresse.add(ponto1)
+          ..referencias.addAll([
+            Mapa_Referencia(
+              setor: 'Setor Único',
+              escalada: 'Via Alpha',
+              ids: ['poi_1'],
+            ),
+            Mapa_Referencia(
+              setor: 'Setor Único',
+              escalada: 'Via Beta',
+              ids: ['poi_1'],
+            ),
+          ]);
+
+        final setor = Setor()
+          ..nome = 'Setor Único'
+          ..escaladas.addAll([esc1, esc2]);
+
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+          );
+
+        final imagemProvedor = MemoryImage(Uint8List(0));
+
+        // 1. Renderiza inicialmente focado na Via Alpha
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                return MapaInterativoPage(
+                  key: const ValueKey('mapa_chave_estavel'),
+                  mapa: mapa,
+                  pico: pico,
+                  cragId: 'crag_1',
+                  imageProviderOverride: imagemProvedor,
+                  initialSelectedId: 'poi_1',
+                  escaladaContextNome: 'Via Alpha',
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Via Alpha'), findsOneWidget);
+        expect(find.text('Via Beta'), findsNothing);
+
+        // 2. Simula rebuild do widget pai atualizando para a Via Beta no mesmo mapa
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                return MapaInterativoPage(
+                  key: const ValueKey('mapa_chave_estavel'),
+                  mapa: mapa,
+                  pico: pico,
+                  cragId: 'crag_1',
+                  imageProviderOverride: imagemProvedor,
+                  initialSelectedId: 'poi_1',
+                  escaladaContextNome: 'Via Beta',
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 3. O card inferior deve ter sido atualizado reativamente para Via Beta
+        expect(find.text('Via Beta'), findsOneWidget);
+        expect(find.text('Via Alpha'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'TDD: didUpdateWidget não move a câmera nem altera seleção quando selectionChanged for falso',
+      (tester) async {
+        final ponto1 = Mapa_PontoDeInteresse(
+          id: 'poi_1',
+          retangulo: BoundingRetangulo(
+            x: 100,
+            y: 100,
+            comprimento: 50,
+            largura: 50,
+          ),
+        );
+
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Estável',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        );
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagens/parede.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 800
+          ..pontosDeInteresse.add(ponto1)
+          ..referencias.add(
+            Mapa_Referencia(
+              setor: 'Setor Único',
+              escalada: 'Via Estável',
+              ids: ['poi_1'],
+            ),
+          );
+
+        final setor = Setor()
+          ..nome = 'Setor Único'
+          ..escaladas.add(esc1);
+
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+          );
+
+        final imagemProvedor = MemoryImage(Uint8List(0));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              key: const ValueKey('mapa_estavel'),
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag_1',
+              imageProviderOverride: imagemProvedor,
+              initialSelectedId: 'poi_1',
+              escaladaContextNome: 'Via Estável',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final interactiveViewer = tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+        final controller = interactiveViewer.transformationController!;
+
+        // Simula pan manual do usuário
+        // ignore: deprecated_member_use
+        final matrizManual = Matrix4.identity()..translate(150.0, 75.0, 0.0);
+        controller.value = matrizManual;
+        await tester.pump();
+
+        final matrizAntes = controller.value.clone();
+
+        // Rebuild do widget com as mesmas propriedades de seleção
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              key: const ValueKey('mapa_estavel'),
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag_1',
+              imageProviderOverride: imagemProvedor,
+              initialSelectedId: 'poi_1',
+              escaladaContextNome: 'Via Estável',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        // A matriz deve continuar idêntica, sem reset nem translação automática
+        expect(controller.value, equals(matrizAntes));
+      },
+    );
+
+    testWidgets(
+      'TDD: _updateFeedbackNode registra o nome da via focada pelo _focusedItemIndex e não refs.first',
+      (tester) async {
+        final ponto1 = Mapa_PontoDeInteresse(
+          id: 'poi_1',
+          retangulo: BoundingRetangulo(
+            x: 100,
+            y: 100,
+            comprimento: 50,
+            largura: 50,
+          ),
+        );
+
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(nome: 'Via Primeira'),
+        );
+        final esc2 = Escalada(
+          viaEsportiva: ViaEsportiva(nome: 'Via Segunda'),
+        );
+
+        final mapa = Mapa()
+          ..caminhoImagemMapa = 'imagens/parede.png'
+          ..larguraMapa = 1000
+          ..alturaMapa = 800
+          ..pontosDeInteresse.add(ponto1)
+          ..referencias.addAll([
+            Mapa_Referencia(
+              setor: 'Setor Único',
+              escalada: 'Via Primeira',
+              ids: ['poi_1'],
+            ),
+            Mapa_Referencia(
+              setor: 'Setor Único',
+              escalada: 'Via Segunda',
+              ids: ['poi_1'],
+            ),
+          ]);
+
+        final setor = Setor()
+          ..nome = 'Setor Único'
+          ..escaladas.addAll([esc1, esc2]);
+
+        final pico = Pico()
+          ..nome = 'Pico Teste'
+          ..setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+          );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag_1',
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+              initialSelectedId: 'poi_1',
+              escaladaContextNome: 'Via Segunda',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          FeedbackMetadataCollector.globalActiveNodeOverride,
+          contains('Via Segunda'),
+        );
+      },
+    );
   });
 }
+
 
 class RegistroCirculo {
   final double raio;

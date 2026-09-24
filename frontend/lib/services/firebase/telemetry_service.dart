@@ -111,11 +111,29 @@ class TelemetryService {
     });
   }
 
-  /// Registra ações diversas feitas dentro da página do pico (e.g. buscar, deletar).
-  Future<void> logAcaoCroqui(String idCroqui, String acao, {String? origem}) {
+  /// Registra ações diversas feitas dentro da página do pico (e.g. abrir_croqui, buscar, deletar).
+  ///
+  /// - [idCroqui]: Identificador único do croqui.
+  /// - [acao]: Ação realizada (ex: `'abrir_croqui'`, `'buscar'`).
+  /// - [origem]: Origem de navegação (ex: `'home'`, `'explorar'`, `'meus_croquis'`).
+  /// - [modoAcesso]: Modo de acesso do croqui: `'offline'` (armazenamento local) ou `'online'` (sob demanda).
+  /// - [primeiraVisita]: Indica se é a primeira vez que o usuário abre este croqui específico no dispositivo.
+  Future<void> logAcaoCroqui(
+    String idCroqui,
+    String acao, {
+    String? origem,
+    String? modoAcesso,
+    bool? primeiraVisita,
+  }) {
     final params = <String, Object>{'id_croqui': idCroqui, 'acao': acao};
     if (origem != null) {
       params['origem'] = origem;
+    }
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (primeiraVisita != null) {
+      params['primeira_visita'] = primeiraVisita ? 'true' : 'false';
     }
     return _logEvent('acao_croqui', params);
   }
@@ -205,9 +223,157 @@ class TelemetryService {
     });
   }
 
-  /// Registra cliques em links de rotas de GPS e páginas web (ex: Termos de uso).
-  Future<void> logLinkExterno(String url, String origem) {
-    return _logEvent('link_externo', {'url': url, 'origem': origem});
+  /// Registra cliques em links de rotas de GPS e páginas web (ex: Termos de uso, redes sociais).
+  Future<void> logLinkExterno(String url, String origem, {String? detalhe}) {
+    return _logEvent('link_externo', {
+      'acao': 'abrir_link_externo',
+      'url': url,
+      'origem': origem,
+      'detalhe': detalhe ?? url,
+    });
+  }
+
+  /// Registra ações analíticas ocorridas no Índice de Escaladas e seus filtros.
+  ///
+  /// - [idCroqui]: Identificador único do croqui/pico.
+  /// - [acao]: Ação realizada (ex: `'filtrar_grau'`, `'filtrar_setor'`, `'filtrar_conquistador'`, `'filtrar_classicas'`, `'limpar_filtros'`, `'expandir_filtros'`, `'colapsar_filtros'`, `'trocar_aba'`).
+  /// - [modalidade]: Modalidade da escalada (ex: `'Esportiva'`, `'Boulder'`, `'Móvel'`, etc.). É mapeada para a dimensão existente `origem` como `'indice_<modalidade>'`.
+  /// - [detalhe]: Valor opcional livre (ex: `'5º a 8ºb'`, `'André Braga'`, `'true'`).
+  Future<void> logAcaoIndiceEscaladas(
+    String idCroqui,
+    String acao, {
+    required String modalidade,
+    String? detalhe,
+  }) {
+    final origemModalidade = modalidade.toLowerCase().startsWith('indice_')
+        ? modalidade.toLowerCase()
+        : 'indice_${modalidade.toLowerCase()}';
+    final params = <String, Object>{
+      'id_croqui': idCroqui,
+      'acao': acao,
+      'origem': origemModalidade,
+    };
+    if (detalhe != null) {
+      params['detalhe'] = detalhe;
+    }
+    return _logEvent('acao_indice_escaladas', params);
+  }
+
+  /// Registra abertura e resolução de Deep Links e QR Codes físicos.
+  ///
+  /// - [idCroqui]: Identificador único do croqui/pico.
+  /// - [destino]: Destino do link (ex: `'pico'`, `'grupo'`, `'setor'`, `'via'`).
+  /// - [sucesso]: Se a resolução e abertura foi bem-sucedida.
+  /// - [tipoStart]: `'cold_start'` (app aberto do zero) ou `'warm_start'` (app já em memória).
+  /// - [motivoErro]: Caso tenha falhado (ex: `'sem_conexao'`, `'pico_nao_encontrado'`).
+  /// - [parametrosUtm]: Parâmetros UTM extraídos da URL (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
+  Future<void> logDeepLinkAberto({
+    required String idCroqui,
+    required String destino,
+    required bool sucesso,
+    String? tipoStart,
+    String? motivoErro,
+    Map<String, String>? parametrosUtm,
+  }) {
+    final params = <String, Object>{
+      'id_croqui': idCroqui,
+      'acao': destino,
+      'destino': destino,
+      'sucesso': sucesso ? 'true' : 'false',
+    };
+    if (tipoStart != null) {
+      params['tipo_start'] = tipoStart;
+      params['origem'] = tipoStart;
+    }
+    if (motivoErro != null) {
+      params['motivo_erro'] = motivoErro;
+    }
+    if (parametrosUtm != null) {
+      params.addAll(parametrosUtm);
+    }
+    return _logEvent('deep_link_aberto', params);
+  }
+
+  /// Registra interações no modal informativo de Beta Aberto.
+  ///
+  /// - [acao]: Ação realizada (ex: `'abrir_modal_beta'`, `'clique_instagram'`, `'clique_whatsapp'`, `'clique_feedback'`).
+  /// - [origem]: Origem do disparo (padrão `'modal_beta'`, ou `'home_header'`).
+  /// - [canal]: Canal específico se aplicável (`'instagram'`, `'whatsapp'`).
+  /// - [detalhe]: Informação complementar enviada à dimensão genérica.
+  Future<void> logAcaoBetaAberto(
+    String acao, {
+    String? origem,
+    String? canal,
+    String? detalhe,
+  }) {
+    final params = <String, Object>{
+      'acao': acao,
+      'origem': origem ?? 'modal_beta',
+    };
+    if (canal != null) {
+      params['canal'] = canal;
+    }
+    final infoDetalhe = detalhe ?? canal;
+    if (infoDetalhe != null) {
+      params['detalhe'] = infoDetalhe;
+    }
+    return _logEvent('acao_beta_aberto', params);
+  }
+
+  /// Registra quando o usuário copia a chave PIX de apoio ao pico.
+  Future<void> logApoioPix(String idCroqui) {
+    return _logEvent('apoio_pico', {
+      'id_croqui': idCroqui,
+      'acao': 'copiar_pix',
+      'origem': 'apoie_pico',
+    });
+  }
+
+  /// Registra ações do guardião de saída ao tentar sair de croqui online não salvo.
+  ///
+  /// - [idCroqui]: Identificador do croqui.
+  /// - [acao]: Ação executada (`'exibir_modal'`, `'guardiao_salvar_offline'`, `'guardiao_sair_sem_salvar'`).
+  Future<void> logAcaoGuardiaoSaida(String idCroqui, String acao) {
+    return _logEvent('guardiao_saida', {
+      'id_croqui': idCroqui,
+      'acao': acao,
+      'origem': 'guardiao_saida',
+      'modo_acesso': 'online',
+    });
+  }
+
+  /// Registra o clique no botão "Salvar Offline" do banner de modo online.
+  Future<void> logSalvarOfflineBanner(String idCroqui) {
+    return _logEvent('banner_modo_online', {
+      'id_croqui': idCroqui,
+      'acao': 'banner_salvar_offline',
+      'origem': 'banner_online',
+      'modo_acesso': 'online',
+    });
+  }
+
+  /// Registra cliques de navegação nos cards centrais da página do pico (Hub).
+  ///
+  /// - [idCroqui]: Identificador do pico.
+  /// - [secao]: Seção acessada (ex: `'abrir_setores'`, `'abrir_indice_escaladas'`, `'abrir_explorar_local'`, `'abrir_regras'`, `'abrir_comunidade'`, `'abrir_creditos'`).
+  Future<void> logNavegacaoPicoHub(String idCroqui, String secao) {
+    return _logEvent('navegacao_pico_hub', {
+      'id_croqui': idCroqui,
+      'acao': secao,
+      'origem': 'pico_hub',
+    });
+  }
+
+  /// Registra a alteração de critérios de ordenação de listas (ex: setores, vias).
+  ///
+  /// - [contexto]: Contexto da ordenação (`'setor'`, `'grupo'`, `'browse'`).
+  /// - [modo]: Modo selecionado (`'grau'`, `'nome'`, `'padrao'`).
+  Future<void> logAlterarOrdenacao(String contexto, String modo) {
+    return _logEvent('alterar_ordenacao', {
+      'acao': 'alterar_ordenacao',
+      'origem': contexto,
+      'detalhe': modo,
+    });
   }
 
   /// Registra interações gerais nas telas de configuracao.

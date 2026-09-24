@@ -9,8 +9,10 @@ import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:feedback/feedback.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import '../mocks/mock_app_logger.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
@@ -39,8 +41,11 @@ void main() {
   late MockAppLogger mockLogger;
   late MockUrlLauncherPlatform mockLauncher;
   late FakeRemoteConfigService fakeRemoteConfig;
+  late MockTelemetryService mockTelemetry;
 
   setUp(() {
+    mockTelemetry = MockTelemetryService();
+    TelemetryService.instance = mockTelemetry;
     mockLogger = MockAppLogger();
     AppLogger.instance = mockLogger;
     mockLauncher = MockUrlLauncherPlatform();
@@ -242,5 +247,66 @@ void main() {
 
     expect(mockLogger.recordedErrors.length, equals(2));
     expect(mockLogger.recordedErrors.last['contextMessage'], contains('Instagram'));
+  });
+
+  group('ModalBetaAberto - Telemetria', () {
+    testWidgets('dispara logAcaoBetaAberto ao abrir o modal', (tester) async {
+      await tester.pumpWidget(criarWidgetTeste());
+      await tester.tap(find.text('Abrir Modal'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
+      final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'abrir_modal_beta');
+      expect(params['origem'], 'home_header');
+    });
+
+    testWidgets('dispara logAcaoBetaAberto ao clicar no Instagram', (tester) async {
+      await tester.pumpWidget(criarWidgetTeste());
+      await tester.tap(find.text('Abrir Modal'));
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+      await tester.tap(find.text('Instagram Oficial'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
+      final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'clique_instagram');
+      expect(params['origem'], 'modal_beta');
+      expect(params['detalhe'], 'instagram');
+    });
+
+    testWidgets('dispara logAcaoBetaAberto ao clicar no WhatsApp', (tester) async {
+      await tester.pumpWidget(criarWidgetTeste());
+      await tester.tap(find.text('Abrir Modal'));
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+      await tester.tap(find.text('Comunidade no WhatsApp'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
+      final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'clique_whatsapp');
+      expect(params['origem'], 'modal_beta');
+      expect(params['detalhe'], 'whatsapp');
+    });
+
+    testWidgets('dispara logAcaoBetaAberto ao clicar em Enviar Sugestão', (tester) async {
+      await tester.pumpWidget(criarWidgetTeste(onFeedbackSolicitado: () {}));
+      await tester.tap(find.text('Abrir Modal'));
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+      await tester.tap(find.text('Enviar Sugestão'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
+      final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'clique_feedback');
+      expect(params['origem'], 'modal_beta');
+      expect(params['detalhe'], 'feedback');
+    });
   });
 }

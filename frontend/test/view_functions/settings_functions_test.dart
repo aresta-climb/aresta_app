@@ -147,36 +147,31 @@ void main() {
       expect(result, isFalse);
     });
 
-    testWidgets('deve rejeitar arquivos .zip e .croqui', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return Container();
-              },
+    testWidgets(
+      'deve falhar graciosamente quando URL for inválida ou inacessível',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return Container();
+                },
+              ),
             ),
           ),
-        ),
-      );
-      final context = tester.element(find.byType(Container));
+        );
+        final context = tester.element(find.byType(Container));
 
-      final result = await conectarEditor(
-        context,
-        datasetRepo,
-        configService,
-        'http://test.com/file.zip',
-      );
-      expect(result, isFalse);
-
-      await tester.pump();
-      expect(
-        find.text(
-          'Aviso: Importação de arquivos locais foi descontinuada. Conecte diretamente via Live Reload / URL.',
-        ),
-        findsOneWidget,
-      );
-    });
+        final result = await conectarEditor(
+          context,
+          datasetRepo,
+          configService,
+          'http://127.0.0.1:9999/inexistente',
+        );
+        expect(result, isFalse);
+      },
+    );
   });
 
   group('buildEditorCard experimental mode tests', () {

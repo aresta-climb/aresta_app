@@ -35,14 +35,11 @@ class EditorDeCroqui {
   /// URL do editor ativo. Null = modo oficial.
   final ValueNotifier<String?> editorUrl = ValueNotifier(null);
 
-  /// Se o modo experimental (zip importado) está ativo.
+  /// Se o modo experimental (conectado ao Editor Desktop) está ativo.
   final ValueNotifier<bool> isExperimentalMode = ValueNotifier(false);
 
   /// Se as opções de desenvolvedor/experimental estão visíveis na UI.
   final ValueNotifier<bool> isDevModeEnabled = ValueNotifier(false);
-
-  /// Tempo restante para a auto-destruição dos dados experimentais.
-  final ValueNotifier<Duration?> timeRemaining = ValueNotifier(null);
 
   /// Notificador de eventos push de recarregamento em tempo real.
   final ValueNotifier<LiveReloadEvent?> eventoLiveReload = ValueNotifier(null);
@@ -55,8 +52,6 @@ class EditorDeCroqui {
     notificadorGatilhoRecarregamento.value++;
   }
 
-  DateTime? _expirationTime;
-  Timer? _countdownTimer;
   WebSocket? _wsLiveReload;
 
   EditorDeCroqui() {
@@ -195,7 +190,6 @@ class EditorDeCroqui {
   /// Inicia a escuta de eventos WebSocket para Live Reload.
   void iniciarEscutaLiveReload(String urlBase) {
     encerrarEscutaLiveReload();
-    if (urlBase.startsWith('aresta-zip://')) return;
 
     Uri? wsUri;
     final codigo = extrairCodigoPrevia(urlBase);
@@ -391,9 +385,7 @@ class EditorDeCroqui {
           );
         }
 
-        final expiryStr = config['expiryTime'] as String?;
-
-        // Se o app foi fechado em modo experimental, limpamos tudo ao abrir
+        // Se o app foi fechado em modo experimental, limpamos tudo ao abrir (Sessão Volátil)
         if (experimental) {
           AppLogger.instance.logInfo(
             '[EditorConfig] Modo experimental detectado no boot. Executando Nuke compulsório...',
@@ -406,27 +398,8 @@ class EditorDeCroqui {
           editorUrl.value = url;
         }
 
-        if (experimental) {
-          isExperimentalMode.value = true;
-        }
-
         if (devMode) {
           isDevModeEnabled.value = true;
-        }
-
-        if (expiryStr != null) {
-          _expirationTime = DateTime.tryParse(expiryStr);
-          if (_expirationTime != null) {
-            final now = DateTime.now();
-            if (_expirationTime!.isBefore(now)) {
-              AppLogger.instance.logInfo(
-                '[EditorConfig] Tempo expirado durante o boot. Limpando...',
-              );
-              nukeExperimentalData();
-            } else {
-              _startCountdown();
-            }
-          }
         }
       }
     } catch (e, stackTrace) {
@@ -438,59 +411,13 @@ class EditorDeCroqui {
     }
   }
 
-  void _startCountdown() {
-    _countdownTimer?.cancel();
-
-    void tick() {
-      if (_expirationTime == null) {
-        _countdownTimer?.cancel();
-        timeRemaining.value = null;
-        return;
-      }
-
-      final now = DateTime.now();
-      final difference = _expirationTime!.difference(now);
-
-      if (difference.isNegative || difference.inSeconds <= 0) {
-        _countdownTimer?.cancel();
-        timeRemaining.value = Duration.zero;
-        AppLogger.instance.logInfo(
-          '[EditorConfig] Tempo esgotado! Iniciando Nuke...',
-        );
-        nukeExperimentalData();
-      } else {
-        timeRemaining.value = difference;
-      }
-    }
-
-    tick();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
-  }
-
-  Future<void> activateExperimental({
-    String? url,
-    bool forceResetTimer = false,
-  }) async {
-    if (forceResetTimer ||
-        _expirationTime == null ||
-        _expirationTime!.isBefore(DateTime.now())) {
-      _expirationTime = DateTime.now().add(const Duration(minutes: 20));
-      AppLogger.instance.logInfo(
-        '[EditorConfig] Definindo novo tempo de expiração: 20 minutos.',
-      );
-    } else {
-      AppLogger.instance.logInfo(
-        '[EditorConfig] Mantendo tempo de expiração existente.',
-      );
-    }
-
-    _startCountdown();
-
+  /// Ativa o modo experimental conectando à URL fornecida.
+  /// No modo experimental simplificado, a sessão permanece ativa enquanto o aplicativo estiver aberto,
+  /// sem limite de tempo ou temporizador regressivo.
+  Future<void> activateExperimental({String? url}) async {
     isExperimentalMode.value = true;
     if (url != null) {
-      if (!url.startsWith('http://') &&
-          !url.startsWith('https://') &&
-          !url.startsWith('aresta-zip://')) {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'http://$url';
       }
       editorUrl.value = url;
@@ -505,7 +432,6 @@ class EditorDeCroqui {
         config['editorUrl'] = null;
       }
       config['isExperimental'] = true;
-      config['expiryTime'] = _expirationTime?.toIso8601String();
 
       await _writeConfig(config);
     } catch (e, stackTrace) {
@@ -549,10 +475,8 @@ class EditorDeCroqui {
     }
   }
 
+  /// Limpa todos os dados experimentais baixados e desconecta do editor desktop.
   Future<void> nukeExperimentalData() async {
-    _expirationTime = null;
-    _countdownTimer?.cancel();
-    timeRemaining.value = null;
     encerrarEscutaLiveReload();
 
     try {

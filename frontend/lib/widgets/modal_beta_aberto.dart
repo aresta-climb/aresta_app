@@ -6,6 +6,7 @@ import 'package:feedback/feedback.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/firebase/remote_config_service.dart';
+import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
 
@@ -18,7 +19,9 @@ Future<void> exibirModalBetaAberto(
   VoidCallback? onFeedbackSolicitado,
   VoidCallback? onAbrirWhatsapp,
   VoidCallback? onAbrirInstagram,
+  String origem = 'home_header',
 }) {
+  TelemetryService.instance.logAcaoBetaAberto('abrir_modal_beta', origem: origem);
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
@@ -60,6 +63,10 @@ class ModalBetaAberto extends StatelessWidget {
   });
 
   Future<void> _acionarWhatsapp(BuildContext context) async {
+    TelemetryService.instance.logAcaoBetaAberto(
+      'clique_whatsapp',
+      canal: 'whatsapp',
+    );
     if (onAbrirWhatsapp != null) {
       onAbrirWhatsapp!();
       return;
@@ -77,6 +84,10 @@ class ModalBetaAberto extends StatelessWidget {
   }
 
   Future<void> _acionarInstagram(BuildContext context) async {
+    TelemetryService.instance.logAcaoBetaAberto(
+      'clique_instagram',
+      canal: 'instagram',
+    );
     if (onAbrirInstagram != null) {
       onAbrirInstagram!();
       return;
@@ -236,6 +247,10 @@ class ModalBetaAberto extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
+                    TelemetryService.instance.logAcaoBetaAberto(
+                      'clique_feedback',
+                      canal: 'feedback',
+                    );
                     Navigator.of(context).pop();
                     if (onFeedbackSolicitado != null) {
                       onFeedbackSolicitado!();

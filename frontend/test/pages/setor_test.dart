@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 void main() {
   testWidgets('SetorPage should wrap body in SafeArea', (tester) async {
@@ -84,7 +86,46 @@ void main() {
       ),
     );
     await tester.pump();
+  });
 
+  testWidgets('SetorPage dispara logAlterarOrdenacao ao alternar critérios de ordenação', (tester) async {
+    final mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
+
+    final via1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Beta'));
+    final via2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Alfa'));
+    final setor = Setor()
+      ..nome = 'Setor Ordenação'
+      ..escaladas.addAll([via1, via2]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor, cragId: 'crag1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1. Toca em ALFABÉTICO
+    mockTelemetria.clear();
+    await tester.tap(find.text('ALFABÉTICO'));
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
+    var params = mockTelemetria.recordedParams['alterar_ordenacao']!;
+    expect(params['acao'], 'alterar_ordenacao');
+    expect(params['origem'], 'setor');
+    expect(params['detalhe'], 'alphaAsc');
+
+    // 2. Toca em DIFICULDADE
+    mockTelemetria.clear();
+    await tester.tap(find.text('DIFICULDADE'));
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
+    params = mockTelemetria.recordedParams['alterar_ordenacao']!;
+    expect(params['acao'], 'alterar_ordenacao');
+    expect(params['origem'], 'setor');
+    expect(params['detalhe'], 'gradeAsc');
   });
 }
 

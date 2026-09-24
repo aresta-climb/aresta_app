@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
+import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../utils/indexador_escaladas.dart';
@@ -42,6 +43,7 @@ class _IndiceEscaladasPageState extends State<IndiceEscaladasPage>
   late Map<String, EstadoFiltrosIndice> _filtrosPorModalidade;
 
   TabController? _tabController;
+  int _indiceAbaAtual = 0;
 
   @override
   void initState() {
@@ -89,7 +91,16 @@ class _IndiceEscaladasPageState extends State<IndiceEscaladasPage>
         vsync: this,
       );
       _tabController!.addListener(() {
-        if (!_tabController!.indexIsChanging) {
+        if (!_tabController!.indexIsChanging &&
+            _tabController!.index != _indiceAbaAtual) {
+          _indiceAbaAtual = _tabController!.index;
+          final novaModalidade = _modalidadesDisponiveis[_indiceAbaAtual];
+          TelemetryService.instance.logAcaoIndiceEscaladas(
+            widget.cragId,
+            'trocar_aba',
+            modalidade: novaModalidade,
+            detalhe: novaModalidade,
+          );
           setState(() {});
         }
       });
@@ -102,16 +113,6 @@ class _IndiceEscaladasPageState extends State<IndiceEscaladasPage>
     super.dispose();
   }
 
-  /// Retorna a lista de setores que possuem escaladas na modalidade informada.
-  List<String> _obterSetoresParaModalidade(String modalidade) {
-    final itens = _itensPorModalidade[modalidade] ?? [];
-    return itens
-        .map((i) => i.setor.nome)
-        .where((nome) => nome.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.compareTo(b));
-  }
 
   /// Retorna a lista de conquistadores que possuem escaladas na modalidade informada.
   List<String> _obterConquistadoresParaModalidade(String modalidade) {
@@ -202,6 +203,7 @@ class _IndiceEscaladasPageState extends State<IndiceEscaladasPage>
 
           // Painel Expansível de Filtros com RangeSlider e Dropdowns com Chips
           PainelFiltrosIndice(
+            cragId: widget.cragId,
             estado: estadoAtivo,
             modalidade: modalidadeAtiva,
             setoresDisponiveis:
@@ -278,6 +280,13 @@ class _IndiceEscaladasPageState extends State<IndiceEscaladasPage>
                       return CardIndiceEscalada(
                         item: item,
                         onTap: () {
+                          TelemetryService.instance.logAcaoEscalada(
+                            widget.cragId,
+                            item.setor.nome,
+                            item.nome,
+                            'abrir_detalhes',
+                            'indice_${modalidadeAtiva.toLowerCase()}',
+                          );
                           if (widget.onViaTap != null) {
                             widget.onViaTap!(item);
                           } else {

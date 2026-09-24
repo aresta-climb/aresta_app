@@ -11,6 +11,7 @@ import '../view_functions/home_functions.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../services/firebase/registro_primeira_visita.dart';
 import '../theme/app_colors.dart';
 
 class GlobalSearchResult {
@@ -192,12 +193,17 @@ class _GlobalSearchState extends State<GlobalSearch> {
               isDownloaded: true,
               isPico: true,
               originalItem: pico,
-              onTap: () {
+              onTap: () async {
+                final primeiraVisita = await RegistroPrimeiraVisita.instancia
+                    .registrarEVerificarPrimeiraVisita(cragIdStr);
                 TelemetryService.instance.logAcaoCroqui(
                   cragIdStr,
                   'abrir_croqui',
                   origem: 'busca_global',
+                  modoAcesso: 'offline',
+                  primeiraVisita: primeiraVisita,
                 );
+                if (!mounted) return;
                 if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
                 }
@@ -269,12 +275,17 @@ class _GlobalSearchState extends State<GlobalSearch> {
             isDownloaded: false,
             isPico: true,
             originalItem: pico,
-            onTap: () {
+            onTap: () async {
+              final primeiraVisita = await RegistroPrimeiraVisita.instancia
+                  .registrarEVerificarPrimeiraVisita(cragId);
               TelemetryService.instance.logAcaoCroqui(
                 cragId,
                 'abrir_croqui',
                 origem: 'busca_global',
+                modoAcesso: 'online',
+                primeiraVisita: primeiraVisita,
               );
+              if (!mounted) return;
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
@@ -368,12 +379,18 @@ class _GlobalSearchState extends State<GlobalSearch> {
             isDownloaded: isDownloaded,
             isPico: false,
             originalItem: setor,
-            onTap: () {
+            onTap: () async {
+              final primeiraVisita = await RegistroPrimeiraVisita.instancia
+                  .registrarEVerificarPrimeiraVisita(cragId);
+              final modoAcesso = isDownloaded ? 'offline' : 'online';
               TelemetryService.instance.logAcaoCroqui(
                 cragId,
                 'abrir_croqui',
                 origem: 'busca_global',
+                modoAcesso: modoAcesso,
+                primeiraVisita: primeiraVisita,
               );
+              if (!mounted) return;
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
@@ -420,12 +437,18 @@ class _GlobalSearchState extends State<GlobalSearch> {
                 isDownloaded: isDownloaded,
                 isPico: false,
                 originalItem: setor,
-                onTap: () {
+                onTap: () async {
+                  final primeiraVisita = await RegistroPrimeiraVisita.instancia
+                      .registrarEVerificarPrimeiraVisita(cragId);
+                  final modoAcesso = isDownloaded ? 'offline' : 'online';
                   TelemetryService.instance.logAcaoCroqui(
                     cragId,
                     'abrir_croqui',
                     origem: 'busca_global',
+                    modoAcesso: modoAcesso,
+                    primeiraVisita: primeiraVisita,
                   );
+                  if (!mounted) return;
                   if (Navigator.of(context).canPop()) {
                     Navigator.of(context).pop();
                   }

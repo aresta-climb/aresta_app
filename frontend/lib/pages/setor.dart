@@ -10,6 +10,7 @@ import '../view_functions/via_functions.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/browse_functions.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/firebase/telemetry_service.dart';
 import '../widgets/mapa_thumbnail.dart';
 
 /// Uma página que fornece uma visão geral de um setor específico.
@@ -373,6 +374,7 @@ class _SetorPageState extends State<SetorPage> {
                 widget.scrollToEscalada,
                 _targetKey,
                 buildEscaladaSortGrid(context, _sortMode, (mode) {
+                  TelemetryService.instance.logAlterarOrdenacao('setor', mode.name);
                   setState(() {
                     _sortMode = mode;
                   });
