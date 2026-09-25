@@ -88,7 +88,9 @@ class MeusCroquisPage extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final downloadedCrags = dataset.downloadedPicos;
+                  final downloadedCrags = dataset.croquisBaixados.isNotEmpty
+                      ? dataset.croquisBaixados
+                      : dataset.downloadedPicos;
 
                   if (downloadedCrags.isEmpty) {
                     return Center(

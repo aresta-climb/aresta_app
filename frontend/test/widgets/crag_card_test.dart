@@ -3,16 +3,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/estatisticas_pico.dart';
 import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/widgets/crag_card.dart';
 
 void main() {
   Widget buildTestCard({
-    required ResumoPico crag,
+    required dynamic crag,
     String? distanceStr,
     bool showDetailedStats = false,
+    bool? isDownloaded,
     VoidCallback? onDownload,
     VoidCallback? onOpen,
   }) {
@@ -26,6 +29,7 @@ void main() {
             crag: crag,
             distanceStr: distanceStr,
             showDetailedStats: showDetailedStats,
+            isDownloadedOverride: isDownloaded,
             downloadingCrags: ValueNotifier(const {}),
             onDownload: onDownload ?? () {},
             onOpen: onOpen,
@@ -36,6 +40,32 @@ void main() {
   }
 
   group('CragCard', () {
+    testWidgets('renderiza informações e estatísticas diretamente a partir de MetadadosIndice', (
+      WidgetTester tester,
+    ) async {
+      final metadados = MetadadosIndice(
+        id: 'pico_proto',
+        nome: 'Pico Protobuf',
+        descricao: 'Serra da Piedade',
+        precomputados: PrecomputadosResumoCroqui(
+          totalSetores: 4,
+          totalEscaladas: 30,
+          totalBoulders: 10,
+          totalEsportivas: 20,
+        ),
+      );
+
+      await tester.pumpWidget(buildTestCard(
+        crag: metadados,
+        showDetailedStats: true,
+        isDownloaded: true,
+      ));
+
+      expect(find.text('PICO PROTOBUF'), findsOneWidget);
+      expect(find.textContaining('4 setores • 30 escaladas'), findsOneWidget);
+      expect(find.textContaining('10 boulders, 20 esportivas'), findsOneWidget);
+      expect(find.text('SALVO OFFLINE'), findsOneWidget);
+    });
     testWidgets('renderiza informações básicas e estatísticas resumidas', (
       WidgetTester tester,
     ) async {

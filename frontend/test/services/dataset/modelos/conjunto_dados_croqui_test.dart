@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset/modelos/conjunto_dados_croqui.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 
 void main() {
@@ -74,5 +76,36 @@ void main() {
       expect(dataset.picosDisponiveis.first.id, equals('pico_mapa'));
       expect(dataset.picosBaixados, isEmpty);
     });
+
+    test('aceita metadadosDisponiveis e croquisBaixados nativamente com interoperabilidade', () {
+      final meta = MetadadosIndice(
+        id: 'cipo',
+        nome: 'Serra do Cipó',
+        caminhoRelativo: 'mg_cipo/compilado.binarypb',
+      );
+      final croqui = Croqui(
+        id: 'cipo',
+        nome: 'Serra do Cipó',
+        picos: [Pico(nome: 'Cipó Base', estado: 'Minas Gerais')],
+      );
+
+      final dataset = ConjuntoDadosCroqui(
+        metadadosDisponiveis: [meta],
+        croquisBaixados: [croqui],
+      );
+
+      expect(dataset.metadadosDisponiveis.length, equals(1));
+      expect(dataset.metadadosDisponiveis.first.id, equals('cipo'));
+      expect(dataset.croquisBaixados.length, equals(1));
+      expect(dataset.croquisBaixados.first.id, equals('cipo'));
+
+      // Verifica interoperabilidade automática com picosDisponiveis e picosBaixados
+      expect(dataset.picosDisponiveis.length, equals(1));
+      expect(dataset.picosDisponiveis.first.id, equals('cipo'));
+      expect(dataset.picosBaixados.length, equals(1));
+      expect(dataset.picosBaixados.first.id, equals('cipo'));
+      expect(dataset.picosBaixados.first.croqui, equals(croqui));
+    });
   });
 }
+

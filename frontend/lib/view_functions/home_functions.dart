@@ -17,6 +17,7 @@ import '../widgets/micro_badge_beta.dart';
 import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 ///
@@ -30,13 +31,15 @@ Future<void> handlePicoSelection(
   String source = 'home',
   RegistroPrimeiraVisita? registroPrimeiraVisita,
 }) async {
-  final ResumoPico resumo = pico is ResumoPico
-      ? pico
-      : ResumoPico.deMapa(
-          pico is Map<String, dynamic>
-              ? pico
-              : Map<String, dynamic>.from(pico as Map),
-        );
+  final ResumoPico resumo = pico is MetadadosIndice
+      ? pico.paraResumoPico()
+      : (pico is ResumoPico
+          ? pico
+          : ResumoPico.deMapa(
+              pico is Map<String, dynamic>
+                  ? pico
+                  : Map<String, dynamic>.from(pico as Map),
+            ));
   final String id = resumo.id;
   if (id.isEmpty) return;
 
@@ -72,7 +75,7 @@ Future<void> handlePicoSelection(
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
-      final checksum = pico['checksum']?.toString();
+      final checksum = resumo.checksum.isNotEmpty ? resumo.checksum : null;
       croqui = await servicoOnline.carregarCroquiRemoto(
         url,
         picoId: id,

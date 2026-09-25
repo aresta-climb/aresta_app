@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/dataset/modelos/resumo_pico.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
 import '../widgets/crag_card.dart';
 export '../widgets/crag_card.dart';
 
@@ -56,6 +57,7 @@ List<ResumoPico> _normalizarPicos(dynamic lista) {
   if (lista is List) {
     return lista.map((item) {
       if (item is ResumoPico) return item;
+      if (item is MetadadosIndice) return item.paraResumoPico();
       if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
       if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
       return const ResumoPico(id: '', nome: '', local: '');
@@ -268,11 +270,13 @@ void showDownloadBottomSheet(
   ValueListenable<Map<String, double>> downloadingCrags, {
   VoidCallback? onOpen,
 }) {
-  final ResumoPico pico = crag is ResumoPico
-      ? crag
-      : ResumoPico.deMapa(crag is Map<String, dynamic>
+  final ResumoPico pico = crag is MetadadosIndice
+      ? crag.paraResumoPico()
+      : (crag is ResumoPico
           ? crag
-          : Map<String, dynamic>.from(crag as Map));
+          : ResumoPico.deMapa(crag is Map<String, dynamic>
+              ? crag
+              : Map<String, dynamic>.from(crag as Map)));
 
   showModalBottomSheet(
     context: context,

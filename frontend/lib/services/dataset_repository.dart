@@ -113,6 +113,8 @@ class DatasetRepository {
     }
     if (activeDataset.value != null) {
       activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: activeDataset.value!.metadadosDisponiveis,
+        croquisBaixados: activeDataset.value!.croquisBaixados,
         picosDisponiveis: activeDataset.value!.picosDisponiveis,
         picosBaixados: activeDataset.value!.picosBaixados,
       );
@@ -415,6 +417,11 @@ class DatasetRepository {
       }
 
       activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: indice.croquis,
+        croquisBaixados: ordenadosCarregados
+            .where((p) => p.croqui != null)
+            .map((p) => p.croqui!)
+            .toList(),
         picosDisponiveis: parsedPicos,
         picosBaixados: ordenadosCarregados,
       );
@@ -573,6 +580,11 @@ class DatasetRepository {
       );
 
       activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: activeDataset.value?.metadadosDisponiveis ?? const [],
+        croquisBaixados: ordenadosCarregados
+            .where((p) => p.croqui != null)
+            .map((p) => p.croqui!)
+            .toList(),
         picosDisponiveis: activeDataset.value!.picosDisponiveis,
         picosBaixados: ordenadosCarregados,
       );
@@ -720,6 +732,11 @@ class DatasetRepository {
     );
 
     activeDataset.value = ConjuntoDadosCroqui(
+      metadadosDisponiveis: activeDataset.value?.metadadosDisponiveis ?? const [],
+      croquisBaixados: ordenadosCarregados
+          .where((p) => p.croqui != null)
+          .map((p) => p.croqui!)
+          .toList(),
       picosDisponiveis: updatedAvailable,
       picosBaixados: ordenadosCarregados,
     );

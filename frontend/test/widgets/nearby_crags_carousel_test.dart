@@ -15,6 +15,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
@@ -828,5 +830,39 @@ void main() {
 
       expect(resultado, isEmpty);
     });
+
+    test('calcularPicosMaisProximos aceita List<MetadadosIndice> diretamente', () {
+      final picos = [
+        MetadadosIndice(
+          id: 'pico_perto',
+          nome: 'Pico Perto',
+          caminhoRelativo: 'sp_perto/compilado.binarypb',
+          localizacao: Coordenada(latitude: -200100000, longitude: -440100000),
+        ),
+        MetadadosIndice(
+          id: 'pico_longe',
+          nome: 'Pico Longe',
+          caminhoRelativo: 'sp_longe/compilado.binarypb',
+          localizacao: Coordenada(latitude: -210000000, longitude: -450000000),
+        ),
+        MetadadosIndice(
+          id: 'pico_sem_loc',
+          nome: 'Pico Sem Loc',
+          caminhoRelativo: 'sp_sem/compilado.binarypb',
+        ),
+      ];
+
+      final resultado = NearbyCragsCarousel.calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+
+      expect(resultado.length, equals(2));
+      expect(resultado.first.id, equals('pico_perto'));
+      expect(resultado.last.id, equals('pico_longe'));
+      expect(resultado.first.distanciaKm, lessThan(resultado.last.distanciaKm!));
+    });
   });
 }
+

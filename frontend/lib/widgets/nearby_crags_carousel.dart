@@ -11,6 +11,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
 
@@ -25,18 +26,36 @@ class NearbyCragsCarousel extends StatefulWidget {
   const NearbyCragsCarousel({super.key, required this.syncService});
 
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
+  /// aceitando [List<ResumoPico>], [List<MetadadosIndice>] ou listas dinâmicas,
   /// retornando os [limite] picos mais próximos ordenados por distância crescente.
   static List<ResumoPico> calcularPicosMaisProximos({
     required double userLat,
     required double userLon,
-    required List<ResumoPico> picosDisponiveis,
+    required List<dynamic> picosDisponiveis,
     int limite = kLimitePicosProximos,
   }) {
     final List<ResumoPico> picosComDistancia = [];
 
-    for (final pico in picosDisponiveis) {
-      final double? picoLat = pico.latitude;
-      final double? picoLon = pico.longitude;
+    for (final item in picosDisponiveis) {
+      final double? picoLat;
+      final double? picoLon;
+      final ResumoPico pico;
+
+      if (item is MetadadosIndice) {
+        picoLat = item.latitude;
+        picoLon = item.longitude;
+        pico = item.paraResumoPico();
+      } else if (item is ResumoPico) {
+        picoLat = item.latitude;
+        picoLon = item.longitude;
+        pico = item;
+      } else if (item is Map) {
+        pico = ResumoPico.deMapa(Map<String, dynamic>.from(item));
+        picoLat = pico.latitude;
+        picoLon = pico.longitude;
+      } else {
+        continue;
+      }
 
       if (picoLat != null && picoLon != null) {
         final double distanceInMeters = Geolocator.distanceBetween(
@@ -121,13 +140,15 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is ResumoPico
-        ? crag
-        : ResumoPico.deMapa(
-            crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map),
-          );
+    final ResumoPico pico = crag is MetadadosIndice
+        ? crag.paraResumoPico()
+        : (crag is ResumoPico
+            ? crag
+            : ResumoPico.deMapa(
+                crag is Map<String, dynamic>
+                    ? crag
+                    : Map<String, dynamic>.from(crag as Map),
+              ));
     final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
 
@@ -370,8 +391,11 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     _lastUserLon = userLon;
 
     final datasetRepo = DatasetRepository.instance;
+    final dataset = datasetRepo?.activeDataset.value;
     final availablePicos =
-        datasetRepo?.activeDataset.value?.availablePicos ?? [];
+        dataset != null && dataset.metadadosDisponiveis.isNotEmpty
+            ? dataset.metadadosDisponiveis
+            : (dataset?.availablePicos ?? []);
 
     final picosOrdenados = NearbyCragsCarousel.calcularPicosMaisProximos(
       userLat: userLat,

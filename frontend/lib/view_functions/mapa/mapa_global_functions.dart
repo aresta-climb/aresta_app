@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
 import '../../services/dataset/modelos/resumo_pico.dart';
+import '../../services/dataset/modelos/metadados_indice.dart';
 
 /// Coleção de funções de UI puras (view_functions) para o Mapa Global.
 ///
@@ -22,11 +23,13 @@ void showCragModal({
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
-  final ResumoPico pico = crag is ResumoPico
-      ? crag
-      : ResumoPico.deMapa(crag is Map<String, dynamic>
+  final ResumoPico pico = crag is MetadadosIndice
+      ? crag.paraResumoPico()
+      : (crag is ResumoPico
           ? crag
-          : Map<String, dynamic>.from(crag as Map));
+          : ResumoPico.deMapa(crag is Map<String, dynamic>
+              ? crag
+              : Map<String, dynamic>.from(crag as Map)));
 
   showModalBottomSheet(
     context: context,
@@ -133,6 +136,7 @@ Set<Marker> buildMapMarkers({
   } else if (crags is List) {
     picos = crags.map((item) {
       if (item is ResumoPico) return item;
+      if (item is MetadadosIndice) return item.paraResumoPico();
       if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
       if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
       return const ResumoPico(id: '', nome: '', local: '');
