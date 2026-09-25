@@ -61,7 +61,7 @@ class ConfiguracaoEditor {
   }
 
   /// Instancia o modelo a partir de um mapa de dados desserializado.
-  factory ConfiguracaoEditor.deMapa(Map<dynamic, dynamic> mapa) {
+  factory ConfiguracaoEditor.deMapa(Map<String, dynamic> mapa) {
     return ConfiguracaoEditor(
       editorUrl: mapa['editorUrl']?.toString(),
       isExperimental: mapa['isExperimental'] == true,

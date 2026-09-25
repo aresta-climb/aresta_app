@@ -24,21 +24,25 @@ class LiveReloadEvent {
   static LiveReloadEvent? deMensagem(String mensagem) {
     try {
       final decodificado = jsonDecode(mensagem);
-      return decodificado is Map ? deMapa(decodificado) : null;
+      return decodificado is Map
+          ? deMapa(Map<String, dynamic>.from(decodificado))
+          : null;
     } catch (_) {
       return null;
     }
   }
 
   /// Constrói o evento a partir do mapa do evento WebSocket.
-  static LiveReloadEvent? deMapa(Map<dynamic, dynamic> dados) {
+  static LiveReloadEvent? deMapa(Map<String, dynamic> dados) {
     final tipo = dados['tipo'];
     final evento = dados['evento'];
     if (tipo == 'recarregar' ||
         evento == 'recarregar' ||
         tipo == 'evento' ||
         dados.containsKey('setor')) {
-      final subDados = dados['dados'] is Map ? dados['dados'] as Map : null;
+      final subDados = dados['dados'] is Map
+          ? Map<String, dynamic>.from(dados['dados'] as Map)
+          : null;
       final setorId = (dados['setor'] ??
           subDados?['setor'] ??
           subDados?['id_croqui'])?.toString();
@@ -342,7 +346,7 @@ class EditorDeCroqui {
       if (content.trim().isEmpty) return ConfiguracaoEditor.vazia;
       final yamlDoc = loadYaml(content);
       if (yamlDoc is YamlMap) {
-        return ConfiguracaoEditor.deMapa(yamlDoc);
+        return ConfiguracaoEditor.deMapa(Map<String, dynamic>.from(yamlDoc));
       }
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
