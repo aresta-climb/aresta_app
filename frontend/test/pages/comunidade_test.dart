@@ -305,4 +305,15 @@ void main() {
       expect(uri.host, expectedHost, reason: 'URL deve ter o host $expectedHost');
     }
   });
+
+  testWidgets('Ao tocar no card SOBRE O TIME, aciona o callback sem lançar exceções', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SOBRE O TIME'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SOBRE O TIME'), findsOneWidget);
+  });
 }

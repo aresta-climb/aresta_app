@@ -6,10 +6,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../main.dart';
+import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetry_service.dart';
 import 'common_functions.dart';
+
+/// Navega para a tela Sobre o Time utilizando o controlador da árvore de navegação ativa.
+///
+/// Permite injeção de [controller] opcional para facilitar testes unitários isolados.
+void navegarParaSobreTime([TreeNavigationController? controller]) {
+  final treeNav = controller ?? TreeNavigationWrapper.currentTreeController;
+  if (treeNav != null) {
+    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
+  }
+}
 
 /// Constrói um card de ação interativo para a página de Comunidade no tema escuro.
 ///

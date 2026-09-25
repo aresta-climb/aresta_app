@@ -286,7 +286,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, MembroTime data) {
               children: [
                 if (data.linkedin.isNotEmpty)
                   ElevatedButton.icon(
-                    onPressed: () => _abrirLinkMembro(data.linkedin, 'LinkedIn'),
+                    onPressed: () => abrirLinkSobreTime(data.linkedin, 'LinkedIn'),
                     icon: const Icon(Icons.work_outline, size: 16, color: Colors.white),
                     label: const Text('LinkedIn', style: TextStyle(color: Colors.white, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
@@ -297,7 +297,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, MembroTime data) {
                   ),
                 if (data.github.isNotEmpty)
                   ElevatedButton.icon(
-                    onPressed: () => _abrirLinkMembro(data.github, 'GitHub'),
+                    onPressed: () => abrirLinkSobreTime(data.github, 'GitHub'),
                     icon: const Icon(Icons.code, size: 16, color: Colors.black),
                     label: const Text('GitHub', style: TextStyle(color: Colors.black, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
@@ -418,8 +418,10 @@ class QuadrantPainter extends CustomPainter {
   }
 }
 
-/// Abre um link externo de um membro da equipe com rastreamento e tratamento de exceções.
-Future<void> _abrirLinkMembro(String url, String redeSocial) async {
+/// Abre um link externo a partir da tela Sobre o Time, registrando telemetria e tratando exceções via [AppLogger].
+///
+/// Utilizado para redes sociais dos membros da equipe e links de contribuição (e.g. Discord).
+Future<void> abrirLinkSobreTime(String url, String servicoOuRede) async {
   TelemetryService.instance.logLinkExterno(
     url,
     'sobre_time',
@@ -429,7 +431,7 @@ Future<void> _abrirLinkMembro(String url, String redeSocial) async {
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   } catch (e, stackTrace) {
     AppLogger.instance.logError(
-      'Erro ao abrir link do $redeSocial em sobre_time_functions',
+      'Erro ao abrir link do $servicoOuRede em sobre_time_functions ($url)',
       error: e,
       stackTrace: stackTrace,
     );

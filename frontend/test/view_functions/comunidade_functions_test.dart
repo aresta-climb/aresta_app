@@ -10,6 +10,7 @@ import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/view_functions/comunidade_functions.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
 import '../mocks/mock_app_logger.dart';
 import '../mocks/mock_telemetry_service.dart';
 
@@ -270,6 +271,22 @@ void main() {
           ),
           isTrue,
         );
+      });
+    });
+
+    group('navegarParaSobreTime', () {
+      test('dispara navegação para SobreTimeNode utilizando controller injetado', () {
+        final controller = TreeNavigationController();
+        expect(controller.currentNode, isA<HomeNode>());
+
+        navegarParaSobreTime(controller);
+
+        expect(controller.currentNode, isA<SobreTimeNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      });
+
+      test('não lança exceção quando currentTreeController é nulo e nenhum controller é injetado', () {
+        expect(() => navegarParaSobreTime(), returnsNormally);
       });
     });
   });

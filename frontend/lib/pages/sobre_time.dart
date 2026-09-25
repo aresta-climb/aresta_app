@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/sobre_time_functions.dart';
-import '../services/firebase/app_logger.dart';
-import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/remote_config_service.dart';
 import '../main.dart';
 
@@ -173,24 +170,10 @@ class _SobreTimePageState extends State<SobreTimePage>
               ),
               const Spacer(),
               GestureDetector(
-                onTap: () async {
-                  final url =
-                      RemoteConfigService.instance.discordCommunityUrl;
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'sobre_time',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError(
-                      'Erro ao abrir link do Discord em SobreTimePage ($url)',
-                      error: e,
-                      stackTrace: stackTrace,
-                    );
-                  }
-                },
+                onTap: () => abrirLinkSobreTime(
+                  RemoteConfigService.instance.discordCommunityUrl,
+                  'Discord',
+                ),
                 child: Container(
                   width: double.infinity,
                   margin: const EdgeInsets.symmetric(horizontal: 24),

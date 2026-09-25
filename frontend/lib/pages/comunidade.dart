@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../main.dart';
-import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
 import '../services/firebase/remote_config_service.dart';
@@ -47,12 +45,7 @@ class ComunidadePage extends StatelessWidget {
                 subtitle: 'Conheça os desenvolvedores e colaboradores do projeto Aresta.',
                 iconData: Icons.groups_outlined,
                 iconBgColor: context.colors.dryMoss,
-                onTap: () {
-                  final treeNav = TreeNavigationWrapper.currentTreeController;
-                  if (treeNav != null) {
-                    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
-                  }
-                },
+                onTap: navegarParaSobreTime,
               ),
               const SizedBox(height: 16),
               buildActionCard(

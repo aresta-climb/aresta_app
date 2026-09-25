@@ -2,7 +2,29 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/view_functions/sobre_time_functions.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../mocks/mock_app_logger.dart';
+import '../mocks/mock_telemetry_service.dart';
+
+class MockUrlLauncherPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements UrlLauncherPlatform {
+  String? lastLaunchedUrl;
+  bool shouldThrow = false;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    lastLaunchedUrl = url;
+    if (shouldThrow) {
+      throw Exception('Falha ao abrir URL nativa');
+    }
+    return true;
+  }
+}
 
 void main() {
   group('MembroTime', () {
@@ -64,6 +86,48 @@ void main() {
           expect(uri.host, contains('github.com'));
         }
       }
+    });
+  });
+
+  group('abrirLinkSobreTime', () {
+    late MockAppLogger mockLogger;
+    late MockTelemetryService mockTelemetria;
+    late MockUrlLauncherPlatform mockLauncher;
+
+    setUp(() {
+      mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      mockTelemetria = MockTelemetryService();
+      TelemetryService.instance = mockTelemetria;
+      mockLauncher = MockUrlLauncherPlatform();
+      UrlLauncherPlatform.instance = mockLauncher;
+    });
+
+    test('abre link com sucesso e registra evento de telemetria sobre_time', () async {
+      const url = 'https://discord.gg/NT9uSKJWYs';
+      await abrirLinkSobreTime(url, 'Discord');
+
+      expect(mockLauncher.lastLaunchedUrl, equals(url));
+      expect(mockTelemetria.recordedEvents, contains('link_externo'));
+      final params = mockTelemetria.recordedParams['link_externo']!;
+      expect(params['acao'], equals('abrir_link_externo'));
+      expect(params['origem'], equals('sobre_time'));
+      expect(params['detalhe'], equals(url));
+      expect(mockLogger.recordedErrors, isEmpty);
+    });
+
+    test('trata exceção ao abrir link registrando erro no AppLogger', () async {
+      mockLauncher.shouldThrow = true;
+      const url = 'https://github.com/invalido';
+      await abrirLinkSobreTime(url, 'GitHub');
+
+      expect(mockTelemetria.recordedEvents, contains('link_externo'));
+      expect(
+        mockLogger.recordedErrors.any(
+          (e) => e['contextMessage'].contains('Erro ao abrir link do GitHub em sobre_time_functions ($url)'),
+        ),
+        isTrue,
+      );
     });
   });
 }
