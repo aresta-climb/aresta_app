@@ -286,23 +286,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, MembroTime data) {
               children: [
                 if (data.linkedin.isNotEmpty)
                   ElevatedButton.icon(
-                    onPressed: () async {
-                      final url = data.linkedin;
-                      TelemetryService.instance.logLinkExterno(
-                        url,
-                        'sobre_time',
-                        detalhe: url,
-                      );
-                      try {
-                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                      } catch (e, stackTrace) {
-                        AppLogger.instance.logError(
-                          'Erro ao abrir link do LinkedIn em sobre_time_functions',
-                          error: e,
-                          stackTrace: stackTrace,
-                        );
-                      }
-                    },
+                    onPressed: () => _abrirLinkMembro(data.linkedin, 'LinkedIn'),
                     icon: const Icon(Icons.work_outline, size: 16, color: Colors.white),
                     label: const Text('LinkedIn', style: TextStyle(color: Colors.white, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
@@ -313,23 +297,7 @@ Widget buildQuadrantDetailedContent(BuildContext context, MembroTime data) {
                   ),
                 if (data.github.isNotEmpty)
                   ElevatedButton.icon(
-                    onPressed: () async {
-                      final url = data.github;
-                      TelemetryService.instance.logLinkExterno(
-                        url,
-                        'sobre_time',
-                        detalhe: url,
-                      );
-                      try {
-                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                      } catch (e, stackTrace) {
-                        AppLogger.instance.logError(
-                          'Erro ao abrir link do GitHub em sobre_time_functions',
-                          error: e,
-                          stackTrace: stackTrace,
-                        );
-                      }
-                    },
+                    onPressed: () => _abrirLinkMembro(data.github, 'GitHub'),
                     icon: const Icon(Icons.code, size: 16, color: Colors.black),
                     label: const Text('GitHub', style: TextStyle(color: Colors.black, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
@@ -447,6 +415,24 @@ class QuadrantPainter extends CustomPainter {
     return index != oldDelegate.index ||
            expand != oldDelegate.expand ||
            fillColor != oldDelegate.fillColor;
+  }
+}
+
+/// Abre um link externo de um membro da equipe com rastreamento e tratamento de exceções.
+Future<void> _abrirLinkMembro(String url, String redeSocial) async {
+  TelemetryService.instance.logLinkExterno(
+    url,
+    'sobre_time',
+    detalhe: url,
+  );
+  try {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (e, stackTrace) {
+    AppLogger.instance.logError(
+      'Erro ao abrir link do $redeSocial em sobre_time_functions',
+      error: e,
+      stackTrace: stackTrace,
+    );
   }
 }
 

@@ -417,10 +417,6 @@ class EditorDeCroqui {
         if (url != null && url.isNotEmpty) {
           editorUrl.value = url;
         }
-
-        if (devMode) {
-          isDevModeEnabled.value = true;
-        }
       }
     } catch (e, stackTrace) {
       AppLogger.instance.logError(

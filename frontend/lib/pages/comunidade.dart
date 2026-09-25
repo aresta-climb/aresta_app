@@ -65,20 +65,10 @@ class ComunidadePage extends StatelessWidget {
                     'Participe para tirar dúvidas, dar ideias e receber avisos do Aresta.',
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
-                onTap: () async {
-                  final url =
-                      RemoteConfigService.instance.whatsappCommunityUrl;
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'comunidade',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError('Erro ao abrir link do WhatsApp ($url)', error: e, stackTrace: stackTrace);
-                  }
-                },
+                onTap: () => _abrirLinkExterno(
+                  RemoteConfigService.instance.whatsappCommunityUrl,
+                  'WhatsApp',
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -88,19 +78,10 @@ class ComunidadePage extends StatelessWidget {
                     'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
-                onTap: () async {
-                  const url = 'https://www.instagram.com/arestaclimb/';
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'comunidade',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError('Erro ao abrir link do Instagram ($url)', error: e, stackTrace: stackTrace);
-                  }
-                },
+                onTap: () => _abrirLinkExterno(
+                  'https://www.instagram.com/arestaclimb/',
+                  'Instagram',
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -110,19 +91,10 @@ class ComunidadePage extends StatelessWidget {
                     'Acompanhe novidades, nosso crescimento e o lado corporativo do Aresta.',
                 iconData: Icons.work_outline,
                 iconBgColor: const Color(0xFF0A66C2), // LinkedIn Blue
-                onTap: () async {
-                  const url = 'https://www.linkedin.com/company/arestaclimb/';
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'comunidade',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError('Erro ao abrir link do LinkedIn ($url)', error: e, stackTrace: stackTrace);
-                  }
-                },
+                onTap: () => _abrirLinkExterno(
+                  'https://www.linkedin.com/company/arestaclimb/',
+                  'LinkedIn',
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -132,20 +104,10 @@ class ComunidadePage extends StatelessWidget {
                     'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
-                onTap: () async {
-                  final url =
-                      RemoteConfigService.instance.discordCommunityUrl;
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'comunidade',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError('Erro ao abrir link do Discord ($url)', error: e, stackTrace: stackTrace);
-                  }
-                },
+                onTap: () => _abrirLinkExterno(
+                  RemoteConfigService.instance.discordCommunityUrl,
+                  'Discord',
+                ),
               ),
               const SizedBox(height: 16),
               buildActionCard(
@@ -154,19 +116,10 @@ class ComunidadePage extends StatelessWidget {
                 subtitle: 'Acesse o perfil com os repositórios do github.',
                 iconData: Icons.code,
                 iconBgColor: const Color(0xFF333333), // GitHub Dark Gray
-                onTap: () async {
-                  const url = 'https://github.com/aresta-climb';
-                  TelemetryService.instance.logLinkExterno(
-                    url,
-                    'comunidade',
-                    detalhe: url,
-                  );
-                  try {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                  } catch (e, stackTrace) {
-                    AppLogger.instance.logError('Erro ao abrir link do GitHub ($url)', error: e, stackTrace: stackTrace);
-                  }
-                },
+                onTap: () => _abrirLinkExterno(
+                  'https://github.com/aresta-climb',
+                  'GitHub',
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -178,5 +131,23 @@ class ComunidadePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Abre uma URL externa no navegador do dispositivo, registrando telemetria e tratando erros com log contextual.
+  Future<void> _abrirLinkExterno(String url, String nomeServico) async {
+    TelemetryService.instance.logLinkExterno(
+      url,
+      'comunidade',
+      detalhe: url,
+    );
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao abrir link do $nomeServico ($url)',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }
