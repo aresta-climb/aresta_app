@@ -17,7 +17,6 @@ import '../widgets/micro_badge_beta.dart';
 import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/http/servico_croqui_online.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 ///

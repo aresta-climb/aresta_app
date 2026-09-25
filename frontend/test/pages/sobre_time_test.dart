@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
@@ -193,6 +194,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NT9uSKJWYs');
-  });
   });
 }

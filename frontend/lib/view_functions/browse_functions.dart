@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../theme/app_colors.dart';
-import '../widgets/provedor_imagem_aresta.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/dataset/modelos/resumo_pico.dart';
