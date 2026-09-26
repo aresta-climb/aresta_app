@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/view_functions/via_functions.dart';
+import 'package:frontend/widgets/mapa_thumbnail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 void main() {
@@ -290,6 +291,89 @@ void main() {
         );
 
         expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+        expect(find.byType(MapaThumbnail), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deve renderizar MapaThumbnail quando a escalada possui mapas próprios',
+      (tester) async {
+        final pico = Pico()..nome = 'Pico Boulder';
+        final mapaLocal = Mapa(
+          caminhoImagemMapa: 'boulder_saida.webp',
+          larguraMapa: 1200,
+          alturaMapa: 800,
+        );
+        final escalada = Escalada(
+          boulder: Boulder(nome: 'Sit Start Crucial'),
+        )..mapas.add(mapaLocal);
+
+        final setor = Setor(nome: 'Bloco A')..escaladas.add(escalada);
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return buildViaBody(
+                    context,
+                    escalada,
+                    'crag_boulder',
+                    pico: pico,
+                    setor: setor,
+                    grupo: null,
+                    fromSetorPage: false,
+                    fromMapaPage: false,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(MapaThumbnail), findsOneWidget);
+        expect(find.text('VER NO CROQUI INTERATIVO'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'não deve renderizar nem MapaThumbnail nem botão quando não há mapas nem referências',
+      (tester) async {
+        final pico = Pico()..nome = 'Pico Sem Mapas';
+        final escalada = Escalada(
+          viaEsportiva: ViaEsportiva(nome: 'Via Isolada'),
+        );
+        final setor = Setor(nome: 'Falésia Isolada')..escaladas.add(escalada);
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return buildViaBody(
+                    context,
+                    escalada,
+                    'crag_sem_mapas',
+                    pico: pico,
+                    setor: setor,
+                    grupo: null,
+                    fromSetorPage: false,
+                    fromMapaPage: false,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(MapaThumbnail), findsNothing);
+        expect(find.text('VER NO CROQUI INTERATIVO'), findsNothing);
       },
     );
 

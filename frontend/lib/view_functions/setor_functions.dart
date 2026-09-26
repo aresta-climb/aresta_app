@@ -139,38 +139,6 @@ class RotulosVia {
   });
 }
 
-/// Extrai o nome da via e o índice do mapa padrão a partir da [Escalada].
-(String nome, int indiceMapaPadrao) _extrairNomeEIndiceMapa(Escalada escalada) {
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      return (escalada.viaEsportiva.nome, escalada.viaEsportiva.indiceMapaPadrao);
-    case Escalada_Tipo.viaMovel:
-      return (escalada.viaMovel.nome, escalada.viaMovel.indiceMapaPadrao);
-    case Escalada_Tipo.boulder:
-      return (escalada.boulder.nome, escalada.boulder.indiceMapaPadrao);
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      return (escalada.viaMultiplasEnfiadas.nome, escalada.viaMultiplasEnfiadas.indiceMapaPadrao);
-    case Escalada_Tipo.highline:
-      return (escalada.highline.nome, escalada.highline.indiceMapaPadrao);
-    default:
-      return ('', 0);
-  }
-}
-
-/// Calcula a ordem de busca nos mapas priorizando o índice padrão configurado.
-List<int> _calcularOrdemBuscaMapas(int indicePadrao, int totalMapas) {
-  final List<int> ordem = [];
-  if (indicePadrao >= 0 && indicePadrao < totalMapas) {
-    ordem.add(indicePadrao);
-  }
-  for (int i = 0; i < totalMapas; i++) {
-    if (!ordem.contains(i)) {
-      ordem.add(i);
-    }
-  }
-  return ordem;
-}
-
 /// Localiza a primeira referência associada ao nome da escalada no mapa.
 Mapa_Referencia? _buscarReferenciaNoMapa(Mapa mapa, String escaladaNome) {
   for (final ref in mapa.referencias) {
@@ -187,10 +155,9 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
     return const RotulosVia(mapIndicator: '', resolvedLabel: '');
   }
 
-  final (nome, indicePadrao) = _extrairNomeEIndiceMapa(escalada);
-  final ordem = _calcularOrdemBuscaMapas(indicePadrao, setor.mapas.length);
+  final nome = getEscaladaNome(escalada);
 
-  for (final i in ordem) {
+  for (int i = 0; i < setor.mapas.length; i++) {
     final mapa = setor.mapas[i];
     final referencia = _buscarReferenciaNoMapa(mapa, nome);
 

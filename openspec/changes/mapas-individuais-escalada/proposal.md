@@ -6,7 +6,7 @@ Atualmente, o sistema de croquis e mapas interativos do Aresta é centrado exclu
 1. **Boulders**: Agarras de partida (*sit-start*), trajetos de saída (*top-out* cego) e linhas de descida do bloco (*downclimb*) demandam fotos dedicadas de ângulos específicos que ficam ilegíveis ou invisíveis na foto frontal do setor.
 2. **Vias de Múltiplas Enfiadas e Vias Técnicas**: Paredes de 300m a 800m possuem detalhes cruciais de paradas intermediárias, bivaques, crux e rotas de rapel que se tornam impraticáveis de visualizar em uma única foto geral de falésia.
 
-Esta mudança introduz suporte nativo a mapas individuais a nível de escalada, com um modelo de orçamento de dados rigoroso (1.0 MP @ WebP Q75, economia de ~80% em bytes) e uma experiência unificada de carrossel no aplicativo móvel.
+Esta mudança introduz suporte nativo a mapas individuais a nível de escalada, com um modelo de orçamento de dados rigoroso (1.0 MP @ WebP Q85, economia de ~70% em pixels e memória) e uma experiência unificada de carrossel no aplicativo móvel.
 
 ## What Changes
 
@@ -15,7 +15,7 @@ Esta mudança introduz suporte nativo a mapas individuais a nível de escalada, 
   - Remoção completa do campo protótipo `repeated Mapa mapas = 21;` de `ViaMultiplasEnfiadas` (marcando o campo 21 como reservado).
 - **Banco de Dados e Editor (`aresta_db`)**:
   - Suporte a `mapas:` no bloco de cada item em `escaladas:` no frontmatter YAML dos setores.
-  - Perfil de compressão dedicado para escaladas: teto de 1.0 MP (~1150x870 px) e WebP Qualidade 75, limitando o peso por imagem a ~75 KB.
+  - Perfil de compressão dedicado para escaladas: teto de 1.0 MP (~1150x870 px) e WebP Qualidade 85, limitando o peso por imagem a ~120 KB com alta fidelidade de agarras e texturas de rocha.
   - Sub-seleção/recorte (*rubber-band crop*) opcional no `DialogoAdicionarMapa` para permitir selecionar uma região de detalhe em fotos originais de alta resolução antes da conversão.
   - Banner instrutivo no `DialogoAdicionarMapa` orientando o autor a selecionar a área de interesse para preservar a máxima qualidade nas agarras.
   - Exibição de mapas de escaladas na árvore de navegação e lista de seleção do `WidgetEditorMapas`.

@@ -1087,10 +1087,15 @@ Widget _buildMultienfiada(
         fromMapaPage,
         via.destaque,
       ),
-      if (via.mapas.isNotEmpty) ...[
-        _buildHeader('Mapas'),
-        _buildMapas(via.mapas, cragId, via.enfiadas, setor),
-      ],
+      _buildInteractiveMapButton(
+        context,
+        escalada,
+        cragId,
+        pico,
+        setor,
+        grupo,
+        fromMapaPage,
+      ),
       _buildHeader('Informações da Multienfiada'),
       if (statCards.isNotEmpty)
         Wrap(
@@ -1445,6 +1450,62 @@ Widget _buildInteractiveMapButton(
   Grupo? grupo,
   bool fromMapaPage,
 ) {
+  // 1. Se a escalada possui mapas próprios locais, exibe o MapaThumbnail rico
+  if (escalada.mapas.isNotEmpty) {
+    final validMapas = escalada.mapas
+        .where((m) =>
+            m.caminhoImagemMapa.isNotEmpty &&
+            m.larguraMapa > 0 &&
+            m.alturaMapa > 0)
+        .toList();
+
+    if (validMapas.isNotEmpty) {
+      List<CarrosselItemData>? carrosselItens;
+      if (pico != null) {
+        final index = CroquiMapIndex(pico);
+        final resolved = ResolvedDataset(
+          grupo: grupo,
+          setor: setor,
+          escalada: escalada,
+        );
+        carrosselItens = index.resolverCarrosselUnificado(resolved);
+      } else {
+        carrosselItens = validMapas
+            .map(
+              (m) => CarrosselItemData(
+                mapaCaminhoImagem: m.caminhoImagemMapa,
+                setorContextNome: setor?.nome,
+                grupoContextNome: grupo?.nome,
+                escaladaContextNome: getEscaladaNome(escalada),
+              ),
+            )
+            .toList();
+      }
+
+      final aspectRatio =
+          validMapas.first.larguraMapa / validMapas.first.alturaMapa;
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: MapaThumbnail(
+              mapas: validMapas,
+              cragId: cragId,
+              setorContext: setor,
+              grupoContext: grupo,
+              nomeContexto: getEscaladaNome(escalada),
+              carrosselItensOverride: carrosselItens,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  // 2. Se a escalada não possui mapas próprios, verifica mapas onde ela é referenciada
   List<IndexedMap> foundMaps = [];
   if (pico != null) {
     final index = CroquiMapIndex(pico);
@@ -1576,31 +1637,6 @@ Widget _buildTopBadges(
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: badges,
-    ),
-  );
-}
-
-Widget _buildMapas(
-  List<Mapa> mapas,
-  String cragId,
-  List<Escalada> escaladasDaVia,
-  Setor? setorContext,
-) {
-  final validMapas = mapas.where((m) => m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0).toList();
-  if (validMapas.isEmpty) return const SizedBox.shrink();
-
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 20),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: AspectRatio(
-        aspectRatio: validMapas.first.larguraMapa / validMapas.first.alturaMapa,
-        child: MapaThumbnail(
-          mapas: validMapas,
-          cragId: cragId,
-          setorContext: setorContext,
-        ),
-      ),
     ),
   );
 }

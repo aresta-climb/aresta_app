@@ -21,6 +21,9 @@ class MapaThumbnail extends StatefulWidget {
   final Future<ImageProvider?>? imageProviderFutureOverride;
   final Future<File?> Function({required String picoId, required String caminho})? preCarregadorDisco;
 
+  /// Lista pré-resolvida de itens para o carrossel (ex: combinação de mapas locais e de setor).
+  final List<CarrosselItemData>? carrosselItensOverride;
+
   const MapaThumbnail({
     super.key,
     required this.mapas,
@@ -31,6 +34,7 @@ class MapaThumbnail extends StatefulWidget {
     this.imageProviderOverride,
     this.imageProviderFutureOverride,
     this.preCarregadorDisco,
+    this.carrosselItensOverride,
   });
 
   @override
@@ -105,16 +109,18 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
             widget.cragId,
             widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral',
           );
+          final mapasParaNavegar = widget.carrosselItensOverride ??
+              widget.mapas
+                  .map((m) => CarrosselItemData(
+                        mapaCaminhoImagem: m.caminhoImagemMapa,
+                        setorContextNome: widget.setorContext?.nome,
+                        grupoContextNome: widget.grupoContext?.nome,
+                      ))
+                  .toList();
           AppNav.toMapas(
             context,
             cragId: widget.cragId,
-            mapas: widget.mapas
-                .map((m) => CarrosselItemData(
-                      mapaCaminhoImagem: m.caminhoImagemMapa,
-                      setorContextNome: widget.setorContext?.nome,
-                      grupoContextNome: widget.grupoContext?.nome,
-                    ))
-                .toList(),
+            mapas: mapasParaNavegar,
             imageProviderOverride: widget.imageProviderOverride,
           );
         },
@@ -177,8 +183,8 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
                       const Icon(Icons.map, color: Colors.white),
                       const SizedBox(width: 8),
                       Text(
-                        widget.mapas.length > 1
-                            ? 'Mapas Interativos (${widget.mapas.length})'
+                        (widget.carrosselItensOverride?.length ?? widget.mapas.length) > 1
+                            ? 'Mapas Interativos (${widget.carrosselItensOverride?.length ?? widget.mapas.length})'
                             : 'Abrir Mapa Interativo',
                         style: TextStyle(
                           color: fishBone,

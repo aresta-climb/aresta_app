@@ -247,6 +247,7 @@ void main() {
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp('thumb_test_');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      EditorDeCroqui();
     });
 
     tearDown(() async {
@@ -276,6 +277,7 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pumpAndSettle();
 
       final imageFinder = find.byType(Image);
       expect(imageFinder, findsOneWidget);

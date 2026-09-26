@@ -41,7 +41,6 @@ void main() {
       final escalada = Escalada(
         viaEsportiva: ViaEsportiva(
           nome: 'Via dos Sonhos',
-          indiceMapaPadrao: 0,
         ),
       );
 

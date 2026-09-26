@@ -20,6 +20,7 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/resolvedor_rotulos_referencia.dart';
+import '../utils/croqui_map_index.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -818,6 +819,42 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           );
         }
       },
+      secondaryActionLabel: escalada.mapas.isNotEmpty ? 'Ver mapas' : null,
+      onSecondaryAction: escalada.mapas.isNotEmpty
+          ? () {
+              TelemetryService.instance.logAcaoEscalada(
+                widget.cragId,
+                widget.setorContext?.nome ?? 'Geral',
+                title,
+                'abrir_mapas_escalada',
+                'mapa',
+              );
+
+              List<CarrosselItemData> mapasData;
+              if (resolved != null) {
+                final index = CroquiMapIndex(widget.pico);
+                mapasData = index.resolverCarrosselUnificado(resolved);
+              } else {
+                mapasData = escalada.mapas
+                    .where((m) => m.caminhoImagemMapa.isNotEmpty)
+                    .map(
+                      (m) => CarrosselItemData(
+                        mapaCaminhoImagem: m.caminhoImagemMapa,
+                        setorContextNome: widget.setorContext?.nome,
+                        grupoContextNome: widget.grupoContext?.nome,
+                        escaladaContextNome: title,
+                      ),
+                    )
+                    .toList();
+              }
+
+              AppNav.toMapas(
+                context,
+                cragId: widget.cragId,
+                mapas: mapasData,
+              );
+            }
+          : null,
     );
   }
 
@@ -846,8 +883,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               int indiceMapa = 0;
               if (ref.hasIndiceMapaAlvo()) {
                 indiceMapa = ref.indiceMapaAlvo;
-              } else if (setor.hasIndiceMapaPadrao()) {
-                indiceMapa = setor.indiceMapaPadrao;
               }
               if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) {
                 indiceMapa = 0;
@@ -930,8 +965,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               int indiceMapa = 0;
               if (ref.hasIndiceMapaAlvo()) {
                 indiceMapa = ref.indiceMapaAlvo;
-              } else if (grupo.hasIndiceMapaPadrao()) {
-                indiceMapa = grupo.indiceMapaPadrao;
               }
               if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) {
                 indiceMapa = 0;
@@ -1770,12 +1803,10 @@ class MapHelper {
         if (sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
             sg.setor.hasConteudo()) {
           for (var esc in sg.setor.conteudo.escaladas) {
-            if (esc.hasViaMultiplasEnfiadas()) {
-              for (var m in esc.viaMultiplasEnfiadas.mapas) {
-                if (m.caminhoImagemMapa == mapaCaminhoImagem) {
-                  mapa = m;
-                  break;
-                }
+            for (var m in esc.mapas) {
+              if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+                mapa = m;
+                break;
               }
             }
             if (mapa != null) break;
@@ -1785,12 +1816,10 @@ class MapHelper {
           for (var s in sg.grupo.conteudo.setores) {
             if (s.hasConteudo()) {
               for (var esc in s.conteudo.escaladas) {
-                if (esc.hasViaMultiplasEnfiadas()) {
-                  for (var m in esc.viaMultiplasEnfiadas.mapas) {
-                    if (m.caminhoImagemMapa == mapaCaminhoImagem) {
-                      mapa = m;
-                      break;
-                    }
+                for (var m in esc.mapas) {
+                  if (m.caminhoImagemMapa == mapaCaminhoImagem) {
+                    mapa = m;
+                    break;
                   }
                 }
                 if (mapa != null) break;

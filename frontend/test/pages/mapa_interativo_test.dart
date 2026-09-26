@@ -814,6 +814,109 @@ void main() {
       },
     );
 
+    testWidgets(
+      'deve exibir ação secundária "Ver mapas" no card flutuante quando a rota possui mapas próprios',
+      (WidgetTester tester) async {
+        final mapaLocal = Mapa(
+          caminhoImagemMapa: 'escalada_detalhe.webp',
+          larguraMapa: 800,
+          alturaMapa: 600,
+        );
+        final esc = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Com Mapa',
+            dificuldade: GrauVia_GrauVia.BR_6SUP,
+          ),
+        )..mapas.add(mapaLocal);
+
+        mockMapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via Com Mapa',
+            ids: ['p1'],
+          ),
+        );
+
+        await tester.pumpWidget(buildApp([esc], mockMapa));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mais Info'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'não deve exibir ação "Ver mapas" quando a rota não possui mapas próprios',
+      (WidgetTester tester) async {
+        final esc = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Sem Mapa',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        );
+
+        mockMapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via Sem Mapa',
+            ids: ['p1'],
+          ),
+        );
+
+        await tester.pumpWidget(buildApp([esc], mockMapa));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mais Info'), findsOneWidget);
+        expect(find.text('Ver mapas'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'clicar em "Ver mapas" no card flutuante de rota com mapa próprio dispara ação esperada',
+      (WidgetTester tester) async {
+        final mapaLocal = Mapa(
+          caminhoImagemMapa: 'boulder_saida.webp',
+          larguraMapa: 900,
+          alturaMapa: 700,
+        );
+        final esc = Escalada(
+          boulder: Boulder(nome: 'Boulder Topo'),
+        )..mapas.add(mapaLocal);
+
+        mockMapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Boulder Topo',
+            ids: ['p1'],
+          ),
+        );
+
+        await tester.pumpWidget(buildApp([esc], mockMapa));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Ver mapas'), findsOneWidget);
+
+        mockTelemetry.clear();
+        await tester.tap(find.text('Ver mapas'));
+        await tester.pumpAndSettle();
+
+        expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+        expect(
+          mockTelemetry.recordedParams['acao_escalada']!['acao'],
+          'abrir_mapas_escalada',
+        );
+      },
+    );
+
     testWidgets('Tapping background de-selects marker', (
       WidgetTester tester,
     ) async {

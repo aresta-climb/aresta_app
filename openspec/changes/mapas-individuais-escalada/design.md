@@ -11,7 +11,7 @@ No entanto, escaladas individuais não possuem suporte a mapas próprios em `Esc
 **Goals:**
 - Adicionar `repeated Mapa mapas = 7;` na mensagem `Escalada` em `croqui.proto` (`aresta_api`).
 - Remover completamente `ViaMultiplasEnfiadas.mapas = 21` e marcar o campo 21 como reservado.
-- Definir perfil de compressão para mapas de escaladas no `aresta_db`: teto de 1.0 MP e WebP Q75 (~75 KB por foto).
+- Definir perfil de compressão para mapas de escaladas no `aresta_db`: teto de 1.0 MP e WebP Q85 (~120 KB por foto, preservando detalhes de agarras e pés).
 - Adicionar ferramenta de recorte (*rubber-band crop*) opcional e banner instrutivo no `DialogoAdicionarMapa`.
 - No `aresta_app`, atualizar `CroquiMapIndex`, exibir `MapaThumbnail` na `ViaPage`, abrir carrossel unificado (mapas locais seguidos por mapas do setor) e habilitar o botão "Ver mapas" no rodapé de rotas no mapa do setor.
 
@@ -32,11 +32,11 @@ No entanto, escaladas individuais não possuem suporte a mapas próprios em `Esc
 - **Alternativa Considerada**: Manter o campo marcado como `[deprecated = true]`.
 - **Justificativa**: Nenhum croqui em todo o banco `database/` utiliza o campo 21. A remoção limpa previne acúmulo de dívida técnica e ambiguidades no código gerado.
 
-### 3. Orçamento de Imagem: Perfil Escalada (1.0 MP @ WebP Q75)
+### 3. Orçamento de Imagem: Perfil Escalada (1.0 MP @ WebP Q85)
 - **Decisão**: 
-  - `AREA_MAXIMA_ESCALADA = 1_000_000` (~1.0 MP) e `QUALIDADE_WEBP_ESCALADA = 75` (método 6).
+  - `AREA_MAXIMA_ESCALADA = 1_000_000` (~1.0 MP) e `QUALIDADE_WEBP_ESCALADA = 85` (método 6).
   - `AREA_MAXIMA_SETOR = 2_500_000` (~2.5 MP) e `QUALIDADE_WEBP_SETOR = 85`.
-- **Justificativa**: Imagens de escalada são enquadramentos aproximados (close-up) de 2m a 5m de rocha. A 1.0 MP, preenchem a tela do celular em escala quase 1:1, enquanto a qualidade 75 reduz o peso para ~75 KB (economia de mais de 80%). O compilador e validador auditam esse teto.
+- **Justificativa**: Imagens de escalada são enquadramentos aproximados (close-up) de 2m a 5m de rocha. A 1.0 MP, preenchem a tela do celular em escala quase 1:1, enquanto a qualidade 85 mantém o peso baixo (~120 KB, economia de 60% em pixels e RAM de GPU em relação a 2.5 MP) preservando nitidez máxima nas agarras e regletes ao dar zoom. O compilador e validador auditam esse teto.
 
 ### 4. Recorte Interativo (*Rubber-band Selection*) no `DialogoAdicionarMapa`
 - **Decisão**: Integrar seleção retangular interativa na área de pré-visualização do `DialogoAdicionarMapa`, reaproveitando a biblioteca pura existente `cortar_imagem_bytes` de `editor/core/transformacoes_imagem.py`.
@@ -57,7 +57,7 @@ No entanto, escaladas individuais não possuem suporte a mapas próprios em `Esc
 
 ## Risks / Trade-offs
 
-- **[Risco de Inchaço de Armazenamento]** $\rightarrow$ *Mitigação*: Imposição automática de 1.0 MP @ Q75 pelo `DialogoAdicionarMapa` e emissão de avisos no script de validação de submissões (`preparar_submissao_lib.py`).
+- **[Risco de Inchaço de Armazenamento]** $\rightarrow$ *Mitigação*: Imposição automática de 1.0 MP @ Q85 pelo `DialogoAdicionarMapa` e emissão de avisos no script de validação de submissões (`preparar_submissao_lib.py`).
 - **[Fricção no Recorte de Imagem]** $\rightarrow$ *Mitigação*: O recorte é 100% opcional; se o usuário não fizer a seleção, a imagem inteira é automaticamente convertida e redimensionada para 1.0 MP sem bloquear o fluxo.
 - **[Sincronização de Tipos Protobuf]** $\rightarrow$ *Mitigação*: Execução de `python build.py` no `aresta_api` para gerar simultaneamente stubs Python para `aresta_db` e Dart para `aresta_app`.
 

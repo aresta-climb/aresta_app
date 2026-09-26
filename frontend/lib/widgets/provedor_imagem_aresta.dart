@@ -44,7 +44,10 @@ class ProvedorImagemAresta {
     int? alturaAlvo,
   }) async {
     try {
-      if (picoId.trim().isEmpty || caminho.trim().isEmpty) return null;
+      if (caminho.trim().isEmpty) return null;
+      final bool ehUrlAbsoluta =
+          caminho.startsWith('http://') || caminho.startsWith('https://');
+      if (picoId.trim().isEmpty && !ehUrlAbsoluta) return null;
 
       ImageProvider? provedorBase;
 
@@ -56,13 +59,14 @@ class ProvedorImagemAresta {
 
       // Identifica se a mídia solicitada é uma miniatura (thumbnail) do pico, aceitando
       // rotas canônicas (thumbnails/<picoId>.webp) ou legadas (/imagens/thumbnail.webp).
-      final bool ehThumbnail = cleanPath.startsWith('thumbnails/') ||
-          cleanPath.contains('/thumbnails/') ||
-          pathSemQuery.endsWith('/thumbnail.webp') ||
-          pathSemQuery == 'thumbnail.webp' ||
-          pathSemQuery.endsWith('/$picoId.webp') ||
-          pathSemQuery == '$picoId.webp' ||
-          (picoId.isNotEmpty && pathSemQuery.contains('thumbnail'));
+      final bool ehThumbnail = picoId.isNotEmpty &&
+          (cleanPath.startsWith('thumbnails/') ||
+              cleanPath.contains('/thumbnails/') ||
+              pathSemQuery.endsWith('/thumbnail.webp') ||
+              pathSemQuery == 'thumbnail.webp' ||
+              pathSemQuery.endsWith('/$picoId.webp') ||
+              pathSemQuery == '$picoId.webp' ||
+              pathSemQuery.contains('thumbnail'));
 
       if (ehThumbnail) {
         cleanPath = 'thumbnails/$picoId.webp';
@@ -194,7 +198,7 @@ class ProvedorImagemAresta {
         }
 
         String urlFinal;
-        if (ehThumbnail) {
+        if (ehThumbnail && picoId.isNotEmpty) {
           // Garante rota canônica na CDN (/thumbnails/<picoId>.webp)
           urlFinal = '$serverBase/thumbnails/$picoId.webp';
         } else if (caminho.startsWith('http://') || caminho.startsWith('https://')) {
