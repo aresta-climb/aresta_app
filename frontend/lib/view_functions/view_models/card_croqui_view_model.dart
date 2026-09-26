@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../services/dataset/modelos/metadados_indice.dart';
 
 /// Modelo de apresentação imutável para exibição de cards de croquis na interface.
 ///

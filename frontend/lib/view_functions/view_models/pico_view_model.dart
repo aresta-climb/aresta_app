@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
-import '../services/http/servico_download_segundo_plano.dart';
-import '../utils/pico_categorization.dart';
-import 'pico_functions.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../services/dataset_repository.dart';
+import '../../services/http/sync_service.dart';
+import '../../services/http/servico_download_segundo_plano.dart';
+import '../../utils/pico_categorization.dart';
+import '../pico_functions.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [PicoDetailsPage] (MVVM).
 ///

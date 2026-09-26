@@ -4,12 +4,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/fuzzy.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
-import '../services/http/servico_download_segundo_plano.dart';
-import '../services/firebase/telemetry_service.dart';
-import 'common_functions.dart';
+import '../../services/dataset/modelos/metadados_indice.dart';
+import '../../services/dataset_repository.dart';
+import '../../services/http/sync_service.dart';
+import '../../services/http/servico_download_segundo_plano.dart';
+import '../../services/firebase/telemetry_service.dart';
+import '../common_functions.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {

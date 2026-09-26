@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
+import '../../services/dataset_repository.dart';
+import '../../services/http/sync_service.dart';
 import 'card_croqui_view_model.dart';
-import 'common_functions.dart';
+import '../common_functions.dart';
 
 /// Modelo de apresentação para a tela [MeusCroquisPage] (MVVM).
 ///
