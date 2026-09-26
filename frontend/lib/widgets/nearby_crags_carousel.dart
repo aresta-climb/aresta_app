@@ -13,7 +13,6 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
@@ -632,7 +631,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
             );
             final picoBase = _closestCrags[indiceReal];
             final distanceStr = NearbyCragsCarousel.formatarDistancia(
-              (picoBase.distanciaKm ?? 0) * 1000,
+              picoBase.distanciaKm * 1000,
             );
 
             final isDownloaded =

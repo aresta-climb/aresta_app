@@ -796,7 +796,7 @@ void main() {
 
       // Valida que as distâncias calculadas estão em ordem estritamente crescente
       for (int i = 0; i < resultado.length - 1; i++) {
-        expect(resultado[i].distanciaKm!, lessThanOrEqualTo(resultado[i + 1].distanciaKm!));
+        expect(resultado[i].distanciaKm, lessThanOrEqualTo(resultado[i + 1].distanciaKm));
       }
     });
 
@@ -861,7 +861,7 @@ void main() {
       expect(resultado.length, equals(2));
       expect(resultado.first.id, equals('pico_perto'));
       expect(resultado.last.id, equals('pico_longe'));
-      expect(resultado.first.distanciaKm, lessThan(resultado.last.distanciaKm!));
+      expect(resultado.first.distanciaKm, lessThan(resultado.last.distanciaKm));
     });
   });
 }

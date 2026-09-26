@@ -3,9 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/home_functions.dart';
@@ -73,7 +71,7 @@ class _BrowsePageState extends State<BrowsePage> {
               )
             : MetadadosIndice(
                 id: (crag as Map)['id']?.toString() ?? '',
-                nome: (crag as Map)['nome']?.toString() ?? '',
+                nome: crag['nome']?.toString() ?? '',
               ));
     final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
