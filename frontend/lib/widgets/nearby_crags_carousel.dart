@@ -11,9 +11,36 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/servico_download_segundo_plano.dart';
 import 'package:frontend/view_functions/home_functions.dart';
 import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
+
+/// Representa um pico de escalada com distância calculada para exibição no carrossel.
+class PicoProximo {
+  final MetadadosIndice pico;
+  final double distanciaKm;
+
+  const PicoProximo({
+    required this.pico,
+    required this.distanciaKm,
+  });
+
+  String get id => pico.id;
+  String get nome => pico.nome;
+  double? get latitude => pico.latitude;
+  double? get longitude => pico.longitude;
+
+  PicoProximo copyWith({
+    MetadadosIndice? pico,
+    double? distanciaKm,
+  }) {
+    return PicoProximo(
+      pico: pico ?? this.pico,
+      distanciaKm: distanciaKm ?? this.distanciaKm,
+    );
+  }
+}
 
 /// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário,
 /// permitindo rolagem contínua (looping) e limitando a seleção a no máximo 6 picos.
@@ -28,31 +55,66 @@ class NearbyCragsCarousel extends StatefulWidget {
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
   /// aceitando [List<ResumoPico>], [List<MetadadosIndice>] ou listas dinâmicas,
   /// retornando os [limite] picos mais próximos ordenados por distância crescente.
-  static List<ResumoPico> calcularPicosMaisProximos({
+  static List<PicoProximo> calcularPicosMaisProximos({
     required double userLat,
     required double userLon,
     required List<dynamic> picosDisponiveis,
     int limite = kLimitePicosProximos,
   }) {
-    final List<ResumoPico> picosComDistancia = [];
+    final List<PicoProximo> picosComDistancia = [];
 
     for (final item in picosDisponiveis) {
       final double? picoLat;
       final double? picoLon;
-      final ResumoPico pico;
+      final MetadadosIndice pico;
 
       if (item is MetadadosIndice) {
+        pico = item;
         picoLat = item.latitude;
         picoLon = item.longitude;
-        pico = item.paraResumoPico();
       } else if (item is ResumoPico) {
         picoLat = item.latitude;
         picoLon = item.longitude;
-        pico = item;
+        pico = MetadadosIndice(
+          id: item.id,
+          nome: item.nome,
+          descricao: item.descricao,
+          caminhoRelativo: item.url,
+          checksumSha256Croqui: item.checksum,
+          localizacao: picoLat != null && picoLon != null
+              ? Coordenada(
+                  latitude: (picoLat * 10000000).round(),
+                  longitude: (picoLon * 10000000).round(),
+                )
+              : null,
+          precomputados: item.estatisticas != null
+              ? PrecomputadosResumoCroqui(
+                  totalSetores: item.estatisticas!.totalSetores,
+                  totalEscaladas: item.estatisticas!.totalVias,
+                  totalBoulders: item.estatisticas!.totalBoulders,
+                  totalEsportivas: item.estatisticas!.totalEsportivas,
+                  totalMoveis: item.estatisticas!.totalMoveis,
+                  totalMultiplasEnfiadas:
+                      item.estatisticas!.totalMultiplasEnfiadas,
+                  totalHighlines: item.estatisticas!.totalHighlines,
+                )
+              : null,
+        );
       } else if (item is Map) {
-        pico = ResumoPico.deMapa(Map<String, dynamic>.from(item));
-        picoLat = pico.latitude;
-        picoLon = pico.longitude;
+        final mapa = Map<String, dynamic>.from(item);
+        picoLat = (mapa['latitude'] as num?)?.toDouble();
+        picoLon = (mapa['longitude'] as num?)?.toDouble();
+        pico = MetadadosIndice(
+          id: mapa['id']?.toString() ?? '',
+          nome: mapa['nome']?.toString() ?? '',
+          descricao: mapa['descricao']?.toString() ?? '',
+          localizacao: picoLat != null && picoLon != null
+              ? Coordenada(
+                  latitude: (picoLat * 10000000).round(),
+                  longitude: (picoLon * 10000000).round(),
+                )
+              : null,
+        );
       } else {
         continue;
       }
@@ -66,14 +128,16 @@ class NearbyCragsCarousel extends StatefulWidget {
         );
 
         picosComDistancia.add(
-          pico.copyWith(distanciaKm: distanceInMeters / 1000),
+          PicoProximo(
+            pico: pico,
+            distanciaKm: distanceInMeters / 1000,
+          ),
         );
       }
     }
 
     picosComDistancia.sort(
-      (a, b) =>
-          (a.distanciaKm ?? double.infinity).compareTo(b.distanciaKm ?? double.infinity),
+      (a, b) => a.distanciaKm.compareTo(b.distanciaKm),
     );
 
     return picosComDistancia.take(limite).toList();
