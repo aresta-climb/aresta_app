@@ -15,6 +15,7 @@ import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
+import 'package:frontend/view_functions/pico_view_model.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 
@@ -805,6 +806,42 @@ void main() {
 
       expect(find.text('Última atualização: 18/09/2026 às 12:00'), findsOneWidget);
       expect(find.textContaining('Hoje'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage renderiza dados providos por PicoViewModel injetado',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final pico = Pico()
+        ..nome = 'Pico Injetado'
+        ..estado = 'MG';
+      final croqui = Croqui();
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: 'crag_injetado',
+        datasetRepo: datasetRepo,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: 'crag_injetado',
+              datasetRepo: datasetRepo,
+              viewModel: vm,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PICO INJETADO'), findsOneWidget);
+      expect(find.textContaining('MG • 0 SETORES'), findsOneWidget);
     },
   );
 }
