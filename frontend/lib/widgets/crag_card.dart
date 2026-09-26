@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
-import '../view_functions/card_croqui_view_model.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 import 'provedor_imagem_aresta.dart';
 

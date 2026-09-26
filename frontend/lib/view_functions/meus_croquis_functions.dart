@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import 'card_croqui_view_model.dart';
+import 'view_models/card_croqui_view_model.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';

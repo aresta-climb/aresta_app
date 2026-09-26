@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
 import '../view_functions/browse_functions.dart';
-import '../view_functions/browse_view_model.dart';
+import '../view_functions/view_models/browse_view_model.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/home_functions.dart';
 import '../view_functions/settings_functions.dart';

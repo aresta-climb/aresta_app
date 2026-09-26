@@ -22,7 +22,7 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
-import '../view_functions/pico_view_model.dart';
+import '../view_functions/view_models/pico_view_model.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;
