@@ -105,7 +105,7 @@ class MeusCroquisPage extends StatelessWidget {
                     itemCount: downloadedCrags.length,
                     itemBuilder: (context, index) {
                       final Croqui crag = downloadedCrags[index];
-                      return OfflineCragCard(
+                      return OfflineCragCard.deCroqui(
                         crag: crag,
                         datasetRepo: datasetRepo,
                         syncService: syncService,

@@ -8,6 +8,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view_functions/meus_croquis_functions.dart';
+import 'package:frontend/view_functions/card_croqui_view_model.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
@@ -81,7 +82,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -115,7 +116,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -149,7 +150,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -186,7 +187,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: croqui,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -219,7 +220,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -238,6 +239,37 @@ void main() {
       expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'meus_croquis');
       expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'offline');
       expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
+    });
+
+    testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
+      WidgetTester tester,
+    ) async {
+      const viewModel = CardCroquiViewModel(
+        id: 'pico_offline_dumb',
+        titulo: 'FALÉSIA DUMB',
+        localizacao: 'SERRA DO CIPÓ',
+        textoEstatisticas: '7 setores • 35 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_offline_dumb.webp',
+        salvoOffline: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              dados: viewModel,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('FALÉSIA DUMB'), findsOneWidget);
+      expect(find.text('SERRA DO CIPÓ'), findsOneWidget);
+      expect(find.text('7 setores • 35 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
     });
   });
 }
