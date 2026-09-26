@@ -4,18 +4,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/services/dataset/modelos/estatisticas_pico.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/widgets/crag_card.dart';
 
 void main() {
   Widget buildTestCard({
-    required dynamic crag,
+    required MetadadosIndice crag,
     String? distanceStr,
     bool showDetailedStats = false,
-    bool? isDownloaded,
+    bool isDownloaded = false,
     VoidCallback? onDownload,
     VoidCallback? onOpen,
   }) {
@@ -29,7 +27,7 @@ void main() {
             crag: crag,
             distanceStr: distanceStr,
             showDetailedStats: showDetailedStats,
-            isDownloadedOverride: isDownloaded,
+            isDownloaded: isDownloaded,
             downloadingCrags: ValueNotifier(const {}),
             onDownload: onDownload ?? () {},
             onOpen: onOpen,
@@ -66,16 +64,17 @@ void main() {
       expect(find.textContaining('10 boulders, 20 esportivas'), findsOneWidget);
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
     });
+
     testWidgets('renderiza informações básicas e estatísticas resumidas', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_alpha',
         nome: 'Pico Alpha',
-        local: 'Serra do Cipó',
-        estatisticas: EstatisticasPico(
+        descricao: 'Serra do Cipó',
+        precomputados: PrecomputadosResumoCroqui(
           totalSetores: 3,
-          totalVias: 12,
+          totalEscaladas: 12,
         ),
       );
 
@@ -88,13 +87,13 @@ void main() {
     testWidgets('exibe modalidades detalhadas quando showDetailedStats for true', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_beta',
         nome: 'Pico Beta',
-        local: 'Ubatuba',
-        estatisticas: EstatisticasPico(
+        descricao: 'Ubatuba',
+        precomputados: PrecomputadosResumoCroqui(
           totalSetores: 2,
-          totalVias: 8,
+          totalEscaladas: 8,
           totalBoulders: 5,
           totalEsportivas: 3,
         ),
@@ -110,10 +109,10 @@ void main() {
     testWidgets('exibe badge de distância quando fornecido', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_gamma',
         nome: 'Pico Gamma',
-        local: 'Itatiaia',
+        descricao: 'Itatiaia',
       );
 
       await tester.pumpWidget(
@@ -127,14 +126,13 @@ void main() {
     testWidgets('exibe badge de salvo offline quando isDownloaded for true', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_delta',
         nome: 'Pico Delta',
-        local: 'Andorinhas',
-        isDownloaded: true,
+        descricao: 'Andorinhas',
       );
 
-      await tester.pumpWidget(buildTestCard(crag: crag));
+      await tester.pumpWidget(buildTestCard(crag: crag, isDownloaded: true));
 
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget);
@@ -144,10 +142,10 @@ void main() {
       WidgetTester tester,
     ) async {
       bool abriu = false;
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_omega',
         nome: 'Pico Omega',
-        local: 'Pedra Bela',
+        descricao: 'Pedra Bela',
       );
 
       await tester.pumpWidget(
