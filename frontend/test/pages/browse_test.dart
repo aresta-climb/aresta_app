@@ -9,6 +9,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/view_functions/browse_view_model.dart';
 import '../mocks/mock_telemetry_service.dart';
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -342,6 +343,35 @@ void main() {
       expect(mockSync.forceBypassCacheUsed, isTrue);
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text('Catálogo atualizado com o serving!'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'BrowsePage consome e renderiza BrowseViewModel customizado injetado',
+    (WidgetTester tester) async {
+      mockRepo.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {'id': 'pico_injetado', 'nome': 'Pico Injetado'},
+        ],
+        downloadedPicos: [],
+      );
+
+      final vm = BrowseViewModel(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        telemetria: mockTelemetry,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowsePage(viewModel: vm),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PICO INJETADO'), findsOneWidget);
     },
   );
 }
