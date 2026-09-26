@@ -652,7 +652,7 @@ void main() {
         // Deve conter os 6 primeiros picos mais próximos (Pico 0 a 5)
         // e NÃO deve conter o 7º e 8º (Pico 6 e 7)
         final carouselState = tester.state(find.byType(NearbyCragsCarousel)) as dynamic;
-        final List<ResumoPico> picosExibidos = carouselState.closestCrags;
+        final List<PicoProximo> picosExibidos = carouselState.closestCrags;
         expect(picosExibidos.length, equals(6));
         expect(picosExibidos.map((p) => p.id).toList(), equals([
           'pico_0',

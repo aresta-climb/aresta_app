@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -172,10 +174,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   double? _lastUserLat;
   double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
-  List<ResumoPico> _closestCrags = [];
+  List<PicoProximo> _closestCrags = [];
 
   @visibleForTesting
-  List<ResumoPico> get closestCrags => _closestCrags;
+  List<PicoProximo> get closestCrags => _closestCrags;
 
   @override
   void initState() {
@@ -204,17 +206,29 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is MetadadosIndice
-        ? crag.paraResumoPico()
-        : (crag is ResumoPico
-            ? crag
-            : ResumoPico.deMapa(
-                crag is Map<String, dynamic>
-                    ? crag
-                    : Map<String, dynamic>.from(crag as Map),
-              ));
-    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
-    final String id = pico.id;
+    final String id;
+    final String name;
+    final MetadadosIndice? resumoDireto;
+
+    if (crag is MetadadosIndice) {
+      resumoDireto = crag;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is PicoProximo) {
+      resumoDireto = crag.pico;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is ResumoPico) {
+      resumoDireto = null;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is Map) {
+      resumoDireto = null;
+      id = crag['id']?.toString() ?? '';
+      name = crag['nome']?.toString() ?? 'Pico';
+    } else {
+      return;
+    }
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -226,13 +240,16 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final repo = DatasetRepository.instance;
     if (repo == null) return;
 
-    final indice = repo.indiceData.value;
-    if (indice == null) return;
-
-    final resumos = indice.croquis.where((r) => r.id == id).toList();
-    if (resumos.isEmpty) return;
-
-    final resumo = resumos.first;
+    final MetadadosIndice resumo;
+    if (resumoDireto != null) {
+      resumo = resumoDireto;
+    } else {
+      final indice = repo.indiceData.value;
+      if (indice == null) return;
+      final resumos = indice.croquis.where((r) => r.id == id).toList();
+      if (resumos.isEmpty) return;
+      resumo = resumos.first;
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -619,25 +636,28 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
             );
 
             final isDownloaded =
+                dataset?.croquisBaixados.any(
+                  (c) => c.id == picoBase.id,
+                ) ??
                 dataset?.downloadedPicos.any(
                   (p) => p.id == picoBase.id,
                 ) ??
                 false;
-            final pico = picoBase.copyWith(isDownloaded: isDownloaded);
 
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: SizedBox(
                 width: 340,
                 child: CragCard(
-                  crag: pico,
+                  crag: picoBase.pico,
+                  isDownloaded: isDownloaded,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
-                  onDownload: () => handleDownload(pico),
+                  onDownload: () => handleDownload(picoBase.pico),
                   onOpen: () {
                     final repo = DatasetRepository.instance;
                     if (repo != null) {
-                      handlePicoSelection(context, repo, pico);
+                      handlePicoSelection(context, repo, picoBase.pico);
                     }
                   },
                 ),
