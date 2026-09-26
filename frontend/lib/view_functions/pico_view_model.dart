@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
+import '../services/http/sync_service.dart';
+import '../services/http/servico_download_segundo_plano.dart';
 import '../utils/pico_categorization.dart';
 import 'pico_functions.dart';
 
@@ -228,5 +230,33 @@ class PicoViewModel extends ChangeNotifier {
       return false;
     }
     return true;
+  }
+
+  /// Inicia o download do croqui em segundo plano via [ServicoDownloadSegundoPlano].
+  Future<bool> baixarPico({required SyncService? syncService}) async {
+    final indice = datasetRepo.indiceData.value;
+    if (indice == null) return false;
+
+    final resumos = indice.croquis.where((r) => r.id == cragId).toList();
+    if (resumos.isEmpty) return false;
+
+    if (syncService == null) return false;
+    final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
+    final sucesso = await servicoDownload.executarDownload(resumos.first);
+
+    if (sucesso) {
+      cancelarPolling();
+      _isInitiallyDownloaded = true;
+      notifyListeners();
+    }
+    return sucesso;
+  }
+
+  /// Exclui o pico do armazenamento local e preserva em memória na sessão online.
+  Future<bool> excluirPico() async {
+    datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(cragId, croqui);
+    final sucesso = await datasetRepo.deleteCrag(cragId);
+    notifyListeners();
+    return sucesso;
   }
 }
