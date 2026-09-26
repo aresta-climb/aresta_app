@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/view_functions/card_croqui_view_model.dart';
 import 'package:frontend/widgets/crag_card.dart';
 
 void main() {
@@ -23,8 +24,8 @@ void main() {
           extensions: [AppColors.dark],
         ),
         child: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
             distanceStr: distanceStr,
             showDetailedStats: showDetailedStats,
             isDownloaded: isDownloaded,
@@ -157,6 +158,40 @@ void main() {
 
       await tester.tap(find.byType(CragCard));
       expect(abriu, isTrue);
+    });
+
+    testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
+      WidgetTester tester,
+    ) async {
+      const viewModel = CardCroquiViewModel(
+        id: 'pico_dumb',
+        titulo: 'PICO PASSIVO',
+        localizacao: 'SERRA DO CIPÓ',
+        textoEstatisticas: '5 setores • 40 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_dumb.webp',
+        salvoOffline: true,
+        textoDistancia: '500m',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Theme(
+            data: ThemeData(extensions: [AppColors.dark]),
+            child: Scaffold(
+              body: CragCard(
+                dados: viewModel,
+                downloadingCrags: ValueNotifier(const {}),
+                onDownload: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('PICO PASSIVO'), findsOneWidget);
+      expect(find.text('5 setores • 40 escaladas'), findsOneWidget);
+      expect(find.text('SALVO OFFLINE'), findsOneWidget);
+      expect(find.text('500m'), findsOneWidget);
     });
   });
 }
