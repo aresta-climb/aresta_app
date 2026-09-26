@@ -330,6 +330,15 @@ void main() {
       expect(evento.timestamp, now);
     });
 
+    test('LiveReloadEvent.deMensagem deve decodificar payload valido de recarregamento', () {
+      final evento = LiveReloadEvent.deMensagem('{"tipo": "recarregar", "setor": "setor_abc"}');
+      expect(evento, isNotNull);
+      expect(evento!.setorId, 'setor_abc');
+
+      final invalido = LiveReloadEvent.deMensagem('mensagem_invalida');
+      expect(invalido, isNull);
+    });
+
     test('eventoLiveReload notificador deve disparar quando novo evento for emitido', () {
       LiveReloadEvent? recebido;
       editor.eventoLiveReload.addListener(() {

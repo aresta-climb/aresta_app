@@ -8,25 +8,40 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/view_functions/comunidade_functions.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import '../mocks/mock_app_logger.dart';
+import '../mocks/mock_telemetry_service.dart';
 
 class MockUrlLauncherPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements UrlLauncherPlatform {
   String? lastLaunchedUrl;
   bool shouldFail = false;
+  bool shouldThrow = false;
 
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async {
-    if (shouldFail) return false;
     lastLaunchedUrl = url;
+    if (shouldThrow) {
+      throw Exception('Falha ao abrir URL nativa');
+    }
+    if (shouldFail) return false;
     return true;
   }
 }
 
 void main() {
   late MockUrlLauncherPlatform mockLauncher;
+  late MockAppLogger mockLogger;
+  late MockTelemetryService mockTelemetria;
 
   setUp(() {
+    mockTelemetria = MockTelemetryService();
+    TelemetryService.instance = mockTelemetria;
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
     mockLauncher = MockUrlLauncherPlatform();
     UrlLauncherPlatform.instance = mockLauncher;
     PackageInfo.setMockInitialValues(
@@ -224,6 +239,55 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('POLÍTICA DE PRIVACIDADE'), findsOneWidget);
+    });
+
+    group('abrirLinkExterno', () {
+      test('abre URL e registra telemetria de link_externo com sucesso', () async {
+        const url = 'https://instagram.com/arestaclimb';
+        const servico = 'Instagram';
+
+        await abrirLinkExterno(url, servico);
+
+        expect(mockLauncher.lastLaunchedUrl, equals(url));
+        expect(mockTelemetria.recordedEvents, contains('link_externo'));
+        final params = mockTelemetria.recordedParams['link_externo']!;
+        expect(params['acao'], equals('abrir_link_externo'));
+        expect(params['origem'], equals('comunidade'));
+        expect(params['detalhe'], equals(url));
+        expect(mockLogger.recordedErrors, isEmpty);
+      });
+
+      test('captura falha ao abrir link e registra contexto no AppLogger', () async {
+        mockLauncher.shouldThrow = true;
+        const url = 'https://chat.whatsapp.com/invalido';
+        const servico = 'WhatsApp';
+
+        await abrirLinkExterno(url, servico);
+
+        expect(mockTelemetria.recordedEvents, contains('link_externo'));
+        expect(
+          mockLogger.recordedErrors.any(
+            (e) => e['contextMessage'].contains('Erro ao abrir link do WhatsApp ($url)'),
+          ),
+          isTrue,
+        );
+      });
+    });
+
+    group('navegarParaSobreTime', () {
+      test('dispara navegação para SobreTimeNode utilizando controller injetado', () {
+        final controller = TreeNavigationController();
+        expect(controller.currentNode, isA<HomeNode>());
+
+        navegarParaSobreTime(controller);
+
+        expect(controller.currentNode, isA<SobreTimeNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      });
+
+      test('não lança exceção quando currentTreeController é nulo e nenhum controller é injetado', () {
+        expect(() => navegarParaSobreTime(), returnsNormally);
+      });
     });
   });
 }

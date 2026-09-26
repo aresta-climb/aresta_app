@@ -6,9 +6,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../main.dart';
+import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/firebase/telemetry_service.dart';
 import 'common_functions.dart';
+
+/// Navega para a tela Sobre o Time utilizando o controlador da árvore de navegação ativa.
+///
+/// Permite injeção de [controller] opcional para facilitar testes unitários isolados.
+void navegarParaSobreTime([TreeNavigationController? controller]) {
+  final treeNav = controller ?? TreeNavigationWrapper.currentTreeController;
+  if (treeNav != null) {
+    treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
+  }
+}
 
 /// Constrói um card de ação interativo para a página de Comunidade no tema escuro.
 ///
@@ -841,6 +854,27 @@ class _PrivacyBottomSheetContentState
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
+    );
+  }
+}
+
+/// Abre uma URL externa no navegador do dispositivo, registrando telemetria de visualização
+/// e tratando exceções para garantir a resiliência da interface e observabilidade via [AppLogger].
+///
+/// Dispara evento [logLinkExterno] com origem `'comunidade'` para auditoria de engajamento do usuário.
+Future<void> abrirLinkExterno(String url, String nomeServico) async {
+  TelemetryService.instance.logLinkExterno(
+    url,
+    'comunidade',
+    detalhe: url,
+  );
+  try {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (e, stackTrace) {
+    AppLogger.instance.logError(
+      'Erro ao abrir link do $nomeServico ($url)',
+      error: e,
+      stackTrace: stackTrace,
     );
   }
 }

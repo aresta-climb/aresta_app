@@ -15,9 +15,13 @@ import '../mocks/mock_telemetry_service.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
+  String discordUrl = 'https://discord.gg/NT9uSKJWYs';
 
   @override
   String get whatsappCommunityUrl => url;
+
+  @override
+  String get discordCommunityUrl => discordUrl;
 }
 
 class MockUrlLauncherPlatform extends Fake
@@ -105,6 +109,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(mockLauncher.lastLaunchedUrl, 'https://www.instagram.com/arestaclimb/');
     expect(mockLogger.recordedErrors, isEmpty);
+
+    // Discord
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NT9uSKJWYs');
+    expect(mockLogger.recordedErrors, isEmpty);
   });
 
   testWidgets('Ao clicar no card do WhatsApp, consome dinamicamente a URL do RemoteConfigService', (WidgetTester tester) async {
@@ -118,6 +129,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/NovaComunidade123');
+    expect(mockLogger.recordedErrors, isEmpty);
+  });
+
+  testWidgets('Ao clicar no card do Discord, consome dinamicamente a URL do RemoteConfigService', (WidgetTester tester) async {
+    setScreenSize(tester);
+    fakeRemoteConfig.discordUrl = 'https://discord.gg/NovoDiscord123';
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockLauncher.shouldThrow = false;
+    await tester.ensureVisible(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.tap(find.text('DISCORD DOS DESENVOLVEDORES'));
+    await tester.pumpAndSettle();
+
+    expect(mockLauncher.lastLaunchedUrl, 'https://discord.gg/NovoDiscord123');
     expect(mockLogger.recordedErrors, isEmpty);
   });
 
@@ -167,7 +193,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       mockLogger.recordedErrors.any(
-        (e) => e['contextMessage'].contains('https://discord.gg/3KDTwcxHK'),
+        (e) => e['contextMessage'].contains('https://discord.gg/NT9uSKJWYs'),
       ),
       isTrue,
     );
@@ -235,7 +261,7 @@ void main() {
     expect(mockTelemetria.recordedEvents, contains('link_externo'));
     params = mockTelemetria.recordedParams['link_externo']!;
     expect(params['origem'], 'comunidade');
-    expect(params['detalhe'], 'https://discord.gg/3KDTwcxHK');
+    expect(params['detalhe'], fakeRemoteConfig.discordCommunityUrl);
 
     // 5. GitHub
     mockTelemetria.clear();
@@ -246,5 +272,48 @@ void main() {
     params = mockTelemetria.recordedParams['link_externo']!;
     expect(params['origem'], 'comunidade');
     expect(params['detalhe'], 'https://github.com/aresta-climb');
+  });
+
+  testWidgets('Todos os links externos disparados pela ComunidadePage possuem formato HTTPS e hosts válidos', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    final List<(String, String)> cardsEHosts = [
+      ('GRUPO DO WHATSAPP', 'chat.whatsapp.com'),
+      ('INSTAGRAM OFICIAL', 'www.instagram.com'),
+      ('LINKEDIN DO PROJETO', 'www.linkedin.com'),
+      ('DISCORD DOS DESENVOLVEDORES', 'discord.gg'),
+      ('GITHUB DO ARESTA', 'github.com'),
+    ];
+
+    for (final (cardTitle, expectedHost) in cardsEHosts) {
+      mockLauncher.shouldThrow = false;
+      mockLauncher.lastLaunchedUrl = null;
+
+      await tester.ensureVisible(find.text(cardTitle));
+      await tester.tap(find.text(cardTitle));
+      await tester.pumpAndSettle();
+
+      final launchedUrl = mockLauncher.lastLaunchedUrl;
+      expect(launchedUrl, isNotNull, reason: 'Card "$cardTitle" deve disparar uma URL');
+
+      final uri = Uri.tryParse(launchedUrl!);
+      expect(uri, isNotNull, reason: 'URL "$launchedUrl" deve ser um URI bem formado');
+      expect(uri!.isAbsolute, isTrue, reason: 'URL deve ser absoluta');
+      expect(uri.scheme, 'https', reason: 'URL deve usar HTTPS');
+      expect(uri.host, expectedHost, reason: 'URL deve ter o host $expectedHost');
+    }
+  });
+
+  testWidgets('Ao tocar no card SOBRE O TIME, aciona o callback sem lançar exceções', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SOBRE O TIME'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SOBRE O TIME'), findsOneWidget);
   });
 }

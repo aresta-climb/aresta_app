@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:frontend/services/firebase/app_logger.dart';
+import '../modelos/resumo_pico.dart';
 
 /// Gerencia a persistência e ordenação dos picos acessados recentemente.
 ///
@@ -41,8 +42,10 @@ class GerenciadorPrioridadePicos {
       } else if (await jsonFile.exists()) {
         // Migração de JSON legado para YAML
         final content = await jsonFile.readAsString();
-        final List<dynamic> jsonList = jsonDecode(content);
-        final list = jsonList.cast<String>();
+        final dynamic decoded = jsonDecode(content);
+        final list = (decoded is List)
+            ? decoded.map((e) => e.toString()).toList()
+            : <String>[];
 
         final yamlContent = list.map((id) => '- "$id"').join('\n');
         await yamlFile.writeAsString(yamlContent);
@@ -82,17 +85,14 @@ class GerenciadorPrioridadePicos {
 
   /// Ordena a lista de [picos] com base na [listaPrioridade].
   /// Picos não presentes na lista recebem prioridade mais baixa e são colocados no final.
-  List<Map<String, dynamic>> ordenarPorPrioridade(
-    List<Map<String, dynamic>> picos,
+  List<ResumoPico> ordenarPorPrioridade(
+    List<ResumoPico> picos,
     List<String> listaPrioridade,
   ) {
-    final List<Map<String, dynamic>> ordenados = List.from(picos);
+    final List<ResumoPico> ordenados = List.from(picos);
     ordenados.sort((a, b) {
-      final String idA = a['id']?.toString() ?? '';
-      final String idB = b['id']?.toString() ?? '';
-
-      int indexA = listaPrioridade.indexOf(idA);
-      int indexB = listaPrioridade.indexOf(idB);
+      int indexA = listaPrioridade.indexOf(a.id);
+      int indexB = listaPrioridade.indexOf(b.id);
 
       if (indexA == -1) indexA = 999999;
       if (indexB == -1) indexB = 999999;

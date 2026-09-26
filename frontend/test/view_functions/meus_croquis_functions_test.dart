@@ -8,6 +8,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view_functions/meus_croquis_functions.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,7 +59,7 @@ void main() {
     } catch (_) {}
   });
 
-  group('OfflineCragCard - Renderização de Miniaturas', () {
+  group('OfflineCragCard - Renderização e Tipagem', () {
     testWidgets('renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300', (
       WidgetTester tester,
     ) async {
@@ -66,12 +67,12 @@ void main() {
       final thumbFile = File('${thumbDir.path}/pico_1.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
-      final crag = {
-        'id': 'pico_1',
-        'nome': 'Pico da Falésia',
-        'local': 'Serra do Cipó',
-        'estatisticas': {'totalSetores': 3, 'totalVias': 15},
-      };
+      const crag = ResumoPico(
+        id: 'pico_1',
+        nome: 'Pico da Falésia',
+        local: 'Serra do Cipó',
+        estatisticas: EstatisticasPico(totalSetores: 3, totalVias: 15),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -99,11 +100,11 @@ void main() {
     testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
       WidgetTester tester,
     ) async {
-      final crag = {
-        'id': 'pico_sem_thumb',
-        'nome': 'Pico Sem Foto',
-        'local': 'Itatiaia',
-      };
+      const crag = ResumoPico(
+        id: 'pico_sem_thumb',
+        nome: 'Pico Sem Foto',
+        local: 'Itatiaia',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -122,17 +123,87 @@ void main() {
       expect(find.byIcon(Icons.terrain), findsOneWidget);
     });
 
+    testWidgets('OfflineCragCard renderiza dados tipados de ResumoPico', (
+      WidgetTester tester,
+    ) async {
+      const crag = ResumoPico(
+        id: 'pico_offline_1',
+        nome: 'Pico das Galinhas',
+        local: 'Minas Gerais',
+        estatisticas: EstatisticasPico(
+          totalSetores: 3,
+          totalVias: 25,
+        ),
+        isDownloaded: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              crag: crag,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('PICO DAS GALINHAS'), findsOneWidget);
+      expect(find.text('MINAS GERAIS'), findsOneWidget);
+      expect(find.text('3 setores • 25 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+    });
+
+    testWidgets('OfflineCragCard renderiza diretamente a partir de instância Croqui do Protobuf', (
+      WidgetTester tester,
+    ) async {
+      final croqui = Croqui(
+        id: 'pedra_do_bau',
+        nome: 'Pedra do Baú',
+        picos: [
+          Pico(
+            nome: 'Baú Principal',
+            estado: 'São Paulo',
+            precomputados: PrecomputadosPico(
+              totalSetores: 4,
+              totalEscaladas: 50,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              crag: croqui,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('PEDRA DO BAÚ'), findsOneWidget);
+      expect(find.text('SÃO PAULO'), findsOneWidget);
+      expect(find.text('4 setores • 50 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+    });
+
     testWidgets('ao clicar em ABRIR OFFLINE dispara telemetria com modo_acesso offline e primeira_visita', (
       WidgetTester tester,
     ) async {
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
 
-      final crag = {
-        'id': 'pico_telemetria',
-        'nome': 'Pico Telemetria',
-        'local': 'Cipó',
-      };
+      const crag = ResumoPico(
+        id: 'pico_telemetria',
+        nome: 'Pico Telemetria',
+        local: 'Cipó',
+      );
 
       await tester.pumpWidget(
         MaterialApp(

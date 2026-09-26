@@ -6,6 +6,8 @@
 library;
 
 import 'dart:io';
+import '../models/feedback_metadata.dart';
+import 'feedback_metadata_dto.dart';
 
 class FeedbackTask {
   final File processingFile;
@@ -19,4 +21,12 @@ class FeedbackTask {
     required this.jsonContent,
     this.pngFile,
   });
+
+  /// Descrição textual informada pelo usuário.
+  String get description => jsonContent['description'] as String? ?? '';
+
+  /// Metadados estruturados coletados no momento do envio.
+  FeedbackMetadata get metadata => FeedbackMetadataDto.fromJson(
+        (jsonContent['metadata'] as Map?)?.cast<String, dynamic>() ?? const {},
+      );
 }
