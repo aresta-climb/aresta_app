@@ -115,4 +115,69 @@ class PicoViewModel extends ChangeNotifier {
     final data = datasetRepo.obterDataAtualizacaoCroqui(cragId);
     return formatarTextoUltimaAtualizacao(data);
   }
+
+  /// Subtítulo consolidado com estado, total de setores e distribuição de modalidades.
+  String get subtitulo {
+    final int setoresCount = totalSetores;
+    int totalVias = 0;
+    int totalBoulders = 0;
+    int totalEsportivas = 0;
+    int totalMoveis = 0;
+    int totalMultiplasEnfiadas = 0;
+    int totalHighlines = 0;
+
+    void processarEscaladas(Iterable<Escalada> escaladas) {
+      for (final escalada in escaladas) {
+        totalVias++;
+        switch (escalada.whichTipo()) {
+          case Escalada_Tipo.boulder:
+            totalBoulders++;
+            break;
+          case Escalada_Tipo.viaEsportiva:
+            totalEsportivas++;
+            break;
+          case Escalada_Tipo.viaMovel:
+            totalMoveis++;
+            break;
+          case Escalada_Tipo.viaMultiplasEnfiadas:
+            totalMultiplasEnfiadas++;
+            break;
+          case Escalada_Tipo.highline:
+            totalHighlines++;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    for (final sg in pico.setoresOuGrupos) {
+      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
+        processarEscaladas(sg.setor.conteudo.escaladas);
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
+        for (final s in sg.grupo.conteudo.setores) {
+          processarEscaladas(s.conteudo.escaladas);
+        }
+      }
+    }
+
+    String statsText = '';
+    if (totalVias > 0) {
+      final List<String> modalidades = [];
+      if (totalEsportivas > 0) modalidades.add('$totalEsportivas esportivas');
+      if (totalBoulders > 0) modalidades.add('$totalBoulders boulders');
+      if (totalMoveis > 0) modalidades.add('$totalMoveis móveis');
+      if (totalMultiplasEnfiadas > 0) {
+        modalidades.add('$totalMultiplasEnfiadas múltiplas enfiadas');
+      }
+      if (totalHighlines > 0) modalidades.add('$totalHighlines highlines');
+
+      statsText = ' • $totalVias escaladas';
+      if (modalidades.isNotEmpty) {
+        statsText += ' (${modalidades.join(', ')})';
+      }
+    }
+
+    return '${pico.estado.toUpperCase()} • $setoresCount SETORES$statsText';
+  }
 }
