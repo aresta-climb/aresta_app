@@ -8,8 +8,8 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/view_functions/browse_view_model.dart';
-import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/view_functions/view_models/browse_view_model.dart';
+import '../../mocks/mock_telemetry_service.dart';
 
 import 'dart:io';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';

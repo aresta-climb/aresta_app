@@ -6,7 +6,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/view_functions/meus_croquis_view_model.dart';
+import 'package:frontend/view_functions/view_models/meus_croquis_view_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

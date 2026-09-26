@@ -8,7 +8,7 @@ import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/view_functions/pico_view_model.dart';
+import 'package:frontend/view_functions/view_models/pico_view_model.dart';
 
 class _FakeDatasetRepository extends DatasetRepository {
   bool deleteCalled = false;
