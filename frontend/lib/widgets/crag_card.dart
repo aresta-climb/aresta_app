@@ -138,7 +138,7 @@ class CragCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                distanceStr!,
+                                distanceStr,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,

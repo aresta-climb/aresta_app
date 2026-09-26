@@ -9,7 +9,6 @@ import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/widgets/crag_card.dart';
 import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
