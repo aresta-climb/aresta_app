@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/home_functions.dart';
@@ -338,12 +339,11 @@ void main() {
                     ) ??
                     false;
                 return CragCard(
-                  crag: ResumoPico(
+                  crag: MetadadosIndice(
                     id: 'pico_sync_1',
                     nome: 'Pico Browse',
-                    local: 'Local Browse',
-                    isDownloaded: isDownloaded,
                   ),
+                  isDownloaded: isDownloaded,
                   downloadingCrags: mockSync.downloadingCrags,
                   onDownload: () {},
                   onOpen: () {},
