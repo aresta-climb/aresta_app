@@ -67,11 +67,15 @@ void main() {
       final thumbFile = File('${thumbDir.path}/pico_1.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_1',
         nome: 'Pico da Falésia',
-        local: 'Serra do Cipó',
-        estatisticas: EstatisticasPico(totalSetores: 3, totalVias: 15),
+        picos: [
+          Pico(
+            estado: 'Serra do Cipó',
+            precomputados: PrecomputadosPico(totalSetores: 3, totalEscaladas: 15),
+          ),
+        ],
       );
 
       await tester.pumpWidget(
@@ -100,10 +104,12 @@ void main() {
     testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_sem_thumb',
         nome: 'Pico Sem Foto',
-        local: 'Itatiaia',
+        picos: [
+          Pico(estado: 'Itatiaia'),
+        ],
       );
 
       await tester.pumpWidget(
@@ -123,18 +129,21 @@ void main() {
       expect(find.byIcon(Icons.terrain), findsOneWidget);
     });
 
-    testWidgets('OfflineCragCard renderiza dados tipados de ResumoPico', (
+    testWidgets('OfflineCragCard renderiza dados tipados de Croqui', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_offline_1',
         nome: 'Pico das Galinhas',
-        local: 'Minas Gerais',
-        estatisticas: EstatisticasPico(
-          totalSetores: 3,
-          totalVias: 25,
-        ),
-        isDownloaded: true,
+        picos: [
+          Pico(
+            estado: 'Minas Gerais',
+            precomputados: PrecomputadosPico(
+              totalSetores: 3,
+              totalEscaladas: 25,
+            ),
+          ),
+        ],
       );
 
       await tester.pumpWidget(
@@ -199,10 +208,12 @@ void main() {
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
 
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_telemetria',
         nome: 'Pico Telemetria',
-        local: 'Cipó',
+        picos: [
+          Pico(estado: 'Cipó'),
+        ],
       );
 
       await tester.pumpWidget(
