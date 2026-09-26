@@ -15,7 +15,7 @@ import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
-import 'package:frontend/view_functions/pico_view_model.dart';
+import 'package:frontend/view_functions/view_models/pico_view_model.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:flutter/material.dart';
 

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/comunidade.dart';
-import 'package:frontend/view_functions/comunidade_view_model.dart';
+import 'package:frontend/view_functions/view_models/comunidade_view_model.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
