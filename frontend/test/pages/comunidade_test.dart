@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/comunidade.dart';
+import 'package:frontend/view_functions/view_models/comunidade_view_model.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -335,4 +336,62 @@ void main() {
     expect(mockTelemetria.recordedParams['abrir_termos_uso']?['acao'], 'abrir_termos_uso');
     expect(mockTelemetria.recordedParams['abrir_termos_uso']?['origem'], 'comunidade');
   });
+
+  testWidgets('ComunidadePage consome e renderiza ComunidadeViewModel customizado injetado', (
+    WidgetTester tester,
+  ) async {
+    setScreenSize(tester);
+    final vmCustomizado = ComunidadeViewModel(
+      whatsapp: const ItemCanalComunidade(
+        titulo: 'CANAL DO ZAP',
+        subtitulo: 'Acesse o zap da escalada',
+        url: 'https://chat.whatsapp.com/custom',
+        rotulo: 'WhatsApp',
+      ),
+      instagram: const ItemCanalComunidade(
+        titulo: 'INSTA ARESTA',
+        subtitulo: 'Fotos e vídeos',
+        url: 'https://instagram.com/custom',
+        rotulo: 'Instagram',
+      ),
+      linkedin: const ItemCanalComunidade(
+        titulo: 'LINKEDIN OFICIAL',
+        subtitulo: 'Corporativo',
+        url: 'https://linkedin.com/custom',
+        rotulo: 'LinkedIn',
+      ),
+      discord: const ItemCanalComunidade(
+        titulo: 'DISCORD DE DEVS',
+        subtitulo: 'Canal de voz e texto',
+        url: 'https://discord.gg/custom',
+        rotulo: 'Discord',
+      ),
+      github: const ItemCanalComunidade(
+        titulo: 'GITHUB ARESTA',
+        subtitulo: 'Código aberto',
+        url: 'https://github.com/custom',
+        rotulo: 'GitHub',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Theme(
+          data: ThemeData(extensions: [AppColors.dark]),
+          child: ComunidadePage(viewModel: vmCustomizado),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CANAL DO ZAP'), findsOneWidget);
+    expect(find.text('Acesse o zap da escalada'), findsOneWidget);
+    expect(find.text('INSTA ARESTA'), findsOneWidget);
+    expect(find.text('DISCORD DE DEVS'), findsOneWidget);
+
+    await tester.tap(find.text('CANAL DO ZAP'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(mockLauncher.lastLaunchedUrl, 'https://chat.whatsapp.com/custom');
+  });
 }
+

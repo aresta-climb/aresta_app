@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/view_functions/common_functions.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -14,6 +16,32 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/theme/app_colors.dart';
+
+/// Representa um pico de escalada com distância calculada para exibição no carrossel.
+class PicoProximo {
+  final MetadadosIndice pico;
+  final double distanciaKm;
+
+  const PicoProximo({
+    required this.pico,
+    required this.distanciaKm,
+  });
+
+  String get id => pico.id;
+  String get nome => pico.nome;
+  double? get latitude => pico.latitude;
+  double? get longitude => pico.longitude;
+
+  PicoProximo copyWith({
+    MetadadosIndice? pico,
+    double? distanciaKm,
+  }) {
+    return PicoProximo(
+      pico: pico ?? this.pico,
+      distanciaKm: distanciaKm ?? this.distanciaKm,
+    );
+  }
+}
 
 /// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário,
 /// permitindo rolagem contínua (looping) e limitando a seleção a no máximo 6 picos.
@@ -28,31 +56,66 @@ class NearbyCragsCarousel extends StatefulWidget {
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
   /// aceitando [List<ResumoPico>], [List<MetadadosIndice>] ou listas dinâmicas,
   /// retornando os [limite] picos mais próximos ordenados por distância crescente.
-  static List<ResumoPico> calcularPicosMaisProximos({
+  static List<PicoProximo> calcularPicosMaisProximos({
     required double userLat,
     required double userLon,
     required List<dynamic> picosDisponiveis,
     int limite = kLimitePicosProximos,
   }) {
-    final List<ResumoPico> picosComDistancia = [];
+    final List<PicoProximo> picosComDistancia = [];
 
     for (final item in picosDisponiveis) {
       final double? picoLat;
       final double? picoLon;
-      final ResumoPico pico;
+      final MetadadosIndice pico;
 
       if (item is MetadadosIndice) {
+        pico = item;
         picoLat = item.latitude;
         picoLon = item.longitude;
-        pico = item.paraResumoPico();
       } else if (item is ResumoPico) {
         picoLat = item.latitude;
         picoLon = item.longitude;
-        pico = item;
+        pico = MetadadosIndice(
+          id: item.id,
+          nome: item.nome,
+          descricao: item.descricao,
+          caminhoRelativo: item.url,
+          checksumSha256Croqui: item.checksum,
+          localizacao: picoLat != null && picoLon != null
+              ? Coordenada(
+                  latitude: (picoLat * 10000000).round(),
+                  longitude: (picoLon * 10000000).round(),
+                )
+              : null,
+          precomputados: item.estatisticas != null
+              ? PrecomputadosResumoCroqui(
+                  totalSetores: item.estatisticas!.totalSetores,
+                  totalEscaladas: item.estatisticas!.totalVias,
+                  totalBoulders: item.estatisticas!.totalBoulders,
+                  totalEsportivas: item.estatisticas!.totalEsportivas,
+                  totalMoveis: item.estatisticas!.totalMoveis,
+                  totalMultiplasEnfiadas:
+                      item.estatisticas!.totalMultiplasEnfiadas,
+                  totalHighlines: item.estatisticas!.totalHighlines,
+                )
+              : null,
+        );
       } else if (item is Map) {
-        pico = ResumoPico.deMapa(Map<String, dynamic>.from(item));
-        picoLat = pico.latitude;
-        picoLon = pico.longitude;
+        final mapa = Map<String, dynamic>.from(item);
+        picoLat = (mapa['latitude'] as num?)?.toDouble();
+        picoLon = (mapa['longitude'] as num?)?.toDouble();
+        pico = MetadadosIndice(
+          id: mapa['id']?.toString() ?? '',
+          nome: mapa['nome']?.toString() ?? '',
+          descricao: mapa['descricao']?.toString() ?? '',
+          localizacao: picoLat != null && picoLon != null
+              ? Coordenada(
+                  latitude: (picoLat * 10000000).round(),
+                  longitude: (picoLon * 10000000).round(),
+                )
+              : null,
+        );
       } else {
         continue;
       }
@@ -66,14 +129,16 @@ class NearbyCragsCarousel extends StatefulWidget {
         );
 
         picosComDistancia.add(
-          pico.copyWith(distanciaKm: distanceInMeters / 1000),
+          PicoProximo(
+            pico: pico,
+            distanciaKm: distanceInMeters / 1000,
+          ),
         );
       }
     }
 
     picosComDistancia.sort(
-      (a, b) =>
-          (a.distanciaKm ?? double.infinity).compareTo(b.distanciaKm ?? double.infinity),
+      (a, b) => a.distanciaKm.compareTo(b.distanciaKm),
     );
 
     return picosComDistancia.take(limite).toList();
@@ -108,10 +173,10 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   double? _lastUserLat;
   double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
-  List<ResumoPico> _closestCrags = [];
+  List<PicoProximo> _closestCrags = [];
 
   @visibleForTesting
-  List<ResumoPico> get closestCrags => _closestCrags;
+  List<PicoProximo> get closestCrags => _closestCrags;
 
   @override
   void initState() {
@@ -140,17 +205,29 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is MetadadosIndice
-        ? crag.paraResumoPico()
-        : (crag is ResumoPico
-            ? crag
-            : ResumoPico.deMapa(
-                crag is Map<String, dynamic>
-                    ? crag
-                    : Map<String, dynamic>.from(crag as Map),
-              ));
-    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
-    final String id = pico.id;
+    final String id;
+    final String name;
+    final MetadadosIndice? resumoDireto;
+
+    if (crag is MetadadosIndice) {
+      resumoDireto = crag;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is PicoProximo) {
+      resumoDireto = crag.pico;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is ResumoPico) {
+      resumoDireto = null;
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is Map) {
+      resumoDireto = null;
+      id = crag['id']?.toString() ?? '';
+      name = crag['nome']?.toString() ?? 'Pico';
+    } else {
+      return;
+    }
 
     if (await widget.syncService.isNetworkDisabled()) {
       if (mounted) {
@@ -162,13 +239,16 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final repo = DatasetRepository.instance;
     if (repo == null) return;
 
-    final indice = repo.indiceData.value;
-    if (indice == null) return;
-
-    final resumos = indice.croquis.where((r) => r.id == id).toList();
-    if (resumos.isEmpty) return;
-
-    final resumo = resumos.first;
+    final MetadadosIndice resumo;
+    if (resumoDireto != null) {
+      resumo = resumoDireto;
+    } else {
+      final indice = repo.indiceData.value;
+      if (indice == null) return;
+      final resumos = indice.croquis.where((r) => r.id == id).toList();
+      if (resumos.isEmpty) return;
+      resumo = resumos.first;
+    }
 
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -551,29 +631,32 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
             );
             final picoBase = _closestCrags[indiceReal];
             final distanceStr = NearbyCragsCarousel.formatarDistancia(
-              (picoBase.distanciaKm ?? 0) * 1000,
+              picoBase.distanciaKm * 1000,
             );
 
             final isDownloaded =
+                dataset?.croquisBaixados.any(
+                  (c) => c.id == picoBase.id,
+                ) ??
                 dataset?.downloadedPicos.any(
                   (p) => p.id == picoBase.id,
                 ) ??
                 false;
-            final pico = picoBase.copyWith(isDownloaded: isDownloaded);
 
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: SizedBox(
                 width: 340,
-                child: CragCard(
-                  crag: pico,
+                child: CragCard.deMetadados(
+                  metadados: picoBase.pico,
+                  isDownloaded: isDownloaded,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
-                  onDownload: () => handleDownload(pico),
+                  onDownload: () => handleDownload(picoBase.pico),
                   onOpen: () {
                     final repo = DatasetRepository.instance;
                     if (repo != null) {
-                      handlePicoSelection(context, repo, pico);
+                      handlePicoSelection(context, repo, picoBase.pico);
                     }
                   },
                 ),

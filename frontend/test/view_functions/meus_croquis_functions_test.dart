@@ -8,7 +8,9 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view_functions/meus_croquis_functions.dart';
+import 'package:frontend/view_functions/view_models/card_croqui_view_model.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,17 +74,21 @@ void main() {
       final thumbFile = File('${thumbDir.path}/pico_1.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_1',
         nome: 'Pico da Falésia',
-        local: 'Serra do Cipó',
-        estatisticas: EstatisticasPico(totalSetores: 3, totalVias: 15),
+        picos: [
+          Pico(
+            estado: 'Serra do Cipó',
+            precomputados: PrecomputadosPico(totalSetores: 3, totalEscaladas: 15),
+          ),
+        ],
       );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -105,16 +111,18 @@ void main() {
     testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_sem_thumb',
         nome: 'Pico Sem Foto',
-        local: 'Itatiaia',
+        picos: [
+          Pico(estado: 'Itatiaia'),
+        ],
       );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -128,24 +136,27 @@ void main() {
       expect(find.byIcon(Icons.terrain), findsOneWidget);
     });
 
-    testWidgets('OfflineCragCard renderiza dados tipados de ResumoPico', (
+    testWidgets('OfflineCragCard renderiza dados tipados de Croqui', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_offline_1',
         nome: 'Pico das Galinhas',
-        local: 'Minas Gerais',
-        estatisticas: EstatisticasPico(
-          totalSetores: 3,
-          totalVias: 25,
-        ),
-        isDownloaded: true,
+        picos: [
+          Pico(
+            estado: 'Minas Gerais',
+            precomputados: PrecomputadosPico(
+              totalSetores: 3,
+              totalEscaladas: 25,
+            ),
+          ),
+        ],
       );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -182,7 +193,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: croqui,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -204,16 +215,18 @@ void main() {
       final mockTelemetry = MockTelemetryService();
       TelemetryService.instance = mockTelemetry;
 
-      const crag = ResumoPico(
+      final crag = Croqui(
         id: 'pico_telemetria',
         nome: 'Pico Telemetria',
-        local: 'Cipó',
+        picos: [
+          Pico(estado: 'Cipó'),
+        ],
       );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: OfflineCragCard(
+            body: OfflineCragCard.deCroqui(
               crag: crag,
               datasetRepo: repositorio,
               syncService: servicoSync,
@@ -232,6 +245,37 @@ void main() {
       expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'meus_croquis');
       expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'offline');
       expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
+    });
+
+    testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
+      WidgetTester tester,
+    ) async {
+      const viewModel = CardCroquiViewModel(
+        id: 'pico_offline_dumb',
+        titulo: 'FALÉSIA DUMB',
+        localizacao: 'SERRA DO CIPÓ',
+        textoEstatisticas: '7 setores • 35 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_offline_dumb.webp',
+        salvoOffline: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              dados: viewModel,
+              datasetRepo: repositorio,
+              syncService: servicoSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('FALÉSIA DUMB'), findsOneWidget);
+      expect(find.text('SERRA DO CIPÓ'), findsOneWidget);
+      expect(find.text('7 setores • 35 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
     });
 
     testWidgets('ao clicar em ABRIR OFFLINE carrega croqui de compilado.binarypb e abre tela do pico sem piscar/voltar', (
@@ -255,14 +299,10 @@ void main() {
       File('${picoOfflineDir.path}/compilado.binarypb')
           .writeAsBytesSync(croqui.writeToBuffer());
 
-      const crag = ResumoPico(
-        id: 'pico_offline_teste',
-        nome: 'Pico Offline Sucesso',
-        local: 'Minas Gerais',
-        isDownloaded: true,
-      );
+      final crag = croqui.paraResumoPico();
 
       repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        croquisBaixados: [croqui],
         picosBaixados: [crag],
         picosDisponiveis: [crag],
       );

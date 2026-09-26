@@ -1,73 +1,96 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
 import '../view_functions/browse_functions.dart';
+import '../view_functions/view_models/browse_view_model.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/home_functions.dart';
 import '../view_functions/settings_functions.dart';
 import '../services/dataset_repository.dart';
-import '../services/editor_croqui.dart';
 import '../services/http/sync_service.dart';
-import '../services/http/servico_download_segundo_plano.dart';
-import 'package:fuzzy/fuzzy.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 
-enum SortOrder { padrao, alfabetico, escaladas }
+/// Re-exportação de [OrdemOrdenacaoPico] para compatibilidade de tipos.
+typedef SortOrder = OrdemOrdenacaoPico;
 
-/// Uma página que permite aos usuários explorar e pesquisar picos disponíveis.
+/// Uma página que permite aos usuários explorar e pesquisar picos disponíveis (Dumb UI).
 ///
-/// Ela exibe uma lista de picos buscada do [DatasetRepository] e
-/// fornece uma barra de pesquisa para filtrar por nome ou localização.
+/// Renderiza visualmente o catálogo e delega buscas, filtros e ordenação ao [BrowseViewModel].
 class BrowsePage extends StatefulWidget {
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
+  /// ViewModel opcional. Se não fornecido, será construído a partir de [datasetRepo] e [syncService].
+  final BrowseViewModel? viewModel;
+
+  /// Repositório de dados utilizado caso o ViewModel não seja fornecido diretamente.
+  final DatasetRepository? datasetRepo;
+
+  /// Serviço de sincronização utilizado caso o ViewModel não seja fornecido diretamente.
+  final SyncService? syncService;
 
   const BrowsePage({
     super.key,
-    required this.datasetRepo,
-    required this.syncService,
-  });
+    this.viewModel,
+    this.datasetRepo,
+    this.syncService,
+  }) : assert(
+         viewModel != null || (datasetRepo != null && syncService != null),
+         'É necessário fornecer viewModel ou datasetRepo e syncService.',
+       );
 
   @override
   State<BrowsePage> createState() => _BrowsePageState();
 }
 
 class _BrowsePageState extends State<BrowsePage> {
-  /// O texto atual inserido na barra de pesquisa.
-  String _searchQuery = '';
-  Timer? _debounceTimer;
-  SortOrder _sortOrder = SortOrder.padrao;
+  late final BrowseViewModel _viewModel;
+  late final bool _criouViewModel;
 
   @override
   void initState() {
     super.initState();
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+      _criouViewModel = false;
+    } else {
+      _viewModel = BrowseViewModel(
+        datasetRepo: widget.datasetRepo!,
+        syncService: widget.syncService!,
+      );
+      _criouViewModel = true;
+    }
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
+    if (_criouViewModel) {
+      _viewModel.dispose();
+    }
     super.dispose();
   }
 
+  BrowseViewModel get viewModel => _viewModel;
+
   /// Aciona o download dos dados binários de um pico (.binarypb).
-  ///
-  /// Mostra um SnackBar durante o processo e outro para indicar
-  /// sucesso ou falha após a conclusão.
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is ResumoPico
+    final MetadadosIndice pico = crag is MetadadosIndice
         ? crag
-        : ResumoPico.deMapa(
-            crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map),
-          );
+        : (crag is ResumoPico
+            ? MetadadosIndice(
+                id: crag.id,
+                nome: crag.nome,
+                descricao: crag.descricao,
+                caminhoRelativo: crag.url,
+                checksumSha256Croqui: crag.checksum,
+              )
+            : MetadadosIndice(
+                id: (crag as Map)['id']?.toString() ?? '',
+                nome: crag['nome']?.toString() ?? '',
+              ));
     final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
-    final String id = pico.id;
-    if (await widget.syncService.isNetworkDisabled()) {
+
+    if (await viewModel.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
       }
@@ -75,8 +98,7 @@ class _BrowsePageState extends State<BrowsePage> {
     }
     if (!mounted) return;
 
-    final indice = widget.datasetRepo.indiceData.value;
-    if (indice == null) {
+    if (viewModel.datasetRepo.indiceData.value == null) {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
@@ -89,28 +111,11 @@ class _BrowsePageState extends State<BrowsePage> {
       return;
     }
 
-    final resumos = indice.croquis.where((r) => r.id == id).toList();
-    if (resumos.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Pico inédito ou não encontrado no índice local.'),
-            ),
-          );
-      }
-      return;
-    }
-    final resumo = resumos.first;
-
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text('Baixando $name...')));
 
-    final servicoDownload =
-        ServicoDownloadSegundoPlano(syncService: widget.syncService);
-    final success = await servicoDownload.executarDownload(resumo);
+    final success = await viewModel.baixarPico(pico);
 
     if (mounted) {
       ScaffoldMessenger.of(context)
@@ -124,211 +129,71 @@ class _BrowsePageState extends State<BrowsePage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final EditorDeCroqui configService = widget.datasetRepo.editorDeCroqui;
-
-    return Scaffold(
-      backgroundColor: context.colors.deepBasalt, // Use new theme background
-      // ValueListenableBuilder reconstrói automaticamente esta parte da interface
-      // sempre que o conjunto de dados no repositório muda (após a busca inicial).
-      body: SafeArea(
-        child: ValueListenableBuilder<TopoDataset?>(
-          valueListenable: widget.datasetRepo.activeDataset,
-          builder: (context, dataset, child) {
-            // Enquanto o repositório ainda está inicializando/buscando, mostra um spinner.
-            if (dataset == null) {
-              return Center(child: CircularProgressIndicator(color: beastHide));
-            }
-
-            final allCrags = dataset.availablePicos;
-
-            List<ResumoPico> filteredCrags;
-            if (_searchQuery.isEmpty) {
-              filteredCrags = allCrags.toList();
-            } else {
-              final fuse = Fuzzy<ResumoPico>(
-                allCrags,
-                options: FuzzyOptions(
-                  keys: [
-                    WeightedKey(
-                      name: 'nome',
-                      getter: (ResumoPico c) =>
-                          normalizeSearchString(c.nome),
-                      weight: 1.0,
-                    ),
-                    WeightedKey(
-                      name: 'local',
-                      getter: (ResumoPico c) =>
-                          normalizeSearchString(c.local),
-                      weight: 0.5,
-                    ),
-                  ],
-                  threshold: 0.4,
-                ),
-              );
-
-              final queryLower = normalizeSearchString(_searchQuery);
-              filteredCrags = fuse
-                  .search(queryLower)
-                  .map((r) => r.item)
-                  .toList();
-            }
-
-            if (_sortOrder == SortOrder.alfabetico) {
-              filteredCrags.sort(
-                (a, b) => a.nome.compareTo(b.nome),
-              );
-            } else if (_sortOrder == SortOrder.escaladas) {
-              filteredCrags.sort((a, b) {
-                final viasA = a.estatisticas?.totalVias ?? 0;
-                final viasB = b.estatisticas?.totalVias ?? 0;
-                return viasB.compareTo(viasA);
-              });
-            }
-
-            // Verifica se o modo editor está ativo para passar as funções de importação
-            return ValueListenableBuilder<bool>(
-              valueListenable: configService.isExperimentalMode,
-              builder: (context, isExperimental, child) {
-                return ValueListenableBuilder<String?>(
-                  valueListenable: configService.editorUrl,
-                  builder: (context, activeUrl, child) {
-                    final isEditor = activeUrl != null || isExperimental;
-
-                    VoidCallback? addCallback;
-                    if (isEditor) {
-                      addCallback = () => mostrarDialogConexao(
-                        context,
-                        widget.datasetRepo,
-                        titulo: 'Trocar serving',
-                      );
-                    } else {
-                      addCallback = null;
-                    }
-
-                    return buildBrowseBody(
-                      context,
-                      filteredCrags,
-                      widget.syncService.downloadingCrags,
-                      onSearchChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-
-                        if (_debounceTimer?.isActive ?? false) {
-                          _debounceTimer!.cancel();
-                        }
-                        _debounceTimer = Timer(
-                          const Duration(milliseconds: 1000),
-                          () {
-                            if (_searchQuery.isNotEmpty) {
-                              TelemetryService.instance.logBuscaCroquis(
-                                _searchQuery,
-                                filteredCrags.length,
-                              );
-                            }
-                          },
-                        );
-                      },
-                      onDownload: handleDownload,
-                      onOpen: (crag) => handlePicoSelection(
-                        context,
-                        widget.datasetRepo,
-                        crag,
-                        source: 'explorar',
-                      ),
-                      onAddExperimental: addCallback,
-                      onSyncPressed: () async {
-                        await handleSyncServing(
-                          context,
-                          widget.datasetRepo,
-                          widget.syncService,
-                        );
-                      },
-                      onFilterPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          useRootNavigator: true,
-                          isScrollControlled: true,
-                          backgroundColor: context.colors.caveShadow,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(24),
-                            ),
-                          ),
-                          builder: (context) {
-                            return StatefulBuilder(
-                              builder: (BuildContext context, StateSetter setModalState) {
-                                return SafeArea(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 24,
-                                      horizontal: 16,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                          child: Text(
-                                            'ORDENAÇÃO DE PICOS',
-                                            style: TextStyle(
-                                              color: context.colors.rustIron,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                              letterSpacing: 1.5,
-                                            ),
-                                          ),
-                                        ),
-                                        Divider(color: context.colors.graniteEdge),
-                                        _buildSortOption(
-                                          context,
-                                          'Padrão',
-                                          SortOrder.padrao,
-                                        ),
-                                        _buildSortOption(
-                                          context,
-                                          'Alfabético (A-Z)',
-                                          SortOrder.alfabetico,
-                                        ),
-                                        _buildSortOption(
-                                          context,
-                                          'Por número de escaladas',
-                                          SortOrder.escaladas,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            );
-          },
-        ),
+  void _mostrarFiltroOrdenacao(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: context.colors.caveShadow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'ORDENAÇÃO DE PICOS',
+                    style: TextStyle(
+                      color: context.colors.rustIron,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                Divider(color: context.colors.graniteEdge),
+                _buildSortOption(
+                  context,
+                  'Padrão',
+                  OrdemOrdenacaoPico.padrao,
+                ),
+                _buildSortOption(
+                  context,
+                  'Alfabético (A-Z)',
+                  OrdemOrdenacaoPico.alfabetico,
+                ),
+                _buildSortOption(
+                  context,
+                  'Por número de escaladas',
+                  OrdemOrdenacaoPico.escaladas,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSortOption(BuildContext context, String title, SortOrder order) {
-    final isSelected = _sortOrder == order;
+  Widget _buildSortOption(
+    BuildContext context,
+    String title,
+    OrdemOrdenacaoPico order,
+  ) {
+    final isSelected = viewModel.ordem == order;
     return InkWell(
       onTap: () {
-        TelemetryService.instance.logAlterarOrdenacao('browse', order.name);
-        setState(() {
-          _sortOrder = order;
-        });
+        viewModel.alterarOrdem(order);
         Navigator.pop(context);
       },
       child: Padding(
@@ -339,9 +204,7 @@ class _BrowsePageState extends State<BrowsePage> {
             Text(
               title,
               style: TextStyle(
-                color: isSelected
-                    ? context.colors.rustIron
-                    : Colors.white,
+                color: isSelected ? context.colors.rustIron : Colors.white,
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -349,6 +212,58 @@ class _BrowsePageState extends State<BrowsePage> {
             if (isSelected)
               Icon(Icons.check, color: context.colors.rustIron, size: 20),
           ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.colors.deepBasalt,
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: viewModel,
+          builder: (context, _) {
+            if (viewModel.carregando) {
+              return Center(child: CircularProgressIndicator(color: beastHide));
+            }
+
+            final filteredCrags = viewModel.picosFiltrados;
+            final isEditor = viewModel.modoEditorAtivo;
+
+            final addCallback = isEditor
+                ? () => mostrarDialogConexao(
+                      context,
+                      viewModel.datasetRepo,
+                      titulo: 'Trocar serving',
+                    )
+                : null;
+
+            return buildBrowseBody(
+              context,
+              filteredCrags,
+              viewModel.syncService.downloadingCrags,
+              isDownloadedChecker: viewModel.estaBaixado,
+              onSearchChanged: viewModel.alterarTermoBusca,
+              onDownload: handleDownload,
+              onOpen: (crag) => handlePicoSelection(
+                context,
+                viewModel.datasetRepo,
+                crag,
+                source: 'explorar',
+              ),
+              onAddExperimental: addCallback,
+              onSyncPressed: () async {
+                await handleSyncServing(
+                  context,
+                  viewModel.datasetRepo,
+                  viewModel.syncService,
+                );
+              },
+              onFilterPressed: () => _mostrarFiltroOrdenacao(context),
+            );
+          },
         ),
       ),
     );

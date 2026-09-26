@@ -5,18 +5,33 @@ import 'package:flutter/material.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../view_functions/meus_croquis_functions.dart';
+import '../view_functions/view_models/meus_croquis_view_model.dart';
 import '../view_functions/common_functions.dart';
 
+/// Página de apresentação dos croquis armazenados offline (Dumb UI).
+///
+/// Renderiza a interface a partir do estado gerenciado por [MeusCroquisViewModel],
+/// mantendo-se totalmente desacoplada de mensagens do Protobuf e lógica de sincronização.
 class MeusCroquisPage extends StatelessWidget {
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
+  /// ViewModel de apresentação de croquis salvos.
+  final MeusCroquisViewModel viewModel;
 
-  const MeusCroquisPage({
+  MeusCroquisPage({
     super.key,
-    required this.datasetRepo,
-    required this.syncService,
-  });
+    MeusCroquisViewModel? viewModel,
+    DatasetRepository? datasetRepo,
+    SyncService? syncService,
+  }) : assert(
+         viewModel != null || (datasetRepo != null && syncService != null),
+         'É necessário fornecer viewModel ou datasetRepo e syncService.',
+       ),
+       viewModel = viewModel ??
+            MeusCroquisViewModel(
+              datasetRepo: datasetRepo!,
+              syncService: syncService!,
+            );
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +77,7 @@ class MeusCroquisPage extends StatelessWidget {
                     children: [
                       IconButton(
                         icon: Icon(Icons.sync, color: context.colors.ashGrey),
-                        onPressed: () async {
-                          await handleManualSync(
-                            context,
-                            datasetRepo,
-                            syncService,
-                          );
-                        },
+                        onPressed: () => viewModel.sincronizarManual(context),
                       ),
                       const SizedBox(width: 8),
                       buildFeedbackButton(
@@ -81,18 +90,13 @@ class MeusCroquisPage extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ValueListenableBuilder<TopoDataset?>(
-                valueListenable: datasetRepo.activeDataset,
-                builder: (context, dataset, _) {
-                  if (dataset == null) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              child: ListenableBuilder(
+                listenable: viewModel,
+                builder: (context, _) {
+                  final List<CardCroquiViewModel> croquis =
+                      viewModel.croquisSalvos;
 
-                  final downloadedCrags = dataset.croquisBaixados.isNotEmpty
-                      ? dataset.croquisBaixados
-                      : dataset.downloadedPicos;
-
-                  if (downloadedCrags.isEmpty) {
+                  if (croquis.isEmpty) {
                     return Center(
                       child: Text(
                         'Nenhum croqui salvo offline ainda.',
@@ -103,13 +107,13 @@ class MeusCroquisPage extends StatelessWidget {
 
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: downloadedCrags.length,
+                    itemCount: croquis.length,
                     itemBuilder: (context, index) {
-                      final crag = downloadedCrags[index];
+                      final CardCroquiViewModel dados = croquis[index];
                       return OfflineCragCard(
-                        crag: crag,
-                        datasetRepo: datasetRepo,
-                        syncService: syncService,
+                        dados: dados,
+                        datasetRepo: viewModel.datasetRepo,
+                        syncService: viewModel.syncService,
                       );
                     },
                   );

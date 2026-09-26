@@ -4,6 +4,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/view_functions/browse_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -53,8 +55,9 @@ void main() {
                   onDownload: (_) {},
                   onOpen: (crag) {
                     // Simulando o comportamento definido na page browse.dart
+                    final String cragId = crag is MetadadosIndice ? crag.id : (crag['id'] as String);
                     TelemetryService.instance.logAcaoCroqui(
-                      crag['id'],
+                      cragId,
                       'abrir_croqui',
                       origem: 'explorar',
                     );
@@ -177,22 +180,23 @@ void main() {
   testWidgets('CragCard exibe estatísticas resumidas por padrão', (
     WidgetTester tester,
   ) async {
-    final Map<String, dynamic> crag = {
-      'id': 'crag1',
-      'nome': 'Pico Teste',
-      'estatisticas': {
-        'totalSetores': 2,
-        'totalVias': 10,
-        'totalBoulders': 5,
-        'totalEsportivas': 5,
-      },
-    };
+    final crag = MetadadosIndice(
+      id: 'crag1',
+      nome: 'Pico Teste',
+      precomputados: PrecomputadosResumoCroqui(
+        totalSetores: 2,
+        totalEscaladas: 10,
+        totalBoulders: 5,
+        totalEsportivas: 5,
+      ),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
+            isDownloaded: false,
             downloadingCrags: ValueNotifier({}),
             onDownload: () {},
           ),
@@ -210,22 +214,23 @@ void main() {
   testWidgets('CragCard exibe estatísticas detalhadas se showDetailedStats for true', (
     WidgetTester tester,
   ) async {
-    final Map<String, dynamic> crag = {
-      'id': 'crag1',
-      'nome': 'Pico Teste',
-      'estatisticas': {
-        'totalSetores': 3,
-        'totalVias': 15,
-        'totalBoulders': 10,
-        'totalEsportivas': 5,
-      },
-    };
+    final crag = MetadadosIndice(
+      id: 'crag1',
+      nome: 'Pico Teste',
+      precomputados: PrecomputadosResumoCroqui(
+        totalSetores: 3,
+        totalEscaladas: 15,
+        totalBoulders: 10,
+        totalEsportivas: 5,
+      ),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
+            isDownloaded: false,
             downloadingCrags: ValueNotifier({}),
             showDetailedStats: true,
             onDownload: () {},

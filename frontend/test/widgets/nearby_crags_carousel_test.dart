@@ -652,7 +652,7 @@ void main() {
         // Deve conter os 6 primeiros picos mais próximos (Pico 0 a 5)
         // e NÃO deve conter o 7º e 8º (Pico 6 e 7)
         final carouselState = tester.state(find.byType(NearbyCragsCarousel)) as dynamic;
-        final List<ResumoPico> picosExibidos = carouselState.closestCrags;
+        final List<PicoProximo> picosExibidos = carouselState.closestCrags;
         expect(picosExibidos.length, equals(6));
         expect(picosExibidos.map((p) => p.id).toList(), equals([
           'pico_0',
@@ -796,7 +796,7 @@ void main() {
 
       // Valida que as distâncias calculadas estão em ordem estritamente crescente
       for (int i = 0; i < resultado.length - 1; i++) {
-        expect(resultado[i].distanciaKm!, lessThanOrEqualTo(resultado[i + 1].distanciaKm!));
+        expect(resultado[i].distanciaKm, lessThanOrEqualTo(resultado[i + 1].distanciaKm));
       }
     });
 
@@ -861,7 +861,7 @@ void main() {
       expect(resultado.length, equals(2));
       expect(resultado.first.id, equals('pico_perto'));
       expect(resultado.last.id, equals('pico_longe'));
-      expect(resultado.first.distanciaKm, lessThan(resultado.last.distanciaKm!));
+      expect(resultado.first.distanciaKm, lessThan(resultado.last.distanciaKm));
     });
   });
 }

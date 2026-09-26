@@ -7,6 +7,7 @@ import 'navigation_tree.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../services/dataset/modelos/resumo_pico.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -111,12 +112,26 @@ class AppNav {
   /// Navega para o Mapa Global.
   static void toMapaGlobal(
     BuildContext context, {
-    required List<ResumoPico> crags,
+    required dynamic crags,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
 
-    ctrl.navigateTo(MapaGlobalNode(crags: crags, parent: ctrl.currentNode));
+    final List<ResumoPico> picos;
+    if (crags is List<ResumoPico>) {
+      picos = crags;
+    } else if (crags is Iterable) {
+      picos = crags.map<ResumoPico>((item) {
+        if (item is ResumoPico) return item;
+        if (item is MetadadosIndice) return item.paraResumoPico();
+        if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
+        return const ResumoPico(id: '', nome: '', local: '');
+      }).toList();
+    } else {
+      picos = const [];
+    }
+
+    ctrl.navigateTo(MapaGlobalNode(crags: picos, parent: ctrl.currentNode));
   }
 
   /// Navega para a página de um Setor.

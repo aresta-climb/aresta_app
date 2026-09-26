@@ -4,12 +4,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/view_functions/meus_croquis_functions.dart';
+import 'package:frontend/view_functions/view_models/meus_croquis_view_model.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
@@ -42,6 +45,7 @@ void main() {
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
     tempDir = await Directory.systemTemp.createTemp('meus_croquis_page_test_');
     PathProviderPlatform.instance = _PlataformaCaminhosMock(tempDir.path);
+
     final editor = EditorDeCroqui();
     repositorio = DatasetRepository(editorDeCroqui: editor);
     servicoSync = SyncService(datasetRepository: repositorio);
@@ -55,47 +59,74 @@ void main() {
     } catch (_) {}
   });
 
-  group('MeusCroquisPage - Testes de Widget', () {
-    testWidgets('exibe CircularProgressIndicator quando activeDataset for nulo', (
-      WidgetTester tester,
-    ) async {
-      repositorio.activeDataset.value = null;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MeusCroquisPage(
-            datasetRepo: repositorio,
-            syncService: servicoSync,
-          ),
+  Widget buildTestWidget({MeusCroquisViewModel? viewModel}) {
+    return MaterialApp(
+      home: Theme(
+        data: ThemeData(extensions: [AppColors.dark]),
+        child: MeusCroquisPage(
+          datasetRepo: repositorio,
+          syncService: servicoSync,
+          viewModel: viewModel,
         ),
-      );
-      await tester.pump();
+      ),
+    );
+  }
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
+  group('MeusCroquisPage - Testes de Widget e ViewModel', () {
     testWidgets('exibe mensagem quando não houver croquis baixados offline', (
       WidgetTester tester,
     ) async {
-      repositorio.activeDataset.value = ConjuntoDadosCroqui(
-        croquisBaixados: [],
-        picosBaixados: [],
-        picosDisponiveis: [],
-      );
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MeusCroquisPage(
-            datasetRepo: repositorio,
-            syncService: servicoSync,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('Nenhum croqui salvo offline ainda.'), findsOneWidget);
       expect(find.text('MEUS CROQUIS'), findsOneWidget);
       expect(find.text('ARMAZENAMENTO OFFLINE'), findsOneWidget);
+      expect(find.text('Nenhum croqui salvo offline ainda.'), findsOneWidget);
+      expect(find.byType(OfflineCragCard), findsNothing);
+    });
+
+    testWidgets('renderiza OfflineCragCard quando há croquis salvos offline', (
+      WidgetTester tester,
+    ) async {
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        availablePicos: [],
+        croquisBaixados: [
+          Croqui(
+            id: 'croqui_1',
+            nome: 'Pico da Neblina',
+            picos: [
+              Pico(
+                estado: 'Amazonas',
+                precomputados: PrecomputadosPico(totalSetores: 2, totalEscaladas: 10),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nenhum croqui salvo offline ainda.'), findsNothing);
+      expect(find.byType(OfflineCragCard), findsOneWidget);
+      expect(find.text('PICO DA NEBLINA'), findsOneWidget);
+      expect(find.text('AMAZONAS'), findsOneWidget);
+    });
+
+    testWidgets('renderiza com ViewModel customizado injetado', (
+      WidgetTester tester,
+    ) async {
+      final vmCustomizado = MeusCroquisViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      await tester.pumpWidget(buildTestWidget(viewModel: vmCustomizado));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MEUS CROQUIS'), findsOneWidget);
+      expect(find.text('Nenhum croqui salvo offline ainda.'), findsOneWidget);
     });
 
     testWidgets('exibe lista de cards e abre croqui salvo em compilado.binarypb com sucesso', (
@@ -148,7 +179,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Valida que o pico abriu e a tela não piscou/voltou
       expect(treeController.currentNode, isA<PicoNode>());
       expect(find.text('BAÚ'), findsOneWidget);
     });

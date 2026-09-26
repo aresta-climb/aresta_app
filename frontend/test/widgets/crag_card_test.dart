@@ -4,18 +4,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/services/dataset/modelos/estatisticas_pico.dart';
-import 'package:frontend/services/dataset/modelos/resumo_pico.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/view_functions/view_models/card_croqui_view_model.dart';
 import 'package:frontend/widgets/crag_card.dart';
 
 void main() {
   Widget buildTestCard({
-    required dynamic crag,
+    required MetadadosIndice crag,
     String? distanceStr,
     bool showDetailedStats = false,
-    bool? isDownloaded,
+    bool isDownloaded = false,
     VoidCallback? onDownload,
     VoidCallback? onOpen,
   }) {
@@ -25,11 +24,11 @@ void main() {
           extensions: [AppColors.dark],
         ),
         child: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
             distanceStr: distanceStr,
             showDetailedStats: showDetailedStats,
-            isDownloadedOverride: isDownloaded,
+            isDownloaded: isDownloaded,
             downloadingCrags: ValueNotifier(const {}),
             onDownload: onDownload ?? () {},
             onOpen: onOpen,
@@ -66,16 +65,17 @@ void main() {
       expect(find.textContaining('10 boulders, 20 esportivas'), findsOneWidget);
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
     });
+
     testWidgets('renderiza informações básicas e estatísticas resumidas', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_alpha',
         nome: 'Pico Alpha',
-        local: 'Serra do Cipó',
-        estatisticas: EstatisticasPico(
+        descricao: 'Serra do Cipó',
+        precomputados: PrecomputadosResumoCroqui(
           totalSetores: 3,
-          totalVias: 12,
+          totalEscaladas: 12,
         ),
       );
 
@@ -88,13 +88,13 @@ void main() {
     testWidgets('exibe modalidades detalhadas quando showDetailedStats for true', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_beta',
         nome: 'Pico Beta',
-        local: 'Ubatuba',
-        estatisticas: EstatisticasPico(
+        descricao: 'Ubatuba',
+        precomputados: PrecomputadosResumoCroqui(
           totalSetores: 2,
-          totalVias: 8,
+          totalEscaladas: 8,
           totalBoulders: 5,
           totalEsportivas: 3,
         ),
@@ -110,10 +110,10 @@ void main() {
     testWidgets('exibe badge de distância quando fornecido', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_gamma',
         nome: 'Pico Gamma',
-        local: 'Itatiaia',
+        descricao: 'Itatiaia',
       );
 
       await tester.pumpWidget(
@@ -127,14 +127,13 @@ void main() {
     testWidgets('exibe badge de salvo offline quando isDownloaded for true', (
       WidgetTester tester,
     ) async {
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_delta',
         nome: 'Pico Delta',
-        local: 'Andorinhas',
-        isDownloaded: true,
+        descricao: 'Andorinhas',
       );
 
-      await tester.pumpWidget(buildTestCard(crag: crag));
+      await tester.pumpWidget(buildTestCard(crag: crag, isDownloaded: true));
 
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget);
@@ -144,10 +143,10 @@ void main() {
       WidgetTester tester,
     ) async {
       bool abriu = false;
-      const crag = ResumoPico(
+      final crag = MetadadosIndice(
         id: 'pico_omega',
         nome: 'Pico Omega',
-        local: 'Pedra Bela',
+        descricao: 'Pedra Bela',
       );
 
       await tester.pumpWidget(
@@ -159,30 +158,6 @@ void main() {
 
       await tester.tap(find.byType(CragCard));
       expect(abriu, isTrue);
-    });
-
-    testWidgets('repassa capaPath prioritário para o widget de fundo quando disponível', (
-      WidgetTester tester,
-    ) async {
-      const crag = ResumoPico(
-        id: 'pico_capa',
-        nome: 'Pico Capa',
-        local: 'Minas Gerais',
-        capaPath: '/caminho/local/capa.jpg',
-        thumbnailUrl: 'https://exemplo.com/thumb.webp',
-        checksum: 'hash_sha256_pico',
-      );
-
-      await tester.pumpWidget(buildTestCard(crag: crag));
-
-      final bgFinder = find.byWidgetPredicate(
-        (w) => w.runtimeType.toString() == '_CragBackgroundWidget',
-      );
-      expect(bgFinder, findsOneWidget);
-      final dynamic bgWidget = tester.widget(bgFinder);
-      expect(bgWidget.capaPath, equals('/caminho/local/capa.jpg'));
-      expect(bgWidget.cragId, equals('pico_capa'));
-      expect(bgWidget.checksumSha256, equals('hash_sha256_pico'));
     });
 
     testWidgets('repassa checksumSha256Thumbnail de MetadadosIndice para o widget de fundo', (
@@ -228,6 +203,40 @@ void main() {
       final dynamic bgWidget = tester.widget(bgFinder);
       expect(bgWidget.capaPath, equals('/downloads/pico_teste/capa.webp'));
       expect(bgWidget.checksumSha256, equals('sha256_teste'));
+    });
+
+    testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
+      WidgetTester tester,
+    ) async {
+      const viewModel = CardCroquiViewModel(
+        id: 'pico_dumb',
+        titulo: 'PICO PASSIVO',
+        localizacao: 'SERRA DO CIPÓ',
+        textoEstatisticas: '5 setores • 40 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_dumb.webp',
+        salvoOffline: true,
+        textoDistancia: '500m',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Theme(
+            data: ThemeData(extensions: [AppColors.dark]),
+            child: Scaffold(
+              body: CragCard(
+                dados: viewModel,
+                downloadingCrags: ValueNotifier(const {}),
+                onDownload: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('PICO PASSIVO'), findsOneWidget);
+      expect(find.text('5 setores • 40 escaladas'), findsOneWidget);
+      expect(find.text('SALVO OFFLINE'), findsOneWidget);
+      expect(find.text('500m'), findsOneWidget);
     });
   });
 }

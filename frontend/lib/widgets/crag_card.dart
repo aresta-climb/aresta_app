@@ -3,106 +3,64 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 import 'provedor_imagem_aresta.dart';
 
-/// Card interativo que exibe um resumo visual do pico (croqui),
-/// incluindo thumbnail em cache, status de download, distância e estatísticas de vias.
+/// Card interativo que exibe um resumo visual do pico (croqui) a partir de [CardCroquiViewModel] (Dumb UI).
+///
+/// Não contém regras de negócio ou de formatação de entidades de dados, apenas renderiza visualmente
+/// as informações já preparadas e delega ações do usuário via callbacks.
 class CragCard extends StatelessWidget {
-  final dynamic crag;
+  final CardCroquiViewModel dados;
   final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
-  final String? distanceStr;
-  final bool showDetailedStats;
-  final bool? isDownloadedOverride;
 
   const CragCard({
     super.key,
-    required this.crag,
+    required this.dados,
     required this.downloadingCrags,
     required this.onDownload,
     this.onOpen,
-    this.distanceStr,
-    this.showDetailedStats = false,
-    this.isDownloadedOverride,
   });
+
+  /// Construtor de conveniência que recebe diretamente [MetadadosIndice] e mapeia para [CardCroquiViewModel].
+  factory CragCard.deMetadados({
+    Key? key,
+    required MetadadosIndice metadados,
+    required ValueListenable<Map<String, double>> downloadingCrags,
+    required VoidCallback onDownload,
+    VoidCallback? onOpen,
+    String? distanceStr,
+    bool showDetailedStats = false,
+    bool isDownloaded = false,
+  }) {
+    return CragCard(
+      key: key,
+      dados: mapearMetadadosParaCard(
+        metadados,
+        salvoOffline: isDownloaded,
+        textoDistancia: distanceStr,
+        estatisticasDetalhadas: showDetailedStats,
+      ),
+      downloadingCrags: downloadingCrags,
+      onDownload: onDownload,
+      onOpen: onOpen,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String id;
-    final String nome;
-    final bool isDownloaded;
-    final String thumbnailUrl;
-    final String? capaPath;
-    final String? checksumSha256;
-    String statsText = '0 setores • 0 escaladas';
-
-    if (crag is MetadadosIndice) {
-      final MetadadosIndice m = crag as MetadadosIndice;
-      id = m.id;
-      nome = m.nome.isEmpty ? 'SEM NOME' : m.nome.toUpperCase();
-      isDownloaded = isDownloadedOverride ?? false;
-      thumbnailUrl = 'thumbnails/${m.id}.webp';
-      capaPath = null;
-      checksumSha256 = m.hasChecksumSha256Thumbnail() ? m.checksumSha256Thumbnail : null;
-
-      if (m.hasPrecomputados()) {
-        final p = m.precomputados;
-        final setores = p.totalSetores;
-        final vias = p.totalEscaladas;
-        statsText = '$setores setores • $vias escaladas';
-
-        if (showDetailedStats) {
-          final List<String> modalidades = [];
-          if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
-          if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
-          if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
-          if (p.totalMultiplasEnfiadas > 0) {
-            modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
-          }
-          if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
-          if (modalidades.isNotEmpty) {
-            statsText += ' (${modalidades.join(', ')})';
-          }
-        }
-      }
-    } else {
-      final ResumoPico r = crag is ResumoPico
-          ? crag as ResumoPico
-          : ResumoPico.deMapa(crag is Map<String, dynamic>
-              ? crag as Map<String, dynamic>
-              : Map<String, dynamic>.from(crag as Map));
-      id = r.id;
-      nome = r.nome.isEmpty ? 'SEM NOME' : r.nome.toUpperCase();
-      isDownloaded = isDownloadedOverride ?? r.isDownloaded;
-      thumbnailUrl = r.thumbnailUrl;
-      capaPath = (r.capaPath?.isNotEmpty == true) ? r.capaPath : null;
-      checksumSha256 = r.checksum.isNotEmpty ? r.checksum : null;
-
-      if (r.estatisticas != null) {
-        final stats = r.estatisticas!;
-        final setores = stats.totalSetores;
-        final vias = stats.totalVias;
-        statsText = '$setores setores • $vias escaladas';
-
-        if (showDetailedStats) {
-          final List<String> modalidades = [];
-          if (stats.totalBoulders > 0) modalidades.add('${stats.totalBoulders} boulders');
-          if (stats.totalEsportivas > 0) modalidades.add('${stats.totalEsportivas} esportivas');
-          if (stats.totalMoveis > 0) modalidades.add('${stats.totalMoveis} móveis');
-          if (stats.totalMultiplasEnfiadas > 0) {
-            modalidades.add('${stats.totalMultiplasEnfiadas} múltiplas enfiadas');
-          }
-          if (stats.totalHighlines > 0) modalidades.add('${stats.totalHighlines} highlines');
-          if (modalidades.isNotEmpty) {
-            statsText += ' (${modalidades.join(', ')})';
-          }
-        }
-      }
-    }
+    final String id = dados.id;
+    final String nome = dados.titulo;
+    final String thumbnailUrl = dados.caminhoMiniatura;
+    final String statsText = dados.textoEstatisticas;
+    final bool isDownloaded = dados.salvoOffline;
+    final String? distanceStr = dados.textoDistancia;
+    final String? capaPath = dados.caminhoCapa;
+    final String? checksumSha256 = dados.checksumSha256;
 
     return GestureDetector(
       onTap: () {
@@ -184,7 +142,7 @@ class CragCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                distanceStr!,
+                                distanceStr,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,

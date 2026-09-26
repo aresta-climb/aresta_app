@@ -18,12 +18,11 @@ import '../theme/app_colors.dart';
 // New imports for sub-pages
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';
 import '../widgets/pico_menu_card.dart';
-import '../utils/pico_categorization.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
-import '../services/http/servico_download_segundo_plano.dart';
+import '../view_functions/view_models/pico_view_model.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final Pico pico;
@@ -32,6 +31,7 @@ class PicoDetailsPage extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final bool scrollToMapaGeral;
   final Setor? returnToSetor;
+  final PicoViewModel? viewModel;
 
   const PicoDetailsPage({
     super.key,
@@ -41,6 +41,7 @@ class PicoDetailsPage extends StatefulWidget {
     required this.datasetRepo,
     this.scrollToMapaGeral = false,
     this.returnToSetor,
+    this.viewModel,
   });
 
   @override
@@ -49,52 +50,22 @@ class PicoDetailsPage extends StatefulWidget {
 
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
-  late PicoCategorizedData _categories;
-  late ServicoCroquiOnline _servicoCroquiOnline;
-  late bool _isInitiallyDownloaded;
+  late final PicoViewModel _viewModel;
+  late final bool _ownsViewModel;
 
   @override
   void initState() {
     super.initState();
-    _categories = PicoCategorizedData(widget.croqui);
-    _servicoCroquiOnline = ServicoCroquiOnline(
-      sessaoOnline: widget.datasetRepo.gerenciadorSessaoOnline,
-      verificarPicoBaixado: (id) => widget.datasetRepo.isPicoDownloaded(id),
-    );
-
-    _isInitiallyDownloaded =
-        widget.datasetRepo.isPicoDownloaded(widget.cragId);
-
-    widget.datasetRepo.activeDataset.addListener(_verificarStatusDownload);
-
-    final dataset = widget.datasetRepo.activeDataset.value;
-    if (!_isInitiallyDownloaded && dataset != null) {
-      try {
-        final picoItem = dataset.picosDisponiveis.firstWhere(
-          (p) => p.id == widget.cragId,
+    _ownsViewModel = widget.viewModel == null;
+    _viewModel = widget.viewModel ??
+        PicoViewModel(
+          pico: widget.pico,
+          croqui: widget.croqui,
+          cragId: widget.cragId,
+          datasetRepo: widget.datasetRepo,
         );
-        final url = picoItem.url;
-        if (url.isNotEmpty) {
-          _servicoCroquiOnline.iniciarPollingEtag(
-            widget.cragId,
-            url,
-            aoAtualizar: (picoId, croqui) {
-              widget.datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
-              final isExperimental =
-                  widget.datasetRepo.editorDeCroqui.isExperimentalMode.value;
-              if (isExperimental) {
-                widget.datasetRepo.editorDeCroqui.dispararPulsoRecarregamento();
-              } else {
-                widget.datasetRepo.notificarCroquiOnlineAtualizadoNaUI(
-                  widget.pico.nome.isNotEmpty ? widget.pico.nome : picoId,
-                );
-              }
-            },
-          );
-        }
-      } catch (_) {}
-    }
 
+    _viewModel.addListener(_aoAtualizarViewModel);
 
     // Registra interceptor de saída no controlador de navegação em árvore
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -134,6 +105,17 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     }
   }
 
+  void _aoAtualizarViewModel() {
+    if (!mounted) return;
+    if (_viewModel.isDownloaded) {
+      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+          TreeNavigationWrapper.currentTreeController;
+      if (tree != null && tree.onBackInterceptor != null) {
+        tree.onBackInterceptor = null;
+      }
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -150,31 +132,16 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       final staysInSameCroqui =
           parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
 
-      if (staysInSameCroqui) {
-        return false;
-      }
-
-      final isBaixado = widget.datasetRepo.isPicoDownloaded(widget.cragId);
-
-      if (isBaixado) {
+      if (!_viewModel.deveInterceptarSaida(staysInSameCroqui: staysInSameCroqui)) {
         tree.onBackInterceptor = null;
         return false;
       }
-
-
-      ResumoPico? picoItem;
-      try {
-        picoItem = widget.datasetRepo.activeDataset.value?.picosDisponiveis
-            .firstWhere((p) => p.id == widget.cragId);
-      } catch (_) {}
-      final tamanhoFormatado =
-          picoItem?.tamanhoFormatado ?? 'Offline';
 
       ModalConfirmacaoSaida.mostrar(
         context: context,
         nomePico: widget.pico.nome,
         cragId: widget.cragId,
-        tamanhoFormatado: tamanhoFormatado,
+        tamanhoFormatado: _viewModel.tamanhoFormatado,
         onSalvar: () {
           _iniciarDownload();
           tree.onBackInterceptor = null;
@@ -193,78 +160,38 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     };
   }
 
-  void _verificarStatusDownload() {
-    if (!mounted) return;
-    final isDownloaded = widget.datasetRepo.isPicoDownloaded(widget.cragId);
-    if (isDownloaded) {
-      _servicoCroquiOnline.cancelarPolling(widget.cragId);
-      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
-          TreeNavigationWrapper.currentTreeController;
-      if (tree != null && tree.onBackInterceptor != null) {
-        tree.onBackInterceptor = null;
-      }
-      if (!_isInitiallyDownloaded) {
-        setState(() {
-          _isInitiallyDownloaded = true;
-        });
-      }
-    }
-  }
-
-  @override
-  void didUpdateWidget(PicoDetailsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.cragId != widget.cragId ||
-        oldWidget.datasetRepo != widget.datasetRepo) {
-      oldWidget.datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
-      widget.datasetRepo.activeDataset.addListener(_verificarStatusDownload);
-    }
-    _verificarStatusDownload();
-  }
-
   @override
   void dispose() {
     ConstrutorCaminhoTrajeto.limparCache();
-    widget.datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
+    _viewModel.removeListener(_aoAtualizarViewModel);
     final tree = TreeNavigationWrapper.currentTreeController;
     if (tree != null) {
       tree.onBackInterceptor = null;
     }
-    _servicoCroquiOnline.cancelarPolling(widget.cragId);
-    _servicoCroquiOnline.dispose();
+    if (_ownsViewModel) {
+      _viewModel.dispose();
+    }
     super.dispose();
   }
 
   void _iniciarDownload() async {
-    final indice = widget.datasetRepo.indiceData.value;
-    if (indice == null) return;
-
-    final resumos = indice.croquis.where((r) => r.id == widget.cragId).toList();
-    if (resumos.isEmpty) return;
-
-    final tree = TreeNavigationWrapper.of(context);
-    final syncService = tree.syncService;
+    final tree = TreeNavigationWrapper.maybeOf(context);
+    final syncService = tree?.syncService;
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text('Baixando ${widget.pico.nome}...')));
 
-    final servicoDownload =
-        ServicoDownloadSegundoPlano(syncService: syncService);
-    final success = await servicoDownload.executarDownload(resumos.first);
+    final success = await _viewModel.baixarPico(syncService: syncService);
 
     if (!mounted) return;
 
     if (success) {
-      _servicoCroquiOnline.cancelarPolling(widget.cragId);
       final currentTree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
           TreeNavigationWrapper.currentTreeController;
       if (currentTree != null) {
         currentTree.onBackInterceptor = null;
       }
-      setState(() {
-        _isInitiallyDownloaded = true;
-      });
     }
 
     ScaffoldMessenger.of(context)
@@ -282,146 +209,45 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   }
 
 
-  int _countTotalSetores() {
-    int count = 0;
-    for (var sg in widget.pico.setoresOuGrupos) {
-      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
-        count++;
-      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
-        count += sg.grupo.conteudo.setores.length;
-      }
-    }
-    return count;
-  }
-
   @override
   Widget build(BuildContext context) {
-    String searchTooltip = 'Buscar via';
-    if (isPicoBoulderArea(widget.pico)) {
-      searchTooltip = 'Buscar boulder';
-    }
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
+            final parentNode = tree?.currentNode.parent;
+            final staysInSameCroqui =
+                parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
 
-    final int setoresCount = _countTotalSetores();
-    int totalVias = 0;
-    int totalBoulders = 0;
-    int totalEsportivas = 0;
-    int totalMoveis = 0;
-    int totalMultiplasEnfiadas = 0;
-    int totalHighlines = 0;
-
-    void processEscaladas(Iterable<Escalada> escaladas) {
-      for (var escalada in escaladas) {
-        totalVias++;
-        switch (escalada.whichTipo()) {
-          case Escalada_Tipo.boulder:
-            totalBoulders++;
-            break;
-          case Escalada_Tipo.viaEsportiva:
-            totalEsportivas++;
-            break;
-          case Escalada_Tipo.viaMovel:
-            totalMoveis++;
-            break;
-          case Escalada_Tipo.viaMultiplasEnfiadas:
-            totalMultiplasEnfiadas++;
-            break;
-          case Escalada_Tipo.highline:
-            totalHighlines++;
-            break;
-          default:
-            break;
-        }
-      }
-    }
-
-    for (var sg in widget.pico.setoresOuGrupos) {
-      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
-        processEscaladas(sg.setor.conteudo.escaladas);
-      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
-        for (var s in sg.grupo.conteudo.setores) {
-          processEscaladas(s.conteudo.escaladas);
-        }
-      }
-    }
-
-    String statsText = '';
-    if (totalVias > 0) {
-      final List<String> modalidades = [];
-      if (totalEsportivas > 0) modalidades.add('$totalEsportivas esportivas');
-      if (totalBoulders > 0) modalidades.add('$totalBoulders boulders');
-      if (totalMoveis > 0) modalidades.add('$totalMoveis móveis');
-      if (totalMultiplasEnfiadas > 0) {
-        modalidades.add('$totalMultiplasEnfiadas múltiplas enfiadas');
-      }
-      if (totalHighlines > 0) modalidades.add('$totalHighlines highlines');
-
-      statsText = ' • $totalVias escaladas';
-      if (modalidades.isNotEmpty) {
-        statsText += ' (${modalidades.join(', ')})';
-      }
-    }    final String subtitleText =
-        "${widget.pico.estado.toUpperCase()} • $setoresCount SETORES$statsText";
-
-    final dataset = widget.datasetRepo.activeDataset.value;
-    final bool isDownloaded = widget.datasetRepo.isPicoDownloaded(widget.cragId);
-
-
-
-    ResumoPico? picoItem;
-    try {
-      picoItem = dataset?.picosDisponiveis.firstWhere(
-        (p) => p.id == widget.cragId,
-      );
-    } catch (_) {}
-
-    final String tamanhoFormatado =
-        picoItem?.tamanhoFormatado ?? 'Offline';
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
-        final parentNode = tree?.currentNode.parent;
-        final staysInSameCroqui =
-            parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
-
-        if (staysInSameCroqui) {
-          if (context.mounted && AppNav.canGoBack(context)) {
-            AppNav.back(context);
-          }
-          return;
-        }
-
-        final isBaixado = widget.datasetRepo.activeDataset.value?.picosBaixados
-                .any((p) => p.id == widget.cragId) ??
-            false;
-
-        if (isBaixado) {
-          if (context.mounted && AppNav.canGoBack(context)) {
-            AppNav.back(context);
-          }
-          return;
-        }
-
-        ModalConfirmacaoSaida.mostrar(
-          context: context,
-          nomePico: widget.pico.nome,
-          tamanhoFormatado: tamanhoFormatado,
-          onSalvar: () {
-            _iniciarDownload();
-            if (context.mounted && AppNav.canGoBack(context)) {
-              AppNav.back(context);
+            if (!_viewModel.deveInterceptarSaida(staysInSameCroqui: staysInSameCroqui)) {
+              if (context.mounted && AppNav.canGoBack(context)) {
+                AppNav.back(context);
+              }
+              return;
             }
+
+            ModalConfirmacaoSaida.mostrar(
+              context: context,
+              nomePico: widget.pico.nome,
+              tamanhoFormatado: _viewModel.tamanhoFormatado,
+              onSalvar: () {
+                _iniciarDownload();
+                if (context.mounted && AppNav.canGoBack(context)) {
+                  AppNav.back(context);
+                }
+              },
+              onSairSemSalvar: () {
+                if (context.mounted && AppNav.canGoBack(context)) {
+                  AppNav.back(context);
+                }
+              },
+            );
           },
-          onSairSemSalvar: () {
-            if (context.mounted && AppNav.canGoBack(context)) {
-              AppNav.back(context);
-            }
-          },
-        );
-      },
-      child: Scaffold(
+          child: Scaffold(
         backgroundColor: context.colors.deepBasalt,
         body: CustomScrollView(
           slivers: [
@@ -513,7 +339,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   children: [
                     LinhaCreditoAutor(creditos: widget.croqui.creditos),
                     Text(
-                      subtitleText,
+                      _viewModel.subtitulo,
                       style: TextStyle(
                         color: context.colors.mossRock,
                         fontWeight: FontWeight.bold,
@@ -537,8 +363,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
 
                             return BannerModoOnline(
                               cragId: widget.cragId,
-                              tamanhoFormatado: tamanhoFormatado,
-                              isDownloaded: isDownloaded,
+                              tamanhoFormatado: _viewModel.tamanhoFormatado,
+                              isDownloaded: _viewModel.isDownloaded,
                               progressoDownload: progresso,
                               onSalvarOffline: _iniciarDownload,
                             );
@@ -561,7 +387,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             Icons.search,
                             color: context.colors.chalkWhite,
                           ),
-                          tooltip: searchTooltip,
+                          tooltip: _viewModel.tooltipBusca,
                           onPressed: () async {
                             TelemetryService.instance.logAcaoCroqui(
                               widget.cragId,
@@ -662,16 +488,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                           );
 
                           if (confirm == true && context.mounted) {
-                            // Garante que o croqui permaneça em memória para transição suave para modo online
-                            widget.datasetRepo.gerenciadorSessaoOnline
-                                .registrarCroquiOnline(
-                              widget.cragId,
-                              widget.croqui,
-                            );
-
-                            final success = await widget.datasetRepo.deleteCrag(
-                              widget.cragId,
-                            );
+                            final success = await _viewModel.excluirPico();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -804,7 +621,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                       );
                       showRegrasBottomSheet(
                         context,
-                        _categories.regras,
+                        _viewModel.regras,
                         widget.cragId,
                       );
                     },
@@ -862,8 +679,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   ),
                   */
 
-                  if (_categories.creditos.isNotEmpty)
-                    ..._categories.creditos.map(
+                  if (_viewModel.creditos.isNotEmpty)
+                    ..._viewModel.creditos.map(
                       (b) => PicoMenuCard(
                         title: b.texto,
                         subtitle:
@@ -898,9 +715,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
-                      formatarTextoUltimaAtualizacao(
-                        widget.datasetRepo.obterDataAtualizacaoCroqui(widget.cragId),
-                      ),
+                      _viewModel.textoUltimaAtualizacao,
                       style: TextStyle(
                         color: context.colors.ashGrey,
                         fontSize: 12,
@@ -955,6 +770,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     ),
+    );
+      },
     );
   }
 }

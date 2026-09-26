@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import 'view_models/card_croqui_view_model.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
@@ -11,59 +12,46 @@ import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/registro_primeira_visita.dart';
 
-/// Card interativo para exibição de um croqui baixado na aba Meus Croquis.
+/// Card interativo para exibição de um croqui baixado na aba Meus Croquis a partir de [CardCroquiViewModel] (Dumb UI).
 ///
-/// Aceita diretamente a entidade [Croqui] do Protobuf ou o modelo legado [ResumoPico],
-/// extraindo nome, localização e estatísticas de setores e escaladas.
+/// Não contém regras de negócio ou de formatação de entidades de dados, apenas renderiza visualmente
+/// as informações já preparadas e delega ações do usuário via callbacks.
 class OfflineCragCard extends StatelessWidget {
-  final dynamic crag;
+  final CardCroquiViewModel dados;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
+  final Croqui? croquiOriginal;
 
   const OfflineCragCard({
     super.key,
-    required this.crag,
+    required this.dados,
     required this.datasetRepo,
     required this.syncService,
+    this.croquiOriginal,
   });
+
+  /// Construtor de conveniência que recebe diretamente a entidade [Croqui] e mapeia para [CardCroquiViewModel].
+  factory OfflineCragCard.deCroqui({
+    Key? key,
+    required Croqui crag,
+    required DatasetRepository datasetRepo,
+    required SyncService syncService,
+  }) {
+    return OfflineCragCard(
+      key: key,
+      dados: mapearCroquiParaCard(crag),
+      datasetRepo: datasetRepo,
+      syncService: syncService,
+      croquiOriginal: crag,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String id;
-    final String nome;
-    final String local;
-    String statsText = '0 setores • 0 escaladas';
-
-    if (crag is Croqui) {
-      final Croqui c = crag as Croqui;
-      id = c.id;
-      final nomeFonte = c.nome.isNotEmpty
-          ? c.nome
-          : (c.picos.isNotEmpty ? c.picos.first.nome : '');
-      nome = (nomeFonte.isEmpty ? 'Sem Nome' : nomeFonte).toUpperCase();
-      final localFonte = c.picos.isNotEmpty && c.picos.first.estado.isNotEmpty
-          ? c.picos.first.estado
-          : '';
-      local = (localFonte.isEmpty ? 'Local Desconhecido' : localFonte).toUpperCase();
-
-      if (c.picos.isNotEmpty && c.picos.first.hasPrecomputados()) {
-        final stats = c.picos.first.precomputados;
-        statsText = '${stats.totalSetores} setores • ${stats.totalEscaladas} escaladas';
-      }
-    } else {
-      id = crag.id?.toString() ?? '';
-      final nomeFonte = crag.nome?.toString() ?? '';
-      nome = (nomeFonte.isEmpty ? 'Sem Nome' : nomeFonte).toUpperCase();
-      final localFonte = crag.local?.toString() ?? '';
-      local = (localFonte.isEmpty ? 'Local Desconhecido' : localFonte).toUpperCase();
-
-      if (crag.estatisticas != null) {
-        final stats = crag.estatisticas!;
-        final setores = stats.totalSetores;
-        final vias = stats.totalVias;
-        statsText = '$setores setores • $vias escaladas';
-      }
-    }
+    final String id = dados.id;
+    final String nome = dados.titulo;
+    final String local = dados.localizacao;
+    final String statsText = dados.textoEstatisticas;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -87,7 +75,7 @@ class OfflineCragCard extends StatelessWidget {
                   child: FutureBuilder<ImageProvider?>(
                     future: ProvedorImagemAresta.resolver(
                       picoId: id,
-                      caminho: 'thumbnails/$id.webp',
+                      caminho: dados.caminhoMiniatura,
                       larguraAlvo: 300,
                     ),
                     builder: (context, snapshot) {
@@ -163,14 +151,8 @@ class OfflineCragCard extends StatelessWidget {
                       primeiraVisita: primeiraVisita,
                     );
 
-                    Croqui? croqui;
-                    if (crag is Croqui) {
-                      croqui = crag as Croqui;
-                    } else if (crag is ResumoPico && (crag as ResumoPico).croqui != null) {
-                      croqui = (crag as ResumoPico).croqui;
-                    } else {
-                      croqui = await datasetRepo.getCroqui(id);
-                    }
+                    Croqui? croqui =
+                        croquiOriginal ?? await datasetRepo.getCroqui(id);
 
                     if (!context.mounted) return;
 
