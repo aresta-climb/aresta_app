@@ -3,6 +3,9 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../aresta_api/proto/generated/indice.pb.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/common_functions.dart';
 import '../view_functions/home_functions.dart';
@@ -58,13 +61,20 @@ class _BrowsePageState extends State<BrowsePage> {
   /// sucesso ou falha após a conclusão.
   @visibleForTesting
   void handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is ResumoPico
+    final MetadadosIndice pico = crag is MetadadosIndice
         ? crag
-        : ResumoPico.deMapa(
-            crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map),
-          );
+        : (crag is ResumoPico
+            ? MetadadosIndice(
+                id: crag.id,
+                nome: crag.nome,
+                descricao: crag.descricao,
+                caminhoRelativo: crag.url,
+                checksumSha256Croqui: crag.checksum,
+              )
+            : MetadadosIndice(
+                id: (crag as Map)['id']?.toString() ?? '',
+                nome: (crag as Map)['nome']?.toString() ?? '',
+              ));
     final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
     if (await widget.syncService.isNetworkDisabled()) {
@@ -90,7 +100,10 @@ class _BrowsePageState extends State<BrowsePage> {
     }
 
     final resumos = indice.croquis.where((r) => r.id == id).toList();
-    if (resumos.isEmpty) {
+    final resumo = resumos.isNotEmpty
+        ? resumos.first
+        : (crag is MetadadosIndice && crag.caminhoRelativo.isNotEmpty ? crag : null);
+    if (resumo == null) {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
@@ -102,7 +115,6 @@ class _BrowsePageState extends State<BrowsePage> {
       }
       return;
     }
-    final resumo = resumos.first;
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -141,26 +153,26 @@ class _BrowsePageState extends State<BrowsePage> {
               return Center(child: CircularProgressIndicator(color: beastHide));
             }
 
-            final allCrags = dataset.availablePicos;
+            final allCrags = dataset.metadadosDisponiveis;
 
-            List<ResumoPico> filteredCrags;
+            List<MetadadosIndice> filteredCrags;
             if (_searchQuery.isEmpty) {
               filteredCrags = allCrags.toList();
             } else {
-              final fuse = Fuzzy<ResumoPico>(
+              final fuse = Fuzzy<MetadadosIndice>(
                 allCrags,
                 options: FuzzyOptions(
                   keys: [
                     WeightedKey(
                       name: 'nome',
-                      getter: (ResumoPico c) =>
+                      getter: (MetadadosIndice c) =>
                           normalizeSearchString(c.nome),
                       weight: 1.0,
                     ),
                     WeightedKey(
                       name: 'local',
-                      getter: (ResumoPico c) =>
-                          normalizeSearchString(c.local),
+                      getter: (MetadadosIndice c) =>
+                          normalizeSearchString(c.localizacaoFormatada),
                       weight: 0.5,
                     ),
                   ],
@@ -181,8 +193,8 @@ class _BrowsePageState extends State<BrowsePage> {
               );
             } else if (_sortOrder == SortOrder.escaladas) {
               filteredCrags.sort((a, b) {
-                final viasA = a.estatisticas?.totalVias ?? 0;
-                final viasB = b.estatisticas?.totalVias ?? 0;
+                final viasA = a.precomputados.totalEscaladas;
+                final viasB = b.precomputados.totalEscaladas;
                 return viasB.compareTo(viasA);
               });
             }
@@ -211,6 +223,8 @@ class _BrowsePageState extends State<BrowsePage> {
                       context,
                       filteredCrags,
                       widget.syncService.downloadingCrags,
+                      isDownloadedChecker: (picoId) =>
+                          dataset.croquisBaixados.any((c) => c.id == picoId),
                       onSearchChanged: (value) {
                         setState(() {
                           _searchQuery = value;
