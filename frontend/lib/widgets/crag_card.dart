@@ -4,58 +4,61 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
+import '../view_functions/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 import 'provedor_imagem_aresta.dart';
 
-/// Card interativo que exibe um resumo visual do pico (croqui) diretamente da entidade Protobuf [MetadadosIndice],
-/// incluindo thumbnail em cache, status de download, distância e estatísticas pré-computadas de vias.
+/// Card interativo que exibe um resumo visual do pico (croqui) a partir de [CardCroquiViewModel] (Dumb UI).
+///
+/// Não contém regras de negócio ou de formatação de entidades de dados, apenas renderiza visualmente
+/// as informações já preparadas e delega ações do usuário via callbacks.
 class CragCard extends StatelessWidget {
-  final MetadadosIndice crag;
+  final CardCroquiViewModel dados;
   final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
-  final String? distanceStr;
-  final bool showDetailedStats;
-  final bool isDownloaded;
 
   const CragCard({
     super.key,
-    required this.crag,
+    required this.dados,
     required this.downloadingCrags,
     required this.onDownload,
     this.onOpen,
-    this.distanceStr,
-    this.showDetailedStats = false,
-    this.isDownloaded = false,
   });
+
+  /// Construtor de conveniência que recebe diretamente [MetadadosIndice] e mapeia para [CardCroquiViewModel].
+  factory CragCard.deMetadados({
+    Key? key,
+    required MetadadosIndice metadados,
+    required ValueListenable<Map<String, double>> downloadingCrags,
+    required VoidCallback onDownload,
+    VoidCallback? onOpen,
+    String? distanceStr,
+    bool showDetailedStats = false,
+    bool isDownloaded = false,
+  }) {
+    return CragCard(
+      key: key,
+      dados: mapearMetadadosParaCard(
+        metadados,
+        salvoOffline: isDownloaded,
+        textoDistancia: distanceStr,
+        estatisticasDetalhadas: showDetailedStats,
+      ),
+      downloadingCrags: downloadingCrags,
+      onDownload: onDownload,
+      onOpen: onOpen,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String id = crag.id;
-    final String nome = crag.nome.isEmpty ? 'SEM NOME' : crag.nome.toUpperCase();
-    final String thumbnailUrl = 'thumbnails/$id.webp';
-    String statsText = '0 setores • 0 escaladas';
-
-    if (crag.hasPrecomputados()) {
-      final p = crag.precomputados;
-      final setores = p.totalSetores;
-      final vias = p.totalEscaladas;
-      statsText = '$setores setores • $vias escaladas';
-
-      if (showDetailedStats) {
-        final List<String> modalidades = [];
-        if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
-        if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
-        if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
-        if (p.totalMultiplasEnfiadas > 0) {
-          modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
-        }
-        if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
-        if (modalidades.isNotEmpty) {
-          statsText += ' (${modalidades.join(', ')})';
-        }
-      }
-    }
+    final String id = dados.id;
+    final String nome = dados.titulo;
+    final String thumbnailUrl = dados.caminhoMiniatura;
+    final String statsText = dados.textoEstatisticas;
+    final bool isDownloaded = dados.salvoOffline;
+    final String? distanceStr = dados.textoDistancia;
 
     return GestureDetector(
       onTap: () {
