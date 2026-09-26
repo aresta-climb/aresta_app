@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
 import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
@@ -88,9 +89,7 @@ class MeusCroquisPage extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final downloadedCrags = dataset.croquisBaixados.isNotEmpty
-                      ? dataset.croquisBaixados
-                      : dataset.downloadedPicos;
+                  final List<Croqui> downloadedCrags = dataset.croquisBaixados;
 
                   if (downloadedCrags.isEmpty) {
                     return Center(
@@ -105,7 +104,7 @@ class MeusCroquisPage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: downloadedCrags.length,
                     itemBuilder: (context, index) {
-                      final crag = downloadedCrags[index];
+                      final Croqui crag = downloadedCrags[index];
                       return OfflineCragCard(
                         crag: crag,
                         datasetRepo: datasetRepo,

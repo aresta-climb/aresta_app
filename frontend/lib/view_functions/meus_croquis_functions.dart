@@ -13,10 +13,10 @@ import '../services/firebase/registro_primeira_visita.dart';
 
 /// Card interativo para exibição de um croqui baixado na aba Meus Croquis.
 ///
-/// Aceita diretamente a entidade [Croqui] do Protobuf ou o modelo legado [ResumoPico],
+/// Aceita diretamente a entidade [Croqui] do Protobuf,
 /// extraindo nome, localização e estatísticas de setores e escaladas.
 class OfflineCragCard extends StatelessWidget {
-  final dynamic crag;
+  final Croqui crag;
   final DatasetRepository datasetRepo;
   final SyncService syncService;
 
@@ -29,40 +29,20 @@ class OfflineCragCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String id;
-    final String nome;
-    final String local;
+    final String id = crag.id;
+    final nomeFonte = crag.nome.isNotEmpty
+        ? crag.nome
+        : (crag.picos.isNotEmpty ? crag.picos.first.nome : '');
+    final String nome = (nomeFonte.isEmpty ? 'Sem Nome' : nomeFonte).toUpperCase();
+    final localFonte = crag.picos.isNotEmpty && crag.picos.first.estado.isNotEmpty
+        ? crag.picos.first.estado
+        : '';
+    final String local = (localFonte.isEmpty ? 'Local Desconhecido' : localFonte).toUpperCase();
+
     String statsText = '0 setores • 0 escaladas';
-
-    if (crag is Croqui) {
-      final Croqui c = crag as Croqui;
-      id = c.id;
-      final nomeFonte = c.nome.isNotEmpty
-          ? c.nome
-          : (c.picos.isNotEmpty ? c.picos.first.nome : '');
-      nome = (nomeFonte.isEmpty ? 'Sem Nome' : nomeFonte).toUpperCase();
-      final localFonte = c.picos.isNotEmpty && c.picos.first.estado.isNotEmpty
-          ? c.picos.first.estado
-          : '';
-      local = (localFonte.isEmpty ? 'Local Desconhecido' : localFonte).toUpperCase();
-
-      if (c.picos.isNotEmpty && c.picos.first.hasPrecomputados()) {
-        final stats = c.picos.first.precomputados;
-        statsText = '${stats.totalSetores} setores • ${stats.totalEscaladas} escaladas';
-      }
-    } else {
-      id = crag.id?.toString() ?? '';
-      final nomeFonte = crag.nome?.toString() ?? '';
-      nome = (nomeFonte.isEmpty ? 'Sem Nome' : nomeFonte).toUpperCase();
-      final localFonte = crag.local?.toString() ?? '';
-      local = (localFonte.isEmpty ? 'Local Desconhecido' : localFonte).toUpperCase();
-
-      if (crag.estatisticas != null) {
-        final stats = crag.estatisticas!;
-        final setores = stats.totalSetores;
-        final vias = stats.totalVias;
-        statsText = '$setores setores • $vias escaladas';
-      }
+    if (crag.picos.isNotEmpty && crag.picos.first.hasPrecomputados()) {
+      final stats = crag.picos.first.precomputados;
+      statsText = '${stats.totalSetores} setores • ${stats.totalEscaladas} escaladas';
     }
 
     return Container(
