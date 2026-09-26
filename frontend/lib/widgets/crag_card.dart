@@ -3,21 +3,20 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
 import '../theme/app_colors.dart';
 import 'provedor_imagem_aresta.dart';
 
-/// Card interativo que exibe um resumo visual do pico (croqui),
-/// incluindo thumbnail em cache, status de download, distância e estatísticas de vias.
+/// Card interativo que exibe um resumo visual do pico (croqui) diretamente da entidade Protobuf [MetadadosIndice],
+/// incluindo thumbnail em cache, status de download, distância e estatísticas pré-computadas de vias.
 class CragCard extends StatelessWidget {
-  final dynamic crag;
+  final MetadadosIndice crag;
   final ValueListenable<Map<String, double>> downloadingCrags;
   final VoidCallback onDownload;
   final VoidCallback? onOpen;
   final String? distanceStr;
   final bool showDetailedStats;
-  final bool? isDownloadedOverride;
+  final bool isDownloaded;
 
   const CragCard({
     super.key,
@@ -27,73 +26,33 @@ class CragCard extends StatelessWidget {
     this.onOpen,
     this.distanceStr,
     this.showDetailedStats = false,
-    this.isDownloadedOverride,
+    this.isDownloaded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String id;
-    final String nome;
-    final bool isDownloaded;
-    final String thumbnailUrl;
+    final String id = crag.id;
+    final String nome = crag.nome.isEmpty ? 'SEM NOME' : crag.nome.toUpperCase();
+    final String thumbnailUrl = 'thumbnails/$id.webp';
     String statsText = '0 setores • 0 escaladas';
 
-    if (crag is MetadadosIndice) {
-      final MetadadosIndice m = crag as MetadadosIndice;
-      id = m.id;
-      nome = m.nome.isEmpty ? 'SEM NOME' : m.nome.toUpperCase();
-      isDownloaded = isDownloadedOverride ?? false;
-      thumbnailUrl = 'thumbnails/${m.id}.webp';
+    if (crag.hasPrecomputados()) {
+      final p = crag.precomputados;
+      final setores = p.totalSetores;
+      final vias = p.totalEscaladas;
+      statsText = '$setores setores • $vias escaladas';
 
-      if (m.hasPrecomputados()) {
-        final p = m.precomputados;
-        final setores = p.totalSetores;
-        final vias = p.totalEscaladas;
-        statsText = '$setores setores • $vias escaladas';
-
-        if (showDetailedStats) {
-          final List<String> modalidades = [];
-          if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
-          if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
-          if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
-          if (p.totalMultiplasEnfiadas > 0) {
-            modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
-          }
-          if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
-          if (modalidades.isNotEmpty) {
-            statsText += ' (${modalidades.join(', ')})';
-          }
+      if (showDetailedStats) {
+        final List<String> modalidades = [];
+        if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
+        if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
+        if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
+        if (p.totalMultiplasEnfiadas > 0) {
+          modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
         }
-      }
-    } else {
-      final ResumoPico r = crag is ResumoPico
-          ? crag as ResumoPico
-          : ResumoPico.deMapa(crag is Map<String, dynamic>
-              ? crag as Map<String, dynamic>
-              : Map<String, dynamic>.from(crag as Map));
-      id = r.id;
-      nome = r.nome.isEmpty ? 'SEM NOME' : r.nome.toUpperCase();
-      isDownloaded = isDownloadedOverride ?? r.isDownloaded;
-      thumbnailUrl = r.thumbnailUrl;
-
-      if (r.estatisticas != null) {
-        final stats = r.estatisticas!;
-        final setores = stats.totalSetores;
-        final vias = stats.totalVias;
-        statsText = '$setores setores • $vias escaladas';
-
-        if (showDetailedStats) {
-          final List<String> modalidades = [];
-          if (stats.totalBoulders > 0) modalidades.add('${stats.totalBoulders} boulders');
-          if (stats.totalEsportivas > 0) modalidades.add('${stats.totalEsportivas} esportivas');
-          if (stats.totalMoveis > 0) modalidades.add('${stats.totalMoveis} móveis');
-          if (stats.totalMultiplasEnfiadas > 0) {
-            modalidades.add('${stats.totalMultiplasEnfiadas} múltiplas enfiadas');
-          }
-          if (stats.totalHighlines > 0) modalidades.add('${stats.totalHighlines} highlines');
-          if (modalidades.isNotEmpty) {
-            statsText += ' (${modalidades.join(', ')})';
-          }
+        if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
+        if (modalidades.isNotEmpty) {
+          statsText += ' (${modalidades.join(', ')})';
         }
       }
     }
