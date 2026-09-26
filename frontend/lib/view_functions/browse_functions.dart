@@ -212,8 +212,8 @@ Widget _buildCragList(
           ...availableCrags.map(
             (crag) => Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: CragCard(
-                crag: crag,
+              child: CragCard.deMetadados(
+                metadados: crag,
                 isDownloaded: isDownloadedChecker != null
                     ? isDownloadedChecker(crag.id)
                     : false,
@@ -322,8 +322,8 @@ Widget buildCragListItem(
   bool isDownloaded = false,
 }) {
   final metadados = _normalizarMetadados([crag]).first;
-  return CragCard(
-    crag: metadados,
+  return CragCard.deMetadados(
+    metadados: metadados,
     isDownloaded: isDownloaded,
     downloadingCrags: downloadingCrags,
     onDownload: onDownload,

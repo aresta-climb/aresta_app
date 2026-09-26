@@ -195,8 +195,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
             isDownloaded: false,
             downloadingCrags: ValueNotifier({}),
             onDownload: () {},
@@ -229,8 +229,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: CragCard(
-            crag: crag,
+          body: CragCard.deMetadados(
+            metadados: crag,
             isDownloaded: false,
             downloadingCrags: ValueNotifier({}),
             showDetailedStats: true,
