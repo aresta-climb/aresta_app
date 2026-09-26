@@ -338,8 +338,8 @@ void main() {
                       (p) => p.id == 'pico_sync_1',
                     ) ??
                     false;
-                return CragCard(
-                  crag: MetadadosIndice(
+                return CragCard.deMetadados(
+                  metadados: MetadadosIndice(
                     id: 'pico_sync_1',
                     nome: 'Pico Browse',
                   ),

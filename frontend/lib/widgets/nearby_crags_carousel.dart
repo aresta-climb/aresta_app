@@ -648,8 +648,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
               padding: const EdgeInsets.only(right: 16.0),
               child: SizedBox(
                 width: 340,
-                child: CragCard(
-                  crag: picoBase.pico,
+                child: CragCard.deMetadados(
+                  metadados: picoBase.pico,
                   isDownloaded: isDownloaded,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
