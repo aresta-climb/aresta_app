@@ -15,6 +15,7 @@ class MockUrlLauncherPlatform extends Fake
     implements UrlLauncherPlatform {
   String? lastLaunchedUrl;
   bool shouldThrow = false;
+  bool shouldFail = false;
 
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async {
@@ -22,6 +23,7 @@ class MockUrlLauncherPlatform extends Fake
     if (shouldThrow) {
       throw Exception('Falha ao abrir URL nativa');
     }
+    if (shouldFail) return false;
     return true;
   }
 }
@@ -125,6 +127,20 @@ void main() {
       expect(
         mockLogger.recordedErrors.any(
           (e) => e['contextMessage'].contains('Erro ao abrir link do GitHub em sobre_time_functions ($url)'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('registra erro no AppLogger quando launchUrl retorna false sem lancar excecao', () async {
+      mockLauncher.shouldFail = true;
+      const url = 'https://github.com/semApp';
+      await abrirLinkSobreTime(url, 'GitHub');
+
+      expect(mockTelemetria.recordedEvents, contains('link_externo'));
+      expect(
+        mockLogger.recordedErrors.any(
+          (e) => e['contextMessage'].contains('Falha ao abrir link do GitHub em sobre_time_functions ($url)'),
         ),
         isTrue,
       );

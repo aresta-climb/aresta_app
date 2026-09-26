@@ -12,9 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import '../mocks/mock_geolocator_platform.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
   FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);
@@ -25,6 +27,9 @@ class FakeSyncService extends SyncService {
 }
 
 void main() {
+  setUp(() {
+    GeolocatorPlatform.instance = MockGeolocatorPlatform();
+  });
   testWidgets('MapaGlobalPage renders correctly with crags', (
     WidgetTester tester,
   ) async {

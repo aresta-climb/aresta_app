@@ -1,39 +1,48 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
-
-import 'dart:io';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../../widgets/provedor_imagem_aresta.dart';
+import '../../dataset_repository.dart';
 import '../../firebase/app_logger.dart';
-import '../modelos/resumo_pico.dart';
 
 /// Responsável por extrair caminhos de capas, processar seções markdown de croquis
-/// e resolver recursivamente arquivos de imagem no sistema de arquivos.
+/// e resolver mídias delegando centralizadamente ao [DatasetRepository] e [ProvedorImagemAresta].
 class ExtratorMetadadosCroqui {
-  /// Carrega os dados locais do croqui e o caminho da imagem de capa para um [ResumoPico].
+  /// Repositório de croquis opcional injetado.
+  final DatasetRepository? repository;
+
+  /// Cria uma instância do extrator com suporte a injeção de dependência.
+  ExtratorMetadadosCroqui({this.repository});
+
+  /// Carrega os dados do croqui e o caminho da imagem de capa para um [ResumoPico].
+  ///
+  /// Prioriza [parsedCroqui] caso já fornecido. Caso contrário, delega a resolução completa
+  /// de quatro etapas (RAM, permanente, volátil e CDN remoto) exclusivamente ao
+  /// [DatasetRepository.getCroqui] e a imagem de capa ao [ProvedorImagemAresta].
   Future<ResumoPico> carregarMetadadosLocais({
     required ResumoPico pico,
     required String downloadsPath,
     required String baseUrl,
     Croqui? parsedCroqui,
+    DatasetRepository? repositoryOverride,
   }) async {
     try {
-      Croqui croqui;
-      if (parsedCroqui != null) {
-        croqui = parsedCroqui;
-      } else {
-        final picoFile = File('$downloadsPath/${pico.id}/${pico.id}.binarypb');
-        if (!picoFile.existsSync()) {
+      Croqui? croqui = parsedCroqui;
+      if (croqui == null) {
+        final repo = repositoryOverride ?? repository ?? DatasetRepository.instance;
+        croqui = await repo?.getCroqui(pico.id);
+        if (croqui == null) {
           return pico;
         }
-        croqui = Croqui.fromBuffer(await picoFile.readAsBytes());
       }
 
-      final capaPath = _resolverCapaPath(
+      final capaPath = await _resolverCapaPath(
         croqui: croqui,
         url: pico.url,
         downloadsPath: downloadsPath,
         id: pico.id,
         baseUrl: baseUrl,
+        datasetRepository: repositoryOverride ?? repository ?? DatasetRepository.instance,
       );
 
       return pico.copyWith(
@@ -52,39 +61,34 @@ class ExtratorMetadadosCroqui {
   }
 
   /// Atualiza o caminho da imagem de capa (`capaPath`) e o nó `data` dentro do mapa [picoData].
-  /// Mantido para compatibilidade com mapas legados.
+  /// Mantido para compatibilidade com fluxos existentes do catálogo.
   Future<void> atualizarMetadadosPico({
     required String id,
     required Map<String, dynamic> picoData,
     required String downloadsPath,
     required String baseUrl,
     Croqui? parsedCroqui,
+    DatasetRepository? repositoryOverride,
   }) async {
     try {
-      Croqui croqui;
-      if (parsedCroqui != null) {
-        croqui = parsedCroqui;
-      } else {
-        File picoFile = File('$downloadsPath/$id/compilado.binarypb');
-        if (!picoFile.existsSync()) {
-          picoFile = File('$downloadsPath/$id/$id.binarypb');
-          if (!picoFile.existsSync()) {
-            return;
-          }
-        }
-        croqui = Croqui.fromBuffer(await picoFile.readAsBytes());
+      Croqui? croqui = parsedCroqui;
+      if (croqui == null) {
+        final repo = repositoryOverride ?? repository ?? DatasetRepository.instance;
+        croqui = await repo?.getCroqui(id);
+        if (croqui == null) return;
       }
 
       if (croqui.picos.isNotEmpty) {
         picoData['data'] = {'pico': croqui.picos.first, 'croqui': croqui};
       }
 
-      final capaPath = _resolverCapaPath(
+      final capaPath = await _resolverCapaPath(
         croqui: croqui,
         url: picoData['url']?.toString(),
         downloadsPath: downloadsPath,
         id: id,
         baseUrl: baseUrl,
+        datasetRepository: repositoryOverride ?? repository ?? DatasetRepository.instance,
       );
 
       if (capaPath != null) {
@@ -99,13 +103,14 @@ class ExtratorMetadadosCroqui {
     }
   }
 
-  String? _resolverCapaPath({
+  Future<String?> _resolverCapaPath({
     required Croqui croqui,
     required String? url,
     required String downloadsPath,
     required String id,
     required String baseUrl,
-  }) {
+    DatasetRepository? datasetRepository,
+  }) async {
     String baseDir = '';
     if (url != null && url.startsWith(baseUrl)) {
       String relative = url.substring(baseUrl.length);
@@ -124,83 +129,23 @@ class ExtratorMetadadosCroqui {
     }
 
     if (capaPath != null) {
-      String fullPath = '$downloadsPath/$id/$capaPath';
-      File imgFile = File(fullPath);
+      final arquivo = await ProvedorImagemAresta.preCarregarNoDisco(
+        picoId: id,
+        caminho: capaPath,
+        baseUrl: baseUrl,
+        caminhoDownloads: downloadsPath,
+        datasetRepository: datasetRepository,
+      );
 
-      if (!imgFile.existsSync()) {
-        if (capaPath.contains('/')) {
-          final fileName = capaPath.split('/').last;
-          final directFile = File('$downloadsPath/$id/$fileName');
-          if (directFile.existsSync()) {
-            imgFile = directFile;
-          } else {
-            final File? foundFile = buscarImagemRecursivamente(
-              '$downloadsPath/$id',
-              fileName,
-            );
-            if (foundFile != null) {
-              imgFile = foundFile;
-            }
-          }
-        } else {
-          final File? foundFile = buscarImagemRecursivamente(
-            '$downloadsPath/$id',
-            capaPath,
-          );
-          if (foundFile != null) {
-            imgFile = foundFile;
-          }
-        }
-      }
-
-      if (imgFile.existsSync()) {
+      if (arquivo != null && await arquivo.exists()) {
         AppLogger.instance.logInfo(
-          '[ExtratorMetadados] Imagem de capa encontrada para $id em: ${imgFile.path}',
+          '[ExtratorMetadados] Imagem de capa encontrada para $id em: ${arquivo.path}',
         );
-        return imgFile.path;
-      } else {
-        AppLogger.instance.logInfo(
-          '[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $fullPath',
-        );
-      }
-    }
-    return null;
-  }
-
-  /// Busca uma imagem recursivamente dentro de um diretório ignorando case e sufixos de extensão.
-  File? buscarImagemRecursivamente(String rootPath, String fileName) {
-    try {
-      final dir = Directory(rootPath);
-      if (!dir.existsSync()) return null;
-
-      final searchName = Uri.decodeComponent(fileName).toLowerCase();
-      String searchBaseName = searchName;
-      if (searchName.contains('.')) {
-        searchBaseName = searchName.substring(0, searchName.lastIndexOf('.'));
+        return arquivo.path;
       }
 
-      final entities = dir.listSync(recursive: true);
-      for (var entity in entities) {
-        if (entity is File) {
-          final String ePath = entity.path.replaceAll('\\', '/');
-          final String eName = ePath.split('/').last;
-          final String eNameLower = Uri.decodeComponent(eName).toLowerCase();
-
-          if (eNameLower == searchName) return entity;
-
-          String eBaseName = eNameLower;
-          if (eNameLower.contains('.')) {
-            eBaseName = eNameLower.substring(0, eNameLower.lastIndexOf('.'));
-          }
-
-          if (eBaseName == searchBaseName) return entity;
-        }
-      }
-    } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        'Erro na busca recursiva de imagem',
-        error: e,
-        stackTrace: stackTrace,
+      AppLogger.instance.logInfo(
+        '[ExtratorMetadados] Imagem de capa NÃO encontrada para $id em: $capaPath',
       );
     }
     return null;

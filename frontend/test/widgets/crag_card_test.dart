@@ -160,5 +160,74 @@ void main() {
       await tester.tap(find.byType(CragCard));
       expect(abriu, isTrue);
     });
+
+    testWidgets('repassa capaPath prioritário para o widget de fundo quando disponível', (
+      WidgetTester tester,
+    ) async {
+      const crag = ResumoPico(
+        id: 'pico_capa',
+        nome: 'Pico Capa',
+        local: 'Minas Gerais',
+        capaPath: '/caminho/local/capa.jpg',
+        thumbnailUrl: 'https://exemplo.com/thumb.webp',
+        checksum: 'hash_sha256_pico',
+      );
+
+      await tester.pumpWidget(buildTestCard(crag: crag));
+
+      final bgFinder = find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == '_CragBackgroundWidget',
+      );
+      expect(bgFinder, findsOneWidget);
+      final dynamic bgWidget = tester.widget(bgFinder);
+      expect(bgWidget.capaPath, equals('/caminho/local/capa.jpg'));
+      expect(bgWidget.cragId, equals('pico_capa'));
+      expect(bgWidget.checksumSha256, equals('hash_sha256_pico'));
+    });
+
+    testWidgets('repassa checksumSha256Thumbnail de MetadadosIndice para o widget de fundo', (
+      WidgetTester tester,
+    ) async {
+      final metadados = MetadadosIndice(
+        id: 'pico_proto_thumb',
+        nome: 'Pico Protobuf',
+        checksumSha256Thumbnail: 'hash_thumb_123',
+      );
+
+      await tester.pumpWidget(buildTestCard(crag: metadados));
+
+      final bgFinder = find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == '_CragBackgroundWidget',
+      );
+      expect(bgFinder, findsOneWidget);
+      final dynamic bgWidget = tester.widget(bgFinder);
+      expect(bgWidget.cragId, equals('pico_proto_thumb'));
+      expect(bgWidget.checksumSha256, equals('hash_thumb_123'));
+    });
+
+    testWidgets('buildCragBackground aceita capaPath e checksumSha256 opcionais', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragBackground(
+              'thumbnails/pico_teste.webp',
+              cragId: 'pico_teste',
+              capaPath: '/downloads/pico_teste/capa.webp',
+              checksumSha256: 'sha256_teste',
+            ),
+          ),
+        ),
+      );
+
+      final bgFinder = find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == '_CragBackgroundWidget',
+      );
+      expect(bgFinder, findsOneWidget);
+      final dynamic bgWidget = tester.widget(bgFinder);
+      expect(bgWidget.capaPath, equals('/downloads/pico_teste/capa.webp'));
+      expect(bgWidget.checksumSha256, equals('sha256_teste'));
+    });
   });
 }

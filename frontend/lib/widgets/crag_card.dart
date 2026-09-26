@@ -36,6 +36,8 @@ class CragCard extends StatelessWidget {
     final String nome;
     final bool isDownloaded;
     final String thumbnailUrl;
+    final String? capaPath;
+    final String? checksumSha256;
     String statsText = '0 setores • 0 escaladas';
 
     if (crag is MetadadosIndice) {
@@ -44,6 +46,8 @@ class CragCard extends StatelessWidget {
       nome = m.nome.isEmpty ? 'SEM NOME' : m.nome.toUpperCase();
       isDownloaded = isDownloadedOverride ?? false;
       thumbnailUrl = 'thumbnails/${m.id}.webp';
+      capaPath = null;
+      checksumSha256 = m.hasChecksumSha256Thumbnail() ? m.checksumSha256Thumbnail : null;
 
       if (m.hasPrecomputados()) {
         final p = m.precomputados;
@@ -75,6 +79,8 @@ class CragCard extends StatelessWidget {
       nome = r.nome.isEmpty ? 'SEM NOME' : r.nome.toUpperCase();
       isDownloaded = isDownloadedOverride ?? r.isDownloaded;
       thumbnailUrl = r.thumbnailUrl;
+      capaPath = (r.capaPath?.isNotEmpty == true) ? r.capaPath : null;
+      checksumSha256 = r.checksum.isNotEmpty ? r.checksum : null;
 
       if (r.estatisticas != null) {
         final stats = r.estatisticas!;
@@ -127,6 +133,8 @@ class CragCard extends StatelessWidget {
             buildCragBackground(
               thumbnailUrl,
               cragId: id,
+              capaPath: capaPath,
+              checksumSha256: checksumSha256,
             ),
             Container(
               decoration: BoxDecoration(
@@ -301,12 +309,20 @@ class CragCard extends StatelessWidget {
 }
 
 /// Widget interno para carregar o plano de fundo da imagem do pico,
-/// resolvendo primeiro do armazenamento local e caindo para rede se necessário.
+/// resolvendo primeiro do armazenamento local e caindo para rede se necessário
+/// através de [ProvedorImagemAresta].
 class _CragBackgroundWidget extends StatefulWidget {
   final String thumbnailUrl;
   final String? cragId;
+  final String? capaPath;
+  final String? checksumSha256;
 
-  const _CragBackgroundWidget({required this.thumbnailUrl, this.cragId});
+  const _CragBackgroundWidget({
+    required this.thumbnailUrl,
+    this.cragId,
+    this.capaPath,
+    this.checksumSha256,
+  });
 
   @override
   State<_CragBackgroundWidget> createState() => _CragBackgroundWidgetState();
@@ -325,7 +341,9 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   void didUpdateWidget(covariant _CragBackgroundWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.thumbnailUrl != widget.thumbnailUrl ||
-        oldWidget.cragId != widget.cragId) {
+        oldWidget.cragId != widget.cragId ||
+        oldWidget.capaPath != widget.capaPath ||
+        oldWidget.checksumSha256 != widget.checksumSha256) {
       _inicializarProvedor();
     }
   }
@@ -334,29 +352,31 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     _provedorImagemFuture = null;
     String? cragId = widget.cragId;
     if ((cragId == null || cragId.isEmpty) && widget.thumbnailUrl.isNotEmpty) {
-      final correspondencia = RegExp(r'thumbnails/([^/?#]+)\.webp').firstMatch(widget.thumbnailUrl);
+      final correspondencia =
+          RegExp(r'thumbnails/([^/?#]+)\.webp').firstMatch(widget.thumbnailUrl);
       if (correspondencia != null) {
         cragId = correspondencia.group(1);
       }
     }
 
-    if (cragId != null && cragId.isNotEmpty) {
-      _provedorImagemFuture = ProvedorImagemAresta.resolver(
-        picoId: cragId,
-        caminho: 'thumbnails/$cragId.webp',
-        larguraAlvo: 300,
-      );
-    } else if (widget.thumbnailUrl.isNotEmpty &&
-        (widget.thumbnailUrl.startsWith('http://') ||
-            widget.thumbnailUrl.startsWith('https://'))) {
-      _provedorImagemFuture = Future.value(
-        ResizeImage.resizeIfNeeded(
-          300,
-          null,
-          NetworkImage(widget.thumbnailUrl),
-        ),
-      );
+    // Prioriza capaPath local ou remoto; se ausente, recorre a thumbnailUrl ou padrão canônico
+    final String caminhoFinal;
+    if (widget.capaPath != null && widget.capaPath!.isNotEmpty) {
+      caminhoFinal = widget.capaPath!;
+    } else if (widget.thumbnailUrl.isNotEmpty) {
+      caminhoFinal = widget.thumbnailUrl;
+    } else if (cragId != null && cragId.isNotEmpty) {
+      caminhoFinal = 'thumbnails/$cragId.webp';
+    } else {
+      return;
     }
+
+    _provedorImagemFuture = ProvedorImagemAresta.resolver(
+      picoId: cragId ?? '',
+      caminho: caminhoFinal,
+      checksumSha256: widget.checksumSha256,
+      larguraAlvo: 300,
+    );
   }
 
   Widget _buildPlaceholder() {
@@ -396,7 +416,17 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   }
 }
 
-/// Constrói o fundo visual do card do pico com suporte a cache local.
-Widget buildCragBackground(String thumbnailUrl, {String? cragId}) {
-  return _CragBackgroundWidget(thumbnailUrl: thumbnailUrl, cragId: cragId);
+/// Constrói o fundo visual do card do pico com suporte a cache local e ProvedorImagemAresta.
+Widget buildCragBackground(
+  String thumbnailUrl, {
+  String? cragId,
+  String? capaPath,
+  String? checksumSha256,
+}) {
+  return _CragBackgroundWidget(
+    thumbnailUrl: thumbnailUrl,
+    cragId: cragId,
+    capaPath: capaPath,
+    checksumSha256: checksumSha256,
+  );
 }

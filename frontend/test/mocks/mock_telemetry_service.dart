@@ -345,4 +345,12 @@ class MockTelemetryService implements TelemetryService {
       'acao': 'banner_versao_recomendada_mostrado',
     };
   }
+
+  @override
+  Future<void> logEvento(String nome, {Map<String, Object>? parametros}) async {
+    recordedEvents.add(nome);
+    if (parametros != null) {
+      recordedParams[nome] = parametros;
+    }
+  }
 }

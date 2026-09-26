@@ -17,6 +17,13 @@ import 'common_functions.dart';
 ///
 /// Permite injeção de [controller] opcional para facilitar testes unitários isolados.
 void navegarParaSobreTime([TreeNavigationController? controller]) {
+  TelemetryService.instance.logEvento(
+    'navegar_sobre_time',
+    parametros: {
+      'acao': 'navegar_sobre_time',
+      'origem': 'comunidade',
+    },
+  );
   final treeNav = controller ?? TreeNavigationWrapper.currentTreeController;
   if (treeNav != null) {
     treeNav.navigateTo(SobreTimeNode(treeNav.currentNode));
@@ -227,6 +234,13 @@ Future<void> launchURL(BuildContext context, String url) async {
 
 /// Exibe os Termos de Uso e Privacidade em um bottom sheet customizado
 void showTermsBottomSheet(BuildContext context) {
+  TelemetryService.instance.logEvento(
+    'abrir_termos_uso',
+    parametros: {
+      'acao': 'abrir_termos_uso',
+      'origem': 'comunidade',
+    },
+  );
   showModalBottomSheet(
     context: context,
     useRootNavigator: true,
@@ -636,6 +650,13 @@ void showLinkOverlay(
 
 /// Exibe a Política de Privacidade em um bottom sheet customizado
 void showPrivacyPolicyBottomSheet(BuildContext context) {
+  TelemetryService.instance.logEvento(
+    'abrir_politica_privacidade',
+    parametros: {
+      'acao': 'abrir_politica_privacidade',
+      'origem': 'comunidade',
+    },
+  );
   showModalBottomSheet(
     context: context,
     useRootNavigator: true,
@@ -869,7 +890,16 @@ Future<void> abrirLinkExterno(String url, String nomeServico) async {
     detalhe: url,
   );
   try {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    final launched = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      AppLogger.instance.logError(
+        'Falha ao abrir link do $nomeServico ($url)',
+        stackTrace: StackTrace.current,
+      );
+    }
   } catch (e, stackTrace) {
     AppLogger.instance.logError(
       'Erro ao abrir link do $nomeServico ($url)',

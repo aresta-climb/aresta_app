@@ -807,25 +807,34 @@ void main() {
       expect(repo.isPicoDownloaded('pico_2'), isFalse);
     });
 
-    test('updateDatasetAfterDownload remove a sessão do pico no GerenciadorSessaoOnline', () async {
+    test('updateDatasetAfterDownload preserva e atualiza o croqui no GerenciadorSessaoOnline', () async {
+      const picoId = 'pico_1';
+      final croquiBaixado = Croqui(id: picoId)..nome = 'Pico Baixado Atualizado';
+      final downloadsDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId');
+      await downloadsDir.create(recursive: true);
+      final arquivoCompilado = File('${downloadsDir.path}/compilado.binarypb');
+      await arquivoCompilado.writeAsBytes(croquiBaixado.writeToBuffer());
+
       repo.activeDataset.value = ConjuntoDadosCroqui(
         picosDisponiveis: [
-          {'id': 'pico_1', 'nome': 'Pico 1'},
+          {'id': picoId, 'nome': 'Pico 1'},
         ],
         picosBaixados: [],
       );
 
       repo.gerenciadorSessaoOnline.registrarCroquiOnline(
-        'pico_1',
-        Croqui(id: 'pico_1'),
+        picoId,
+        Croqui(id: picoId)..nome = 'Versao Antiga Online',
         etag: 'etag_123',
       );
-      expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_1'), isNotNull);
+      expect(repo.gerenciadorSessaoOnline.obterCroquiOnline(picoId), isNotNull);
 
-      await repo.updateDatasetAfterDownload('pico_1');
+      await repo.updateDatasetAfterDownload(picoId);
 
-      expect(repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_1'), isNull);
-      expect(repo.gerenciadorSessaoOnline.obterEtag('pico_1'), isNull);
+      // Não deve ter sido apagado, mas sim atualizado com a versão baixada no armazenamento local
+      final croquiMemoria = repo.gerenciadorSessaoOnline.obterCroquiOnline(picoId);
+      expect(croquiMemoria, isNotNull);
+      expect(croquiMemoria?.nome, equals('Pico Baixado Atualizado'));
     });
 
     test('notificarAtualizacaoSessaoOnline re-indexa mídias e atualiza activeDataset', () {

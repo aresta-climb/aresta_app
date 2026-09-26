@@ -444,10 +444,21 @@ class DatasetRepository {
     activeDataset.value = ConjuntoDadosCroqui.vazio();
   }
 
-  /// Atualiza o conjunto de dados após a conclusão de um download.
+  /// Atualiza o conjunto de dados após a conclusão de um download permanente.
+  ///
+  /// Preserva a navegação ativa carregando o croqui recém-baixado do armazenamento local
+  /// e atualizando-o no [gerenciadorSessaoOnline], garantindo que o usuário permaneça
+  /// no croqui sem interrupções ou fechamento inesperado da tela.
   Future<void> updateDatasetAfterDownload(String id) async {
     ConstrutorCaminhoTrajeto.limparCache();
-    gerenciadorSessaoOnline.removerSessao(id);
+    final directory = await getApplicationDocumentsDirectory();
+    final downloadsPath = editorDeCroqui.downloadsPath(directory.path);
+    final croquiBaixado =
+        await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
+    if (croquiBaixado != null) {
+      gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiBaixado);
+      indexarMidiasDoCroqui(id, croquiBaixado);
+    }
     await _refreshActiveDataset();
   }
 
@@ -757,13 +768,30 @@ class DatasetRepository {
       parsedCroqui: parsedPico,
     );
 
+    if (parsedPico != null) {
+      gerenciadorSessaoOnline.registrarCroquiOnline(id, parsedPico);
+      indexarMidiasDoCroqui(id, parsedPico);
+    }
+
     final atual = activeDataset.value;
     if (atual != null) {
       final novosDisponiveis =
           atual.availablePicos.map((p) => p.id == id ? atualizado : p).toList();
       final novosBaixados =
           atual.downloadedPicos.map((p) => p.id == id ? atualizado : p).toList();
+      if (!novosBaixados.any((p) => p.id == id) &&
+          (atualizado.isDownloaded || parsedPico != null)) {
+        novosBaixados.add(atualizado);
+      }
+
+      final novosCroquisBaixados = [...atual.croquisBaixados];
+      final croquiFinal = atualizado.croqui ?? parsedPico;
+      if (croquiFinal != null && !novosCroquisBaixados.any((c) => c.id == id)) {
+        novosCroquisBaixados.add(croquiFinal);
+      }
+
       activeDataset.value = atual.copyWith(
+        croquisBaixados: novosCroquisBaixados,
         picosDisponiveis: novosDisponiveis,
         picosBaixados: novosBaixados,
       );

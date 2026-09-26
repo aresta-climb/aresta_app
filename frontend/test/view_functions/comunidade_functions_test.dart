@@ -220,6 +220,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('TERMOS E PRIVACIDADE'), findsOneWidget);
+      expect(mockTelemetria.recordedEvents, contains('abrir_termos_uso'));
+      expect(mockTelemetria.recordedParams['abrir_termos_uso']?['acao'], 'abrir_termos_uso');
+      expect(mockTelemetria.recordedParams['abrir_termos_uso']?['origem'], 'comunidade');
     });
 
     testWidgets('showPrivacyPolicyBottomSheet abre modal e renderiza header', (WidgetTester tester) async {
@@ -239,6 +242,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('POLÍTICA DE PRIVACIDADE'), findsOneWidget);
+      expect(mockTelemetria.recordedEvents, contains('abrir_politica_privacidade'));
+      expect(mockTelemetria.recordedParams['abrir_politica_privacidade']?['acao'], 'abrir_politica_privacidade');
+      expect(mockTelemetria.recordedParams['abrir_politica_privacidade']?['origem'], 'comunidade');
     });
 
     group('abrirLinkExterno', () {
@@ -272,10 +278,26 @@ void main() {
           isTrue,
         );
       });
+
+      test('registra erro no AppLogger quando launchUrl retorna false sem lancar excecao', () async {
+        mockLauncher.shouldFail = true;
+        const url = 'https://chat.whatsapp.com/semApp';
+        const servico = 'WhatsApp';
+
+        await abrirLinkExterno(url, servico);
+
+        expect(mockTelemetria.recordedEvents, contains('link_externo'));
+        expect(
+          mockLogger.recordedErrors.any(
+            (e) => e['contextMessage'].contains('Falha ao abrir link do WhatsApp ($url)'),
+          ),
+          isTrue,
+        );
+      });
     });
 
     group('navegarParaSobreTime', () {
-      test('dispara navegação para SobreTimeNode utilizando controller injetado', () {
+      test('dispara navegacao para SobreTimeNode e registra telemetria institucional', () {
         final controller = TreeNavigationController();
         expect(controller.currentNode, isA<HomeNode>());
 
@@ -283,6 +305,10 @@ void main() {
 
         expect(controller.currentNode, isA<SobreTimeNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());
+        expect(mockTelemetria.recordedEvents, contains('navegar_sobre_time'));
+        final params = mockTelemetria.recordedParams['navegar_sobre_time']!;
+        expect(params['acao'], equals('navegar_sobre_time'));
+        expect(params['origem'], equals('comunidade'));
       });
 
       test('não lança exceção quando currentTreeController é nulo e nenhum controller é injetado', () {

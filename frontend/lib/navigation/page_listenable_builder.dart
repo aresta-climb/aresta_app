@@ -60,6 +60,19 @@ class PageListenableBuilder extends StatelessWidget {
           croqui = crag.croqui;
         } catch (_) {}
 
+        // 1.1 Se não encontrou pico ou croqui em downloadedPicos, tenta em croquisBaixados
+        if (pico == null || croqui == null) {
+          try {
+            final croquiBaixado = topoDataset.croquisBaixados.firstWhere(
+              (c) => c.id == cragId,
+            );
+            if (croquiBaixado.picos.isNotEmpty) {
+              pico = croquiBaixado.picos.first;
+              croqui = croquiBaixado;
+            }
+          } catch (_) {}
+        }
+
         // 2. Se não estiver baixado, tenta resolver da sessão online ativa
         if (pico == null || croqui == null) {
           final croquiOnline =

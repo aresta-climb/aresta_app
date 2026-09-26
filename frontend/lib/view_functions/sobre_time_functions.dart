@@ -428,7 +428,16 @@ Future<void> abrirLinkSobreTime(String url, String servicoOuRede) async {
     detalhe: url,
   );
   try {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    final launched = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
+      AppLogger.instance.logError(
+        'Falha ao abrir link do $servicoOuRede em sobre_time_functions ($url)',
+        stackTrace: StackTrace.current,
+      );
+    }
   } catch (e, stackTrace) {
     AppLogger.instance.logError(
       'Erro ao abrir link do $servicoOuRede em sobre_time_functions ($url)',

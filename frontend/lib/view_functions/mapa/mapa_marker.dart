@@ -475,3 +475,99 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
   );
 }
 
+/// Gera um [BitmapDescriptor] contendo exclusivamente o balão de texto com cantos arredondados,
+/// projetado para exibição desacoplada como rótulo flutuante acima do pino do mapa.
+///
+/// Não inclui o desenho do pino nem gera asas laterais transparentes excedentes,
+/// garantindo que a sobreposição visual não cause interferências espúrias de hit-test.
+Future<BitmapDescriptor> createCustomMarkerLabelBitmap(
+  String texto, {
+  double larguraMaximaTexto = 200.0,
+  double pixelRatio = 3.0,
+}) async {
+  // Tamanho de fonte proporcional equivalente ao utilizado no pino local (85 * 0.16)
+  const double tamanhoFonte = 13.6;
+
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: texto,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: tamanhoFonte,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+    maxLines: 1,
+    ellipsis: '...',
+  );
+  textPainter.layout(maxWidth: larguraMaximaTexto);
+
+  const double bubblePaddingX = 12.0;
+  const double bubblePaddingY = 6.0;
+  final double bubbleWidth = textPainter.width + bubblePaddingX * 2;
+  final double bubbleHeight = textPainter.height + bubblePaddingY * 2;
+
+  // Margem mínima de 4px para conter suavemente a sombra sem criar asas largas
+  const double shadowMargin = 4.0;
+  final double canvasWidth = bubbleWidth + shadowMargin * 2;
+  final double canvasHeight = bubbleHeight + shadowMargin * 2;
+
+  final double rasterWidth = canvasWidth * pixelRatio;
+  final double rasterHeight = canvasHeight * pixelRatio;
+
+  final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(pictureRecorder);
+
+  canvas.scale(pixelRatio);
+
+  final bubbleRect = Rect.fromLTWH(
+    shadowMargin,
+    shadowMargin,
+    bubbleWidth,
+    bubbleHeight,
+  );
+
+  // Sombra suave do balão
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      bubbleRect.shift(const Offset(0, 2)),
+      const Radius.circular(8),
+    ),
+    Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+  );
+
+  // Fundo principal escuro com cantos arredondados
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(bubbleRect, const Radius.circular(8)),
+    Paint()..color = Colors.black.withValues(alpha: 0.8),
+  );
+
+  // Renderiza o texto centralizado dentro do balão
+  textPainter.paint(
+    canvas,
+    Offset(
+      shadowMargin + bubblePaddingX,
+      shadowMargin + bubblePaddingY,
+    ),
+  );
+
+  final ui.Image labelImage = await pictureRecorder.endRecording().toImage(
+    rasterWidth.toInt(),
+    rasterHeight.toInt(),
+  );
+  final ByteData? byteData = await labelImage.toByteData(
+    format: ui.ImageByteFormat.png,
+  );
+
+  return converterByteDataEmBitmap(
+    byteData,
+    imagePixelRatio: pixelRatio,
+    width: canvasWidth,
+    height: canvasHeight,
+  );
+}
+

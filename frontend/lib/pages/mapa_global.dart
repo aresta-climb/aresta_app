@@ -232,13 +232,18 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         });
       }
 
-      // Gera ícones com texto para visão local em segundo plano
-      for (final crag in widget.crags) {
+      // Gera rótulos desacoplados de texto para visão local em segundo plano
+      for (final dynamic cragItem in widget.crags) {
+        final ResumoPico crag = cragItem is ResumoPico
+            ? cragItem
+            : ResumoPico.deMapa(
+                cragItem is Map<String, dynamic>
+                    ? cragItem
+                    : Map<String, dynamic>.from(cragItem as Map),
+              );
         final name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-        final textIcon = await createCustomMarkerBitmapWithText(
-          'assets/logo_app.png',
+        final textIcon = await createCustomMarkerLabelBitmap(
           name,
-          size: 85,
         );
         if (mounted) {
           setState(() {

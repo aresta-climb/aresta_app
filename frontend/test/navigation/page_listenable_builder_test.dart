@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -10,6 +11,23 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class _MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  _MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => '$tempPath/temp_cache';
+}
 
 // Mock observer para testar se AppNav.back() foi chamado
 class MockNavigatorObserver extends NavigatorObserver {
@@ -26,10 +44,21 @@ void main() {
   group('PageListenableBuilder Hot-Reload Tests', () {
     late DatasetRepository repo;
     late EditorDeCroqui editor;
+    late Directory tempDir;
 
-    setUp(() {
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('page_listenable_test_');
+      PathProviderPlatform.instance = _MockPathProviderPlatform(tempDir.path);
       editor = EditorDeCroqui();
       repo = DatasetRepository(editorDeCroqui: editor);
+    });
+
+    tearDown(() async {
+      try {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
     });
 
     testWidgets(
@@ -361,5 +390,111 @@ void main() {
         expect(find.text('Pico Online V2'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'Deve resolver o Pico a partir de croquisBaixados quando downloadedPicos não tiver o pico',
+      (WidgetTester tester) async {
+        final pico = Pico()..nome = 'Pico de Croquis Baixados';
+        final croqui = Croqui()
+          ..id = 'pico_croqui_baixado'
+          ..nome = 'Croqui Baixado';
+        croqui.picos.add(pico);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          croquisBaixados: [croqui],
+          picosBaixados: [],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_croqui_baixado',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Pico de Croquis Baixados'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Não deve desempilhar (pop) da tela ao concluir download para modo offline',
+      (WidgetTester tester) async {
+        final mockObserver = MockNavigatorObserver();
+        const picoId = 'pico_lapinha';
+
+        final picoOnline = Pico()..nome = 'Gruta da Lapinha';
+        final croquiOnline = Croqui()
+          ..id = picoId
+          ..nome = 'Croqui Lapinha';
+        croquiOnline.picos.add(picoOnline);
+
+        // Configura o croqui na sessão online ativa
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(picoId, croquiOnline);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          croquisBaixados: [],
+          picosBaixados: [],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [mockObserver],
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PageListenableBuilder(
+                            datasetRepo: repo,
+                            cragId: picoId,
+                            builder: (context, pico, croqui, setor, grupo, escalada) {
+                              return Scaffold(
+                                body: Text(pico.nome),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Abrir Pico'),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        // Abre a tela do pico
+        await tester.tap(find.text('Abrir Pico'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Gruta da Lapinha'), findsOneWidget);
+        expect(mockObserver.hasPopped, isFalse);
+
+        // Simula a conclusão do download do croqui offline
+        await tester.runAsync(() async {
+          await repo.updateDatasetAfterDownload(picoId);
+        });
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // O usuário NÃO deve ser desempilhado nem jogado para fora da tela
+        expect(mockObserver.hasPopped, isFalse);
+        expect(find.text('Gruta da Lapinha'), findsOneWidget);
+      },
+    );
   });
 }
+

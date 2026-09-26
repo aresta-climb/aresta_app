@@ -162,9 +162,37 @@ class OfflineCragCard extends StatelessWidget {
                       modoAcesso: 'offline',
                       primeiraVisita: primeiraVisita,
                     );
+
+                    Croqui? croqui;
+                    if (crag is Croqui) {
+                      croqui = crag as Croqui;
+                    } else if (crag is ResumoPico && (crag as ResumoPico).croqui != null) {
+                      croqui = (crag as ResumoPico).croqui;
+                    } else {
+                      croqui = await datasetRepo.getCroqui(id);
+                    }
+
                     if (!context.mounted) return;
-                    AppNav.toPico(context, cragId: id);
-                    datasetRepo.updatePriorityAfterNavigation(id);
+
+                    if (croqui != null && croqui.picos.isNotEmpty) {
+                      datasetRepo.gerenciadorSessaoOnline
+                          .registrarCroquiOnline(id, croqui);
+                      datasetRepo.indexarMidiasDoCroqui(id, croqui);
+
+                      AppNav.toPico(
+                        context,
+                        pico: croqui.picos.first,
+                        croqui: croqui,
+                        cragId: id,
+                      );
+                      datasetRepo.updatePriorityAfterNavigation(id);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Erro ao abrir o guia offline.'),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC04F34),

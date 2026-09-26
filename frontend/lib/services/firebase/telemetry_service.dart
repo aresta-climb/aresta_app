@@ -414,4 +414,9 @@ class TelemetryService {
       'acao': 'banner_versao_recomendada_mostrado',
     });
   }
+
+  /// Dispara um evento de telemetria genérico com parâmetros customizados.
+  Future<void> logEvento(String nome, {Map<String, Object>? parametros}) {
+    return _logEvent(nome, parametros);
+  }
 }

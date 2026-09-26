@@ -105,6 +105,24 @@ void main() {
         expect(bitmapTextoSemImagem, isNotNull);
       });
     });
+
+    testWidgets('createCustomMarkerLabelBitmap deve gerar bitmap exclusivo do balão de texto sem desenhar pino', (tester) async {
+      await tester.runAsync(() async {
+        final bitmapRotulo = await createCustomMarkerLabelBitmap(
+          'Parque Natural Municipal das Andorinhas',
+          larguraMaximaTexto: 180.0,
+          pixelRatio: 3.0,
+        );
+        final bitmapCurto = await createCustomMarkerLabelBitmap(
+          'Cipó',
+          larguraMaximaTexto: 180.0,
+          pixelRatio: 3.0,
+        );
+
+        expect(bitmapRotulo, isNotNull);
+        expect(bitmapCurto, isNotNull);
+      });
+    });
   });
 }
 

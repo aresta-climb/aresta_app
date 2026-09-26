@@ -306,14 +306,33 @@ void main() {
     }
   });
 
-  testWidgets('Ao tocar no card SOBRE O TIME, aciona o callback sem lançar exceções', (WidgetTester tester) async {
+  testWidgets('Ao tocar no card SOBRE O TIME, aciona a telemetria institucional de navegação', (WidgetTester tester) async {
     setScreenSize(tester);
     await tester.pumpWidget(createTestWidget());
     await tester.pumpAndSettle();
 
+    mockTelemetria.clear();
     await tester.tap(find.text('SOBRE O TIME'));
     await tester.pumpAndSettle();
 
     expect(find.text('SOBRE O TIME'), findsOneWidget);
+    expect(mockTelemetria.recordedEvents, contains('navegar_sobre_time'));
+    expect(mockTelemetria.recordedParams['navegar_sobre_time']?['acao'], 'navegar_sobre_time');
+    expect(mockTelemetria.recordedParams['navegar_sobre_time']?['origem'], 'comunidade');
+  });
+
+  testWidgets('Ao tocar no card de Termos de Uso e Privacidade, dispara telemetria de abrir_termos_uso', (WidgetTester tester) async {
+    setScreenSize(tester);
+    await tester.pumpWidget(createTestWidget());
+    await tester.pumpAndSettle();
+
+    mockTelemetria.clear();
+    await tester.ensureVisible(find.text('Termos de Uso e Privacidade'));
+    await tester.tap(find.text('Termos de Uso e Privacidade'));
+    await tester.pumpAndSettle();
+
+    expect(mockTelemetria.recordedEvents, contains('abrir_termos_uso'));
+    expect(mockTelemetria.recordedParams['abrir_termos_uso']?['acao'], 'abrir_termos_uso');
+    expect(mockTelemetria.recordedParams['abrir_termos_uso']?['origem'], 'comunidade');
   });
 }

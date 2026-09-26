@@ -228,7 +228,7 @@ void main() {
       );
     });
 
-    testWidgets('buildMapMarkers deve usar textIcons na faixa local (zoom >= 9)',
+    testWidgets('buildMapMarkers deve desacoplar pino e rótulo flutuante na faixa local (zoom >= 9)',
         (WidgetTester tester) async {
       final crags = [
         {
@@ -244,7 +244,7 @@ void main() {
           home: Scaffold(
             body: Builder(
               builder: (context) {
-                final regionalIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+                final customIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
                 final textIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
 
                 final markers = buildMapMarkers(
@@ -252,14 +252,24 @@ void main() {
                   crags: crags,
                   downloadingCrags: ValueNotifier<Map<String, double>>({}),
                   onDownload: (_) {},
-                  regionalIcon: regionalIcon,
+                  customIcon: customIcon,
                   textIcons: {'crag1': textIcon},
                   currentZoom: 9.5, // Faixa Local (>= 9.0)
                 );
 
-                expect(markers.length, equals(1));
-                expect(markers.first.icon, equals(textIcon),
-                    reason: 'Em zoom local (>= 9.0) deve utilizar o textIcon correspondente');
+                expect(markers.length, equals(2),
+                    reason: 'No zoom local deve gerar marcador de pino e marcador de rótulo desacoplados');
+
+                final pinoMarker = markers.firstWhere((m) => m.markerId.value == 'crag1');
+                expect(pinoMarker.icon, equals(customIcon));
+                expect(pinoMarker.zIndexInt, equals(2));
+                expect(pinoMarker.anchor, equals(const Offset(0.5, 0.94)));
+                expect(pinoMarker.onTap, isNotNull);
+
+                final rotuloMarker = markers.firstWhere((m) => m.markerId.value == 'crag1_rotulo');
+                expect(rotuloMarker.icon, equals(textIcon));
+                expect(rotuloMarker.zIndexInt, equals(1));
+                expect(rotuloMarker.consumeTapEvents, isFalse);
 
                 return const SizedBox.shrink();
               },

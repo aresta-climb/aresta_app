@@ -151,17 +151,14 @@ Set<Marker> buildMapMarkers({
       final double lng = crag.longitude!;
       final String id = crag.id;
 
-      BitmapDescriptor iconToUse = fallbackIcon;
-      // Rótulos de texto com nome só são exibidos na faixa local para evitar sobreposição
-      if (faixa == FaixaZoomMapa.local && textIcons != null) {
-        iconToUse = textIcons[id] ?? fallbackIcon;
-      }
-
+      // Marcador do pino (compacto, sem asas transparentes de texto)
       markers.add(
         Marker(
           markerId: MarkerId(id),
           position: LatLng(lat, lng),
-          icon: iconToUse,
+          icon: fallbackIcon,
+          anchor: const Offset(0.5, 0.94),
+          zIndexInt: 2,
           onTap: () {
             showCragModal(
               context: context,
@@ -173,6 +170,23 @@ Set<Marker> buildMapMarkers({
           },
         ),
       );
+
+      // Na faixa local (zoom >= 9.0), renderiza o rótulo textual flutuante desacoplado
+      if (faixa == FaixaZoomMapa.local &&
+          textIcons != null &&
+          textIcons.containsKey(id) &&
+          textIcons[id] != null) {
+        markers.add(
+          Marker(
+            markerId: MarkerId('${id}_rotulo'),
+            position: LatLng(lat, lng),
+            icon: textIcons[id]!,
+            anchor: const Offset(0.5, 2.8),
+            zIndexInt: 1,
+            consumeTapEvents: false,
+          ),
+        );
+      }
     }
   }
 

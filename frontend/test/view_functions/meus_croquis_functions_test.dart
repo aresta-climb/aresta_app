@@ -15,6 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks/mock_telemetry_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:geolocator/geolocator.dart';
+import '../mocks/mock_geolocator_platform.dart';
 
 class _PlataformaCaminhosMock extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -44,6 +48,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     RegistroPrimeiraVisita.resetForTesting();
+    GeolocatorPlatform.instance = MockGeolocatorPlatform();
     tempDir = await Directory.systemTemp.createTemp('meus_croquis_test_');
     PathProviderPlatform.instance = _PlataformaCaminhosMock(tempDir.path);
     final editor = EditorDeCroqui();
@@ -228,5 +233,115 @@ void main() {
       expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'offline');
       expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
     });
+
+    testWidgets('ao clicar em ABRIR OFFLINE carrega croqui de compilado.binarypb e abre tela do pico sem piscar/voltar', (
+      WidgetTester tester,
+    ) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final picoOfflineDir = Directory('${tempDir.path}/downloads/pico_offline_teste')
+        ..createSync(recursive: true);
+      final croqui = Croqui(
+        id: 'pico_offline_teste',
+        nome: 'Pico Offline Sucesso',
+        picos: [
+          Pico(
+            nome: 'Pico Offline Sucesso',
+            estado: 'Minas Gerais',
+          ),
+        ],
+      );
+      File('${picoOfflineDir.path}/compilado.binarypb')
+          .writeAsBytesSync(croqui.writeToBuffer());
+
+      const crag = ResumoPico(
+        id: 'pico_offline_teste',
+        nome: 'Pico Offline Sucesso',
+        local: 'Minas Gerais',
+        isDownloaded: true,
+      );
+
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [crag],
+        picosDisponiveis: [crag],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: repositorio,
+            syncService: servicoSync,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      treeController.navigateTo(MeusCroquisNode(const HomeNode()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('ABRIR OFFLINE'));
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Não deve ter voltado para MeusCroquisNode (não deve só piscar a tela)
+      expect(treeController.currentNode, isA<PicoNode>());
+      expect(find.text('PICO OFFLINE SUCESSO'), findsOneWidget);
+      expect(
+        repositorio.gerenciadorSessaoOnline.obterCroquiOnline('pico_offline_teste'),
+        isNotNull,
+      );
+    });
+
+    testWidgets('ao clicar em ABRIR OFFLINE quando o croqui não pode ser carregado exibe SnackBar amigável de erro', (
+      WidgetTester tester,
+    ) async {
+      const cragInexistente = ResumoPico(
+        id: 'pico_inexistente',
+        nome: 'Pico Inexistente',
+        local: 'Local',
+        isDownloaded: true,
+      );
+
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [cragInexistente],
+        picosDisponiveis: [cragInexistente],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: repositorio,
+            syncService: servicoSync,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      treeController.navigateTo(MeusCroquisNode(const HomeNode()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('ABRIR OFFLINE'));
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(treeController.currentNode, isA<MeusCroquisNode>());
+      expect(find.text('Erro ao abrir o guia offline.'), findsOneWidget);
+    });
   });
 }
+
+
+

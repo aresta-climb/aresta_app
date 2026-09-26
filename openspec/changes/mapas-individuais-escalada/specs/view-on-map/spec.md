@@ -9,7 +9,7 @@ The system SHALL open the interactive map using explicit target contexts rather 
 - **AND** if the entity is an escalada with direct maps, those maps are presented as the initial items in the carousel
 
 ### Requirement: Default map selection
-The system SHALL respect the `indice_mapa_padrao` property of entities (climbs, sectors, groups) when determining which map to open, prioritizing direct climb maps when they exist.
+The system SHALL determine which map to open by prioritizing direct climb maps when they exist, falling back to the default map index or the first map in the context where the entity is referenced.
 
 #### Scenario: Entity has explicit default map
 - **WHEN** an entity has `indice_mapa_padrao` set and "View on map" is clicked
