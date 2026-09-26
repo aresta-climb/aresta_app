@@ -138,4 +138,58 @@ void main() {
       vm.dispose();
     });
   });
+
+  group('PicoViewModel - Interceptação e Ciclo de Vida de Download', () {
+    test('deveInterceptarSaida retorna falso quando permanece no mesmo croqui', () {
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      expect(vm.deveInterceptarSaida(staysInSameCroqui: true), isFalse);
+      vm.dispose();
+    });
+
+    test('deveInterceptarSaida retorna falso quando croqui está baixado', () {
+      repositorio.activeDataset.value = TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [
+          {'id': cragId, 'nome': 'Pedra do Baú'},
+        ],
+      );
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      expect(vm.isDownloaded, isTrue);
+      expect(vm.deveInterceptarSaida(staysInSameCroqui: false), isFalse);
+      vm.dispose();
+    });
+
+    test('deveInterceptarSaida retorna verdadeiro quando não baixado e sai do croqui', () {
+      repositorio.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {'id': cragId, 'nome': 'Pedra do Baú'},
+        ],
+        downloadedPicos: [],
+      );
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      expect(vm.isDownloaded, isFalse);
+      expect(vm.deveInterceptarSaida(staysInSameCroqui: false), isTrue);
+      vm.dispose();
+    });
+  });
 }
