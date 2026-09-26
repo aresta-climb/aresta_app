@@ -7,6 +7,7 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view_functions/pico_view_model.dart';
 
 class _FakeDatasetRepository extends DatasetRepository {
@@ -19,6 +20,15 @@ class _FakeDatasetRepository extends DatasetRepository {
   Future<bool> deleteCrag(String id) async {
     deleteCalled = true;
     deletedCragId = id;
+    return true;
+  }
+}
+
+class _FakeSyncService extends SyncService {
+  _FakeSyncService({required super.datasetRepository});
+
+  @override
+  Future<bool> downloadCrag(ResumoCroqui resumo) async {
     return true;
   }
 }
@@ -189,6 +199,50 @@ void main() {
 
       expect(vm.isDownloaded, isFalse);
       expect(vm.deveInterceptarSaida(staysInSameCroqui: false), isTrue);
+      vm.dispose();
+    });
+
+    test('excluirPico transiciona croqui para sessão online e chama deleteCrag', () async {
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      final sucesso = await vm.excluirPico();
+
+      expect(sucesso, isTrue);
+      expect(repositorio.deleteCalled, isTrue);
+      expect(repositorio.deletedCragId, cragId);
+      expect(
+        repositorio.gerenciadorSessaoOnline.obterCroquiOnline(cragId),
+        croqui,
+      );
+      vm.dispose();
+    });
+
+    test('baixarPico executa download com sucesso e atualiza estado', () async {
+      repositorio.indiceData.value = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = cragId
+            ..nome = 'Pedra do Baú',
+        );
+
+      final fakeSync = _FakeSyncService(datasetRepository: repositorio);
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      final resultado = await vm.baixarPico(syncService: fakeSync);
+
+      expect(resultado, isTrue);
+      expect(vm.isInitiallyDownloaded, isTrue);
       vm.dispose();
     });
   });
