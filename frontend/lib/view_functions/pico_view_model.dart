@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
 import '../utils/pico_categorization.dart';
+import 'pico_functions.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [PicoDetailsPage] (MVVM).
 ///
@@ -61,5 +62,57 @@ class PicoViewModel extends ChangeNotifier {
     _servicoCroquiOnline.cancelarPolling(cragId);
     _servicoCroquiOnline.dispose();
     super.dispose();
+  }
+
+  /// Indica se o pico está atualmente salvo no armazenamento offline.
+  bool get isDownloaded => datasetRepo.isPicoDownloaded(cragId);
+
+  /// Indica se o pico já estava baixado no momento em que a tela foi aberta.
+  bool get isInitiallyDownloaded => _isInitiallyDownloaded;
+
+  /// Categorias extraídas dos botões do croqui (regras, créditos, etc.).
+  PicoCategorizedData get categorias => _categorias;
+
+  /// Lista de regras extraídas do croqui.
+  List<Botao> get regras => _categorias.regras;
+
+  /// Lista de botões de créditos e agradecimentos.
+  List<Botao> get creditos => _categorias.creditos;
+
+  /// Tamanho formatado em bytes vindo do catálogo disponível.
+  String get tamanhoFormatado {
+    final dataset = datasetRepo.activeDataset.value;
+    ResumoPico? picoItem;
+    try {
+      picoItem = dataset?.picosDisponiveis.firstWhere((p) => p.id == cragId);
+    } catch (_) {}
+    return picoItem?.tamanhoFormatado ?? 'Offline';
+  }
+
+  /// Quantidade total de setores somando setores avulsos e setores dentro de grupos.
+  int get totalSetores {
+    int count = 0;
+    for (final sg in pico.setoresOuGrupos) {
+      if (sg.whichTipo() == SetorOuGrupo_Tipo.setor) {
+        count++;
+      } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo) {
+        count += sg.grupo.conteudo.setores.length;
+      }
+    }
+    return count;
+  }
+
+  /// Texto de dica do botão de pesquisa na barra superior.
+  String get tooltipBusca {
+    if (isPicoBoulderArea(pico)) {
+      return 'Buscar boulder';
+    }
+    return 'Buscar via';
+  }
+
+  /// Data e hora formatada da última sincronização ou atualização do croqui.
+  String get textoUltimaAtualizacao {
+    final data = datasetRepo.obterDataAtualizacaoCroqui(cragId);
+    return formatarTextoUltimaAtualizacao(data);
   }
 }
