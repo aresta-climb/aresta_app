@@ -4,14 +4,26 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/comunidade_functions.dart';
-import '../services/firebase/remote_config_service.dart';
+import '../view_functions/comunidade_view_model.dart';
 import '../view_functions/common_functions.dart';
 
+/// Página de apresentação dos canais da comunidade e mídias do Aresta (Dumb UI).
+///
+/// Renderiza exclusivamente elementos visuais e delega ações e conteúdo dinâmico
+/// para [ComunidadeViewModel].
 class ComunidadePage extends StatelessWidget {
-  const ComunidadePage({super.key});
+  /// Modelo de apresentação da comunidade. Se nulo, utiliza [ComunidadeViewModel.doServico].
+  final ComunidadeViewModel? viewModel;
+
+  const ComunidadePage({
+    super.key,
+    this.viewModel,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final vm = viewModel ?? ComunidadeViewModel.doServico();
+
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
@@ -50,68 +62,48 @@ class ComunidadePage extends StatelessWidget {
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'GRUPO DO WHATSAPP',
-                subtitle:
-                    'Participe para tirar dúvidas, dar ideias e receber avisos do Aresta.',
+                title: vm.whatsapp.titulo,
+                subtitle: vm.whatsapp.subtitulo,
                 iconData: Icons.chat_bubble_outline,
                 iconBgColor: const Color(0xFF128C7E), // WhatsApp Green
-                onTap: () => abrirLinkExterno(
-                  RemoteConfigService.instance.whatsappCommunityUrl,
-                  'WhatsApp',
-                ),
+                onTap: vm.whatsapp.executar,
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'INSTAGRAM OFICIAL',
-                subtitle:
-                    'Acompanhe as últimas novidades, atualizações e bastidores do aplicativo.',
+                title: vm.instagram.titulo,
+                subtitle: vm.instagram.subtitulo,
                 iconData: Icons.camera_alt_outlined,
                 iconBgColor: const Color(0xFFE1306C), // Instagram Pink/Red
-                onTap: () => abrirLinkExterno(
-                  'https://www.instagram.com/arestaclimb/',
-                  'Instagram',
-                ),
+                onTap: vm.instagram.executar,
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'LINKEDIN DO PROJETO',
-                subtitle:
-                    'Acompanhe novidades, nosso crescimento e o lado corporativo do Aresta.',
+                title: vm.linkedin.titulo,
+                subtitle: vm.linkedin.subtitulo,
                 iconData: Icons.work_outline,
                 iconBgColor: const Color(0xFF0A66C2), // LinkedIn Blue
-                onTap: () => abrirLinkExterno(
-                  'https://www.linkedin.com/company/arestaclimb/',
-                  'LinkedIn',
-                ),
+                onTap: vm.linkedin.executar,
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'DISCORD DOS DESENVOLVEDORES',
-                subtitle:
-                    'Converse com a equipe, acompanhe o código e colabore com o futuro do Aresta.',
+                title: vm.discord.titulo,
+                subtitle: vm.discord.subtitulo,
                 iconData: Icons.discord,
                 iconBgColor: const Color(0xFF5865F2), // Discord Blurple
-                onTap: () => abrirLinkExterno(
-                  RemoteConfigService.instance.discordCommunityUrl,
-                  'Discord',
-                ),
+                onTap: vm.discord.executar,
               ),
               const SizedBox(height: 16),
               buildActionCard(
                 context,
-                title: 'GITHUB DO ARESTA',
-                subtitle: 'Acesse o perfil com os repositórios do github.',
+                title: vm.github.titulo,
+                subtitle: vm.github.subtitulo,
                 iconData: Icons.code,
                 iconBgColor: const Color(0xFF333333), // GitHub Dark Gray
-                onTap: () => abrirLinkExterno(
-                  'https://github.com/aresta-climb',
-                  'GitHub',
-                ),
+                onTap: vm.github.executar,
               ),
-
               const SizedBox(height: 16),
               buildTermsCard(context),
               const SizedBox(height: 32),
