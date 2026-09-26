@@ -3,6 +3,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view_functions/pico_view_model.dart';
@@ -77,6 +79,62 @@ void main() {
         'SP • 2 SETORES • 3 escaladas (1 esportivas, 1 boulders, 1 móveis)',
       );
       expect(vm.tooltipBusca, 'Buscar via');
+      vm.dispose();
+    });
+
+    test('define tooltipBusca como boulder quando pico é focado em boulders', () {
+      final setor = Setor(
+        nome: 'Setor Boulder',
+        escaladas: [
+          Escalada(boulder: Boulder(nome: 'V3 dos Sonhos')),
+        ],
+      );
+      pico.setoresOuGrupos.add(
+        SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+      );
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      expect(vm.tooltipBusca, 'Buscar boulder');
+      vm.dispose();
+    });
+
+    test('obtém tamanhoFormatado e data de atualização do dataset', () {
+      repositorio.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {
+            'id': cragId,
+            'nome': 'Pedra do Baú',
+            'tamanho_bytes': 15 * 1024 * 1024,
+            'tamanhoFormatado': '15.0 MB',
+            'url': 'https://exemplo.com/bau.zip',
+          },
+        ],
+        downloadedPicos: [],
+      );
+
+      repositorio.indiceData.value = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = cragId
+            ..nome = 'Pedra do Baú'
+            ..timestampUpdate = Timestamp.fromDateTime(DateTime(2026, 5, 20, 14, 30)),
+        );
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+
+      expect(vm.tamanhoFormatado, '15.0 MB');
+      expect(vm.textoUltimaAtualizacao, contains('20/05/2026 às 14:30'));
       vm.dispose();
     });
   });
