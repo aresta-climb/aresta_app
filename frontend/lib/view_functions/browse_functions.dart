@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../aresta_api/proto/generated/indice.pb.dart';
 import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
@@ -26,8 +27,28 @@ Widget buildBrowseBody(
   VoidCallback? onAddExperimental,
   VoidCallback? onFilterPressed,
   VoidCallback? onSyncPressed,
+  bool Function(String picoId)? isDownloadedChecker,
 }) {
-  final List<ResumoPico> picos = _normalizarPicos(availableCrags);
+  final List<MetadadosIndice> picos = _normalizarMetadados(availableCrags);
+  final Set<String> baixadosImplicitos = {};
+  if (availableCrags is List) {
+    for (final item in availableCrags) {
+      if (item is ResumoPico && item.isDownloaded) {
+        baixadosImplicitos.add(item.id);
+      } else if (item is Map && (item['isDownloaded'] == true)) {
+        final id = item['id']?.toString();
+        if (id != null) baixadosImplicitos.add(id);
+      }
+    }
+  }
+
+  bool verificarBaixado(String picoId) {
+    if (isDownloadedChecker != null) {
+      return isDownloadedChecker(picoId);
+    }
+    return baixadosImplicitos.contains(picoId);
+  }
+
   return Column(
     children: [
       const SizedBox(height: 10),
@@ -45,22 +66,64 @@ Widget buildBrowseBody(
           onDownload,
           onOpen: onOpen,
           onAddExperimental: onAddExperimental,
+          isDownloadedChecker: verificarBaixado,
         ),
       ),
     ],
   );
 }
 
-List<ResumoPico> _normalizarPicos(dynamic lista) {
+List<MetadadosIndice> _normalizarMetadados(dynamic lista) {
   if (lista == null) return const [];
-  if (lista is List<ResumoPico>) return lista;
+  if (lista is List<MetadadosIndice>) return lista;
   if (lista is List) {
     return lista.map((item) {
-      if (item is ResumoPico) return item;
-      if (item is MetadadosIndice) return item.paraResumoPico();
-      if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
-      if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
-      return const ResumoPico(id: '', nome: '', local: '');
+      if (item is MetadadosIndice) return item;
+      if (item is ResumoPico) {
+        return MetadadosIndice(
+          id: item.id,
+          nome: item.nome,
+          descricao: item.descricao,
+          caminhoRelativo: item.url,
+          checksumSha256Croqui: item.checksum,
+          precomputados: item.estatisticas != null
+              ? PrecomputadosResumoCroqui(
+                  totalSetores: item.estatisticas!.totalSetores,
+                  totalEscaladas: item.estatisticas!.totalVias,
+                  totalBoulders: item.estatisticas!.totalBoulders,
+                  totalEsportivas: item.estatisticas!.totalEsportivas,
+                  totalMoveis: item.estatisticas!.totalMoveis,
+                  totalMultiplasEnfiadas:
+                      item.estatisticas!.totalMultiplasEnfiadas,
+                  totalHighlines: item.estatisticas!.totalHighlines,
+                )
+              : null,
+        );
+      }
+      if (item is Map) {
+        final mapa = Map<String, dynamic>.from(item);
+        final stats = mapa['estatisticas'] as Map?;
+        return MetadadosIndice(
+          id: mapa['id']?.toString() ?? '',
+          nome: mapa['nome']?.toString() ?? '',
+          descricao: mapa['descricao']?.toString() ?? '',
+          precomputados: stats != null
+              ? PrecomputadosResumoCroqui(
+                  totalSetores: (stats['totalSetores'] as num?)?.toInt() ?? 0,
+                  totalEscaladas: (stats['totalVias'] as num?)?.toInt() ?? 0,
+                  totalBoulders: (stats['totalBoulders'] as num?)?.toInt() ?? 0,
+                  totalEsportivas:
+                      (stats['totalEsportivas'] as num?)?.toInt() ?? 0,
+                  totalMoveis: (stats['totalMoveis'] as num?)?.toInt() ?? 0,
+                  totalMultiplasEnfiadas:
+                      (stats['totalMultiplasEnfiadas'] as num?)?.toInt() ?? 0,
+                  totalHighlines:
+                      (stats['totalHighlines'] as num?)?.toInt() ?? 0,
+                )
+              : null,
+        );
+      }
+      return MetadadosIndice();
     }).toList();
   }
   return const [];
@@ -68,11 +131,12 @@ List<ResumoPico> _normalizarPicos(dynamic lista) {
 
 Widget _buildCragList(
   BuildContext context,
-  List<ResumoPico> availableCrags,
+  List<MetadadosIndice> availableCrags,
   ValueListenable<Map<String, double>> downloadingCrags,
   Function(dynamic) onDownload, {
   Function(dynamic)? onOpen,
   VoidCallback? onAddExperimental,
+  bool Function(String picoId)? isDownloadedChecker,
 }) {
   return SingleChildScrollView(
     physics: const BouncingScrollPhysics(),
@@ -150,6 +214,9 @@ Widget _buildCragList(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: CragCard(
                 crag: crag,
+                isDownloaded: isDownloadedChecker != null
+                    ? isDownloadedChecker(crag.id)
+                    : false,
                 downloadingCrags: downloadingCrags,
                 onDownload: () => onDownload(crag),
                 onOpen: onOpen != null ? () => onOpen(crag) : null,
@@ -252,16 +319,17 @@ Widget buildCragListItem(
   ValueListenable<Map<String, double>> downloadingCrags,
   VoidCallback onDownload, {
   VoidCallback? onOpen,
+  bool isDownloaded = false,
 }) {
+  final metadados = _normalizarMetadados([crag]).first;
   return CragCard(
-    crag: crag,
+    crag: metadados,
+    isDownloaded: isDownloaded,
     downloadingCrags: downloadingCrags,
     onDownload: onDownload,
     onOpen: onOpen,
   );
 }
-
-
 
 void showDownloadBottomSheet(
   BuildContext context,
@@ -269,14 +337,10 @@ void showDownloadBottomSheet(
   VoidCallback onDownload,
   ValueListenable<Map<String, double>> downloadingCrags, {
   VoidCallback? onOpen,
+  bool isDownloaded = false,
 }) {
-  final ResumoPico pico = crag is MetadadosIndice
-      ? crag.paraResumoPico()
-      : (crag is ResumoPico
-          ? crag
-          : ResumoPico.deMapa(crag is Map<String, dynamic>
-              ? crag
-              : Map<String, dynamic>.from(crag as Map)));
+  final MetadadosIndice pico = _normalizarMetadados([crag]).first;
+  final String localFormatado = pico.localizacaoFormatada;
 
   showModalBottomSheet(
     context: context,
@@ -315,7 +379,7 @@ void showDownloadBottomSheet(
               ),
               const SizedBox(height: 8),
               Text(
-                pico.local.isNotEmpty ? pico.local : 'Local Desconhecido',
+                localFormatado.isNotEmpty ? localFormatado : 'Local Desconhecido',
                 style: TextStyle(color: context.colors.ashGrey, fontSize: 14),
               ),
               const SizedBox(height: 16),
@@ -375,7 +439,7 @@ void showDownloadBottomSheet(
                     );
                   }
 
-                  if (pico.isDownloaded && onOpen != null) {
+                  if (isDownloaded && onOpen != null) {
                     return SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
