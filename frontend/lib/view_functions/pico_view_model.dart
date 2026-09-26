@@ -43,6 +43,7 @@ class PicoViewModel extends ChangeNotifier {
             ),
         _isInitiallyDownloaded = datasetRepo.isPicoDownloaded(cragId) {
     datasetRepo.activeDataset.addListener(_verificarStatusDownload);
+    iniciarPollingOnlineSeNecessario();
   }
 
   void _verificarStatusDownload() {
@@ -179,5 +180,53 @@ class PicoViewModel extends ChangeNotifier {
     }
 
     return '${pico.estado.toUpperCase()} • $setoresCount SETORES$statsText';
+  }
+
+  /// Inicia polling de verificação ETag caso o pico não esteja baixado e possua URL.
+  void iniciarPollingOnlineSeNecessario() {
+    final dataset = datasetRepo.activeDataset.value;
+    if (!_isInitiallyDownloaded && dataset != null) {
+      try {
+        final picoItem = dataset.picosDisponiveis.firstWhere(
+          (p) => p.id == cragId,
+        );
+        final url = picoItem.url;
+        if (url.isNotEmpty) {
+          _servicoCroquiOnline.iniciarPollingEtag(
+            cragId,
+            url,
+            aoAtualizar: (picoId, croquiAtualizado) {
+              datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+              final isExperimental =
+                  datasetRepo.editorDeCroqui.isExperimentalMode.value;
+              if (isExperimental) {
+                datasetRepo.editorDeCroqui.dispararPulsoRecarregamento();
+              } else {
+                datasetRepo.notificarCroquiOnlineAtualizadoNaUI(
+                  pico.nome.isNotEmpty ? pico.nome : picoId,
+                );
+              }
+              notifyListeners();
+            },
+          );
+        }
+      } catch (_) {}
+    }
+  }
+
+  /// Cancela o polling online ativo para este pico.
+  void cancelarPolling() {
+    _servicoCroquiOnline.cancelarPolling(cragId);
+  }
+
+  /// Avalia se a navegação de retorno deve ser interceptada com modal de confirmação.
+  bool deveInterceptarSaida({required bool staysInSameCroqui}) {
+    if (staysInSameCroqui) {
+      return false;
+    }
+    if (isDownloaded) {
+      return false;
+    }
+    return true;
   }
 }
