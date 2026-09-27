@@ -105,19 +105,13 @@ class NearbyCragsCarousel extends StatefulWidget {
         final mapa = Map<String, dynamic>.from(item);
         picoLat = (mapa['latitude'] as num?)?.toDouble();
         picoLon = (mapa['longitude'] as num?)?.toDouble();
-        pico = MetadadosIndice(
-          id: mapa['id']?.toString() ?? '',
-          nome: mapa['nome']?.toString() ?? '',
-          descricao: mapa['descricao']?.toString() ?? '',
-          localizacao: picoLat != null && picoLon != null
-              ? Coordenada(
-                  latitude: (picoLat * 10000000).round(),
-                  longitude: (picoLon * 10000000).round(),
-                )
-              : null,
-        );
       } else {
-        continue;
+        try {
+          picoLat = (item.latitude as num?)?.toDouble();
+          picoLon = (item.longitude as num?)?.toDouble();
+        } catch (_) {
+          continue;
+        }
       }
 
       if (picoLat != null && picoLon != null) {
