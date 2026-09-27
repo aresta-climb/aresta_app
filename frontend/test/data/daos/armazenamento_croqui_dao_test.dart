@@ -50,3 +50,29 @@ void main() {
       final arquivoLegado = File('${picoDir.path}/bau.binarypb');
       await arquivoLegado.writeAsBytes(croquiLegado.writeToBuffer());
 
+      final croquiCarregado = await dao.carregarCroqui(tempDir.path, 'bau');
+
+      expect(croquiCarregado, isNotNull);
+      expect(croquiCarregado!.id, equals('bau'));
+      expect(File('${picoDir.path}/compilado.binarypb').existsSync(), isTrue);
+    });
+
+    test('verificarPicoBaixado retorna true se compilado.binarypb ou legado existe', () async {
+      final picoDir = Directory('${tempDir.path}/cipo')..createSync(recursive: true);
+      expect(await dao.verificarPicoBaixado(tempDir.path, 'cipo'), isFalse);
+
+      File('${picoDir.path}/compilado.binarypb').writeAsBytesSync([1, 2, 3]);
+      expect(await dao.verificarPicoBaixado(tempDir.path, 'cipo'), isTrue);
+    });
+
+    test('excluirPico remove o diretório do pico com sucesso', () async {
+      final picoDir = Directory('${tempDir.path}/itacoatiara')..createSync(recursive: true);
+      File('${picoDir.path}/compilado.binarypb').writeAsBytesSync([1, 2, 3]);
+
+      final sucesso = await dao.excluirPico(tempDir.path, 'itacoatiara');
+
+      expect(sucesso, isTrue);
+      expect(picoDir.existsSync(), isFalse);
+    });
+  });
+}
