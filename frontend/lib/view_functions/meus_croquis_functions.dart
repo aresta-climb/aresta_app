@@ -132,24 +132,7 @@ class OfflineCragCard extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                          .registrarCroquiOnline(id, croqui);
-                      datasetRepo.indexarMidiasDoCroqui(id, croqui);
-
-                      AppNav.toPico(
-                        context,
-                        pico: croqui.picos.first,
-                        croqui: croqui,
-                        cragId: id,
-                      );
-                      datasetRepo.updatePriorityAfterNavigation(id);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Erro ao abrir o guia offline.'),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: onAbrir,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC04F34),
                     foregroundColor: Colors.white,
@@ -173,7 +156,7 @@ class OfflineCragCard extends StatelessWidget {
               _buildIconButton(
                 context,
                 icon: Icons.delete_outline,
-                onPressed: () => _handleDelete(context, id, nome),
+                onPressed: onExcluir,
               ),
             ],
           ),
@@ -201,30 +184,6 @@ class OfflineCragCard extends StatelessWidget {
       ),
     );
   }
-
-  Future<void> _handleDelete(
-    BuildContext context,
-    String cragId,
-    String nome,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colors.caveShadow,
-        title: const Text('Excluir?', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Deseja excluir o guia de $nome?',
-          style: TextStyle(color: context.colors.ashGrey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'CANCELAR',
-              style: TextStyle(color: context.colors.ashGrey),
-            ),
-          ),
-          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
           ),
