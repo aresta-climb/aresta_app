@@ -32,3 +32,38 @@ void main() {
       expect(dto.checksumSha256, equals('abc123hash'));
     });
 
+    test('mapearMetadadosParaCard mapeia ResumoCroqui corretamente', () {
+      final metadados = ResumoCroqui(
+        id: 'bau',
+        nome: 'Pedra do Baú',
+        caminhoRelativo: 'sao_paulo/bau',
+        checksumSha256Thumbnail: 'thumbhash123',
+        precomputados: PrecomputadosResumoCroqui(
+          totalSetores: 4,
+          totalEscaladas: 50,
+          totalEsportivas: 30,
+          totalMoveis: 20,
+        ),
+      );
+
+      final dto = mapearMetadadosParaCard(
+        metadados,
+        salvoOffline: false,
+        textoDistancia: '2.5 km',
+        estatisticasDetalhadas: true,
+      );
+
+      expect(dto.id, equals('bau'));
+      expect(dto.titulo, equals('PEDRA DO BAÚ'));
+      expect(dto.salvoOffline, isFalse);
+      expect(dto.textoDistancia, equals('2.5 km'));
+      expect(dto.checksumSha256, equals('thumbhash123'));
+      expect(dto.textoEstatisticas, contains('4 setores • 50 escaladas'));
+      expect(dto.textoEstatisticas, contains('30 esportivas, 20 móveis'));
+    });
+
+    test('mapearCroquiParaCard mapeia Croqui completo corretamente', () {
+      final croqui = Croqui(
+        id: 'cipó',
+        nome: 'Serra do Cipó',
+        picos: [
