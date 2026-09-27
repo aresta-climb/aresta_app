@@ -162,21 +162,9 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
 
   Future<void> _loadCustomIcons() async {
     try {
-      // Ícone para visão macro (40px)
-      final macro = await createCustomMarkerBitmap(
-        'assets/logo_app.png',
-        size: 40,
-      );
-      // Ícone para visão regional (65px)
-      final regional = await createCustomMarkerBitmap(
-        'assets/logo_app.png',
-        size: 65,
-      );
-      // Ícone para visão local / base (85px)
-      final custom = await createCustomMarkerBitmap(
-        'assets/logo_app.png',
-        size: 85,
-      );
+      final macro = await createCustomMarkerBitmap('assets/logo_app.png', size: 40);
+      final regional = await createCustomMarkerBitmap('assets/logo_app.png', size: 65);
+      final custom = await createCustomMarkerBitmap('assets/logo_app.png', size: 85);
       if (mounted) {
         setState(() {
           _macroIcon = macro;
@@ -185,19 +173,9 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         });
       }
 
-      // Gera rótulos desacoplados de texto para visão local em segundo plano
-      for (final dynamic cragItem in widget.crags) {
-        final ResumoPico crag = cragItem is ResumoPico
-            ? cragItem
-            : ResumoPico.deMapa(
-                cragItem is Map<String, dynamic>
-                    ? cragItem
-                    : Map<String, dynamic>.from(cragItem as Map),
-              );
+      for (final MapaPicoDTO crag in widget.viewModel.picosNoMapa) {
         final name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-        final textIcon = await createCustomMarkerLabelBitmap(
-          name,
-        );
+        final textIcon = await createCustomMarkerLabelBitmap(name);
         if (mounted) {
           setState(() {
             _textIcons[crag.id] = textIcon;
