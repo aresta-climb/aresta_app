@@ -227,8 +227,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard.deCroqui(
               crag: crag,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () => clicouAbrir = true,
+              onExcluir: () => clicouExcluir = true,
             ),
           ),
         ),
@@ -237,13 +237,11 @@ void main() {
 
       await tester.tap(find.text('ABRIR OFFLINE'));
       await tester.pumpAndSettle();
+      expect(clicouAbrir, isTrue);
 
-      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
-      expect(mockTelemetry.recordedParams['acao_croqui']!['id_croqui'], 'pico_telemetria');
-      expect(mockTelemetry.recordedParams['acao_croqui']!['acao'], 'abrir_croqui');
-      expect(mockTelemetry.recordedParams['acao_croqui']!['origem'], 'meus_croquis');
-      expect(mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'], 'offline');
-      expect(mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'], 'true');
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      expect(clicouExcluir, isTrue);
     });
 
     testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
@@ -263,8 +261,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard(
               dados: viewModel,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () {},
+              onExcluir: () {},
             ),
           ),
         ),
