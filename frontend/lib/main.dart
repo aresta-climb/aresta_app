@@ -807,10 +807,12 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
               } catch (_) {}
             }
             return PicoDetailsPage(
-              pico: pico,
-              croqui: croqui,
-              cragId: cragId,
-              datasetRepo: widget.datasetRepo,
+              viewModel: PicoViewModel(
+                datasetRepo: widget.datasetRepo,
+                pico: pico,
+                croqui: croqui,
+                cragId: cragId,
+              ),
               scrollToMapaGeral: node.scrollToMapaGeral,
               returnToSetor: returnToSetor,
             );
@@ -901,18 +903,25 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
     if (node is MapaGlobalNode) {
       return MapaGlobalPage(
-        crags: node.crags,
-        datasetRepo: widget.datasetRepo,
-        syncService: widget.syncService,
+        viewModel: MapaGlobalViewModel(
+          datasetRepo: widget.datasetRepo,
+          syncService: widget.syncService,
+          picosIniciais: node.crags,
+        ),
       );
     }
 
     if (node is GPSNode) {
-      return GPSPage(datasetRepo: widget.datasetRepo);
+      return const GPSPage();
     }
 
     if (node is SettingsNode) {
-      return SettingsPage(datasetRepo: widget.datasetRepo);
+      return SettingsPage(
+        viewModel: SettingsViewModel(
+          datasetRepo: widget.datasetRepo,
+          editorDeCroqui: widget.datasetRepo.editorDeCroqui,
+        ),
+      );
     }
 
     if (node is SobreTimeNode) {
@@ -1111,25 +1120,22 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 }
 
 class _HomePageWrapper extends StatelessWidget {
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
+  final HomeViewModel viewModel;
   final Function(int) onSwitchTab;
 
   const _HomePageWrapper({
-    required this.datasetRepo,
-    required this.syncService,
+    required this.viewModel,
     required this.onSwitchTab,
   });
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
-      valueListenable: datasetRepo.homeResetTrigger,
+      valueListenable: viewModel.datasetRepo.homeResetTrigger,
       builder: (context, counter, child) {
         return HomePage(
           key: ValueKey(counter),
-          datasetRepo: datasetRepo,
-          syncService: syncService,
+          viewModel: viewModel,
           onSwitchTab: onSwitchTab,
         );
       },
