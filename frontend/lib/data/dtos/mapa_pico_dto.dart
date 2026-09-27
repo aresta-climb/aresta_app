@@ -59,3 +59,33 @@ class MapaPicoDTO {
     this.urlDownload = '',
     this.checksumSha256 = '',
   });
+
+  /// Indica se o pico possui coordenadas geográficas válidas para plotagem de marcador no mapa.
+  bool get temCoordenadasValidas =>
+      latitude != null &&
+      longitude != null &&
+      (latitude! != 0.0 || longitude! != 0.0);
+
+  /// Constrói um [MapaPicoDTO] a partir de uma entidade [ResumoCroqui] (Protobuf).
+  factory MapaPicoDTO.deMetadados({
+    required ResumoCroqui metadados,
+    bool estaBaixado = false,
+    String baseUrl = '',
+  }) {
+    final lat = metadados.hasLocalizacao()
+        ? metadados.localizacao.latitude / 10000000.0
+        : null;
+    final lon = metadados.hasLocalizacao()
+        ? metadados.localizacao.longitude / 10000000.0
+        : null;
+
+    final int setores =
+        metadados.hasPrecomputados() ? metadados.precomputados.totalSetores : 0;
+    final int escaladas =
+        metadados.hasPrecomputados() ? metadados.precomputados.totalEscaladas : 0;
+
+    final String url = baseUrl.isNotEmpty
+        ? '$baseUrl/${metadados.caminhoRelativo}?v=${metadados.checksumSha256Croqui}'
+        : metadados.caminhoRelativo;
+
+    return MapaPicoDTO(
