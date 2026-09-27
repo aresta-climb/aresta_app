@@ -26,3 +26,32 @@ class MapaGlobalViewModel extends ChangeNotifier {
 
   MapaGlobalViewModel({
     required this.datasetRepo,
+    required this.syncService,
+    this.picosIniciais,
+  }) {
+    datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
+  }
+
+  void _aoAtualizarDataset() => notifyListeners();
+
+  @override
+  void dispose() {
+    datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
+    super.dispose();
+  }
+
+  /// Monitoramento reativo dos downloads em andamento.
+  ValueListenable<Map<String, double>> get downloadingCrags =>
+      syncService.downloadingCrags;
+
+  /// Verifica se um pico específico já foi baixado para o armazenamento local.
+  bool estaBaixado(String picoId) {
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return false;
+    return dataset.croquisBaixados.any((c) => c.id == picoId);
+  }
+
+  /// Lista de picos catalogados válidos para plotagem geográfica no mapa mundial.
+  List<MapaPicoDTO> get picosNoMapa {
+    if (picosIniciais != null && picosIniciais!.isNotEmpty) {
+      return picosIniciais!
