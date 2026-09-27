@@ -99,3 +99,37 @@ CardCroquiDTO mapearMetadadosParaCard(
   );
 }
 
+/// Mapeia um guia completo offline [Croqui] para o modelo [CardCroquiDTO].
+CardCroquiDTO mapearCroquiParaCard(
+  Croqui croqui, {
+  String? textoDistancia,
+}) {
+  final String id = croqui.id;
+  final nomeFonte = croqui.nome.trim().isNotEmpty
+      ? croqui.nome.trim()
+      : (croqui.picos.isNotEmpty ? croqui.picos.first.nome.trim() : '');
+  final String titulo =
+      nomeFonte.isEmpty ? 'SEM NOME' : nomeFonte.toUpperCase();
+
+  final localFonte = croqui.picos.isNotEmpty && croqui.picos.first.estado.trim().isNotEmpty
+      ? croqui.picos.first.estado.trim()
+      : '';
+  final String localizacao =
+      localFonte.isEmpty ? 'LOCAL DESCONHECIDO' : localFonte.toUpperCase();
+
+  String textoEstatisticas = '0 setores • 0 escaladas';
+  if (croqui.picos.isNotEmpty && croqui.picos.first.hasPrecomputados()) {
+    final stats = croqui.picos.first.precomputados;
+    textoEstatisticas = '${stats.totalSetores} setores • ${stats.totalEscaladas} escaladas';
+  }
+
+  return CardCroquiDTO(
+    id: id,
+    titulo: titulo,
+    localizacao: localizacao,
+    textoEstatisticas: textoEstatisticas,
+    caminhoMiniatura: 'thumbnails/$id.webp',
+    salvoOffline: true,
+    textoDistancia: textoDistancia,
+  );
+}
