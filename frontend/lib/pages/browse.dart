@@ -40,34 +40,16 @@ class BrowsePage extends StatelessWidget {
       name = crag['nome']?.toString() ?? 'Pico';
     } else {
       id = crag.toString();
-    if (await viewModel.syncService.isNetworkDisabled()) {
-      if (mounted) {
-        showDeprecatedAppVersionSnackBar(context);
-      }
-      return;
-    }
-    if (!mounted) return;
-
-    if (viewModel.datasetRepo.indiceData.value == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Erro: Índice não carregado. Tente novamente.'),
-            ),
-          );
-      }
-      return;
+      name = 'Pico';
     }
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text('Baixando $name...')));
 
-    final success = await viewModel.baixarPico(pico);
+    final success = await viewModel.baixarPicoPorId(id);
 
-    if (mounted) {
+    if (context.mounted) {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
@@ -176,7 +158,11 @@ class BrowsePage extends StatelessWidget {
           listenable: viewModel,
           builder: (context, _) {
             if (viewModel.carregando) {
-              return Center(child: CircularProgressIndicator(color: beastHide));
+              return Center(
+                child: CircularProgressIndicator(
+                  color: context.colors.beastHide,
+                ),
+              );
             }
 
             final filteredCrags = viewModel.picosFiltrados;
