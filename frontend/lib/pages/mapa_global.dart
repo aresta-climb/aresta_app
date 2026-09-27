@@ -33,30 +33,11 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     final name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
 
-    if (await widget.syncService.isNetworkDisabled()) {
-      if (mounted) {
-        showDeprecatedAppVersionSnackBar(context);
-      }
-      return;
-    }
-
-    final indice = widget.datasetRepo.indiceData.value;
-    if (indice == null) return;
-
-    final resumos = indice.croquis.where((r) => r.id == id).toList();
-    if (resumos.isEmpty) return;
-
-    final resumo = resumos.first;
-
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Baixando $name...')));
     }
 
-    final servicoDownload =
-        ServicoDownloadSegundoPlano(syncService: widget.syncService);
-    final success = await servicoDownload.executarDownload(resumo);
+    final success = await widget.viewModel.baixarPico(id);
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
