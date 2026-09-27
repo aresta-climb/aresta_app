@@ -32,3 +32,37 @@ class PicoProximoDTO {
   final int totalSetores;
 
   /// Total pré-computado de vias/escaladas.
+  final int totalEscaladas;
+
+  /// Checksum SHA-256 opcional para validação de integridade da thumbnail.
+  final String? checksumSha256;
+
+  const PicoProximoDTO({
+    required this.id,
+    required this.nome,
+    required this.localizacao,
+    this.distanciaKm,
+    required this.caminhoMiniatura,
+    this.estaBaixado = false,
+    this.totalSetores = 0,
+    this.totalEscaladas = 0,
+    this.checksumSha256,
+  });
+
+  /// Retorna a distância formatada para leitura humana (ex: '450 m' ou '12.3 km').
+  String get distanciaFormatada {
+    if (distanciaKm == null) return '';
+    final km = distanciaKm!;
+    if (km < 1.0) {
+      final metros = (km * 1000).round();
+      return '$metros m';
+    } else {
+      return '${km.toStringAsFixed(1)} km';
+    }
+  }
+
+  /// Constrói um [PicoProximoDTO] a partir de uma entidade [ResumoCroqui] (Protobuf).
+  factory PicoProximoDTO.deMetadados({
+    required ResumoCroqui metadados,
+    double? distanciaKm,
+    bool estaBaixado = false,
