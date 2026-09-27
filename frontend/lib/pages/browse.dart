@@ -39,43 +39,7 @@ class BrowsePage extends StatelessWidget {
       id = crag['id']?.toString() ?? '';
       name = crag['nome']?.toString() ?? 'Pico';
     } else {
-      _viewModel = BrowseViewModel(
-        datasetRepo: widget.datasetRepo!,
-        syncService: widget.syncService!,
-      );
-      _criouViewModel = true;
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_criouViewModel) {
-      _viewModel.dispose();
-    }
-    super.dispose();
-  }
-
-  BrowseViewModel get viewModel => _viewModel;
-
-  /// Aciona o download dos dados binários de um pico (.binarypb).
-  @visibleForTesting
-  void handleDownload(dynamic crag) async {
-    final MetadadosIndice pico = crag is MetadadosIndice
-        ? crag
-        : (crag is ResumoPico
-            ? MetadadosIndice(
-                id: crag.id,
-                nome: crag.nome,
-                descricao: crag.descricao,
-                caminhoRelativo: crag.url,
-                checksumSha256Croqui: crag.checksum,
-              )
-            : MetadadosIndice(
-                id: (crag as Map)['id']?.toString() ?? '',
-                nome: crag['nome']?.toString() ?? '',
-              ));
-    final String name = pico.nome.isEmpty ? 'Pico' : pico.nome;
-
+      id = crag.toString();
     if (await viewModel.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
