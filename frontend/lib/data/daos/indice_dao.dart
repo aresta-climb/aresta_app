@@ -22,3 +22,27 @@ class IndiceDao {
         'Erro ao carregar índice do disco em $caminhoArquivo',
         error: e,
         stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
+
+  /// Grava a mensagem [Indice] em bytes binários no arquivo especificado.
+  Future<bool> salvarNoDisco(String caminhoArquivo, Indice indice) async {
+    try {
+      final arquivo = File(caminhoArquivo);
+      if (!await arquivo.parent.exists()) {
+        await arquivo.parent.create(recursive: true);
+      }
+      await arquivo.writeAsBytes(indice.writeToBuffer());
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao salvar índice no disco em $caminhoArquivo',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+}
