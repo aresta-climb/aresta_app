@@ -83,3 +83,32 @@ void main() {
       );
 
       // Usuário próximo a São Bento do Sapucaí (perto da Pedra do Baú)
+      vm.atualizarLocalizacaoUsuario(-22.68, -45.66);
+
+      expect(vm.carregando, isFalse);
+      expect(vm.picosProximos.length, equals(2));
+      expect(vm.picosProximos.first.id, equals('bau'));
+      expect(vm.picosProximos.first.distanciaKm, isNotNull);
+      expect(vm.picosProximos.first.distanciaKm!, lessThan(vm.picosProximos.last.distanciaKm!));
+
+      vm.dispose();
+    });
+
+    test('estaBaixado verifica presença em croquisBaixados', () {
+      final vm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      final croquiBaixado = Croqui(id: 'cipo', nome: 'Serra do Cipó');
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        croquisBaixados: [croquiBaixado],
+      );
+
+      expect(vm.estaBaixado('cipo'), isTrue);
+      expect(vm.estaBaixado('outro'), isFalse);
+
+      vm.dispose();
+    });
+  });
+}
