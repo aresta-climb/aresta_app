@@ -55,3 +55,31 @@ class MapaGlobalViewModel extends ChangeNotifier {
   List<MapaPicoDTO> get picosNoMapa {
     if (picosIniciais != null && picosIniciais!.isNotEmpty) {
       return picosIniciais!
+          .map((item) {
+            if (item is MapaPicoDTO) return item;
+            if (item is Map) {
+              return MapaPicoDTO.deMapa(Map<String, dynamic>.from(item));
+            }
+            if (item is ResumoCroqui) {
+              return MapaPicoDTO.deMetadados(
+                metadados: item,
+                estaBaixado: estaBaixado(item.id),
+              );
+            }
+            return null;
+          })
+          .whereType<MapaPicoDTO>()
+          .where((dto) => dto.temCoordenadasValidas)
+          .toList();
+    }
+
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return const [];
+
+    final baseUrl = datasetRepo.editorDeCroqui.activeBaseUrl;
+    return dataset.metadadosDisponiveis
+        .map((m) => MapaPicoDTO.deMetadados(
+              metadados: m,
+              estaBaixado: estaBaixado(m.id),
+              baseUrl: baseUrl,
+            ))
