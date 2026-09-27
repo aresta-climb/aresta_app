@@ -3,21 +3,23 @@
 
 import 'package:flutter/material.dart';
 import '../view_functions/home_functions.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
+import '../view_functions/view_models/home_view_model.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/common_functions.dart';
 
-/// A página inicial do aplicativo (nova versão).
+/// A página inicial do aplicativo (Dumb UI).
+///
+/// Apresenta o carrossel de picos próximos, atalhos de exploração e aciona a sincronização
+/// através de [HomeViewModel].
 class HomePage extends StatelessWidget {
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
+  /// ViewModel de negócios e dados da tela inicial.
+  final HomeViewModel viewModel;
+
+  /// Callback acionado para troca de abas no navegador principal.
   final Function(int) onSwitchTab;
 
   const HomePage({
     super.key,
-    required this.datasetRepo,
-    required this.syncService,
+    required this.viewModel,
     required this.onSwitchTab,
   });
 
@@ -30,9 +32,9 @@ class HomePage extends StatelessWidget {
           color: context.colors.dryMoss,
           backgroundColor: context.colors.caveShadow,
           onRefresh: () async {
-            await handleManualSync(context, datasetRepo, syncService);
+            await viewModel.sincronizarManual(context);
           },
-          child: buildHomeBody(context, datasetRepo, syncService, onSwitchTab),
+          child: buildHomeBody(context, viewModel, onSwitchTab),
         ),
       ),
     );
