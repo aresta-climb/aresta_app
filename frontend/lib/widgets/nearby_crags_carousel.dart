@@ -443,33 +443,6 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
   }
 
-  /// Calcula as distâncias geodésicas entre o usuário e todos os picos do índice local.
-  void _calculateDistances(double userLat, double userLon) {
-    _lastUserLat = userLat;
-    _lastUserLon = userLon;
-
-    final datasetRepo = DatasetRepository.instance;
-    final dataset = datasetRepo?.activeDataset.value;
-    final availablePicos =
-        dataset != null && dataset.metadadosDisponiveis.isNotEmpty
-            ? dataset.metadadosDisponiveis
-            : (dataset?.availablePicos ?? []);
-
-    final picosOrdenados = NearbyCragsCarousel.calcularPicosMaisProximos(
-      userLat: userLat,
-      userLon: userLon,
-      picosDisponiveis: availablePicos,
-    );
-
-    if (mounted) {
-      setState(() {
-        _closestCrags = picosOrdenados;
-        _isLoading = false;
-        _permissionDenied = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
