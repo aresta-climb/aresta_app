@@ -31,3 +31,36 @@ void main() {
       );
 
       final arquivoIndice = File('${tempDir.path}/indice.binarypb');
+      await arquivoIndice.writeAsBytes(indiceEsperado.writeToBuffer());
+
+      final indiceCarregado = await dao.carregarDoDisco(arquivoIndice.path);
+
+      expect(indiceCarregado, isNotNull);
+      expect(indiceCarregado!.croquis.length, equals(2));
+      expect(indiceCarregado.croquis[0].id, equals('bau'));
+      expect(indiceCarregado.croquis[1].id, equals('cipo'));
+    });
+
+    test('carregarDoDisco retorna null se arquivo não existe', () async {
+      final indiceCarregado = await dao.carregarDoDisco('${tempDir.path}/inexistente.binarypb');
+      expect(indiceCarregado, isNull);
+    });
+
+    test('salvarNoDisco grava Indice em bytes binários no arquivo', () async {
+      final indice = Indice(
+        croquis: [
+          ResumoCroqui(id: 'itacoatiara', nome: 'Itacoatiara'),
+        ],
+      );
+
+      final caminhoArquivo = '${tempDir.path}/novo_indice.binarypb';
+      final sucesso = await dao.salvarNoDisco(caminhoArquivo, indice);
+
+      expect(sucesso, isTrue);
+      expect(File(caminhoArquivo).existsSync(), isTrue);
+
+      final lido = await dao.carregarDoDisco(caminhoArquivo);
+      expect(lido?.croquis.first.id, equals('itacoatiara'));
+    });
+  });
+}
