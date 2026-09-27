@@ -4,23 +4,22 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../data/dtos/mapa_pico_dto.dart';
 import '../view_functions/mapa/mapa_global_functions.dart';
-import '../view_functions/common_functions.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
-import '../services/http/servico_download_segundo_plano.dart';
 import '../view_functions/mapa/mapa_marker.dart';
-import '../view_functions/home_functions.dart';
+import '../view_functions/view_models/mapa_global_view_model.dart';
+import '../view_functions/common_functions.dart';
 import '../theme/app_colors.dart';
 
-/// Arquivo principal da tela do "Mapa Global" (Mapa de Picos).
+/// Arquivo principal da tela do "Mapa Global" (Mapa de Picos) (Dumb UI).
+///
+/// Renderiza visualmente o mapa com os marcadores de picos e delega downloads
+/// e navegações para o [MapaGlobalViewModel].
 class MapaGlobalPage extends StatefulWidget {
   static bool hasShownLocationWarning = false;
-  final List<ResumoPico> crags;
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
+  final MapaGlobalViewModel viewModel;
 
-  MapaGlobalPage({
+  const MapaGlobalPage({
     super.key,
     required dynamic crags,
     required this.datasetRepo,
