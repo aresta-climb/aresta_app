@@ -8,6 +8,10 @@ import '../browse_functions.dart';
 import '../../services/dataset/modelos/resumo_pico.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 
+import '../../data/dtos/mapa_pico_dto.dart';
+import '../../data/dtos/card_croqui_dto.dart';
+import '../../widgets/crag_card.dart';
+
 /// Coleção de funções de UI puras (view_functions) para o Mapa Global.
 ///
 /// Este arquivo concentra a lógica de construção visual isolada para o mapa,
@@ -23,9 +27,22 @@ void showCragModal({
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
-  final ResumoPico pico = crag is MetadadosIndice
-      ? crag.paraResumoPico()
-      : (crag is ResumoPico
+  final CardCroquiDTO cardDados;
+  if (crag is MapaPicoDTO) {
+    cardDados = CardCroquiDTO(
+      id: crag.id,
+      titulo: crag.nome.toUpperCase(),
+      localizacao: crag.localizacao.toUpperCase(),
+      textoEstatisticas: '${crag.totalSetores} setores • ${crag.totalEscaladas} escaladas',
+      caminhoMiniatura: crag.caminhoMiniatura,
+      salvoOffline: crag.estaBaixado,
+      checksumSha256: crag.checksumSha256.isNotEmpty ? crag.checksumSha256 : null,
+    );
+  } else if (crag is CardCroquiDTO) {
+    cardDados = crag;
+  } else {
+    final ResumoPico pico = crag is MetadadosIndice
+        ? crag.paraResumoPico()
           ? crag
           : ResumoPico.deMapa(crag is Map<String, dynamic>
               ? crag
