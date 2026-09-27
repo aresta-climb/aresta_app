@@ -7,48 +7,7 @@ export '../../data/dtos/card_croqui_dto.dart';
 
 /// Apelido para manter compatibilidade com componentes legados que importam [CardCroquiViewModel].
 ///
-  /// Texto formatado de distância relativa do usuário (ex: '350m' ou '12.4km'), se disponível.
-  final String? textoDistancia;
-
-  /// Caminho opcional da imagem de capa local ou remota.
-  final String? caminhoCapa;
-
-  /// Hash SHA-256 opcional para validação de integridade e cache de imagem.
-  final String? checksumSha256;
-
-  const CardCroquiViewModel({
-    required this.id,
-    required this.titulo,
-    this.localizacao = '',
-    required this.textoEstatisticas,
-    required this.caminhoMiniatura,
-    this.salvoOffline = false,
-    this.textoDistancia,
-    this.caminhoCapa,
-    this.checksumSha256,
-  });
-}
-
-/// Mapeia uma entidade de catálogo [MetadadosIndice] para o modelo de apresentação [CardCroquiViewModel].
-CardCroquiViewModel mapearMetadadosParaCard(
-  MetadadosIndice metadados, {
-  bool salvoOffline = false,
-  String? textoDistancia,
-  bool estatisticasDetalhadas = false,
-}) {
-  final String id = metadados.id;
-  final String titulo =
-      metadados.nome.trim().isEmpty ? 'SEM NOME' : metadados.nome.trim().toUpperCase();
-  final String localizacao = metadados.localizacaoFormatada.toUpperCase();
-  final String caminhoMiniatura = 'thumbnails/$id.webp';
-  final String? checksumSha256 =
-      metadados.hasChecksumSha256Thumbnail() ? metadados.checksumSha256Thumbnail : null;
-
-  String textoEstatisticas = '0 setores • 0 escaladas';
-  if (metadados.hasPrecomputados()) {
-    final p = metadados.precomputados;
-    final setores = p.totalSetores;
-    final vias = p.totalEscaladas;
+/// O modelo canônico de transferência de dados para Dumb UI agora reside em [CardCroquiDTO].
     textoEstatisticas = '$setores setores • $vias escaladas';
 
     if (estatisticasDetalhadas) {
