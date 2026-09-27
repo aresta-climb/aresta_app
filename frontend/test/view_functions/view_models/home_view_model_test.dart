@@ -55,3 +55,31 @@ void main() {
           caminhoRelativo: 'sp/bau',
           localizacao: Coordenada(
             latitude: -226844440,
+            longitude: -456633330,
+          ),
+          precomputados: PrecomputadosResumoCroqui(
+            totalSetores: 4,
+            totalEscaladas: 40,
+          ),
+        ),
+        ResumoCroqui(
+          id: 'cuscuzeiro',
+          nome: 'Cuscuzeiro',
+          caminhoRelativo: 'sp/cuscuzeiro',
+          localizacao: Coordenada(
+            latitude: -221000000,
+            longitude: -477000000,
+          ),
+          precomputados: PrecomputadosResumoCroqui(
+            totalSetores: 2,
+            totalEscaladas: 20,
+          ),
+        ),
+      ];
+
+      repositorio.indiceData.value = Indice(croquis: picosIndice);
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: picosIndice,
+      );
+
+      // Usuário próximo a São Bento do Sapucaí (perto da Pedra do Baú)
