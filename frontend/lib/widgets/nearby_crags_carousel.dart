@@ -445,6 +445,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final picos = widget.viewModel.picosProximos;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -461,7 +463,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
                   letterSpacing: 1.1,
                 ),
               ),
-              if (_closestCrags.isNotEmpty) ...[
+              if (picos.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Icon(
                   Icons.location_on,
@@ -479,8 +481,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   }
 
   Widget _buildContent() {
-    final isDatasetLoading =
-        DatasetRepository.instance?.activeDataset.value == null;
+    final isDatasetLoading = widget.viewModel.carregando;
 
     if (_isLoading || isDatasetLoading) {
       return Center(
@@ -554,7 +555,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       );
     }
 
-    if (_closestCrags.isEmpty) {
+    final picos = widget.viewModel.picosProximos;
+    if (picos.isEmpty) {
       return Center(
         child: Text(
           'Nenhum pico com localização encontrada.',
@@ -563,18 +565,12 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       );
     }
 
-    return ValueListenableBuilder<TopoDataset?>(
-      valueListenable:
-          DatasetRepository.instance?.activeDataset ?? ValueNotifier(null),
-      builder: (context, dataset, child) {
-        final int? totalItens =
-            _closestCrags.length > 1 ? null : _closestCrags.length;
+    final int? totalItens = picos.length > 1 ? null : picos.length;
 
-        return ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          scrollDirection: Axis.horizontal,
-          itemCount: totalItens,
-          padding: const EdgeInsets.only(left: 24, right: 8),
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      scrollDirection: Axis.horizontal,
+      itemCount: totalItens,
           itemBuilder: (context, index) {
             final int indiceReal = NearbyCragsCarousel.calcularIndiceCircular(
               index,
