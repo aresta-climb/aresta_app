@@ -126,3 +126,35 @@ class HomeViewModel extends ChangeNotifier {
   /// Aciona o download dos dados de um pico específico em segundo plano.
   Future<bool> baixarPico(String picoId) async {
     final indice = datasetRepo.indiceData.value;
+    if (indice != null) {
+      final resumos = indice.croquis.where((r) => r.id == picoId).toList();
+      if (resumos.isNotEmpty) {
+        final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
+        return await servicoDownload.executarDownload(resumos.first);
+      }
+    }
+    final resumoFallback = ResumoCroqui()
+      ..id = picoId
+      ..nome = picoId;
+    return await syncService.downloadCrag(resumoFallback);
+  }
+
+  /// Abre a tela de detalhes de um pico a partir do seu identificador único.
+  Future<void> abrirPico(BuildContext context, String picoId) async {
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return;
+
+    dynamic pico;
+    if (dataset.metadadosDisponiveis.any((m) => m.id == picoId)) {
+      pico = dataset.metadadosDisponiveis.firstWhere((m) => m.id == picoId);
+    } else if (dataset.picosDisponiveis.any((p) => p.id == picoId)) {
+      pico = dataset.picosDisponiveis.firstWhere((p) => p.id == picoId);
+    } else if (dataset.availablePicos.any((p) => (p is Map ? p['id'] : p.id) == picoId)) {
+      pico = dataset.availablePicos.firstWhere((p) => (p is Map ? p['id'] : p.id) == picoId);
+    } else {
+      pico = ResumoCroqui(id: picoId);
+    }
+
+    await handlePicoSelection(context, datasetRepo, pico, source: 'home');
+  }
+}
