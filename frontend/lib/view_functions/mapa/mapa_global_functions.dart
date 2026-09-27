@@ -43,10 +43,23 @@ void showCragModal({
   } else {
     final ResumoPico pico = crag is MetadadosIndice
         ? crag.paraResumoPico()
-          ? crag
-          : ResumoPico.deMapa(crag is Map<String, dynamic>
-              ? crag
-              : Map<String, dynamic>.from(crag as Map)));
+        : (crag is ResumoPico
+            ? crag
+            : ResumoPico.deMapa(crag is Map<String, dynamic>
+                ? crag
+                : Map<String, dynamic>.from(crag as Map)));
+    cardDados = CardCroquiDTO(
+      id: pico.id,
+      titulo: pico.nome.toUpperCase(),
+      localizacao: pico.local.toUpperCase(),
+      textoEstatisticas: pico.estatisticas != null
+          ? '${pico.estatisticas!.totalSetores} setores • ${pico.estatisticas!.totalVias} escaladas'
+          : '0 setores • 0 escaladas',
+      caminhoMiniatura: pico.thumbnailUrl.isNotEmpty ? pico.thumbnailUrl : 'thumbnails/${pico.id}.webp',
+      salvoOffline: pico.isDownloaded,
+      checksumSha256: pico.checksum.isNotEmpty ? pico.checksum : null,
+    );
+  }
 
   showModalBottomSheet(
     context: context,
@@ -65,10 +78,10 @@ void showCragModal({
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: buildCragListItem(
-                  pico,
-                  downloadingCrags,
-                  () {
+                child: CragCard(
+                  dados: cardDados,
+                  downloadingCrags: downloadingCrags,
+                  onDownload: () {
                     onDownload();
                     Navigator.of(context).pop();
                   },
@@ -147,16 +160,19 @@ Set<Marker> buildMapMarkers({
       break;
   }
 
-  final List<ResumoPico> picos;
-  if (crags is List<ResumoPico>) {
-    picos = crags;
-  } else if (crags is List) {
-    picos = crags.map((item) {
-      if (item is ResumoPico) return item;
-      if (item is MetadadosIndice) return item.paraResumoPico();
-      if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
-      if (item is Map) return ResumoPico.deMapa(Map<String, dynamic>.from(item));
-      return const ResumoPico(id: '', nome: '', local: '');
+  if (crags is Iterable) {
+    for (final crag in crags) {
+      final double? lat;
+      final double? lng;
+      final String id;
+
+      if (crag is MapaPicoDTO) {
+        lat = crag.latitude;
+        lng = crag.longitude;
+        id = crag.id;
+      } else if (crag is ResumoPico) {
+        lat = crag.latitude;
+        lng = crag.longitude;
     }).toList();
   } else {
     picos = const [];
