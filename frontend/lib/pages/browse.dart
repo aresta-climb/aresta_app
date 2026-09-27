@@ -169,34 +169,24 @@ class BrowsePage extends StatelessWidget {
             final isEditor = viewModel.modoEditorAtivo;
 
             final addCallback = isEditor
-                ? () => mostrarDialogConexao(
-                      context,
-                      viewModel.datasetRepo,
-                      titulo: 'Trocar serving',
-                    )
+                ? () => viewModel.trocarServing(context)
                 : null;
 
             return buildBrowseBody(
               context,
               filteredCrags,
-              viewModel.syncService.downloadingCrags,
+              viewModel.downloadingCrags,
               isDownloadedChecker: viewModel.estaBaixado,
               onSearchChanged: viewModel.alterarTermoBusca,
-              onDownload: handleDownload,
-              onOpen: (crag) => handlePicoSelection(
-                context,
-                viewModel.datasetRepo,
-                crag,
-                source: 'explorar',
-              ),
-              onAddExperimental: addCallback,
-              onSyncPressed: () async {
-                await handleSyncServing(
-                  context,
-                  viewModel.datasetRepo,
-                  viewModel.syncService,
-                );
+              onDownload: (crag) => handleDownload(context, crag),
+              onOpen: (crag) {
+                final String id = crag is MetadadosIndice
+                    ? crag.id
+                    : (crag is CardCroquiDTO ? crag.id : crag['id']?.toString() ?? '');
+                viewModel.abrirPico(context, id);
               },
+              onAddExperimental: addCallback,
+              onSyncPressed: () async => await viewModel.sincronizarServing(context),
               onFilterPressed: () => _mostrarFiltroOrdenacao(context),
             );
           },
