@@ -184,24 +184,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   void _aoAtualizarViewModel() {
     if (mounted) setState(() {});
   }
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is PicoProximo) {
-      resumoDireto = crag.pico;
-      id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is ResumoPico) {
-      resumoDireto = null;
-      id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is Map) {
-      resumoDireto = null;
-      id = crag['id']?.toString() ?? '';
-      name = crag['nome']?.toString() ?? 'Pico';
-    } else {
-      return;
-    }
 
-    if (await widget.syncService.isNetworkDisabled()) {
+  Future<void> _handleDownload(String id, String name) async {
+    if (await widget.viewModel.syncService.isNetworkDisabled()) {
       if (mounted) {
         showDeprecatedAppVersionSnackBar(context);
       }
