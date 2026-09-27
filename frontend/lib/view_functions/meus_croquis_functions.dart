@@ -33,9 +33,8 @@ class OfflineCragCard extends StatelessWidget {
     return OfflineCragCard(
       key: key,
       dados: mapearCroquiParaCard(crag),
-      datasetRepo: datasetRepo,
-      syncService: syncService,
-      croquiOriginal: crag,
+      onAbrir: onAbrir,
+      onExcluir: onExcluir,
     );
   }
 
@@ -133,24 +132,6 @@ class OfflineCragCard extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final primeiraVisita = await RegistroPrimeiraVisita.instancia
-                        .registrarEVerificarPrimeiraVisita(id);
-                    TelemetryService.instance.logAcaoCroqui(
-                      id,
-                      'abrir_croqui',
-                      origem: 'meus_croquis',
-                      modoAcesso: 'offline',
-                      primeiraVisita: primeiraVisita,
-                    );
-
-                    Croqui? croqui =
-                        croquiOriginal ?? await datasetRepo.getCroqui(id);
-
-                    if (!context.mounted) return;
-
-                    if (croqui != null && croqui.picos.isNotEmpty) {
-                      datasetRepo.gerenciadorSessaoOnline
                           .registrarCroquiOnline(id, croqui);
                       datasetRepo.indexarMidiasDoCroqui(id, croqui);
 
