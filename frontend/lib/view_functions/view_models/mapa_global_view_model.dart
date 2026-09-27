@@ -83,3 +83,32 @@ class MapaGlobalViewModel extends ChangeNotifier {
               estaBaixado: estaBaixado(m.id),
               baseUrl: baseUrl,
             ))
+        .where((dto) => dto.temCoordenadasValidas)
+        .toList();
+  }
+
+  /// Aciona o download dos dados binários de um pico pelo seu identificador único.
+  Future<bool> baixarPico(String picoId) async {
+    final indice = datasetRepo.indiceData.value;
+    if (indice == null) return false;
+
+    final resumos = indice.croquis.where((r) => r.id == picoId).toList();
+    if (resumos.isEmpty) return false;
+
+    final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
+    return await servicoDownload.executarDownload(resumos.first);
+  }
+
+  /// Abre a página de detalhes de um pico selecionado a partir do mapa.
+  Future<void> abrirPico(BuildContext context, String picoId) async {
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return;
+
+    final meta = dataset.metadadosDisponiveis.firstWhere(
+      (m) => m.id == picoId,
+      orElse: () => ResumoCroqui(id: picoId),
+    );
+
+    await handlePicoSelection(context, datasetRepo, meta, source: 'mapa');
+  }
+}
