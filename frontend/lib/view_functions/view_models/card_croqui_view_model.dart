@@ -8,27 +8,6 @@ export '../../data/dtos/card_croqui_dto.dart';
 /// Apelido para manter compatibilidade com componentes legados que importam [CardCroquiViewModel].
 ///
 /// O modelo canônico de transferência de dados para Dumb UI agora reside em [CardCroquiDTO].
-    textoEstatisticas = '$setores setores • $vias escaladas';
-
-    if (estatisticasDetalhadas) {
-      final List<String> modalidades = [];
-      if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
-      if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
-      if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
-      if (p.totalMultiplasEnfiadas > 0) {
-        modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
-      }
-      if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
-      if (modalidades.isNotEmpty) {
-        textoEstatisticas += ' (${modalidades.join(', ')})';
-      }
-    }
-  }
-
-  return CardCroquiViewModel(
-    id: id,
-    titulo: titulo,
-    localizacao: localizacao,
     textoEstatisticas: textoEstatisticas,
     caminhoMiniatura: caminhoMiniatura,
     salvoOffline: salvoOffline,
