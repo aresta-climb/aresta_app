@@ -91,4 +91,46 @@ class MeusCroquisViewModel extends ChangeNotifier {
 
     if (croqui != null && croqui.picos.isNotEmpty) {
       datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(cragId, croqui);
+      datasetRepo.indexarMidiasDoCroqui(cragId, croqui);
+
+      AppNav.toPico(
+        context,
+        pico: croqui.picos.first,
+        croqui: croqui,
+        cragId: cragId,
+      );
+      datasetRepo.updatePriorityAfterNavigation(cragId);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao abrir o guia offline.'),
+        ),
+      );
+    }
+  }
+
+  /// Exibe diálogo de confirmação de exclusão e remove o croqui localmente se confirmado.
+  Future<void> excluirCroqui(BuildContext context, String cragId, String nome) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.colors.caveShadow,
+        title: const Text('Excluir?', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Deseja excluir o guia de $nome?',
+          style: TextStyle(color: context.colors.ashGrey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'CANCELAR',
+              style: TextStyle(color: context.colors.ashGrey),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
+          ),
+        ],
 }
