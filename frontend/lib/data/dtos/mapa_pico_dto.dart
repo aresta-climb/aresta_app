@@ -89,3 +89,34 @@ class MapaPicoDTO {
         : metadados.caminhoRelativo;
 
     return MapaPicoDTO(
+      id: metadados.id,
+      nome: metadados.nome.isEmpty ? 'Pico' : metadados.nome,
+      latitude: lat,
+      longitude: lon,
+      estaBaixado: estaBaixado,
+      totalSetores: setores,
+      totalEscaladas: escaladas,
+      caminhoMiniatura: 'thumbnails/${metadados.id}.webp',
+      localizacao: metadados.localizacaoFormatada,
+      descricao: metadados.descricao,
+      urlDownload: url,
+      checksumSha256: metadados.checksumSha256Croqui,
+    );
+  }
+
+  /// Constrói um [MapaPicoDTO] a partir de um mapa de dados legados ou mocks.
+  factory MapaPicoDTO.deMapa(
+    Map<String, dynamic> mapa, {
+    bool estaBaixado = false,
+  }) {
+    return MapaPicoDTO(
+      id: mapa['id']?.toString() ?? '',
+      nome: mapa['nome']?.toString() ?? 'Pico',
+      latitude: (mapa['latitude'] as num?)?.toDouble(),
+      longitude: (mapa['longitude'] as num?)?.toDouble(),
+      estaBaixado: estaBaixado || (mapa['isDownloaded'] == true),
+      localizacao: mapa['local']?.toString() ?? '',
+      caminhoMiniatura: mapa['thumbnailUrl']?.toString() ?? '',
+    );
+  }
+}
