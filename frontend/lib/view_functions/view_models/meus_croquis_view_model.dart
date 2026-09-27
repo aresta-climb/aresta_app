@@ -133,4 +133,25 @@ class MeusCroquisViewModel extends ChangeNotifier {
             child: const Text('EXCLUIR', style: TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      final success = await datasetRepo.deleteCrag(cragId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                success ? 'Guia excluído.' : 'Erro ao excluir guia.',
+              ),
+              backgroundColor: success
+                  ? context.colors.dryMoss
+                  : Theme.of(context).colorScheme.error,
+            ),
+          );
+      }
+    }
+  }
 }
