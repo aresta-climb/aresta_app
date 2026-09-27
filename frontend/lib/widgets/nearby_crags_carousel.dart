@@ -37,11 +37,24 @@ class PicoProximo {
     if (pico is PicoProximoDTO) return (pico as PicoProximoDTO).nome;
     if (pico is Map) return pico['nome']?.toString() ?? '';
     return '';
-  double? get latitude => pico.latitude;
-  double? get longitude => pico.longitude;
+  }
+
+  double? get latitude {
+    if (pico is MetadadosIndice) return (pico as MetadadosIndice).latitude;
+    if (pico is ResumoPico) return (pico as ResumoPico).latitude;
+    if (pico is Map) return (pico['latitude'] as num?)?.toDouble();
+    return null;
+  }
+
+  double? get longitude {
+    if (pico is MetadadosIndice) return (pico as MetadadosIndice).longitude;
+    if (pico is ResumoPico) return (pico as ResumoPico).longitude;
+    if (pico is Map) return (pico['longitude'] as num?)?.toDouble();
+    return null;
+  }
 
   PicoProximo copyWith({
-    MetadadosIndice? pico,
+    dynamic pico,
     double? distanciaKm,
   }) {
     return PicoProximo(
