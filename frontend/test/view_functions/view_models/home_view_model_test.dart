@@ -1,0 +1,28 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'dart:io';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/view_functions/view_models/home_view_model.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory tempDir;
+  late EditorDeCroqui editor;
+  late DatasetRepository repositorio;
+  late SyncService servicoSync;
+
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('aresta_home_vm_test_');
+    editor = EditorDeCroqui();
+    repositorio = DatasetRepository(editorDeCroqui: editor);
+    servicoSync = SyncService(datasetRepository: repositorio);
+  });
+
+  tearDown(() {
+    if (tempDir.existsSync()) {
