@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../data/dtos/card_croqui_dto.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/view_models/browse_view_model.dart';
-import '../view_functions/common_functions.dart';
-import '../view_functions/home_functions.dart';
-import '../view_functions/settings_functions.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
 import '../theme/app_colors.dart';
 
 /// Re-exportação de [OrdemOrdenacaoPico] para compatibilidade de tipos.
@@ -18,25 +14,14 @@ typedef SortOrder = OrdemOrdenacaoPico;
 /// Uma página que permite aos usuários explorar e pesquisar picos disponíveis (Dumb UI).
 ///
 /// Renderiza visualmente o catálogo e delega buscas, filtros e ordenação ao [BrowseViewModel].
-class BrowsePage extends StatefulWidget {
-  /// ViewModel opcional. Se não fornecido, será construído a partir de [datasetRepo] e [syncService].
-  final BrowseViewModel? viewModel;
-
-  /// Repositório de dados utilizado caso o ViewModel não seja fornecido diretamente.
-  final DatasetRepository? datasetRepo;
-
-  /// Serviço de sincronização utilizado caso o ViewModel não seja fornecido diretamente.
-  final SyncService? syncService;
+class BrowsePage extends StatelessWidget {
+  /// ViewModel de apresentação e negócios da tela de catálogo.
+  final BrowseViewModel viewModel;
 
   const BrowsePage({
     super.key,
-    this.viewModel,
-    this.datasetRepo,
-    this.syncService,
-  }) : assert(
-         viewModel != null || (datasetRepo != null && syncService != null),
-         'É necessário fornecer viewModel ou datasetRepo e syncService.',
-       );
+    required this.viewModel,
+  });
 
   @override
   State<BrowsePage> createState() => _BrowsePageState();
