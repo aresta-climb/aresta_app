@@ -571,32 +571,18 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       physics: const BouncingScrollPhysics(),
       scrollDirection: Axis.horizontal,
       itemCount: totalItens,
-          itemBuilder: (context, index) {
-            final int indiceReal = NearbyCragsCarousel.calcularIndiceCircular(
-              index,
-              _closestCrags.length,
-            );
-            final picoBase = _closestCrags[indiceReal];
-            final distanceStr = NearbyCragsCarousel.formatarDistancia(
-              picoBase.distanciaKm * 1000,
-            );
+      padding: const EdgeInsets.only(left: 24, right: 8),
+      itemBuilder: (context, index) {
+        final int indiceReal = NearbyCragsCarousel.calcularIndiceCircular(
+          index,
+          picos.length,
+        );
+        final pico = picos[indiceReal];
 
-            final isDownloaded =
-                dataset?.croquisBaixados.any(
-                  (c) => c.id == picoBase.id,
-                ) ??
-                dataset?.downloadedPicos.any(
-                  (p) => p.id == picoBase.id,
-                ) ??
-                false;
-
-            return Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: SizedBox(
-                width: 340,
-                child: CragCard.deMetadados(
-                  metadados: picoBase.pico,
-                  isDownloaded: isDownloaded,
+        return Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: SizedBox(
+            width: 340,
                   distanceStr: distanceStr,
                   downloadingCrags: widget.syncService.downloadingCrags,
                   onDownload: () => handleDownload(picoBase.pico),
