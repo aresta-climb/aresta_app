@@ -173,16 +173,20 @@ Set<Marker> buildMapMarkers({
       } else if (crag is ResumoPico) {
         lat = crag.latitude;
         lng = crag.longitude;
-    }).toList();
-  } else {
-    picos = const [];
-  }
+        id = crag.id;
+      } else if (crag is MetadadosIndice) {
+        lat = crag.latitude;
+        lng = crag.longitude;
+        id = crag.id;
+      } else if (crag is Map) {
+        lat = (crag['latitude'] as num?)?.toDouble();
+        lng = (crag['longitude'] as num?)?.toDouble();
+        id = crag['id']?.toString() ?? '';
+      } else {
+        continue;
+      }
 
-  for (final crag in picos) {
-    if (crag.latitude != null && crag.longitude != null) {
-      final double lat = crag.latitude!;
-      final double lng = crag.longitude!;
-      final String id = crag.id;
+      if (lat != null && lng != null) {
 
       // Marcador do pino (compacto, sem asas transparentes de texto)
       markers.add(
@@ -221,6 +225,7 @@ Set<Marker> buildMapMarkers({
         );
       }
     }
+  }
   }
 
   return markers;
