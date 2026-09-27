@@ -62,3 +62,35 @@ class HomeViewModel extends ChangeNotifier {
   /// Verifica se um pico específico já foi baixado para o armazenamento local.
   bool estaBaixado(String picoId) {
     final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return false;
+    return dataset.croquisBaixados.any((c) => c.id == picoId) ||
+        dataset.picosBaixados.any((p) => p.id == picoId);
+  }
+
+  /// Retorna os picos mais próximos ao usuário formatados como [PicoProximoDTO].
+  List<PicoProximoDTO> get picosProximos {
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return const [];
+
+    final availablePicos = dataset.metadadosDisponiveis.isNotEmpty
+        ? dataset.metadadosDisponiveis
+        : (dataset.picosDisponiveis.isNotEmpty
+            ? dataset.picosDisponiveis
+            : dataset.availablePicos);
+    if (availablePicos.isEmpty) return const [];
+
+    if (_userLat == null || _userLon == null) {
+      return const [];
+    }
+
+    final proximos = NearbyCragsCarousel.calcularPicosMaisProximos(
+      userLat: _userLat!,
+      userLon: _userLon!,
+      picosDisponiveis: availablePicos,
+    );
+
+    return proximos.map((item) {
+      final pico = item.pico;
+      if (pico is MetadadosIndice) {
+        return PicoProximoDTO.deMetadados(
+          metadados: pico,
