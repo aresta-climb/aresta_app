@@ -242,14 +242,18 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
                   _handleOpen(crag);
                 }
               },
-        ),
-        myLocationEnabled: true,
-        myLocationButtonEnabled: false,
-        mapToolbarEnabled: false,
-        zoomControlsEnabled: false,
-        onMapCreated: (controller) {
-          _mapController = controller;
-        },
+              macroIcon: _macroIcon,
+              regionalIcon: _regionalIcon,
+              customIcon: _customIcon,
+              textIcons: _textIcons,
+              currentZoom: _currentZoom,
+              faixaZoom: _currentFaixaZoom,
+            ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            mapToolbarEnabled: false,
+            zoomControlsEnabled: false,
+            onMapCreated: (controller) {
         onCameraMove: (CameraPosition position) {
           if (mounted) {
             try {
