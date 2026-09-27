@@ -71,4 +71,24 @@ class MeusCroquisViewModel extends ChangeNotifier {
   Future<void> sincronizarManual(BuildContext context) async {
     await handleManualSync(context, datasetRepo, syncService);
   }
+
+  /// Carrega o croqui salvo offline e realiza a navegação para os detalhes do pico.
+  Future<void> abrirCroqui(BuildContext context, String cragId, {Croqui? croquiPrecarregado}) async {
+    final primeiraVisita =
+        await RegistroPrimeiraVisita.instancia.registrarEVerificarPrimeiraVisita(cragId);
+
+    TelemetryService.instance.logAcaoCroqui(
+      cragId,
+      'abrir_croqui',
+      origem: 'meus_croquis',
+      modoAcesso: 'offline',
+      primeiraVisita: primeiraVisita,
+    );
+
+    Croqui? croqui = croquiPrecarregado ?? await datasetRepo.getCroqui(cragId);
+
+    if (!context.mounted) return;
+
+    if (croqui != null && croqui.picos.isNotEmpty) {
+      datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(cragId, croqui);
 }
