@@ -53,3 +53,31 @@ void main() {
       );
 
       final dto = PicoProximoDTO.deMetadados(
+        metadados: metadados,
+        distanciaKm: 5.67,
+        estaBaixado: true,
+      );
+
+      expect(dto.id, equals('cipó'));
+      expect(dto.nome, equals('Serra do Cipó'));
+      expect(dto.localizacao, equals('Minas Gerais'));
+      expect(dto.distanciaKm, equals(5.67));
+      expect(dto.distanciaFormatada, equals('5.7 km'));
+      expect(dto.caminhoMiniatura, equals('thumbnails/cipó.webp'));
+      expect(dto.estaBaixado, isTrue);
+      expect(dto.totalSetores, equals(10));
+      expect(dto.totalEscaladas, equals(150));
+    });
+
+    test('distanciaFormatada com valor nulo retorna string vazia', () {
+      const dto = PicoProximoDTO(
+        id: 'pico_sem_distancia',
+        nome: 'Pico Longe',
+        localizacao: 'Minas',
+        caminhoMiniatura: 'thumbnails/pico_sem_distancia.webp',
+      );
+
+      expect(dto.distanciaFormatada, isEmpty);
+    });
+  });
+}
