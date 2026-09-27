@@ -5,21 +5,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/view_functions/browse_functions.dart';
-import 'package:frontend/view_functions/common_functions.dart';
-import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/servico_download_segundo_plano.dart';
-import 'package:frontend/view_functions/home_functions.dart';
-import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
-import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:frontend/theme/app_colors.dart';
+import '../services/dataset/modelos/metadados_indice.dart';
+import '../services/dataset/modelos/resumo_pico.dart';
+import '../services/firebase/app_logger.dart';
+import '../theme/app_colors.dart';
+import '../view_functions/view_models/home_view_model.dart';
+import '../data/dtos/pico_proximo_dto.dart';
+import 'crag_card.dart';
 
 /// Representa um pico de escalada com distância calculada para exibição no carrossel.
 class PicoProximo {
-  final MetadadosIndice pico;
+  final dynamic pico;
   final double distanciaKm;
 
   const PicoProximo({
@@ -27,8 +23,20 @@ class PicoProximo {
     required this.distanciaKm,
   });
 
-  String get id => pico.id;
-  String get nome => pico.nome;
+  String get id {
+    if (pico is MetadadosIndice) return (pico as MetadadosIndice).id;
+    if (pico is ResumoPico) return (pico as ResumoPico).id;
+    if (pico is PicoProximoDTO) return (pico as PicoProximoDTO).id;
+    if (pico is Map) return pico['id']?.toString() ?? '';
+    return '';
+  }
+
+  String get nome {
+    if (pico is MetadadosIndice) return (pico as MetadadosIndice).nome;
+    if (pico is ResumoPico) return (pico as ResumoPico).nome;
+    if (pico is PicoProximoDTO) return (pico as PicoProximoDTO).nome;
+    if (pico is Map) return pico['nome']?.toString() ?? '';
+    return '';
   double? get latitude => pico.latitude;
   double? get longitude => pico.longitude;
 
