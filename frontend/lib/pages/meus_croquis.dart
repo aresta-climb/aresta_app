@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
+import '../data/dtos/card_croqui_dto.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../view_functions/meus_croquis_functions.dart';
 import '../view_functions/view_models/meus_croquis_view_model.dart';
 import '../view_functions/common_functions.dart';
@@ -13,25 +11,15 @@ import '../view_functions/common_functions.dart';
 /// Página de apresentação dos croquis armazenados offline (Dumb UI).
 ///
 /// Renderiza a interface a partir do estado gerenciado por [MeusCroquisViewModel],
-/// mantendo-se totalmente desacoplada de mensagens do Protobuf e lógica de sincronização.
+/// mantendo-se totalmente desacoplada de mensagens do Protobuf, serviços de rede e repositórios.
 class MeusCroquisPage extends StatelessWidget {
   /// ViewModel de apresentação de croquis salvos.
   final MeusCroquisViewModel viewModel;
 
-  MeusCroquisPage({
+  const MeusCroquisPage({
     super.key,
-    MeusCroquisViewModel? viewModel,
-    DatasetRepository? datasetRepo,
-    SyncService? syncService,
-  }) : assert(
-         viewModel != null || (datasetRepo != null && syncService != null),
-         'É necessário fornecer viewModel ou datasetRepo e syncService.',
-       ),
-       viewModel = viewModel ??
-            MeusCroquisViewModel(
-              datasetRepo: datasetRepo!,
-              syncService: syncService!,
-            );
+    required this.viewModel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -93,8 +81,7 @@ class MeusCroquisPage extends StatelessWidget {
               child: ListenableBuilder(
                 listenable: viewModel,
                 builder: (context, _) {
-                  final List<CardCroquiViewModel> croquis =
-                      viewModel.croquisSalvos;
+                  final List<CardCroquiDTO> croquis = viewModel.croquisSalvos;
 
                   if (croquis.isEmpty) {
                     return Center(
@@ -109,11 +96,15 @@ class MeusCroquisPage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: croquis.length,
                     itemBuilder: (context, index) {
-                      final CardCroquiViewModel dados = croquis[index];
+                      final CardCroquiDTO dados = croquis[index];
                       return OfflineCragCard(
                         dados: dados,
-                        datasetRepo: viewModel.datasetRepo,
-                        syncService: viewModel.syncService,
+                        onAbrir: () => viewModel.abrirCroqui(context, dados.id),
+                        onExcluir: () => viewModel.excluirCroqui(
+                          context,
+                          dados.id,
+                          dados.titulo,
+                        ),
                       );
                     },
                   );
