@@ -64,9 +64,11 @@ void main() {
       home: Theme(
         data: ThemeData(extensions: [AppColors.dark]),
         child: MeusCroquisPage(
-          datasetRepo: repositorio,
-          syncService: servicoSync,
-          viewModel: viewModel,
+          viewModel: viewModel ??
+              MeusCroquisViewModel(
+                datasetRepo: repositorio,
+                syncService: servicoSync,
+              ),
         ),
       ),
     );
