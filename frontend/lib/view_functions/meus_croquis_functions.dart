@@ -3,39 +3,32 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import 'view_models/card_croqui_view_model.dart';
-import '../services/dataset_repository.dart';
-import '../services/http/sync_service.dart';
+import '../data/dtos/card_croqui_dto.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
-import '../navigation/navigation_functions.dart';
-import '../services/firebase/telemetry_service.dart';
-import '../services/firebase/registro_primeira_visita.dart';
 
-/// Card interativo para exibição de um croqui baixado na aba Meus Croquis a partir de [CardCroquiViewModel] (Dumb UI).
+/// Card interativo para exibição de um croqui baixado na aba Meus Croquis a partir de [CardCroquiDTO] (Dumb UI).
 ///
-/// Não contém regras de negócio ou de formatação de entidades de dados, apenas renderiza visualmente
+/// Não contém regras de negócio ou de persistência de dados, apenas renderiza visualmente
 /// as informações já preparadas e delega ações do usuário via callbacks.
 class OfflineCragCard extends StatelessWidget {
-  final CardCroquiViewModel dados;
-  final DatasetRepository datasetRepo;
-  final SyncService syncService;
-  final Croqui? croquiOriginal;
+  final CardCroquiDTO dados;
+  final VoidCallback onAbrir;
+  final VoidCallback onExcluir;
 
   const OfflineCragCard({
     super.key,
     required this.dados,
-    required this.datasetRepo,
-    required this.syncService,
-    this.croquiOriginal,
+    required this.onAbrir,
+    required this.onExcluir,
   });
 
-  /// Construtor de conveniência que recebe diretamente a entidade [Croqui] e mapeia para [CardCroquiViewModel].
+  /// Construtor de conveniência que recebe diretamente a entidade [Croqui] e mapeia para [CardCroquiDTO].
   factory OfflineCragCard.deCroqui({
     Key? key,
     required Croqui crag,
-    required DatasetRepository datasetRepo,
-    required SyncService syncService,
+    required VoidCallback onAbrir,
+    required VoidCallback onExcluir,
   }) {
     return OfflineCragCard(
       key: key,
