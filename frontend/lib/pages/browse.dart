@@ -23,20 +23,21 @@ class BrowsePage extends StatelessWidget {
     required this.viewModel,
   });
 
-  @override
-  State<BrowsePage> createState() => _BrowsePageState();
-}
+  /// Aciona o download dos dados binários de um pico (.binarypb) com feedback visual.
+  @visibleForTesting
+  Future<void> handleDownload(BuildContext context, dynamic crag) async {
+    final String id;
+    final String name;
 
-class _BrowsePageState extends State<BrowsePage> {
-  late final BrowseViewModel _viewModel;
-  late final bool _criouViewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.viewModel != null) {
-      _viewModel = widget.viewModel!;
-      _criouViewModel = false;
+    if (crag is MetadadosIndice) {
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is CardCroquiDTO) {
+      id = crag.id;
+      name = crag.titulo.isEmpty ? 'Pico' : crag.titulo;
+    } else if (crag is Map) {
+      id = crag['id']?.toString() ?? '';
+      name = crag['nome']?.toString() ?? 'Pico';
     } else {
       _viewModel = BrowseViewModel(
         datasetRepo: widget.datasetRepo!,
