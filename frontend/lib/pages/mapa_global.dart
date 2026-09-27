@@ -21,42 +21,15 @@ class MapaGlobalPage extends StatefulWidget {
 
   const MapaGlobalPage({
     super.key,
-    required dynamic crags,
-    required this.datasetRepo,
-    required this.syncService,
-  }) : crags = _normalizar(crags);
-
-  static List<ResumoPico> _normalizar(dynamic lista) {
-    if (lista == null) return const [];
-    if (lista is List<ResumoPico>) return List.unmodifiable(lista);
-    if (lista is List) {
-      return List.unmodifiable(
-        lista.map((item) {
-          if (item is ResumoPico) return item;
-          if (item is Map<String, dynamic>) return ResumoPico.deMapa(item);
-          if (item is Map) {
-            return ResumoPico.deMapa(Map<String, dynamic>.from(item));
-          }
-          return const ResumoPico(id: '', nome: '', local: '');
-        }),
-      );
-    }
-    return const [];
-  }
+    required this.viewModel,
+  });
 
   @override
   State<MapaGlobalPage> createState() => _MapaGlobalPageState();
 }
 
 class _MapaGlobalPageState extends State<MapaGlobalPage> {
-  void _handleDownload(dynamic crag) async {
-    final ResumoPico pico = crag is ResumoPico
-        ? crag
-        : ResumoPico.deMapa(
-            crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map),
-          );
+  void _handleDownload(MapaPicoDTO pico) async {
     final name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
 
