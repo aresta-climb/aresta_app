@@ -21,3 +21,27 @@ void main() {
     repositorio = DatasetRepository(editorDeCroqui: editor);
     viewModel = SettingsViewModel(
       datasetRepo: repositorio,
+      editorDeCroqui: editor,
+    );
+  });
+
+  tearDown(() {
+    viewModel.dispose();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
+  group('SettingsViewModel Tests', () {
+    test('reflete estado de modoExperimental e editorUrl', () {
+      expect(viewModel.modoExperimental, isFalse);
+      expect(viewModel.editorUrl, isNull);
+
+      viewModel.alterarModoExperimental(true);
+      expect(viewModel.modoExperimental, isTrue);
+
+      viewModel.alterarEditorUrl('http://192.168.1.10:8080');
+      expect(viewModel.editorUrl, equals('http://192.168.1.10:8080'));
+    });
+  });
+}
