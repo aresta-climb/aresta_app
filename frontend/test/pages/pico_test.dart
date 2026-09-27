@@ -245,7 +245,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico Teste',
           croqui: Croqui(),
           cragId: 'crag1',
@@ -281,7 +281,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico com Crédito',
           croqui: croqui,
           cragId: 'crag_credito',
@@ -302,7 +302,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico sem Crédito',
           croqui: croqui,
           cragId: 'crag_sem_credito',
@@ -322,7 +322,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico da Vó Gusta',
           croqui: croqui,
           cragId: 'crag_vo_gusta',
@@ -343,7 +343,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()
             ..nome = 'Pico Teste'
             ..estado = 'MG',
@@ -390,7 +390,7 @@ void main() {
           datasetRepo: datasetRepo,
           syncService: syncService,
           treeController: treeController,
-          child: PicoDetailsPage(
+          child: _criarPicoDetailsPage(
             pico: Pico()..nome = 'Pico Online',
             croqui: Croqui(),
             cragId: 'crag_online',
@@ -427,7 +427,7 @@ void main() {
           datasetRepo: datasetRepo,
           syncService: syncService,
           treeController: treeController,
-          child: PicoDetailsPage(
+          child: _criarPicoDetailsPage(
             pico: Pico()..nome = 'Pico Online Não Baixado',
             croqui: Croqui(),
             cragId: 'crag_online_nao_baixado',
@@ -474,7 +474,7 @@ void main() {
           datasetRepo: datasetRepo,
           syncService: syncService,
           treeController: treeController,
-          child: PicoDetailsPage(
+          child: _criarPicoDetailsPage(
             pico: Pico()..nome = 'Pico Online',
             croqui: Croqui(),
             cragId: 'crag_online_teste',
@@ -529,7 +529,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico Descarte',
           croqui: Croqui(),
           cragId: 'crag_descarte',
@@ -575,7 +575,7 @@ void main() {
             syncService: syncService,
             treeController: tree,
             child: Scaffold(
-              body: PicoDetailsPage(
+              body: _criarPicoDetailsPage(
                 pico: Pico()..nome = 'Pico do Baú',
                 croqui: Croqui(),
                 cragId: 'crag1',
@@ -628,7 +628,7 @@ void main() {
             syncService: syncService,
             treeController: tree,
             child: Scaffold(
-              body: PicoDetailsPage(
+              body: _criarPicoDetailsPage(
                 pico: Pico()..nome = 'Pico do Baú',
                 croqui: Croqui(),
                 cragId: 'crag1',
@@ -688,7 +688,7 @@ void main() {
             syncService: syncService,
             treeController: tree,
             child: Scaffold(
-              body: PicoDetailsPage(
+              body: _criarPicoDetailsPage(
                 pico: Pico()..nome = 'Pico do Baú',
                 croqui: croqui,
                 cragId: 'crag1',
@@ -771,7 +771,7 @@ void main() {
             syncService: syncService,
             treeController: tree,
             child: Scaffold(
-              body: PicoDetailsPage(
+              body: _criarPicoDetailsPage(
                 pico: Pico()..nome = 'Pico Online',
                 croqui: Croqui(),
                 cragId: 'crag1',
@@ -815,7 +815,7 @@ void main() {
         MaterialApp(
           theme: construirTemaEscuro(),
           home: Scaffold(
-            body: PicoDetailsPage(
+            body: _criarPicoDetailsPage(
               pico: Pico()..nome = 'Pico Teste',
               croqui: Croqui(),
               cragId: 'crag1',
@@ -851,10 +851,6 @@ void main() {
           theme: construirTemaEscuro(),
           home: Scaffold(
             body: PicoDetailsPage(
-              pico: pico,
-              croqui: croqui,
-              cragId: 'crag_injetado',
-              datasetRepo: datasetRepo,
               viewModel: vm,
             ),
           ),
