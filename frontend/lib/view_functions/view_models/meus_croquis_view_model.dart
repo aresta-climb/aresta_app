@@ -2,15 +2,20 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/dtos/card_croqui_dto.dart';
+import '../../navigation/navigation_functions.dart';
 import '../../services/dataset_repository.dart';
+import '../../services/firebase/registro_primeira_visita.dart';
+import '../../services/firebase/telemetry_service.dart';
 import '../../services/http/sync_service.dart';
-import 'card_croqui_view_model.dart';
+import '../../theme/app_colors.dart';
 import '../common_functions.dart';
 
 /// Modelo de apresentação para a tela [MeusCroquisPage] (MVVM).
 ///
 /// Observa as atualizações do [DatasetRepository] e expõe a lista de croquis
-/// offline já transformados no modelo passivo [CardCroquiViewModel], mantendo a UI
+/// offline já transformados no modelo passivo [CardCroquiDTO], mantendo a UI
 /// livre de regras de negócio e acoplamento com Protobuf.
 class MeusCroquisViewModel extends ChangeNotifier {
   /// Repositório de dados locais e catálogo de croquis.
@@ -36,11 +41,27 @@ class MeusCroquisViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Retorna a lista de croquis salvos offline mapeados como [CardCroquiViewModel].
-  List<CardCroquiViewModel> get croquisSalvos {
+  /// Retorna a lista de croquis salvos offline mapeados como [CardCroquiDTO].
+  List<CardCroquiDTO> get croquisSalvos {
     final dataset = datasetRepo.activeDataset.value;
-    final croquis = dataset?.croquisBaixados ?? [];
-    return croquis.map(mapearCroquiParaCard).toList();
+    if (dataset == null) return const [];
+    if (dataset.croquisBaixados.isNotEmpty) {
+      return dataset.croquisBaixados.map(mapearCroquiParaCard).toList();
+    }
+    return dataset.picosBaixados.map((pico) {
+      final stats = pico.estatisticas;
+      final textoStats = stats != null
+          ? '${stats.totalSetores} setores • ${stats.totalVias} escaladas'
+          : '';
+      return CardCroquiDTO(
+        id: pico.id,
+        titulo: pico.nome,
+        localizacao: pico.local,
+        textoEstatisticas: textoStats,
+        caminhoMiniatura: pico.thumbnailUrl,
+        salvoOffline: true,
+      );
+    }).toList();
   }
 
   /// Indica se não há nenhum croqui salvo offline.
