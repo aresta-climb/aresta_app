@@ -187,31 +187,18 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     }
   }
 
-  void _handleOpen(dynamic crag) {
-    final ResumoPico pico = crag is ResumoPico
-        ? crag
-        : ResumoPico.deMapa(
-            crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map),
-          );
-    handlePicoSelection(
-      context,
-      widget.datasetRepo,
-      pico,
-      source: 'mapa_global',
-    );
+  void _handleOpen(MapaPicoDTO pico) {
+    widget.viewModel.abrirPico(context, pico.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Removed markers generation from here since it needs to be inside body for zoom reactivity
-
+    final picos = widget.viewModel.picosNoMapa;
     LatLng initialTarget = const LatLng(-14.2350, -51.9253);
-    if (widget.crags.isNotEmpty) {
-      final firstCrag = widget.crags.first;
-      if (firstCrag.latitude != null && firstCrag.longitude != null) {
-        initialTarget = LatLng(firstCrag.latitude!, firstCrag.longitude!);
+    if (picos.isNotEmpty) {
+      final first = picos.first;
+      if (first.latitude != null && first.longitude != null) {
+        initialTarget = LatLng(first.latitude!, first.longitude!);
       }
     }
 
@@ -222,7 +209,6 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         'Mapa Global',
         actions: [buildFeedbackButton(context)],
       ),
-
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? context.colors.caveShadow
