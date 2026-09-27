@@ -188,33 +188,24 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   Future<void> _handleDownload(String id, String name) async {
     if (await widget.viewModel.syncService.isNetworkDisabled()) {
       if (mounted) {
-        showDeprecatedAppVersionSnackBar(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sua versão do Aresta está desatualizada. Atualize para continuar baixando croquis.',
+            ),
+          ),
+        );
       }
       return;
     }
 
-    final repo = DatasetRepository.instance;
-    if (repo == null) return;
-
-    final MetadadosIndice resumo;
-    if (resumoDireto != null) {
-      resumo = resumoDireto;
-    } else {
-      final indice = repo.indiceData.value;
-      if (indice == null) return;
-      final resumos = indice.croquis.where((r) => r.id == id).toList();
-      if (resumos.isEmpty) return;
-      resumo = resumos.first;
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
     }
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Baixando $name...')));
-
-    final servicoDownload =
-        ServicoDownloadSegundoPlano(syncService: widget.syncService);
-    final success = await servicoDownload.executarDownload(resumo);
+    final success = await widget.viewModel.baixarPico(id);
 
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
