@@ -11,6 +11,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:frontend/view_functions/view_models/meus_croquis_view_model.dart';
 
 class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {
   final int _hard = 0;
@@ -120,7 +121,12 @@ void main() {
       // Pump MeusCroquisPage to render OfflineCragCard which contains the sync button
       await tester.pumpWidget(
         MaterialApp(
-          home: MeusCroquisPage(datasetRepo: testRepo, syncService: testSync),
+          home: MeusCroquisPage(
+            viewModel: MeusCroquisViewModel(
+              datasetRepo: testRepo,
+              syncService: testSync,
+            ),
+          ),
         ),
       );
       await tester.pump();
