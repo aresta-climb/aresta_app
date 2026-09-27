@@ -232,6 +232,23 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
     if (crag is MetadadosIndice) {
       id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is PicoProximo) {
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is PicoProximoDTO) {
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is ResumoPico) {
+      id = crag.id;
+      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
+    } else if (crag is Map) {
+      id = crag['id']?.toString() ?? '';
+      name = crag['nome']?.toString() ?? 'Pico';
+    } else {
+      return;
+    }
+    await _handleDownload(id, name);
   }
 
   Future<void> _initLocation() async {
@@ -312,9 +329,12 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   void _applyPosition(Position position) {
     if (!mounted) return;
     _lastUserLat = position.latitude;
-    _lastUserLon = position.longitude;
     _saveLocationToCache(position.latitude, position.longitude);
-    _calculateDistances(position.latitude, position.longitude);
+    widget.viewModel.atualizarLocalizacaoUsuario(position.latitude, position.longitude);
+    setState(() {
+      _isLoading = false;
+      _permissionDenied = false;
+    });
   }
 
   void _startPositionStream() {
@@ -335,11 +355,9 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     } catch (_) {}
   }
 
-  /// Tenta resolver a localização por satélite com degradação progressiva de precisão.
   Future<void> _fetchGpsLocation() async {
     if (!mounted) return;
 
-    // 1. Tenta obter a última posição conhecida do SO (instantâneo)
     try {
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown != null && mounted) {
@@ -347,17 +365,14 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       }
     } catch (_) {}
 
-    // 2. Se ainda não temos coordenadas, tenta o cache de SharedPreferences
     if (_lastUserLat == null) {
       await _fallbackToCachedLocationOrFinish();
     }
 
-    // 3. Se já temos localização resolvida, encerra a busca inicial
     if (_lastUserLat != null) {
       return;
     }
 
-    // 4. Solicita a posição GPS atual com precisão alta (necessária no Android/Emulador)
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -371,7 +386,6 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
         return;
       }
     } catch (_) {
-      // Se a requisição síncrona expirar, inicia o stream contínuo para capturar quando o sinal chegar
       _startPositionStream();
     }
 
@@ -382,10 +396,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
   }
 
-  /// Salva coordenadas de sucesso em disco local (SharedPreferences).
   Future<void> _saveLocationToCache(double lat, double lon) async {
     _lastUserLat = lat;
-    _lastUserLon = lon;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_kLastKnownLatKey, lat);
@@ -399,7 +411,6 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
   }
 
-  /// Lê as coordenadas salvas em cache local ou conclui o carregamento graciosamente.
   Future<void> _fallbackToCachedLocationOrFinish() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -410,8 +421,11 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
 
       if (cachedLat != null && cachedLon != null) {
         _lastUserLat = cachedLat;
-        _lastUserLon = cachedLon;
-        _calculateDistances(cachedLat, cachedLon);
+        widget.viewModel.atualizarLocalizacaoUsuario(cachedLat, cachedLon);
+        setState(() {
+          _isLoading = false;
+          _permissionDenied = false;
+        });
         return;
       }
     } catch (e, stackTrace) {
