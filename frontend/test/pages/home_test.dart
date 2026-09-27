@@ -13,6 +13,8 @@ import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import 'package:frontend/theme/app_colors.dart';
 
+import 'package:frontend/view_functions/view_models/home_view_model.dart';
+
 class MockDatasetRepository extends Mock implements DatasetRepository {}
 
 class MockSyncService extends Mock implements SyncService {}
@@ -23,13 +25,19 @@ void main() {
   });
 
   Widget createTestWidget(DatasetRepository repo, SyncService syncService) {
+    try {
+      when(() => repo.homeResetTrigger).thenReturn(ValueNotifier(0));
+    } catch (_) {}
+
     return MaterialApp(
       theme: ThemeData(
         extensions: const [AppColors.dark],
       ),
       home: HomePage(
-        datasetRepo: repo,
-        syncService: syncService,
+        viewModel: HomeViewModel(
+          datasetRepo: repo,
+          syncService: syncService,
+        ),
         onSwitchTab: (_) {},
       ),
     );
@@ -45,6 +53,7 @@ void main() {
       );
 
       when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+      when(() => mockRepo.homeResetTrigger).thenReturn(ValueNotifier(0));
       when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
       when(
         () => mockSync.syncIndex(auto: false),
@@ -88,6 +97,7 @@ void main() {
       );
 
       when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+      when(() => mockRepo.homeResetTrigger).thenReturn(ValueNotifier(0));
       when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
       when(
         () => mockSync.syncIndex(auto: false),
