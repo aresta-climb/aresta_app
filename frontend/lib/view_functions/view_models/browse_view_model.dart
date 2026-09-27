@@ -2,14 +2,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/fuzzy.dart';
+import '../../data/dtos/card_croqui_dto.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/firebase/telemetry_service.dart';
 import '../common_functions.dart';
+import '../home_functions.dart';
+import '../settings_functions.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {
@@ -62,6 +66,10 @@ class BrowseViewModel extends ChangeNotifier {
     datasetRepo.editorDeCroqui.editorUrl.removeListener(_aoAtualizarDataset);
     super.dispose();
   }
+
+  /// Monitoramento reativo do mapa de downloads em andamento.
+  ValueListenable<Map<String, double>> get downloadingCrags =>
+      syncService.downloadingCrags;
 
   /// Termo de pesquisa atualmente ativo na barra de busca.
   String get termoBusca => _termoBusca;
@@ -133,13 +141,23 @@ class BrowseViewModel extends ChangeNotifier {
     return resultado;
   }
 
+  /// Lista dos picos filtrados mapeados diretamente para [CardCroquiDTO] (Dumb UI).
+  List<CardCroquiDTO> get picosCards {
+    return picosFiltrados.map((m) {
+      return mapearMetadadosParaCard(
+        m,
+        salvoOffline: estaBaixado(m.id),
+      );
+    }).toList();
+  }
+
   /// Atualiza o termo de busca, aciona a reconstrução da UI e agenda telemetria debounced.
   void alterarTermoBusca(String novoTermo) {
     _termoBusca = novoTermo;
     notifyListeners();
 
     _timerDebounce?.cancel();
-    _timerDebounce = Timer(const Duration(milliseconds: 1000), () {
+    _timerDebounce = Timer(const Duration(milliseconds: 500), () {
       if (_termoBusca.isNotEmpty) {
         final t = telemetria ?? TelemetryService.instance;
         t.logBuscaCroquis(_termoBusca, picosFiltrados.length);
