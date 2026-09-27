@@ -583,19 +583,13 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           padding: const EdgeInsets.only(right: 16.0),
           child: SizedBox(
             width: 340,
-                  distanceStr: distanceStr,
-                  downloadingCrags: widget.syncService.downloadingCrags,
-                  onDownload: () => handleDownload(picoBase.pico),
-                  onOpen: () {
-                    final repo = DatasetRepository.instance;
-                    if (repo != null) {
-                      handlePicoSelection(context, repo, picoBase.pico);
-                    }
-                  },
-                ),
-              ),
-            );
-          },
+            child: CragCard(
+              dados: pico.paraCardCroquiDTO(),
+              downloadingCrags: widget.viewModel.downloadingCrags,
+              onDownload: () => _handleDownload(pico.id, pico.nome),
+              onOpen: () => widget.viewModel.abrirPico(context, pico.id),
+            ),
+          ),
         );
       },
     );
