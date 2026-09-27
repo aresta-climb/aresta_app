@@ -30,3 +30,35 @@ class SettingsViewModel extends ChangeNotifier {
   @override
   void dispose() {
     editorDeCroqui.isExperimentalMode.removeListener(_aoAtualizar);
+    editorDeCroqui.editorUrl.removeListener(_aoAtualizar);
+    super.dispose();
+  }
+
+  /// Indica se o modo experimental está habilitado.
+  bool get modoExperimental => editorDeCroqui.isExperimentalMode.value;
+
+  /// URL de servidor local de desenvolvimento conectada, se houver.
+  String? get editorUrl => editorDeCroqui.editorUrl.value;
+
+  /// URL ativa utilizada para requisições de mídias e croquis.
+  String get activeBaseUrl => editorDeCroqui.activeBaseUrl;
+
+  /// Altera o estado do modo experimental.
+  void alterarModoExperimental(bool ativado) {
+    editorDeCroqui.isExperimentalMode.value = ativado;
+  }
+
+  /// Define uma nova URL de servidor local ou desconecta (quando nulo).
+  void alterarEditorUrl(String? url) {
+    editorDeCroqui.editorUrl.value = url;
+  }
+
+  /// Abre o diálogo de conexão com servidor via IP ou QR code.
+  void abrirDialogConexao(BuildContext context) {
+    mostrarDialogConexao(
+      context,
+      datasetRepo,
+      titulo: 'Trocar serving',
+    );
+  }
+}
