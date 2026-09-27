@@ -35,3 +35,41 @@ void main() {
     });
 
     test('temCoordenadasValidas retorna false quando coordenadas são nulas ou zero', () {
+      const dtoInvalido = MapaPicoDTO(
+        id: 'invalido',
+        nome: 'Pico Sem Coordenadas',
+      );
+
+      expect(dtoInvalido.temCoordenadasValidas, isFalse);
+    });
+
+    test('deMetadados converte ResumoCroqui com micrograus para graus decimais', () {
+      final metadados = ResumoCroqui(
+        id: 'bau',
+        nome: 'Pedra do Baú',
+        localizacao: Coordenada(
+          latitude: -226844440,
+          longitude: -456633330,
+        ),
+        precomputados: PrecomputadosResumoCroqui(
+          totalSetores: 6,
+          totalEscaladas: 80,
+        ),
+      );
+
+      final dto = MapaPicoDTO.deMetadados(
+        metadados: metadados,
+        estaBaixado: false,
+      );
+
+      expect(dto.id, equals('bau'));
+      expect(dto.nome, equals('Pedra do Baú'));
+      expect(dto.latitude, closeTo(-22.684444, 0.00001));
+      expect(dto.longitude, closeTo(-45.663333, 0.00001));
+      expect(dto.estaBaixado, isFalse);
+      expect(dto.totalSetores, equals(6));
+      expect(dto.totalEscaladas, equals(80));
+      expect(dto.temCoordenadasValidas, isTrue);
+    });
+  });
+}
