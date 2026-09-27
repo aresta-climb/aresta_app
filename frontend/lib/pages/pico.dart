@@ -8,7 +8,6 @@ import '../view_functions/common_functions.dart';
 import '../view_functions/pico_functions.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/via_functions.dart';
-import '../services/dataset_repository.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/navigation_tree.dart';
 import '../services/firebase/telemetry_service.dart';
@@ -25,24 +24,20 @@ import '../widgets/modal_confirmacao_saida.dart';
 import '../view_functions/view_models/pico_view_model.dart';
 
 class PicoDetailsPage extends StatefulWidget {
-  final Pico pico;
-  final Croqui croqui;
-  final String cragId;
-  final DatasetRepository datasetRepo;
+  final PicoViewModel viewModel;
   final bool scrollToMapaGeral;
   final Setor? returnToSetor;
-  final PicoViewModel? viewModel;
 
   const PicoDetailsPage({
     super.key,
-    required this.pico,
-    required this.croqui,
-    required this.cragId,
-    required this.datasetRepo,
+    required this.viewModel,
     this.scrollToMapaGeral = false,
     this.returnToSetor,
-    this.viewModel,
   });
+
+  String get cragId => viewModel.cragId;
+  Pico get pico => viewModel.pico;
+  Croqui get croqui => viewModel.croqui;
 
   @override
   State<PicoDetailsPage> createState() => _PicoDetailsPageState();
@@ -51,20 +46,11 @@ class PicoDetailsPage extends StatefulWidget {
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
   late final PicoViewModel _viewModel;
-  late final bool _ownsViewModel;
 
   @override
   void initState() {
     super.initState();
-    _ownsViewModel = widget.viewModel == null;
-    _viewModel = widget.viewModel ??
-        PicoViewModel(
-          pico: widget.pico,
-          croqui: widget.croqui,
-          cragId: widget.cragId,
-          datasetRepo: widget.datasetRepo,
-        );
-
+    _viewModel = widget.viewModel;
     _viewModel.addListener(_aoAtualizarViewModel);
 
     // Registra interceptor de saída no controlador de navegação em árvore
@@ -168,9 +154,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     if (tree != null) {
       tree.onBackInterceptor = null;
     }
-    if (_ownsViewModel) {
-      _viewModel.dispose();
-    }
+    _viewModel.dispose();
     super.dispose();
   }
 
