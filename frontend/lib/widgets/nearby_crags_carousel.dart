@@ -218,6 +218,22 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     }
   }
 
+  @visibleForTesting
+  List<PicoProximo> get closestCrags {
+    return widget.viewModel.picosProximos
+        .map((p) => PicoProximo(pico: p, distanciaKm: p.distanciaKm ?? 0.0))
+        .toList();
+  }
+
+  @visibleForTesting
+  void handleDownload(dynamic crag) async {
+    final String id;
+    final String name;
+
+    if (crag is MetadadosIndice) {
+      id = crag.id;
+  }
+
   Future<void> _initLocation() async {
     if (!mounted) return;
     setState(() {
