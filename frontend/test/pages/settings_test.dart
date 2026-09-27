@@ -13,6 +13,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/theme/app_colors.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
+import 'package:frontend/view_functions/view_models/settings_view_model.dart';
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -58,7 +59,12 @@ void main() {
 
   testWidgets('SettingsPage deve renderizar o título de configurações', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsPage(datasetRepo: mockRepo),
+      home: SettingsPage(
+        viewModel: SettingsViewModel(
+          datasetRepo: mockRepo,
+          editorDeCroqui: mockEditor,
+        ),
+      ),
     ));
     expect(find.text('Configurações'), findsOneWidget);
   });
@@ -68,7 +74,12 @@ void main() {
       theme: ThemeData(
         extensions: const [AppColors.dark],
       ),
-      home: SettingsPage(datasetRepo: mockRepo),
+      home: SettingsPage(
+        viewModel: SettingsViewModel(
+          datasetRepo: mockRepo,
+          editorDeCroqui: mockEditor,
+        ),
+      ),
     ));
     await tester.pumpAndSettle();
 
