@@ -26,3 +26,32 @@ void main() {
 
   tearDown(() {
     if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
+  group('HomeViewModel Tests', () {
+    test('inicia em estado de carregamento quando dataset é nulo', () {
+      final vm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      expect(vm.carregando, isTrue);
+      expect(vm.picosProximos, isEmpty);
+      vm.dispose();
+    });
+
+    test('reage a atualizações no activeDataset e calcula picos mais próximos ordenados por distância', () {
+      final vm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      final picosIndice = [
+        ResumoCroqui(
+          id: 'bau',
+          nome: 'Pedra do Baú',
+          caminhoRelativo: 'sp/bau',
+          localizacao: Coordenada(
+            latitude: -226844440,
