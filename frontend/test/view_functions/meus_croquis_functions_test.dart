@@ -90,8 +90,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard.deCroqui(
               crag: crag,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () {},
+              onExcluir: () {},
             ),
           ),
         ),
@@ -124,8 +124,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard.deCroqui(
               crag: crag,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () {},
+              onExcluir: () {},
             ),
           ),
         ),
@@ -158,8 +158,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard.deCroqui(
               crag: crag,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () {},
+              onExcluir: () {},
             ),
           ),
         ),
@@ -195,8 +195,8 @@ void main() {
           home: Scaffold(
             body: OfflineCragCard.deCroqui(
               crag: croqui,
-              datasetRepo: repositorio,
-              syncService: servicoSync,
+              onAbrir: () {},
+              onExcluir: () {},
             ),
           ),
         ),
@@ -209,12 +209,11 @@ void main() {
       expect(find.text('ABRIR OFFLINE'), findsOneWidget);
     });
 
-    testWidgets('ao clicar em ABRIR OFFLINE dispara telemetria com modo_acesso offline e primeira_visita', (
+    testWidgets('ao clicar em ABRIR OFFLINE e Excluir aciona callbacks respectivos', (
       WidgetTester tester,
     ) async {
-      final mockTelemetry = MockTelemetryService();
-      TelemetryService.instance = mockTelemetry;
-
+      bool clicouAbrir = false;
+      bool clicouExcluir = false;
       final crag = Croqui(
         id: 'pico_telemetria',
         nome: 'Pico Telemetria',
