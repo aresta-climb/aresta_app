@@ -64,15 +64,21 @@ class PicoProximo {
   }
 }
 
-/// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário,
-/// permitindo rolagem contínua (looping) e limitando a seleção a no máximo 6 picos.
+/// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário (Dumb UI).
+///
+/// Obtém permissão de GPS e coordenadas, informando ao [HomeViewModel] para que este
+/// processe as distâncias e forneça a lista reativa de [PicoProximoDTO].
 class NearbyCragsCarousel extends StatefulWidget {
   /// Limite padrão de picos exibidos no carrossel de mais próximos.
   static const int kLimitePicosProximos = 6;
 
-  final SyncService syncService;
+  /// ViewModel que fornece dados calculados e gerencia ações da Home.
+  final HomeViewModel viewModel;
 
-  const NearbyCragsCarousel({super.key, required this.syncService});
+  const NearbyCragsCarousel({
+    super.key,
+    required this.viewModel,
+  });
 
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
   /// aceitando [List<ResumoPico>], [List<MetadadosIndice>] ou listas dinâmicas,
@@ -88,40 +94,13 @@ class NearbyCragsCarousel extends StatefulWidget {
     for (final item in picosDisponiveis) {
       final double? picoLat;
       final double? picoLon;
-      final MetadadosIndice pico;
 
       if (item is MetadadosIndice) {
-        pico = item;
         picoLat = item.latitude;
         picoLon = item.longitude;
       } else if (item is ResumoPico) {
         picoLat = item.latitude;
         picoLon = item.longitude;
-        pico = MetadadosIndice(
-          id: item.id,
-          nome: item.nome,
-          descricao: item.descricao,
-          caminhoRelativo: item.url,
-          checksumSha256Croqui: item.checksum,
-          localizacao: picoLat != null && picoLon != null
-              ? Coordenada(
-                  latitude: (picoLat * 10000000).round(),
-                  longitude: (picoLon * 10000000).round(),
-                )
-              : null,
-          precomputados: item.estatisticas != null
-              ? PrecomputadosResumoCroqui(
-                  totalSetores: item.estatisticas!.totalSetores,
-                  totalEscaladas: item.estatisticas!.totalVias,
-                  totalBoulders: item.estatisticas!.totalBoulders,
-                  totalEsportivas: item.estatisticas!.totalEsportivas,
-                  totalMoveis: item.estatisticas!.totalMoveis,
-                  totalMultiplasEnfiadas:
-                      item.estatisticas!.totalMultiplasEnfiadas,
-                  totalHighlines: item.estatisticas!.totalHighlines,
-                )
-              : null,
-        );
       } else if (item is Map) {
         final mapa = Map<String, dynamic>.from(item);
         picoLat = (mapa['latitude'] as num?)?.toDouble();
