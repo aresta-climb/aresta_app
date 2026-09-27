@@ -65,3 +65,37 @@ CardCroquiDTO mapearMetadadosParaCard(
   final String? checksumSha256 =
       metadados.hasChecksumSha256Thumbnail() ? metadados.checksumSha256Thumbnail : null;
 
+  String textoEstatisticas = '0 setores • 0 escaladas';
+  if (metadados.hasPrecomputados()) {
+    final p = metadados.precomputados;
+    final setores = p.totalSetores;
+    final vias = p.totalEscaladas;
+    textoEstatisticas = '$setores setores • $vias escaladas';
+
+    if (estatisticasDetalhadas) {
+      final List<String> modalidades = [];
+      if (p.totalBoulders > 0) modalidades.add('${p.totalBoulders} boulders');
+      if (p.totalEsportivas > 0) modalidades.add('${p.totalEsportivas} esportivas');
+      if (p.totalMoveis > 0) modalidades.add('${p.totalMoveis} móveis');
+      if (p.totalMultiplasEnfiadas > 0) {
+        modalidades.add('${p.totalMultiplasEnfiadas} múltiplas enfiadas');
+      }
+      if (p.totalHighlines > 0) modalidades.add('${p.totalHighlines} highlines');
+      if (modalidades.isNotEmpty) {
+        textoEstatisticas += ' (${modalidades.join(', ')})';
+      }
+    }
+  }
+
+  return CardCroquiDTO(
+    id: id,
+    titulo: titulo,
+    localizacao: localizacao,
+    textoEstatisticas: textoEstatisticas,
+    caminhoMiniatura: caminhoMiniatura,
+    salvoOffline: salvoOffline,
+    textoDistancia: textoDistancia,
+    checksumSha256: checksumSha256,
+  );
+}
+
