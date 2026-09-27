@@ -25,3 +25,31 @@ void main() {
       expect(dtoMetro.distanciaKm, equals(0.45));
       expect(dtoMetro.distanciaFormatada, equals('450 m'));
       expect(dtoMetro.caminhoMiniatura, equals('thumbnails/pedra_bela.webp'));
+      expect(dtoMetro.estaBaixado, isTrue);
+      expect(dtoMetro.totalSetores, equals(4));
+      expect(dtoMetro.totalEscaladas, equals(30));
+
+      const dtoKm = PicoProximoDTO(
+        id: 'bau',
+        nome: 'Pedra do Baú',
+        localizacao: 'São Paulo',
+        distanciaKm: 12.34,
+        caminhoMiniatura: 'thumbnails/bau.webp',
+        estaBaixado: false,
+      );
+
+      expect(dtoKm.distanciaFormatada, equals('12.3 km'));
+    });
+
+    test('deMetadados converte ResumoCroqui e calcula distância formatada', () {
+      final metadados = ResumoCroqui(
+        id: 'cipó',
+        nome: 'Serra do Cipó',
+        caminhoRelativo: 'minas_gerais/serra_do_cipo',
+        precomputados: PrecomputadosResumoCroqui(
+          totalSetores: 10,
+          totalEscaladas: 150,
+        ),
+      );
+
+      final dto = PicoProximoDTO.deMetadados(
