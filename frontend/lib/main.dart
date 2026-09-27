@@ -24,6 +24,12 @@ import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/view_functions/common_functions.dart';
+import 'package:frontend/view_functions/view_models/home_view_model.dart';
+import 'package:frontend/view_functions/view_models/browse_view_model.dart';
+import 'package:frontend/view_functions/view_models/meus_croquis_view_model.dart';
+import 'package:frontend/view_functions/view_models/mapa_global_view_model.dart';
+import 'package:frontend/view_functions/view_models/settings_view_model.dart';
+import 'package:frontend/view_functions/view_models/pico_view_model.dart';
 import 'widgets/text_carousel_modal_content.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -524,6 +530,9 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final TreeNavigationController treeController;
   late final DeepLinkNavigatorService deepLinkNavigator;
   late final GerenciadorDeepLinks gerenciadorDeepLinks;
+  late final HomeViewModel _homeViewModel;
+  late final BrowseViewModel _browseViewModel;
+  late final MeusCroquisViewModel _meusCroquisViewModel;
 
   /// Expõe o SyncService para páginas filhas acessarem via TreeNavigationWrapper.of(context).
   // ignore: unreachable_from_main
@@ -532,6 +541,19 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   @override
   void initState() {
     super.initState();
+    _homeViewModel = HomeViewModel(
+      datasetRepo: widget.datasetRepo,
+      syncService: widget.syncService,
+    );
+    _browseViewModel = BrowseViewModel(
+      datasetRepo: widget.datasetRepo,
+      syncService: widget.syncService,
+    );
+    _meusCroquisViewModel = MeusCroquisViewModel(
+      datasetRepo: widget.datasetRepo,
+      syncService: widget.syncService,
+    );
+
     treeController = widget.treeController ?? TreeNavigationController();
     treeController.addListener(_onNodeChanged);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
@@ -577,6 +599,9 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
   @override
   void dispose() {
+    _homeViewModel.dispose();
+    _browseViewModel.dispose();
+    _meusCroquisViewModel.dispose();
     gerenciadorDeepLinks.dispose();
     _feedbackController?.removeListener(_onFeedbackChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.removeListener(_onCroquiOnlineAtualizado);
@@ -705,17 +730,14 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         index: tabIndex,
         children: [
           _HomePageWrapper(
-            datasetRepo: widget.datasetRepo,
-            syncService: widget.syncService,
+            viewModel: _homeViewModel,
             onSwitchTab: _onItemTapped,
           ),
           BrowsePage(
-            datasetRepo: widget.datasetRepo,
-            syncService: widget.syncService,
+            viewModel: _browseViewModel,
           ),
           MeusCroquisPage(
-            datasetRepo: widget.datasetRepo,
-            syncService: widget.syncService,
+            viewModel: _meusCroquisViewModel,
           ),
           const ComunidadePage(), // Pass dependencies if needed in the future
         ],
