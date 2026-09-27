@@ -67,3 +67,38 @@ void main() {
         id: 'cipó',
         nome: 'Serra do Cipó',
         picos: [
+          Pico(
+            nome: 'Serra do Cipó',
+            estado: 'Minas Gerais',
+            precomputados: PrecomputadosPico(
+              totalSetores: 8,
+              totalEscaladas: 120,
+            ),
+          ),
+        ],
+      );
+
+      final dto = mapearCroquiParaCard(croqui, textoDistancia: '500 m');
+
+      expect(dto.id, equals('cipó'));
+      expect(dto.titulo, equals('SERRA DO CIPÓ'));
+      expect(dto.localizacao, equals('MINAS GERAIS'));
+      expect(dto.textoEstatisticas, equals('8 setores • 120 escaladas'));
+      expect(dto.salvoOffline, isTrue);
+      expect(dto.textoDistancia, equals('500 m'));
+    });
+
+    test('trata nomes e locais vazios com valores amigáveis padrão', () {
+      final metadadosVazios = ResumoCroqui(id: 'sem_nome');
+      final dtoVazio = mapearMetadadosParaCard(metadadosVazios);
+
+      expect(dtoVazio.titulo, equals('SEM NOME'));
+      expect(dtoVazio.textoEstatisticas, equals('0 setores • 0 escaladas'));
+
+      final croquiVazio = Croqui(id: 'croqui_vazio');
+      final dtoCroquiVazio = mapearCroquiParaCard(croquiVazio);
+      expect(dtoCroquiVazio.titulo, equals('SEM NOME'));
+      expect(dtoCroquiVazio.localizacao, equals('LOCAL DESCONHECIDO'));
+    });
+  });
+}
