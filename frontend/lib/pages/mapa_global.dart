@@ -218,23 +218,30 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         onPressed: _initLocation,
         child: const Icon(Icons.my_location),
       ),
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: initialTarget,
-          zoom: _currentZoom,
-        ),
-        markers: buildMapMarkers(
-          context: context,
-          crags: widget.crags,
-          downloadingCrags: widget.syncService.downloadingCrags,
-          onDownload: _handleDownload,
-          onOpen: _handleOpen,
-          macroIcon: _macroIcon,
-          regionalIcon: _regionalIcon,
-          customIcon: _customIcon,
-          textIcons: _textIcons,
-          currentZoom: _currentZoom,
-          faixaZoom: _currentFaixaZoom,
+      body: ListenableBuilder(
+        listenable: widget.viewModel,
+        builder: (context, _) {
+          final picosAtuais = widget.viewModel.picosNoMapa;
+
+          return GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: initialTarget,
+              zoom: _currentZoom,
+            ),
+            markers: buildMapMarkers(
+              context: context,
+              crags: picosAtuais,
+              downloadingCrags: widget.viewModel.downloadingCrags,
+              onDownload: (crag) {
+                if (crag is MapaPicoDTO) {
+                  _handleDownload(crag);
+                }
+              },
+              onOpen: (crag) {
+                if (crag is MapaPicoDTO) {
+                  _handleOpen(crag);
+                }
+              },
         ),
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
