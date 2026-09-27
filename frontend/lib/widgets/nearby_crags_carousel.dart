@@ -124,7 +124,7 @@ class NearbyCragsCarousel extends StatefulWidget {
 
         picosComDistancia.add(
           PicoProximo(
-            pico: pico,
+            pico: item,
             distanciaKm: distanceInMeters / 1000,
           ),
         );
@@ -165,47 +165,25 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
   bool _isLoading = true;
   bool _permissionDenied = false;
   double? _lastUserLat;
-  double? _lastUserLon;
   StreamSubscription<Position>? _positionSubscription;
-  List<PicoProximo> _closestCrags = [];
-
-  @visibleForTesting
-  List<PicoProximo> get closestCrags => _closestCrags;
 
   @override
   void initState() {
     super.initState();
-    DatasetRepository.instance?.activeDataset.addListener(_onDatasetOrResetChanged);
-    DatasetRepository.instance?.homeResetTrigger.addListener(_onDatasetOrResetChanged);
+    widget.viewModel.addListener(_aoAtualizarViewModel);
     _initLocation();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
-    DatasetRepository.instance?.activeDataset.removeListener(_onDatasetOrResetChanged);
-    DatasetRepository.instance?.homeResetTrigger.removeListener(_onDatasetOrResetChanged);
+    widget.viewModel.removeListener(_aoAtualizarViewModel);
     super.dispose();
   }
 
-  void _onDatasetOrResetChanged() {
-    if (!mounted) return;
-    if (_lastUserLat != null && _lastUserLon != null) {
-      _calculateDistances(_lastUserLat!, _lastUserLon!);
-    } else {
-      _fallbackToCachedLocationOrFinish();
-    }
+  void _aoAtualizarViewModel() {
+    if (mounted) setState(() {});
   }
-
-  @visibleForTesting
-  void handleDownload(dynamic crag) async {
-    final String id;
-    final String name;
-    final MetadadosIndice? resumoDireto;
-
-    if (crag is MetadadosIndice) {
-      resumoDireto = crag;
-      id = crag.id;
       name = crag.nome.isEmpty ? 'Pico' : crag.nome;
     } else if (crag is PicoProximo) {
       resumoDireto = crag.pico;
