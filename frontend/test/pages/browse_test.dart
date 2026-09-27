@@ -168,7 +168,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+          body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
         ),
       ),
     );
@@ -206,7 +212,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+            body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
           ),
         ),
       );
@@ -255,7 +267,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+            body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
           ),
         ),
       );
@@ -341,7 +359,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+            body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
           ),
         ),
       );
