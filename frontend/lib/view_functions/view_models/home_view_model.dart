@@ -30,3 +30,35 @@ class HomeViewModel extends ChangeNotifier {
 
   HomeViewModel({
     required this.datasetRepo,
+    required this.syncService,
+  }) {
+    datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
+    datasetRepo.homeResetTrigger.addListener(_aoAtualizarDataset);
+  }
+
+  void _aoAtualizarDataset() => notifyListeners();
+
+  @override
+  void dispose() {
+    datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
+    datasetRepo.homeResetTrigger.removeListener(_aoAtualizarDataset);
+    super.dispose();
+  }
+
+  /// Indica se os dados do catálogo ainda estão sendo inicializados.
+  bool get carregando => datasetRepo.activeDataset.value == null;
+
+  /// Monitoramento reativo do progresso percentual dos picos atualmente em download.
+  ValueListenable<Map<String, double>> get downloadingCrags =>
+      syncService.downloadingCrags;
+
+  /// Atualiza a coordenada geográfica do usuário para cálculo de distâncias.
+  void atualizarLocalizacaoUsuario(double lat, double lon) {
+    _userLat = lat;
+    _userLon = lon;
+    notifyListeners();
+  }
+
+  /// Verifica se um pico específico já foi baixado para o armazenamento local.
+  bool estaBaixado(String picoId) {
+    final dataset = datasetRepo.activeDataset.value;
