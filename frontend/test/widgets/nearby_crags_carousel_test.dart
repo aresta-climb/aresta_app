@@ -18,6 +18,7 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/view_functions/view_models/home_view_model.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
 
@@ -64,6 +65,8 @@ void main() {
     late Directory tempDir;
     late Map<String, dynamic> picoA;
     late Map<String, dynamic> picoB;
+    late DatasetRepository datasetRepo;
+    late HomeViewModel viewModel;
 
     setUp(() async {
       TelemetryService.instance = MockTelemetryService();
@@ -75,7 +78,7 @@ void main() {
       fakeSyncService = FakeSyncService();
 
       final editorDeCroqui = EditorDeCroqui();
-      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
       
       picoA = <String, dynamic>{
         'id': 'pico_a',
@@ -115,6 +118,11 @@ void main() {
           ..caminhoRelativo = 'picos/pico_b/pico_b.binarypb',
       );
       datasetRepo.indiceData.value = indice;
+
+      viewModel = HomeViewModel(
+        datasetRepo: datasetRepo,
+        syncService: fakeSyncService,
+      );
     });
 
     tearDown(() async {
@@ -142,7 +150,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -172,7 +180,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -193,7 +201,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -216,7 +224,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -236,7 +244,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -281,7 +289,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -335,7 +343,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -387,7 +395,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -410,7 +418,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -462,7 +470,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -483,7 +491,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -516,7 +524,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -551,7 +559,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -585,7 +593,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -642,7 +650,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
@@ -702,7 +710,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: NearbyCragsCarousel(syncService: fakeSyncService),
+              body: NearbyCragsCarousel(viewModel: viewModel),
             ),
           ),
         );
