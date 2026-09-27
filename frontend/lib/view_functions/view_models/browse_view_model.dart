@@ -188,4 +188,43 @@ class BrowseViewModel extends ChangeNotifier {
     final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
     return await servicoDownload.executarDownload(resumo);
   }
+
+  /// Aciona o download dos dados de um pico pelo seu identificador único.
+  Future<bool> baixarPicoPorId(String picoId) async {
+    final indice = datasetRepo.indiceData.value;
+    if (indice == null) return false;
+
+    final resumos = indice.croquis.where((r) => r.id == picoId).toList();
+    if (resumos.isEmpty) return false;
+
+    final servicoDownload = ServicoDownloadSegundoPlano(syncService: syncService);
+    return await servicoDownload.executarDownload(resumos.first);
+  }
+
+  /// Abre a página de detalhes de um pico selecionado.
+  Future<void> abrirPico(BuildContext context, String picoId) async {
+    final dataset = datasetRepo.activeDataset.value;
+    if (dataset == null) return;
+
+    final meta = dataset.metadadosDisponiveis.firstWhere(
+      (m) => m.id == picoId,
+      orElse: () => MetadadosIndice(id: picoId),
+    );
+
+    await handlePicoSelection(context, datasetRepo, meta, source: 'explorar');
+  }
+
+  /// Exibe diálogo para troca do servidor ativo (modo editor/experimental).
+  void trocarServing(BuildContext context) {
+    mostrarDialogConexao(
+      context,
+      datasetRepo,
+      titulo: 'Trocar serving',
+    );
+  }
+
+  /// Dispara a sincronização manual do serving ativo.
+  Future<void> sincronizarServing(BuildContext context) async {
+    await handleSyncServing(context, datasetRepo, syncService);
+  }
 }
