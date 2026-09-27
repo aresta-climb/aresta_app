@@ -18,6 +18,7 @@ import '../widgets/modal_beta_aberto.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
+import 'view_models/home_view_model.dart';
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 ///
@@ -110,13 +111,20 @@ Future<void> handlePicoSelection(
   }
 }
 
-/// Constrói o corpo principal da página inicial refatorada.
+/// Constrói o corpo principal da página inicial refatorada (Dumb UI).
 Widget buildHomeBody(
   BuildContext context,
-  DatasetRepository datasetRepo,
-  SyncService syncService, [
+  dynamic repoOuViewModel, [
+  dynamic syncOuOnSwitchTab,
   Function(int)? onSwitchTab,
 ]) {
+  final HomeViewModel viewModel = repoOuViewModel is HomeViewModel
+      ? repoOuViewModel
+      : HomeViewModel(
+          datasetRepo: repoOuViewModel as DatasetRepository,
+          syncService: syncOuOnSwitchTab as SyncService,
+        );
+
   return SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(
       parent: BouncingScrollPhysics(),
@@ -124,9 +132,9 @@ Widget buildHomeBody(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(context, datasetRepo, syncService),
-        _buildSearchBar(context, datasetRepo),
-        NearbyCragsCarousel(syncService: syncService),
+        _buildHeader(context, viewModel),
+        _buildSearchBar(context, viewModel),
+        NearbyCragsCarousel(viewModel: viewModel),
         _buildGuiaRapido(context),
         _buildConservacao(context),
         const SizedBox(height: 30),
@@ -137,8 +145,7 @@ Widget buildHomeBody(
 
 Widget _buildHeader(
   BuildContext context,
-  DatasetRepository datasetRepo,
-  SyncService syncService,
+  HomeViewModel viewModel,
 ) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -201,11 +208,7 @@ Widget _buildHeader(
                   icon: Icon(Icons.sync, color: context.colors.ashGrey),
                   tooltip: 'Sincronizar catálogo e croquis',
                   onPressed: () async {
-                    await handleManualSync(
-                      context,
-                      datasetRepo,
-                      syncService,
-                    );
+                    await viewModel.sincronizarManual(context);
                   },
                 ),
                 buildFeedbackButton(context, color: context.colors.ashGrey),
@@ -255,7 +258,7 @@ Widget _buildHeader(
   );
 }
 
-Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
+Widget _buildSearchBar(BuildContext context, HomeViewModel viewModel) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 24, 24, 30),
     child: GestureDetector(
@@ -273,9 +276,9 @@ Widget _buildSearchBar(BuildContext context, DatasetRepository datasetRepo) {
                 ),
               ),
               body: GlobalSearch(
-                datasetRepo: datasetRepo,
+                datasetRepo: viewModel.datasetRepo,
                 downloadedPicos:
-                    datasetRepo.activeDataset.value?.downloadedPicos ??
+                    viewModel.datasetRepo.activeDataset.value?.downloadedPicos ??
                         const <ResumoPico>[],
               ),
             ),
