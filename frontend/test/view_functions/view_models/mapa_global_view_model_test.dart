@@ -25,3 +25,30 @@ void main() {
     servicoSync = SyncService(datasetRepository: repositorio);
     viewModel = MapaGlobalViewModel(
       datasetRepo: repositorio,
+      syncService: servicoSync,
+    );
+  });
+
+  tearDown(() {
+    viewModel.dispose();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
+  group('MapaGlobalViewModel Tests', () {
+    test('picosNoMapa filtra picos sem coordenadas e retorna MapaPicoDTO válidos', () {
+      final picosIndice = [
+        ResumoCroqui(
+          id: 'bau',
+          nome: 'Pedra do Baú',
+          localizacao: Coordenada(
+            latitude: -226844440,
+            longitude: -456633330,
+          ),
+          precomputados: PrecomputadosResumoCroqui(
+            totalSetores: 4,
+            totalEscaladas: 40,
+          ),
+        ),
+        ResumoCroqui(
