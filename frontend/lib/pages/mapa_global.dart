@@ -254,20 +254,22 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
             mapToolbarEnabled: false,
             zoomControlsEnabled: false,
             onMapCreated: (controller) {
-        onCameraMove: (CameraPosition position) {
-          if (mounted) {
-            try {
-              final novaFaixa = obterFaixaZoom(position.zoom);
-              _currentZoom = position.zoom;
-              if (_currentFaixaZoom != novaFaixa) {
-                setState(() {
-                  _currentFaixaZoom = novaFaixa;
-                });
+              _mapController = controller;
+            },
+            onCameraMove: (CameraPosition position) {
+              if (mounted) {
+                try {
+                  final novaFaixa = obterFaixaZoom(position.zoom);
+                  _currentZoom = position.zoom;
+                  if (_currentFaixaZoom != novaFaixa) {
+                    setState(() {
+                      _currentFaixaZoom = novaFaixa;
+                    });
+                  }
+                } catch (_) {}
               }
-            } catch (e) {
-              // Ignora frames nulos ou incompletos emitidos por platform channels (OEM Android 11)
-            }
-          }
+            },
+          );
         },
       ),
     );
