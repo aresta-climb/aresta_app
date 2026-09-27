@@ -1,0 +1,28 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../../data/dtos/mapa_pico_dto.dart';
+import '../../services/dataset_repository.dart';
+import '../../services/http/sync_service.dart';
+import '../../services/http/servico_download_segundo_plano.dart';
+import '../home_functions.dart';
+
+/// Modelo de apresentação e gerenciador de estado para a tela [MapaGlobalPage] (MVVM).
+///
+/// Encapsula a conversão de metadados do índice para [MapaPicoDTO], gerenciamento de downloads,
+/// verificação de status offline e navegação para picos, tornando o widget de mapa puramente passivo (Dumb UI).
+class MapaGlobalViewModel extends ChangeNotifier {
+  /// Repositório de dados com catálogo e croquis baixados.
+  final DatasetRepository datasetRepo;
+
+  /// Serviço de sincronização e download de arquivos binários.
+  final SyncService syncService;
+
+  /// Lista opcional de picos injetados inicialmente (ex: via nós de navegação ou testes).
+  final List<dynamic>? picosIniciais;
+
+  MapaGlobalViewModel({
+    required this.datasetRepo,
