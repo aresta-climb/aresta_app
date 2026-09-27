@@ -321,7 +321,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     final String caminhoFinal;
     if (widget.capaPath != null && widget.capaPath!.isNotEmpty) {
       caminhoFinal = widget.capaPath!;
-    } else if (widget.thumbnailUrl.isNotEmpty) {
+    } else if (widget.thumbnailUrl.isNotEmpty && !widget.thumbnailUrl.endsWith('/.webp')) {
       caminhoFinal = widget.thumbnailUrl;
     } else if (cragId != null && cragId.isNotEmpty) {
       caminhoFinal = 'thumbnails/$cragId.webp';
