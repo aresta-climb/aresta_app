@@ -94,3 +94,35 @@ class HomeViewModel extends ChangeNotifier {
       if (pico is MetadadosIndice) {
         return PicoProximoDTO.deMetadados(
           metadados: pico,
+          distanciaKm: item.distanciaKm,
+          estaBaixado: estaBaixado(pico.id),
+        );
+      }
+      final String id = item.id;
+      final String nome = item.nome;
+      final String local = pico is ResumoPico
+          ? pico.local
+          : (pico is Map ? (pico['local']?.toString() ?? '') : '');
+      final String thumb = pico is ResumoPico
+          ? pico.thumbnailUrl
+          : (pico is Map ? (pico['thumbnailUrl']?.toString() ?? '') : '');
+
+      return PicoProximoDTO(
+        id: id,
+        nome: nome,
+        localizacao: local,
+        caminhoMiniatura: thumb,
+        distanciaKm: item.distanciaKm,
+        estaBaixado: estaBaixado(id),
+      );
+    }).toList();
+  }
+
+  /// Dispara a sincronização manual dos dados com o servidor remoto.
+  Future<void> sincronizarManual(BuildContext context) async {
+    await handleManualSync(context, datasetRepo, syncService);
+  }
+
+  /// Aciona o download dos dados de um pico específico em segundo plano.
+  Future<bool> baixarPico(String picoId) async {
+    final indice = datasetRepo.indiceData.value;
