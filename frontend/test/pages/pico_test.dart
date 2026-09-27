@@ -28,6 +28,28 @@ class _FakeDatasetRepository extends DatasetRepository {
   }
 }
 
+PicoDetailsPage _criarPicoDetailsPage({
+  required Pico pico,
+  required Croqui croqui,
+  required String cragId,
+  required DatasetRepository datasetRepo,
+  bool scrollToMapaGeral = false,
+  Setor? returnToSetor,
+  PicoViewModel? viewModel,
+}) {
+  return PicoDetailsPage(
+    viewModel: viewModel ??
+        PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: datasetRepo,
+        ),
+    scrollToMapaGeral: scrollToMapaGeral,
+    returnToSetor: returnToSetor,
+  );
+}
+
 void main() {
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (
     tester,
@@ -37,7 +59,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico Teste',
           croqui: Croqui(),
           cragId: 'crag1',
@@ -61,7 +83,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico Teste',
           croqui: Croqui(),
           cragId: 'crag1',
@@ -86,7 +108,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: PicoDetailsPage(
+          home: _criarPicoDetailsPage(
             pico: pico,
             croqui: croqui,
             cragId: 'crag1',
@@ -125,7 +147,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: Pico()..nome = 'Pico Teste',
           croqui: Croqui(),
           cragId: 'crag1',
@@ -195,7 +217,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PicoDetailsPage(
+        home: _criarPicoDetailsPage(
           pico: pico,
           croqui: Croqui(),
           cragId: 'crag1',
