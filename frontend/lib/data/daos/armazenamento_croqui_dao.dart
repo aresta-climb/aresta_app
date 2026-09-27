@@ -34,3 +34,39 @@ class ArmazenamentoCroquiDao {
       AppLogger.instance.logError(
         'Erro ao carregar croqui local $picoId em $downloadsPath',
         error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
+
+  /// Verifica se o arquivo binário do [picoId] existe no diretório de downloads (formato canônico ou legado).
+  Future<bool> verificarPicoBaixado(String downloadsPath, String picoId) async {
+    final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
+    if (await canonicalFile.exists()) return true;
+
+    final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
+    return legacyFile.exists();
+  }
+
+  /// Exclui o diretório e os arquivos locais associados ao [picoId].
+  Future<bool> excluirPico(String downloadsPath, String picoId) async {
+    try {
+      final dir = Directory('$downloadsPath/$picoId');
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        AppLogger.instance.logInfo(
+          '[ArmazenamentoCroquiDao] Pasta do pico $picoId excluída com sucesso.',
+        );
+        return true;
+      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao excluir pasta do pico $picoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return false;
+  }
+}
