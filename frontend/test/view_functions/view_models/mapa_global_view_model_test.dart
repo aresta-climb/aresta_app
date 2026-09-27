@@ -52,3 +52,30 @@ void main() {
           ),
         ),
         ResumoCroqui(
+          id: 'sem_coord',
+          nome: 'Pico Sem Coordenadas',
+        ),
+      ];
+
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: picosIndice,
+      );
+
+      final picos = viewModel.picosNoMapa;
+      expect(picos.length, equals(1));
+      expect(picos.first.id, equals('bau'));
+      expect(picos.first.temCoordenadasValidas, isTrue);
+      expect(picos.first.latitude, closeTo(-22.684444, 0.0001));
+    });
+
+    test('estaBaixado verifica presença de croqui salvo offline', () {
+      final croqui = Croqui(id: 'bau', nome: 'Pedra do Baú');
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        croquisBaixados: [croqui],
+      );
+
+      expect(viewModel.estaBaixado('bau'), isTrue);
+      expect(viewModel.estaBaixado('inexistente'), isFalse);
+    });
+  });
+}
