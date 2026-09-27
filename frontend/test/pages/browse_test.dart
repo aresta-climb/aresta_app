@@ -85,15 +85,22 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+          body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     // Aciona download do pico
-    final browseState = tester.state(find.byType(BrowsePage)) as dynamic;
-    browseState.handleDownload({'id': 'pico_1', 'nome': 'Pico Teste'});
+    final browse = tester.widget<BrowsePage>(find.byType(BrowsePage));
+    final element = tester.element(find.byType(BrowsePage));
+    browse.handleDownload(element, {'id': 'pico_1', 'nome': 'Pico Teste'});
 
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();
@@ -123,15 +130,22 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: BrowsePage(datasetRepo: mockRepo, syncService: mockSync),
+          body: BrowsePage(
+            viewModel: BrowseViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              telemetria: mockTelemetry,
+            ),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     // Aciona download do pico
-    final browseState = tester.state(find.byType(BrowsePage)) as dynamic;
-    browseState.handleDownload({'id': 'pico_1', 'nome': 'Pico Teste'});
+    final browse = tester.widget<BrowsePage>(find.byType(BrowsePage));
+    final element = tester.element(find.byType(BrowsePage));
+    browse.handleDownload(element, {'id': 'pico_1', 'nome': 'Pico Teste'});
 
     // Wait for the async function to finish and SnackBar to appear
     await tester.pumpAndSettle();
