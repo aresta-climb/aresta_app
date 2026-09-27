@@ -66,3 +66,38 @@ class PicoProximoDTO {
     required ResumoCroqui metadados,
     double? distanciaKm,
     bool estaBaixado = false,
+  }) {
+    final int setores =
+        metadados.hasPrecomputados() ? metadados.precomputados.totalSetores : 0;
+    final int escaladas =
+        metadados.hasPrecomputados() ? metadados.precomputados.totalEscaladas : 0;
+
+    return PicoProximoDTO(
+      id: metadados.id,
+      nome: metadados.nome.isEmpty ? 'Pico' : metadados.nome,
+      localizacao: metadados.localizacaoFormatada,
+      distanciaKm: distanciaKm,
+      caminhoMiniatura: 'thumbnails/${metadados.id}.webp',
+      estaBaixado: estaBaixado,
+      totalSetores: setores,
+      totalEscaladas: escaladas,
+      checksumSha256: metadados.hasChecksumSha256Thumbnail()
+          ? metadados.checksumSha256Thumbnail
+          : null,
+    );
+  }
+
+  /// Converte o [PicoProximoDTO] para o [CardCroquiDTO] utilizado pelo [CragCard].
+  CardCroquiDTO paraCardCroquiDTO() {
+    return CardCroquiDTO(
+      id: id,
+      titulo: nome.toUpperCase(),
+      localizacao: localizacao.toUpperCase(),
+      caminhoMiniatura: caminhoMiniatura,
+      salvoOffline: estaBaixado,
+      textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
+      textoEstatisticas: '$totalSetores setores • $totalEscaladas vias',
+      checksumSha256: checksumSha256,
+    );
+  }
+}
