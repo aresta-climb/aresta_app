@@ -14,9 +14,13 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 | `sync_status_timer_test.dart`| `SyncStatusTimer` | Testa a debouncer do status de sync que previne *flickering* rápido na UI |
 | `sync_service_test.dart` | `SyncService` | Testes complexos de sincronização atômica, checagem de hashes SHA-256 e extração de imagens Markdown |
 
-| `feedback/feedback_queue_service_test.dart` | `FeedbackQueueService` | Testa o enfileiramento local (SharedPreferences) e a chamada agendada do Workmanager |
-| `feedback/background_worker_test.dart` | `FeedbackOrchestrator` | Testa a execução da fila de feedback em background, requests HTTP multipart e lógica de retry (Backoff) |
-| `feedback/feedback_metadata_collector_test.dart` | `FeedbackMetadataCollector` | Testa a coleta correta dos metadados de telemetria do dispositivo na hora do envio do reporte |
+| `feedback/feedback_queue_service_test.dart` | `FeedbackQueueService` | Testa o enfileiramento na fila local e a integração com o repositório de persistência |
+| `feedback/feedback_metadata_collector_test.dart` | `FeedbackMetadataCollector` | Testa a coleta correta dos metadados de telemetria do dispositivo e auditoria de hashes |
+| `feedback/feedback_network_service_test.dart` | `FeedbackNetworkService` | Testa envio multipart protegido por App Check para o backend Supabase |
+| `feedback/network_feedback_trigger_test.dart` | `NetworkFeedbackTrigger` | Testa disparo automático de envio quando a conectividade é restabelecida |
+| `feedback/tarefa_feedback_test.dart` | `TarefaFeedback` | Testa modelo de tarefas da fila de persistência atômica em disco |
+| `dataset/gerenciador_arquivos_locais_test.dart` | `GerenciadorArquivosLocais` | Testa operações diretas de arquivos e diretórios de croquis no disco local |
+| `dataset/gerenciador_sessao_online_test.dart` | `GerenciadorSessaoOnline` | Testa gestão de croquis em memória RAM e cache volátil sob demanda |
 
 ## Como executar
 
