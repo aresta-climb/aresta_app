@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../data/dtos/card_croqui_dto.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/meus_croquis_functions.dart';
 import '../view_functions/view_models/meus_croquis_view_model.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../view_functions/common_functions.dart';
 
 /// Página de apresentação dos croquis armazenados offline (Dumb UI).
@@ -81,7 +81,7 @@ class MeusCroquisPage extends StatelessWidget {
               child: ListenableBuilder(
                 listenable: viewModel,
                 builder: (context, _) {
-                  final List<CardCroquiDTO> croquis = viewModel.croquisSalvos;
+                  final List<CardCroquiViewModel> croquis = viewModel.croquisSalvos;
 
                   if (croquis.isEmpty) {
                     return Center(
@@ -96,7 +96,7 @@ class MeusCroquisPage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: croquis.length,
                     itemBuilder: (context, index) {
-                      final CardCroquiDTO dados = croquis[index];
+                      final CardCroquiViewModel dados = croquis[index];
                       return OfflineCragCard(
                         dados: dados,
                         onAbrir: () => viewModel.abrirCroqui(context, dados.id),

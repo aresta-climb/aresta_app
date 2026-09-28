@@ -77,7 +77,7 @@ class PicoProximo {
 /// Carrossel horizontal que exibe os picos mais próximos da localização atual do usuário (Dumb UI).
 ///
 /// Obtém permissão de GPS e coordenadas, informando ao [HomeViewModel] para que este
-/// processe as distâncias e forneça a lista reativa de [PicoProximoDTO].
+/// processe as distâncias e forneça a lista reativa de [PicoProximoViewModel].
 class NearbyCragsCarousel extends StatefulWidget {
   /// Limite padrão de picos exibidos no carrossel de mais próximos.
   static const int kLimitePicosProximos = 6;
@@ -554,7 +554,7 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           child: SizedBox(
             width: 340,
             child: CragCard(
-              dados: pico.paraCardCroquiDTO(),
+              dados: pico.paraCardCroquiViewModel(),
               downloadingCrags: widget.viewModel.downloadingCrags,
               onDownload: () => _handleDownload(pico.id, pico.nome),
               onOpen: () => widget.viewModel.abrirPico(context, pico.id),
