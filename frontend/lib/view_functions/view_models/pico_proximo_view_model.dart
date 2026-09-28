@@ -67,9 +67,6 @@ abstract class PicoProximoViewModel {
   /// Converte o [PicoProximoViewModel] para o [CardCroquiViewModel] para exibição no [CragCard].
   CardCroquiViewModel paraCardCroquiViewModel();
 
-  /// Alias de compatibilidade para código existente.
-  CardCroquiViewModel paraCardCroquiDTO() => paraCardCroquiViewModel();
-
   /// Constrói um [PicoProximoViewModel] diretamente sobre a mensagem Protobuf [ResumoCroqui].
   factory PicoProximoViewModel.deMetadados({
     required ResumoCroqui metadados,

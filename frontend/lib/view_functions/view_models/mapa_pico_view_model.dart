@@ -73,9 +73,6 @@ abstract class MapaPicoViewModel {
   /// Converte o [MapaPicoViewModel] para [CardCroquiViewModel] para exibição no card de croqui.
   CardCroquiViewModel paraCardCroquiViewModel();
 
-  /// Alias de compatibilidade para código existente.
-  CardCroquiViewModel paraCardCroquiDTO() => paraCardCroquiViewModel();
-
   /// Constrói um [MapaPicoViewModel] diretamente sobre a mensagem Protobuf [ResumoCroqui].
   factory MapaPicoViewModel.deMetadados({
     required ResumoCroqui metadados,

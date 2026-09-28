@@ -391,9 +391,6 @@ CardCroquiViewModel mapearMetadadosParaCard(
   try {
     return (metadados as dynamic).paraCardCroquiViewModel() as CardCroquiViewModel;
   } catch (_) {}
-  try {
-    return (metadados as dynamic).paraCardCroquiDTO() as CardCroquiViewModel;
-  } catch (_) {}
   return CardCroquiViewModel.deValores(
     id: metadados.toString(),
     titulo: metadados.toString(),
