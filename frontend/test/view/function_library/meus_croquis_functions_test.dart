@@ -1,0 +1,384 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/view/function_library/meus_croquis_functions.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
+import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/registro_primeira_visita.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../mocks/mock_telemetry_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../mocks/mock_geolocator_platform.dart';
+
+class _PlataformaCaminhosMock extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String caminhoTemp;
+  _PlataformaCaminhosMock(this.caminhoTemp);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminhoTemp;
+  @override
+  Future<String?> getTemporaryPath() async => caminhoTemp;
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory tempDir;
+  late DatasetRepository repositorio;
+  late SyncService servicoSync;
+
+  final bytesPng1 = <int>[
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+    0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
+    0, 13, 73, 68, 65, 84, 120, 156, 99, 100, 248, 207, 80, 15, 0, 3,
+    134, 1, 128, 90, 52, 125, 107, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+    66, 96, 130
+  ];
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    RegistroPrimeiraVisita.resetForTesting();
+    GeolocatorPlatform.instance = MockGeolocatorPlatform();
+    tempDir = await Directory.systemTemp.createTemp('meus_croquis_test_');
+    PathProviderPlatform.instance = _PlataformaCaminhosMock(tempDir.path);
+    final editor = EditorDeCroqui();
+    repositorio = DatasetRepository(editorDeCroqui: editor);
+    servicoSync = SyncService(datasetRepository: repositorio);
+  });
+
+  tearDown(() async {
+    try {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    } catch (_) {}
+  });
+
+  group('OfflineCragCard - Renderização e Tipagem', () {
+    testWidgets('renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300', (
+      WidgetTester tester,
+    ) async {
+      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbFile = File('${thumbDir.path}/pico_1.webp');
+      thumbFile.writeAsBytesSync(bytesPng1);
+
+      final crag = Croqui(
+        id: 'pico_1',
+        nome: 'Pico da Falésia',
+        picos: [
+          Pico(
+            estado: 'Serra do Cipó',
+            precomputados: PrecomputadosPico(totalSetores: 3, totalEscaladas: 15),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard.deCroqui(
+              crag: crag,
+              onAbrir: () {},
+              onExcluir: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsOneWidget);
+
+      final Image imageWidget = tester.widget(imageFinder);
+      expect(imageWidget.image, isA<ResizeImage>());
+      final resize = imageWidget.image as ResizeImage;
+      expect(resize.width, equals(300));
+    });
+
+    testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
+      WidgetTester tester,
+    ) async {
+      final crag = Croqui(
+        id: 'pico_sem_thumb',
+        nome: 'Pico Sem Foto',
+        picos: [
+          Pico(estado: 'Itatiaia'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard.deCroqui(
+              crag: crag,
+              onAbrir: () {},
+              onExcluir: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.terrain), findsOneWidget);
+    });
+
+    testWidgets('OfflineCragCard renderiza dados tipados de Croqui', (
+      WidgetTester tester,
+    ) async {
+      final crag = Croqui(
+        id: 'pico_offline_1',
+        nome: 'Pico das Galinhas',
+        picos: [
+          Pico(
+            estado: 'Minas Gerais',
+            precomputados: PrecomputadosPico(
+              totalSetores: 3,
+              totalEscaladas: 25,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard.deCroqui(
+              crag: crag,
+              onAbrir: () {},
+              onExcluir: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('PICO DAS GALINHAS'), findsOneWidget);
+      expect(find.text('MINAS GERAIS'), findsOneWidget);
+      expect(find.text('3 setores • 25 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+    });
+
+    testWidgets('OfflineCragCard renderiza diretamente a partir de instância Croqui do Protobuf', (
+      WidgetTester tester,
+    ) async {
+      final croqui = Croqui(
+        id: 'pedra_do_bau',
+        nome: 'Pedra do Baú',
+        picos: [
+          Pico(
+            nome: 'Baú Principal',
+            estado: 'São Paulo',
+            precomputados: PrecomputadosPico(
+              totalSetores: 4,
+              totalEscaladas: 50,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard.deCroqui(
+              crag: croqui,
+              onAbrir: () {},
+              onExcluir: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('PEDRA DO BAÚ'), findsOneWidget);
+      expect(find.text('SÃO PAULO'), findsOneWidget);
+      expect(find.text('4 setores • 50 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+    });
+
+    testWidgets('ao clicar em ABRIR OFFLINE e Excluir aciona callbacks respectivos', (
+      WidgetTester tester,
+    ) async {
+      bool clicouAbrir = false;
+      bool clicouExcluir = false;
+      final crag = Croqui(
+        id: 'pico_telemetria',
+        nome: 'Pico Telemetria',
+        picos: [
+          Pico(estado: 'Cipó'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard.deCroqui(
+              crag: crag,
+              onAbrir: () => clicouAbrir = true,
+              onExcluir: () => clicouExcluir = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ABRIR OFFLINE'));
+      await tester.pumpAndSettle();
+      expect(clicouAbrir, isTrue);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      expect(clicouExcluir, isTrue);
+    });
+
+    testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
+      WidgetTester tester,
+    ) async {
+      const viewModel = CardCroquiViewModel(
+        id: 'pico_offline_dumb',
+        titulo: 'FALÉSIA DUMB',
+        localizacao: 'SERRA DO CIPÓ',
+        textoEstatisticas: '7 setores • 35 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_offline_dumb.webp',
+        salvoOffline: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OfflineCragCard(
+              dados: viewModel,
+              onAbrir: () {},
+              onExcluir: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('FALÉSIA DUMB'), findsOneWidget);
+      expect(find.text('SERRA DO CIPÓ'), findsOneWidget);
+      expect(find.text('7 setores • 35 escaladas'), findsOneWidget);
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+    });
+
+    testWidgets('ao clicar em ABRIR OFFLINE carrega croqui de compilado.binarypb e abre tela do pico sem piscar/voltar', (
+      WidgetTester tester,
+    ) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final picoOfflineDir = Directory('${tempDir.path}/downloads/pico_offline_teste')
+        ..createSync(recursive: true);
+      final croqui = Croqui(
+        id: 'pico_offline_teste',
+        nome: 'Pico Offline Sucesso',
+        picos: [
+          Pico(
+            nome: 'Pico Offline Sucesso',
+            estado: 'Minas Gerais',
+          ),
+        ],
+      );
+      File('${picoOfflineDir.path}/compilado.binarypb')
+          .writeAsBytesSync(croqui.writeToBuffer());
+
+      final crag = croqui.paraResumoPico();
+
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        croquisBaixados: [croqui],
+        picosBaixados: [crag],
+        picosDisponiveis: [crag],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: repositorio,
+            syncService: servicoSync,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      treeController.navigateTo(MeusCroquisNode(const HomeNode()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('ABRIR OFFLINE'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('ABRIR OFFLINE'));
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Não deve ter voltado para MeusCroquisNode (não deve só piscar a tela)
+      expect(treeController.currentNode, isA<PicoNode>());
+      expect(find.text('PICO OFFLINE SUCESSO'), findsOneWidget);
+      expect(
+        repositorio.gerenciadorSessaoOnline.obterCroquiOnline('pico_offline_teste'),
+        isNotNull,
+      );
+    });
+
+    testWidgets('ao clicar em ABRIR OFFLINE quando o croqui não pode ser carregado exibe SnackBar amigável de erro', (
+      WidgetTester tester,
+    ) async {
+      const cragInexistente = ResumoPico(
+        id: 'pico_inexistente',
+        nome: 'Pico Inexistente',
+        local: 'Local',
+        isDownloaded: true,
+      );
+
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [cragInexistente],
+        picosDisponiveis: [cragInexistente],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: repositorio,
+            syncService: servicoSync,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final treeController = TreeNavigationWrapper.currentTreeController!;
+      treeController.navigateTo(MeusCroquisNode(const HomeNode()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.runAsync(() async {
+        await tester.tap(find.text('ABRIR OFFLINE'));
+        await Future.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(treeController.currentNode, isA<MeusCroquisNode>());
+      expect(find.text('Erro ao abrir o guia offline.'), findsOneWidget);
+    });
+  });
+}
+
+
+
