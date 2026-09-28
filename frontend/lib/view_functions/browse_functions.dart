@@ -3,12 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../aresta_api/proto/generated/indice.pb.dart';
 import '../theme/app_colors.dart';
 import 'common_functions.dart';
 import '../navigation/navigation_functions.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
+import 'view_models/card_croqui_view_model.dart';
 import '../widgets/crag_card.dart';
 export '../widgets/crag_card.dart';
 
@@ -29,11 +27,11 @@ Widget buildBrowseBody(
   VoidCallback? onSyncPressed,
   bool Function(String picoId)? isDownloadedChecker,
 }) {
-  final List<MetadadosIndice> picos = _normalizarMetadados(availableCrags);
+  final List<CardCroquiViewModel> picos = _normalizarCards(availableCrags);
   final Set<String> baixadosImplicitos = {};
   if (availableCrags is List) {
     for (final item in availableCrags) {
-      if (item is ResumoPico && item.isDownloaded) {
+      if (item is CardCroquiViewModel && item.salvoOffline) {
         baixadosImplicitos.add(item.id);
       } else if (item is Map && (item['isDownloaded'] == true)) {
         final id = item['id']?.toString();
@@ -73,57 +71,13 @@ Widget buildBrowseBody(
   );
 }
 
-List<MetadadosIndice> _normalizarMetadados(dynamic lista) {
+List<CardCroquiViewModel> _normalizarCards(dynamic lista) {
   if (lista == null) return const [];
-  if (lista is List<MetadadosIndice>) return lista;
+  if (lista is List<CardCroquiViewModel>) return lista;
   if (lista is List) {
     return lista.map((item) {
-      if (item is MetadadosIndice) return item;
-      if (item is ResumoPico) {
-        return MetadadosIndice(
-          id: item.id,
-          nome: item.nome,
-          descricao: item.descricao,
-          caminhoRelativo: item.url,
-          checksumSha256Croqui: item.checksum,
-          precomputados: item.estatisticas != null
-              ? PrecomputadosResumoCroqui(
-                  totalSetores: item.estatisticas!.totalSetores,
-                  totalEscaladas: item.estatisticas!.totalVias,
-                  totalBoulders: item.estatisticas!.totalBoulders,
-                  totalEsportivas: item.estatisticas!.totalEsportivas,
-                  totalMoveis: item.estatisticas!.totalMoveis,
-                  totalMultiplasEnfiadas:
-                      item.estatisticas!.totalMultiplasEnfiadas,
-                  totalHighlines: item.estatisticas!.totalHighlines,
-                )
-              : null,
-        );
-      }
-      if (item is Map) {
-        final mapa = Map<String, dynamic>.from(item);
-        final stats = mapa['estatisticas'] as Map?;
-        return MetadadosIndice(
-          id: mapa['id']?.toString() ?? '',
-          nome: mapa['nome']?.toString() ?? '',
-          descricao: mapa['descricao']?.toString() ?? '',
-          precomputados: stats != null
-              ? PrecomputadosResumoCroqui(
-                  totalSetores: (stats['totalSetores'] as num?)?.toInt() ?? 0,
-                  totalEscaladas: (stats['totalVias'] as num?)?.toInt() ?? 0,
-                  totalBoulders: (stats['totalBoulders'] as num?)?.toInt() ?? 0,
-                  totalEsportivas:
-                      (stats['totalEsportivas'] as num?)?.toInt() ?? 0,
-                  totalMoveis: (stats['totalMoveis'] as num?)?.toInt() ?? 0,
-                  totalMultiplasEnfiadas:
-                      (stats['totalMultiplasEnfiadas'] as num?)?.toInt() ?? 0,
-                  totalHighlines:
-                      (stats['totalHighlines'] as num?)?.toInt() ?? 0,
-                )
-              : null,
-        );
-      }
-      return MetadadosIndice();
+      if (item is CardCroquiViewModel) return item;
+      return mapearMetadadosParaCard(item);
     }).toList();
   }
   return const [];
@@ -131,7 +85,7 @@ List<MetadadosIndice> _normalizarMetadados(dynamic lista) {
 
 Widget _buildCragList(
   BuildContext context,
-  List<MetadadosIndice> availableCrags,
+  List<CardCroquiViewModel> availableCrags,
   ValueListenable<Map<String, double>> downloadingCrags,
   Function(dynamic) onDownload, {
   Function(dynamic)? onOpen,
@@ -210,18 +164,23 @@ Widget _buildCragList(
           )
         else
           ...availableCrags.map(
-            (crag) => Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: CragCard.deMetadados(
-                metadados: crag,
-                isDownloaded: isDownloadedChecker != null
-                    ? isDownloadedChecker(crag.id)
-                    : false,
-                downloadingCrags: downloadingCrags,
-                onDownload: () => onDownload(crag),
-                onOpen: onOpen != null ? () => onOpen(crag) : null,
-              ),
-            ),
+            (crag) {
+              final baixado = isDownloadedChecker != null
+                  ? isDownloadedChecker(crag.id)
+                  : crag.salvoOffline;
+              final dados = crag.salvoOffline == baixado
+                  ? crag
+                  : crag.comSalvoOffline(baixado);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: CragCard(
+                  dados: dados,
+                  downloadingCrags: downloadingCrags,
+                  onDownload: () => onDownload(dados),
+                  onOpen: onOpen != null ? () => onOpen(dados) : null,
+                ),
+              );
+            },
           ),
       ],
     ),
@@ -321,10 +280,12 @@ Widget buildCragListItem(
   VoidCallback? onOpen,
   bool isDownloaded = false,
 }) {
-  final metadados = _normalizarMetadados([crag]).first;
-  return CragCard.deMetadados(
-    metadados: metadados,
-    isDownloaded: isDownloaded,
+  final item = _normalizarCards([crag]).first;
+  final dados = item.salvoOffline == isDownloaded
+      ? item
+      : item.comSalvoOffline(isDownloaded);
+  return CragCard(
+    dados: dados,
     downloadingCrags: downloadingCrags,
     onDownload: onDownload,
     onOpen: onOpen,
@@ -339,8 +300,8 @@ void showDownloadBottomSheet(
   VoidCallback? onOpen,
   bool isDownloaded = false,
 }) {
-  final MetadadosIndice pico = _normalizarMetadados([crag]).first;
-  final String localFormatado = pico.localizacaoFormatada;
+  final CardCroquiViewModel pico = _normalizarCards([crag]).first;
+  final String localFormatado = pico.localizacao;
 
   showModalBottomSheet(
     context: context,
