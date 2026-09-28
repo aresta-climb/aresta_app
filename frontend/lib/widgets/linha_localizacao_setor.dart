@@ -6,7 +6,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/via_functions.dart';
+import '../view/function_library/via_functions.dart';
 
 /// Componente que apresenta a localização geográfica de uma escalada (`Grupo > Setor`
 /// ou apenas `Setor`) com indicação visual evidente de que é acionável para abrir

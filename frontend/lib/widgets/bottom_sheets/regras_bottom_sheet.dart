@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../view_functions/offline_markdown.dart';
+import '../../view/function_library/offline_markdown.dart';
 import '../../theme/app_colors.dart';
 
 class RegrasBottomSheet extends StatelessWidget {

@@ -18,7 +18,7 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/view_functions/view_models/home_view_model.dart';
+import 'package:frontend/view/view_models/home_view_model.dart';
 import '../mocks/mock_geolocator_platform.dart';
 import '../mocks/mock_telemetry_service.dart';
 

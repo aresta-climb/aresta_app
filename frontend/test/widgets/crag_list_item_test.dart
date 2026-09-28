@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/view_functions/browse_functions.dart';
+import 'package:frontend/view/function_library/browse_functions.dart';
 
 void main() {
   group('CragListItem Widget Tests', () {

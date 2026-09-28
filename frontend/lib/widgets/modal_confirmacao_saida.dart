@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/common_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 
 /// Modal de confirmação e conscientização ("Guardião de Saída") exibido

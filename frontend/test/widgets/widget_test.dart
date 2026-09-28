@@ -11,7 +11,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:frontend/view_functions/view_models/meus_croquis_view_model.dart';
+import 'package:frontend/view/view_models/meus_croquis_view_model.dart';
 
 class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {
   final int _hard = 0;

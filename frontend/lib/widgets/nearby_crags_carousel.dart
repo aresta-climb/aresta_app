@@ -7,10 +7,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firebase/app_logger.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/view_models/home_view_model.dart';
-import '../view_functions/view_models/pico_proximo_view_model.dart';
-import '../view_functions/view_models/card_croqui_view_model.dart';
-import '../view_functions/home_functions.dart' as home_functions;
+import '../view/view_models/home_view_model.dart';
+import '../view/view_models/pico_proximo_view_model.dart';
+import '../view/view_models/card_croqui_view_model.dart';
+import '../view/function_library/home_functions.dart' as home_functions;
 import 'crag_card.dart';
 
 /// Representa um pico de escalada com distância calculada para exibição no carrossel.

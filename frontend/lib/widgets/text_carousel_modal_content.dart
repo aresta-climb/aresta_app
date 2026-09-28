@@ -4,9 +4,9 @@
 import 'package:flutter/material.dart';
 import '../navigation/navigation_tree.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/offline_markdown.dart';
+import '../view/function_library/offline_markdown.dart';
 import '../utils/markdown_utils.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/common_functions.dart';
 
 class TextCarouselModalContent extends StatefulWidget {
   final TextCarouselNode node;

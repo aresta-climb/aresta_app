@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/common_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../navigation/navigation_tree.dart';

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/app_colors.dart';
-import 'package:frontend/view_functions/view_models/card_croqui_view_model.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 import 'package:frontend/widgets/crag_card.dart';
 
 void main() {
