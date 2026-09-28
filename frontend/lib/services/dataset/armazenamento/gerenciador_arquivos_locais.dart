@@ -1,31 +1,78 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../../data/daos/armazenamento_croqui_dao.dart';
+import '../../firebase/app_logger.dart';
 
 /// Gerencia as operações de entrada/saída de arquivos no armazenamento permanente (`/downloads`).
 ///
-/// Delega as leituras físicas e manipulações de arquivo binário ao [ArmazenamentoCroquiDao].
+/// Encapsula a manipulação física dos arquivos binários (`compilado.binarypb`), renomeações transparentes de arquivos
+/// legados e remoção de pastas de dados.
 class GerenciadorArquivosLocais {
-  final ArmazenamentoCroquiDao _dao;
-
-  /// Cria uma nova instância de [GerenciadorArquivosLocais], permitindo injeção de [ArmazenamentoCroquiDao].
-  GerenciadorArquivosLocais({ArmazenamentoCroquiDao? dao})
-      : _dao = dao ?? ArmazenamentoCroquiDao();
+  /// Cria uma nova instância de [GerenciadorArquivosLocais].
+  const GerenciadorArquivosLocais();
 
   /// Carrega e desserializa o [Croqui] completo a partir do diretório de downloads local.
   ///
   /// Prioriza o caminho canônico `compilado.binarypb`. Caso localize o arquivo legado `<picoId>.binarypb`,
   /// executa uma migração transparente (*lazy rename*) no mesmo diretório antes de desserializar.
-  Future<Croqui?> carregarCroqui(String downloadsPath, String picoId) =>
-      _dao.carregarCroqui(downloadsPath, picoId);
+  Future<Croqui?> carregarCroqui(String downloadsPath, String picoId) async {
+    try {
+      final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
+      if (await canonicalFile.exists()) {
+        final bytes = await canonicalFile.readAsBytes();
+        return Croqui.fromBuffer(bytes);
+      }
+
+      final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
+      if (await legacyFile.exists()) {
+        try {
+          await legacyFile.rename(canonicalFile.path);
+          final bytes = await canonicalFile.readAsBytes();
+          return Croqui.fromBuffer(bytes);
+        } catch (_) {
+          final bytes = await legacyFile.readAsBytes();
+          return Croqui.fromBuffer(bytes);
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao carregar croqui local $picoId em $downloadsPath',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
 
   /// Verifica se o croqui do [picoId] está presente no diretório de downloads (canônico ou legado).
-  Future<bool> verificarPicoBaixado(String downloadsPath, String picoId) =>
-      _dao.verificarPicoBaixado(downloadsPath, picoId);
+  Future<bool> verificarPicoBaixado(String downloadsPath, String picoId) async {
+    final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
+    if (await canonicalFile.exists()) return true;
+
+    final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
+    return legacyFile.exists();
+  }
 
   /// Exclui a pasta do pico do armazenamento local.
-  Future<bool> excluirPico(String downloadsPath, String picoId) =>
-      _dao.excluirPico(downloadsPath, picoId);
+  Future<bool> excluirPico(String downloadsPath, String picoId) async {
+    try {
+      final dir = Directory('$downloadsPath/$picoId');
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        AppLogger.instance.logInfo(
+          '[GerenciadorArquivosLocais] Pasta do pico $picoId excluída com sucesso.',
+        );
+        return true;
+      }
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Erro ao excluir pasta do pico $picoId',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return false;
+  }
 }
