@@ -7,8 +7,8 @@ import '../../services/dataset/modelos/metadados_indice.dart';
 
 /// ViewModel de item para exibição de cards de croquis na interface (Dumb UI).
 ///
-/// Implementa a abordagem Zero-Copy: referencia diretamente a mensagem Protobuf ([ResumoCroqui]
-/// ou [Croqui]) através de getters sob demanda, sem duplicar dados em novas estruturas em memória.
+/// Encapsula diretamente a mensagem Protobuf ([ResumoCroqui] ou [Croqui]) através de
+/// getters sob demanda, formatando dados para apresentação visual de forma leve.
 abstract class CardCroquiViewModel {
   /// Identificador único do pico/croqui.
   String get id;
@@ -91,7 +91,7 @@ abstract class CardCroquiViewModel {
     String? checksumSha256,
   }) = _CardCroquiValores;
 
-  /// Cria um [CardCroquiViewModel] diretamente sobre a entidade Protobuf [ResumoCroqui] (Zero-Copy).
+  /// Cria um [CardCroquiViewModel] diretamente sobre a mensagem Protobuf [ResumoCroqui].
   factory CardCroquiViewModel.deMetadados(
     ResumoCroqui metadados, {
     bool salvoOffline,
@@ -99,7 +99,7 @@ abstract class CardCroquiViewModel {
     bool estatisticasDetalhadas,
   }) = _CardCroquiMetadados;
 
-  /// Cria um [CardCroquiViewModel] diretamente sobre a entidade Protobuf [Croqui] completo (Zero-Copy).
+  /// Cria um [CardCroquiViewModel] diretamente sobre a mensagem Protobuf [Croqui] completo.
   factory CardCroquiViewModel.deCroqui(
     Croqui croqui, {
     String? textoDistancia,
@@ -126,7 +126,7 @@ abstract class CardCroquiViewModel {
   }) = _CardCroquiMapa;
 }
 
-/// Implementação Zero-Copy que referencia diretamente a mensagem Protobuf [ResumoCroqui].
+/// Implementação leve que referencia diretamente a mensagem Protobuf [ResumoCroqui].
 class _CardCroquiMetadados extends CardCroquiViewModel {
   final ResumoCroqui _metadados;
 
@@ -201,7 +201,7 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
   }
 }
 
-/// Implementação Zero-Copy que referencia diretamente a mensagem Protobuf [Croqui].
+/// Implementação leve que referencia diretamente a mensagem Protobuf [Croqui].
 class _CardCroquiCroqui extends CardCroquiViewModel {
   final Croqui _croqui;
 
@@ -318,7 +318,11 @@ class _CardCroquiMapa extends CardCroquiViewModel {
   @override
   final bool salvoOffline;
 
-  _CardCroquiMapa(this._mapa, {this.salvoOffline = false}) : super._();
+  _CardCroquiMapa(this._mapa, {bool salvoOffline = false})
+      : salvoOffline = salvoOffline ||
+            (_mapa['isDownloaded'] == true) ||
+            (_mapa['salvoOffline'] == true),
+        super._();
 
   @override
   CardCroquiViewModel comSalvoOffline(bool novoSalvoOffline) {
@@ -372,12 +376,24 @@ CardCroquiViewModel mapearMetadadosParaCard(
       estatisticasDetalhadas: estatisticasDetalhadas,
     );
   }
+  if (metadados is Croqui) {
+    return CardCroquiViewModel.deCroqui(
+      metadados,
+      textoDistancia: textoDistancia,
+    );
+  }
   if (metadados is Map) {
     return CardCroquiViewModel.deMapa(
       Map<String, dynamic>.from(metadados),
       salvoOffline: salvoOffline,
     );
   }
+  try {
+    return (metadados as dynamic).paraCardCroquiViewModel() as CardCroquiViewModel;
+  } catch (_) {}
+  try {
+    return (metadados as dynamic).paraCardCroquiDTO() as CardCroquiViewModel;
+  } catch (_) {}
   return CardCroquiViewModel.deValores(
     id: metadados.toString(),
     titulo: metadados.toString(),

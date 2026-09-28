@@ -6,5 +6,5 @@ export '../../view_functions/view_models/card_croqui_view_model.dart';
 
 /// Apelido para manter compatibilidade com componentes que importam [CardCroquiDTO].
 ///
-/// O modelo canônico de apresentação Zero-Copy é [CardCroquiViewModel].
+/// O modelo canônico de apresentação na interface é [CardCroquiViewModel].
 typedef CardCroquiDTO = CardCroquiViewModel;
