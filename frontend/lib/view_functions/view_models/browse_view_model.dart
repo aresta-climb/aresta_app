@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/fuzzy.dart';
-import '../../data/dtos/card_croqui_dto.dart';
+import 'card_croqui_view_model.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
@@ -141,8 +141,8 @@ class BrowseViewModel extends ChangeNotifier {
     return resultado;
   }
 
-  /// Lista dos picos filtrados mapeados diretamente para [CardCroquiDTO] (Dumb UI).
-  List<CardCroquiDTO> get picosCards {
+  /// Lista dos picos filtrados mapeados diretamente para [CardCroquiViewModel] (Dumb UI).
+  List<CardCroquiViewModel> get picosCards {
     return picosFiltrados.map((m) {
       return mapearMetadadosParaCard(
         m,
