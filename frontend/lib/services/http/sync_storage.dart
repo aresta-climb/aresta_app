@@ -6,32 +6,24 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/daos/indice_dao.dart';
 import '../firebase/app_logger.dart';
 
 /// Gerencia o armazenamento local de arquivos para sincronização,
 /// ocultando os detalhes de I/O do SyncService.
 class SyncStorage {
-  /// Lê o arquivo de índice mestre do armazenamento local.
+  final IndiceDao _indiceDao;
+
+  /// Cria uma instância de [SyncStorage] permitindo injeção de [IndiceDao].
+  SyncStorage({IndiceDao? indiceDao})
+      : _indiceDao = indiceDao ?? IndiceDao();
+
+  /// Lê o arquivo de índice mestre do armazenamento local através do [IndiceDao].
   ///
   /// Retorna o objeto [Indice] populado se o arquivo existir,
   /// caso contrário, retorna nulo.
-  Future<Indice?> readLocalIndice(String filePath) async {
-    final file = File(filePath);
-    if (await file.exists()) {
-      try {
-        final bytes = await file.readAsBytes();
-        return Indice.fromBuffer(bytes);
-      } catch (e, stackTrace) {
-        AppLogger.instance.logError(
-          '[SyncStorage] Erro ao ler indice local (possível breaking change)',
-          error: e,
-          stackTrace: stackTrace,
-        );
-        return null;
-      }
-    }
-    return null;
-  }
+  Future<Indice?> readLocalIndice(String filePath) =>
+      _indiceDao.carregarDoDisco(filePath);
 
   /// Salva os bytes do índice no arquivo local especificado,
   /// criando a estrutura de diretórios caso necessário.
