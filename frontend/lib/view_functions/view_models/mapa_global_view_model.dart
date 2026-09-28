@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
-import '../../data/dtos/mapa_pico_dto.dart';
+import 'mapa_pico_view_model.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
@@ -12,7 +12,7 @@ import '../home_functions.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [MapaGlobalPage] (MVVM).
 ///
-/// Encapsula a conversão de metadados do índice para [MapaPicoDTO], gerenciamento de downloads,
+/// Encapsula a conversão de metadados do índice para [MapaPicoViewModel], gerenciamento de downloads,
 /// verificação de status offline e navegação para picos, tornando o widget de mapa puramente passivo (Dumb UI).
 class MapaGlobalViewModel extends ChangeNotifier {
   /// Repositório de dados com catálogo e croquis baixados.
@@ -52,23 +52,23 @@ class MapaGlobalViewModel extends ChangeNotifier {
   }
 
   /// Lista de picos catalogados válidos para plotagem geográfica no mapa mundial.
-  List<MapaPicoDTO> get picosNoMapa {
+  List<MapaPicoViewModel> get picosNoMapa {
     if (picosIniciais != null && picosIniciais!.isNotEmpty) {
       return picosIniciais!
           .map((item) {
-            if (item is MapaPicoDTO) return item;
+            if (item is MapaPicoViewModel) return item;
             if (item is Map) {
-              return MapaPicoDTO.deMapa(Map<String, dynamic>.from(item));
+              return MapaPicoViewModel.deMapa(Map<String, dynamic>.from(item));
             }
             if (item is ResumoCroqui) {
-              return MapaPicoDTO.deMetadados(
+              return MapaPicoViewModel.deMetadados(
                 metadados: item,
                 estaBaixado: estaBaixado(item.id),
               );
             }
             return null;
           })
-          .whereType<MapaPicoDTO>()
+          .whereType<MapaPicoViewModel>()
           .where((dto) => dto.temCoordenadasValidas)
           .toList();
     }
@@ -78,7 +78,7 @@ class MapaGlobalViewModel extends ChangeNotifier {
 
     final baseUrl = datasetRepo.editorDeCroqui.activeBaseUrl;
     return dataset.metadadosDisponiveis
-        .map((m) => MapaPicoDTO.deMetadados(
+        .map((m) => MapaPicoViewModel.deMetadados(
               metadados: m,
               estaBaixado: estaBaixado(m.id),
               baseUrl: baseUrl,

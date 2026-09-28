@@ -37,7 +37,7 @@ void main() {
   });
 
   group('MapaGlobalViewModel Tests', () {
-    test('picosNoMapa filtra picos sem coordenadas e retorna MapaPicoDTO válidos', () {
+    test('picosNoMapa filtra picos sem coordenadas e retorna MapaPicoViewModel válidos', () {
       final picosIndice = [
         ResumoCroqui(
           id: 'bau',
