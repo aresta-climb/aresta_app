@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../data/dtos/mapa_pico_dto.dart';
+import '../view_functions/view_models/mapa_pico_view_model.dart';
 import '../view_functions/mapa/mapa_global_functions.dart';
 import '../view_functions/mapa/mapa_marker.dart';
 import '../view_functions/view_models/mapa_global_view_model.dart';
@@ -29,7 +29,7 @@ class MapaGlobalPage extends StatefulWidget {
 }
 
 class _MapaGlobalPageState extends State<MapaGlobalPage> {
-  void _handleDownload(MapaPicoDTO pico) async {
+  void _handleDownload(MapaPicoViewModel pico) async {
     final name = pico.nome.isEmpty ? 'Pico' : pico.nome;
     final String id = pico.id;
 
@@ -173,7 +173,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         });
       }
 
-      for (final MapaPicoDTO crag in widget.viewModel.picosNoMapa) {
+      for (final MapaPicoViewModel crag in widget.viewModel.picosNoMapa) {
         final name = crag.nome.isEmpty ? 'Pico' : crag.nome;
         final textIcon = await createCustomMarkerLabelBitmap(name);
         if (mounted) {
@@ -187,7 +187,7 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
     }
   }
 
-  void _handleOpen(MapaPicoDTO pico) {
+  void _handleOpen(MapaPicoViewModel pico) {
     widget.viewModel.abrirPico(context, pico.id);
   }
 
@@ -233,12 +233,12 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
               crags: picosAtuais,
               downloadingCrags: widget.viewModel.downloadingCrags,
               onDownload: (crag) {
-                if (crag is MapaPicoDTO) {
+                if (crag is MapaPicoViewModel) {
                   _handleDownload(crag);
                 }
               },
               onOpen: (crag) {
-                if (crag is MapaPicoDTO) {
+                if (crag is MapaPicoViewModel) {
                   _handleOpen(crag);
                 }
               },
