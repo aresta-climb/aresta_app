@@ -3,7 +3,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
 import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 import 'provedor_imagem_aresta.dart';
@@ -26,10 +25,10 @@ class CragCard extends StatelessWidget {
     this.onOpen,
   });
 
-  /// Construtor de conveniência que recebe diretamente [MetadadosIndice] e mapeia para [CardCroquiViewModel].
+  /// Construtor de conveniência que recebe metadados flexíveis e mapeia para [CardCroquiViewModel].
   factory CragCard.deMetadados({
     Key? key,
-    required MetadadosIndice metadados,
+    required dynamic metadados,
     required ValueListenable<Map<String, double>> downloadingCrags,
     required VoidCallback onDownload,
     VoidCallback? onOpen,
