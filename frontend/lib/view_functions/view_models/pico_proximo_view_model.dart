@@ -7,8 +7,8 @@ import 'card_croqui_view_model.dart';
 
 /// ViewModel de item que representa um pico próximo ao usuário para carrosséis ou listas (Dumb UI).
 ///
-/// Adota o padrão Zero-Copy: referencia diretamente a mensagem Protobuf [ResumoCroqui] através
-/// de getters puros, calculando e formatando a distância sob demanda.
+/// Encapsula a mensagem Protobuf [ResumoCroqui] através de getters diretos,
+/// calculando e formatando a distância sob demanda para a camada de apresentação.
 abstract class PicoProximoViewModel {
   /// Identificador único do pico.
   String get id;
@@ -70,7 +70,7 @@ abstract class PicoProximoViewModel {
   /// Alias de compatibilidade para código existente.
   CardCroquiViewModel paraCardCroquiDTO() => paraCardCroquiViewModel();
 
-  /// Constrói um [PicoProximoViewModel] diretamente sobre a entidade Protobuf [ResumoCroqui] (Zero-Copy).
+  /// Constrói um [PicoProximoViewModel] diretamente sobre a mensagem Protobuf [ResumoCroqui].
   factory PicoProximoViewModel.deMetadados({
     required ResumoCroqui metadados,
     double? distanciaKm,
@@ -91,7 +91,7 @@ abstract class PicoProximoViewModel {
   }) = _PicoProximoValores;
 }
 
-/// Implementação Zero-Copy que referencia diretamente a entidade Protobuf [ResumoCroqui].
+/// Implementação leve que referencia diretamente a mensagem Protobuf [ResumoCroqui].
 class _PicoProximoMetadados extends PicoProximoViewModel {
   final ResumoCroqui _metadados;
 
