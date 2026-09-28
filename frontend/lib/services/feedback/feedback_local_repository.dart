@@ -9,8 +9,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-
-import '../../data/dtos/feedback_task.dart';
+import 'tarefa_feedback.dart';
 import '../firebase/app_logger.dart';
 
 class FeedbackLocalRepository {
@@ -98,11 +97,11 @@ class FeedbackLocalRepository {
         final pngFile = File(pngPath);
 
         tasks.add(
-          FeedbackTask(
-            processingFile: processingFile,
+          TarefaFeedback(
+            arquivoProcessamento: processingFile,
             id: feedbackId,
-            jsonContent: jsonContent,
-            pngFile: pngFile.existsSync() ? pngFile : null,
+            conteudoJson: jsonContent,
+            arquivoPng: pngFile.existsSync() ? pngFile : null,
           ),
         );
       } catch (e, stackTrace) {
