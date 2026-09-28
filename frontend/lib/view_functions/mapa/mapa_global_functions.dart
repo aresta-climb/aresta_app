@@ -5,11 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../browse_functions.dart';
-import '../../services/dataset/modelos/resumo_pico.dart';
-import '../../services/dataset/modelos/metadados_indice.dart';
-
-import '../../data/dtos/mapa_pico_dto.dart';
-import '../../data/dtos/card_croqui_dto.dart';
+import '../view_models/mapa_pico_view_model.dart';
+import '../view_models/card_croqui_view_model.dart';
 import '../../widgets/crag_card.dart';
 
 /// Coleção de funções de UI puras (view_functions) para o Mapa Global.
@@ -27,38 +24,13 @@ void showCragModal({
   required VoidCallback onDownload,
   VoidCallback? onOpen,
 }) {
-  final CardCroquiDTO cardDados;
-  if (crag is MapaPicoDTO) {
-    cardDados = CardCroquiDTO(
-      id: crag.id,
-      titulo: crag.nome.toUpperCase(),
-      localizacao: crag.localizacao.toUpperCase(),
-      textoEstatisticas: '${crag.totalSetores} setores • ${crag.totalEscaladas} escaladas',
-      caminhoMiniatura: crag.caminhoMiniatura,
-      salvoOffline: crag.estaBaixado,
-      checksumSha256: crag.checksumSha256.isNotEmpty ? crag.checksumSha256 : null,
-    );
-  } else if (crag is CardCroquiDTO) {
+  final CardCroquiViewModel cardDados;
+  if (crag is MapaPicoViewModel) {
+    cardDados = crag.paraCardCroquiViewModel();
+  } else if (crag is CardCroquiViewModel) {
     cardDados = crag;
   } else {
-    final ResumoPico pico = crag is MetadadosIndice
-        ? crag.paraResumoPico()
-        : (crag is ResumoPico
-            ? crag
-            : ResumoPico.deMapa(crag is Map<String, dynamic>
-                ? crag
-                : Map<String, dynamic>.from(crag as Map)));
-    cardDados = CardCroquiDTO(
-      id: pico.id,
-      titulo: pico.nome.toUpperCase(),
-      localizacao: pico.local.toUpperCase(),
-      textoEstatisticas: pico.estatisticas != null
-          ? '${pico.estatisticas!.totalSetores} setores • ${pico.estatisticas!.totalVias} escaladas'
-          : '0 setores • 0 escaladas',
-      caminhoMiniatura: pico.thumbnailUrl.isNotEmpty ? pico.thumbnailUrl : 'thumbnails/${pico.id}.webp',
-      salvoOffline: pico.isDownloaded,
-      checksumSha256: pico.checksum.isNotEmpty ? pico.checksum : null,
-    );
+    cardDados = mapearMetadadosParaCard(crag);
   }
 
   showModalBottomSheet(
@@ -166,15 +138,7 @@ Set<Marker> buildMapMarkers({
       final double? lng;
       final String id;
 
-      if (crag is MapaPicoDTO) {
-        lat = crag.latitude;
-        lng = crag.longitude;
-        id = crag.id;
-      } else if (crag is ResumoPico) {
-        lat = crag.latitude;
-        lng = crag.longitude;
-        id = crag.id;
-      } else if (crag is MetadadosIndice) {
+      if (crag is MapaPicoViewModel) {
         lat = crag.latitude;
         lng = crag.longitude;
         id = crag.id;
@@ -183,7 +147,13 @@ Set<Marker> buildMapMarkers({
         lng = (crag['longitude'] as num?)?.toDouble();
         id = crag['id']?.toString() ?? '';
       } else {
-        continue;
+        try {
+          lat = (crag.latitude as num?)?.toDouble();
+          lng = (crag.longitude as num?)?.toDouble();
+          id = (crag.id as String?) ?? '';
+        } catch (_) {
+          continue;
+        }
       }
 
       if (lat != null && lng != null) {
