@@ -36,6 +36,7 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 |---|---|
 | [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
 | [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: MVVM, serviços, páginas, funções e widgets |
+| [`frontend/lib/view/README.md`](frontend/lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
 | [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, Modo Experimental e ciclo de importação |
 | [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e streaming sob demanda |
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
