@@ -1,6 +1,6 @@
 # Arquitetura Principal do Aplicativo Aresta Climb
 
-Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em como os dados são buscados, gerenciados e apresentados ao usuário. O aplicativo consiste em uma camada de **Serviços** para o gerenciamento de dados, uma camada de **Funções de Visualização** para componentes de interface/callbacks desacoplados e uma camada de **Páginas** para roteamento e layout.
+Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em como os dados são buscados, gerenciados e apresentados ao usuário. O aplicativo consiste em uma camada de **Serviços** para o gerenciamento de dados, uma camada de **Apresentação e Visualização** (`lib/view/`) contendo funções de interface (`function_library/`) e modelos de apresentação (`view_models/`), e uma camada de **Páginas** para roteamento e layout.
 
 ## 1. Camada de Serviços (`lib/services/`)
 
@@ -87,15 +87,24 @@ Expõe a API pública estática **`AppNav`**, que simplifica a navegação no ap
 
 ---
 
-## 4. Camada de Funções de Visualização (`lib/view_functions/`)
+## 4. Camada de Apresentação e Visualização (`lib/view/`)
 
-Para evitar arquivos de página monolíticos, todos os construtores de UI complexos, estilização e callbacks são extraídos para o diretório `view_functions/`.
+A camada de visualização é dividida de forma modular em duas subcamadas complementares, seguindo o padrão MVVM e mantendo os arquivos de `pages/` enxutos, focados apenas na estrutura do Scaffold e ciclo de vida:
 
-- **Funções específicas** (`home_functions.dart`, `browse_functions.dart`, `setor_functions.dart`, `sobre_time_functions.dart`, `meus_croquis_functions.dart`, etc.): Contêm funções `build...` e manipuladores de ação para suas respectivas páginas. Reduzem o tamanho dos arquivos em `pages/`. Com foco em arquitetura limpa, estruturas dinâmicas foram migradas para modelos fortemente tipados (`RotulosVia`, `MembroTime`, `MetadadosIndice`, `Croqui`) e blocos aninhados foram decompostos em funções puras testáveis.
-- **`mapa/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global, como `mapa_global_functions.dart` e o `mapa_marker.dart`, que renderiza programaticamente usando `Canvas` e `Path` o marcador personalizado (pingo) na cor vibrante da logomarca do app.
-- **`common_functions.dart`**: Sistema de design genérico. Define componentes como `buildSortMenu<T>` e a renderização das barras de navegação primária (`buildPrimaryBottomNav`) e secundária. Obs: O controle mestre de cores passou para o diretório `theme/app_colors.dart`.
-- **`offline_markdown.dart`**: Visualizador Markdown customizado para o mandato _offline-first_. Substitui o `imageBuilder` padrão para interceptar requisições de imagem e servir arquivos diretamente do armazenamento local via `FileImage`, sem nenhuma chamada de rede.
-- **`settings_functions.dart`**: Gerencia a conexão com servidores de editor desktop (via código de prévia ou URL) e a leitura de QR codes, acionando a sincronização e Live Reload via `SyncService` e WebSocket.
+### Subcamada de Funções de Interface (`lib/view/function_library/`)
+Reúne os construtores visuais puros, componentes de layout específicos de cada tela e callbacks de interação do usuário:
+- **Funções específicas por página** (`home_functions.dart`, `browse_functions.dart`, `setor_functions.dart`, `sobre_time_functions.dart`, `meus_croquis_functions.dart`, `comunidade_functions.dart`, `pico_functions.dart`, `via_functions.dart`, etc.): Contêm funções `build...` e despachadores de ação. Modelos tipados (`RotulosVia`, `MembroTime`, `MetadadosIndice`, `Croqui`) e funções puras eliminam aninhamentos condicionais complexos e facilitam testes de widget granulares.
+- **`mapa/` (Subdiretório)**: Organiza as funções exclusivas do mapa de visualização global (`mapa_global_functions.dart`) e o `mapa_marker.dart`, que renderiza programaticamente via `Canvas` e `Path` o marcador personalizado na cor oficial da marca.
+- **`common_functions.dart`**: Sistema de design compartilhado. Define componentes como menus (`buildSortMenu<T>`), barras de navegação primária (`buildPrimaryBottomNav`) e secundária, e utilitários de texto seguro.
+- **`offline_markdown.dart`**: Visualizador Markdown customizado para o modelo *offline-first*. Intercepta requisições de imagem para servir arquivos diretamente do armazenamento local via `FileImage`, sem chamadas de rede.
+- **`settings_functions.dart`**: Gerencia a conexão com servidores de editor desktop (via código de prévia ou URL) e leitura de QR codes, acionando a sincronização e Live Reload via `SyncService` e WebSocket.
+
+### Subcamada de Modelos de Apresentação (`lib/view/view_models/`)
+Encapsula o estado da interface, cálculos visuais derivados (como distâncias geográficas de picos próximos e status de download) e prepara os dados de domínio para renderização passiva:
+- **`card_croqui_view_model.dart`**: Modela a apresentação de cartões de croqui na Home e na Busca Global, expondo getters tipados para contagem de vias, setores, download e identificadores.
+- **`mapa_pico_view_model.dart`**: Encapsula dados de coordenadas, visibilidade, nome e cálculo de marcadores para projeção no Google Maps.
+- **`pico_proximo_view_model.dart`**: Calcula distâncias geográficas relativas à posição do usuário e disponibilidade offline para alimentação do carrossel de picos próximos.
+- **View Models de Páginas** (`browse_view_model.dart`, `home_view_model.dart`, `meus_croquis_view_model.dart`, `pico_view_model.dart`, `settings_view_model.dart`, `comunidade_view_model.dart`, `mapa_global_view_model.dart`): Gerenciam os estados reativos locais, ordenações e filtros de cada tela correspondente.
 
 ---
 
