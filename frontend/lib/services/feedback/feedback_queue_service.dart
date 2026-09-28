@@ -13,7 +13,6 @@ import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
 import '../../data/models/feedback_metadata.dart';
-import '../../data/dtos/feedback_metadata_dto.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks
 /// antes deles serem despachados pelo `FeedbackOrchestrator`.
@@ -90,7 +89,7 @@ class FeedbackQueueService {
     // 2. Criar e salvar o arquivo .json atômico correspondente
     final Map<String, dynamic> feedbackData = {
       'description': description,
-      'metadata': FeedbackMetadataDto.toJson(metadata),
+      'metadata': metadata.toJson(),
       'timestamp': metadata.submittedAtTimestamp,
     };
 

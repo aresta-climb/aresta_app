@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/dtos/feedback_metadata_dto.dart';
 import 'package:frontend/data/models/feedback_metadata.dart';
 
 void main() {
-  group('FeedbackMetadataDto', () {
+  group('FeedbackMetadata', () {
     test('toJson converte FeedbackMetadata para Map corretamente', () {
-      final metadata = FeedbackMetadata(
+      const metadata = FeedbackMetadata(
         navigationTree: 'Home -> Settings',
         submittedAt: '16 de junho de 2026 às 09:00:00 (GMT-3)',
         submittedAtTimestamp: '2026-06-16T09:00:00.000-03:00',
@@ -32,7 +31,7 @@ void main() {
         thumbnailStatus: 'INTEGRO',
       );
 
-      final json = FeedbackMetadataDto.toJson(metadata);
+      final json = metadata.toJson();
 
       expect(json['navigationTree'], 'Home -> Settings');
       expect(json['submittedAt'], '16 de junho de 2026 às 09:00:00 (GMT-3)');
@@ -82,7 +81,7 @@ void main() {
         'thumbnail_status': 'INTEGRO',
       };
 
-      final metadata = FeedbackMetadataDto.fromJson(json);
+      final metadata = FeedbackMetadata.fromJson(json);
 
       expect(metadata.navigationTree, 'Home -> Settings');
       expect(metadata.submittedAt, '16 de junho de 2026 às 09:00:00 (GMT-3)');
@@ -110,7 +109,7 @@ void main() {
     test('fromJson utiliza valores default para chaves ausentes', () {
       final json = <String, dynamic>{};
 
-      final metadata = FeedbackMetadataDto.fromJson(json);
+      final metadata = FeedbackMetadata.fromJson(json);
 
       expect(metadata.navigationTree, 'unknown');
       expect(metadata.submittedAt, 'unknown');

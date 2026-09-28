@@ -8,7 +8,6 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../../data/dtos/feedback_metadata_dto.dart';
 import '../../data/models/feedback_metadata.dart';
 
 /// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
@@ -53,7 +52,7 @@ class FeedbackNetworkService {
     request.fields['description'] = description;
 
     final Map<String, dynamic> finalMetadata = metadata is FeedbackMetadata
-        ? FeedbackMetadataDto.toJson(metadata)
+        ? metadata.toJson()
         : Map<String, dynamic>.from(metadata as Map);
     finalMetadata['dispatcher'] = dispatcher;
     request.fields['metadata'] = jsonEncode(finalMetadata);
