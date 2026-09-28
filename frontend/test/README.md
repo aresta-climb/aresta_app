@@ -9,7 +9,7 @@ test/
 ├── application_managers/ Testes dos orquestradores de background, feedback e migração
 ├── architecture/         Testes arquiteturais e de convenção de código (isolamento de pacotes)
 ├── constants/            Testes de validação de constantes de rede e URLs
-├── data/                 Testes de DTOs e serialização de metadados
+├── data/                 Testes de modelos e serialização de metadados
 ├── integration/          Testes de integração de fluxos completos (download, leitura, hot reload)
 ├── legal/                Testes para validação e extração de datas de documentos legais
 ├── navigation/           Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder
@@ -18,7 +18,7 @@ test/
 ├── services/             Testes unitários dos serviços centrais (DatasetRepository, SyncService, EditorDeCroqui, etc.)
 ├── theme/                Testes unitários do gerenciamento de temas e persistência
 ├── utils/                Testes de funções utilitárias isoladas (FormatadorCreditos, ConstrutorCaminhoTrajeto, etc.)
-├── view_functions/       Testes unitários de funções de formatação e visualização compartilhadas
+├── view/                 Testes unitários da camada de apresentação (function_library e view_models)
 └── widgets/              Testes de componentes e widgets reutilizáveis da interface
 ```
 
@@ -32,7 +32,7 @@ flutter test
 
 # Rodar uma pasta específica
 flutter test test/services/
-flutter test test/view_functions/
+flutter test test/view/
 flutter test test/navigation/
 flutter test test/theme/
 flutter test test/protobuf/
@@ -52,8 +52,8 @@ flutter test test/services/editor_croqui_test.dart
 | `services/` e `application_managers/` | Gestão de dados, sincronização atômica, Isolates, offline-first e feedback | 100% aprovado |
 | `navigation/` | Árvore de nós, prevenção de loops, Hot-Reload passivo e API `AppNav` | 100% aprovado |
 | `pages/` e `widgets/` | Interfaces de usuário, carrossel de mapas, busca global, créditos e banners | 100% aprovado |
-| `view_functions/` e `utils/` | Formatação de graus, traçados vetoriais, hit-testing e créditos | 100% aprovado |
-| `architecture/`, `legal/` e `protobuf/` | Garantia de isolamento arquitetural, conformidade e integridade binária | 100% aprovado |
+| `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | 100% aprovado |
+| `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | 100% aprovado |
 | **Total Geral** | **102 arquivos de teste / 737 cenários automatizados** | **100% aprovado** |
 
 ## Convenções
