@@ -28,24 +28,13 @@ Widget buildBrowseBody(
   bool Function(String picoId)? isDownloadedChecker,
 }) {
   final List<CardCroquiViewModel> picos = _normalizarCards(availableCrags);
-  final Set<String> baixadosImplicitos = {};
-  if (availableCrags is List) {
-    for (final item in availableCrags) {
-      if (item is CardCroquiViewModel && item.salvoOffline) {
-        baixadosImplicitos.add(item.id);
-      } else if (item is Map && (item['isDownloaded'] == true)) {
-        final id = item['id']?.toString();
-        if (id != null) baixadosImplicitos.add(id);
-      }
-    }
-  }
+  final Set<String> baixadosImplicitos = {
+    for (final pico in picos)
+      if (pico.salvoOffline) pico.id,
+  };
 
-  bool verificarBaixado(String picoId) {
-    if (isDownloadedChecker != null) {
-      return isDownloadedChecker(picoId);
-    }
-    return baixadosImplicitos.contains(picoId);
-  }
+  bool verificarBaixado(String picoId) =>
+      isDownloadedChecker?.call(picoId) ?? baixadosImplicitos.contains(picoId);
 
   return Column(
     children: [
@@ -155,7 +144,7 @@ Widget _buildCragList(
         if (availableCrags.isEmpty)
           Center(
             child: Padding(
-              padding: EdgeInsets.only(top: 40.0),
+              padding: const EdgeInsets.only(top: 40.0),
               child: Text(
                 'Nenhum pico encontrado.',
                 style: TextStyle(color: context.colors.ashGrey, fontSize: 16),
@@ -418,7 +407,7 @@ void showDownloadBottomSheet(
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
+                        child: const Text(
                           'ABRIR CROQUI',
                           style: TextStyle(
                             color: Colors.black,
