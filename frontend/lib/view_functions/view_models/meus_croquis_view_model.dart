@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../data/dtos/card_croqui_dto.dart';
+import 'card_croqui_view_model.dart';
 import '../../navigation/navigation_functions.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
@@ -15,7 +15,7 @@ import '../common_functions.dart';
 /// Modelo de apresentação para a tela [MeusCroquisPage] (MVVM).
 ///
 /// Observa as atualizações do [DatasetRepository] e expõe a lista de croquis
-/// offline já transformados no modelo passivo [CardCroquiDTO], mantendo a UI
+/// offline já transformados no modelo passivo [CardCroquiViewModel], mantendo a UI
 /// livre de regras de negócio e acoplamento com Protobuf.
 class MeusCroquisViewModel extends ChangeNotifier {
   /// Repositório de dados locais e catálogo de croquis.
@@ -41,8 +41,8 @@ class MeusCroquisViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Retorna a lista de croquis salvos offline mapeados como [CardCroquiDTO].
-  List<CardCroquiDTO> get croquisSalvos {
+  /// Retorna a lista de croquis salvos offline mapeados como [CardCroquiViewModel].
+  List<CardCroquiViewModel> get croquisSalvos {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return const [];
     if (dataset.croquisBaixados.isNotEmpty) {
@@ -53,7 +53,7 @@ class MeusCroquisViewModel extends ChangeNotifier {
       final textoStats = stats != null
           ? '${stats.totalSetores} setores • ${stats.totalVias} escaladas'
           : '';
-      return CardCroquiDTO(
+      return CardCroquiViewModel(
         id: pico.id,
         titulo: pico.nome,
         localizacao: pico.local,

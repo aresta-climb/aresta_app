@@ -3,16 +3,16 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../data/dtos/card_croqui_dto.dart';
+import 'view_models/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 
-/// Card interativo para exibição de um croqui baixado na aba Meus Croquis a partir de [CardCroquiDTO] (Dumb UI).
+/// Card interativo para exibição de um croqui baixado na aba Meus Croquis a partir de [CardCroquiViewModel] (Dumb UI).
 ///
 /// Não contém regras de negócio ou de persistência de dados, apenas renderiza visualmente
 /// as informações já preparadas e delega ações do usuário via callbacks.
 class OfflineCragCard extends StatelessWidget {
-  final CardCroquiDTO dados;
+  final CardCroquiViewModel dados;
   final VoidCallback onAbrir;
   final VoidCallback onExcluir;
 
@@ -23,7 +23,7 @@ class OfflineCragCard extends StatelessWidget {
     required this.onExcluir,
   });
 
-  /// Construtor de conveniência que recebe diretamente a entidade [Croqui] e mapeia para [CardCroquiDTO].
+  /// Construtor de conveniência que recebe diretamente a entidade [Croqui] e mapeia para [CardCroquiViewModel].
   factory OfflineCragCard.deCroqui({
     Key? key,
     required Croqui crag,

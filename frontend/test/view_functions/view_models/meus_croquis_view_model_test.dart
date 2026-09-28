@@ -42,7 +42,7 @@ void main() {
       expect(viewModel.estaVazio, isTrue);
     });
 
-    test('ao atualizar dataset notifica ouvintes e mapeia para CardCroquiDTO', () {
+    test('ao atualizar dataset notifica ouvintes e mapeia para CardCroquiViewModel', () {
       bool notificado = false;
       viewModel.addListener(() {
         notificado = true;
