@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../services/firebase/remote_config_service.dart';
-import '../comunidade_functions.dart';
+import '../function_library/comunidade_functions.dart';
 
 /// Representa um canal de comunicação oficial ou link social da comunidade Aresta.
 class ItemCanalComunidade {

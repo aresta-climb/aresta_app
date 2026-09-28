@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/view_functions/view_models/mapa_pico_view_model.dart';
+import 'package:frontend/view/view_models/mapa_pico_view_model.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 

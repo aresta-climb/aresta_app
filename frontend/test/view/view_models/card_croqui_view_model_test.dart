@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
-import 'package:frontend/view_functions/view_models/card_croqui_view_model.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 
 void main() {
   group('CardCroquiViewModel', () {

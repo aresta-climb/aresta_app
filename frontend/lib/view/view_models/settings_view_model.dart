@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/editor_croqui.dart';
-import '../settings_functions.dart';
+import '../function_library/settings_functions.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [SettingsPage] (MVVM).
 ///

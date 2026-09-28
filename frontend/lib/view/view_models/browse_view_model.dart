@@ -11,9 +11,9 @@ import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/firebase/telemetry_service.dart';
-import '../common_functions.dart';
-import '../home_functions.dart';
-import '../settings_functions.dart';
+import '../function_library/common_functions.dart';
+import '../function_library/home_functions.dart';
+import '../function_library/settings_functions.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {
