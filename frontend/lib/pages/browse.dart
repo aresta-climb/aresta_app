@@ -3,9 +3,9 @@
 
 import 'package:flutter/material.dart';
 import '../data/dtos/card_croqui_dto.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
 import '../view_functions/browse_functions.dart';
 import '../view_functions/view_models/browse_view_model.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../theme/app_colors.dart';
 
 /// Re-exportação de [OrdemOrdenacaoPico] para compatibilidade de tipos.
@@ -29,10 +29,7 @@ class BrowsePage extends StatelessWidget {
     final String id;
     final String name;
 
-    if (crag is MetadadosIndice) {
-      id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is CardCroquiDTO) {
+    if (crag is CardCroquiViewModel) {
       id = crag.id;
       name = crag.titulo.isEmpty ? 'Pico' : crag.titulo;
     } else if (crag is Map) {
@@ -165,7 +162,7 @@ class BrowsePage extends StatelessWidget {
               );
             }
 
-            final filteredCrags = viewModel.picosFiltrados;
+            final filteredCrags = viewModel.picosCards;
             final isEditor = viewModel.modoEditorAtivo;
 
             final addCallback = isEditor
@@ -180,9 +177,9 @@ class BrowsePage extends StatelessWidget {
               onSearchChanged: viewModel.alterarTermoBusca,
               onDownload: (crag) => handleDownload(context, crag),
               onOpen: (crag) {
-                final String id = crag is MetadadosIndice
+                final String id = crag is CardCroquiViewModel
                     ? crag.id
-                    : (crag is CardCroquiDTO ? crag.id : crag['id']?.toString() ?? '');
+                    : (crag is Map ? crag['id']?.toString() ?? '' : crag.toString());
                 viewModel.abrirPico(context, id);
               },
               onAddExperimental: addCallback,
