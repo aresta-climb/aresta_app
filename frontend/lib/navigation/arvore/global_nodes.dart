@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'nav_node.dart';
-import '../../services/dataset/modelos/resumo_pico.dart';
 
 /// O nó raiz da navegação do aplicativo. Representa a tela inicial (HomeView).
 class HomeNode extends NavNode {
@@ -44,10 +43,10 @@ class BrowseNode extends NavNode {
 
 /// Nó que representa o mapa global acessado a partir da Busca.
 class MapaGlobalNode extends NavNode {
-  final List<ResumoPico> crags;
+  final List<dynamic> crags;
 
   const MapaGlobalNode({
-    required this.crags,
+    this.crags = const [],
     required super.parent,
   });
 
