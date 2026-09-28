@@ -60,14 +60,20 @@ frontend/
 │   ├── utils/
 │   │   ├── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
 │   │   └── pico_categorization.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
-│   ├── view_functions/                  - Builders de UI, callbacks e funções por página
-│   │   ├── common_functions.dart        - Sistema de design (paletas, tipografia, componentes base)
-│   │   ├── offline_markdown.dart        - Visualizador Markdown com FileImage offline
-│   │   ├── settings_functions.dart      - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
-│   │   ├── mapa/
-│   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
-│   │   │   └── mapa_marker.dart        - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
-│   │   └── *_functions.dart             - Funções específicas por página (home, browse, pico, …)
+│   ├── view/                            - Camada de visualização e apresentação
+│   │   ├── function_library/            - Builders de UI, callbacks e renderizadores puros
+│   │   │   ├── common_functions.dart    - Sistema de design (paletas, tipografia, componentes base)
+│   │   │   ├── offline_markdown.dart    - Visualizador Markdown com FileImage offline
+│   │   │   ├── settings_functions.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
+│   │   │   ├── mapa/
+│   │   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
+│   │   │   │   └── mapa_marker.dart    - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
+│   │   │   └── *_functions.dart         - Funções específicas por página (home, browse, pico, …)
+│   │   └── view_models/                 - Modelos de apresentação e gerenciamento de estado
+│   │       ├── card_croqui_view_model.dart - Estado e apresentação de cards de croqui
+│   │       ├── mapa_pico_view_model.dart   - Apresentação e coordenadas de picos no mapa
+│   │       ├── pico_proximo_view_model.dart- Apresentação de picos próximos e distâncias
+│   │       └── *_view_model.dart        - View models para páginas e componentes reativos
 │   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
 │   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
@@ -125,7 +131,9 @@ frontend/
     ├── protobuf/                        - Testes de serialização/desserialização dos objetos Protobuf
     ├── services/                        - Testes unitários dos serviços principais (SyncService, etc)
     ├── theme/                           - Testes unitários do gerenciamento de temas e persistência
-    ├── view_functions/                  - Testes unitários de funções utilitárias compartilhadas
+    ├── view/                            - Testes unitários da camada de apresentação
+    │   ├── function_library/            - Testes de funções utilitárias e builders de tela
+    │   └── view_models/                 - Testes de modelos de apresentação e gerenciamento de estado
     └── widgets/                         - Testes de widget da interface do usuário
 ```
 
@@ -233,6 +241,7 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 | Documento | Conteúdo |
 |---|---|
 | [`lib/README.md`](lib/README.md) | Arquitetura completa: serviços, páginas, funções e widgets |
+| [`lib/view/README.md`](lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
 | [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore com Hot-Reload (Tree Navigation) |
 | [`lib/services/README.md`](lib/services/README.md) | Modo Experimental, ciclo de vida de importação e isolamento de dados |
 | [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
