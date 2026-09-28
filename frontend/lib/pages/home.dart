@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../view_functions/home_functions.dart';
-import '../view_functions/view_models/home_view_model.dart';
+import '../view/function_library/home_functions.dart';
+import '../view/view_models/home_view_model.dart';
 import '../theme/app_colors.dart';
 
 /// A página inicial do aplicativo (Dumb UI).

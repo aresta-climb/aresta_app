@@ -4,7 +4,7 @@
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../view_functions/common_functions.dart';
+import '../../view/function_library/common_functions.dart';
 import '../../utils/pico_categorization.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/app_colors.dart';

@@ -13,7 +13,7 @@ import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import 'package:frontend/theme/app_colors.dart';
 
-import 'package:frontend/view_functions/view_models/home_view_model.dart';
+import 'package:frontend/view/view_models/home_view_model.dart';
 
 class MockDatasetRepository extends Mock implements DatasetRepository {}
 

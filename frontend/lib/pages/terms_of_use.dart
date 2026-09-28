@@ -7,7 +7,7 @@ import '../theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:frontend/view_functions/common_functions.dart';
+import 'package:frontend/view/function_library/common_functions.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

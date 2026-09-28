@@ -8,7 +8,7 @@ import '../services/firebase/telemetry_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../utils/indexador_escaladas.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/common_functions.dart';
 import '../widgets/card_indice_escalada.dart';
 import '../widgets/painel_filtros_indice.dart';
 

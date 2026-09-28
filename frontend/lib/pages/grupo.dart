@@ -4,10 +4,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view_functions/common_functions.dart';
-import '../view_functions/grupo_functions.dart';
+import '../view/function_library/common_functions.dart';
+import '../view/function_library/grupo_functions.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/browse_functions.dart';
+import '../view/function_library/browse_functions.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../services/firebase/telemetry_service.dart';
 

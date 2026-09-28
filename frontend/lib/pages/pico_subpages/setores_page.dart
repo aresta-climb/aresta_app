@@ -3,9 +3,9 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../view_functions/pico_functions.dart';
-import '../../view_functions/common_functions.dart';
-import '../../view_functions/grupo_functions.dart';
+import '../../view/function_library/pico_functions.dart';
+import '../../view/function_library/common_functions.dart';
+import '../../view/function_library/grupo_functions.dart';
 import '../../widgets/mapa_thumbnail.dart';
 
 class SetoresPage extends StatefulWidget {

@@ -3,10 +3,10 @@
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../view_functions/meus_croquis_functions.dart';
-import '../view_functions/view_models/meus_croquis_view_model.dart';
-import '../view_functions/view_models/card_croqui_view_model.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/meus_croquis_functions.dart';
+import '../view/view_models/meus_croquis_view_model.dart';
+import '../view/view_models/card_croqui_view_model.dart';
+import '../view/function_library/common_functions.dart';
 
 /// Página de apresentação dos croquis armazenados offline (Dumb UI).
 ///

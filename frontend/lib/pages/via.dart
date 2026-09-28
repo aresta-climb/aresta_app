@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view_functions/common_functions.dart';
-import '../view_functions/via_functions.dart';
+import '../view/function_library/common_functions.dart';
+import '../view/function_library/via_functions.dart';
 
 /// Uma página que exibe informações detalhadas sobre uma via de escalada específica.
 ///

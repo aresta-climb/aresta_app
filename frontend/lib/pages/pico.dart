@@ -4,10 +4,10 @@
 import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view_functions/common_functions.dart';
-import '../view_functions/pico_functions.dart';
-import '../view_functions/browse_functions.dart';
-import '../view_functions/via_functions.dart';
+import '../view/function_library/common_functions.dart';
+import '../view/function_library/pico_functions.dart';
+import '../view/function_library/browse_functions.dart';
+import '../view/function_library/via_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/navigation_tree.dart';
 import '../services/firebase/telemetry_service.dart';
@@ -21,7 +21,7 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../widgets/banner_modo_online.dart';
 import '../widgets/linha_credito_autor.dart';
 import '../widgets/modal_confirmacao_saida.dart';
-import '../view_functions/view_models/pico_view_model.dart';
+import '../view/view_models/pico_view_model.dart';
 
 class PicoDetailsPage extends StatefulWidget {
   final PicoViewModel viewModel;

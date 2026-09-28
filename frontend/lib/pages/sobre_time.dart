@@ -4,8 +4,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
-import '../view_functions/common_functions.dart';
-import '../view_functions/sobre_time_functions.dart';
+import '../view/function_library/common_functions.dart';
+import '../view/function_library/sobre_time_functions.dart';
 import '../services/firebase/remote_config_service.dart';
 import '../main.dart';
 

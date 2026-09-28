@@ -4,11 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../view_functions/view_models/mapa_pico_view_model.dart';
-import '../view_functions/mapa/mapa_global_functions.dart';
-import '../view_functions/mapa/mapa_marker.dart';
-import '../view_functions/view_models/mapa_global_view_model.dart';
-import '../view_functions/common_functions.dart';
+import '../view/view_models/mapa_pico_view_model.dart';
+import '../view/function_library/mapa/mapa_global_functions.dart';
+import '../view/function_library/mapa/mapa_marker.dart';
+import '../view/view_models/mapa_global_view_model.dart';
+import '../view/function_library/common_functions.dart';
 import '../theme/app_colors.dart';
 
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos) (Dumb UI).

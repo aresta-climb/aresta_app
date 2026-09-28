@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view_functions/via_functions.dart';
+import '../view/function_library/via_functions.dart';
 
 /// Representa um item enriquecido do índice de escaladas, contendo a escalada
 /// e sua resolução geográfica completa (setor e grupo correspondentes).

@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../view_functions/common_functions.dart';
+import '../view/function_library/common_functions.dart';
 import '../theme/app_colors.dart';
 
 /// Página para escanear QR Codes
