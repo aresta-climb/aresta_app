@@ -5,12 +5,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/dataset/modelos/metadados_indice.dart';
-import '../services/dataset/modelos/resumo_pico.dart';
 import '../services/firebase/app_logger.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/view_models/home_view_model.dart';
-import '../data/dtos/pico_proximo_dto.dart';
+import '../view_functions/view_models/pico_proximo_view_model.dart';
+import '../view_functions/view_models/card_croqui_view_model.dart';
 import '../view_functions/home_functions.dart' as home_functions;
 import 'crag_card.dart';
 
@@ -25,33 +24,43 @@ class PicoProximo {
   });
 
   String get id {
-    if (pico is MetadadosIndice) return (pico as MetadadosIndice).id;
-    if (pico is ResumoPico) return (pico as ResumoPico).id;
-    if (pico is PicoProximoDTO) return (pico as PicoProximoDTO).id;
+    if (pico is PicoProximoViewModel) return (pico as PicoProximoViewModel).id;
+    if (pico is CardCroquiViewModel) return (pico as CardCroquiViewModel).id;
     if (pico is Map) return pico['id']?.toString() ?? '';
-    return '';
+    try {
+      return (pico.id as String?) ?? '';
+    } catch (_) {
+      return '';
+    }
   }
 
   String get nome {
-    if (pico is MetadadosIndice) return (pico as MetadadosIndice).nome;
-    if (pico is ResumoPico) return (pico as ResumoPico).nome;
-    if (pico is PicoProximoDTO) return (pico as PicoProximoDTO).nome;
+    if (pico is PicoProximoViewModel) return (pico as PicoProximoViewModel).nome;
+    if (pico is CardCroquiViewModel) return (pico as CardCroquiViewModel).nome;
     if (pico is Map) return pico['nome']?.toString() ?? '';
-    return '';
+    try {
+      return (pico.nome as String?) ?? '';
+    } catch (_) {
+      return '';
+    }
   }
 
   double? get latitude {
-    if (pico is MetadadosIndice) return (pico as MetadadosIndice).latitude;
-    if (pico is ResumoPico) return (pico as ResumoPico).latitude;
     if (pico is Map) return (pico['latitude'] as num?)?.toDouble();
-    return null;
+    try {
+      return (pico.latitude as num?)?.toDouble();
+    } catch (_) {
+      return null;
+    }
   }
 
   double? get longitude {
-    if (pico is MetadadosIndice) return (pico as MetadadosIndice).longitude;
-    if (pico is ResumoPico) return (pico as ResumoPico).longitude;
     if (pico is Map) return (pico['longitude'] as num?)?.toDouble();
-    return null;
+    try {
+      return (pico.longitude as num?)?.toDouble();
+    } catch (_) {
+      return null;
+    }
   }
 
   PicoProximo copyWith({
@@ -189,23 +198,25 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
     final String id;
     final String name;
 
-    if (crag is MetadadosIndice) {
+    if (crag is PicoProximoViewModel) {
       id = crag.id;
       name = crag.nome.isEmpty ? 'Pico' : crag.nome;
     } else if (crag is PicoProximo) {
       id = crag.id;
       name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is PicoProximoDTO) {
-      id = crag.id;
-      name = crag.nome.isEmpty ? 'Pico' : crag.nome;
-    } else if (crag is ResumoPico) {
+    } else if (crag is CardCroquiViewModel) {
       id = crag.id;
       name = crag.nome.isEmpty ? 'Pico' : crag.nome;
     } else if (crag is Map) {
       id = crag['id']?.toString() ?? '';
       name = crag['nome']?.toString() ?? 'Pico';
     } else {
-      return;
+      try {
+        id = (crag.id as String?) ?? '';
+        name = (crag.nome as String?) ?? 'Pico';
+      } catch (_) {
+        return;
+      }
     }
     await _handleDownload(id, name);
   }
