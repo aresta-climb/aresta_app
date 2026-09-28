@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../main.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:frontend/main.dart';
 import '../services/dataset_repository.dart';
 import '../navigation/navigation_tree.dart';
 import '../navigation/navigation_functions.dart';
@@ -19,6 +20,65 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset/modelos/metadados_indice.dart';
 import 'view_models/home_view_model.dart';
+import 'view_models/card_croqui_view_model.dart';
+import 'view_models/pico_proximo_view_model.dart';
+
+/// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
+/// retornando os [limite] picos mais próximos ordenados por distância crescente.
+List<PicoProximo> calcularPicosMaisProximos({
+  required double userLat,
+  required double userLon,
+  required List<dynamic> picosDisponiveis,
+  int limite = 6,
+}) {
+  final List<PicoProximo> picosComDistancia = [];
+
+  for (final item in picosDisponiveis) {
+    final double? picoLat;
+    final double? picoLon;
+
+    if (item is MetadadosIndice) {
+      picoLat = item.latitude;
+      picoLon = item.longitude;
+    } else if (item is ResumoPico) {
+      picoLat = item.latitude;
+      picoLon = item.longitude;
+    } else if (item is Map) {
+      final mapa = Map<String, dynamic>.from(item);
+      picoLat = (mapa['latitude'] as num?)?.toDouble();
+      picoLon = (mapa['longitude'] as num?)?.toDouble();
+    } else {
+      try {
+        picoLat = (item.latitude as num?)?.toDouble();
+        picoLon = (item.longitude as num?)?.toDouble();
+      } catch (_) {
+        continue;
+      }
+    }
+
+    if (picoLat != null && picoLon != null) {
+      final double distanceInMeters = Geolocator.distanceBetween(
+        userLat,
+        userLon,
+        picoLat,
+        picoLon,
+      );
+
+      picosComDistancia.add(
+        PicoProximo(
+          pico: item,
+          distanciaKm: distanceInMeters / 1000,
+        ),
+      );
+    }
+  }
+
+  picosComDistancia.sort(
+    (a, b) => a.distanciaKm.compareTo(b.distanciaKm),
+  );
+
+  return picosComDistancia.take(limite).toList();
+}
 
 /// Navega para a página de detalhes de um pico selecionado (local ou sob demanda online).
 ///
@@ -32,16 +92,26 @@ Future<void> handlePicoSelection(
   String source = 'home',
   RegistroPrimeiraVisita? registroPrimeiraVisita,
 }) async {
-  final ResumoPico resumo = pico is MetadadosIndice
-      ? pico.paraResumoPico()
-      : (pico is ResumoPico
-          ? pico
-          : ResumoPico.deMapa(
-              pico is Map<String, dynamic>
-                  ? pico
-                  : Map<String, dynamic>.from(pico as Map),
-            ));
-  final String id = resumo.id;
+  String id = '';
+  if (pico is CardCroquiViewModel) {
+    id = pico.id;
+  } else if (pico is PicoProximoViewModel) {
+    id = pico.id;
+  } else if (pico is MetadadosIndice) {
+    id = pico.id;
+  } else if (pico is ResumoPico) {
+    id = pico.id;
+  } else if (pico is Map) {
+    id = pico['id']?.toString() ?? '';
+  } else if (pico is String) {
+    id = pico;
+  } else {
+    try {
+      id = (pico.id as String?) ?? '';
+    } catch (_) {
+      id = '';
+    }
+  }
   if (id.isEmpty) return;
 
   final registro = registroPrimeiraVisita ?? RegistroPrimeiraVisita.instancia;
@@ -71,12 +141,32 @@ Future<void> handlePicoSelection(
 
   // Se não estiver salvo localmente, busca sob demanda para sessão online
   if (croqui == null) {
-    final url = resumo.url;
+    String url = '';
+    String? checksum;
+
+    if (pico is MetadadosIndice) {
+      url = pico.caminhoRelativo;
+      checksum = pico.checksumSha256Croqui.isNotEmpty ? pico.checksumSha256Croqui : null;
+    } else if (pico is ResumoPico) {
+      url = pico.url;
+      checksum = pico.checksum.isNotEmpty ? pico.checksum : null;
+    } else if (pico is Map) {
+      url = pico['url']?.toString() ?? '';
+      checksum = pico['checksum']?.toString();
+    } else {
+      try {
+        final meta = datasetRepo.activeDataset.value?.metadadosDisponiveis.firstWhere((m) => m.id == id);
+        if (meta != null) {
+          url = meta.caminhoRelativo;
+          checksum = meta.checksumSha256Croqui.isNotEmpty ? meta.checksumSha256Croqui : null;
+        }
+      } catch (_) {}
+    }
+
     if (url.isNotEmpty) {
       final servicoOnline = ServicoCroquiOnline(
         sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
       );
-      final checksum = resumo.checksum.isNotEmpty ? resumo.checksum : null;
       croqui = await servicoOnline.carregarCroquiRemoto(
         url,
         picoId: id,
