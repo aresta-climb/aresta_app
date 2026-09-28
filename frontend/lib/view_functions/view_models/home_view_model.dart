@@ -4,12 +4,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
-import '../../data/dtos/pico_proximo_dto.dart';
+import 'pico_proximo_view_model.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
-import '../../widgets/nearby_crags_carousel.dart';
 import '../common_functions.dart';
 import '../home_functions.dart';
 
@@ -67,8 +66,8 @@ class HomeViewModel extends ChangeNotifier {
         dataset.picosBaixados.any((p) => p.id == picoId);
   }
 
-  /// Retorna os picos mais próximos ao usuário formatados como [PicoProximoDTO].
-  List<PicoProximoDTO> get picosProximos {
+  /// Retorna os picos mais próximos ao usuário formatados como [PicoProximoViewModel].
+  List<PicoProximoViewModel> get picosProximos {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return const [];
 
@@ -83,7 +82,7 @@ class HomeViewModel extends ChangeNotifier {
       return const [];
     }
 
-    final proximos = NearbyCragsCarousel.calcularPicosMaisProximos(
+    final proximos = calcularPicosMaisProximos(
       userLat: _userLat!,
       userLon: _userLon!,
       picosDisponiveis: availablePicos,
@@ -92,7 +91,7 @@ class HomeViewModel extends ChangeNotifier {
     return proximos.map((item) {
       final pico = item.pico;
       if (pico is MetadadosIndice) {
-        return PicoProximoDTO.deMetadados(
+        return PicoProximoViewModel.deMetadados(
           metadados: pico,
           distanciaKm: item.distanciaKm,
           estaBaixado: estaBaixado(pico.id),
@@ -107,7 +106,7 @@ class HomeViewModel extends ChangeNotifier {
           ? pico.thumbnailUrl
           : (pico is Map ? (pico['thumbnailUrl']?.toString() ?? '') : '');
 
-      return PicoProximoDTO(
+      return PicoProximoViewModel.deValores(
         id: id,
         nome: nome,
         localizacao: local,

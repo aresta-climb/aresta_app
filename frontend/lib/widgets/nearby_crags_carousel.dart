@@ -11,6 +11,7 @@ import '../services/firebase/app_logger.dart';
 import '../theme/app_colors.dart';
 import '../view_functions/view_models/home_view_model.dart';
 import '../data/dtos/pico_proximo_dto.dart';
+import '../view_functions/home_functions.dart' as home_functions;
 import 'crag_card.dart';
 
 /// Representa um pico de escalada com distância calculada para exibição no carrossel.
@@ -81,7 +82,6 @@ class NearbyCragsCarousel extends StatefulWidget {
   });
 
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
-  /// aceitando [List<ResumoPico>], [List<MetadadosIndice>] ou listas dinâmicas,
   /// retornando os [limite] picos mais próximos ordenados por distância crescente.
   static List<PicoProximo> calcularPicosMaisProximos({
     required double userLat,
@@ -89,53 +89,12 @@ class NearbyCragsCarousel extends StatefulWidget {
     required List<dynamic> picosDisponiveis,
     int limite = kLimitePicosProximos,
   }) {
-    final List<PicoProximo> picosComDistancia = [];
-
-    for (final item in picosDisponiveis) {
-      final double? picoLat;
-      final double? picoLon;
-
-      if (item is MetadadosIndice) {
-        picoLat = item.latitude;
-        picoLon = item.longitude;
-      } else if (item is ResumoPico) {
-        picoLat = item.latitude;
-        picoLon = item.longitude;
-      } else if (item is Map) {
-        final mapa = Map<String, dynamic>.from(item);
-        picoLat = (mapa['latitude'] as num?)?.toDouble();
-        picoLon = (mapa['longitude'] as num?)?.toDouble();
-      } else {
-        try {
-          picoLat = (item.latitude as num?)?.toDouble();
-          picoLon = (item.longitude as num?)?.toDouble();
-        } catch (_) {
-          continue;
-        }
-      }
-
-      if (picoLat != null && picoLon != null) {
-        final double distanceInMeters = Geolocator.distanceBetween(
-          userLat,
-          userLon,
-          picoLat,
-          picoLon,
-        );
-
-        picosComDistancia.add(
-          PicoProximo(
-            pico: item,
-            distanciaKm: distanceInMeters / 1000,
-          ),
-        );
-      }
-    }
-
-    picosComDistancia.sort(
-      (a, b) => a.distanciaKm.compareTo(b.distanciaKm),
+    return home_functions.calcularPicosMaisProximos(
+      userLat: userLat,
+      userLon: userLon,
+      picosDisponiveis: picosDisponiveis,
+      limite: limite,
     );
-
-    return picosComDistancia.take(limite).toList();
   }
 
   /// Formata uma distância em metros para uma string amigável ao usuário (ex: '350m' ou '12.4km').
