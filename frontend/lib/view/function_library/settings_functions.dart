@@ -14,7 +14,7 @@ import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../theme/gerenciador_tema.dart';
 import '../../theme/cores_app.dart';
-import 'package:frontend/widgets/app_version_checker.dart';
+import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../navigation/navigation_functions.dart';
 import 'package:package_info_plus/package_info_plus.dart';

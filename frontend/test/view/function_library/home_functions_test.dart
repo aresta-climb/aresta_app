@@ -11,7 +11,7 @@ import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/function_library/home_functions.dart';
 import 'package:frontend/view/function_library/browse_functions.dart';
-import 'package:frontend/widgets/nearby_crags_carousel.dart';
+import 'package:frontend/widgets/carrossel_picos_proximos.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';

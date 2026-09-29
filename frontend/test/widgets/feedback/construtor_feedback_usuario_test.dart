@@ -4,7 +4,7 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:frontend/widgets/feedback/construtor_feedback_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 void main() {

@@ -31,7 +31,7 @@ import 'package:frontend/view/function_library/offline_markdown.dart';
 import 'package:frontend/view/view_models/mapa_global_view_model.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 import 'package:frontend/view/view_models/settings_view_model.dart';
-import 'package:frontend/widgets/text_carousel_modal_content.dart';
+import 'package:frontend/widgets/conteudo_modal_carrossel.dart';
 
 /// Constrói e resolve a página ([Widget]) correspondente a um nó ([NavNode]) da árvore de navegação.
 ///

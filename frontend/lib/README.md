@@ -112,16 +112,16 @@ Encapsula o estado da interface, cálculos visuais derivados (como distâncias g
 
 Componentes de UI reutilizáveis e independentes que encapsulam lógica visual e comportamento específico.
 
-- **`crag_card.dart`**: Card modular interativo para exibição de picos na grade ou listagem (usado no Explorar/Browse e no carrossel de picos próximos). Consome diretamente metadados de catálogo ([`MetadadosIndice`]) com acesso O(1) a pré-computados, contagem de setores/vias, status de download e telemetria de visualização.
+- **`card_pico.dart`**: Card modular interativo para exibição de picos na grade ou listagem (usado no Explorar/Browse e no carrossel de picos próximos). Consome diretamente metadados de catálogo ([`MetadadosIndice`]) com acesso O(1) a pré-computados, contagem de setores/vias, status de download e telemetria de visualização.
 - **`linha_credito_autor.dart`**: Widget padronizado para exibição dos créditos de autores e conquistadores do croqui. Suporta quebra automática em múltiplas linhas para listas longas, mantendo o ícone `Icons.person_outline` alinhado ao topo.
-- **`feedback/`**: Contém o `custom_feedback_builder.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
-- **`global_search.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
+- **`feedback/`**: Contém o `construtor_feedback_usuario.dart`, responsável por substituir e construir a interface de formulário do in-app feedback, mantendo coesão com as cores e design do aplicativo.
+- **`busca_global.dart`**: Componente de pesquisa agregada (Fuzzy Search) que funciona como ponte unificada para busca por Vias, Setores ou Picos.
 - **`mapa_thumbnail.dart`**: Widget especializado para exibir uma prévia interativa de mapas de setores ou picos. Resolve automaticamente o caminho da imagem no armazenamento local offline e gerencia o estado de carregamento e a transição para o mapa interativo completo.
 - **`banner_modo_online.dart`**: Banner informativo persistente que avisa o usuário quando o croqui está em modo online sob demanda.
 - **`modal_confirmacao_saida.dart`**: Guardião de saída (`PopScope`) que alerta o usuário sobre a necessidade de salvar o croqui offline antes de sair para a montanha.
 - **`provedor_imagem_aresta.dart`**: Provedor unificado com resolução em camadas (downloads permanente, cache volátil e streaming remoto CDN com query `?v=<sha256>`). Realiza auto-resolução de SHA-256 via `DatasetRepository`.
 - **`imagem_arquivo_aresta.dart`**: Implementação especializada de `ImageProvider<ChaveImagemArquivoAresta>` que substitui o `FileImage` do Flutter, indexando a chave de cache nativa por caminho, escala e `checksumSha256` para invalidar texturas em disco reativamente sem piscar a UI.
-- **`app_version_checker.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.
+- **`verificador_versao_app.dart`**: Widget e telas de verificação de versão mínima com alerta de obsolescência e bloqueio rígido.
 - **`micro_badge_beta.dart`**: Micro-badge ultracompacto para sinalização do estágio de "Beta Aberto" no cabeçalho da Home com proteção contra overflow em larguras a partir de 320dp e abertura interativa do modal informativo.
 - **`modal_beta_aberto.dart`**: Modal explicativo em BottomSheet com título em destaque, tópicos do estágio comunitário do projeto, botões em largura total com forte ênfase para o Instagram Oficial, Comunidade no WhatsApp e acionamento nativo de feedback (`BetterFeedback`).
 - **`badges_modalidades.dart`**: Renderiza chips compactos e responsivos (`Wrap`) com as contagens e nomes das modalidades de escalada presentes em um setor ou grupo (esportivas, móveis, boulders, multienfiadas, highlines), com concordância gramatical automática (singular/plural) e cores do tema.

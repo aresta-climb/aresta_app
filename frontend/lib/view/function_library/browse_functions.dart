@@ -7,8 +7,8 @@ import '../../theme/cores_app.dart';
 import 'common_functions.dart';
 import '../../navigation/navigation_functions.dart';
 import '../view_models/card_croqui_view_model.dart';
-import '../../widgets/crag_card.dart';
-export '../../widgets/crag_card.dart';
+import '../../widgets/card_pico.dart';
+export '../../widgets/card_pico.dart';
 
 /// Constrói a área de conteúdo principal para a página de Explorar (Browse).
 ///

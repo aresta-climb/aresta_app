@@ -25,9 +25,9 @@ import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/theme/temas.dart';
 import 'package:frontend/theme/gerenciador_tema.dart';
-import 'package:frontend/widgets/app_version_checker.dart';
+import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:frontend/widgets/banner_modo_experimental.dart';
-import 'package:frontend/widgets/feedback/custom_feedback_builder.dart';
+import 'package:frontend/widgets/feedback/construtor_feedback_usuario.dart';
 
 // Re-exports de compatibilidade retroativa para testes e módulos existentes
 export 'package:frontend/navigation/tree_navigation_wrapper.dart'

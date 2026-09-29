@@ -1,15 +1,15 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
-/// Construtor customizado para a interface de feedback em texto.
+/// Construtor de interface de feedback em texto para o usuário.
 ///
-/// Este builder substitui a caixa de texto padrão do pacote `feedback`,
-/// permitindo que a UI se integre perfeitamente com o tema e as cores
+/// Este construtor substitui a caixa de texto padrão do pacote `feedback`,
+/// permitindo que a interface se integre perfeitamente com o tema e as cores
 /// do aplicativo Aresta.
-Widget customFeedbackBuilder(
+Widget construtorFeedbackUsuario(
   BuildContext context,
   OnSubmit onSubmit,
   ScrollController? scrollController,
@@ -19,6 +19,10 @@ Widget customFeedbackBuilder(
     scrollController: scrollController,
   );
 }
+
+/// Alias de compatibilidade retroativa para [construtorFeedbackUsuario].
+const customFeedbackBuilder = construtorFeedbackUsuario;
+
 
 /// Widget Stateful que renderiza o formulário de feedback.
 ///

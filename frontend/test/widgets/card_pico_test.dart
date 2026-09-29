@@ -7,7 +7,7 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/card_croqui_view_model.dart';
-import 'package:frontend/widgets/crag_card.dart';
+import 'package:frontend/widgets/card_pico.dart';
 
 void main() {
   Widget buildTestCard({

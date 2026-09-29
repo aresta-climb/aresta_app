@@ -11,7 +11,7 @@ import '../view/view_models/home_view_model.dart';
 import '../view/view_models/pico_proximo_view_model.dart';
 import '../view/view_models/card_croqui_view_model.dart';
 import '../view/function_library/home_functions.dart' as home_functions;
-import 'crag_card.dart';
+import 'card_pico.dart';
 
 /// Representa um pico de escalada com distância calculada para exibição no carrossel.
 class PicoProximo {
