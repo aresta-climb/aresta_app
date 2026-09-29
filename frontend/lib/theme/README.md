@@ -19,3 +19,8 @@ Em vez de depender de instâncias hardcoded de `Color` que não podem mudar com 
 Controlador Singleton que gerencia o estado global do tema selecionado pelo usuário.
 - Armazena a preferência de tema (Sistema, Claro, ou Escuro) utilizando o `SharedPreferences` para persistir a escolha entre as sessões do aplicativo.
 - Expõe um `ValueNotifier<ThemeMode>` que o `main.dart` escuta via `ValueListenableBuilder` para reconstruir toda a árvore de widgets quando o tema é alterado, sem a necessidade de pacotes externos de gerenciamento de estado.
+
+### `temas.dart`
+Fábrica de instâncias de `ThemeData` para o sistema de design:
+- **`construirTemaClaro()`**: Constrói o tema visual claro completo, configurando `colorScheme.fromSeed`, fontes Montserrat, esquema de seleção de texto e definindo explicitamente estilos base para `IconButtonThemeData`, `MenuButtonThemeData` e `PopupMenuThemeData` (prevenindo falhas ao mesclar estilos de botão no Material 3).
+- **`construirTemaEscuro()`**: Constrói o tema visual escuro completo sob a mesma filosofia de resiliência e harmonia visual.

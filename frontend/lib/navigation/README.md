@@ -24,6 +24,8 @@ lib/navigation/
 │   └── tree_navigation_controller.dart - Controlador reativo TreeNavigationController (ChangeNotifier)
 ├── navigation_tree.dart               - Fachada de re-exports dos módulos da árvore para importação unificada
 ├── page_listenable_builder.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
+├── resolvedor_rotas_arvore.dart       - Fábrica e resolução modular de nós da árvore para telas e modais
+├── tree_navigation_wrapper.dart       - Roteador principal e envoltório declarativo com suporte a abas persistentes
 └── navigation_functions.dart          - API pública simplificada AppNav
 ```
 
@@ -50,6 +52,17 @@ A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Es
 ### `navigation_functions.dart`
 Contém a classe estática `AppNav`, que funciona como uma interface limpa (API) para acessar e modificar a árvore de navegação sem precisar lidar diretamente com o `BuildContext` complexo do controlador.
 Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. A API aceita objetos complexos por comodidade (ex: `AppNav.toSetor(context, setor: meuSetor)`), mas descarta os objetos nos bastidores e salva apenas o `nome` do setor na árvore.
+
+### `resolvedor_rotas_arvore.dart`
+Centraliza a lógica de fábrica para converter nós abstratos da árvore em páginas Flutter concretas:
+- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós utilitários (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`) para suas respectivas páginas, encapsulando-as com `PageListenableBuilder` para hot-reload reativo de dados.
+- **`construirPaginaModalParaNo`**: Constrói folhas modais declarativas (`ModalBottomSheetPage`) para exibição em DraggableScrollableSheet de `TextNode` (artigos e beta) e `TextCarouselNode`.
+
+### `tree_navigation_wrapper.dart`
+O orquestrador visual principal da navegação em árvore:
+- Mantém o `IndexedStack` permanente para as abas base (Home, Browse, Meus Croquis e Comunidade), preservando as posições de rolagem de tela dos usuários.
+- Empilha rotas de forma estritamente declarativa via `Navigator(pages: ...)`.
+- Trata eventos de sincronização em segundo plano, Live Reload de croquis e interceptação do botão Voltar do sistema operacional via `PopScope`.
 
 ## Como usar (A API `AppNav`)
 

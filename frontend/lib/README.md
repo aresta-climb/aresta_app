@@ -43,8 +43,8 @@ Subdiretório responsável por isolar o SDK do Firebase do restante da aplicaç�
 
 A camada de páginas é responsável pelo roteamento de nível superior, estrutura do Scaffold e montagem dos widgets.
 
-### Navegação Principal (`main.dart`)
-Inicializa os bindings do Flutter, cria instâncias do `DatasetRepository` e `SyncService`, aciona a sincronização inicial e configura o `TreeNavigationWrapper` (que monitora o `TreeNavigationController`) para renderizar condicionalmente as visualizações raiz: Início (Home), Explorar (Browse) e Configurações. As transições hierárquicas (GPS, Setores, Vias) reconstroem a interface reativamente com base no nó ativo.
+### Ponto de Entrada e Bootstrap (`main.dart`)
+Inicializa os bindings do Flutter, configura parâmetros de memória e vitals (`configurarGestaoMemoria`), cria instâncias do `DatasetRepository` e `SyncService`, aciona a sincronização inicial via `setupAppServices` e monta o widget raiz `MyApp`. O roteamento declarativo e ciclo de vida de abas fica sob responsabilidade do `TreeNavigationWrapper` (`lib/navigation/`), mantendo `main.dart` extremamente enxuto, legível e modular.
 
 ### Páginas de Nível Superior
 - **`home.dart`**: Exibe um carrossel dos picos de maior prioridade e uma lista suspensa de todos os picos disponíveis localmente.

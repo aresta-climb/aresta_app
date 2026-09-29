@@ -15,6 +15,7 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `notificacoes/` | Gerenciamento de notificações nativas de download (`GerenciadorNotificacaoDownload`) com suporte a Foreground Services e progresso contínuo |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
+| `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), foreground takeover (`setupAppServices`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
 
 ---
 
