@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firebase/app_logger.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
 import '../view/view_models/pico_proximo_view_model.dart';
 import '../view/view_models/card_croqui_view_model.dart';

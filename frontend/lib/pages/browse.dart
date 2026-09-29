@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../view/function_library/browse_functions.dart';
 import '../view/view_models/browse_view_model.dart';
 import '../view/view_models/card_croqui_view_model.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 
 /// Re-exportação de [OrdemOrdenacaoPico] para compatibilidade de tipos.
 typedef SortOrder = OrdemOrdenacaoPico;

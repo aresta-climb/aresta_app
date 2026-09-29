@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/utils/pico_categorization.dart';
+import 'package:frontend/utils/categorizacao_pico.dart';
 
 void main() {
   group('PicoCategorization', () {

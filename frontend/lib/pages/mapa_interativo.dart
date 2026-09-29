@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:math' as math;
@@ -10,17 +10,17 @@ import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/common_functions.dart';
 import '../view/function_library/via_functions.dart';
-import '../utils/dataset_resolver.dart';
+import '../utils/consulta_dataset.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/map_hierarchy_resolver.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../widgets/badges_modalidades.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/resolvedor_rotulos_referencia.dart';
-import '../utils/croqui_map_index.dart';
+import '../utils/indice_mapas_croqui.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///

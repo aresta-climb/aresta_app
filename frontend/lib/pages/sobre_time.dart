@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../view/function_library/common_functions.dart';
 import '../view/function_library/sobre_time_functions.dart';
 import '../services/firebase/remote_config_service.dart';

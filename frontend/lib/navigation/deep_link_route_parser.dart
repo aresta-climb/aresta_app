@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../utils/slug_utils.dart';
+import '../utils/utilitarios_slug.dart';
 
 /// Representa uma rota de deep link decomposta e estruturada a partir de uma URL ou URI.
 class RotaDeepLink {

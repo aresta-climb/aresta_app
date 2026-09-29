@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../utils/consolidador_modalidades.dart';
 
 /// Componente visual reutilizável que apresenta chips/badges informativos

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/arvore/modal_nodes.dart';
-import 'package:frontend/utils/dataset_resolver.dart';
+import 'package:frontend/utils/consulta_dataset.dart';
 
 /// Classe auxiliar para converter Referências string-based e dados reais (Protobuf)
 /// em uma chave de hashing universal. Essencial para construir mapas globais e

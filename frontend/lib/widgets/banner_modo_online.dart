@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../services/firebase/telemetry_service.dart';
 
 /// Banner visual posicionado no topo ou na página de detalhes do pico

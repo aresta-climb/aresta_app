@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo é o Gerente/Coordenador acionado por ações do Usuário (UseCase).
@@ -11,7 +11,7 @@ import 'package:feedback/feedback.dart';
 import '../../../services/firebase/telemetry_service.dart';
 import '../../../services/feedback/feedback_metadata_collector.dart';
 import '../../../services/feedback/feedback_queue_service.dart';
-import '../../../theme/app_colors.dart';
+import '../../../theme/cores_app.dart';
 
 class SubmitFeedbackUseCase {
   static final ValueNotifier<bool> isFeedbackOpen = ValueNotifier<bool>(false);

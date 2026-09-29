@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/pages/pico_subpages/apoie_pico_page.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/theme/app_colors.dart';
-import 'package:frontend/utils/pico_categorization.dart';
+import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/utils/categorizacao_pico.dart';
 import '../../mocks/mock_telemetry_service.dart';
 
 void main() {

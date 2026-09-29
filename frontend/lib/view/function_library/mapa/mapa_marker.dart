@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../theme/app_colors.dart';
+import '../../../theme/cores_app.dart';
 
 /// Converte um [ByteData] gerado a partir de um canvas em um [BitmapDescriptor] com fallback seguro
 /// e suporte a especificações de densidade de pixels (Retina / High-DPI).

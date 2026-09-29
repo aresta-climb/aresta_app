@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import '../view/function_library/mapa/mapa_global_functions.dart';
 import '../view/function_library/mapa/mapa_marker.dart';
 import '../view/view_models/mapa_global_view_model.dart';
 import '../view/function_library/common_functions.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 
 /// Arquivo principal da tela do "Mapa Global" (Mapa de Picos) (Dumb UI).
 ///

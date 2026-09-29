@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -23,9 +23,9 @@ import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/theme/app_colors.dart';
-import 'package:frontend/utils/markdown_utils.dart';
-import 'package:frontend/utils/pico_categorization.dart';
+import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/utils/utilitarios_markdown.dart';
+import 'package:frontend/utils/categorizacao_pico.dart';
 import 'package:frontend/view/function_library/common_functions.dart';
 import 'package:frontend/view/function_library/offline_markdown.dart';
 import 'package:frontend/view/view_models/mapa_global_view_model.dart';

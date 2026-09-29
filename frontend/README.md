@@ -1,4 +1,4 @@
-# Aresta Climb App — Frontend
+﻿# Aresta Climb App — Frontend
 
 Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a croquis, mapas GPS e sincronização de repositórios.
 
@@ -55,11 +55,11 @@ frontend/
 │   ├── constants/
 │   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
 │   ├── theme/
-│   │   ├── app_colors.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
-│   │   └── theme_controller.dart        - Gerenciamento de estado do tema
+│   │   ├── cores_app.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
+│   │   └── gerenciador_tema.dart        - Gerenciamento de estado do tema
 │   ├── utils/
-│   │   ├── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
-│   │   └── pico_categorization.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
+│   │   ├── utilitarios_markdown.dart          - Funções utilitárias para parseamento de strings Markdown
+│   │   └── categorizacao_pico.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
 │   ├── view/                            - Camada de visualização e apresentação
 │   │   ├── function_library/            - Builders de UI, callbacks e renderizadores puros
 │   │   │   ├── common_functions.dart    - Sistema de design (paletas, tipografia, componentes base)

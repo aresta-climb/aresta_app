@@ -1,4 +1,4 @@
-# Arquitetura Principal do Aplicativo Aresta Climb
+﻿# Arquitetura Principal do Aplicativo Aresta Climb
 
 Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em como os dados são buscados, gerenciados e apresentados ao usuário. O aplicativo consiste em uma camada de **Serviços** para o gerenciamento de dados, uma camada de **Apresentação e Visualização** (`lib/view/`) contendo funções de interface (`function_library/`) e modelos de apresentação (`view_models/`), e uma camada de **Páginas** para roteamento e layout.
 
@@ -135,7 +135,7 @@ Reúne utilitários de domínio para manipulação de dados, resolução de índ
 - **`consolidador_modalidades.dart`**: Utilitário puro responsável pela agregação quantitativa de modalidades de escalada em setores e grupos, tratamento de singular e plural para cada modalidade, formatação do resumo quantitativo de grupos (`"X setores • Y escaladas"`) e fallback automático para dados pré-computados quando disponíveis.
 - **`formatador_creditos.dart`**: Validação de placeholders genéricos e formatação de listas de autores/créditos em frases amigáveis (`"Croqui por ..."`).
 - **`construtor_caminho_trajeto.dart`**: Barreira arquitetural exclusiva para o subsistema de desenho vetorial com `package:path_drawing/`. Converte dados compilados SVG (`M ... C ...`) em `ui.Path` nativo, aplica estilos de traçado FEMEMG (sólido, tracejado, pontilhado), mantém cache em memória por rota/estilo para garantir 60/120 FPS no `InteractiveViewer`, realiza conversão defensiva de cores hexadecimais (`ponto.cor`) e amostra polilinhas para detecção ergonômica de toques (hit-testing por menor distância euclidiana com tolerância de 16dp).
-- **`croqui_map_index.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.
-- **`dataset_resolver.dart`**: Resolução dinâmica de referências cruzadas entre marcadores do mapa e entidades do dataset (`Escalada`, `Setor`, `Pico`).
+- **`indice_mapas_croqui.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.
+- **`consulta_dataset.dart`**: Resolução dinâmica de referências cruzadas entre marcadores do mapa e entidades do dataset (`Escalada`, `Setor`, `Pico`).
 
 

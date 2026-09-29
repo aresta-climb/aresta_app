@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -7,7 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/firebase/remote_config_service.dart';
 import '../services/firebase/telemetry_service.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import '../services/firebase/app_logger.dart';
 
 /// Exibe o modal explicativo da fase de Beta Aberto como um Bottom Sheet personalizado.

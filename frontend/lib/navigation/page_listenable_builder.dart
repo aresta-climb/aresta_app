@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
-import '../utils/dataset_resolver.dart';
+import '../utils/consulta_dataset.dart';
 import '../services/firebase/app_logger.dart';
 import 'navigation_functions.dart';
 

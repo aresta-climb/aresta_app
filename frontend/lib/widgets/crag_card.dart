@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../view/view_models/card_croqui_view_model.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 import 'provedor_imagem_aresta.dart';
 
 /// Card interativo que exibe um resumo visual do pico (croqui) a partir de [CardCroquiViewModel] (Dumb UI).

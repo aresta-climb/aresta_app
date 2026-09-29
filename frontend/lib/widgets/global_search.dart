@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -12,7 +12,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/navigation_functions.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/firebase/registro_primeira_visita.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 
 class GlobalSearchResult {
   final String title;
