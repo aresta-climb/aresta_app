@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/navigation/resolvedor_rotas_arvore.dart';
+import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/settings.dart';

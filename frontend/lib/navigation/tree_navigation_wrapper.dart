@@ -10,7 +10,7 @@ import 'package:frontend/application_managers/feedback/submit_feedback_usecase.d
 import 'package:frontend/navigation/deep_link_navigator_service.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/navigation/resolvedor_rotas_arvore.dart';
+import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/browse.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/home.dart';
