@@ -3,11 +3,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 class MockAssetBundle extends Fake implements AssetBundle {
   final Map<String, String> mockFiles;

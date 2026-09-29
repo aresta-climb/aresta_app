@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';

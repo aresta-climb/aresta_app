@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../services/dataset_repository.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../utils/categorizacao_pico.dart';

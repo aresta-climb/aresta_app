@@ -15,7 +15,7 @@ import 'package:workmanager/workmanager.dart';
 import '../feedback/orquestrador_feedback.dart';
 import '../migracao/migracao_background_orchestrator.dart';
 import '../../services/firebase/app_logger.dart';
-import '../../services/firebase/init_firebase.dart';
+import '../../services/firebase/inicializar_firebase.dart';
 
 /// Função de callback exigida pelo Workmanager como ponto de entrada em segundo plano.
 ///

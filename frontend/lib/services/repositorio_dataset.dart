@@ -803,3 +803,7 @@ class DatasetRepository {
     homeResetTrigger.value++;
   }
 }
+
+/// Alias em português brasileiro para [DatasetRepository].
+typedef RepositorioDataset = DatasetRepository;
+

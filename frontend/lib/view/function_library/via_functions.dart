@@ -10,7 +10,7 @@ import 'markdown_offline.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../widgets/linha_localizacao_setor.dart';
 import '../../navigation/funcoes_navegacao.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import '../../utils/indice_mapas_croqui.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../navigation/arvore_navegacao.dart';

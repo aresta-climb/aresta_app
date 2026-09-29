@@ -3,7 +3,7 @@
 
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/view_models/configuracoes_view_model.dart';
 

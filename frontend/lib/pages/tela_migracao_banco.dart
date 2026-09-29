@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 /// Etapas do processo de migração de banco de dados.

@@ -4,10 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:frontend/main.dart';
-import '../../services/dataset_repository.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../navigation/arvore_navegacao.dart';
 import '../../navigation/funcoes_navegacao.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../theme/cores_app.dart';
 import 'biblioteca_funcoes_comuns.dart';

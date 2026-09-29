@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo é o Gerente/Coordenador de background (Orchestrator) de Feedback.
@@ -14,9 +14,9 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../services/feedback/feedback_local_repository.dart';
 import '../../services/feedback/feedback_network_service.dart';
-import '../../services/firebase/app_check_service.dart';
+import '../../services/firebase/validador_app.dart';
 import '../../services/firebase/app_logger.dart';
-import '../../services/firebase/remote_config_service.dart';
+import '../../services/firebase/remote_config.dart';
 
 /// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
 /// das tarefas de feedback salvas no disco local do dispositivo.

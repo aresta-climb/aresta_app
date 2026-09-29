@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/widgets/busca_global.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {

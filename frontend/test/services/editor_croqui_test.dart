@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Suíte de testes do EditorDeCroqui.
@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 
 void main() {
   late EditorDeCroqui editor;

@@ -10,7 +10,7 @@ import '../../main.dart';
 import '../../navigation/arvore_navegacao.dart';
 import '../../theme/cores_app.dart';
 import '../../services/firebase/app_logger.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 import 'biblioteca_funcoes_comuns.dart';
 
 /// Navega para a tela Sobre o Time utilizando o controlador da árvore de navegação ativa.

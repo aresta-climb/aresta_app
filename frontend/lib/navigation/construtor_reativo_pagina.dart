@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset_repository.dart';
+import '../services/repositorio_dataset.dart';
 import '../utils/consulta_dataset.dart';
 import '../services/firebase/app_logger.dart';
 import 'funcoes_navegacao.dart';

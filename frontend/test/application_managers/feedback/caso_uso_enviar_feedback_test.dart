@@ -11,7 +11,7 @@ import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.
 import 'package:frontend/data/modelos/metadados_feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 
 class MockFeedbackMetadataCollector extends Mock
     implements FeedbackMetadataCollector {}

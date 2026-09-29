@@ -1,14 +1,14 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../services/dataset_repository.dart';
+import '../services/repositorio_dataset.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
-import '../services/firebase/remote_config_service.dart';
+import '../services/firebase/remote_config.dart';
 import 'imagem_arquivo_aresta.dart';
 
 /// Provedor unificado e em camadas para resolução de imagens do ecossistema Aresta.

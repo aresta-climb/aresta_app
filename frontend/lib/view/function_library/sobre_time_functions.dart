@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
 import '../../theme/cores_app.dart';
 import '../../services/firebase/app_logger.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 
 /// Representa um membro da equipe com seus metadados e redes sociais.
 class MembroTime {

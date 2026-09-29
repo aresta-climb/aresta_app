@@ -9,13 +9,13 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/via.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 void main() {
   late MockTelemetryService mockTelemetry;

@@ -5,11 +5,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/widgets/verificador_versao_app.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../mocks/mock_telemetria.dart';
 
 class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {
   int _hard = 0;

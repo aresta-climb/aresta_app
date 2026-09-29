@@ -9,7 +9,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 
 class MockAppLinks extends Mock implements AppLinks {}

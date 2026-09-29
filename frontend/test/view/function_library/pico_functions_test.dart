@@ -1,12 +1,12 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/view/function_library/pico_functions.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import '../../mocks/mock_telemetry_service.dart';
+import '../../mocks/mock_telemetria.dart';
 
 void main() {
   test('Pico functions should dispatch logAbrirSetor', () {

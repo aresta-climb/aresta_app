@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/constants/constantes_rede.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:mocktail/mocktail.dart';

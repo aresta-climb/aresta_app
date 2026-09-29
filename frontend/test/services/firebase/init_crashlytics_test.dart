@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:frontend/services/firebase/init_firebase.dart';
+import 'package:frontend/services/firebase/inicializar_firebase.dart';
 
 class MockFirebaseCrashlytics implements FirebaseCrashlytics {
   bool collectionEnabled = true;

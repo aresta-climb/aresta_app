@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../theme/cores_app.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)

@@ -15,7 +15,7 @@ import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/meus_croquis.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';

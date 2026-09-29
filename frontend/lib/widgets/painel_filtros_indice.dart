@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
 import '../utils/filtro_grau_escalada.dart';
 

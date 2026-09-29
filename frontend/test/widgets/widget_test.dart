@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/meus_croquis.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:frontend/view/view_models/meus_croquis_view_model.dart';
 

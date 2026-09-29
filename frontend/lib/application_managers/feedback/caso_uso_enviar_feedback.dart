@@ -8,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
-import '../../../services/firebase/telemetry_service.dart';
+import '../../../services/firebase/telemetria.dart';
 import '../../../services/feedback/feedback_metadata_collector.dart';
 import '../../../services/feedback/feedback_queue_service.dart';
 import '../../../theme/cores_app.dart';

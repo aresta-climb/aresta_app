@@ -11,11 +11,11 @@ import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:feedback/feedback.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../../mocks/mock_telemetria.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/theme/cores_app.dart';
 

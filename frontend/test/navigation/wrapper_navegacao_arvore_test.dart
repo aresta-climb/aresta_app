@@ -7,7 +7,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 

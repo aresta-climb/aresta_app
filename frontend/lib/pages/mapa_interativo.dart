@@ -4,7 +4,7 @@
 import 'dart:math' as math;
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:flutter/material.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';

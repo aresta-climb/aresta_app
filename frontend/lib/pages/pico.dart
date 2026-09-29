@@ -10,7 +10,7 @@ import '../view/function_library/funcoes_explorar.dart';
 import '../view/function_library/via_functions.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../navigation/arvore_navegacao.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../services/firebase/app_logger.dart';
 import '../theme/cores_app.dart';
 

@@ -1,12 +1,12 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 
 /// Widget de controle mestre e não-bloqueante de versão do aplicativo.
 ///

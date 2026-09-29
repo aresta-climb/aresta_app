@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/function_library/funcoes_configuracoes.dart';
 import 'package:frontend/main.dart';
@@ -16,14 +16,14 @@ import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../mocks/mock_geolocator_platform.dart';
-import '../../mocks/mock_telemetry_service.dart';
+import '../../mocks/mock_telemetria.dart';
 
 class FakePathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {

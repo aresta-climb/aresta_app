@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../theme/cores_app.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 
 /// Banner visual posicionado no topo ou na página de detalhes do pico
 /// indicando navegação em modo online e permitindo salvamento offline com 1 toque.

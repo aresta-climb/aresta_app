@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/firebase/remote_config_service.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/remote_config.dart';
+import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
 import '../services/firebase/app_logger.dart';
 

@@ -7,7 +7,7 @@ import '../theme/cores_app.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../navigation/funcoes_navegacao.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../navigation/arvore_navegacao.dart';
 import 'provedor_imagem_aresta.dart';
 

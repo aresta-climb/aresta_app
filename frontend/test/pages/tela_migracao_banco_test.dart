@@ -7,8 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:frontend/pages/tela_migracao_banco.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../mocks/mock_telemetria.dart';
 
 class FakeSyncService extends Fake implements SyncService {
   int migrationCallCount = 0;

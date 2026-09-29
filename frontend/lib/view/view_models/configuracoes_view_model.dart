@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../../services/dataset_repository.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../services/editor_croqui.dart';
 import '../function_library/funcoes_configuracoes.dart';
 

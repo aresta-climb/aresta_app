@@ -6,7 +6,7 @@ Este documento descreve a estrutura e o fluxo lógico do aplicativo, com foco em
 
 A camada de serviços é responsável pelo gerenciamento de estado do aplicativo e da arquitetura baseada em **MVVM**. Classes geradas via **Protobuf** (`ResumoCroqui`, `Indice`, `Croqui`) atuam como nossos **Models** fortemente tipados. O `DatasetRepository` atua como a **ViewModel** principal.
 
-### `DatasetRepository` (`dataset_repository.dart` e `dataset/`)
+### `DatasetRepository` (`repositorio_dataset.dart` e `dataset/`)
 O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local e das sessões online até as camadas reativas da interface. Foi decomposto em submódulos desacoplados de responsabilidade única:
 
 - **`dataset/modelos/`**: Modelo de dados em memória `TopoDataset` e tipos auxiliares fortemente tipados.
@@ -19,11 +19,11 @@ Diretório isolado que retém todas as responsabilidades que interagem com tráf
 
 - **`SyncService` (`sync_service.dart`)**: Trabalhador em segundo plano responsável por manter o conjunto de dados local sincronizado. Trabalha de forma tipada, lendo `ResumoCroqui`. Aciona e monitora a thread secundária (`Isolate`), convertendo atualizações em eventos para barras de progresso na UI. Expõe `lastSyncWasAuto` e `quantidadeCroquisBaixadosAtualizadosNoUltimoSync` para que a UI notifique o usuário exclusivamente quando croquis locais baixados forem alterados na inicialização do app.
 - **`SyncIsolate` (`sync_isolate.dart`)**: Executa as validações pesadas de integridade (SHA256) e gere o fluxo das Delta Syncs (baixando apenas arquivos que mudaram) em uma thread separada para não causar travamentos ou "lag" na UI.
-- **`SyncNetwork` (`sync_network.dart`)**: Responsável pela comunicação HTTP pura, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
-- **`SyncStorage` (`sync_storage.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
+- **`SyncNetwork` (`sync_rede.dart`)**: Responsável pela comunicação HTTP pura, lidando com respostas (como *304 Not Modified* via ETag) e leitura do `.binarypb` mestre.
+- **`SyncStorage` (`sync_armazenamento.dart`)**: Trata a persistência atômica no disco, lidando com criação, download em arquivos intermediários (`.tmp`) e substituições seguras em caso de erro na conexão.
 - **`ServicoCroquiOnline` (`servico_croqui_online.dart`)**: Baixa arquivos `.binarypb` sob demanda em milissegundos para navegação imediata sem exigir download prévio e executa polling periódico leve de ETag.
 - **`ServicoDownloadSegundoPlano` (`servico_download_segundo_plano.dart`)**: Realiza downloads permanentes resilientes em segundo plano com notificações persistentes (`ongoing: true`).
-- **`UpdateDownloader` (`update_downloader.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
+- **`UpdateDownloader` (`baixador_atualizacoes.dart`)**: Verificação OTA (Over-The-Air) e download de atualizações via novos `.apk`.
 
 ### `EditorDeCroqui` (`editor_croqui.dart`)
 O controlador de contexto e configuração do aplicativo. Rastreia qual modo está ativo e fornece caminhos de diretório dinâmicos para os outros serviços.

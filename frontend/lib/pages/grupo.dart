@@ -9,7 +9,7 @@ import '../view/function_library/grupo_functions.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/funcoes_explorar.dart';
 import '../widgets/mapa_thumbnail.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 
 /// Uma página que exibe informações detalhadas sobre um grupo específico de setores.
 ///

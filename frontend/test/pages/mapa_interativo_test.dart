@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -11,8 +11,8 @@ import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../mocks/mock_telemetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/badges_modalidades.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';

@@ -6,10 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/pages/sobre_time.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:frontend/theme/cores_app.dart';
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String discordUrl = 'https://discord.gg/NT9uSKJWYs';

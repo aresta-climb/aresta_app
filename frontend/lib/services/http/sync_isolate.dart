@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../firebase/app_logger.dart';
-import 'sync_storage.dart';
+import 'sync_armazenamento.dart';
 
 /// Argumentos necessários para instanciar o [downloadIsolateMain].
 ///

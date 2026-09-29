@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import '../../services/firebase/remote_config_service.dart';
+import '../../services/firebase/remote_config.dart';
 import '../function_library/comunidade_functions.dart';
 
 /// Representa um canal de comunicação oficial ou link social da comunidade Aresta.

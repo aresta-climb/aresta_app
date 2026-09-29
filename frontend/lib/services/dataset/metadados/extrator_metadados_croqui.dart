@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../../widgets/provedor_imagem_aresta.dart';
-import '../../dataset_repository.dart';
+import '../../repositorio_dataset.dart';
 import '../../firebase/app_logger.dart';
 
 /// Responsável por extrair caminhos de capas, processar seções markdown de croquis

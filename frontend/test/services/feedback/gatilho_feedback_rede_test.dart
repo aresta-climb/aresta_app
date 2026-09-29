@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/feedback/network_feedback_trigger.dart';
+import 'package:frontend/services/feedback/gatilho_feedback_rede.dart';
 
 void main() {
   group('NetworkFeedbackTrigger', () {

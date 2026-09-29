@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/dataset_repository.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/repositorio_dataset.dart';
+import '../services/firebase/telemetria.dart';
 import '../utils/consulta_dataset.dart';
 import '../utils/utilitarios_slug.dart';
 import 'analisador_rotas_deep_link.dart';

@@ -10,7 +10,7 @@ import 'markdown_offline.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
 import '../../navigation/funcoes_navegacao.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/badges_modalidades.dart';

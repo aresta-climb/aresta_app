@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 
 class MockTelemetryService implements TelemetryService {
   @override
@@ -354,3 +354,7 @@ class MockTelemetryService implements TelemetryService {
     }
   }
 }
+
+/// Alias em português para [MockTelemetryService].
+typedef MockTelemetria = MockTelemetryService;
+

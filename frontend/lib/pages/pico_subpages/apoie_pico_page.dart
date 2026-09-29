@@ -10,7 +10,7 @@ import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/cores_app.dart';
 import '../../navigation/arvore_navegacao.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ApoiePicoPage extends StatelessWidget {

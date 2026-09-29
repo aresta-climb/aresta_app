@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/firebase/app_check_service.dart';
+import 'package:frontend/services/firebase/validador_app.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:mocktail/mocktail.dart';
 

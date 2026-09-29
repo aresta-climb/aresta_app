@@ -98,21 +98,21 @@ frontend/
 │   │   └── qr_scanner.dart              - Scanner de QR code
 │   ├── services/                        - Serviços centrais
 │   │   ├── firebase/
-│   │   │   ├── init_firebase.dart       - Inicialização e captura de Crashlytics
-│   │   │   ├── telemetry_service.dart   - Isolamento do Analytics
-│   │   │   ├── remote_config_service.dart - Fallbacks e cache local
+│   │   │   ├── inicializar_firebase.dart       - Inicialização e captura de Crashlytics
+│   │   │   ├── telemetria.dart   - Isolamento do Analytics
+│   │   │   ├── remote_config.dart - Fallbacks e cache local
 │   │   │   └── app_logger.dart          - Logger de eventos local (debug)
 │   │   ├── http/
 │   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
 │   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
-│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto e gestão de ETags
-│   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
-│   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   │   ├── sync_rede.dart        - Faz o download HTTP bruto e gestão de ETags
+│   │   │   ├── sync_armazenamento.dart        - Trata arquivos `.tmp` e salva de forma atômica
+│   │   │   └── baixador_atualizacoes.dart   - Verificação e download de atualizações do APK
 │   │   ├── feedback/
 │   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
 │   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
 │   │   │   └── feedback_queue_service.dart - Fila local persistente (SharedPreferences)
-│   │   ├── dataset_repository.dart      - Estado central: downloads e metadados
+│   │   ├── repositorio_dataset.dart      - Estado central: downloads e metadados
 │   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
 │   └── widgets/
 │       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa

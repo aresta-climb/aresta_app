@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
@@ -6,9 +6,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../../firebase_options.dart';
-import 'app_check_service.dart';
-import 'remote_config_service.dart';
-import 'telemetry_service.dart';
+import 'validador_app.dart';
+import 'remote_config.dart';
+import 'telemetria.dart';
 
 /// Inicializa os serviços do Firebase e os configura globalmente.
 /// Esta função encapsula todo o contato direto com a API core do Firebase.

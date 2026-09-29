@@ -11,7 +11,7 @@ import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:frontend/pages/sobre_time.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 

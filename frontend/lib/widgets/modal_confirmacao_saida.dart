@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 
 /// Modal de confirmação e conscientização ("Guardião de Saída") exibido
 /// quando o usuário tenta sair de um croqui explorado online sem tê-lo salvo offline.

@@ -11,9 +11,9 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:frontend/application_managers/segundo_plano/despachante_segundo_plano.dart';
 import 'package:frontend/application_managers/migracao/migracao_background_orchestrator.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import '../../mocks/mock_telemetry_service.dart';
+import '../../mocks/mock_telemetria.dart';
 import '../../mocks/mock_app_logger.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform

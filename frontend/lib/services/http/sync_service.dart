@@ -7,18 +7,18 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../dataset_repository.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import '../repositorio_dataset.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/constants/constantes_rede.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:isolate';
-import 'sync_storage.dart';
-import 'sync_network.dart';
+import 'sync_armazenamento.dart';
+import 'sync_rede.dart';
 import 'sync_isolate.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 
 /// Classe auxiliar que agrega todas as operações de disco (.tmp -> renomeio, deleções)
 /// e atualizações de estado em memória (metadados).

@@ -21,7 +21,7 @@ import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/via.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/utils/utilitarios_markdown.dart';

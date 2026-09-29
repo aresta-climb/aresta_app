@@ -10,7 +10,7 @@ import '../view/function_library/via_functions.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/funcoes_explorar.dart';
 import '../services/firebase/app_logger.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../widgets/mapa_thumbnail.dart';
 
 /// Uma página que fornece uma visão geral de um setor específico.

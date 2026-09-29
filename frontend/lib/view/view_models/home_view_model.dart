@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'pico_proximo_view_model.dart';
-import '../../services/dataset_repository.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
