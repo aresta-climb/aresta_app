@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../view/function_library/browse_functions.dart';
-import '../view/view_models/browse_view_model.dart';
+import '../view/function_library/funcoes_explorar.dart';
+import '../view/view_models/explorar_view_model.dart';
 import '../view/view_models/card_croqui_view_model.dart';
 import '../theme/cores_app.dart';
 

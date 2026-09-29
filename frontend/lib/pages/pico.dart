@@ -4,9 +4,9 @@
 import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/pico_functions.dart';
-import '../view/function_library/browse_functions.dart';
+import '../view/function_library/funcoes_explorar.dart';
 import '../view/function_library/via_functions.dart';
 import '../navigation/navigation_functions.dart';
 import '../navigation/navigation_tree.dart';

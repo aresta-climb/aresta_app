@@ -62,9 +62,9 @@ frontend/
 │   │   └── categorizacao_pico.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
 │   ├── view/                            - Camada de visualização e apresentação
 │   │   ├── function_library/            - Builders de UI, callbacks e renderizadores puros
-│   │   │   ├── common_functions.dart    - Sistema de design (paletas, tipografia, componentes base)
-│   │   │   ├── offline_markdown.dart    - Visualizador Markdown com FileImage offline
-│   │   │   ├── settings_functions.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
+│   │   │   ├── biblioteca_funcoes_comuns.dart    - Sistema de design (paletas, tipografia, componentes base)
+│   │   │   ├── markdown_offline.dart    - Visualizador Markdown com FileImage offline
+│   │   │   ├── funcoes_configuracoes.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
 │   │   │   ├── mapa/
 │   │   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
 │   │   │   │   └── mapa_marker.dart    - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa

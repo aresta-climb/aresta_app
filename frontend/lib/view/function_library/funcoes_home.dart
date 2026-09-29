@@ -10,7 +10,7 @@ import '../../navigation/navigation_functions.dart';
 import '../../services/firebase/telemetry_service.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../theme/cores_app.dart';
-import 'common_functions.dart';
+import 'biblioteca_funcoes_comuns.dart';
 import '../../widgets/carrossel_picos_proximos.dart';
 import '../../widgets/busca_global.dart';
 import '../../services/http/sync_service.dart';

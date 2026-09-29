@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import 'common_functions.dart';
-import 'offline_markdown.dart';
+import 'biblioteca_funcoes_comuns.dart';
+import 'markdown_offline.dart';
 import 'via_functions.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';

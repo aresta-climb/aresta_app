@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -8,7 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../widgets/provedor_imagem_aresta.dart';
-import 'common_functions.dart';
+import 'biblioteca_funcoes_comuns.dart';
 
 /// Um widget que renderiza conteúdo Markdown com suporte a imagens offline locais.
 ///

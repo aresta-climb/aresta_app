@@ -13,7 +13,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
-import 'package:frontend/view/view_models/settings_view_model.dart';
+import 'package:frontend/view/view_models/configuracoes_view_model.dart';
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin

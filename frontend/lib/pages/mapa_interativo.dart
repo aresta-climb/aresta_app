@@ -8,7 +8,7 @@ import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../utils/consulta_dataset.dart';
 import '../navigation/navigation_functions.dart';

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/comunidade_functions.dart';
 import '../view/view_models/comunidade_view_model.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 
 /// Página de apresentação dos canais da comunidade e mídias do Aresta (Dumb UI).
 ///

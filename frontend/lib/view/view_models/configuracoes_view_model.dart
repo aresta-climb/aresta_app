@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/editor_croqui.dart';
-import '../function_library/settings_functions.dart';
+import '../function_library/funcoes_configuracoes.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [SettingsPage] (MVVM).
 ///

@@ -10,7 +10,7 @@ import '../../services/firebase/registro_primeira_visita.dart';
 import '../../services/firebase/telemetry_service.dart';
 import '../../services/http/sync_service.dart';
 import '../../theme/cores_app.dart';
-import '../function_library/common_functions.dart';
+import '../function_library/biblioteca_funcoes_comuns.dart';
 
 /// Modelo de apresentação para a tela [MeusCroquisPage] (MVVM).
 ///

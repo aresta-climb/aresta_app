@@ -18,8 +18,8 @@ import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
-import 'package:frontend/view/function_library/common_functions.dart';
-import 'package:frontend/view/view_models/browse_view_model.dart';
+import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
+import 'package:frontend/view/view_models/explorar_view_model.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
 import 'package:frontend/view/view_models/meus_croquis_view_model.dart';
 

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../services/dataset_repository.dart';
 import '../../services/editor_croqui.dart';
-import 'common_functions.dart';
+import 'biblioteca_funcoes_comuns.dart';
 import '../../pages/qr_scanner.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';

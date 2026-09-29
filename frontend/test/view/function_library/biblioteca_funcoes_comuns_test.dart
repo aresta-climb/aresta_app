@@ -7,7 +7,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/view/function_library/common_functions.dart';
+import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
 import 'package:feedback/feedback.dart';

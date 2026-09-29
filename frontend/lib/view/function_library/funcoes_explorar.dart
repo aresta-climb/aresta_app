@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../theme/cores_app.dart';
-import 'common_functions.dart';
+import 'biblioteca_funcoes_comuns.dart';
 import '../../navigation/navigation_functions.dart';
 import '../view_models/card_croqui_view_model.dart';
 import '../../widgets/card_pico.dart';

@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../browse_functions.dart';
+import '../funcoes_explorar.dart';
 import '../../view_models/mapa_pico_view_model.dart';
 import '../../view_models/card_croqui_view_model.dart';
 import '../../../widgets/card_pico.dart';

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../view/function_library/home_functions.dart';
+import '../view/function_library/funcoes_home.dart';
 import '../view/view_models/home_view_model.dart';
 import '../theme/cores_app.dart';
 

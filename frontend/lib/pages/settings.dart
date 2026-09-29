@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../view/function_library/common_functions.dart';
-import '../view/function_library/settings_functions.dart';
-import '../view/view_models/settings_view_model.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../view/function_library/funcoes_configuracoes.dart';
+import '../view/view_models/configuracoes_view_model.dart';
 
 /// Página de Configurações do aplicativo (Dumb UI).
 ///

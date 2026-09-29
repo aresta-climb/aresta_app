@@ -26,11 +26,11 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/utils/utilitarios_markdown.dart';
 import 'package:frontend/utils/categorizacao_pico.dart';
-import 'package:frontend/view/function_library/common_functions.dart';
-import 'package:frontend/view/function_library/offline_markdown.dart';
+import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
+import 'package:frontend/view/function_library/markdown_offline.dart';
 import 'package:frontend/view/view_models/mapa_global_view_model.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
-import 'package:frontend/view/view_models/settings_view_model.dart';
+import 'package:frontend/view/view_models/configuracoes_view_model.dart';
 import 'package:frontend/widgets/conteudo_modal_carrossel.dart';
 
 /// Constrói e resolve a página ([Widget]) correspondente a um nó ([NavNode]) da árvore de navegação.

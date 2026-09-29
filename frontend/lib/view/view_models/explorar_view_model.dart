@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -11,9 +11,9 @@ import '../../services/dataset_repository.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../services/firebase/telemetry_service.dart';
-import '../function_library/common_functions.dart';
-import '../function_library/home_functions.dart';
-import '../function_library/settings_functions.dart';
+import '../function_library/biblioteca_funcoes_comuns.dart';
+import '../function_library/funcoes_home.dart';
+import '../function_library/funcoes_configuracoes.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {

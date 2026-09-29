@@ -1,4 +1,4 @@
-# Camada de Apresentação e Visualização (`lib/view/`)
+﻿# Camada de Apresentação e Visualização (`lib/view/`)
 
 Este diretório concentra a camada de apresentação e visualização da aplicação Aresta Climb, organizada segundo o padrão de arquitetura **MVVM (Model-View-ViewModel)** e o princípio **Feature-First** (Diretriz II do `AGENTS.md`).
 
@@ -11,24 +11,24 @@ A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos 
 ```text
 lib/view/
 ├── function_library/             - Biblioteca de funções construtoras de UI e callbacks
-│   ├── common_functions.dart     - Componentes base, menus suspensos e barras de navegação
-│   ├── browse_functions.dart     - Construtores de tela e lógica da página Explorar
-│   ├── home_functions.dart       - Renderizadores da tela inicial e carrossel
+│   ├── biblioteca_funcoes_comuns.dart     - Componentes base, menus suspensos e barras de navegação
+│   ├── funcoes_explorar.dart     - Construtores de tela e lógica da página Explorar
+│   ├── funcoes_home.dart       - Renderizadores da tela inicial e carrossel
 │   ├── pico_functions.dart       - Cabeçalho, botões e seções da página do Pico
 │   ├── setor_functions.dart      - Listagem de vias, badges FEMEMG e itens de setor
 │   ├── via_functions.dart        - Visualizador de beta, croquis e formatação de graus
 │   ├── comunidade_functions.dart - Links e ações do hub comunitário
 │   ├── grupo_functions.dart      - Resumo e listagem de subsetores
 │   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
-│   ├── settings_functions.dart   - Conexão com Editor Desktop, QR Code e temas
+│   ├── funcoes_configuracoes.dart   - Conexão com Editor Desktop, QR Code e temas
 │   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
-│   ├── offline_markdown.dart     - Renderização de Markdown com imagens em disco
+│   ├── markdown_offline.dart     - Renderização de Markdown com imagens em disco
 │   ├── gps_functions.dart        - Utilitários de geolocalização e mapas
 │   └── mapa/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
-    ├── browse_view_model.dart    - Estado reativo de filtros, downloads e busca no Explorar
+    ├── explorar_view_model.dart    - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
     ├── comunidade_view_model.dart- Estado de links e mídias sociais comunitárias
     ├── home_view_model.dart      - Estado do carrossel principal e listas locais
@@ -37,7 +37,7 @@ lib/view/
     ├── meus_croquis_view_model.dart - Estado de filtragem e remoção de croquis baixados
     ├── pico_proximo_view_model.dart - Cálculo de distâncias e proximidade do usuário
     ├── pico_view_model.dart      - Estado de subpáginas e estatísticas do pico ativo
-    └── settings_view_model.dart  - Estado do modo de desenvolvedor e preferências
+    └── configuracoes_view_model.dart  - Estado do modo de desenvolvedor e preferências
 ```
 
 ---
@@ -49,7 +49,7 @@ Os arquivos da `function_library` são coleções de funções puras e construto
 - **Desacoplamento e Testabilidade**: Ao isolar construtores de UI em funções especializadas, os testes de widget podem ser executados isoladamente sem necessidade de instanciar scaffolds complexos ou navegação global.
 - **Formatação de Domínio**: Utilitários como `getGrauString` e `getGrauValue` (em `via_functions.dart`) realizam a conversão limpa dos enums Protobuf para a notação de graduação brasileira (esportiva, boulder, móvel).
 - **Marcadores Customizados**: O módulo `mapa/mapa_marker.dart` utiliza a API do `Canvas` e `Path` nativos do Flutter para gerar mapas de bits (`BitmapDescriptor`) com o logotipo do Aresta, adaptando o tamanho dinamicamente conforme a densidade de pixels do dispositivo.
-- **Suporte Offline**: O componente `offline_markdown.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`), mantendo o compromisso de funcionamento 100% offline.
+- **Suporte Offline**: O componente `markdown_offline.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`), mantendo o compromisso de funcionamento 100% offline.
 
 ---
 
