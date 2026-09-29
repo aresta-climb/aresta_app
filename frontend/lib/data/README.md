@@ -1,4 +1,4 @@
-# Camada de Modelos de Dados (`lib/data/`)
+﻿# Camada de Modelos de Dados (`lib/data/`)
 
 Este diretório contém os modelos de dados internos não derivados de mensagens Protobuf do ecossistema Aresta Climb.
 
@@ -11,14 +11,14 @@ A principal responsabilidade deste módulo é fornecer estruturas tipadas, segur
 ```text
 lib/data/
 └── models/
-    └── feedback_metadata.dart    - Modelo de domínio dos metadados de diagnóstico de feedback
+    └── metadados_feedback.dart    - Modelo de domínio dos metadados de diagnóstico de feedback
 ```
 
 ---
 
 ## 1. Modelos de Domínio (`models/`)
 
-### `FeedbackMetadata` (`models/feedback_metadata.dart`)
+### `FeedbackMetadata` (`modelos/metadados_feedback.dart`)
 Representa o pacote completo de informações contextuais do dispositivo capturadas no momento em que um usuário abre ou submete um reporte de in-app feedback:
 - **Telemetria do Aparelho**: Modelo, versão do sistema operacional, orientação da tela, dimensões do viewport, conectividade ativa (Wi-Fi, móvel, offline) e tema visual (Claro/Escuro).
 - **Contexto de Navegação**: Identificador único do reporte (`feedbackId`), UUID da instalação (`appInstanceId`), versão do app e caminho canônico completo da árvore de navegação ativa (`navigationTree`).

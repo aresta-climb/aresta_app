@@ -9,14 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:feedback/feedback.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../../mocks/mock_telemetry_service.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
+import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 import 'package:mocktail/mocktail.dart';

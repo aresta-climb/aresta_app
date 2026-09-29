@@ -6,7 +6,7 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
+import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';

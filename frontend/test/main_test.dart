@@ -19,7 +19,7 @@ import 'package:frontend/pages/tela_migracao_banco.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/constants/legal_version.g.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/models/feedback_metadata.dart';
+import 'package:frontend/data/modelos/metadados_feedback.dart';
 
 void main() {
   group('FeedbackMetadata', () {

@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
+import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,7 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 
 import '../../tool/sync_preload.dart';
 

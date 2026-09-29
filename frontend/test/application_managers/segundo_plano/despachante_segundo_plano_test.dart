@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -9,7 +9,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:frontend/application_managers/background/background_dispatcher.dart';
+import 'package:frontend/application_managers/segundo_plano/despachante_segundo_plano.dart';
 import 'package:frontend/application_managers/migracao/migracao_background_orchestrator.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';

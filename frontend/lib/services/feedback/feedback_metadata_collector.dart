@@ -19,7 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../data/models/feedback_metadata.dart';
+import '../../data/modelos/metadados_feedback.dart';
 
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
 /// em que o usuário decide enviar um feedback ou relatar um bug.

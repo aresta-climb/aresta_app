@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -10,7 +10,7 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../dataset_repository.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:isolate';
 import 'sync_storage.dart';

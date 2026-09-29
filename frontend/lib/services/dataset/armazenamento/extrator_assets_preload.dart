@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../aresta_api/proto/generated/indice.pb.dart';
-import '../../../constants/network_constants.dart';
+import '../../../constants/constantes_rede.dart';
 import '../../firebase/app_logger.dart';
 
 /// Extrai os assets pré-embutidos (pre-bundled) do pacote do aplicativo

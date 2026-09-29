@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Modelo de domínio interno da fila de persistência local de feedback.
@@ -6,7 +6,7 @@
 library;
 
 import 'dart:io';
-import '../../data/models/feedback_metadata.dart';
+import '../../data/modelos/metadados_feedback.dart';
 
 /// Tarefa de feedback pendente ou em processamento na fila local.
 class TarefaFeedback {

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Despachante global e centralizado de tarefas em segundo plano (WorkManager).
@@ -12,7 +12,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
-import '../feedback/feedback_orchestrator.dart';
+import '../feedback/orquestrador_feedback.dart';
 import '../migracao/migracao_background_orchestrator.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/init_firebase.dart';

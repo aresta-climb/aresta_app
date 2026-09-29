@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import '../../constants/network_constants.dart';
+import '../../constants/constantes_rede.dart';
 import 'app_logger.dart';
 
 /// Serviço responsável por gerenciar o Firebase Remote Config de forma reativa e não-bloqueante.
