@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/navigation/arvore/global_nodes.dart';
-import 'package:frontend/navigation/arvore/pico_nodes.dart';
-import 'package:frontend/navigation/arvore/modal_nodes.dart';
+import 'package:frontend/navigation/arvore/nos_globais.dart';
+import 'package:frontend/navigation/arvore/nos_pico.dart';
+import 'package:frontend/navigation/arvore/nos_modais.dart';
 
 void main() {
   group('Nós de Navegação (Equivalência Polimórfica isSameNode)', () {

@@ -77,9 +77,9 @@ frontend/
 │   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
 │   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
-│   │   ├── navigation_functions.dart    - API estática AppNav com herança de contexto
-│   │   ├── navigation_tree.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
-│   │   └── page_listenable_builder.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
+│   │   ├── funcoes_navegacao.dart    - API estática AppNav com herança de contexto
+│   │   ├── arvore_navegacao.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
+│   │   └── construtor_reativo_pagina.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
 │   │   ├── browse.dart                  - Índice remoto com download inline

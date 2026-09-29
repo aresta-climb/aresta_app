@@ -6,7 +6,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/dataset_repository.dart';
 import '../utils/consulta_dataset.dart';
 import '../services/firebase/app_logger.dart';
-import 'navigation_functions.dart';
+import 'funcoes_navegacao.dart';
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
 /// redesenha a página atual com os dados mais recentes do croqui.

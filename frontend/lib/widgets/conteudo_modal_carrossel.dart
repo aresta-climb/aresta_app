@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../navigation/navigation_tree.dart';
+import '../navigation/arvore_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/markdown_offline.dart';
 import '../utils/utilitarios_markdown.dart';

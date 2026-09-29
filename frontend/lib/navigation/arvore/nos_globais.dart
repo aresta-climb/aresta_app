@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'nav_node.dart';
+import 'no_navegacao.dart';
 
 /// O nó raiz da navegação do aplicativo. Representa a tela inicial (HomeView).
 class HomeNode extends NavNode {

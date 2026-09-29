@@ -7,8 +7,8 @@ import '../services/dataset_repository.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../utils/consulta_dataset.dart';
 import '../utils/utilitarios_slug.dart';
-import 'deep_link_route_parser.dart';
-import 'navigation_tree.dart';
+import 'analisador_rotas_deep_link.dart';
+import 'arvore_navegacao.dart';
 
 /// Serviço responsável por interceptar, resolver e navegar para rotas profundas
 /// acionadas via Deep Links ou leitura de QR Codes.

@@ -7,7 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../main.dart';
-import '../../navigation/navigation_tree.dart';
+import '../../navigation/arvore_navegacao.dart';
 import '../../theme/cores_app.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/telemetry_service.dart';

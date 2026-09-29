@@ -8,7 +8,7 @@ import 'markdown_offline.dart';
 import 'via_functions.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';
-import '../../navigation/navigation_functions.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/telemetry_service.dart';
 import '../../utils/resolvedor_rotulos_referencia.dart';
 

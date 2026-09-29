@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:math' as math;
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:flutter/material.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../services/firebase/app_logger.dart';
@@ -11,8 +11,8 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../utils/consulta_dataset.dart';
-import '../navigation/navigation_functions.dart';
-import '../navigation/map_hierarchy_resolver.dart';
+import '../navigation/funcoes_navegacao.dart';
+import '../navigation/hierarquia_mapas.dart';
 import '../theme/cores_app.dart';
 import '../widgets/provedor_imagem_aresta.dart';
 import '../widgets/badges_modalidades.dart';

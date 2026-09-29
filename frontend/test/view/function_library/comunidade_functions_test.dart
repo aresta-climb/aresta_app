@@ -10,7 +10,7 @@ import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/comunidade_functions.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import '../../mocks/mock_app_logger.dart';
 import '../../mocks/mock_telemetry_service.dart';
 

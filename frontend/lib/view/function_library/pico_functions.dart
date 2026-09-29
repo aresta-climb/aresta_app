@@ -3,13 +3,13 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/main.dart';
 import 'biblioteca_funcoes_comuns.dart';
 import 'markdown_offline.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
-import '../../navigation/navigation_functions.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/telemetry_service.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';

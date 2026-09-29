@@ -10,8 +10,8 @@ import 'package:workmanager/workmanager.dart';
 import 'package:frontend/application_managers/background/background_dispatcher.dart';
 import 'package:frontend/application_managers/feedback/feedback_orchestrator.dart';
 import 'package:frontend/constants/legal_version.g.dart';
-import 'package:frontend/navigation/navigation_functions.dart';
-import 'package:frontend/navigation/tree_navigation_wrapper.dart';
+import 'package:frontend/navigation/funcoes_navegacao.dart';
+import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/tela_migracao_banco.dart';
 import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:frontend/services/dataset_repository.dart';
@@ -30,7 +30,7 @@ import 'package:frontend/widgets/banner_modo_experimental.dart';
 import 'package:frontend/widgets/feedback/construtor_feedback_usuario.dart';
 
 // Re-exports de compatibilidade retroativa para testes e módulos existentes
-export 'package:frontend/navigation/tree_navigation_wrapper.dart'
+export 'package:frontend/navigation/wrapper_navegacao_arvore.dart'
     show TreeNavigationWrapper, TreeNavigationWrapperState;
 export 'package:frontend/services/inicializacao_app.dart'
     show configurarGestaoMemoria, registrarOuvintesLiveReload, setupAppServices;

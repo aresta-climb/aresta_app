@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../main.dart';
-import 'navigation_tree.dart';
+import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 

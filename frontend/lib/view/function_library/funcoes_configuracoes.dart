@@ -16,7 +16,7 @@ import '../../theme/gerenciador_tema.dart';
 import '../../theme/cores_app.dart';
 import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../navigation/navigation_functions.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../widgets/modal_beta_aberto.dart';
 

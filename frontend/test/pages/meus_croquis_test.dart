@@ -13,7 +13,7 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/meus_croquis_functions.dart';
 import 'package:frontend/view/view_models/meus_croquis_view_model.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 import 'package:shared_preferences/shared_preferences.dart';

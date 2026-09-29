@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/navigation/arvore/modal_nodes.dart';
+import 'package:frontend/navigation/arvore/nos_modais.dart';
 import 'package:frontend/utils/consulta_dataset.dart';
 
 /// Classe auxiliar para converter Referências string-based e dados reais (Protobuf)

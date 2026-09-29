@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/navigation/arvore/tree_navigation_controller.dart';
-import 'package:frontend/navigation/arvore/global_nodes.dart';
-import 'package:frontend/navigation/arvore/pico_nodes.dart';
+import 'package:frontend/navigation/arvore/navegador_arvore.dart';
+import 'package:frontend/navigation/arvore/nos_globais.dart';
+import 'package:frontend/navigation/arvore/nos_pico.dart';
 
 void main() {
   group('TreeNavigationController', () {

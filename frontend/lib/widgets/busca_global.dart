@@ -9,7 +9,7 @@ import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/function_library/funcoes_home.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../navigation/navigation_functions.dart';
+import '../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../services/firebase/registro_primeira_visita.dart';
 import '../theme/cores_app.dart';

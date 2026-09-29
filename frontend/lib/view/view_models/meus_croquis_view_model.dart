@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import 'card_croqui_view_model.dart';
-import '../../navigation/navigation_functions.dart';
+import '../../navigation/funcoes_navegacao.dart';
 import '../../services/dataset_repository.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../services/firebase/telemetry_service.dart';

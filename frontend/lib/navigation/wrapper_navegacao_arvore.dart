@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:frontend/application_managers/feedback/submit_feedback_usecase.dart';
-import 'package:frontend/navigation/deep_link_navigator_service.dart';
+import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/comunidade.dart';
@@ -409,3 +409,8 @@ class _HomePageWrapper extends StatelessWidget {
     );
   }
 }
+
+/// Alias em português brasileiro para [TreeNavigationWrapper].
+typedef WrapperNavegacaoArvore = TreeNavigationWrapper;
+typedef WrapperNavegacaoArvoreState = TreeNavigationWrapperState;
+

@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'nav_node.dart';
+import 'no_navegacao.dart';
 
 /// Nó que representa um modal textual aberto sobre a página atual.
 class TextNode extends NavNode {

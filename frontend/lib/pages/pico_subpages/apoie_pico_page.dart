@@ -9,7 +9,7 @@ import '../../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/cores_app.dart';
-import '../../navigation/navigation_tree.dart';
+import '../../navigation/arvore_navegacao.dart';
 import '../../services/firebase/telemetry_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 

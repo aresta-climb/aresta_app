@@ -9,7 +9,7 @@ import '../../view/function_library/markdown_offline.dart';
 import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/cores_app.dart';
-import '../../navigation/navigation_tree.dart';
+import '../../navigation/arvore_navegacao.dart';
 
 class ExplorarLocalPage extends StatelessWidget {
   final Pico pico;

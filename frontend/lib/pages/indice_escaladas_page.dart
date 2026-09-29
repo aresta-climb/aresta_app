@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../navigation/navigation_functions.dart';
+import '../navigation/funcoes_navegacao.dart';
 import '../services/firebase/telemetry_service.dart';
 import '../theme/cores_app.dart';
 import '../utils/filtro_grau_escalada.dart';

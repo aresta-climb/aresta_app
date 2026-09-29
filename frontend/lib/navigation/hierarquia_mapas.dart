@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import 'navigation_tree.dart' show CarrosselItemData;
+import 'arvore_navegacao.dart' show CarrosselItemData;
 
 /// Representa o destino de navegação hierárquica a partir de um mapa.
 ///
@@ -23,7 +23,7 @@ class MapDestination {
   });
 }
 
-class MapHierarchyResolver {
+class HierarquiaMapas {
   /// Avalia os contextos atuais (Setor e Grupo) para descobrir o mapa de nível superior.
   ///
   /// A hierarquia de navegação funciona assim:
@@ -87,3 +87,7 @@ class MapHierarchyResolver {
     return null;
   }
 }
+
+/// Alias de compatibilidade retroativa para [HierarquiaMapas].
+typedef MapHierarchyResolver = HierarquiaMapas;
+

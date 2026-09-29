@@ -4,9 +4,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/navigation/modal_bottom_sheet_page.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
-import 'package:frontend/navigation/page_listenable_builder.dart';
+import 'package:frontend/navigation/pagina_modal_bottom_sheet.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/grupo.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';

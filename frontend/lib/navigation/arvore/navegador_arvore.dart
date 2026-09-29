@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'nav_node.dart';
-import 'navigation_tree_model.dart';
+import 'modelo_arvore_navegacao.dart';
+import 'no_navegacao.dart';
 
-/// Controlador de estado reativo de navegação baseado na árvore de nós ([ArvoreNavegacao]).
+/// Orquestrador de estado reativo de navegação baseado na árvore de nós ([ArvoreNavegacao]).
 ///
 /// Atua como a ponte entre o modelo de domínio puro e os widgets reativos do Flutter,
 /// notificando ouvintes (`notifyListeners`) a cada transição de tela.
-class TreeNavigationController extends ChangeNotifier {
+class NavegadorArvore extends ChangeNotifier {
   ArvoreNavegacao _arvore;
 
   /// Permite que uma página intercepte o botão voltar do sistema ou da AppBar.
@@ -17,7 +17,7 @@ class TreeNavigationController extends ChangeNotifier {
   /// Se retornar `true`, a navegação padrão da árvore é cancelada pois a página já tratou a ação.
   bool Function()? onBackInterceptor;
 
-  TreeNavigationController({ArvoreNavegacao? estadoInicial})
+  NavegadorArvore({ArvoreNavegacao? estadoInicial})
       : _arvore = estadoInicial ?? const ArvoreNavegacao();
 
   /// Retorna o modelo de árvore atual.
@@ -68,3 +68,7 @@ class TreeNavigationController extends ChangeNotifier {
   /// Apelido em português brasileiro para [goHome].
   void irParaHome() => goHome();
 }
+
+/// Alias de compatibilidade retroativa para [NavegadorArvore].
+typedef TreeNavigationController = NavegadorArvore;
+
