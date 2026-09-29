@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/pages/browse.dart';
+import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';

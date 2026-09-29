@@ -12,8 +12,8 @@ import 'package:frontend/application_managers/feedback/feedback_orchestrator.dar
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/navigation/navigation_functions.dart';
 import 'package:frontend/navigation/tree_navigation_wrapper.dart';
-import 'package:frontend/pages/database_migration_screen.dart';
-import 'package:frontend/pages/terms_of_use.dart';
+import 'package:frontend/pages/tela_migracao_banco.dart';
+import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/feedback/network_feedback_trigger.dart';

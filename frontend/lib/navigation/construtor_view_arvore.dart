@@ -18,7 +18,7 @@ import 'package:frontend/pages/pico_subpages/comunidade_pico_page.dart';
 import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
 import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/setor.dart';
-import 'package:frontend/pages/settings.dart';
+import 'package:frontend/pages/configuracoes.dart';
 import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/dataset_repository.dart';

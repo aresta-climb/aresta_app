@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:frontend/pages/database_migration_screen.dart';
+import 'package:frontend/pages/tela_migracao_banco.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetry_service.dart';
 import '../mocks/mock_telemetry_service.dart';
