@@ -1,4 +1,4 @@
-﻿# Aresta Climb App — Frontend
+# Aresta Climb App — Frontend
 
 Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a croquis, mapas GPS e sincronização de repositórios.
 
@@ -82,7 +82,7 @@ frontend/
 │   │   └── construtor_reativo_pagina.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
-│   │   ├── browse.dart                  - Índice remoto com download inline
+│   │   ├── explorar.dart                - Índice remoto com download inline
 │   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
@@ -93,8 +93,8 @@ frontend/
 │   │   ├── grupo.dart                   - Agrupamento de setores
 │   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
 │   │   ├── via.dart                     - Nó folha: beta, croqui e imagens
-│   │   ├── settings.dart                - Configurações e ferramentas de editor
-│   │   ├── terms_of_use.dart            - Visualizador dos documentos legais
+│   │   ├── configuracoes.dart           - Configurações e ferramentas de editor
+│   │   ├── termos_de_uso.dart           - Visualizador dos documentos legais
 │   │   └── qr_scanner.dart              - Scanner de QR code
 │   ├── services/                        - Serviços centrais
 │   │   ├── firebase/

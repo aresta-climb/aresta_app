@@ -1,4 +1,4 @@
-﻿# Camada de Modelos de Dados (`lib/data/`)
+# Camada de Modelos de Dados (`lib/data/`)
 
 Este diretório contém os modelos de dados internos não derivados de mensagens Protobuf do ecossistema Aresta Climb.
 
@@ -10,13 +10,13 @@ A principal responsabilidade deste módulo é fornecer estruturas tipadas, segur
 
 ```text
 lib/data/
-└── models/
+└── modelos/
     └── metadados_feedback.dart    - Modelo de domínio dos metadados de diagnóstico de feedback
 ```
 
 ---
 
-## 1. Modelos de Domínio (`models/`)
+## 1. Modelos de Domínio (`modelos/`)
 
 ### `FeedbackMetadata` (`modelos/metadados_feedback.dart`)
 Representa o pacote completo de informações contextuais do dispositivo capturadas no momento em que um usuário abre ou submete um reporte de in-app feedback:
@@ -26,4 +26,4 @@ Representa o pacote completo de informações contextuais do dispositivo captura
   - `indiceSha256`: Hash SHA-256 do arquivo `indice.binarypb` local.
   - `croquiId`, `croquiSha256Esperado`, `croquiSha256Real`, `croquiStatus`: Status de integridade do croqui em visualização (`INTEGRO`, `DIVERGENTE`, `NAO_BAIXADO`).
   - `thumbnailSha256Esperado`, `thumbnailSha256Real`, `thumbnailStatus`: Status de integridade da miniatura do pico ativo.
-- **Serialização Direta**: Possui construtor de fábrica `fromJson` e método `toJson` diretos na própria classe, eliminando a necessidade de DTOs intermediários (Princípio VI de Simplicidade e Anti-Abstração do `AGENTS.md`).
+- **Serialização Direta**: Possui construtor de fábrica `fromJson` e método `toJson` diretos na própria classe, eliminando a necessidade de DTOs intermediários (Princípio de Simplicidade e Anti-Abstração).

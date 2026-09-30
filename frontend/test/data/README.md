@@ -1,6 +1,6 @@
 # Testes de Modelos de Dados (`test/data/`)
 
-Esta pasta contém os testes unitários dedicados à validação de modelos de dados e serialização JSON da pasta `lib/data/`, em conformidade com as diretrizes do `AGENTS.md`.
+Esta pasta contém os testes unitários dedicados à validação de modelos de dados e serialização JSON da pasta `lib/data/`, com cobertura abrangente de resiliência e integridade.
 
 ---
 
@@ -8,15 +8,15 @@ Esta pasta contém os testes unitários dedicados à validação de modelos de d
 
 ```text
 test/data/
-└── models/
-    └── feedback_metadata_test.dart - Testes de integridade e serialização de FeedbackMetadata
+└── modelos/
+    └── metadados_feedback_test.dart - Testes de integridade e serialização de FeedbackMetadata
 ```
 
 ---
 
-## 1. Testes de Modelos (`models/`)
+## 1. Testes de Modelos (`modelos/`)
 
-### `feedback_metadata_test.dart`
+### `metadados_feedback_test.dart`
 Valida o ciclo completo de serialização e desserialização do modelo `FeedbackMetadata`:
 - **Round-Trip JSON**: Garante que instâncias convertidas para `Map<String, dynamic>` via `toJson()` possam ser reconstruídas perfeitamente via `fromJson()` sem perda ou corrupção de campos.
 - **Auditoria Criptográfica de Hashes**: Valida a persistência e restauração correta dos campos de integridade (`indiceSha256`, `croquiStatus`, `thumbnailStatus`, etc.).
@@ -32,5 +32,5 @@ Valida o ciclo completo de serialização e desserialização do modelo `Feedbac
 flutter test test/data/
 
 # Executar especificamente o teste de metadados
-flutter test test/data/models/feedback_metadata_test.dart
+flutter test test/data/modelos/metadados_feedback_test.dart
 ```

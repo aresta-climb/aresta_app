@@ -1,4 +1,4 @@
-﻿# Documentação de Serviços — Aresta Climb
+# Documentação de Serviços — Aresta Climb
 
 Este diretório contém a lógica de negócios e os serviços centrais do aplicativo. A arquitetura é construída com princípios de Clean Architecture e separação de responsabilidades, suportando tanto o modo de produção oficial quanto o modo experimental de Live Reload para editores.
 
@@ -86,7 +86,7 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### Módulo de In-App Feedback (`feedback/`)
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
-- **`FeedbackOrchestrator`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
+- **`OrquestradorFeedback` (`orquestrador_feedback.dart`)**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
 - **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) e executa **Auditoria Criptográfica de Hashes sob demanda** (calculando SHA-256 do índice local, miniatura e croqui em visualização para rotular os estados como `INTEGRO`, `DIVERGENTE` ou `NAO_BAIXADO`).
 
 ---

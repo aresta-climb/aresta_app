@@ -1,6 +1,6 @@
-﻿# Camada de Apresentação e Visualização (`lib/view/`)
+# Camada de Apresentação e Visualização (`lib/view/`)
 
-Este diretório concentra a camada de apresentação e visualização da aplicação Aresta Climb, organizada segundo o padrão de arquitetura **MVVM (Model-View-ViewModel)** e o princípio **Feature-First** (Diretriz II do `AGENTS.md`).
+Este diretório concentra a camada de apresentação e visualização da aplicação Aresta Climb, organizada segundo o padrão de arquitetura **MVVM (Model-View-ViewModel)** e o princípio **Feature-First**.
 
 A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos e focados estritamente na composição do Scaffold, ciclo de vida do Flutter e integração com o sistema de navegação reativa (`PageListenableBuilder`). Todo o trabalho pesado de montagem de componentes visuais, callbacks, cálculo de dados derivados de tela e formatação é delegado a este módulo.
 
@@ -67,7 +67,7 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.
 - **`PicoProximoViewModel`**: Computa a distância geográfica em quilômetros entre a localização GPS do dispositivo e as coordenadas do pico, ordenando o carrossel de picos mais próximos.
-- **View Models de Páginas**: Coordenam o ciclo de vida reativo e filtros de páginas como `BrowsePage`, `HomePage`, `PicoPage` e `MeusCroquisPage`.
+- **View Models de Páginas**: Coordenam o ciclo de vida reativo e filtros de páginas como `ExplorarPage`, `HomePage`, `PicoPage` e `MeusCroquisPage`.
 
 ---
 

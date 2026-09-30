@@ -54,7 +54,7 @@ flutter test test/services/editor_croqui_test.dart
 | `pages/` e `widgets/` | Interfaces de usuário, carrossel de mapas, busca global, créditos e banners | 100% aprovado |
 | `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | 100% aprovado |
 | `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | 100% aprovado |
-| **Total Geral** | **102 arquivos de teste / 737 cenários automatizados** | **100% aprovado** |
+| **Total Geral** | **Suíte completa / 1.318 testes automatizados** | **100% aprovado** |
 
 ## Convenções
 
