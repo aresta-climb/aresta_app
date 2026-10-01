@@ -48,4 +48,46 @@ void main() {
       expect(appBar.preferredSize.height, greaterThan(0));
     },
   );
+
+  testWidgets(
+    'ArestaHomeAppBar aciona callback onSync ao tocar no botão de sincronização',
+    (tester) async {
+      bool sincronizado = false;
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: ArestaHomeAppBar(
+            onSync: () => sincronizado = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.sync));
+      await tester.pump();
+
+      expect(sincronizado, isTrue);
+    },
+  );
+
+  testWidgets(
+    'ArestaHomeAppBar aciona callback onSettings ao tocar no botão de configurações',
+    (tester) async {
+      bool abriuConfiguracoes = false;
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: ArestaHomeAppBar(
+            onSettings: () => abriuConfiguracoes = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pump();
+
+      expect(abriuConfiguracoes, isTrue);
+    },
+  );
 }
