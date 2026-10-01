@@ -215,33 +215,28 @@ Widget buildHomeBody(
           syncService: syncOuOnSwitchTab as SyncService,
         );
 
-  return SingleChildScrollView(
-    physics: const AlwaysScrollableScrollPhysics(
-      parent: BouncingScrollPhysics(),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader(context, viewModel),
-        _buildSearchBar(context, viewModel),
-        NearbyCragsCarousel(viewModel: viewModel),
-        _buildGuiaRapido(context),
-        _buildConservacao(context),
-        const SizedBox(height: 30),
-      ],
-    ),
-  );
-}
-
-Widget _buildHeader(
-  BuildContext context,
-  HomeViewModel viewModel,
-) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _buildAppBar(context, viewModel),
-      _buildHeroWelcome(context),
+      Expanded(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroWelcome(context),
+              _buildSearchBar(context, viewModel),
+              NearbyCragsCarousel(viewModel: viewModel),
+              _buildGuiaRapido(context),
+              _buildConservacao(context),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
     ],
   );
 }
