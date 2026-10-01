@@ -314,7 +314,19 @@ Widget _buildHeader(
             ),
           ],
         ),
-        const SizedBox(height: 28),
+        _buildHeroWelcome(context),
+      ],
+    ),
+  );
+}
+
+/// Constrói o texto de boas-vindas e introdução no topo da rolagem da página inicial.
+Widget _buildHeroWelcome(BuildContext context) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
           'BEM VINDO!',
           style: TextStyle(
