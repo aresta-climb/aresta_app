@@ -6,7 +6,6 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
-
 import 'package:frontend/application_managers/segundo_plano/despachante_segundo_plano.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/constants/legal_version.g.dart';
