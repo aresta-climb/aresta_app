@@ -107,8 +107,26 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
           const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.sync, color: context.colors.ashGrey),
+                tooltip: 'Sincronizar catálogo e croquis',
+                onPressed: () => _executarSincronizacao(context),
+              ),
+              buildFeedbackButton(context, color: context.colors.ashGrey),
+              IconButton(
+                icon: Icon(Icons.settings, color: context.colors.ashGrey),
+                onPressed: () => _executarConfiguracoes(context),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
+/// Sinônimo em português para [ArestaHomeAppBar].
+typedef AppBarHomeAresta = ArestaHomeAppBar;
