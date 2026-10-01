@@ -155,6 +155,47 @@ void main() {
   );
 
   testWidgets(
+    'appbar permanece visível e fixa fora da rolagem ao rolar a página inicial',
+    (WidgetTester tester) async {
+      mockRepo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
+      await tester.pumpWidget(buildTestableWidget());
+      await tester.pump();
+
+      // Os botões e marca da appbar NÃO devem ser descendentes de SingleChildScrollView
+      expect(
+        find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byIcon(Icons.settings),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byIcon(Icons.sync),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.text('ARESTA CLIMB'),
+        ),
+        findsNothing,
+      );
+
+      // Ao rolar a página para baixo
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -500));
+      await tester.pump();
+
+      // A AppBar continua visível na tela
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byIcon(Icons.sync), findsOneWidget);
+      expect(find.text('ARESTA CLIMB'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'handlePicoSelection dispara telemetria de abrir_croqui com origem, modoAcesso e primeiraVisita',
     (WidgetTester tester) async {
       final mockTelemetry = MockTelemetryService();
