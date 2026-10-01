@@ -237,84 +237,93 @@ Widget _buildHeader(
   BuildContext context,
   HomeViewModel viewModel,
 ) {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildAppBar(context, viewModel),
+      _buildHeroWelcome(context),
+    ],
+  );
+}
+
+/// Constrói a barra de aplicativo superior (AppBar fixa) da página inicial.
+Widget _buildAppBar(
+  BuildContext context,
+  HomeViewModel viewModel,
+) {
+  return Container(
+    color: context.colors.deepBasalt,
+    padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/logo_app_trace.svg',
-                      height: 22,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 7),
-                    InkWell(
-                      onTap: () => exibirModalBetaAberto(context),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Stack(
-                        alignment: Alignment.centerLeft,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 7, bottom: 5),
-                            child: Text(
-                              'ARESTA CLIMB',
-                              style: TextStyle(
-                                fontFamily: 'Montserrat',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15.5,
-                                letterSpacing: 0.5,
-                                color: context.colors.chalkWhite,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: MicroBadgeBeta(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Row(
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: Icon(Icons.sync, color: context.colors.ashGrey),
-                  tooltip: 'Sincronizar catálogo e croquis',
-                  onPressed: () async {
-                    await viewModel.sincronizarManual(context);
-                  },
+                SvgPicture.asset(
+                  'assets/logo_app_trace.svg',
+                  height: 22,
+                  fit: BoxFit.contain,
                 ),
-                buildFeedbackButton(context, color: context.colors.ashGrey),
-                IconButton(
-                  icon: Icon(Icons.settings, color: context.colors.ashGrey),
-                  onPressed: () {
-                    TreeNavigationWrapper.of(
-                      context,
-                    ).treeController.navigateTo(SettingsNode(const HomeNode()));
-                  },
+                const SizedBox(width: 7),
+                InkWell(
+                  onTap: () => exibirModalBetaAberto(context),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 7, bottom: 5),
+                        child: Text(
+                          'ARESTA CLIMB',
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15.5,
+                            letterSpacing: 0.5,
+                            color: context.colors.chalkWhite,
+                          ),
+                        ),
+                      ),
+                      const Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: MicroBadgeBeta(),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.sync, color: context.colors.ashGrey),
+              tooltip: 'Sincronizar catálogo e croquis',
+              onPressed: () async {
+                await viewModel.sincronizarManual(context);
+              },
+            ),
+            buildFeedbackButton(context, color: context.colors.ashGrey),
+            IconButton(
+              icon: Icon(Icons.settings, color: context.colors.ashGrey),
+              onPressed: () {
+                TreeNavigationWrapper.of(
+                  context,
+                ).treeController.navigateTo(SettingsNode(const HomeNode()));
+              },
+            ),
           ],
         ),
-        _buildHeroWelcome(context),
       ],
     ),
   );
