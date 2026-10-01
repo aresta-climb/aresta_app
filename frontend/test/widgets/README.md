@@ -21,6 +21,7 @@ Esta pasta contém testes de widget da interface do usuário. Os testes aqui ver
 | `provedor_imagem_aresta_test.dart` | `ProvedorImagemAresta` | Testa resolução de imagens em camadas (local, cache temporário e CDN) |
 | `temas_botoes_test.dart` | `TemasBotoes` | Testa estilizações e temas de botões de navegação e ação |
 | `feedback/construtor_feedback_usuario_test.dart` | `CustomStringFeedback` | Testa o layout e comportamento visual (Light/Dark mode) do formulário de In-App Feedback |
+| `app_bar_home_aresta_test.dart` | `ArestaHomeAppBar` | Testa a renderização da barra superior da Home, ações de sincronização, configurações, modal beta e suporte a PreferredSizeWidget |
 
 ## Como executar
 
