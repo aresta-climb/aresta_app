@@ -45,3 +45,4 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 | `CarrosselPicosProximos` | Carrossel horizontal de picos próximos com miniaturas otimizadas. |
 | `MapaThumbnail` | Visualização estática leve de mapa vetorial/satélite para pré-visualização rápida de setores. |
 | `BuscaGlobal` | Barra unificada de busca textual por picos, setores e vias. |
+| `ArestaHomeAppBar` | Barra de aplicativo superior dedicada da tela inicial com identidade visual da marca, selo beta e ações de sincronização, feedback e configurações. |
