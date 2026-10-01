@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -178,5 +178,29 @@ void main() {
     final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
     expect(params['acao'], 'abrir_modal_beta');
     expect(params['origem'], 'home_header');
+  });
+
+  testWidgets('HomePage mantém appbar visível após rolagem do conteúdo', (tester) async {
+    final mockRepo = MockDatasetRepository();
+    final mockSync = MockSyncService();
+    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
+      TopoDataset(availablePicos: [], downloadedPicos: []),
+    );
+
+    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
+    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+
+    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pump();
+
+    // Rola para baixo
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -600));
+    await tester.pump();
+
+    // Elementos da AppBar continuam visíveis
+    expect(find.text('ARESTA CLIMB'), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+    expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 }
