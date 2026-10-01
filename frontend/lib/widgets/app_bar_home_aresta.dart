@@ -55,6 +55,60 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return Container(
+      color: context.colors.deepBasalt,
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/logo_app_trace.svg',
+                    height: 22,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: 7),
+                  InkWell(
+                    onTap: () => exibirModalBetaAberto(context),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 7, bottom: 5),
+                          child: Text(
+                            'ARESTA CLIMB',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15.5,
+                              letterSpacing: 0.5,
+                              color: context.colors.chalkWhite,
+                            ),
+                          ),
+                        ),
+                        const Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: MicroBadgeBeta(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
   }
 }
