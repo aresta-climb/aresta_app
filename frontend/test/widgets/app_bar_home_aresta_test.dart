@@ -90,4 +90,38 @@ void main() {
       expect(abriuConfiguracoes, isTrue);
     },
   );
+
+  testWidgets(
+    'ArestaHomeAppBar abre ModalBetaAberto ao tocar na marca',
+    (tester) async {
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: const ArestaHomeAppBar(),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('ARESTA CLIMB'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(ModalBetaAberto), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'ArestaHomeAppBar funciona como PreferredSizeWidget em Scaffold.appBar',
+    (tester) async {
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: const ArestaHomeAppBar(),
+          usarScaffoldAppBar: true,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('ARESTA CLIMB'), findsOneWidget);
+      expect(find.byType(ArestaHomeAppBar), findsOneWidget);
+    },
+  );
 }
