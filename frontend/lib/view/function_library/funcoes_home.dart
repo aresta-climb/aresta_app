@@ -3,20 +3,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:frontend/main.dart';
 import '../../services/repositorio_dataset.dart';
-import '../../navigation/arvore_navegacao.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../theme/cores_app.dart';
-import 'biblioteca_funcoes_comuns.dart';
 import '../../widgets/carrossel_picos_proximos.dart';
 import '../../widgets/busca_global.dart';
 import '../../services/http/sync_service.dart';
-import '../../widgets/micro_badge_beta.dart';
-import '../../widgets/modal_beta_aberto.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../../widgets/app_bar_home_aresta.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
 import '../view_models/home_view_model.dart';
@@ -218,7 +213,7 @@ Widget buildHomeBody(
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildAppBar(context, viewModel),
+      ArestaHomeAppBar(viewModel: viewModel),
       Expanded(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
