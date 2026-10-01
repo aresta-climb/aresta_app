@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:math' as math;
@@ -1433,39 +1433,50 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                 },
               ),
 
-              // Camada 2: Card Flutuante
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                bottom: _selectedId != null
-                    ? 20 + MediaQuery.of(context).padding.bottom
-                    : -150,
+              // Camada 2: Controles Flutuantes Inferiores (Botão de Recentralizar e Card Flutuante)
+              //
+              // Estruturados em uma única Column alinhada na base da tela para que o botão de
+              // recentralizar/GPS seja automaticamente empurrado para cima do card flutuante com
+              // espaçamento responsivo, prevenindo qualquer sobreposição visual independentemente
+              // da altura dinâmica do card (títulos multi-linha, badges, descrições longas ou
+              // controles de paginação de múltiplos itens).
+              Positioned(
+                bottom: 20 + MediaQuery.of(context).padding.bottom,
                 left: 20,
                 right: 20,
-                child: _buildFloatingCard(
-                  viewportConstraints,
-                  viewportSize,
-                ),
-              ),
-              // Camada 3: Botão de Recentralizar Imagem (Estilo Mapa Global / FloatingActionButton)
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                bottom: _selectedId != null
-                    ? 220 + MediaQuery.of(context).padding.bottom
-                    : 20 + MediaQuery.of(context).padding.bottom,
-                right: 20,
-                child: FloatingActionButton(
-                  heroTag: 'recentralizar_mapa_interativo',
-                  backgroundColor:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? context.colors.caveShadow
-                          : context.colors.chalkWhite,
-                  foregroundColor: AppColors.brandColor,
-                  mini: true,
-                  onPressed: _recentralizarImagem,
-                  tooltip: 'Centralizar imagem',
-                  child: const Icon(Icons.my_location),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FloatingActionButton(
+                        heroTag: 'recentralizar_mapa_interativo',
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? context.colors.caveShadow
+                                : context.colors.chalkWhite,
+                        foregroundColor: AppColors.brandColor,
+                        mini: true,
+                        onPressed: _recentralizarImagem,
+                        tooltip: 'Centralizar imagem',
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: _selectedId != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _buildFloatingCard(
+                                viewportConstraints,
+                                viewportSize,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
                 ),
               ),
               // Camada 4: Botão de Navegação "Subir" (Up)
