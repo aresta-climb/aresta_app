@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -398,6 +398,9 @@ Widget _buildSearchBar(BuildContext context, HomeViewModel viewModel) {
   );
 }
 
+/// Constrói o card explicativo do "Guia Rápido do Aresta" com 3 passos
+/// para orientar o escalador a encontrar picos, salvar offline e utilizar
+/// o croqui interativo.
 Widget _buildGuiaRapido(BuildContext context) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
@@ -442,7 +445,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           ),
           const SizedBox(height: 8),
           Text(
-            'Quatro passos pra você sair do app direto pro paredão.',
+            'Três passos pra você sair do app direto pro paredão.',
             style: TextStyle(
               color: context.colors.ashGrey,
               fontSize: 14,
@@ -476,15 +479,6 @@ Widget _buildGuiaRapido(BuildContext context) {
             desc:
                 'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
             iconColor: const Color(0xFFBCA646),
-          ),
-          _buildStepItem(
-            context,
-            num: '04',
-            icon: Icons.people_outline,
-            title: 'COMPARTILHE',
-            desc:
-                'Avise outros escaladores sobre restrições de fauna, chuva ou itens perdidos.',
-            iconColor: const Color(0xFF5B81A7),
             isLast: true,
           ),
         ],

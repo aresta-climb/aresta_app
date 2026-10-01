@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -114,16 +114,16 @@ void main() {
       // Verify NearbyCragsCarousel exists
       expect(find.byType(NearbyCragsCarousel), findsOneWidget);
 
-      // Verify Guia Rápido em Dark Mode com 4 passos
+      // Verify Guia Rápido em Dark Mode com 3 passos
       expect(find.text('GUIA RÁPIDO DO ARESTA'), findsOneWidget);
       expect(
-        find.text('Quatro passos pra você sair do app direto pro paredão.'),
+        find.text('Três passos pra você sair do app direto pro paredão.'),
         findsOneWidget,
       );
       expect(find.text('ENCONTRE O PICO'), findsOneWidget);
       expect(find.text('SALVE OFFLINE'), findsOneWidget);
       expect(find.text('CROQUI INTERATIVO'), findsOneWidget);
-      expect(find.text('COMPARTILHE'), findsOneWidget);
+      expect(find.text('COMPARTILHE'), findsNothing);
 
       // Validação do novo layout refinado:
       // 1. Container externo do Guia Rápido tem fundo transparente/cor do app
