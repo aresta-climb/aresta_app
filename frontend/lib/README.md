@@ -59,6 +59,7 @@ Representam a estrutura topológica aninhada de um guia de escalada. O estado fl
 
 - **`pico.dart`**: Nó raiz de um guia. Exibe resumo, informações logísticas e a lista de setores ou grupos.
 - **`mapas_carrossel.dart`**: Navegação em formato carrossel horizontal (swiping) contendo múltiplos `mapa_interativo.dart`, oferecendo transições de mapa mais fluidas entre hierarquias e subsetores do guia de escalada.
+- **`mapa_interativo.dart`**: Visualizador de mapas e croquis vetoriais com zoom livre, POIs interativos, card flutuante responsivo de detalhes e botão de recentralizar (GPS) dinamicamente posicionado acima do card para evitar sobreposição de elementos na interface.
 - **`grupo.dart` / `setor.dart`**: Subárea geográfica. Adapta a nomenclatura dinamicamente ("Vias" vs "Boulders") de acordo com o tipo de conteúdo do setor.
 - **`via.dart`**: Nó folha com beta, descrições e imagens croqui (topo) de alta resolução.
 
