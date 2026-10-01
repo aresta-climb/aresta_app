@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -959,6 +959,61 @@ void main() {
       final interactiveViewerFinder = find.byType(InteractiveViewer);
       expect(interactiveViewerFinder, findsOneWidget);
     });
+
+    testWidgets(
+      'Botão de recentralizar (GPS) fica posicionado estritamente acima do card de detalhes sem sobreposição quando via com descrição longa é selecionada',
+      (WidgetTester tester) async {
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Variante Santo do Pau Oco (extensão)',
+            descricao:
+                'IMPORTANTE Segurança usar capacete!!!\nMelhor sair com segunda proteção clipada.',
+          ),
+        );
+        mockMapa.referencias.add(
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Variante Santo do Pau Oco (extensão)',
+            ids: ['p1'],
+          ),
+        );
+
+        await tester.pumpWidget(buildApp([esc1], mockMapa));
+        await tester.pumpAndSettle();
+
+        // Antes de selecionar: FAB está no canto inferior direito
+        final fabFinder = find.byType(FloatingActionButton);
+        expect(fabFinder, findsOneWidget);
+        final posicaoInicialFab = tester.getRect(fabFinder);
+
+        // Seleciona o marcador p1
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        // O card de detalhes deve estar visível
+        final cardFinder = find.byType(Card);
+        expect(cardFinder, findsOneWidget);
+        final cardRect = tester.getRect(cardFinder);
+        final fabRectAberto = tester.getRect(fabFinder);
+
+        // O FAB deve estar estritamente acima do card de detalhes (fabRect.bottom <= cardRect.top)
+        expect(
+          fabRectAberto.bottom,
+          lessThanOrEqualTo(cardRect.top),
+          reason:
+              'O botão de GPS (FAB) não deve sobrepor o card flutuante; sua base deve estar acima do topo do card.',
+        );
+
+        // Fecha o card pelo botão close
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        // O card deve fechar e o FAB voltar para a base
+        expect(find.byType(Card), findsNothing);
+        final posicaoFinalFab = tester.getRect(fabFinder);
+        expect(posicaoFinalFab.bottom, equals(posicaoInicialFab.bottom));
+      },
+    );
 
     testWidgets('Closing floating card de-selects marker', (
       WidgetTester tester,
