@@ -1015,6 +1015,61 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Botão de recentralizar (GPS) fica posicionado estritamente acima do card quando há múltiplos itens agrupados no mesmo marcador',
+      (WidgetTester tester) async {
+        final esc1 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via 1',
+            descricao: 'Descrição da primeira via compartilhando o mesmo ponto.',
+          ),
+        );
+        final esc2 = Escalada(
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via 2',
+            descricao: 'Descrição da segunda via com linha mais extensa.',
+          ),
+        );
+        mockMapa.referencias.addAll([
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via 1',
+            ids: ['p1'],
+          ),
+          Mapa_Referencia(
+            setor: 'Setor Teste',
+            escalada: 'Via 2',
+            ids: ['p1'],
+          ),
+        ]);
+
+        await tester.pumpWidget(buildApp([esc1, esc2], mockMapa));
+        await tester.pumpAndSettle();
+
+        final fabFinder = find.byType(FloatingActionButton);
+        expect(fabFinder, findsOneWidget);
+
+        // Seleciona o marcador p1
+        await tester.tap(find.byKey(const Key('marker_p1')));
+        await tester.pumpAndSettle();
+
+        // O card de detalhes deve estar visível com controles de navegação
+        final cardFinder = find.byType(Card);
+        expect(cardFinder, findsOneWidget);
+        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+        final cardRect = tester.getRect(cardFinder);
+        final fabRectAberto = tester.getRect(fabFinder);
+
+        expect(
+          fabRectAberto.bottom,
+          lessThanOrEqualTo(cardRect.top),
+          reason:
+              'O botão de GPS (FAB) deve permanecer acima do card flutuante mesmo com controles de múltiplos itens.',
+        );
+      },
+    );
+
     testWidgets('Closing floating card de-selects marker', (
       WidgetTester tester,
     ) async {
