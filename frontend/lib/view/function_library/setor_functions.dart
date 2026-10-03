@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import 'common_functions.dart';
-import 'offline_markdown.dart';
+import 'biblioteca_funcoes_comuns.dart';
+import 'markdown_offline.dart';
 import 'via_functions.dart';
 import '../../widgets/mapa_thumbnail.dart';
-import '../../theme/app_colors.dart';
-import '../../navigation/navigation_functions.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../theme/cores_app.dart';
+import '../../navigation/funcoes_navegacao.dart';
+import '../../services/firebase/telemetria.dart';
 import '../../utils/resolvedor_rotulos_referencia.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.

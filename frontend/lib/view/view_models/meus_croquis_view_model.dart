@@ -1,16 +1,16 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import 'card_croqui_view_model.dart';
-import '../../navigation/navigation_functions.dart';
-import '../../services/dataset_repository.dart';
+import '../../navigation/funcoes_navegacao.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../services/firebase/telemetria.dart';
 import '../../services/http/sync_service.dart';
-import '../../theme/app_colors.dart';
-import '../function_library/common_functions.dart';
+import '../../theme/cores_app.dart';
+import '../function_library/biblioteca_funcoes_comuns.dart';
 
 /// Modelo de apresentação para a tela [MeusCroquisPage] (MVVM).
 ///

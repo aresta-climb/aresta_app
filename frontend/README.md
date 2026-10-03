@@ -55,16 +55,16 @@ frontend/
 │   ├── constants/
 │   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
 │   ├── theme/
-│   │   ├── app_colors.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
-│   │   └── theme_controller.dart        - Gerenciamento de estado do tema
+│   │   ├── cores_app.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
+│   │   └── gerenciador_tema.dart        - Gerenciamento de estado do tema
 │   ├── utils/
-│   │   ├── markdown_utils.dart          - Funções utilitárias para parseamento de strings Markdown
-│   │   └── pico_categorization.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
+│   │   ├── utilitarios_markdown.dart          - Funções utilitárias para parseamento de strings Markdown
+│   │   └── categorizacao_pico.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
 │   ├── view/                            - Camada de visualização e apresentação
 │   │   ├── function_library/            - Builders de UI, callbacks e renderizadores puros
-│   │   │   ├── common_functions.dart    - Sistema de design (paletas, tipografia, componentes base)
-│   │   │   ├── offline_markdown.dart    - Visualizador Markdown com FileImage offline
-│   │   │   ├── settings_functions.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
+│   │   │   ├── biblioteca_funcoes_comuns.dart    - Sistema de design (paletas, tipografia, componentes base)
+│   │   │   ├── markdown_offline.dart    - Visualizador Markdown com FileImage offline
+│   │   │   ├── funcoes_configuracoes.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
 │   │   │   ├── mapa/
 │   │   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
 │   │   │   │   └── mapa_marker.dart    - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
@@ -77,12 +77,12 @@ frontend/
 │   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
 │   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
-│   │   ├── navigation_functions.dart    - API estática AppNav com herança de contexto
-│   │   ├── navigation_tree.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
-│   │   └── page_listenable_builder.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
+│   │   ├── funcoes_navegacao.dart    - API estática AppNav com herança de contexto
+│   │   ├── arvore_navegacao.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
+│   │   └── construtor_reativo_pagina.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
-│   │   ├── browse.dart                  - Índice remoto com download inline
+│   │   ├── explorar.dart                - Índice remoto com download inline
 │   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
@@ -93,34 +93,34 @@ frontend/
 │   │   ├── grupo.dart                   - Agrupamento de setores
 │   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
 │   │   ├── via.dart                     - Nó folha: beta, croqui e imagens
-│   │   ├── settings.dart                - Configurações e ferramentas de editor
-│   │   ├── terms_of_use.dart            - Visualizador dos documentos legais
+│   │   ├── configuracoes.dart           - Configurações e ferramentas de editor
+│   │   ├── termos_de_uso.dart           - Visualizador dos documentos legais
 │   │   └── qr_scanner.dart              - Scanner de QR code
 │   ├── services/                        - Serviços centrais
 │   │   ├── firebase/
-│   │   │   ├── init_firebase.dart       - Inicialização e captura de Crashlytics
-│   │   │   ├── telemetry_service.dart   - Isolamento do Analytics
-│   │   │   ├── remote_config_service.dart - Fallbacks e cache local
+│   │   │   ├── inicializar_firebase.dart       - Inicialização e captura de Crashlytics
+│   │   │   ├── telemetria.dart   - Isolamento do Analytics
+│   │   │   ├── remote_config.dart - Fallbacks e cache local
 │   │   │   └── app_logger.dart          - Logger de eventos local (debug)
 │   │   ├── http/
 │   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
 │   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
-│   │   │   ├── sync_network.dart        - Faz o download HTTP bruto e gestão de ETags
-│   │   │   ├── sync_storage.dart        - Trata arquivos `.tmp` e salva de forma atômica
-│   │   │   └── update_downloader.dart   - Verificação e download de atualizações do APK
+│   │   │   ├── sync_rede.dart        - Faz o download HTTP bruto e gestão de ETags
+│   │   │   ├── sync_armazenamento.dart        - Trata arquivos `.tmp` e salva de forma atômica
+│   │   │   └── baixador_atualizacoes.dart   - Verificação e download de atualizações do APK
 │   │   ├── feedback/
 │   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
 │   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
 │   │   │   └── feedback_queue_service.dart - Fila local persistente (SharedPreferences)
-│   │   ├── dataset_repository.dart      - Estado central: downloads e metadados
+│   │   ├── repositorio_dataset.dart      - Estado central: downloads e metadados
 │   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
 │   └── widgets/
 │       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa
 │       ├── feedback/
-│       │   └── custom_feedback_builder.dart - Construtor de interface customizada para formulário de in-app feedback
-│       ├── crag_card.dart               - Card interativo do pico com status, progresso de download e estatísticas
+│       │   └── construtor_feedback_usuario.dart - Construtor de interface customizada para formulário de in-app feedback
+│       ├── card_pico.dart               - Card interativo do pico com status, progresso de download e estatísticas
 │       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
-│       ├── global_search.dart           - Busca global agregada de todos os croquis baixados
+│       ├── busca_global.dart           - Busca global agregada de todos os croquis baixados
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/
     ├── architecture/                    - Testes arquiteturais e de convenção de código

@@ -1,14 +1,14 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/services/http/sync_storage.dart';
+import 'package:frontend/services/http/sync_armazenamento.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -19,7 +19,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../mocks/mock_app_logger.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
 class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigService {

@@ -1,4 +1,4 @@
-# Integração Firebase - Aresta Climb
+﻿# Integração Firebase - Aresta Climb
 
 Este diretório (`lib/services/firebase/`) consolida **absolutamente todos** os contatos da aplicação com os SDKs do Firebase. Essa arquitetura de isolamento foi construída para evitar acoplamento forte da UI com provedores analíticos de terceiros, garantindo que o resto do sistema desconheça a existência do Firebase.
 
@@ -7,7 +7,7 @@ Existe um teste unitário (`test/architecture/firebase_isolation_test.dart`) des
 
 ## Componentes
 
-### 1. `init_firebase.dart`
+### 1. `inicializar_firebase.dart`
 Ponto central de inicialização. Exporta a função `initFirebase()` que deve ser chamada **somente uma vez** durante a inicialização do app no `main.dart`. 
 O que ele faz:
 - Chama `Firebase.initializeApp()` injetando as opções de plataforma (geradas pelo flutterfire).
@@ -16,13 +16,13 @@ O que ele faz:
 - Desativa a coleta do Firebase Analytics em modo debug (`initAnalytics`).
 - Dá o "Start" no serviço de _Remote Config_.
 
-### 2. `telemetry_service.dart`
+### 2. `telemetria.dart`
 Abstração construída em cima do pacote `firebase_analytics`.
 Nenhuma tela ou componente no Aresta Climb deve chamar o Firebase Analytics diretamente. Qualquer tela que desejar disparar um evento (ex: "Croqui aberto" ou "Mapa carregado") chamará as funções de contrato bem-definidas do `TelemetryService.instance`.
 - **Modo Debug**: Se o app estiver rodando localmente, os eventos serão impressos amigavelmente no Console em vez de inundar o Analytics real.
 - **Mocking**: Para testes unitários de funções de tela, usamos um `MockTelemetryService` que substitui essa instância para evitar _crashes_ de inicialização do SDK nativo e validar quais eventos foram requisitados.
 
-### 3. `remote_config_service.dart`
+### 3. `remote_config.dart`
 Abstração do `firebase_remote_config`. 
 Ele funciona mantendo uma tabela de _feature flags_ ou valores remotos de configuração.
 - **Valores Padrão**: Toda flag invocada neste app deve ter um fallback inquebrável caso o dispositivo não tenha internet.
@@ -30,7 +30,7 @@ Ele funciona mantendo uma tabela de _feature flags_ ou valores remotos de config
 - **URLs Dinâmicas**: Permite alterar dinamicamente a URL do endpoint de feedback (`feedback_edge_function_url`) e a URL base do servidor de dados (`serving_base_url`) sem necessidade de nova compilação do app.
 - **Como expandir**: Para adicionar uma nova flag, declare-a nos fallbacks internos e crie um _getter_ tipado para a UI ler de forma nativa e simples.
 
-### 4. `app_check_service.dart`
+### 4. `validador_app.dart`
 Abstração do `firebase_app_check`.
 Responsável pela atestação de integridade de hardware e software da aplicação.
 - **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.

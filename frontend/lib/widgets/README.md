@@ -1,6 +1,6 @@
 # Widgets e Componentes Reutilizáveis — Aresta Climb
 
-Este diretório reúne os componentes visuais e utilitários de interface compartilhados por todo o aplicativo, estruturados segundo o princípio **Feature-First / Componentes Independentes** (Diretriz II do `AGENTS.md`).
+Este diretório reúne os componentes visuais e utilitários de interface compartilhados por todo o aplicativo, estruturados segundo o princípio **Feature-First / Componentes Independentes**.
 
 ---
 
@@ -24,7 +24,7 @@ Fachada unificada e assíncrona para resolução e exibição de imagens em todo
    - **Deduplicação de Requisições Concorrentes**: Mantém um mapa em memória (`_downloadsEmAndamento`) indexado pelo caminho de destino. Múltiplos widgets solicitando a mesma imagem concorrentemente compartilham o mesmo `Future`, disparando apenas uma requisição HTTP real.
 4. **Downsampling Opcional na Decodificação**:
    - Caso `larguraAlvo` ou `alturaAlvo` sejam informados, encapsula o provedor resultante com `ResizeImage.resizeIfNeeded`.
-   - Utilizado de forma padronizada (`larguraAlvo: 300`) em cartões de picos (`OfflineCragCard`), fundos de lista (`_CragBackgroundWidget`) e carrosséis.
+    - Utilizado de forma padronizada (`larguraAlvo: 300`) em cartões de picos (`CardPico`), fundos de lista (`_CragBackgroundWidget`) e carrosséis.
 
 ---
 
@@ -42,6 +42,7 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 | `BannerModoExperimental` | Faixa fixa no topo da interface durante o Modo de Desenvolvimento/Live Reload, exibindo tempo restante e animação de pulso ao receber atualizações via WebSocket. |
 | `BannerModoOnline` | Alerta visual discreto indicando navegação em croqui sob demanda (sem download offline completo). |
 | `ModalConfirmacaoSaida` | Diálogo de confirmação que impede a perda de dados ou saída acidental de telas de exploração. |
-| `NearbyCragsCarousel` | Carrossel horizontal de picos próximos com miniaturas otimizadas. |
+| `CarrosselPicosProximos` | Carrossel horizontal de picos próximos com miniaturas otimizadas. |
 | `MapaThumbnail` | Visualização estática leve de mapa vetorial/satélite para pré-visualização rápida de setores. |
-| `GlobalSearch` | Barra unificada de busca textual por picos, setores e vias. |
+| `BuscaGlobal` | Barra unificada de busca textual por picos, setores e vias. |
+| `ArestaHomeAppBar` | Barra de aplicativo superior dedicada da tela inicial com identidade visual da marca, selo beta e ações de sincronização, feedback e configurações. |

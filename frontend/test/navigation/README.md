@@ -5,10 +5,10 @@ Este diretório contém os testes de unidade dedicados a validar o comportamento
 ## O que está sendo testado?
 
 Os testes estão organizados em testes de integração de navegação e testes de domínio modular em `test/navigation/arvore/`:
-- `navigation_test.dart` e `navigation_tree_test.dart`: Testes de integração de roteamento e fluxos de tela.
-- `arvore/navigation_tree_model_test.dart`: Testes unitários puros das regras de domínio da árvore (push, pop, rewind, reset, canonical path).
-- `arvore/tree_navigation_controller_test.dart`: Testes do controlador reativo e notificações do `ChangeNotifier`.
-- `arvore/nav_nodes_test.dart`: Testes unitários dos nós (`NavNode`, rótulos amigáveis e caminhos canônicos curtos).
+- `navigation_test.dart` e `arvore_navegacao_test.dart`: Testes de integração de roteamento e fluxos de tela.
+- `arvore/modelo_arvore_navegacao_test.dart`: Testes unitários puros das regras de domínio da árvore (push, pop, rewind, reset, canonical path).
+- `arvore/navegador_arvore_test.dart`: Testes do controlador reativo e notificações do `ChangeNotifier`.
+- `arvore/no_navegacao_test.dart`: Testes unitários dos nós (`NoNavegacao`, rótulos amigáveis e caminhos canônicos curtos).
 
 Validam as seguintes capacidades e comportamentos da Árvore de Navegação:
 
@@ -42,7 +42,7 @@ Esta é a funcionalidade crítica do sistema baseada em árvore, projetada para 
 * Por exemplo, garante que o `MapaGlobalNode` (o mapa-múndi) atue estritamente como um nó folha descendente do `BrowseNode` quando acionado a partir da aba Explorar, preservando a linha do tempo do usuário ao recuar.
 
 ### 8. Hot-Reload Reativo (PageListenableBuilder)
-* **`page_listenable_builder_test.dart`**: Garante o core da funcionalidade de atualizações em tempo real do modo de edição de croquis.
+* **`construtor_reativo_pagina_test.dart`**: Garante o core da funcionalidade de atualizações em tempo real do modo de edição de croquis.
 * Valida a inserção dinâmica de novos dados injetados via `DatasetRepository.activeDataset`, verificando se a UI acorda passivamente e se redesenha de forma silenciosa e instantânea com os novos dados sem piscar.
 * Confirma o comportamento de segurança perante exclusões de dados (Resiliência): se um croqui for atualizado em background e o subnível em que o usuário está atualmente (ex: um setor) não existir mais na nova versão baixada, a view reage de forma segura chamando `AppNav.back()` automaticamente, evitando vazamentos e erros de renderização.
 

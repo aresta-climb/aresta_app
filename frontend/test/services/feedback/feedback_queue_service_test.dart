@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:workmanager/workmanager.dart';
 
-import 'package:frontend/data/models/feedback_metadata.dart';
+import 'package:frontend/data/modelos/metadados_feedback.dart';
 
 void main() {
   group('FeedbackQueueService', () {

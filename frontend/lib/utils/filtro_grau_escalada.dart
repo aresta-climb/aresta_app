@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'indexador_escaladas.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 
 /// Define uma faixa de grau rápida pré-configurada para seleção imediata.
 class FaixaRapidaGrau {

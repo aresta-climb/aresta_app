@@ -1,18 +1,18 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/pico_functions.dart';
-import '../view/function_library/browse_functions.dart';
+import '../view/function_library/funcoes_explorar.dart';
 import '../view/function_library/via_functions.dart';
-import '../navigation/navigation_functions.dart';
-import '../navigation/navigation_tree.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../navigation/funcoes_navegacao.dart';
+import '../navigation/arvore_navegacao.dart';
+import '../services/firebase/telemetria.dart';
 import '../services/firebase/app_logger.dart';
-import '../theme/app_colors.dart';
+import '../theme/cores_app.dart';
 
 // New imports for sub-pages
 import '../widgets/bottom_sheets/regras_bottom_sheet.dart';

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -6,7 +6,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/firebase/app_logger.dart';
-import 'deep_link_navigator_service.dart';
+import 'servico_navegacao_deep_link.dart';
 
 /// Gerenciador de ciclo de vida de Deep Links que escuta eventos nativos do SO (App Links e Universal Links).
 ///

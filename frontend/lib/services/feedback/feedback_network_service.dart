@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Rede de Feedback.
@@ -8,7 +8,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../../data/models/feedback_metadata.dart';
+import '../../data/modelos/metadados_feedback.dart';
 
 /// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
 ///

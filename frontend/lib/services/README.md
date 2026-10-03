@@ -8,13 +8,14 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 
 | Arquivo / Pasta | Responsabilidade |
 |---|---|
-| `dataset_repository.dart` | Fachada e gerenciador de estado central: downloads, índice, metadados e prioridade |
+| `repositorio_dataset.dart` | Fachada e gerenciador de estado central: downloads, índice, metadados e prioridade |
 | `dataset/` | Submódulos desacoplados de responsabilidade única (`modelos/`, `armazenamento/`, `metadados/`, `sessao_online/`) |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
 | `http/` | Módulo de rede e sincronização (downloads, atualizações OTA, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano`) |
 | `notificacoes/` | Gerenciamento de notificações nativas de download (`GerenciadorNotificacaoDownload`) com suporte a Foreground Services e progresso contínuo |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
+| `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), foreground takeover (`setupAppServices`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
 
 ---
 
@@ -92,7 +93,7 @@ Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperiment
 
 ### Módulo de In-App Feedback (`feedback/`)
 - **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
-- **`FeedbackOrchestrator`**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
+- **`OrquestradorFeedback` (`orquestrador_feedback.dart`)**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
 - **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) e executa **Auditoria Criptográfica de Hashes sob demanda** (calculando SHA-256 do índice local, miniatura e croqui em visualização para rotular os estados como `INTEGRO`, `DIVERGENTE` ou `NAO_BAIXADO`).
 
 ---
@@ -114,7 +115,7 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 - **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.
 - **`GerenciadorNotificacaoDownload` (`notificacoes/gerenciador_notificacao_download.dart`)**: Gestão de notificações nativas na barra de status do sistema operacional. No Android, ancora a execução a um Foreground Service nativo ininterrupto com notificação contínua sticky (`ongoing: true`) e barra de progresso, transitando atomicamente para uma notificação dispensável de sucesso/erro. No iOS, emite a notificação nativa ao concluir o salvamento.
 - **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves no pipeline de download offline e sincronização de índice são tratadas com a mesma seriedade de um crash (`logCrash`, `fatal: true`), impactando imediatamente as métricas de estabilidade no Firebase Crashlytics e disparando alertas para a equipe de desenvolvimento.
-- **`TelemetryService` e Analytics (`firebase/telemetry_service.dart`)**: Rastreamento de telemetria analítica com taxonomia padronizada em português via GA4:
+- **`TelemetryService` e Analytics (`firebase/telemetria.dart`)**: Rastreamento de telemetria analítica com taxonomia padronizada em português via GA4:
   - *Deep Links & QR Codes*: `logDeepLinkAberto` captura parâmetros de rota, tipo de inicialização (`cold_start`/`warm_start`), status de sucesso/falha e dimensões UTM (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
   - *Índice de Escaladas*: `logAcaoIndiceEscaladas` instrumenta alternância de abas de modalidade e aplicação de filtros dinâmicos de graduação (`filtrar_grau`), setor (`filtrar_setor`), conquistadores (`filtrar_conquistador`), clássicas (`filtrar_classicas`) e limpeza (`limpar_filtros`) com valores no parâmetro `detalhe`.
   - *Pico Hub e Subpáginas*: `logNavegacaoPicoHub` para os cards centrais (Setores, Explorar Local, Regras, Comunidade, Créditos, Índice) e `logApoioPix` para cópia de chave PIX em Apoie o Pico.

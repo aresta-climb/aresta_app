@@ -1,14 +1,14 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import 'mapa_pico_view_model.dart';
-import '../../services/dataset_repository.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
-import '../function_library/home_functions.dart';
+import '../function_library/funcoes_home.dart';
 
 /// Modelo de apresentação e gerenciador de estado para a tela [MapaGlobalPage] (MVVM).
 ///

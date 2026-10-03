@@ -1,16 +1,16 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/setor_functions.dart';
 import '../view/function_library/via_functions.dart';
-import '../theme/app_colors.dart';
-import '../view/function_library/browse_functions.dart';
+import '../theme/cores_app.dart';
+import '../view/function_library/funcoes_explorar.dart';
 import '../services/firebase/app_logger.dart';
-import '../services/firebase/telemetry_service.dart';
+import '../services/firebase/telemetria.dart';
 import '../widgets/mapa_thumbnail.dart';
 
 /// Uma página que fornece uma visão geral de um setor específico.

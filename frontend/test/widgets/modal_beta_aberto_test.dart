@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,13 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
-import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
+import 'package:frontend/theme/cores_app.dart';
 import 'package:feedback/feedback.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import '../mocks/mock_app_logger.dart';
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';

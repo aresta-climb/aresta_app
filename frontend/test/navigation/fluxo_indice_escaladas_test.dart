@@ -1,21 +1,21 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/main.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/via.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 
-import '../mocks/mock_telemetry_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 void main() {
   late MockTelemetryService mockTelemetry;

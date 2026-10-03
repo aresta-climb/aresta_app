@@ -1,16 +1,16 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../view/function_library/common_functions.dart';
-import '../../utils/pico_categorization.dart';
+import '../../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
-import '../../theme/app_colors.dart';
-import '../../navigation/navigation_tree.dart';
-import '../../services/firebase/telemetry_service.dart';
+import '../../theme/cores_app.dart';
+import '../../navigation/arvore_navegacao.dart';
+import '../../services/firebase/telemetria.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ApoiePicoPage extends StatelessWidget {

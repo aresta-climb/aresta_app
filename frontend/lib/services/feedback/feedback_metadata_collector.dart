@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Sistema/Dispositivo.
@@ -9,17 +9,17 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/main.dart'; // Para acessar TreeNavigationWrapper
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../data/models/feedback_metadata.dart';
+import '../../data/modelos/metadados_feedback.dart';
 
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
 /// em que o usuário decide enviar um feedback ou relatar um bug.

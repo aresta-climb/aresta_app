@@ -1,0 +1,500 @@
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/navigation/construtor_reativo_pagina.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/main.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class _MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  _MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => '$tempPath/temp_cache';
+}
+
+// Mock observer para testar se AppNav.back() foi chamado
+class MockNavigatorObserver extends NavigatorObserver {
+  bool hasPopped = false;
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    hasPopped = true;
+    super.didPop(route, previousRoute);
+  }
+}
+
+void main() {
+  group('PageListenableBuilder Hot-Reload Tests', () {
+    late DatasetRepository repo;
+    late EditorDeCroqui editor;
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('page_listenable_test_');
+      PathProviderPlatform.instance = _MockPathProviderPlatform(tempDir.path);
+      editor = EditorDeCroqui();
+      repo = DatasetRepository(editorDeCroqui: editor);
+    });
+
+    tearDown(() async {
+      try {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    testWidgets(
+      'Deve injetar o Pico na UI e recarregar quando o dataset mudar',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Versão 1';
+        final picoV2 = Pico()..nome = 'Pico Versão 2';
+        final croqui = Croqui();
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_1',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        // Verifica se a Versão 1 foi renderizada
+        expect(find.text('Pico Versão 1'), findsOneWidget);
+        expect(find.text('Pico Versão 2'), findsNothing);
+
+        // Simula um Hot-Reload (Novo download do _checkForUpdates)
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        await tester.pump();
+
+        // Verifica se a UI se atualizou sozinha para a Versão 2
+        expect(find.text('Pico Versão 1'), findsNothing);
+        expect(find.text('Pico Versão 2'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Deve executar AppNav.back() se o Setor for deletado do Dataset',
+      (WidgetTester tester) async {
+        final mockObserver = MockNavigatorObserver();
+
+        final setorV1 = Setor()..nome = 'Setor de Teste';
+        final arquivoSetor = ArquivoSetor()..conteudo = setorV1;
+
+        final picoV1 = Pico()..nome = 'Pico V1';
+        picoV1.setoresOuGrupos.add(SetorOuGrupo()..setor = arquivoSetor);
+
+        final croqui = Croqui();
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [mockObserver],
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PageListenableBuilder(
+                            datasetRepo: repo,
+                            cragId: 'pico_1',
+                            setorNome: 'Setor de Teste',
+                            builder:
+                                (
+                                  context,
+                                  pico,
+                                  croqui,
+                                  setor,
+                                  grupo,
+                                  escalada,
+                                ) {
+                                  return Scaffold(
+                                    body: Text('View do ${setor?.nome}'),
+                                  );
+                                },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Go'),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        // Entra na tela
+        await tester.tap(find.text('Go'));
+        await tester.pumpAndSettle();
+
+        // Verifica que o Setor de Teste carregou
+        expect(find.text('View do Setor de Teste'), findsOneWidget);
+        expect(mockObserver.hasPopped, isFalse);
+
+        // Hot-Reload: Um novo Pico entra, mas o "Setor de Teste" foi deletado no servidor!
+        final picoV2 = Pico()..nome = 'Pico V2 Sem Setores';
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        // Pump para processar o builder
+        await tester.pump();
+
+        // O PageListenableBuilder deve agendar um pop
+        await tester.pumpAndSettle();
+
+        // Verifica se ele fez pop de volta para a primeira tela
+        expect(mockObserver.hasPopped, isTrue);
+        expect(find.text('Go'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Deve encontrar Setor aninhado dentro de um Grupo', (
+      WidgetTester tester,
+    ) async {
+      final mockObserver = MockNavigatorObserver();
+
+      final subSetor = Setor()..nome = 'Sub-setor Teste';
+      final arquivoSubSetor = ArquivoSetor()..conteudo = subSetor;
+
+      final grupo = Grupo()..nome = 'Grupo Teste';
+      grupo.setores.add(arquivoSubSetor);
+
+      final arquivoGrupo = ArquivoGrupo()..conteudo = grupo;
+
+      final pico = Pico()..nome = 'Pico Teste';
+      pico.setoresOuGrupos.add(SetorOuGrupo()..grupo = arquivoGrupo);
+
+      final croqui = Croqui();
+
+      repo.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [
+          {
+            'id': 'pico_1',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+        picosDisponiveis: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [mockObserver],
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PageListenableBuilder(
+                          datasetRepo: repo,
+                          cragId: 'pico_1',
+                          setorNome: 'Sub-setor Teste',
+                          builder:
+                              (context, pico, croqui, setor, grupo, escalada) {
+                                return Scaffold(
+                                  body: Text('View do ${setor?.nome}'),
+                                );
+                              },
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Go'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Entra na tela
+      await tester.tap(find.text('Go'));
+      await tester.pumpAndSettle();
+
+      // Verifica que o Sub-setor de Teste carregou e não fez pop
+      expect(find.text('View do Sub-setor Teste'), findsOneWidget);
+      expect(mockObserver.hasPopped, isFalse);
+    });
+    testWidgets(
+      'Deve atualizar a UI de forma transparente e contínua sem popup bloqueante',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Teste';
+        final croqui = Croqui();
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV1, 'croqui': croqui},
+              'isDownloaded': true,
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        final syncService = SyncService(datasetRepository: repo);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              datasetRepo: repo,
+              syncService: syncService,
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final wrapperState =
+            tester.state<State<TreeNavigationWrapper>>(
+                  find.byType(TreeNavigationWrapper),
+                )
+                as dynamic;
+        final treeController = wrapperState.treeController;
+
+        treeController.navigateTo(
+          PicoNode(cragId: 'pico_1', parent: const HomeNode()),
+        );
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('PICO TESTE'), findsOneWidget);
+        expect(find.text('Croqui Atualizado'), findsNothing);
+
+        // Simula atualização no dataset
+        final picoV2 = Pico()..nome = 'Pico Teste Atualizado';
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_1',
+              'data': {'pico': picoV2, 'croqui': croqui},
+              'isDownloaded': true,
+            },
+          ],
+          picosDisponiveis: [],
+        );
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // A UI atualiza automaticamente sem popup bloqueante
+        expect(find.text('PICO TESTE ATUALIZADO'), findsOneWidget);
+        expect(find.text('Croqui Atualizado'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Deve injetar o Pico da sessão online na UI e recarregar quando a sessão online for atualizada',
+      (WidgetTester tester) async {
+        final picoV1 = Pico()..nome = 'Pico Online V1';
+        final croquiV1 = Croqui()..id = 'pico_online_1';
+        croquiV1.picos.add(picoV1);
+
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croquiV1);
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [],
+          picosDisponiveis: [
+            {'id': 'pico_online_1', 'nome': 'Pico Online V1'},
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_online_1',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Pico Online V1'), findsOneWidget);
+        expect(find.text('Pico Online V2'), findsNothing);
+
+        // Atualiza a sessão online com V2 e aciona notificação
+        final picoV2 = Pico()..nome = 'Pico Online V2';
+        final croquiV2 = Croqui()..id = 'pico_online_1';
+        croquiV2.picos.add(picoV2);
+
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_online_1', croquiV2);
+        repo.notificarAtualizacaoSessaoOnline('pico_online_1');
+
+        await tester.pump();
+
+        expect(find.text('Pico Online V1'), findsNothing);
+        expect(find.text('Pico Online V2'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Deve resolver o Pico a partir de croquisBaixados quando downloadedPicos não tiver o pico',
+      (WidgetTester tester) async {
+        final pico = Pico()..nome = 'Pico de Croquis Baixados';
+        final croqui = Croqui()
+          ..id = 'pico_croqui_baixado'
+          ..nome = 'Croqui Baixado';
+        croqui.picos.add(pico);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          croquisBaixados: [croqui],
+          picosBaixados: [],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_croqui_baixado',
+              builder: (context, pico, croqui, setor, grupo, escalada) {
+                return Text(pico.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Pico de Croquis Baixados'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Não deve desempilhar (pop) da tela ao concluir download para modo offline',
+      (WidgetTester tester) async {
+        final mockObserver = MockNavigatorObserver();
+        const picoId = 'pico_lapinha';
+
+        final picoOnline = Pico()..nome = 'Gruta da Lapinha';
+        final croquiOnline = Croqui()
+          ..id = picoId
+          ..nome = 'Croqui Lapinha';
+        croquiOnline.picos.add(picoOnline);
+
+        // Configura o croqui na sessão online ativa
+        repo.gerenciadorSessaoOnline.registrarCroquiOnline(picoId, croquiOnline);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          croquisBaixados: [],
+          picosBaixados: [],
+          picosDisponiveis: [],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [mockObserver],
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PageListenableBuilder(
+                            datasetRepo: repo,
+                            cragId: picoId,
+                            builder: (context, pico, croqui, setor, grupo, escalada) {
+                              return Scaffold(
+                                body: Text(pico.nome),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Abrir Pico'),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        // Abre a tela do pico
+        await tester.tap(find.text('Abrir Pico'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Gruta da Lapinha'), findsOneWidget);
+        expect(mockObserver.hasPopped, isFalse);
+
+        // Simula a conclusão do download do croqui offline
+        await tester.runAsync(() async {
+          await repo.updateDatasetAfterDownload(picoId);
+        });
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // O usuário NÃO deve ser desempilhado nem jogado para fora da tela
+        expect(mockObserver.hasPopped, isFalse);
+        expect(find.text('Gruta da Lapinha'), findsOneWidget);
+      },
+    );
+  });
+}
+

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../view/function_library/gps_functions.dart';
-import '../view/function_library/common_functions.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 
 /// Página de GPS do aplicativo (Dumb UI).
 class GPSPage extends StatelessWidget {

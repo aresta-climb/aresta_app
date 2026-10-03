@@ -1,33 +1,33 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:frontend/services/firebase/remote_config_service.dart';
+import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/main.dart';
-import 'package:frontend/services/dataset_repository.dart';
-import 'package:frontend/navigation/navigation_tree.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/setor.dart';
-import 'package:frontend/navigation/page_listenable_builder.dart';
-import 'package:frontend/pages/terms_of_use.dart';
-import 'package:frontend/pages/database_migration_screen.dart';
+import 'package:frontend/navigation/construtor_reativo_pagina.dart';
+import 'package:frontend/pages/termos_de_uso.dart';
+import 'package:frontend/pages/tela_migracao_banco.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/constants/legal_version.g.dart';
-import 'package:frontend/constants/network_constants.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/theme/cores_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'mocks/mock_telemetry_service.dart';
+import 'mocks/mock_telemetria.dart';
 import 'mocks/mock_geolocator_platform.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mocktail/mocktail.dart';

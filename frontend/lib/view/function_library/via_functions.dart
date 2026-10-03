@@ -1,19 +1,19 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/cores_app.dart';
 
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import 'common_functions.dart';
-import 'offline_markdown.dart';
+import 'biblioteca_funcoes_comuns.dart';
+import 'markdown_offline.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../widgets/linha_localizacao_setor.dart';
-import '../../navigation/navigation_functions.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../../utils/croqui_map_index.dart';
-import '../../utils/dataset_resolver.dart';
-import '../../navigation/navigation_tree.dart';
+import '../../navigation/funcoes_navegacao.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../../utils/indice_mapas_croqui.dart';
+import '../../utils/consulta_dataset.dart';
+import '../../navigation/arvore_navegacao.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
 String getEscaladaNome(Escalada escalada) {

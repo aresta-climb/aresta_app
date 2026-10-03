@@ -1,0 +1,354 @@
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
+import 'package:frontend/view/function_library/funcoes_explorar.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import '../../mocks/mock_telemetria.dart';
+
+class MockPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  MockPathProviderPlatform(this.tempPath);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets(
+    'buildBrowseBody passa onOpen corretamente e permite acionar telemetria',
+    (WidgetTester tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final List<Map<String, dynamic>> availableCrags = [
+        {
+          'id': 'crag1',
+          'nome': 'Pico Teste',
+          'local': 'Local Teste',
+          'isDownloaded': true, // Para mostrar o botão Abrir Croqui
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return buildBrowseBody(
+                  context,
+                  availableCrags,
+                  ValueNotifier<Map<String, double>>({}),
+                  onSearchChanged: (_) {},
+                  onDownload: (_) {},
+                  onOpen: (crag) {
+                    // Simulando o comportamento definido na page browse.dart
+                    final String cragId = crag is MetadadosIndice ? crag.id : (crag['id'] as String);
+                    TelemetryService.instance.logAcaoCroqui(
+                      cragId,
+                      'abrir_croqui',
+                      origem: 'explorar',
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Agora o tap no card já chama onOpen diretamente se estiver baixado!
+      await tester.tap(find.text('PICO TESTE'));
+      await tester.pumpAndSettle();
+
+      // Verifica a telemetria disparada pelo onOpen
+      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        'abrir_croqui',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_croqui']!['origem'],
+        'explorar',
+      );
+    },
+  );
+
+  testWidgets(
+    'buildBrowseBody exibe animação de download quando o pico está em downloadingCrags',
+    (WidgetTester tester) async {
+      final List<Map<String, dynamic>> availableCrags = [
+        {
+          'id': 'crag_dl',
+          'nome': 'Pico Baixando',
+          'local': 'Local DL',
+          'isDownloaded': false,
+        },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return buildBrowseBody(
+                  context,
+                  availableCrags,
+                  ValueNotifier<Map<String, double>>({
+                    'crag_dl': 0.5,
+                  }), // Simula que está baixando com 50%
+                  onSearchChanged: (_) {},
+                  onDownload: (_) {},
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('PICO BAIXANDO'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // O botão BAIXAR não deve estar presente de forma clicável, mas a animação sim.
+      // Verifica se o CircularProgressIndicator com o percentual está presente no card.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+    },
+  );
+
+  testWidgets('showDownloadBottomSheet exibe a descrição curta do pico caso exista', (
+    WidgetTester tester,
+  ) async {
+    final Map<String, dynamic> crag = {
+      'id': 'crag_desc',
+      'nome': 'Pico Descrição',
+      'local': 'Local Desc',
+      'descricao': 'Esta é a descrição curta e bacana do pico.',
+      'isDownloaded': false,
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  showDownloadBottomSheet(
+                    context,
+                    crag,
+                    () {},
+                    ValueNotifier<Map<String, double>>({}),
+                  );
+                },
+                child: const Text('ABRIR MODAL'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    // Antes de abrir o modal, a descrição não existe
+    expect(
+      find.text('Esta é a descrição curta e bacana do pico.'),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('ABRIR MODAL'));
+    await tester.pumpAndSettle();
+
+    // Deve existir após abrir o modal
+    expect(
+      find.text('Esta é a descrição curta e bacana do pico.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('CragCard exibe estatísticas resumidas por padrão', (
+    WidgetTester tester,
+  ) async {
+    final crag = MetadadosIndice(
+      id: 'crag1',
+      nome: 'Pico Teste',
+      precomputados: PrecomputadosResumoCroqui(
+        totalSetores: 2,
+        totalEscaladas: 10,
+        totalBoulders: 5,
+        totalEsportivas: 5,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard.deMetadados(
+            metadados: crag,
+            isDownloaded: false,
+            downloadingCrags: ValueNotifier({}),
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir 2 setores • 10 escaladas
+    expect(find.text('2 setores • 10 escaladas'), findsOneWidget);
+    
+    // NÃO deve exibir a listagem de tipos (boulders, esportivas)
+    expect(find.textContaining('boulders'), findsNothing);
+  });
+
+  testWidgets('CragCard exibe estatísticas detalhadas se showDetailedStats for true', (
+    WidgetTester tester,
+  ) async {
+    final crag = MetadadosIndice(
+      id: 'crag1',
+      nome: 'Pico Teste',
+      precomputados: PrecomputadosResumoCroqui(
+        totalSetores: 3,
+        totalEscaladas: 15,
+        totalBoulders: 10,
+        totalEsportivas: 5,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CragCard.deMetadados(
+            metadados: crag,
+            isDownloaded: false,
+            downloadingCrags: ValueNotifier({}),
+            showDetailedStats: true,
+            onDownload: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Deve exibir o texto completo com os tipos
+    expect(
+      find.text('3 setores • 15 escaladas (10 boulders, 5 esportivas)'),
+      findsOneWidget,
+    );
+  });
+
+  group('CragBackground Downsampling Tests', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('thumb_test_');
+      PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+      EditorDeCroqui();
+    });
+
+    tearDown(() async {
+      try {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      } catch (_) {}
+    });
+
+    final bytesPng1 = <int>[
+      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+      0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
+      0, 13, 73, 68, 65, 84, 120, 156, 99, 100, 248, 207, 80, 15, 0, 3,
+      134, 1, 128, 90, 52, 125, 107, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+      66, 96, 130
+    ];
+
+    testWidgets('buildCragBackground aplica cacheWidth na imagem remota', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragBackground('https://cdn.arestaclimb.com/thumb.webp'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsOneWidget);
+      final Image imageWidget = tester.widget(imageFinder);
+      expect(imageWidget.image, isA<ResizeImage>());
+      final resize = imageWidget.image as ResizeImage;
+      expect(resize.width, equals(300));
+    });
+
+    testWidgets('buildCragBackground resolve miniatura local via ProvedorImagemAresta com ImagemArquivoAresta', (
+      WidgetTester tester,
+    ) async {
+      EditorDeCroqui();
+      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbFile = File('${thumbDir.path}/crag_local.webp');
+      thumbFile.writeAsBytesSync(bytesPng1);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragBackground('', cragId: 'crag_local'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsOneWidget);
+      final Image imageWidget = tester.widget(imageFinder);
+      expect(imageWidget.image, isA<ResizeImage>());
+      final resize = imageWidget.image as ResizeImage;
+      expect(resize.width, equals(300));
+      expect(resize.imageProvider, isA<ImagemArquivoAresta>());
+    });
+
+    testWidgets('buildCragBackground resolve miniatura local mesmo quando thumbnailUrl for a URL legada remota', (
+      WidgetTester tester,
+    ) async {
+      EditorDeCroqui();
+      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbFile = File('${thumbDir.path}/crag_legado.webp');
+      thumbFile.writeAsBytesSync(bytesPng1);
+
+      // Simula o caso real reportado: crag['thumbnailUrl'] recebido com URL legada remota
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: buildCragBackground(
+              'https://serving.arestaclimb.com/v4/br_mg_caete_pedra_filha/imagens/thumbnail.webp',
+              cragId: 'crag_legado',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final imageFinder = find.byType(Image);
+      expect(imageFinder, findsOneWidget);
+      final Image imageWidget = tester.widget(imageFinder);
+      expect(imageWidget.image, isA<ResizeImage>());
+      final resize = imageWidget.image as ResizeImage;
+      expect(resize.width, equals(300));
+      expect(resize.imageProvider, isA<ImagemArquivoAresta>());
+    });
+  });
+}
+

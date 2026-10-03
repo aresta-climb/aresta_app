@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 // ignore_for_file: avoid_print
@@ -17,7 +17,7 @@ library;
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
-import 'package:frontend/constants/network_constants.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 
 class SyncPreloadRunner {
   final http.Client client;

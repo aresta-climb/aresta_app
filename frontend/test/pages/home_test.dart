@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/pages/home.dart';
-import 'package:frontend/services/dataset_repository.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/firebase/telemetry_service.dart';
-import '../mocks/mock_telemetry_service.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import '../mocks/mock_telemetria.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
-import 'package:frontend/theme/app_colors.dart';
+import 'package:frontend/theme/cores_app.dart';
 
 import 'package:frontend/view/view_models/home_view_model.dart';
 
@@ -178,5 +178,29 @@ void main() {
     final params = mockTelemetry.recordedParams['acao_beta_aberto']!;
     expect(params['acao'], 'abrir_modal_beta');
     expect(params['origem'], 'home_header');
+  });
+
+  testWidgets('HomePage mantém appbar visível após rolagem do conteúdo', (tester) async {
+    final mockRepo = MockDatasetRepository();
+    final mockSync = MockSyncService();
+    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
+      TopoDataset(availablePicos: [], downloadedPicos: []),
+    );
+
+    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
+    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
+    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+
+    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pump();
+
+    // Rola para baixo
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -600));
+    await tester.pump();
+
+    // Elementos da AppBar continuam visíveis
+    expect(find.text('ARESTA CLIMB'), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+    expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 }
