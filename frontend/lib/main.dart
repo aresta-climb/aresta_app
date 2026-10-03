@@ -118,9 +118,9 @@ void main() async {
   final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
   final syncService = SyncService(datasetRepository: datasetRepo);
 
-  // Escuta mudanças de modo para re-sincronizar
-  void onModeChange() {
-    datasetRepo.loadEmpty();
+  // Escuta mudanças de modo para re-sincronizar de forma atômica
+  void onModeChange() async {
+    await datasetRepo.init();
     syncService.syncIndex();
   }
 

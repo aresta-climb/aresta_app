@@ -7,6 +7,7 @@ import 'package:frontend/services/firebase/remote_config_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:frontend/main.dart';
 import 'package:frontend/services/dataset_repository.dart';
 import 'package:frontend/navigation/navigation_tree.dart';
@@ -97,6 +98,13 @@ class MockWorkmanager extends Mock implements Workmanager {}
 class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}
 
 class MockImageCache extends Mock implements ImageCache {}
+
+class _Fake304HttpClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(const Stream.empty(), 304);
+  }
+}
 
 void main() {
   late Directory tempDir;
@@ -503,6 +511,88 @@ void main() {
       }
 
       expect(mockEditor.isExperimentalMode.value, isFalse);
+    },
+  );
+
+  testWidgets(
+    'Ao sair do modo experimental via banner, restaura croquis de producao no activeDataset',
+    (WidgetTester tester) async {
+      final prodIndice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_prod'
+            ..nome = 'Pico Producao',
+        );
+      File('${tempDir.path}/indice.binarypb').writeAsBytesSync(
+        prodIndice.writeToBuffer(),
+      );
+
+      final expIndice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_exp'
+            ..nome = 'Pico Experimental',
+        );
+      final expDir = Directory('${tempDir.path}/editor/experimental');
+      expDir.createSync(recursive: true);
+      File('${expDir.path}/indice.binarypb').writeAsBytesSync(
+        expIndice.writeToBuffer(),
+      );
+
+      final fakeSync = SyncService(
+        datasetRepository: mockRepo,
+        client: _Fake304HttpClient(),
+      );
+      fakeSync.syncStatus.value = SyncStatus.updated;
+
+      await tester.runAsync(() async {
+        mockEditor.isExperimentalMode.value = true;
+        mockEditor.editorUrl.value = 'http://test.local';
+        await mockRepo.init();
+      });
+
+      expect(mockEditor.isExperimentalMode.value, isTrue);
+      expect(mockRepo.activeDataset.value?.availablePicos.first.id, 'pico_exp');
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: fakeSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.textContaining('MODO EXPERIMENTAL ATIVO'), findsOneWidget);
+      expect(find.textContaining('SAIR'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.textContaining('SAIR'));
+        for (int i = 0; i < 20; i++) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (!mockEditor.isExperimentalMode.value) break;
+        }
+      });
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(mockEditor.isExperimentalMode.value, isFalse);
+      expect(
+        mockRepo.activeDataset.value,
+        isNotNull,
+      );
+      expect(
+        mockRepo.activeDataset.value!.availablePicos,
+        isNotEmpty,
+        reason: 'Dataset não deve ficar vazio ao sair do modo experimental',
+      );
+      expect(
+        mockRepo.activeDataset.value!.availablePicos.first.id,
+        equals('pico_prod'),
+        reason: 'Deve conter o pico oficial de produção',
+      );
     },
   );
 

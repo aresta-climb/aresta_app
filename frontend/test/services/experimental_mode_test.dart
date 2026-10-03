@@ -94,6 +94,28 @@ void main() {
     );
 
     test(
+      'nukeExperimentalData desativa isExperimentalMode antes ou simultaneamente a anular editorUrl para evitar caminhos invalidos',
+      () async {
+        final editor = EditorDeCroqui();
+        await editor.activateExperimental(url: 'http://test.local');
+
+        bool? modoExperimentalQuandoUrlFicouNula;
+        editor.editorUrl.addListener(() {
+          if (editor.editorUrl.value == null) {
+            modoExperimentalQuandoUrlFicouNula = editor.isExperimentalMode.value;
+          }
+        });
+
+        await editor.nukeExperimentalData();
+        expect(
+          modoExperimentalQuandoUrlFicouNula,
+          isFalse,
+          reason: 'isExperimentalMode deve ser desativado antes ou em conjunto com a limpeza de editorUrl',
+        );
+      },
+    );
+
+    test(
       'activateExperimental adiciona http:// se a URL não tiver esquema',
       () async {
         final editor = EditorDeCroqui();

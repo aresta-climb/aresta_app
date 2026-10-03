@@ -511,7 +511,12 @@ class EditorDeCroqui {
       }
 
       final config = await _readConfig();
-      await _writeConfig(config.copyWith(clearEditorUrl: true));
+      await _writeConfig(
+        config.copyWith(
+          clearEditorUrl: true,
+          isExperimental: false,
+        ),
+      );
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '[EditorConfig] Erro ao limpar dados',
@@ -519,8 +524,8 @@ class EditorDeCroqui {
         stackTrace: stackTrace,
       );
     } finally {
+      isExperimentalMode.value = false;
       editorUrl.value = null;
-      await disconnect();
     }
   }
 }

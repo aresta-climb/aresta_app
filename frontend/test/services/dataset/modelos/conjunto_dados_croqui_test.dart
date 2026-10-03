@@ -106,6 +106,28 @@ void main() {
       expect(dataset.picosBaixados.first.id, equals('cipo'));
       expect(dataset.picosBaixados.first.croqui, equals(croqui));
     });
+
+    test('getters isEmpty e isNotEmpty refletem corretamente presenca de dados', () {
+      final vazio = ConjuntoDadosCroqui.vazio();
+      expect(vazio.isEmpty, isTrue);
+      expect(vazio.isNotEmpty, isFalse);
+
+      final comDisponivel = ConjuntoDadosCroqui(
+        picosDisponiveis: [
+          const ResumoPico(id: 'p1', nome: 'P1', local: 'L1'),
+        ],
+      );
+      expect(comDisponivel.isEmpty, isFalse);
+      expect(comDisponivel.isNotEmpty, isTrue);
+
+      final comBaixado = ConjuntoDadosCroqui(
+        croquisBaixados: [
+          Croqui(id: 'p1', nome: 'P1'),
+        ],
+      );
+      expect(comBaixado.isEmpty, isFalse);
+      expect(comBaixado.isNotEmpty, isTrue);
+    });
   });
 }
 

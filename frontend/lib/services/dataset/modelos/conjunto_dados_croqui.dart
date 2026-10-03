@@ -211,6 +211,16 @@ class ConjuntoDadosCroqui {
     );
   }
 
+  /// Indica se o conjunto de dados está completamente vazio.
+  bool get isEmpty =>
+      metadadosDisponiveis.isEmpty &&
+      croquisBaixados.isEmpty &&
+      picosDisponiveis.isEmpty &&
+      picosBaixados.isEmpty;
+
+  /// Indica se o conjunto de dados possui ao menos um elemento disponível ou baixado.
+  bool get isNotEmpty => !isEmpty;
+
   /// Retorna uma instância vazia inicial do conjunto de dados.
   factory ConjuntoDadosCroqui.vazio() {
     return const ConjuntoDadosCroqui.puro();

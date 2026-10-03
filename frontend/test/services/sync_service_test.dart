@@ -1375,9 +1375,17 @@ void main() {
         etagFile.parent.createSync(recursive: true);
         etagFile.writeAsStringSync('mock_etag_123');
 
-        // Força estar carregado
+        // Força estar carregado com dados reais
         repo.activeDataset.value = TopoDataset(
-          availablePicos: [],
+          availablePicos: [
+            ResumoPico(
+              id: 'pico_existente',
+              nome: 'Pico Existente',
+              local: 'Local',
+              descricao: '',
+              url: '',
+            ),
+          ],
           downloadedPicos: [],
         );
         final resetCountBefore = repo.homeResetTrigger.value;
@@ -1387,7 +1395,49 @@ void main() {
         expect(
           repo.homeResetTrigger.value,
           equals(resetCountBefore),
-          reason: 'Nao deve recarregar no 304 se ja tem activeDataset',
+          reason: 'Nao deve recarregar no 304 se ja tem activeDataset com dados',
+        );
+      },
+    );
+
+    test(
+      'deve recarregar DatasetRepo a partir do indice local em 304 se activeDataset estiver vazio',
+      () async {
+        final localIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_local_recuperado'
+              ..nome = 'Pico Local Recuperado',
+          );
+        final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
+        final syncServiceFake =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        indiceFile.parent.createSync(recursive: true);
+        indiceFile.writeAsBytesSync(localIndice.writeToBuffer());
+
+        final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
+        etagFile.writeAsStringSync('mock_etag_123');
+
+        // Simula o repositório esvaziado por transição de modo
+        repo.loadEmpty();
+        expect(repo.activeDataset.value, isNotNull);
+        expect(repo.activeDataset.value!.availablePicos, isEmpty);
+
+        await syncServiceFake.syncIndex();
+
+        expect(
+          repo.activeDataset.value!.availablePicos,
+          isNotEmpty,
+          reason: 'Deve recarregar o índice do disco no 304 se o dataset estiver vazio',
+        );
+        expect(
+          repo.activeDataset.value!.availablePicos.first.id,
+          equals('pico_local_recuperado'),
         );
       },
     );

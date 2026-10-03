@@ -44,6 +44,13 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 3. Conexão WebSocket para escuta de eventos `live_reload` em tempo real.
 4. O `SyncService` sincroniza o índice e dados atualizados instantaneamente.
 
+### Saída do Modo Experimental & Restauração de Produção
+
+Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperimental` ou programmaticamente):
+1. **Limpeza e Desconexão Coordenada (`nukeExperimentalData`)**: Encerra o WebSocket de Live Reload, remove recursivamente os diretórios voláteis (`editor/experimental` e `edited`), grava a configuração atômica e redefine `isExperimentalMode.value = false` antes de zerar `editorUrl.value`. Isso previne que ouvintes de mudanças de estado tentem ler arquivos no caminho experimental já excluído.
+2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: O repositório recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
+3. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
+
 ---
 
 ## Principais Classes e Responsabilidades

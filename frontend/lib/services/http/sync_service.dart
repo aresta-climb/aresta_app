@@ -523,7 +523,8 @@ class SyncService {
           AppLogger.instance.logInfo(
             '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
           );
-          if (datasetRepository.activeDataset.value == null) {
+          if (datasetRepository.activeDataset.value == null ||
+              datasetRepository.activeDataset.value!.isEmpty) {
             await _loadLocalIndiceAndNotify(localIndicePath);
           }
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
