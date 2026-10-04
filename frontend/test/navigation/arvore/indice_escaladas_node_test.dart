@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +38,24 @@ void main() {
       expect(merged, isA<IndiceEscaladasNode>());
       expect((merged as IndiceEscaladasNode).cragId, 'bau');
       expect(merged.parent, parent2);
+    });
+
+    test('suporta modalidadeInicial e preserva em copyWithMergedAncestor', () {
+      const parent1 = HomeNode();
+      const parent2 = HomeNode();
+      const node = IndiceEscaladasNode(
+        cragId: 'bau',
+        modalidadeInicial: 'Boulders',
+        parent: parent1,
+      );
+      const matchingAncestor = IndiceEscaladasNode(cragId: 'bau', parent: parent2);
+
+      final merged = node.copyWithMergedAncestor(matchingAncestor);
+      expect(merged, isA<IndiceEscaladasNode>());
+      final nodeMerged = merged as IndiceEscaladasNode;
+      expect(nodeMerged.cragId, 'bau');
+      expect(nodeMerged.modalidadeInicial, 'Boulders');
+      expect(nodeMerged.parent, parent2);
     });
   });
 }

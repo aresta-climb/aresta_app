@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -19,30 +19,48 @@ class BadgesModalidades extends StatelessWidget {
   /// Cria uma instância com os itens fornecidos diretamente.
   const BadgesModalidades({super.key, required this.itens});
 
-  /// Constrói os badges a partir das escaladas de um [Setor].
-  factory BadgesModalidades.deSetor(Setor setor, {Key? key}) {
-    return BadgesModalidades(
-      key: key,
-      itens: ConsolidadorModalidades.consolidarSetor(setor),
-    );
-  }
-
-  /// Constrói os badges a partir das escaladas agregadas de um [Grupo].
-  factory BadgesModalidades.deGrupo(Grupo grupo, {Key? key}) {
-    return BadgesModalidades(
-      key: key,
-      itens: ConsolidadorModalidades.consolidarGrupo(grupo),
-    );
-  }
-
-  /// Constrói os badges a partir de uma lista iterável de [Escalada].
-  factory BadgesModalidades.deEscaladas(
-    Iterable<Escalada> escaladas, {
+  /// Constrói os badges a partir das escaladas de um [Setor], opcionalmente filtradas.
+  factory BadgesModalidades.deSetor(
+    Setor setor, {
     Key? key,
+    Iterable<Escalada>? escaladasFiltradas,
   }) {
     return BadgesModalidades(
       key: key,
-      itens: ConsolidadorModalidades.consolidarEscaladas(escaladas),
+      itens: ConsolidadorModalidades.consolidarSetor(
+        setor,
+        escaladasFiltradas: escaladasFiltradas,
+      ),
+    );
+  }
+
+  /// Constrói os badges a partir das escaladas agregadas de um [Grupo], opcionalmente filtradas.
+  factory BadgesModalidades.deGrupo(
+    Grupo grupo, {
+    Key? key,
+    Iterable<Escalada>? escaladasFiltradas,
+  }) {
+    return BadgesModalidades(
+      key: key,
+      itens: ConsolidadorModalidades.consolidarGrupo(
+        grupo,
+        escaladasFiltradas: escaladasFiltradas,
+      ),
+    );
+  }
+
+  /// Constrói os badges a partir de uma lista iterável de [Escalada], opcionalmente com [todasEscaladas].
+  factory BadgesModalidades.deEscaladas(
+    Iterable<Escalada> escaladas, {
+    Key? key,
+    Iterable<Escalada>? todasEscaladas,
+  }) {
+    return BadgesModalidades(
+      key: key,
+      itens: ConsolidadorModalidades.consolidarEscaladas(
+        escaladas,
+        todasEscaladas: todasEscaladas,
+      ),
     );
   }
 

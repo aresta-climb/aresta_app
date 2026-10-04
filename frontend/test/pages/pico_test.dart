@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -552,7 +552,7 @@ void main() {
   });
 
   testWidgets(
-    'PicoDetailsPage renderiza cartões Setores e Índice de Escaladas lado a lado e navega para IndiceEscaladasNode',
+    'PicoDetailsPage exibe card hero unificado Setores & Escaladas e navega para SetoresNode',
     (tester) async {
       tester.view.physicalSize = const Size(800, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -587,22 +587,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Setores'), findsOneWidget);
-      expect(find.text('Índice de Escaladas'), findsOneWidget);
-      expect(find.text('Croquis detalhados e mapas de cada setor'), findsOneWidget);
-      expect(find.text('Todas as vias e boulders filtrados por grau e tipo'), findsOneWidget);
+      expect(find.text('Setores & Escaladas'), findsOneWidget);
+      expect(
+        find.text('Explore setores, vias e boulders com filtros e mapas integrados'),
+        findsOneWidget,
+      );
+      expect(find.text('Índice de Escaladas'), findsNothing);
+      expect(find.text('Croquis detalhados e mapas de cada setor'), findsNothing);
 
-      await tester.tap(find.text('Índice de Escaladas'));
+      await tester.tap(find.text('Setores & Escaladas'));
       await tester.pumpAndSettle();
 
-      expect(tree.currentNode, isA<IndiceEscaladasNode>());
-      final node = tree.currentNode as IndiceEscaladasNode;
+      expect(tree.currentNode, isA<SetoresNode>());
+      final node = tree.currentNode as SetoresNode;
       expect(node.cragId, 'crag1');
     },
   );
 
   testWidgets(
-    'PicoDetailsPage dispara telemetria ao tocar no card Índice de Escaladas',
+    'PicoDetailsPage dispara telemetria ao tocar no card unificado Setores & Escaladas',
     (tester) async {
       tester.view.physicalSize = const Size(800, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -640,19 +643,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Índice de Escaladas'));
+      await tester.tap(find.text('Setores & Escaladas'));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
       final params = mockTelemetry.recordedParams['navegacao_pico_hub']!;
       expect(params['id_croqui'], 'crag1');
-      expect(params['acao'], 'abrir_indice_escaladas');
+      expect(params['acao'], 'abrir_setores_e_escaladas');
       expect(params['origem'], 'pico_hub');
     },
   );
 
   testWidgets(
-    'PicoDetailsPage dispara telemetria ao tocar nos cards de Setores, Explorar Local, Regras e Comunidade',
+    'PicoDetailsPage dispara telemetria ao tocar nos cards de Setores & Escaladas, Explorar Local, Regras e Comunidade',
     (tester) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -700,12 +703,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Teste Setores
+      // Teste Setores & Escaladas
       mockTelemetry.clear();
-      await tester.tap(find.text('Setores'));
+      await tester.tap(find.text('Setores & Escaladas'));
       await tester.pumpAndSettle();
       expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
-      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_setores');
+      expect(mockTelemetry.recordedParams['navegacao_pico_hub']!['acao'], 'abrir_setores_e_escaladas');
 
       // Teste Explorar Local
       mockTelemetry.clear();

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:frontend/main.dart';
@@ -494,71 +494,32 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Main Hub Cards (Grade de 2 colunas com Setores e Índice de Escaladas)
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: PicoMenuCard(
-                            isCompact: true,
-                            title: 'Setores',
-                            subtitle: 'Croquis detalhados e mapas de cada setor',
-                            icon: Icons.landscape,
-                            iconColor: context.colors.rustIron,
-                            backgroundColor: context.colors.caveShadow,
-                            titleColor: context.colors.chalkWhite,
-                            subtitleColor: context.colors.fishBone,
-                            onTap: () {
-                              TelemetryService.instance.logNavegacaoPicoHub(
-                                widget.cragId,
-                                'abrir_setores',
-                              );
-                              TreeNavigationWrapper.of(
-                                context,
-                              ).treeController.navigateTo(
-                                SetoresNode(
-                                  cragId: widget.cragId,
-                                  parent: TreeNavigationWrapper.of(
-                                    context,
-                                  ).treeController.currentNode,
-                                ),
-                              );
-                            },
-                          ),
+                  // Card Hero Unificado: Setores & Escaladas
+                  PicoMenuCard(
+                    title: 'Setores & Escaladas',
+                    subtitle:
+                        'Explore setores, vias e boulders com filtros e mapas integrados',
+                    icon: Icons.landscape,
+                    iconColor: context.colors.rustIron,
+                    backgroundColor: context.colors.caveShadow,
+                    titleColor: context.colors.chalkWhite,
+                    subtitleColor: context.colors.fishBone,
+                    onTap: () {
+                      TelemetryService.instance.logNavegacaoPicoHub(
+                        widget.cragId,
+                        'abrir_setores_e_escaladas',
+                      );
+                      TreeNavigationWrapper.of(
+                        context,
+                      ).treeController.navigateTo(
+                        SetoresNode(
+                          cragId: widget.cragId,
+                          parent: TreeNavigationWrapper.of(
+                            context,
+                          ).treeController.currentNode,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: PicoMenuCard(
-                            isCompact: true,
-                            title: 'Índice de Escaladas',
-                            subtitle:
-                                'Todas as vias e boulders filtrados por grau e tipo',
-                            icon: Icons.format_list_bulleted,
-                            iconColor: context.colors.beastHide,
-                            backgroundColor: context.colors.caveShadow,
-                            titleColor: context.colors.chalkWhite,
-                            subtitleColor: context.colors.fishBone,
-                            onTap: () {
-                              TelemetryService.instance.logNavegacaoPicoHub(
-                                widget.cragId,
-                                'abrir_indice_escaladas',
-                              );
-                              TreeNavigationWrapper.of(
-                                context,
-                              ).treeController.navigateTo(
-                                IndiceEscaladasNode(
-                                  cragId: widget.cragId,
-                                  parent: TreeNavigationWrapper.of(
-                                    context,
-                                  ).treeController.currentNode,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 

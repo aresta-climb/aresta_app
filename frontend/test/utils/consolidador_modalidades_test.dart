@@ -264,4 +264,178 @@ void main() {
       expect(resultado[4].rotuloFormatado, '1 highline');
     });
   });
+
+  group('ConsolidadorModalidades - Faixas de Grau e Filtros', () {
+    test('formata rótulo com faixa de graus para modalidade', () {
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.esportiva,
+          19,
+          faixaGraus: '6a a 10c',
+        ),
+        '19 esportivas - 6a a 10c',
+      );
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.boulder,
+          32,
+          faixaGraus: 'v0 a v7',
+        ),
+        '32 boulders - v0 a v7',
+      );
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.esportiva,
+          1,
+          faixaGraus: '7a',
+        ),
+        '1 esportiva - 7a',
+      );
+    });
+
+    test('formata rótulo com filtro parcial e faixa de graus', () {
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.esportiva,
+          3,
+          quantidadeTotal: 19,
+          faixaGraus: '6a a 7c',
+        ),
+        '3 de 19 esportivas - 6a a 7c',
+      );
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.boulder,
+          1,
+          quantidadeTotal: 10,
+          faixaGraus: 'v4',
+        ),
+        '1 de 10 boulders - v4',
+      );
+      expect(
+        ConsolidadorModalidades.formatarRotulo(
+          ModalidadeEscaladaEnum.movel,
+          2,
+          quantidadeTotal: 5,
+        ),
+        '2 de 5 móveis',
+      );
+    });
+
+    test('consolida escaladas incluindo faixa de graus calculada por modalidade', () {
+      final e1 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via Facil'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e2 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via Dificil'
+          ..dificuldade = GrauVia_GrauVia.BR_10C);
+      final b1 = Escalada()
+        ..boulder = (Boulder()
+          ..nome = 'Boulder Facil'
+          ..dificuldade = GrauBoulder_GrauBoulder.V0);
+      final b2 = Escalada()
+        ..boulder = (Boulder()
+          ..nome = 'Boulder Dificil'
+          ..dificuldade = GrauBoulder_GrauBoulder.V7);
+
+      final resultado = ConsolidadorModalidades.consolidarEscaladas([e1, e2, b1, b2]);
+
+      expect(resultado.length, 2);
+
+      final esportivas = resultado.firstWhere(
+        (i) => i.modalidade == ModalidadeEscaladaEnum.esportiva,
+      );
+      expect(esportivas.quantidade, 2);
+      expect(esportivas.faixaGraus, '7a a 10c');
+      expect(esportivas.rotuloFormatado, '2 esportivas - 7a a 10c');
+
+      final boulders = resultado.firstWhere(
+        (i) => i.modalidade == ModalidadeEscaladaEnum.boulder,
+      );
+      expect(boulders.quantidade, 2);
+      expect(boulders.faixaGraus, 'v0 a v7');
+      expect(boulders.rotuloFormatado, '2 boulders - v0 a v7');
+    });
+
+    test('consolida escaladas com filtro ativo comparando com todasEscaladas', () {
+      final e1 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via 1'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e2 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via 2'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e3 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via 3'
+          ..dificuldade = GrauVia_GrauVia.BR_9A);
+
+      // Apenas e1 e e2 passaram no filtro de grau
+      final filtradas = [e1, e2];
+      final todas = [e1, e2, e3];
+
+      final resultado = ConsolidadorModalidades.consolidarEscaladas(
+        filtradas,
+        todasEscaladas: todas,
+      );
+
+      expect(resultado.length, 1);
+      final esportivas = resultado.first;
+      expect(esportivas.quantidade, 2);
+      expect(esportivas.quantidadeTotal, 3);
+      expect(esportivas.faixaGraus, '7a');
+      expect(esportivas.rotuloFormatado, '2 de 3 esportivas - 7a');
+    });
+
+    test('consolidarSetor com escaladasFiltradas calcula badges e proporções', () {
+      final e1 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via 1'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e2 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'Via 2'
+          ..dificuldade = GrauVia_GrauVia.BR_8A);
+      final setor = Setor()
+        ..nome = 'Setor Teste'
+        ..escaladas.addAll([e1, e2]);
+
+      final resultado = ConsolidadorModalidades.consolidarSetor(
+        setor,
+        escaladasFiltradas: [e1],
+      );
+
+      expect(resultado.length, 1);
+      expect(resultado.first.rotuloFormatado, '1 de 2 esportivas - 7a');
+    });
+
+    test('consolidarGrupo com escaladasFiltradas calcula badges e proporções', () {
+      final e1 = Escalada()
+        ..boulder = (Boulder()
+          ..nome = 'B1'
+          ..dificuldade = GrauBoulder_GrauBoulder.V2);
+      final e2 = Escalada()
+        ..boulder = (Boulder()
+          ..nome = 'B2'
+          ..dificuldade = GrauBoulder_GrauBoulder.V5);
+      final setor = Setor()
+        ..nome = 'Setor Teste'
+        ..escaladas.addAll([e1, e2]);
+      final grupo = Grupo()
+        ..nome = 'Grupo Teste'
+        ..setores.add(ArquivoSetor()..conteudo = setor);
+
+      final resultado = ConsolidadorModalidades.consolidarGrupo(
+        grupo,
+        escaladasFiltradas: [e2],
+      );
+
+      expect(resultado.length, 1);
+      expect(resultado.first.rotuloFormatado, '1 de 2 boulders - v5');
+    });
+  });
 }
+

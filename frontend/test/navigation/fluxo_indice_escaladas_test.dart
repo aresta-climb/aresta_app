@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
-import 'package:frontend/pages/indice_escaladas_page.dart';
+import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -103,11 +103,19 @@ void main() {
               ),
             ),
           );
-        } else if (node is IndiceEscaladasNode) {
-          return IndiceEscaladasPage(
+        } else if (node is SetoresNode) {
+          return SetoresPage(
             pico: pico,
             croqui: croqui,
             cragId: 'bau',
+            modalidadeInicial: node.modalidadeInicial,
+          );
+        } else if (node is IndiceEscaladasNode) {
+          return SetoresPage(
+            pico: pico,
+            croqui: croqui,
+            cragId: 'bau',
+            modalidadeInicial: node.modalidadeInicial,
           );
         } else if (node is ViaNode) {
           Escalada? escaladaEncontrada;
@@ -201,24 +209,29 @@ void main() {
       await tester.pumpWidget(construirApp());
       await tester.pumpAndSettle();
 
-      // 1. Validar que o Pico exibe a grade com Índice de Escaladas
-      expect(find.text('Índice de Escaladas'), findsOneWidget);
-      expect(find.text('Setores'), findsOneWidget);
+      // 1. Validar que o Pico exibe o card unificado Setores & Escaladas
+      expect(find.text('Setores & Escaladas'), findsOneWidget);
 
-      // 2. Navegar para o Índice de Escaladas
-      await tester.tap(find.text('Índice de Escaladas'));
+      // 2. Navegar para a exploração unificada
+      await tester.tap(find.text('Setores & Escaladas'));
       await tester.pumpAndSettle();
 
-      expect(treeController.currentNode, isA<IndiceEscaladasNode>());
-      expect(find.byType(IndiceEscaladasPage), findsOneWidget);
+      expect(treeController.currentNode, isA<SetoresNode>());
+      expect(find.byType(SetoresPage), findsOneWidget);
 
-      // Deve listar as abas "Esportivas" e "Multienfiadas" (conforme modalidades existentes no pico)
-      expect(find.textContaining('Esportivas'), findsOneWidget);
-      expect(find.textContaining('Multienfiadas'), findsOneWidget);
+      // Deve listar as abas "Setores (2)", "Esportivas (1)" e "Multienfiadas (1)"
+      expect(find.textContaining('Setores (2)'), findsOneWidget);
+      expect(find.textContaining('Esportivas (1)'), findsOneWidget);
+      expect(find.textContaining('Multienfiadas (1)'), findsOneWidget);
       // Boulders não existem nesse pico, logo não deve renderizar a aba Boulders
       expect(find.textContaining('Boulders'), findsNothing);
 
-      // 3. Expande filtros e adiciona setor pelo dropdown
+      // 3. Mudar para a aba de Esportivas e expandir filtros
+      await tester.tap(find.textContaining('Esportivas (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mister Magoo'), findsOneWidget);
+
       await tester.tap(find.text('Filtros'));
       await tester.pumpAndSettle();
 
@@ -248,13 +261,18 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
-      // Deve ter retornado ao Índice de Escaladas preservando o chip do setor selecionado
-      expect(treeController.currentNode, isA<IndiceEscaladasNode>());
-      expect(find.byType(IndiceEscaladasPage), findsOneWidget);
+      // Deve ter retornado à exploração unificada preservando o chip do setor selecionado
+      expect(treeController.currentNode, isA<SetoresNode>());
+      expect(find.byType(SetoresPage), findsOneWidget);
       expect(find.text('Mister Magoo'), findsOneWidget);
 
+      // Limpa os filtros ativos para voltar a listar todas as vias e modalidades
+      await tester.ensureVisible(find.text('Limpar'));
+      await tester.tap(find.text('Limpar'));
+      await tester.pumpAndSettle();
+
       // 7. Mudar para a aba de Multienfiadas
-      await tester.tap(find.textContaining('Multienfiadas'));
+      await tester.tap(find.textContaining('Multienfiadas (1)'));
       await tester.pumpAndSettle();
 
       expect(find.text('Fissura do Meio'), findsOneWidget);
@@ -280,6 +298,49 @@ void main() {
       expect(setorNode.grupoNome, 'Complexo do Baú');
       expect(setorNode.scrollToEscaladaNome, 'Fissura do Meio');
       expect(find.text('PÁGINA DO SETOR: Paredão Norte'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Compatibilidade declarativa: IndiceEscaladasNode resolve para SetoresPage',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final pico = criarPicoCompleto();
+      final croqui = Croqui();
+
+      final treeController = TreeNavigationController(
+        estadoInicial: const ArvoreNavegacao(
+          noAtual: IndiceEscaladasNode(
+            cragId: 'bau',
+            modalidadeInicial: 'Multienfiadas',
+            parent: HomeNode(),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: treeController,
+            child: SetoresPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: 'bau',
+              modalidadeInicial: 'Multienfiadas',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SetoresPage), findsOneWidget);
+      expect(find.text('Fissura do Meio'), findsOneWidget);
     },
   );
 }

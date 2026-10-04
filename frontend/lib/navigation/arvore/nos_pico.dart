@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'no_navegacao.dart';
@@ -35,37 +35,51 @@ class PicoNode extends PicoContextNode {
   String toString() => 'PicoNode($cragId)';
 }
 
-/// Nó que representa a listagem de todos os setores de um pico.
+/// Nó que representa a exploração integrada de setores e escaladas de um pico.
 class SetoresNode extends PicoContextNode {
+  final String? modalidadeInicial;
+
   const SetoresNode({
     required super.cragId,
+    this.modalidadeInicial,
     required super.parent,
   });
 
   @override
   NavNode copyWithMergedAncestor(covariant SetoresNode matchingAncestor) =>
-      SetoresNode(cragId: cragId, parent: matchingAncestor.parent);
+      SetoresNode(
+        cragId: cragId,
+        modalidadeInicial: modalidadeInicial ?? matchingAncestor.modalidadeInicial,
+        parent: matchingAncestor.parent,
+      );
 
   @override
-  String get rotuloAmigavel => 'Setores';
+  String get rotuloAmigavel => 'Setores & Escaladas';
 
   @override
-  String obterCaminhoCurto() => 'Início -> Pico ($cragId) -> Setores';
+  String obterCaminhoCurto() => 'Início -> Pico ($cragId) -> Setores & Escaladas';
 
   @override
   String toString() => 'SetoresNode';
 }
 
-/// Nó que representa o índice e catálogo de todas as escaladas de um pico.
+/// Nó que representa o índice e catálogo de todas as escaladas de um pico (retrocompatibilidade).
 class IndiceEscaladasNode extends PicoContextNode {
+  final String? modalidadeInicial;
+
   const IndiceEscaladasNode({
     required super.cragId,
+    this.modalidadeInicial,
     required super.parent,
   });
 
   @override
   NavNode copyWithMergedAncestor(covariant IndiceEscaladasNode matchingAncestor) =>
-      IndiceEscaladasNode(cragId: cragId, parent: matchingAncestor.parent);
+      IndiceEscaladasNode(
+        cragId: cragId,
+        modalidadeInicial: modalidadeInicial ?? matchingAncestor.modalidadeInicial,
+        parent: matchingAncestor.parent,
+      );
 
   @override
   String get rotuloAmigavel => 'Índice de Escaladas';

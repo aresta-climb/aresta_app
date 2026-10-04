@@ -46,3 +46,6 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 | `MapaThumbnail` | Visualização estática leve de mapa vetorial/satélite para pré-visualização rápida de setores. |
 | `BuscaGlobal` | Barra unificada de busca textual por picos, setores e vias. |
 | `ArestaHomeAppBar` | Barra de aplicativo superior dedicada da tela inicial com identidade visual da marca, selo beta e ações de sincronização, feedback e configurações. |
+| `BarraOrdenacaoExploracao` | Barra consistente com a tríade de ordenação `[ PADRÃO | GRAU | ALFABÉTICO ]` e alternador bidirecional `[ ▲ / ▼ ]`, adaptando-se tanto à lista de setores quanto às listas de vias. |
+| `PainelFiltrosIndice` | Painel expansível compartilhado de filtros que opera sobre `EstadoFiltrosUnificado`, atuando como superset na aba Setores (com ativação de modalidades e faixas de grau unificadas para Vias e Boulders) e projeção contextual nas abas de modalidade. |
+| `CardIndiceEscalada` | Cartão rico para renderização de vias e boulders nos catálogos de exploração, exibindo grau, estilo, proteções e selo de clássica. |

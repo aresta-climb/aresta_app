@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,7 +9,6 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/grupo.dart';
-import 'package:frontend/pages/indice_escaladas_page.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/mapas_carrossel.dart';
 import 'package:frontend/pages/pico.dart';
@@ -107,12 +106,18 @@ Widget construirPaginaParaNo({
             returnToSetor: returnToSetor,
           );
         } else if (node is SetoresNode) {
-          return SetoresPage(pico: pico, cragId: cragId);
-        } else if (node is IndiceEscaladasNode) {
-          return IndiceEscaladasPage(
+          return SetoresPage(
             pico: pico,
-            croqui: croqui,
             cragId: cragId,
+            croqui: croqui,
+            modalidadeInicial: node.modalidadeInicial,
+          );
+        } else if (node is IndiceEscaladasNode) {
+          return SetoresPage(
+            pico: pico,
+            cragId: cragId,
+            croqui: croqui,
+            modalidadeInicial: node.modalidadeInicial,
           );
         } else if (node is ExplorarLocalNode) {
           return ExplorarLocalPage(

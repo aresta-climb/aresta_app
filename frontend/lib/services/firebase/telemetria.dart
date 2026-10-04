@@ -355,7 +355,7 @@ class TelemetryService {
   /// Registra cliques de navegação nos cards centrais da página do pico (Hub).
   ///
   /// - [idCroqui]: Identificador do pico.
-  /// - [secao]: Seção acessada (ex: `'abrir_setores'`, `'abrir_indice_escaladas'`, `'abrir_explorar_local'`, `'abrir_regras'`, `'abrir_comunidade'`, `'abrir_creditos'`).
+  /// - [secao]: Seção acessada (ex: `'abrir_setores_e_escaladas'`, `'abrir_setores'`, `'abrir_indice_escaladas'`, `'abrir_explorar_local'`, `'abrir_regras'`, `'abrir_comunidade'`, `'abrir_creditos'`).
   Future<void> logNavegacaoPicoHub(String idCroqui, String secao) {
     return _logEvent('navegacao_pico_hub', {
       'id_croqui': idCroqui,

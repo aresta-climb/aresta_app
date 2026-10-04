@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/mapa_global.dart';
@@ -84,6 +85,26 @@ void main() {
       );
 
       expect(widget, isA<MapaGlobalPage>());
+    });
+
+    testWidgets('resolve SetoresNode para PageListenableBuilder', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const SetoresNode(cragId: 'pico_1', parent: HomeNode()),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      expect(widget, isA<PageListenableBuilder>());
+    });
+
+    testWidgets('resolve IndiceEscaladasNode para PageListenableBuilder', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const IndiceEscaladasNode(cragId: 'pico_1', parent: HomeNode()),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      expect(widget, isA<PageListenableBuilder>());
     });
 
     testWidgets('retorna mensagem para nó desconhecido', (tester) async {

@@ -132,3 +132,28 @@ List<ItemIndiceEscalada> indexarEscaladasDoPico(Pico pico, String cragId) {
 
   return resultado;
 }
+
+/// Indexa todas as escaladas contidas nos setores de um [Grupo], mapeando cada uma
+/// com o setor correspondente e a referência a este grupo em uma lista de [ItemIndiceEscalada].
+List<ItemIndiceEscalada> indexarEscaladasDoGrupo(Grupo grupo, String cragId) {
+  final List<ItemIndiceEscalada> resultado = [];
+
+  for (final setorRef in grupo.setores) {
+    if (setorRef.hasConteudo()) {
+      final setor = setorRef.conteudo;
+      for (final escalada in setor.escaladas) {
+        resultado.add(
+          ItemIndiceEscalada(
+            escalada: escalada,
+            setor: setor,
+            grupo: grupo,
+            cragId: cragId,
+          ),
+        );
+      }
+    }
+  }
+
+  return resultado;
+}
+

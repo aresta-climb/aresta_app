@@ -112,5 +112,81 @@ void main() {
       expect(find.text('1 multienfiada'), findsOneWidget);
       expect(find.text('1 highline'), findsOneWidget);
     });
+
+    testWidgets('construtor deSetor com escaladas com grau exibe faixa nos badges', (tester) async {
+      final setor = Setor()
+        ..nome = 'Setor Boulder'
+        ..escaladas.addAll([
+          Escalada()
+            ..boulder = (Boulder()
+              ..nome = 'B1'
+              ..dificuldade = GrauBoulder_GrauBoulder.V1),
+          Escalada()
+            ..boulder = (Boulder()
+              ..nome = 'B2'
+              ..dificuldade = GrauBoulder_GrauBoulder.V7),
+        ]);
+
+      await tester.pumpWidget(
+        criarAmbienteDeTeste(
+          BadgesModalidades.deSetor(setor),
+        ),
+      );
+
+      expect(find.text('2 boulders - v1 a v7'), findsOneWidget);
+    });
+
+    testWidgets('construtor deSetor com escaladasFiltradas exibe proporção e faixa', (tester) async {
+      final e1 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'E1'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e2 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'E2'
+          ..dificuldade = GrauVia_GrauVia.BR_9A);
+      final setor = Setor()
+        ..nome = 'Setor Falésia'
+        ..escaladas.addAll([e1, e2]);
+
+      await tester.pumpWidget(
+        criarAmbienteDeTeste(
+          BadgesModalidades.deSetor(
+            setor,
+            escaladasFiltradas: [e1],
+          ),
+        ),
+      );
+
+      expect(find.text('1 de 2 esportivas - 7a'), findsOneWidget);
+    });
+
+    testWidgets('construtor deGrupo com escaladasFiltradas exibe proporção e faixa', (tester) async {
+      final e1 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'E1'
+          ..dificuldade = GrauVia_GrauVia.BR_7A);
+      final e2 = Escalada()
+        ..viaEsportiva = (ViaEsportiva()
+          ..nome = 'E2'
+          ..dificuldade = GrauVia_GrauVia.BR_8A);
+      final setor = Setor()
+        ..nome = 'Setor 1'
+        ..escaladas.addAll([e1, e2]);
+      final grupo = Grupo()
+        ..nome = 'Grupo 1'
+        ..setores.add(ArquivoSetor()..conteudo = setor);
+
+      await tester.pumpWidget(
+        criarAmbienteDeTeste(
+          BadgesModalidades.deGrupo(
+            grupo,
+            escaladasFiltradas: [e1],
+          ),
+        ),
+      );
+
+      expect(find.text('1 de 2 esportivas - 7a'), findsOneWidget);
+    });
   });
 }

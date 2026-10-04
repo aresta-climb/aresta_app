@@ -126,5 +126,28 @@ void main() {
       expect(itens[2].isDestaque, isFalse);
       expect(itens[2].conquistadores, isEmpty);
     });
+
+    test('indexa escaladas de um grupo contendo setores', () {
+      final via = ViaEsportiva()
+        ..nome = 'Via do Grupo'
+        ..dificuldade = GrauVia_GrauVia.BR_6SUP;
+      final escalada = Escalada()..viaEsportiva = via;
+
+      final setor = Setor()
+        ..nome = 'Setor Interno'
+        ..escaladas.add(escalada);
+
+      final grupo = Grupo()
+        ..nome = 'Grupo Esmeralda'
+        ..setores.add(ArquivoSetor(conteudo: setor));
+
+      final itens = indexarEscaladasDoGrupo(grupo, 'crag-grupo');
+
+      expect(itens.length, 1);
+      expect(itens.first.nome, 'Via do Grupo');
+      expect(itens.first.setor.nome, 'Setor Interno');
+      expect(itens.first.grupo?.nome, 'Grupo Esmeralda');
+      expect(itens.first.localizacaoFormatada, 'Grupo Esmeralda › Setor Interno');
+    });
   });
 }

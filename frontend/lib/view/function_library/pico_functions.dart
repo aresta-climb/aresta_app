@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -165,13 +165,24 @@ Widget _buildInfoRow(String label, String value) {
   );
 }
 
+/// Constrói o cartão de exibição de um setor na listagem de setores.
+///
+/// Exibe os badges informativos de modalidades e faixas de grau (ex: "19 esportivas - 6a a 10c"),
+/// respeitando [escaladasFiltradas] caso fornecidas para exibir a proporção filtrada (ex: "3 de 19 esportivas - 6a a 7c").
 Widget buildSectorTile(
   BuildContext context,
   Setor setor,
   String cragId, {
   Grupo? grupoContext,
+  Iterable<Escalada>? escaladasFiltradas,
+  String? faixaGraus,
+  int? totalViasFiltradas,
+  int? totalViasSetor,
 }) {
-  final itens = ConsolidadorModalidades.consolidarSetor(setor);
+  final itens = ConsolidadorModalidades.consolidarSetor(
+    setor,
+    escaladasFiltradas: escaladasFiltradas,
+  );
 
   return Padding(
     padding: const EdgeInsets.only(bottom: 15),
@@ -193,7 +204,7 @@ Widget buildSectorTile(
         ),
         subtitle: itens.isNotEmpty
             ? Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 6),
                 child: BadgesModalidades(itens: itens),
               )
             : null,
@@ -207,8 +218,23 @@ Widget buildSectorTile(
   );
 }
 
-Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
-  final itens = ConsolidadorModalidades.consolidarGrupo(grupo);
+/// Constrói o cartão de exibição de um grupo na listagem de setores.
+///
+/// Exibe a linha de resumo do grupo ("5 setores • 42 escaladas") e os badges
+/// informativos de modalidades com faixas de graduação individuais e proporções filtradas.
+Widget buildGrupoTile(
+  BuildContext context,
+  Grupo grupo,
+  String cragId, {
+  Iterable<Escalada>? escaladasFiltradas,
+  String? faixaGraus,
+  int? totalViasFiltradas,
+  int? totalViasGrupo,
+}) {
+  final itens = ConsolidadorModalidades.consolidarGrupo(
+    grupo,
+    escaladasFiltradas: escaladasFiltradas,
+  );
   int totalEscaladas = 0;
   for (final s in grupo.setores) {
     if (s.hasConteudo()) {
@@ -243,7 +269,7 @@ Widget buildGrupoTile(BuildContext context, Grupo grupo, String cragId) {
           ),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

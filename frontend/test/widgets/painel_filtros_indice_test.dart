@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -149,6 +149,7 @@ void main() {
       );
 
       // Abre dropdown de conquistador
+      await tester.ensureVisible(find.byType(DropdownButton<String>).last);
       await tester.tap(find.byType(DropdownButton<String>).last);
       await tester.pumpAndSettle();
 
@@ -442,6 +443,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.byType(DropdownButton<String>).last);
       await tester.tap(find.byType(DropdownButton<String>).last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Carlos').last);
@@ -538,6 +540,391 @@ void main() {
       expect(params['id_croqui'], 'crag_pedra');
       expect(params['acao'], 'limpar_filtros');
       expect(params['origem'], 'indice_esportiva');
+    });
+
+    testWidgets('no modo Superset (Setores), renderiza seleção de modalidades e omite dropdown de setores', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const ['Setor 1'],
+            conquistadoresDisponiveis: const ['Carlos'],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      // Deve exibir os seletores de modalidade ativa
+      expect(find.text('Esportiva'), findsWidgets);
+      expect(find.text('Boulder'), findsWidgets);
+
+      // Não deve exibir dropdown de selecionar setores quando na aba Setores
+      expect(find.text('Setor 1'), findsNothing);
+
+      // Tocar no chip de Boulder deve atualizar estado
+      await tester.tap(find.text('Boulder').first);
+      await tester.pumpAndSettle();
+      expect(estadoEmitido, isNotNull);
+    });
+
+    testWidgets('no modo contextual (ex: Esportiva), omite seleção de modalidades e exibe dropdown de setores', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const ['Setor 1', 'Setor 2'],
+            conquistadoresDisponiveis: const ['Carlos'],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Exibe RangeSlider da modalidade
+      expect(find.byType(RangeSlider), findsOneWidget);
+
+      // Exibe seletor de setores
+      expect(find.text('Adicionar setor...'), findsOneWidget);
+    });
+
+    testWidgets('ao desmarcar e remarcar todas as modalidades, normaliza estado para vazio sem filtro ativo', (tester) async {
+      EstadoFiltrosUnificado? ultimoEstado;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => ultimoEstado = e,
+          ),
+        ),
+      );
+
+      // Desmarca Boulder: estado deve ter apenas Esportiva
+      await tester.tap(find.text('Boulder').first);
+      await tester.pumpAndSettle();
+      expect(ultimoEstado?.modalidadesAtivas, {'Esportiva'});
+
+      // Remarca Boulder: como todas as disponíveis estão selecionadas, deve normalizar para vazio
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: ultimoEstado!,
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => ultimoEstado = e,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Boulder').first);
+      await tester.pumpAndSettle();
+      expect(ultimoEstado?.modalidadesAtivas.isEmpty, isTrue);
+
+      // Re-renderiza com o novo estado normalizado
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: ultimoEstado!,
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => ultimoEstado = e,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 ativo'), findsNothing);
+    });
+
+    testWidgets('na aba Setores omite filtro de grupos mesmo com gruposDisponiveis informados', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const ['Setor 1'],
+            gruposDisponiveis: const ['Grupo Principal'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Localização (Grupos)'), findsNothing);
+      expect(find.text('Adicionar grupo...'), findsNothing);
+      expect(find.text('Grupo Principal'), findsNothing);
+    });
+
+    testWidgets('nas abas de modalidade exibe seletor de Localização unificado com setores e grupos', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const ['Setor Alpha'],
+            gruposDisponiveis: const ['Grupo Beta'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      // Deve exibir um único título de "Localização", e o hint "Adicionar setor ou grupo..."
+      expect(find.text('Localização'), findsOneWidget);
+      expect(find.text('Localização (Setores)'), findsNothing);
+      expect(find.text('Localização (Grupos)'), findsNothing);
+      expect(find.text('Adicionar setor ou grupo...'), findsOneWidget);
+
+      // Toca no dropdown de localização
+      await tester.tap(find.text('Adicionar setor ou grupo...'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Seleciona o grupo Beta
+      await tester.tap(find.text('Grupo Beta (Grupo)').last);
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido?.grupos, contains('Grupo Beta'));
+    });
+
+    testWidgets('faixa de grau com min e max conta como exatamente 1 filtro ativo', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Esportiva': 800},
+        maxGrauPorModalidade: {'Esportiva': 1000},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('1 ativo'), findsOneWidget);
+      expect(find.text('2 ativos'), findsNothing);
+    });
+
+    testWidgets('ao selecionar apenas um conquistador, exibe exatamente 1 ativo', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const ['Lucas'],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(DropdownButton<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lucas').last);
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido?.conquistadores, {'Lucas'});
+      expect(estadoEmitido?.minGrauPorModalidade, isEmpty);
+      expect(estadoEmitido?.maxGrauPorModalidade, isEmpty);
+      expect(estadoEmitido?.modalidadesAtivas, isEmpty);
+      expect(estadoEmitido?.setores, isEmpty);
+      expect(estadoEmitido?.grupos, isEmpty);
+    });
+
+    testWidgets('faixa de grau com apenas max conta como exatamente 1 filtro ativo e exibe chip no modo colapsado', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        maxGrauPorModalidade: {'Esportiva': 800},
+      );
+
+      // No modo colapsado: exibe exatamente 1 chip
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: false,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.byType(Chip), findsOneWidget);
+
+      // No modo expandido: exibe badge '1 ativo'
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            key: const ValueKey('expandido'),
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('1 ativo'), findsOneWidget);
+      expect(find.text('2 ativos'), findsNothing);
+    });
+
+    testWidgets('faixa de grau com min e max renderiza exatamente 1 chip no modo colapsado', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Esportiva': 700},
+        maxGrauPorModalidade: {'Esportiva': 900},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: false,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.byType(Chip), findsOneWidget);
+    });
+
+    testWidgets('painel expandido não encapsula em scrollview interno restritivo', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      final painelFinder = find.byType(PainelFiltrosIndice);
+      final innerScrollFinder = find.descendant(
+        of: painelFinder,
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(innerScrollFinder, findsNothing);
+    });
+
+    testWidgets('no modo Superset com Esportiva, Tradicional e Boulder, renderiza no máximo 2 sliders (Vias e Boulders)', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Tradicional', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Deve encontrar exatamente 2 RangeSliders: 1 para Vias e 1 para Boulders
+      expect(find.byType(RangeSlider), findsNWidgets(2));
+      expect(find.text('Faixa de Grau (Vias)'), findsOneWidget);
+      expect(find.text('Faixa de Grau (Boulders)'), findsOneWidget);
+      expect(find.text('Faixa de Grau (ESPORTIVA)'), findsNothing);
+      expect(find.text('Faixa de Grau (TRADICIONAL)'), findsNothing);
+    });
+
+    testWidgets('no modo Superset com apenas modalidades de vias, renderiza apenas 1 slider com título Faixa de Grau', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Tradicional', 'Top Rope'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Apenas 1 RangeSlider para vias
+      expect(find.byType(RangeSlider), findsOneWidget);
+      expect(find.text('Faixa de Grau'), findsOneWidget);
+      expect(find.text('Faixa de Grau (Vias)'), findsNothing);
+      expect(find.text('Faixa de Grau (Boulders)'), findsNothing);
+    });
+
+    testWidgets('ao ajustar slider de Vias na aba Setores, atualiza chave "Via" no estado unificado', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Tradicional', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      final sliders = find.byType(RangeSlider);
+      expect(sliders, findsNWidgets(2));
+
+      // Primeiro slider é Vias
+      final sliderVias = tester.widget<RangeSlider>(sliders.first);
+      // Índice 4 em grausVia é 5º (valor 600), índice 8 é 7a (valor 810)
+      sliderVias.onChanged?.call(const RangeValues(4, 8));
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido?.minGrauPorModalidade['Via'], 600);
+      expect(estadoEmitido?.maxGrauPorModalidade['Via'], 810);
     });
   });
 }

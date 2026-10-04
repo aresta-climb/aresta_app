@@ -41,4 +41,32 @@ O `FormatadorCreditos` centraliza a lógica de validação, filtragem e formata�
 - **Formatação Amigável**: Gera frases como `"Croqui por Autor 1, Autor 2"`, respeitando prefixos já existentes.
 - **Desacoplamento de UI**: Utilidade pura em Dart, consumida pelo componente `LinhaCreditoAutor`.
 
+---
+
+## 3. Filtros, Normalização e Mediana de Graduação (`filtro_grau_escalada.dart`)
+
+Centraliza os algoritmos matemáticos e modelos de estado para a exploração unificada de escaladas e setores:
+
+### Tabela de Pesos Unificada (`obterPesoDificuldadeUnificado`)
+Normaliza a graduação de vias esportivas/móveis brasileiras e blocos de boulder em uma régua contínua comparativa de 0 a 2000 pontos:
+- **Vias Brasileiras**: 4º (~500), 5º (~600), 6a (~700), 7a (~800), 8a (~1000), 9a (~1200), etc.
+- **Boulders (Escala V)**: V0 (~500), V1 (~600), V2 (~700), V3 (~800), V5 (~1000), V7 (~1200), etc.
+- Viabiliza comparações justas de dificuldade entre setores com diferentes perfis de modalidade.
+
+### Mediana de Grau de Setor (`calcularMedianaGrauSetor`)
+Calcula o nível de dificuldade representativo de um setor utilizando a **mediana** dos pesos normalizados das vias que atendem ao filtro ativo:
+- **Resiliência a Outliers**: Uma única via extrema ou projeto em um setor escola não distorce artificialmente a classificação do setor para cima.
+- Em caso de número par de vias, calcula a média aritmética entre os dois valores centrais da distribuição.
+
+### Formatação de Faixas de Grau (`formatarFaixaGrausSetor`)
+Gera rótulos concisos para exibição em cartões de setor (ex: `"4º a 6ºsup"`, `"V2 a V6"` ou `"5º"`).
+
+### Modelo Imutável `EstadoFiltrosUnificado`
+Consolida em uma única estrutura de dados os critérios de busca de todo o pico:
+- `modalidadesAtivas`: Conjunto de modalidades visíveis na aba Setores.
+- `minGrauPorModalidade` e `maxGrauPorModalidade`: Intervalos numéricos independentes por modalidade.
+- `setores`, `grupos` e `conquistadores`: Conjuntos de seleção contextual e multi-seleção.
+- `tipoOrdenacao` e `direcaoCrescente`: Controle de ordenação bidirecional (`padrao`, `grau`, `alfabetico`).
+- Métodos reativos `filtrarSetores`, `filtrarEscaladas`, `obterContadorSetores` e `obterContadorModalidade`.
+
 
