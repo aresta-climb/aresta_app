@@ -70,6 +70,8 @@ class DatasetRepository {
         servicoCroquiOnline = servicoCroquiOnline ??
             ServicoCroquiOnline(
               sessaoOnline: gerenciadorSessaoOnline,
+              verificarPicoBaixado: (id) => _instance?.isPicoDownloaded(id) ?? false,
+              verificarLiveReloadAtivo: () => editorDeCroqui.isLiveReloadConectado,
             ) {
     _instance = this;
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);

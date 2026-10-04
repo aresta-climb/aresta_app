@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:typed_data';
@@ -9,6 +9,7 @@ import 'package:feedback/feedback.dart';
 
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/data/modelos/metadados_feedback.dart';
+import 'package:frontend/data/modelos/tipo_feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -142,6 +143,69 @@ void main() {
       // Verifica se a Snackbar de sucesso apareceu
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('Feedback recebido!'), findsOneWidget);
+    });
+
+    testWidgets('execute propaga tipo_feedback: croqui dos extras para os metadados', (
+      tester,
+    ) async {
+      when(() => mockTelemetryService.logAcaoFeedback(any()))
+          .thenAnswer((_) async {});
+
+      const fakeMetadata = FeedbackMetadata(
+        navigationTree: 'Croqui',
+        submittedAt: 'test',
+        submittedAtTimestamp: 'test-ts',
+        feedbackId: 'uuid-456',
+        appInstanceId: 'instance',
+        os: 'android',
+        osVersion: '14',
+        deviceModel: 'device',
+        appVersion: '1.0',
+        screenSize: '100x100',
+        deviceOrientation: 'up',
+        isDarkMode: 'false',
+        connectivity: 'wifi',
+      );
+
+      when(() => mockMetadataCollector.collect(context: any(named: 'context')))
+          .thenAnswer((_) async => fakeMetadata);
+
+      FeedbackMetadata? metadadosEnfileirados;
+      when(
+        () => mockQueueService.enqueueFeedback(
+          description: any(named: 'description'),
+          screenshot: any(named: 'screenshot'),
+          metadata: any(named: 'metadata'),
+        ),
+      ).thenAnswer((invocation) async {
+        metadadosEnfileirados = invocation.namedArguments[#metadata] as FeedbackMetadata?;
+      });
+
+      final fakeFeedback = UserFeedback(
+        text: 'Via com linha errada',
+        screenshot: Uint8List.fromList([1, 2]),
+        extra: {'tipo_feedback': 'croqui'},
+      );
+
+      late BuildContext testContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BetterFeedback(
+            child: Builder(
+              builder: (context) {
+                testContext = context;
+                return const Scaffold(body: Text('Test'));
+              },
+            ),
+          ),
+        ),
+      );
+
+      await useCase.execute(testContext, fakeFeedback);
+      await tester.pumpAndSettle();
+
+      expect(metadadosEnfileirados, isNotNull);
+      expect(metadadosEnfileirados!.tipoFeedback, TipoFeedback.croqui);
     });
   });
 }

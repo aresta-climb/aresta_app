@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo é o Gerente/Coordenador acionado por ações do Usuário (UseCase).
@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
+import '../../../data/modelos/tipo_feedback.dart';
 import '../../../services/firebase/telemetria.dart';
 import '../../../services/feedback/feedback_metadata_collector.dart';
 import '../../../services/feedback/feedback_queue_service.dart';
@@ -37,7 +38,11 @@ class SubmitFeedbackUseCase {
     _telemetryService.logAcaoFeedback('enviar_feedback');
 
     // 3. Collect domain metadata
-    final metadata = await _metadataCollector.collect(context: context);
+    final rawMetadata = await _metadataCollector.collect(context: context);
+    final tipoSelecionado = TipoFeedback.fromString(
+      feedback.extra?['tipo_feedback'] as String?,
+    );
+    final metadata = rawMetadata.copyWith(tipoFeedback: tipoSelecionado);
 
     // 4. Enqueue in local storage for background processing
     await _queueService.enqueueFeedback(

@@ -32,10 +32,10 @@ void main() {
   testWidgets('GrupoPage re-resolve imagem de capa no didUpdateWidget durante Hot Reload', (tester) async {
     final grupo1 = Grupo()
       ..nome = 'Grupo 1'
-      ..descricao = '![Capa](capa1.webp)';
+      ..caminhoImagemCapa = 'imagens/capa1.webp';
     final grupo2 = Grupo()
       ..nome = 'Grupo 1'
-      ..descricao = '![Capa](capa2.webp)';
+      ..caminhoImagemCapa = 'imagens/capa2.webp';
 
     await tester.pumpWidget(
       MaterialApp(
@@ -51,6 +51,42 @@ void main() {
       ),
     );
     await tester.pump();
+  });
+
+  testWidgets('GrupoPage renderiza SliverAppBar expandido de 300px quando caminhoImagemCapa estiver preenchido', (tester) async {
+    final grupo = Grupo()
+      ..nome = 'Grupo Com Capa'
+      ..caminhoImagemCapa = 'imagens/capa_grupo.webp';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GrupoPage(grupo: grupo, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    final sliverAppBarFinder = find.byType(SliverAppBar);
+    expect(sliverAppBarFinder, findsOneWidget);
+    final sliverAppBar = tester.widget<SliverAppBar>(sliverAppBarFinder);
+    expect(sliverAppBar.expandedHeight, 300.0);
+  });
+
+  testWidgets('GrupoPage renderiza SliverAppBar compacto quando não possui caminhoImagemCapa', (tester) async {
+    final grupo = Grupo()
+      ..nome = 'Grupo Sem Capa';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GrupoPage(grupo: grupo, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    final sliverAppBarFinder = find.byType(SliverAppBar);
+    expect(sliverAppBarFinder, findsOneWidget);
+    final sliverAppBar = tester.widget<SliverAppBar>(sliverAppBarFinder);
+    expect(sliverAppBar.expandedHeight, isNull);
+    expect(find.text('GRUPO SEM CAPA'), findsOneWidget);
   });
 
   testWidgets('GrupoPage dispara logAlterarOrdenacao ao alternar critérios de ordenação', (tester) async {

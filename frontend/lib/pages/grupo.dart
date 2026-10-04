@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/funcoes_navegacao.dart';
@@ -11,7 +10,6 @@ import '../theme/cores_app.dart';
 import '../utils/filtro_grau_escalada.dart';
 import '../utils/indexador_escaladas.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../view/function_library/funcoes_explorar.dart';
 import '../view/function_library/markdown_offline.dart';
 import '../view/function_library/pico_functions.dart';
 import '../widgets/barra_ordenacao_exploracao.dart';
@@ -107,27 +105,19 @@ class _GrupoPageState extends State<GrupoPage>
     super.dispose();
   }
 
-  /// Resolve a imagem de capa do grupo a partir do Markdown ou fallback do pico.
+  bool get _temCapa =>
+      widget.grupo.hasCaminhoImagemCapa() &&
+      widget.grupo.caminhoImagemCapa.isNotEmpty;
+
+  /// Resolve a imagem de capa do grupo a partir do caminhoImagemCapa.
   Future<ImageProvider?> _resolveCoverImage() async {
-    final String jsonString = jsonEncode(widget.grupo.toProto3Json());
-    final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final matches = regex.allMatches(jsonString);
-    final List<String> paths = [];
-
-    for (var match in matches) {
-      if (match.groupCount >= 1) {
-        String path = match.group(1)!;
-        if (!path.startsWith('http')) {
-          paths.add(path);
-        }
-      }
+    if (_temCapa) {
+      return resolveImagePathProvider(
+        widget.cragId,
+        widget.grupo.caminhoImagemCapa,
+        larguraAlvo: 600,
+      );
     }
-
-    if (paths.isNotEmpty) {
-      final firstPath = paths.first;
-      return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
-    }
-
     return null;
   }
 
@@ -311,31 +301,43 @@ class _GrupoPageState extends State<GrupoPage>
         slivers: [
           // 1. Cabeçalho com Capa Animada e Título
           SliverAppBar(
-            expandedHeight: 300.0,
+            expandedHeight: _temCapa ? 300.0 : null,
             pinned: true,
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            title: !_temCapa
+                ? Text(
+                    widget.grupo.nome.toUpperCase(),
+                    style: const TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
+            centerTitle: false,
             actions: [
               buildFeedbackButton(context, color: context.colors.chalkWhite),
               const SizedBox(width: 8),
             ],
-            flexibleSpace: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final top = constraints.biggest.height;
-                final collapsedHeight =
-                    MediaQuery.of(context).padding.top + kToolbarHeight;
-                const expandedHeight = 300.0;
-                double t =
-                    (top - collapsedHeight) / (expandedHeight - collapsedHeight);
-                t = t.clamp(0.0, 1.0);
+            flexibleSpace: _temCapa
+                ? LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      final top = constraints.biggest.height;
+                      final collapsedHeight =
+                          MediaQuery.of(context).padding.top + kToolbarHeight;
+                      const expandedHeight = 300.0;
+                      double t =
+                          (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+                      t = t.clamp(0.0, 1.0);
 
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    FlexibleSpaceBar(
-                      background: widget.grupo.mapas.isNotEmpty &&
-                              _coverProviderFuture != null
-                          ? FutureBuilder<ImageProvider?>(
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          FlexibleSpaceBar(
+                            background: FutureBuilder<ImageProvider?>(
                               future: _coverProviderFuture,
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
@@ -397,32 +399,34 @@ class _GrupoPageState extends State<GrupoPage>
                                     ],
                                   );
                                 }
-                                return _buildDefaultCover();
+                                return Container(
+                                  color: context.colors.deepBasalt,
+                                );
                               },
-                            )
-                          : _buildDefaultCover(),
-                    ),
-                    Positioned(
-                      left: 16 + (56 * (1 - t)),
-                      right: 16 + (72 * (1 - t)),
-                      bottom: 16,
-                      child: Text(
-                        widget.grupo.nome.toUpperCase(),
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          fontSize: 20 + (8 * t),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                          color: Colors.white,
-                        ),
-                        maxLines: t > 0.5 ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 16 + (56 * (1 - t)),
+                            right: 16 + (72 * (1 - t)),
+                            bottom: 16,
+                            child: Text(
+                              widget.grupo.nome.toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: 'BebasNeue',
+                                fontSize: 20 + (8 * t),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                                color: Colors.white,
+                              ),
+                              maxLines: t > 0.5 ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                : null,
           ),
 
           // 2. Seção Fixa: Descrição, Mapa, Abas de Modalidade, Filtros e Ordenação
@@ -555,55 +559,6 @@ class _GrupoPageState extends State<GrupoPage>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDefaultCover() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        buildCragBackground('', cragId: widget.cragId),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 200,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black,
-                  Colors.black.withValues(alpha: 0.7),
-                  Colors.transparent,
-                ],
-                stops: const [0.0, 0.4, 1.0],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 200,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.9),
-                  Colors.black.withValues(alpha: 0.6),
-                  Colors.transparent,
-                ],
-                stops: const [0.0, 0.4, 1.0],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

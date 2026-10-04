@@ -45,7 +45,7 @@ class PicoDetailsPage extends StatefulWidget {
 
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
-  late final PicoViewModel _viewModel;
+  late PicoViewModel _viewModel;
 
   @override
   void initState() {
@@ -88,6 +88,19 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           }
         });
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PicoDetailsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewModel != widget.viewModel) {
+      _viewModel.removeListener(_aoAtualizarViewModel);
+      _viewModel.cancelarPolling();
+      _viewModel.dispose();
+      _viewModel = widget.viewModel;
+      _viewModel.addListener(_aoAtualizarViewModel);
+      _setupBackInterceptor();
     }
   }
 

@@ -52,6 +52,14 @@ Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperiment
 2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: O repositório recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
 3. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
 
+### Estabilização de Cotas e Proteção do Relay (Cloudflare & WebSocket)
+
+Para evitar exaustão de requisições e consumo excessivo de cotas em túneis de retransmissão remotos (`aresta-previa-relay` / Cloudflare Durable Objects):
+- **Suporte a ETag e HTTP 304 no Túnel Retransmissor Desktop**: O retransmissor Python avalia o cabeçalho `If-None-Match` comparando com o SHA-256 do arquivo local e devolve status `304 Not Modified` com corpo vazio quando não há alterações, evitando re-downloads contínuos de arquivos inalterados.
+- **Dormência de Polling com WebSocket Conectado**: O `ServicoCroquiOnline` consulta `isLiveReloadConectado` e mantém os timers de polling periódicos de 30 segundos totalmente dormentes (sem chamadas HTTP) enquanto houver conexão WebSocket ativa, utilizando o canal de push em tempo real para disparar atualizações.
+- **Coalescência de Requisições Ativas (*In-Flight Request Sharing*)**: O `SyncService.syncIndex()` compartilha a `Future` em trânsito entre chamadas simultâneas, impedindo disparos concorrentes duplicados de requisições de rede.
+- **Debounce de Transição de Modos e Eventos Push**: Ouvintes de transição de modo em `main.dart` e ouvintes de Live Reload em `registrarOuvintesLiveReload` utilizam um debounce de 50ms para consolidar atualizações múltiplas em uma única sincronização atômica.
+
 ---
 
 ## Principais Classes e Responsabilidades
@@ -92,8 +100,8 @@ Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperiment
 - No **Modo Experimental**, notificações intrusivas (SnackBar / toasts) são suprimidas para garantir atualização contínua e silenciosa enquanto o `BannerModoExperimental` pulsa visualmente.
 
 ### Módulo de In-App Feedback (`feedback/`)
-- **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` e agenda as rotinas de disparo em background (via Workmanager).
-- **`OrquestradorFeedback` (`orquestrador_feedback.dart`)**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para o Supabase (Edge Functions), anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file` para download imediato pela equipe de engenharia no Discord.
+- **`FeedbackQueueService`**: Gerencia a fila persistente local. Salva imagens no diretório temporário, cria o payload JSON no `SharedPreferences` com categoria `tipo_feedback` (`croqui` ou `app`) e agenda as rotinas de disparo em background (via Workmanager).
+- **`OrquestradorFeedback` (`orquestrador_feedback.dart`)**: Tarefa executada em background pelo SO (independente se o app estiver aberto ou não). Despacha a fila de requisições pendentes via `multipart/form-data` para a Edge Function `app-feedback` no Supabase, anexando também os binários reais `indice.binarypb` e `compilado.binarypb` como `indice_file` e `croqui_file`. A Edge Function publica o relato como uma issue pública no repositório GitHub `aresta-climb/aresta_db` com etiquetagem automática por labels (`feedback:croqui/app`, `so:android/ios`, `pico:<id>`) e segrega dados confidenciais (UUIDs, modelo do aparelho e IP) na tabela restrita `feedback_diagnosticos` (RLS), gerando um link restrito para o Supabase Dashboard.
 - **`FeedbackMetadataCollector`**: Coleta dados cruciais do dispositivo no momento do report (bateria, conectividade, versão do app, resolução e tema da UI, e estado atual do NavNode) e executa **Auditoria Criptográfica de Hashes sob demanda** (calculando SHA-256 do índice local, miniatura e croqui em visualização para rotular os estados como `INTEGRO`, `DIVERGENTE` ou `NAO_BAIXADO`).
 
 ---

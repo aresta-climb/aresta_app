@@ -1441,12 +1441,12 @@ void main() {
     );
 
     testWidgets(
-      'MapaInterativoPage deve renderizar o botão de feedback (bug_report)',
+      'MapaInterativoPage deve renderizar o botão de feedback (warning_amber_rounded)',
       (WidgetTester tester) async {
         await tester.pumpWidget(buildApp([], mockMapa));
         await tester.pumpAndSettle();
 
-        expect(find.byIcon(Icons.bug_report), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
       },
     );
 

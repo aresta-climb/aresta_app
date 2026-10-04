@@ -533,7 +533,7 @@ class EstadoFiltrosUnificado {
   /// Modalidades como Esportiva, Tradicional, Top Rope e Artificial compartilham a escala
   /// brasileira de vias e portanto pertencem à categoria 'Via'. Boulders pertencem à categoria 'Boulder'.
   static String obterCategoriaGrau(String modalidade) {
-    if (modalidade.trim().toLowerCase() == 'boulder') {
+    if (modalidade.trim().toLowerCase().startsWith('boulder')) {
       return 'Boulder';
     }
     return 'Via';

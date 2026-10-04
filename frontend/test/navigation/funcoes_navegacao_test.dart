@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +25,9 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
   final ValueNotifier<String?> notificadorCroquiAtualizado = ValueNotifier(null);
   @override
   late final EditorDeCroqui editorDeCroqui;
+  @override
+  late final ServicoCroquiOnline servicoCroquiOnline =
+      ServicoCroquiOnline(sessaoOnline: gerenciadorSessaoOnline);
 
   FakeDatasetRepository(this.editorDeCroqui) {
     final via = ViaEsportiva()..nome = 'Via Teste';

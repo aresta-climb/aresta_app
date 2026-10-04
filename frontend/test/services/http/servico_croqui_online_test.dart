@@ -332,6 +332,40 @@ void main() {
       verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
     });
 
+    test('verificarAtualizacaoEtag e timer de polling permanecem dormentes sem disparar HTTP quando WebSocket de Live Reload estiver conectado', () async {
+      bool wsConectado = true;
+      final servicoComWs = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: tempDir.path,
+        verificarLiveReloadAtivo: () => wsConectado,
+      );
+
+      sessaoOnline.registrarCroquiOnline('pico_ws', Croqui(id: 'pico_ws'), etag: 'etag1');
+
+      // 1. Com WebSocket conectado, verificarAtualizacaoEtag retorna false e não dispara HTTP
+      final resultadoComWs = await servicoComWs.verificarAtualizacaoEtag(
+        'pico_ws',
+        'https://servidor.com/pico_ws.binarypb',
+      );
+      expect(resultadoComWs, isFalse);
+      verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
+
+      // 2. Quando o WebSocket cai (wsConectado = false), o polling volta a executar normalmente
+      wsConectado = false;
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('', 304));
+
+      final resultadoSemWs = await servicoComWs.verificarAtualizacaoEtag(
+        'pico_ws',
+        'https://servidor.com/pico_ws.binarypb',
+      );
+      expect(resultadoSemWs, isFalse);
+      verify(() => mockClient.get(any(), headers: any(named: 'headers'))).called(1);
+
+      servicoComWs.dispose();
+    });
+
     test('verificarAtualizacaoEtag com 200 processa bytes, atualiza sessão online e grava em cache volátil', () async {
       sessaoOnline.registrarCroquiOnline(
         'pico_1',

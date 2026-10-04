@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -244,6 +244,25 @@ void main() {
       expect(resultado, isTrue);
       expect(vm.isInitiallyDownloaded, isTrue);
       vm.dispose();
+    });
+
+    test('PicoViewModel utiliza ServicoCroquiOnline compartilhado sem vazamento de polling', () {
+      final servico = ServicoCroquiOnline(
+        sessaoOnline: repositorio.gerenciadorSessaoOnline,
+      );
+
+      final vm1 = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+        servicoCroquiOnline: servico,
+      );
+
+      expect(servico.isPollingAtivo(cragId), isFalse);
+
+      vm1.dispose();
+      expect(servico.isPollingAtivo(cragId), isFalse);
     });
   });
 }

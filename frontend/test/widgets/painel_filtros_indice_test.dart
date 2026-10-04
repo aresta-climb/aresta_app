@@ -926,6 +926,178 @@ void main() {
       expect(estadoEmitido?.minGrauPorModalidade['Via'], 600);
       expect(estadoEmitido?.maxGrauPorModalidade['Via'], 810);
     });
+
+    testWidgets('na aba Esportiva com filtros de grau de Via e Boulder ativos, exibe apenas chip de grau de Via e conta 1 ativo', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Via': 700, 'Boulder': 600},
+        maxGrauPorModalidade: {'Via': 1030, 'Boulder': 1200},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // No modo colapsado, exibe apenas o chip da categoria correspondente à aba (Via -> 6º a 9c)
+      expect(find.text('6º a 9c'), findsOneWidget);
+      expect(find.text('V5 a V11'), findsNothing);
+      expect(find.text('Boulders: V5 a V11'), findsNothing);
+      expect(find.text('Vias: 6º a 9c'), findsNothing);
+
+      // Ao expandir, o contador deve indicar exatamente 1 ativo (apenas o grau de via relevante para a aba)
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 ativo'), findsOneWidget);
+      expect(find.text('2 ativos'), findsNothing);
+    });
+
+    testWidgets('na aba Boulder com filtros de grau de Via e Boulder ativos, exibe apenas chip de grau de Boulder e conta 1 ativo', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Via': 700, 'Boulder': 600},
+        maxGrauPorModalidade: {'Via': 1030, 'Boulder': 1200},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Boulder',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // No modo colapsado, exibe apenas o chip da categoria correspondente à aba (Boulder -> V5 a V11)
+      expect(find.text('V5 a V11'), findsOneWidget);
+      expect(find.text('6º a 9c'), findsNothing);
+      expect(find.text('Vias: 6º a 9c'), findsNothing);
+      expect(find.text('Boulders: V5 a V11'), findsNothing);
+
+      // Ao expandir, o contador deve indicar exatamente 1 ativo
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 ativo'), findsOneWidget);
+      expect(find.text('2 ativos'), findsNothing);
+    });
+
+    testWidgets('na aba Setores com filtros de grau de Via e Boulder ativos, exibe ambos os chips com prefixo de categoria e conta 2 ativos', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Via': 700, 'Boulder': 600},
+        maxGrauPorModalidade: {'Via': 1030, 'Boulder': 1200},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Na aba Setores, exibe ambos os chips com o prefixo para clareza
+      expect(find.text('Vias: 6º a 9c'), findsOneWidget);
+      expect(find.text('Boulders: V5 a V11'), findsOneWidget);
+
+      // Ao expandir, o contador indica 2 ativos
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 ativos'), findsOneWidget);
+    });
+
+    testWidgets('filtro de modalidadesAtivas só renderiza chip e conta como ativo na aba Setores', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        modalidadesAtivas: {'Esportiva'},
+      );
+
+      // 1. Na aba Setores
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Esportiva'), findsOneWidget);
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 ativo'), findsOneWidget);
+
+      // 2. Na aba contextual Esportiva
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Não deve exibir chip de modalidade na aba dedicada à modalidade
+      expect(find.text('Esportiva'), findsNothing);
+      expect(find.text('1 ativo'), findsNothing);
+    });
+
+    testWidgets('ao limpar filtros na aba contextual Esportiva, redefine grau da aba mas preserva grau de Boulder', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+      final estado = const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Via': 700, 'Boulder': 600},
+        maxGrauPorModalidade: {'Via': 1030, 'Boulder': 1200},
+        setores: {'Falésia Central'},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const ['Falésia Central'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Limpar'));
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido, isNotNull);
+      // Setores limpos
+      expect(estadoEmitido!.setores, isEmpty);
+      // Grau de Via limpo
+      expect(estadoEmitido!.minGrauPorModalidade.containsKey('Via'), isFalse);
+      expect(estadoEmitido!.maxGrauPorModalidade.containsKey('Via'), isFalse);
+      // Grau de Boulder PRESERVADO
+      expect(estadoEmitido!.minGrauPorModalidade['Boulder'], 600);
+      expect(estadoEmitido!.maxGrauPorModalidade['Boulder'], 1200);
+    });
   });
 }
 

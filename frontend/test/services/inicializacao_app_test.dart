@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/painting.dart';
@@ -151,11 +151,49 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
       verify(() => mockImageCache.clear()).called(1);
       verifyNever(() => mockDataset.init());
+    });
+
+    test('coalesce múltiplos eventos push de LiveReload em rápida sucessão', () async {
+      final mockDataset = MockDatasetRepository();
+      final mockSyncSvc = MockSyncService();
+      final mockImageCache = MockImageCache();
+      final editorLocal = EditorDeCroqui();
+
+      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockDataset.init()).thenAnswer((_) async {});
+      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
+
+      registrarOuvintesLiveReload(
+        editorLocal,
+        mockDataset,
+        mockSyncSvc,
+        imageCache: mockImageCache,
+        debounceDuration: const Duration(milliseconds: 40),
+      );
+
+      // Emite 3 eventos seguidos quase instantâneos
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'setor_1',
+        timestamp: DateTime.now(),
+      );
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'setor_2',
+        timestamp: DateTime.now(),
+      );
+      editorLocal.eventoLiveReload.value = LiveReloadEvent(
+        setorId: 'setor_3',
+        timestamp: DateTime.now(),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Deve ter chamado syncIndex apenas 1 vez para o lote
+      verify(() => mockSyncSvc.syncIndex()).called(1);
     });
   });
 }

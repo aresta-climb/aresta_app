@@ -101,6 +101,7 @@ Widget construirPaginaParaNo({
               pico: pico,
               croqui: croqui,
               cragId: cragId,
+              servicoCroquiOnline: datasetRepo.servicoCroquiOnline,
             ),
             scrollToMapaGeral: node.scrollToMapaGeral,
             returnToSetor: returnToSetor,

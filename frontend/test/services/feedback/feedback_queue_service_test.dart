@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
@@ -112,6 +112,7 @@ void main() {
         expect(jsonContent['metadata']['feedbackId'], basenameJson);
         expect(jsonContent['description'], 'Test bug');
         expect(jsonContent['metadata']['os'], 'ios');
+        expect(jsonContent['metadata']['tipo_feedback'], 'app');
         expect(jsonContent['timestamp'], '2026-06-16T21:00:00.000-03:00');
 
         // Verifica registro do Workmanager

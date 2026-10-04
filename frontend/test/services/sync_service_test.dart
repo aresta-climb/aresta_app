@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Testes do SyncService: lógica de extração de imagens markdown e SyncStatus.
@@ -2546,6 +2546,45 @@ void main() {
 
         // 2. A sessão online antiga do pico DEVE ter sido expurgada da RAM
         expect(repo.gerenciadorSessaoOnline.obterCroquiOnline(picoId), isNull);
+      },
+    );
+
+    test(
+      'syncIndex coalesces concurrent calls and reuses the in-flight Future without duplicate HTTP requests',
+      () async {
+        final localIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_coalesce'
+              ..nome = 'Pico Coalesce',
+          );
+        final fakeClient = FakeClient(localIndice, {}, 'etag_coalesce');
+        final syncService =
+            SyncService(datasetRepository: repo, client: fakeClient)
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        // Dispara 3 chamadas concorrentes simultâneas de syncIndex()
+        final future1 = syncService.syncIndex();
+        final future2 = syncService.syncIndex();
+        final future3 = syncService.syncIndex();
+
+        final results = await Future.wait([future1, future2, future3]);
+
+        // Todas as 3 chamadas devem resolver com sucesso
+        expect(results[0], equals(results[1]));
+        expect(results[1], equals(results[2]));
+
+        // FakeClient só deve ter recebido 1 única requisição HTTP para indice.binarypb
+        final indiceRequests = fakeClient.requestedUrls
+            .where((url) => url.endsWith('indice.binarypb'))
+            .length;
+        expect(
+          indiceRequests,
+          equals(1),
+          reason: 'Chamadas simultâneas de syncIndex devem ser coalescidas em uma única requisição',
+        );
       },
     );
   });

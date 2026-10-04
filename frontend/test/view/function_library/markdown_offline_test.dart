@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -125,7 +125,7 @@ void main() {
       // Com a alteração de dados, as imagens anteriores devem ter sido expurgadas do cache
       expect(PaintingBinding.instance.imageCache.liveImageCount, equals(0));
     });
-    testWidgets('Tocar em imagem deve abrir um modal com o botão de bug_report', (
+    testWidgets('Tocar em imagem deve abrir um modal com o botão de feedback', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -153,9 +153,9 @@ void main() {
       // Verifica se o dialog abriu contendo um InteractiveViewer
       expect(find.byType(InteractiveViewer), findsOneWidget);
 
-      // Verifica se o botão de close e o de bug_report estão presentes na sobreposição da imagem
+      // Verifica se o botão de close e o de feedback estão presentes na sobreposição da imagem
       expect(find.byIcon(Icons.close), findsOneWidget);
-      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
 
       // Fecha o dialog
       await tester.tap(find.byIcon(Icons.close));

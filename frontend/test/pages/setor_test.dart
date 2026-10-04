@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -67,10 +67,10 @@ void main() {
   testWidgets('SetorPage re-resolve imagem de capa no didUpdateWidget durante Hot Reload', (tester) async {
     final setor1 = Setor()
       ..nome = 'Setor 1'
-      ..descricao = '![Capa](capa1.webp)';
+      ..caminhoImagemCapa = 'imagens/capa1.webp';
     final setor2 = Setor()
       ..nome = 'Setor 1'
-      ..descricao = '![Capa](capa2.webp)';
+      ..caminhoImagemCapa = 'imagens/capa2.webp';
 
     await tester.pumpWidget(
       MaterialApp(
@@ -86,6 +86,42 @@ void main() {
       ),
     );
     await tester.pump();
+  });
+
+  testWidgets('SetorPage renderiza SliverAppBar expandido de 300px quando caminhoImagemCapa estiver preenchido', (tester) async {
+    final setor = Setor()
+      ..nome = 'Setor Com Capa'
+      ..caminhoImagemCapa = 'imagens/capa.webp';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    final sliverAppBarFinder = find.byType(SliverAppBar);
+    expect(sliverAppBarFinder, findsOneWidget);
+    final sliverAppBar = tester.widget<SliverAppBar>(sliverAppBarFinder);
+    expect(sliverAppBar.expandedHeight, 300.0);
+  });
+
+  testWidgets('SetorPage renderiza SliverAppBar compacto quando não possui caminhoImagemCapa', (tester) async {
+    final setor = Setor()
+      ..nome = 'Setor Sem Capa';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor, cragId: 'crag1'),
+      ),
+    );
+    await tester.pump();
+
+    final sliverAppBarFinder = find.byType(SliverAppBar);
+    expect(sliverAppBarFinder, findsOneWidget);
+    final sliverAppBar = tester.widget<SliverAppBar>(sliverAppBarFinder);
+    expect(sliverAppBar.expandedHeight, isNull);
+    expect(find.text('SETOR SEM CAPA'), findsOneWidget);
   });
 
   testWidgets('SetorPage dispara logAlterarOrdenacao ao alternar critérios de ordenação', (tester) async {

@@ -108,15 +108,24 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
       int total = 0;
-      final bool temFiltroModalidade = u.modalidadesAtivas.isNotEmpty &&
-          (widget.modalidadesDisponiveis.isEmpty ||
-              u.modalidadesAtivas.length < widget.modalidadesDisponiveis.length);
-      if (temFiltroModalidade) total++;
-      final categoriasComFiltroGrau = {
-        ...u.minGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
-        ...u.maxGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
-      };
-      total += categoriasComFiltroGrau.length;
+      if (_isModoSetores) {
+        final bool temFiltroModalidade = u.modalidadesAtivas.isNotEmpty &&
+            (widget.modalidadesDisponiveis.isEmpty ||
+                u.modalidadesAtivas.length < widget.modalidadesDisponiveis.length);
+        if (temFiltroModalidade) total++;
+        final categoriasComFiltroGrau = {
+          ...u.minGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
+          ...u.maxGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
+        };
+        total += categoriasComFiltroGrau.length;
+      } else {
+        final catAba = EstadoFiltrosUnificado.obterCategoriaGrau(_abaEfetiva);
+        final temFiltroGrauCategoria = u.minGrauPorModalidade.keys
+                .any((k) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == catAba) ||
+            u.maxGrauPorModalidade.keys
+                .any((k) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == catAba);
+        if (temFiltroGrauCategoria) total++;
+      }
       total += u.setores.length;
       total += u.grupos.length;
       total += u.conquistadores.length;
@@ -187,7 +196,28 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
   void _limparFiltros() {
     _logTelemetria('limpar_filtros');
     if (_isUnificado) {
-      widget.onFiltrosUnificadosChanged?.call(const EstadoFiltrosUnificado());
+      if (_isModoSetores) {
+        widget.onFiltrosUnificadosChanged?.call(const EstadoFiltrosUnificado());
+      } else {
+        final u = widget.estadoUnificado!;
+        final catAba = EstadoFiltrosUnificado.obterCategoriaGrau(_abaEfetiva);
+        final mins = Map<String, int>.from(u.minGrauPorModalidade)
+          ..remove(catAba)
+          ..removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == catAba);
+        final maxs = Map<String, int>.from(u.maxGrauPorModalidade)
+          ..remove(catAba)
+          ..removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == catAba);
+        final limpo = u.copyWith(
+          minGrauPorModalidade: mins,
+          maxGrauPorModalidade: maxs,
+          clearSetores: true,
+          clearGrupos: true,
+          clearConquistadores: true,
+          apenasClassicas: false,
+          termoBusca: '',
+        );
+        widget.onFiltrosUnificadosChanged?.call(limpo);
+      }
     } else if (widget.estado != null) {
       widget.onFiltrosChanged?.call(const EstadoFiltrosIndice());
     }
@@ -486,8 +516,9 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
 
-      // Modalidades (apenas se for filtro restritivo)
-      if (u.modalidadesAtivas.isNotEmpty &&
+      // Modalidades (apenas se for filtro restritivo na aba Setores)
+      if (_isModoSetores &&
+          u.modalidadesAtivas.isNotEmpty &&
           (widget.modalidadesDisponiveis.isEmpty ||
               u.modalidadesAtivas.length < widget.modalidadesDisponiveis.length)) {
         for (final mod in widget.modalidadesDisponiveis.where((m) => u.modalidadesAtivas.contains(m))) {
@@ -511,10 +542,14 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       }
 
       // Grau (agrupado por categoria: Via e/ou Boulder)
-      final categoriasGrau = {
+      var categoriasGrau = {
         ...u.minGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
         ...u.maxGrauPorModalidade.keys.map(EstadoFiltrosUnificado.obterCategoriaGrau),
       };
+      if (!_isModoSetores) {
+        final catAba = EstadoFiltrosUnificado.obterCategoriaGrau(_abaEfetiva);
+        categoriasGrau = categoriasGrau.where((c) => c == catAba).toSet();
+      }
       final bool temMultiplasCategorias = widget.modalidadesDisponiveis
               .map(EstadoFiltrosUnificado.obterCategoriaGrau)
               .toSet()

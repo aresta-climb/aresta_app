@@ -657,11 +657,15 @@ void main() {
 
       test('obterCategoriaGrau mapeia corretamente para Via ou Boulder', () {
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('Esportiva'), 'Via');
+        expect(EstadoFiltrosUnificado.obterCategoriaGrau('Esportivas'), 'Via');
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('Tradicional'), 'Via');
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('Top Rope'), 'Via');
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('Artificial'), 'Via');
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('Boulder'), 'Boulder');
+        expect(EstadoFiltrosUnificado.obterCategoriaGrau('Boulders'), 'Boulder');
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('boulder'), 'Boulder');
+        expect(EstadoFiltrosUnificado.obterCategoriaGrau('boulders'), 'Boulder');
+        expect(EstadoFiltrosUnificado.obterCategoriaGrau('BOULDER'), 'Boulder');
       });
 
       test('filtro de grau com chave "Via" restringe todas as modalidades de via sem afetar boulders', () {

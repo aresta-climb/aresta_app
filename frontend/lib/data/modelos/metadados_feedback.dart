@@ -5,6 +5,8 @@
 /// Contém as propriedades estruturadas e a serialização direta de/para JSON.
 library;
 
+import 'tipo_feedback.dart';
+
 class FeedbackMetadata {
   final String navigationTree;
   final String submittedAt;
@@ -19,6 +21,9 @@ class FeedbackMetadata {
   final String deviceOrientation;
   final String isDarkMode;
   final String connectivity;
+
+  /// Categoria do feedback ('croqui' ou 'app').
+  final TipoFeedback tipoFeedback;
 
   /// Checksum SHA-256 do arquivo `indice.binarypb` local.
   final String? indiceSha256;
@@ -58,6 +63,7 @@ class FeedbackMetadata {
     required this.deviceOrientation,
     required this.isDarkMode,
     required this.connectivity,
+    this.tipoFeedback = TipoFeedback.aplicativo,
     this.indiceSha256,
     this.croquiId,
     this.croquiSha256Esperado,
@@ -84,6 +90,9 @@ class FeedbackMetadata {
       deviceOrientation: json['deviceOrientation'] as String? ?? 'unknown',
       isDarkMode: json['isDarkMode'] as String? ?? 'unknown',
       connectivity: json['connectivity'] as String? ?? 'unknown',
+      tipoFeedback: TipoFeedback.fromString(
+        (json['tipo_feedback'] ?? json['tipoFeedback']) as String?,
+      ),
       indiceSha256: (json['indice_sha256'] ?? json['indiceSha256']) as String?,
       croquiId: (json['croqui_id'] ?? json['croquiId']) as String?,
       croquiSha256Esperado: (json['croqui_sha256_esperado'] ?? json['croquiSha256Esperado']) as String?,
@@ -111,6 +120,7 @@ class FeedbackMetadata {
       'deviceOrientation': deviceOrientation,
       'isDarkMode': isDarkMode,
       'connectivity': connectivity,
+      'tipo_feedback': tipoFeedback.valor,
       if (indiceSha256 != null) 'indice_sha256': indiceSha256,
       if (croquiId != null) 'croqui_id': croquiId,
       if (croquiSha256Esperado != null) 'croqui_sha256_esperado': croquiSha256Esperado,
@@ -121,4 +131,109 @@ class FeedbackMetadata {
       if (thumbnailStatus != null) 'thumbnail_status': thumbnailStatus,
     };
   }
+
+  /// Retorna uma nova instância de [FeedbackMetadata] substituindo os campos especificados.
+  FeedbackMetadata copyWith({
+    String? navigationTree,
+    String? submittedAt,
+    String? submittedAtTimestamp,
+    String? feedbackId,
+    String? appInstanceId,
+    String? os,
+    String? osVersion,
+    String? deviceModel,
+    String? appVersion,
+    String? screenSize,
+    String? deviceOrientation,
+    String? isDarkMode,
+    String? connectivity,
+    TipoFeedback? tipoFeedback,
+    String? indiceSha256,
+    String? croquiId,
+    String? croquiSha256Esperado,
+    String? croquiSha256Real,
+    String? croquiStatus,
+    String? thumbnailSha256Esperado,
+    String? thumbnailSha256Real,
+    String? thumbnailStatus,
+  }) {
+    return FeedbackMetadata(
+      navigationTree: navigationTree ?? this.navigationTree,
+      submittedAt: submittedAt ?? this.submittedAt,
+      submittedAtTimestamp: submittedAtTimestamp ?? this.submittedAtTimestamp,
+      feedbackId: feedbackId ?? this.feedbackId,
+      appInstanceId: appInstanceId ?? this.appInstanceId,
+      os: os ?? this.os,
+      osVersion: osVersion ?? this.osVersion,
+      deviceModel: deviceModel ?? this.deviceModel,
+      appVersion: appVersion ?? this.appVersion,
+      screenSize: screenSize ?? this.screenSize,
+      deviceOrientation: deviceOrientation ?? this.deviceOrientation,
+      isDarkMode: isDarkMode ?? this.isDarkMode,
+      connectivity: connectivity ?? this.connectivity,
+      tipoFeedback: tipoFeedback ?? this.tipoFeedback,
+      indiceSha256: indiceSha256 ?? this.indiceSha256,
+      croquiId: croquiId ?? this.croquiId,
+      croquiSha256Esperado: croquiSha256Esperado ?? this.croquiSha256Esperado,
+      croquiSha256Real: croquiSha256Real ?? this.croquiSha256Real,
+      croquiStatus: croquiStatus ?? this.croquiStatus,
+      thumbnailSha256Esperado: thumbnailSha256Esperado ?? this.thumbnailSha256Esperado,
+      thumbnailSha256Real: thumbnailSha256Real ?? this.thumbnailSha256Real,
+      thumbnailStatus: thumbnailStatus ?? this.thumbnailStatus,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is FeedbackMetadata &&
+        other.navigationTree == navigationTree &&
+        other.submittedAt == submittedAt &&
+        other.submittedAtTimestamp == submittedAtTimestamp &&
+        other.feedbackId == feedbackId &&
+        other.appInstanceId == appInstanceId &&
+        other.os == os &&
+        other.osVersion == osVersion &&
+        other.deviceModel == deviceModel &&
+        other.appVersion == appVersion &&
+        other.screenSize == screenSize &&
+        other.deviceOrientation == deviceOrientation &&
+        other.isDarkMode == isDarkMode &&
+        other.connectivity == connectivity &&
+        other.tipoFeedback == tipoFeedback &&
+        other.indiceSha256 == indiceSha256 &&
+        other.croquiId == croquiId &&
+        other.croquiSha256Esperado == croquiSha256Esperado &&
+        other.croquiSha256Real == croquiSha256Real &&
+        other.croquiStatus == croquiStatus &&
+        other.thumbnailSha256Esperado == thumbnailSha256Esperado &&
+        other.thumbnailSha256Real == thumbnailSha256Real &&
+        other.thumbnailStatus == thumbnailStatus;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        navigationTree,
+        submittedAt,
+        submittedAtTimestamp,
+        feedbackId,
+        appInstanceId,
+        os,
+        osVersion,
+        deviceModel,
+        appVersion,
+        screenSize,
+        deviceOrientation,
+        isDarkMode,
+        connectivity,
+        tipoFeedback,
+        indiceSha256,
+        croquiId,
+        croquiSha256Esperado,
+        croquiSha256Real,
+        croquiStatus,
+        thumbnailSha256Esperado,
+        thumbnailSha256Real,
+        thumbnailStatus,
+      ]);
 }

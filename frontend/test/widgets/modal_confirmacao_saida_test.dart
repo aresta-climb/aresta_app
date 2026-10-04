@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -43,7 +43,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('SALVAR PARA A PEDRA?'), findsOneWidget);
-      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
       expect(
         find.text(
           'Lembre-se: na rocha não há sinal de internet. Para consultar os croquis e graus de Gruta do Baú sem conexão, salve o guia offline.',

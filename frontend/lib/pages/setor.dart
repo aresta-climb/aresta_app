@@ -1,14 +1,12 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/setor_functions.dart';
 import '../view/function_library/via_functions.dart';
 import '../theme/cores_app.dart';
-import '../view/function_library/funcoes_explorar.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetria.dart';
 import '../widgets/mapa_thumbnail.dart';
@@ -96,28 +94,18 @@ class _SetorPageState extends State<SetorPage> {
     });
   }
 
+  bool get _temCapa =>
+      widget.setor.hasCaminhoImagemCapa() &&
+      widget.setor.caminhoImagemCapa.isNotEmpty;
+
   Future<ImageProvider?> _resolveCoverImage() async {
-    // Tenta encontrar uma imagem Markdown aleatória
-    final String jsonString = jsonEncode(widget.setor.toProto3Json());
-    final RegExp regex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final matches = regex.allMatches(jsonString);
-    List<String> paths = [];
-
-    for (var match in matches) {
-      if (match.groupCount >= 1) {
-        String path = match.group(1)!;
-        if (!path.startsWith('http')) {
-          paths.add(path);
-        }
-      }
+    if (_temCapa) {
+      return resolveImagePathProvider(
+        widget.cragId,
+        widget.setor.caminhoImagemCapa,
+        larguraAlvo: 600,
+      );
     }
-
-    if (paths.isNotEmpty) {
-      final firstPath = paths.first;
-      return resolveImagePathProvider(widget.cragId, firstPath, larguraAlvo: 600);
-    }
-
-    // Se não encontrou imagens, retorna null para fazer fallback pra capa principal
     return null;
   }
 
@@ -157,35 +145,46 @@ class _SetorPageState extends State<SetorPage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300.0,
+            expandedHeight: _temCapa ? 300.0 : null,
             pinned: true,
             backgroundColor: context.colors.deepBasalt,
             iconTheme: IconThemeData(color: context.colors.chalkWhite),
+            title: !_temCapa
+                ? Text(
+                    widget.setor.nome.toUpperCase(),
+                    style: const TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : null,
+            centerTitle: false,
             actions: [
               buildFeedbackButton(context, color: context.colors.chalkWhite),
               const SizedBox(width: 8),
             ],
-            flexibleSpace: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final top = constraints.biggest.height;
-                final collapsedHeight =
-                    MediaQuery.of(context).padding.top + kToolbarHeight;
-                final expandedHeight = 300.0;
-                // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
-                // Usamos isso para animar manualmente o padding e o tamanho da fonte.
-                double t =
-                    (top - collapsedHeight) /
-                    (expandedHeight - collapsedHeight);
-                t = t.clamp(0.0, 1.0); // 1.0 = expanded, 0.0 = collapsed
+            flexibleSpace: _temCapa
+                ? LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      final top = constraints.biggest.height;
+                      final collapsedHeight =
+                          MediaQuery.of(context).padding.top + kToolbarHeight;
+                      const expandedHeight = 300.0;
+                      // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
+                      // Usamos isso para animar manualmente o padding e o tamanho da fonte.
+                      double t =
+                          (top - collapsedHeight) /
+                          (expandedHeight - collapsedHeight);
+                      t = t.clamp(0.0, 1.0); // 1.0 = expanded, 0.0 = collapsed
 
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    FlexibleSpaceBar(
-                      background:
-                          widget.setor.mapas.isNotEmpty &&
-                              _coverProviderFuture != null
-                          ? FutureBuilder<ImageProvider?>(
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          FlexibleSpaceBar(
+                            background: FutureBuilder<ImageProvider?>(
                               future: _coverProviderFuture,
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
@@ -201,7 +200,8 @@ class _SetorPageState extends State<SetorPage> {
                                       Image(
                                         image: snapshot.data!,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const SizedBox.shrink(),
                                       ),
                                       Positioned(
                                         top: 0,
@@ -252,115 +252,39 @@ class _SetorPageState extends State<SetorPage> {
                                     ],
                                   );
                                 }
-                                // Se não encontrou imagem local, exibe a capa do croqui
-                                return Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    buildCragBackground(
-                                      '',
-                                      cragId: widget.cragId,
-                                    ),
-                                    Positioned(
-                                      top: 0,
-                                      left: 0,
-                                      right: 0,
-                                      height: 200,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Colors.black,
-                                              Colors.black.withValues(
-                                                alpha: 0.7,
-                                              ),
-                                              Colors.transparent,
-                                            ],
-                                            stops: const [0.0, 0.4, 1.0],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      height: 200,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.bottomCenter,
-                                            end: Alignment.topCenter,
-                                            colors: [
-                                              Colors.black.withValues(
-                                                alpha: 0.9,
-                                              ),
-                                              Colors.black.withValues(
-                                                alpha: 0.6,
-                                              ),
-                                              Colors.transparent,
-                                            ],
-                                            stops: const [0.0, 0.4, 1.0],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                return Container(
+                                  color: context.colors.deepBasalt,
                                 );
                               },
-                            )
-                          : Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                buildCragBackground('', cragId: widget.cragId),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  height: 150,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.bottomCenter,
-                                        end: Alignment.topCenter,
-                                        colors: [
-                                          Colors.black.withValues(alpha: 0.8),
-                                          Colors.transparent,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
-                    ),
-                    Positioned(
-                      // Anima a margem esquerda de 16 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
-                      left: 16 + (56 * (1 - t)),
-                      // Anima a margem direita para dar espaço ao botão de feedback.
-                      right:
-                          16 + (72 * (1 - t)), // Make room for feedback button
-                      bottom: 16,
-                      child: Text(
-                        widget.setor.nome.toUpperCase(),
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          // A fonte diminui suavemente de 28 para 20.
-                          fontSize: 20 + (8 * t),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                          color: Colors.white,
-                        ),
-                        // Força para 1 linha a partir da metade do scroll para evitar que o texto bata na status bar.
-                        maxLines: t > 0.5 ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                          ),
+                          Positioned(
+                            // Anima a margem esquerda de 16 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
+                            left: 16 + (56 * (1 - t)),
+                            // Anima a margem direita para dar espaço ao botão de feedback.
+                            right:
+                                16 + (72 * (1 - t)), // Make room for feedback button
+                            bottom: 16,
+                            child: Text(
+                              widget.setor.nome.toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: 'BebasNeue',
+                                // A fonte diminui suavemente de 28 para 20.
+                                fontSize: 20 + (8 * t),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                                color: Colors.white,
+                              ),
+                              // Força para 1 linha a partir da metade do scroll para evitar que o texto bata na status bar.
+                              maxLines: t > 0.5 ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                : null,
           ),
           SliverToBoxAdapter(
             child: SafeArea(

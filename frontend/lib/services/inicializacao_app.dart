@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -81,41 +81,46 @@ void registrarOuvintesLiveReload(
   SyncService syncService, {
   ServicoCroquiOnline? servicoCroquiOnline,
   ImageCache? imageCache,
+  Duration debounceDuration = const Duration(milliseconds: 50),
 }) {
-  editor.eventoLiveReload.addListener(() async {
+  Timer? debounceTimer;
+  editor.eventoLiveReload.addListener(() {
     final evento = editor.eventoLiveReload.value;
     if (evento != null) {
-      AppLogger.instance.logInfo(
-        '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
-      );
-      await syncService.syncIndex();
-
-      // Recarrega sob demanda croquis que estejam abertos em sessão online
-      final servicoOnline = servicoCroquiOnline ??
-          ServicoCroquiOnline(sessaoOnline: datasetRepo.gerenciadorSessaoOnline);
-      final croquisOnlineIds =
-          datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.keys.toList();
-      for (final picoId in croquisOnlineIds) {
-        final picosDisponiveis =
-            datasetRepo.activeDataset.value?.picosDisponiveis ?? [];
-        final picoItem = picosDisponiveis.firstWhere(
-          (p) => p.id == picoId,
-          orElse: () => const ResumoPico(id: '', nome: '', local: ''),
+      debounceTimer?.cancel();
+      debounceTimer = Timer(debounceDuration, () async {
+        AppLogger.instance.logInfo(
+          '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
         );
-        final url = picoItem.url;
-        if (url.isNotEmpty) {
-          await servicoOnline.recarregarCroquiOnline(url, picoId: picoId);
-          datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+        await syncService.syncIndex();
+
+        // Recarrega sob demanda croquis que estejam abertos em sessão online
+        final servicoOnline = servicoCroquiOnline ??
+            ServicoCroquiOnline(sessaoOnline: datasetRepo.gerenciadorSessaoOnline);
+        final croquisOnlineIds =
+            datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.keys.toList();
+        for (final picoId in croquisOnlineIds) {
+          final picosDisponiveis =
+              datasetRepo.activeDataset.value?.picosDisponiveis ?? [];
+          final picoItem = picosDisponiveis.firstWhere(
+            (p) => p.id == picoId,
+            orElse: () => const ResumoPico(id: '', nome: '', local: ''),
+          );
+          final url = picoItem.url;
+          if (url.isNotEmpty) {
+            await servicoOnline.recarregarCroquiOnline(url, picoId: picoId);
+            datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+          }
         }
-      }
 
-      // Purgação cirúrgica do cache inativo do Flutter sem descartar texturas ativas da GPU
-      final cache = imageCache ?? PaintingBinding.instance.imageCache;
-      cache.clear();
+        // Purgação cirúrgica do cache inativo do Flutter sem descartar texturas ativas da GPU
+        final cache = imageCache ?? PaintingBinding.instance.imageCache;
+        cache.clear();
 
-      AppLogger.instance.logInfo(
-        '⚡ [LiveReload] Sincronização automática concluída!',
-      );
+        AppLogger.instance.logInfo(
+          '⚡ [LiveReload] Sincronização automática concluída!',
+        );
+      });
     }
   });
 }

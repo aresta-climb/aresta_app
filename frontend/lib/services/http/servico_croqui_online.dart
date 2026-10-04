@@ -18,6 +18,7 @@ class ServicoCroquiOnline {
   final GerenciadorSessaoOnline _sessaoOnline;
   final String? _caminhoCacheVolatil;
   final bool Function(String picoId)? _verificarPicoBaixado;
+  final bool Function()? _verificarLiveReloadAtivo;
   final void Function(String picoId, Croqui croqui)? _aoAtualizarCroqui;
 
   final Map<String, Timer> _timersPolling = {};
@@ -27,11 +28,13 @@ class ServicoCroquiOnline {
     required GerenciadorSessaoOnline sessaoOnline,
     String? caminhoCacheVolatil,
     bool Function(String picoId)? verificarPicoBaixado,
+    bool Function()? verificarLiveReloadAtivo,
     void Function(String picoId, Croqui croqui)? aoAtualizarCroqui,
   })  : _client = client ?? http.Client(),
         _sessaoOnline = sessaoOnline,
         _caminhoCacheVolatil = caminhoCacheVolatil,
         _verificarPicoBaixado = verificarPicoBaixado,
+        _verificarLiveReloadAtivo = verificarLiveReloadAtivo,
         _aoAtualizarCroqui = aoAtualizarCroqui;
 
   /// Retorna a instância do gerenciador de sessão online.
@@ -213,6 +216,14 @@ class ServicoCroquiOnline {
     if (_sessaoOnline.obterCroquiOnline(picoId) == null) {
       cancelarPolling(picoId);
       AppLogger.instance.logInfo('[ServicoCroquiOnline] Cancelando polling de ETag: pico $picoId não possui sessão online ativa.');
+      return false;
+    }
+
+    // Se o canal push de Live Reload via WebSocket estiver conectado, mantém o polling dormente
+    if (_verificarLiveReloadAtivo != null && _verificarLiveReloadAtivo()) {
+      AppLogger.instance.logInfo(
+        '[ServicoCroquiOnline] Polling de ETag dormente para $picoId: WebSocket de Live Reload conectado.',
+      );
       return false;
     }
 

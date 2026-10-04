@@ -865,6 +865,55 @@ void main() {
       expect(find.textContaining('MG • 0 SETORES'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'PicoDetailsPage atualiza _viewModel e remove ouvintes do antigo ao receber novo viewModel via didUpdateWidget',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final pico1 = Pico()..nome = 'Pico 1'..estado = 'MG';
+      final vm1 = PicoViewModel(
+        pico: pico1,
+        croqui: Croqui(),
+        cragId: 'crag_1',
+        datasetRepo: datasetRepo,
+      );
+
+      final pico2 = Pico()..nome = 'Pico 2'..estado = 'RJ';
+      final vm2 = PicoViewModel(
+        pico: pico2,
+        croqui: Croqui(),
+        cragId: 'crag_2',
+        datasetRepo: datasetRepo,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(
+              viewModel: vm1,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('PICO 1'), findsOneWidget);
+
+      // Atualiza a página com vm2
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(
+              viewModel: vm2,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('PICO 2'), findsOneWidget);
+    },
+  );
 }
 
 

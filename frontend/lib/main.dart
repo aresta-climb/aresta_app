@@ -1,6 +1,7 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
@@ -65,10 +66,14 @@ void main() async {
   final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
   final syncService = SyncService(datasetRepository: datasetRepo);
 
-  // Escuta mudanças de modo para re-sincronizar de forma atômica
-  void onModeChange() async {
-    await datasetRepo.init();
-    syncService.syncIndex();
+  // Escuta mudanças de modo para re-sincronizar de forma atômica com debounce
+  Timer? debounceModo;
+  void onModeChange() {
+    debounceModo?.cancel();
+    debounceModo = Timer(const Duration(milliseconds: 50), () async {
+      await datasetRepo.init();
+      syncService.syncIndex();
+    });
   }
 
   editorDeCroqui.editorUrl.addListener(onModeChange);

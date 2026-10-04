@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -865,7 +865,7 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
       verifyNever(() => mockDataset.init());
@@ -911,7 +911,7 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
       verifyNever(() => mockDataset.init());
@@ -944,7 +944,7 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       verify(() => mockSyncSvc.syncIndex()).called(1);
       verify(() => mockImageCache.clear()).called(1);

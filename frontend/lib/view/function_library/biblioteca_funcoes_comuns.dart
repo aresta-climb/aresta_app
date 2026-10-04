@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -33,7 +33,7 @@ Color get weatheredIron => _currentColors.weatheredIron;
 
 Widget buildFeedbackButton(BuildContext context, {Color? color}) {
   return IconButton(
-    icon: Icon(Icons.bug_report, color: color ?? Colors.black),
+    icon: Icon(Icons.warning_amber_rounded, color: color ?? Colors.black),
     tooltip: 'Enviar Feedback/Bug',
     onPressed: () {
       if (!FeedbackOrchestrator.isConfigured) {

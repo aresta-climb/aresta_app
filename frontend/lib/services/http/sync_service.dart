@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -347,13 +347,36 @@ class SyncService {
     return false;
   }
 
+  Future<List<String>>? _activeSyncFuture;
+
   /// Sincroniza o índice mestre com o servidor remoto.
   ///
   /// Se um novo índice estiver disponível, ele atualiza o cache local e aciona
   /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
   /// inacessível, ele reverte para o índice em cache local.
   /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
+  /// Chamadas concorrentes são coalescidas para evitar requisições de rede duplicadas.
   Future<List<String>> syncIndex({
+    bool auto = true,
+    bool forceBypassCache = false,
+  }) {
+    if (_activeSyncFuture != null && !forceBypassCache) {
+      return _activeSyncFuture!;
+    }
+
+    final future = _executarSyncIndex(
+      auto: auto,
+      forceBypassCache: forceBypassCache,
+    );
+    _activeSyncFuture = future;
+    return future.whenComplete(() {
+      if (_activeSyncFuture == future) {
+        _activeSyncFuture = null;
+      }
+    });
+  }
+
+  Future<List<String>> _executarSyncIndex({
     bool auto = true,
     bool forceBypassCache = false,
   }) async {

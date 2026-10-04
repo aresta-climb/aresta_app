@@ -1,8 +1,9 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/metadados_feedback.dart';
+import 'package:frontend/data/modelos/tipo_feedback.dart';
 
 void main() {
   group('FeedbackMetadata', () {
@@ -124,6 +125,41 @@ void main() {
       expect(metadata.deviceOrientation, 'unknown');
       expect(metadata.isDarkMode, 'unknown');
       expect(metadata.connectivity, 'unknown');
+      expect(metadata.tipoFeedback, TipoFeedback.aplicativo);
+    });
+
+    test('toJson e fromJson preservam tipoFeedback como croqui', () {
+      final json = {
+        'tipo_feedback': 'croqui',
+      };
+
+      final metadata = FeedbackMetadata.fromJson(json);
+      expect(metadata.tipoFeedback, TipoFeedback.croqui);
+      expect(metadata.toJson()['tipo_feedback'], 'croqui');
+    });
+
+    test('copyWith altera propriedades corretamente mantendo as demais', () {
+      const original = FeedbackMetadata(
+        navigationTree: 'Nav',
+        submittedAt: 'sub',
+        submittedAtTimestamp: 'ts',
+        feedbackId: 'id',
+        appInstanceId: 'inst',
+        os: 'os',
+        osVersion: 'v',
+        deviceModel: 'model',
+        appVersion: 'appV',
+        screenSize: 'screen',
+        deviceOrientation: 'ori',
+        isDarkMode: 'dark',
+        connectivity: 'conn',
+        tipoFeedback: TipoFeedback.aplicativo,
+      );
+
+      final alterado = original.copyWith(tipoFeedback: TipoFeedback.croqui);
+      expect(alterado.tipoFeedback, TipoFeedback.croqui);
+      expect(alterado.feedbackId, 'id');
+      expect(alterado.navigationTree, 'Nav');
     });
   });
 }

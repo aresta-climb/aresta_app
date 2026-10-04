@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -86,6 +86,9 @@ class EditorDeCroqui {
   }
 
   WebSocket? _wsLiveReload;
+
+  /// Indica se o canal WebSocket de Live Reload está ativamente conectado.
+  bool get isLiveReloadConectado => _wsLiveReload != null;
 
   EditorDeCroqui() {
     _instance = this;

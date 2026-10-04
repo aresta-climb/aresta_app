@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Suíte de testes de funções utilitárias.
@@ -175,7 +175,7 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('buildCommonAppBar', () {
-    testWidgets('deve conter o botão de feedback (bug_report)', (
+    testWidgets('deve conter o botão de feedback (warning_amber_rounded)', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -192,7 +192,7 @@ void main() {
       );
 
       expect(find.text('Test Title'), findsOneWidget);
-      expect(find.byIcon(Icons.bug_report), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
 
     testWidgets(
@@ -221,7 +221,7 @@ void main() {
         );
 
         expect(find.byIcon(Icons.settings), findsOneWidget);
-        expect(find.byIcon(Icons.bug_report), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
       },
     );
 
@@ -243,7 +243,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.bug_report));
+      await tester.tap(find.byIcon(Icons.warning_amber_rounded));
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
@@ -278,7 +278,7 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byIcon(Icons.bug_report));
+        await tester.tap(find.byIcon(Icons.warning_amber_rounded));
         await tester
             .pumpAndSettle(); // Aguarda a animação de abertura do BetterFeedback terminar
 
@@ -320,7 +320,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.bug_report));
+      await tester.tap(find.byIcon(Icons.warning_amber_rounded));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents.contains('acao_feedback'), isTrue);

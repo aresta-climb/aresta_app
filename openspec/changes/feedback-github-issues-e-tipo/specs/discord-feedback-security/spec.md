@@ -11,16 +11,16 @@ A Edge Function `app-feedback` do Supabase DEVE (MUST) tratar respostas de limit
 - **QUANDO** a API do GitHub permanecer indisponível ou rejeitar a requisição após a retentativa
 - **ENTÃO** a Edge Function responde com `HTTP 503 Service Unavailable`, permitindo que a fila persistente local do aplicativo execute retentativas posteriores com backoff exponencial.
 
-### Requirement: Anexação e Repasse de Binários de Diagnóstico para Download no Discord
-O aplicativo DEVE (MUST) anexar ao formulário multipart do feedback os arquivos binários locais `indice.binarypb` e o `compilado.binarypb` do pico em visualização (quando disponível). A Edge Function `app-feedback` do Supabase DEVE (MUST) aceitar esses arquivos multipart adicionais e disponibilizá-los para download direto na issue do GitHub criada no repositório `aresta_db`.
+### Requirement: Anexação de Captura de Tela e Repasse de Binários de Diagnóstico para Download na Issue do GitHub
+O aplicativo DEVE (MUST) anexar ao formulário multipart do feedback a captura de tela `screenshot` (PNG), os arquivos binários locais `indice.binarypb` e o `compilado.binarypb` do pico em visualização (quando disponível). A Edge Function `app-feedback` do Supabase DEVE (MUST) aceitar esses arquivos multipart adicionais, realizar o upload seguro para o bucket público `feedback_anexos` no Supabase Storage e disponibilizá-los diretamente como imagem embutida e links de download direto no corpo da issue do GitHub criada no repositório `aresta_db`.
 
-#### Scenario: Anexo e transmissão dos binários pelo aplicativo
+#### Scenario: Anexo e transmissão da captura e dos binários pelo aplicativo
 - **WHEN** o formulário de feedback é despachado pelo aplicativo com um croqui aberto
-- **THEN** a requisição multipart inclui os campos de arquivo `indice_file` (contendo o `indice.binarypb`) e `croqui_file` (contendo o `compilado.binarypb`).
+- **THEN** a requisição multipart inclui os campos de arquivo `screenshot` (contendo a captura anotada), `indice_file` (contendo o `indice.binarypb`) e `croqui_file` (contendo o `compilado.binarypb`).
 
-#### Scenario: Disponibilização dos binários no canal do Discord
-- **WHEN** a Edge Function `app-feedback` processa a requisição contendo os binários adicionais
-- **THEN** realiza o upload dos binários para armazenamento acessível e anexa os links de download direto no corpo da issue do GitHub criada no repositório `aresta_db`.
+#### Scenario: Disponibilização da imagem e dos binários na Issue do GitHub
+- **WHEN** a Edge Function `app-feedback` processa a requisição contendo os arquivos adicionais
+- **THEN** realiza o upload dos binários para o bucket `feedback_anexos` no Supabase Storage e anexa a imagem da captura de tela e os links de download direto no corpo da issue do GitHub criada no repositório `aresta_db`.
 
 ## ADDED Requirements
 
