@@ -23,6 +23,8 @@ lib/view/
 │   ├── funcoes_configuracoes.dart   - Conexão com Editor Desktop, QR Code e temas
 │   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
 │   ├── markdown_offline.dart     - Renderização de Markdown com imagens em disco
+│   ├── sintaxe_tag_small.dart    - Sintaxe inline para reconhecimento de tags <small>
+│   ├── construtor_elemento_small.dart - Construtor visual de elementos de fonte reduzida
 │   ├── gps_functions.dart        - Utilitários de geolocalização e mapas
 │   └── mapa/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
@@ -49,7 +51,7 @@ Os arquivos da `function_library` são coleções de funções puras e construto
 - **Desacoplamento e Testabilidade**: Ao isolar construtores de UI em funções especializadas, os testes de widget podem ser executados isoladamente sem necessidade de instanciar scaffolds complexos ou navegação global.
 - **Formatação de Domínio**: Utilitários como `getGrauString` e `getGrauValue` (em `via_functions.dart`) realizam a conversão limpa dos enums Protobuf para a notação de graduação brasileira (esportiva, boulder, móvel).
 - **Marcadores Customizados**: O módulo `mapa/mapa_marker.dart` utiliza a API do `Canvas` e `Path` nativos do Flutter para gerar mapas de bits (`BitmapDescriptor`) com o logotipo do Aresta, adaptando o tamanho dinamicamente conforme a densidade de pixels do dispositivo.
-- **Suporte Offline**: O componente `markdown_offline.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`), mantendo o compromisso de funcionamento 100% offline.
+- **Suporte Offline e Markdown Enriquecido**: O componente `markdown_offline.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`), mantendo o compromisso de funcionamento 100% offline. Além disso, com os módulos `sintaxe_tag_small.dart` e `construtor_elemento_small.dart`, o aplicativo suporta nativamente a tag HTML semântica `<small>` para textos e notas com escala reduzida (80%), preservando alinhamento de linha de base e formatação aninhada.
 
 ---
 

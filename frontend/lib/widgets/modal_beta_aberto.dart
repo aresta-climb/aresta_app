@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,6 +9,8 @@ import '../services/firebase/remote_config.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
 import '../services/firebase/app_logger.dart';
+import 'feedback/construtor_feedback_usuario.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
 
 /// Exibe o modal explicativo da fase de Beta Aberto como um Bottom Sheet personalizado.
 ///
@@ -251,11 +253,22 @@ class ModalBetaAberto extends StatelessWidget {
                       'clique_feedback',
                       canal: 'feedback',
                     );
+                    final temCroqui = temCroquiAtivoNaArvore(context);
+                    final cragId = obterCragIdAtivoNaArvore();
+                    TelemetryService.instance.logAcaoFeedback(
+                      'abrir_feedback',
+                      origem: 'modal_beta',
+                      temCroqui: temCroqui,
+                      idCroqui: cragId,
+                    );
                     Navigator.of(context).pop();
                     if (onFeedbackSolicitado != null) {
                       onFeedbackSolicitado!();
                     } else {
-                      BetterFeedback.of(context).show((UserFeedback feedback) {});
+                      GerenciadorFeedbackSheet.sincronizarDimensoes(context);
+                      BetterFeedback.of(context).show((UserFeedback feedback) async {
+                        await processFeedbackSubmission(context, feedback);
+                      });
                     }
                   },
                 ),

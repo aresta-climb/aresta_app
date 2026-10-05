@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,6 +9,8 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../widgets/provedor_imagem_aresta.dart';
 import 'biblioteca_funcoes_comuns.dart';
+import 'construtor_elemento_small.dart';
+import 'sintaxe_tag_small.dart';
 
 /// Um widget que renderiza conteúdo Markdown com suporte a imagens offline locais.
 ///
@@ -50,6 +52,8 @@ class _OfflineMarkdownState extends State<OfflineMarkdown> {
     return MarkdownBody(
           data: markdownData,
           extensionSet: md.ExtensionSet.gitHubFlavored,
+          inlineSyntaxes: [SintaxeTagSmall()],
+          builders: {'small': ConstrutorElementoSmall()},
           onTapLink: (text, href, title) async {
             if (href != null) {
               TelemetryService.instance.logLinkExterno(

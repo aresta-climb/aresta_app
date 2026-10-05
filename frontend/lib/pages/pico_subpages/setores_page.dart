@@ -10,7 +10,6 @@ import '../../utils/filtro_grau_escalada.dart';
 import '../../utils/indexador_escaladas.dart';
 import '../../view/function_library/pico_functions.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../../widgets/barra_ordenacao_exploracao.dart';
 import '../../widgets/card_indice_escalada.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../services/gerenciador_filtros_croqui.dart';
@@ -399,25 +398,6 @@ class _SetoresPageState extends State<SetoresPage>
                   conquistadoresDisponiveis: _obterConquistadoresDisponiveis(abaAtual),
                   temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
                   onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
-                ),
-
-                // Barra de Ordenação com Tríade [PADRÃO | GRAU | ALFABÉTICO] e Alternador de Direção [▲ / ▼]
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: BarraOrdenacaoExploracao(
-                    ordenacaoAtual: _estadoFiltros.tipoOrdenacao,
-                    direcaoCrescente: _estadoFiltros.direcaoCrescente,
-                    onOrdenacaoChanged: (novoModo) {
-                      _atualizarEstadoFiltros(
-                        _estadoFiltros.copyWith(tipoOrdenacao: novoModo),
-                      );
-                    },
-                    onDirecaoChanged: (novaDirecao) {
-                      _atualizarEstadoFiltros(
-                        _estadoFiltros.copyWith(direcaoCrescente: novaDirecao),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),

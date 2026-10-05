@@ -335,6 +335,40 @@ void main() {
         expect(find.textContaining('Esportiva |'), findsNothing);
       },
     );
+
+    testWidgets(
+      'renderiza a descrição do setor diretamente sem exibir cabeçalho "Descrição"',
+      (WidgetTester tester) async {
+        final setor = Setor(
+          nome: 'Setor Cachoeira',
+          descricao: 'Texto descritivo com detalhes de acesso e sol da tarde.',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildSetorBody(
+                  context,
+                  setor,
+                  'crag_teste',
+                  [],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // O cabeçalho redundante "Descrição" não deve ser renderizado
+        expect(find.text('Descrição'), findsNothing);
+        // O conteúdo descritivo deve ser renderizado normalmente
+        expect(
+          find.text('Texto descritivo com detalhes de acesso e sol da tarde.'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
 

@@ -21,7 +21,9 @@ Esta pasta contém testes unitários das funções utilitárias compartilhadas e
 | `comunidade_functions_test.dart` | Hub Comunitário | Testa a montagem de links de redes sociais, canais Discord e grupos WhatsApp. |
 | `sobre_time_functions_test.dart` | `carregarMembrosTime`, `buildTeamMemberCard` | Testa o carregamento tipado de membros (`MembroTime`) e a renderização dos cartões no Sobre Nós. |
 | `funcoes_configuracoes_test.dart` | Configurações e Dev Mode | Testa a validação de QR Code, conexão com o Editor Desktop e alternância de temas. |
-| `markdown_offline_test.dart` | Visualizador Offline | Testa a interceptação de imagens embutidas em Markdown para leitura direta do sistema de arquivos local. |
+| `markdown_offline_test.dart` | Visualizador Offline | Testa a interceptação de imagens embutidas em Markdown para leitura direta do sistema de arquivos local e renderização de tags semânticas (<small>). |
+| `sintaxe_tag_small_test.dart` | Sintaxe Tag Small | Testa a identificação e parsing recursivo de tags <small> no parser Markdown. |
+| `construtor_elemento_small_test.dart` | Construtor Elemento Small | Testa a aplicação de escala reduzida (80%) com TextSpan e preservação de formatações aninhadas. |
 | `mapa/mapa_global_functions_test.dart` | `buildMapMarkers`, `obterFaixaZoom`, Interface do Mapa Global | Testa a criação e montagem interativa do Mapa Global, resolução de faixas de zoom (Macro, Regional, Local), com interações de bottom sheet e navegação. |
 | `mapa/mapa_marker_test.dart` | `createCustomMarkerBitmap`, `createCustomMarkerBitmapWithText`, `calcularDimensoesMarcador` | Testa a geração de bitmaps customizados de marcadores com redimensionamento proporcional, truncamento automático de nomes extensos e resiliência de buffers de GPU. |
 

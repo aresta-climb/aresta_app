@@ -224,6 +224,12 @@ Widget construirPaginaParaNo({
     return const SobreTimePage();
   }
 
+  if (node is ControlesNode) {
+    // ControlesNode é um nó de contexto para o modal bottom sheet de filtros e feedback,
+    // gerenciado localmente pelo componente PainelFiltrosIndice.
+    return const SizedBox.shrink();
+  }
+
   return const Center(child: Text('Unknown Node'));
 }
 

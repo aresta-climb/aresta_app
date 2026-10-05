@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo é o Gerente/Coordenador de background (Orchestrator) de Feedback.
@@ -17,6 +17,7 @@ import '../../services/feedback/feedback_network_service.dart';
 import '../../services/firebase/validador_app.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/remote_config.dart';
+import '../../services/firebase/telemetria.dart';
 
 /// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
 /// das tarefas de feedback salvas no disco local do dispositivo.
@@ -51,6 +52,7 @@ class FeedbackOrchestrator {
     Future<String?> Function()? getAppCheckTokenOverride,
     String dispatcher = 'unknown',
     bool? isDebugModeOverride,
+    TelemetryService? telemetryService,
   }) async {
     if (_isProcessing) return true;
     _isProcessing = true;
@@ -161,7 +163,24 @@ class FeedbackOrchestrator {
 
           // Se a entrega foi confirmada (status 2xx), limpa os arquivos locais da tarefa
           localRepository.completeTask(task);
+
+          await (telemetryService ?? TelemetryService.instance).logAcaoFeedback(
+            'despacho_feedback',
+            status: 'sucesso',
+            dispatcher: dispatcher,
+            tipoFeedback: task.metadata.tipoFeedback.valor,
+            idCroqui: task.metadata.croquiId,
+          );
         } catch (e) {
+          await (telemetryService ?? TelemetryService.instance).logAcaoFeedback(
+            'despacho_feedback',
+            status: 'falha',
+            dispatcher: dispatcher,
+            tipoFeedback: task.metadata.tipoFeedback.valor,
+            idCroqui: task.metadata.croquiId,
+            erro: e.toString(),
+          );
+
           // Se falhou (timeout, rate limit 429 ou erro 503), destrava o arquivo para retentativa posterior
           localRepository.unlockTask(task.processingFile);
 

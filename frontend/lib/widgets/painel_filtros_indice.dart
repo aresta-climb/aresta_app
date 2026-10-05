@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../navigation/arvore_navegacao.dart';
+import '../navigation/wrapper_navegacao_arvore.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
 import '../utils/filtro_grau_escalada.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import 'barra_ordenacao_exploracao.dart';
 
 /// Painel expansível e colapsável (*expando*) para controle de filtros
 /// do Índice de Escaladas e da exploração unificada de Setores & Escaladas.
@@ -81,7 +85,8 @@ class PainelFiltrosIndice extends StatefulWidget {
 }
 
 class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
-  late bool _expandido;
+  final ValueNotifier<int> _versaoNotificador = ValueNotifier<int>(0);
+  bool _modalAberto = false;
 
   bool get _isUnificado => widget.estadoUnificado != null;
   String get _abaEfetiva => widget.abaAtiva ?? widget.modalidade ?? 'Esportiva';
@@ -98,16 +103,54 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     }
   }
 
+  /// Registra eventos analíticos de ordenação tanto no funil do índice de escaladas
+  /// quanto no monitoramento global de ordenação, permitindo mensurar a preferência
+  /// dos escaladores por modo de listagem (padrão, grau, alfabético) e direção (asc, desc).
+  void _registrarTelemetriaOrdenacao(TipoOrdenacaoExploracao tipo, bool crescente) {
+    final detalhe = '${tipo.name}_${crescente ? 'asc' : 'desc'}';
+    _logTelemetria('alterar_ordenacao', detalhe: detalhe);
+    TelemetryService.instance.logAlterarOrdenacao(_abaEfetiva.toLowerCase(), detalhe);
+  }
+
+  void _notificarMudanca() {
+    if (mounted) {
+      _versaoNotificador.value++;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _expandido = widget.inicialmenteExpandido;
+    if (widget.inicialmenteExpandido) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _abrirModalControles(context);
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(PainelFiltrosIndice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notificarMudanca();
+    });
+  }
+
+  @override
+  void dispose() {
+    _versaoNotificador.dispose();
+    super.dispose();
   }
 
   int _contarFiltrosAtivos() {
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
       int total = 0;
+      if (u.tipoOrdenacao != TipoOrdenacaoExploracao.padrao || !u.direcaoCrescente) {
+        total++;
+      }
       if (_isModoSetores) {
         final bool temFiltroModalidade = u.modalidadesAtivas.isNotEmpty &&
             (widget.modalidadesDisponiveis.isEmpty ||
@@ -160,6 +203,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     bool clearMinGrau = false,
     int? maxGrauValor,
     bool clearMaxGrau = false,
+    TipoOrdenacaoExploracao? tipoOrdenacao,
+    bool? direcaoCrescente,
   }) {
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
@@ -176,6 +221,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         grupos: grupos,
         conquistadores: conquistadores,
         apenasClassicas: apenasClassicas,
+        tipoOrdenacao: tipoOrdenacao,
+        direcaoCrescente: direcaoCrescente,
       );
       widget.onFiltrosUnificadosChanged?.call(novo);
     } else if (widget.estado != null) {
@@ -191,6 +238,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       );
       widget.onFiltrosChanged?.call(novo);
     }
+    _notificarMudanca();
   }
 
   void _limparFiltros() {
@@ -215,16 +263,91 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           clearConquistadores: true,
           apenasClassicas: false,
           termoBusca: '',
+          tipoOrdenacao: TipoOrdenacaoExploracao.padrao,
+          direcaoCrescente: true,
         );
         widget.onFiltrosUnificadosChanged?.call(limpo);
       }
     } else if (widget.estado != null) {
       widget.onFiltrosChanged?.call(const EstadoFiltrosIndice());
     }
+    _notificarMudanca();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// Aciona a abertura do Modal Bottom Sheet contendo as seções de Ordenação e Filtros.
+  Future<void> _abrirModalControles(BuildContext context) async {
+    if (_modalAberto) return;
+    _modalAberto = true;
+    _logTelemetria('expandir_filtros');
+
+    TreeNavigationController? ctrl;
+    try {
+      ctrl = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+          TreeNavigationWrapper.currentTreeController;
+    } catch (_) {
+      ctrl = TreeNavigationWrapper.currentTreeController;
+    }
+    if (ctrl != null) {
+      ctrl.navigateTo(ControlesNode(cragId: widget.cragId, parent: ctrl.currentNode));
+    }
+
+    final bool Function()? interceptorAnterior = ctrl?.onBackInterceptor;
+    BuildContext? sheetContextRef;
+    bool fechandoModal = false;
+
+    if (ctrl != null) {
+      ctrl.onBackInterceptor = () {
+        if (fechandoModal) return true;
+        if (sheetContextRef != null && sheetContextRef!.mounted) {
+          fechandoModal = true;
+          Navigator.of(sheetContextRef!).pop();
+          return true;
+        }
+        return false;
+      };
+    }
+
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: context.colors.deepBasalt,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (sheetContext) {
+          sheetContextRef = sheetContext;
+          return PopScope(
+            canPop: true,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop && ctrl != null && ctrl.onBackInterceptor != null) {
+                fechandoModal = true;
+                ctrl.onBackInterceptor = interceptorAnterior;
+              }
+            },
+            child: ValueListenableBuilder<int>(
+              valueListenable: _versaoNotificador,
+              builder: (context, versao, child) {
+                return _buildModalControlesConteudo(sheetContext);
+              },
+            ),
+          );
+        },
+      );
+    } finally {
+      if (ctrl != null) {
+        ctrl.onBackInterceptor = interceptorAnterior;
+      }
+      _modalAberto = false;
+      if (ctrl != null && ctrl.currentNode is ControlesNode) {
+        ctrl.goBack();
+      }
+      _logTelemetria('colapsar_filtros');
+    }
+  }
+
+  /// Renderiza o conteúdo estruturado do Modal Bottom Sheet com Ordenação e Filtros.
+  Widget _buildModalControlesConteudo(BuildContext context) {
     final colors = context.colors;
     final totalAtivos = _contarFiltrosAtivos();
     final temConquistadoresCadastrados = widget.possuiConquistadores ??
@@ -237,100 +360,136 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         ? widget.estadoUnificado!.apenasClassicas
         : widget.estado!.apenasClassicas;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: colors.caveShadow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: totalAtivos > 0
-              ? colors.rustIron.withValues(alpha: 0.5)
-              : colors.graniteEdge,
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Cabeçalho acionável (colapsa / expande)
-          InkWell(
-            onTap: () {
-              final novoExpandido = !_expandido;
-              _logTelemetria(
-                novoExpandido ? 'expandir_filtros' : 'colapsar_filtros',
-              );
-              setState(() {
-                _expandido = novoExpandido;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.graniteEdge,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.filter_list,
-                    size: 20,
-                    color: totalAtivos > 0 ? colors.rustIron : colors.chalkWhite,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Filtros',
-                    style: TextStyle(
-                      color: colors.chalkWhite,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.tune_rounded, size: 20, color: colors.rustIron),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Filtros e Ordenação',
+                            style: TextStyle(
+                              color: colors.chalkWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (totalAtivos > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.rustIron.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: colors.rustIron.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              '$totalAtivos ativo${totalAtivos > 1 ? 's' : ''}',
+                              style: TextStyle(
+                                color: colors.rustIron,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          TextButton(
+                            onPressed: _limparFiltros,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Limpar',
+                              style: TextStyle(
+                                color: colors.ashGrey,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (_expandido && totalAtivos > 0) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.rustIron.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: colors.rustIron.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Text(
-                        '$totalAtivos ativo${totalAtivos > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          color: colors.rustIron,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  Icon(
-                    _expandido ? Icons.expand_less : Icons.expand_more,
-                    color: colors.ashGrey,
+                  buildFeedbackButton(context, color: colors.ashGrey),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: Icon(Icons.close, size: 20, color: colors.ashGrey),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Fechar',
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Chips com os filtros ativos visíveis quando colapsado
-          if (!_expandido && totalAtivos > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: _buildChipsFiltrosAtivos(context),
-            ),
-
-          // Conteúdo detalhado quando expandido
-          if (_expandido) ...[
             Divider(height: 1, color: colors.graniteEdge),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                    // Modo Setores: Seleção de modalidades ativas
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSecaoTitulo(context, 'ORDENAÇÃO'),
+                    const SizedBox(height: 10),
+                    BarraOrdenacaoExploracao(
+                      ordenacaoAtual: _isUnificado
+                          ? widget.estadoUnificado!.tipoOrdenacao
+                          : TipoOrdenacaoExploracao.padrao,
+                      direcaoCrescente: _isUnificado
+                          ? widget.estadoUnificado!.direcaoCrescente
+                          : true,
+                      onOrdenacaoChanged: (tipo) {
+                        final direcaoAtual = _isUnificado
+                            ? widget.estadoUnificado!.direcaoCrescente
+                            : true;
+                        _registrarTelemetriaOrdenacao(tipo, direcaoAtual);
+                        _atualizarFiltros(tipoOrdenacao: tipo);
+                      },
+                      onDirecaoChanged: (crescente) {
+                        final ordenacaoAtual = _isUnificado
+                            ? widget.estadoUnificado!.tipoOrdenacao
+                            : TipoOrdenacaoExploracao.padrao;
+                        _registrarTelemetriaOrdenacao(ordenacaoAtual, crescente);
+                        _atualizarFiltros(direcaoCrescente: crescente);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildSecaoTitulo(context, 'FILTROS'),
+                    const SizedBox(height: 12),
+
                     if (_isModoSetores && widget.modalidadesDisponiveis.isNotEmpty) ...[
                       _buildSecaoTitulo(context, 'Modalidades'),
                       const SizedBox(height: 8),
@@ -338,7 +497,6 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Sliders de Grau (unificados em no máximo 2: Vias e Boulders)
                     if (_isModoSetores) ...[
                       ..._obterCategoriasParaSliders().map((cat) {
                         return Padding(
@@ -361,7 +519,6 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Localização (Setores e Grupos combinados para economizar espaço vertical, exceto na aba Setores)
                     if (!_isModoSetores) ...[
                       _buildSecaoTitulo(context, 'Localização'),
                       const SizedBox(height: 8),
@@ -369,7 +526,6 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Conquistadores (Dropdown + Wrap de Chips)
                     if (temConquistadoresCadastrados) ...[
                       _buildSecaoTitulo(context, 'Conquista (Autores)'),
                       const SizedBox(height: 8),
@@ -377,58 +533,136 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Apenas Clássicas e Botão Limpar
-                    if (widget.temClassicasDisponiveis || totalAtivos > 0) ...[
-                      Row(
-                        children: [
-                          if (widget.temClassicasDisponiveis)
-                            FilterChip(
-                              selected: apenasClassicasAtivo,
-                              label: Text(
-                                'Apenas Clássicas (★)',
-                                style: TextStyle(
-                                  color: apenasClassicasAtivo
-                                      ? colors.deepBasalt
-                                      : colors.chalkWhite,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              selectedColor: Colors.amber,
-                              backgroundColor: colors.deepBasalt,
-                              side: BorderSide(
-                                color: apenasClassicasAtivo
-                                    ? Colors.amber
-                                    : colors.graniteEdge,
-                              ),
-                              onSelected: (selecionado) {
-                                _logTelemetria(
-                                  'filtrar_classicas',
-                                  detalhe: selecionado ? 'true' : 'false',
-                                );
-                                _atualizarFiltros(apenasClassicas: selecionado);
-                              },
-                            ),
-                          const Spacer(),
-                          if (totalAtivos > 0)
-                            TextButton.icon(
-                              onPressed: _limparFiltros,
-                              icon: Icon(Icons.clear, size: 16, color: colors.ashGrey),
-                              label: Text(
-                                'Limpar',
-                                style: TextStyle(
-                                  color: colors.ashGrey,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
+                    if (widget.temClassicasDisponiveis) ...[
+                      FilterChip(
+                        selected: apenasClassicasAtivo,
+                        label: Text(
+                          'Apenas Clássicas (★)',
+                          style: TextStyle(
+                            color: apenasClassicasAtivo
+                                ? colors.deepBasalt
+                                : colors.chalkWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        selectedColor: Colors.amber,
+                        backgroundColor: colors.deepBasalt,
+                        side: BorderSide(
+                          color: apenasClassicasAtivo
+                              ? Colors.amber
+                              : colors.graniteEdge,
+                        ),
+                        onSelected: (selecionado) {
+                          _logTelemetria(
+                            'filtrar_classicas',
+                            detalhe: selecionado ? 'true' : 'false',
+                          );
+                          _atualizarFiltros(apenasClassicas: selecionado);
+                        },
                       ),
                     ],
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final totalAtivos = _contarFiltrosAtivos();
+    final chips = _obterListaChips(context);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.caveShadow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: totalAtivos > 0
+              ? colors.rustIron.withValues(alpha: 0.5)
+              : colors.graniteEdge,
+        ),
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () => _abrirModalControles(context),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 20,
+                    color: totalAtivos > 0 ? colors.rustIron : colors.chalkWhite,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Filtros e Ordenação',
+                    style: TextStyle(
+                      color: colors.chalkWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (totalAtivos > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.rustIron.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: colors.rustIron.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        '$totalAtivos',
+                        style: TextStyle(
+                          color: colors.rustIron,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (chips.isNotEmpty) ...[
+            Container(
+              width: 1,
+              height: 24,
+              color: colors.graniteEdge,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: chips
+                      .map((chip) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: chip,
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -488,6 +722,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             width: isSelected ? 1.4 : 1.0,
           ),
           onSelected: (selected) {
+            _logTelemetria(
+              'filtrar_modalidade',
+              detalhe: '$mod:${selected ? 'ativo' : 'inativo'}',
+            );
             final novas = Set<String>.from(
               ativas.isEmpty ? widget.modalidadesDisponiveis : ativas,
             );
@@ -509,12 +747,51 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     );
   }
 
-  Widget _buildChipsFiltrosAtivos(BuildContext context) {
+  String _obterRotuloChipOrdenacao(EstadoFiltrosUnificado u) {
+    final seta = u.direcaoCrescente ? '▲' : '▼';
+    switch (u.tipoOrdenacao) {
+      case TipoOrdenacaoExploracao.padrao:
+        return 'Padrão $seta';
+      case TipoOrdenacaoExploracao.grau:
+        return 'Grau $seta';
+      case TipoOrdenacaoExploracao.alfabetico:
+        return u.direcaoCrescente ? 'A-Z ▲' : 'Z-A ▼';
+    }
+  }
+
+  List<Widget> _obterListaChips(BuildContext context) {
     final colors = context.colors;
     final chips = <Widget>[];
 
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
+
+      // Chip dinâmico de Ordenação (quando fora do padrão Padrão ▲)
+      if (u.tipoOrdenacao != TipoOrdenacaoExploracao.padrao || !u.direcaoCrescente) {
+        chips.add(
+          Chip(
+            label: Text(
+              _obterRotuloChipOrdenacao(u),
+              style: TextStyle(color: colors.chalkWhite, fontSize: 12),
+            ),
+            backgroundColor: colors.rustIron.withValues(alpha: 0.3),
+            side: BorderSide(color: colors.rustIron),
+            deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+            onDeleted: () {
+              _registrarTelemetriaOrdenacao(
+                TipoOrdenacaoExploracao.padrao,
+                true,
+              );
+              _atualizarFiltros(
+                tipoOrdenacao: TipoOrdenacaoExploracao.padrao,
+                direcaoCrescente: true,
+              );
+            },
+          ),
+        );
+      }
 
       // Modalidades (apenas se for filtro restritivo na aba Setores)
       if (_isModoSetores &&
@@ -528,7 +805,10 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               backgroundColor: colors.rustIron.withValues(alpha: 0.3),
               side: BorderSide(color: colors.rustIron),
               deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
               onDeleted: () {
+                _logTelemetria('filtrar_modalidade', detalhe: '$mod:inativo');
                 final novas = Set<String>.from(u.modalidadesAtivas)..remove(mod);
                 if (novas.isEmpty || novas.length >= widget.modalidadesDisponiveis.length) {
                   _atualizarFiltros(clearModalidadesAtivas: true);
@@ -588,6 +868,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               _logTelemetria('filtrar_grau', detalhe: 'Todos os graus');
               final mins = Map<String, int>.from(u.minGrauPorModalidade)
@@ -610,6 +892,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               final novos = Set<String>.from(u.setores)..remove(s);
               _atualizarFiltros(setores: novos);
@@ -626,6 +910,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               final novos = Set<String>.from(u.grupos)..remove(g);
               _atualizarFiltros(grupos: novos);
@@ -642,6 +928,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               final novos = Set<String>.from(u.conquistadores)..remove(c);
               _atualizarFiltros(conquistadores: novos);
@@ -659,6 +947,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: Colors.amber.withValues(alpha: 0.15),
             side: const BorderSide(color: Colors.amber),
             deleteIcon: const Icon(Icons.close, size: 16, color: Colors.amber),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () => _atualizarFiltros(apenasClassicas: false),
           ),
         );
@@ -691,6 +981,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               _logTelemetria('limpar_grau');
               _atualizarFiltros(clearMinGrau: true, clearMaxGrau: true);
@@ -706,6 +998,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               final novos = Set<String>.from(e.setores)..remove(s);
               _atualizarFiltros(setores: novos);
@@ -721,6 +1015,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: colors.rustIron.withValues(alpha: 0.3),
             side: BorderSide(color: colors.rustIron),
             deleteIcon: Icon(Icons.close, size: 16, color: colors.chalkWhite),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () {
               final novos = Set<String>.from(e.conquistadores)..remove(c);
               _atualizarFiltros(conquistadores: novos);
@@ -737,17 +1033,15 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
             backgroundColor: Colors.amber.withValues(alpha: 0.15),
             side: const BorderSide(color: Colors.amber),
             deleteIcon: const Icon(Icons.close, size: 16, color: Colors.amber),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             onDeleted: () => _atualizarFiltros(apenasClassicas: false),
           ),
         );
       }
     }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: chips,
-    );
+    return chips;
   }
 
   Widget _buildSecaoTitulo(BuildContext context, String titulo) {

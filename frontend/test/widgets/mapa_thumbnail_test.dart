@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -272,9 +272,9 @@ void main() {
         expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
         expect(find.byIcon(Icons.map), findsOneWidget);
 
-        // O container deve respeitar a proporção
-        final aspectRatioFinder = find.byType(AspectRatio);
-        expect(aspectRatioFinder, findsWidgets);
+        // O container deve respeitar o limite de altura máxima de 260px
+        final tamanho = tester.getSize(find.byType(MapaThumbnail));
+        expect(tamanho.height, lessThanOrEqualTo(260.0));
       },
     );
 
@@ -457,6 +457,67 @@ void main() {
         expect(find.byType(ErrorWidget), findsNothing);
         expect(tester.takeException(), isNull);
         expect(find.text('Abrir Mapa Interativo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'em mapas verticais ou quadrados limita altura máxima a 260px e em panorâmicos preserva proporção',
+      (tester) async {
+        // 1. Mapa vertical (300 largura x 600 altura): sem limite, em 400px de tela teria 800px de altura
+        final mapaVertical = Mapa()
+          ..caminhoImagemMapa = 'vertical.webp'
+          ..larguraMapa = 300
+          ..alturaMapa = 600;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: MapaThumbnail(
+                    mapas: [mapaVertical],
+                    cragId: 'crag1',
+                    imageProviderOverride: const ProvedorImagemComFalha(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final Size tamanhoVertical = tester.getSize(find.byType(MapaThumbnail));
+        expect(tamanhoVertical.width, 400.0);
+        expect(tamanhoVertical.height, lessThanOrEqualTo(260.0));
+
+        // 2. Mapa panorâmico (800 largura x 400 altura, aspect ratio 2.0): em 400px de tela tem 200px de altura (< 260px)
+        final mapaPanoramico = Mapa()
+          ..caminhoImagemMapa = 'panoramico.webp'
+          ..larguraMapa = 800
+          ..alturaMapa = 400;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: MapaThumbnail(
+                    mapas: [mapaPanoramico],
+                    cragId: 'crag1',
+                    imageProviderOverride: const ProvedorImagemComFalha(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final Size tamanhoPanoramico = tester.getSize(find.byType(MapaThumbnail));
+        expect(tamanhoPanoramico.width, 400.0);
+        expect(tamanhoPanoramico.height, closeTo(200.0, 0.1));
       },
     );
   });

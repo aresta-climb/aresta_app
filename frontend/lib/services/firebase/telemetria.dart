@@ -381,9 +381,28 @@ class TelemetryService {
     return _logEvent('acao_configuracoes', {'acao': acao});
   }
 
-  /// Registra interações do sistema de In-App Feedback (abrir, enviar).
-  Future<void> logAcaoFeedback(String acao) {
-    return _logEvent('acao_feedback', {'acao': acao});
+  /// Registra interações do sistema de In-App Feedback (abrir, enviar, cancelar, despacho).
+  Future<void> logAcaoFeedback(
+    String acao, {
+    String? origem,
+    String? tipoFeedback,
+    String? idCroqui,
+    bool? temCroqui,
+    int? qtdCaracteres,
+    String? dispatcher,
+    String? status,
+    String? erro,
+  }) {
+    final parametros = <String, Object>{'acao': acao};
+    if (origem != null) parametros['origem'] = origem;
+    if (tipoFeedback != null) parametros['tipo_feedback'] = tipoFeedback;
+    if (idCroqui != null) parametros['id_croqui'] = idCroqui;
+    if (temCroqui != null) parametros['tem_croqui'] = temCroqui.toString();
+    if (qtdCaracteres != null) parametros['qtd_caracteres'] = qtdCaracteres;
+    if (dispatcher != null) parametros['dispatcher'] = dispatcher;
+    if (status != null) parametros['status'] = status;
+    if (erro != null) parametros['erro'] = erro;
+    return _logEvent('acao_feedback', parametros);
   }
 
   /// Registra a visualização da tela de atualização de banco de dados

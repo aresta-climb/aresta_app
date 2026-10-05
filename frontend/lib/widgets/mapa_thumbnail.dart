@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -101,105 +101,120 @@ class _MapaThumbnailState extends State<MapaThumbnail> {
     final colors = Theme.of(context).extension<AppColors>() ?? AppColors.dark;
     final aspectRatio = thumbnailMap.larguraMapa / thumbnailMap.alturaMapa;
 
-    return AspectRatio(
-      aspectRatio: aspectRatio,
-      child: GestureDetector(
-        onTap: () {
-          TelemetryService.instance.logAbrirMapa(
-            widget.cragId,
-            widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral',
-          );
-          final mapasParaNavegar = widget.carrosselItensOverride ??
-              widget.mapas
-                  .map((m) => CarrosselItemData(
-                        mapaCaminhoImagem: m.caminhoImagemMapa,
-                        setorContextNome: widget.setorContext?.nome,
-                        grupoContextNome: widget.grupoContext?.nome,
-                      ))
-                  .toList();
-          AppNav.toMapas(
-            context,
-            cragId: widget.cragId,
-            mapas: mapasParaNavegar,
-            imageProviderOverride: widget.imageProviderOverride,
-          );
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Stack(
-            alignment: Alignment.center,
-            fit: StackFit.expand,
-            children: [
-              // Camada 0: Fundo sólido do tema enquanto a imagem carrega
-              Container(
-                color: colors.deepBasalt,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final larguraDisponivel = constraints.maxWidth;
+        final alturaNatural = larguraDisponivel.isFinite && larguraDisponivel > 0
+            ? larguraDisponivel / aspectRatio
+            : 260.0;
+        final alturaEfetiva = alturaNatural.clamp(0.0, 260.0);
 
-              // Camada 1: Imagem de fundo assíncrona com fade suave
-              FutureBuilder<ImageProvider?>(
-                future: _imageProviderFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    return Image(
-                      image: snapshot.data!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                      frameBuilder:
-                          (context, child, frame, wasSynchronouslyLoaded) {
-                        if (wasSynchronouslyLoaded) return child;
-                        return AnimatedOpacity(
-                          opacity: frame == null ? 0.0 : 1.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                          child: child,
+        return SizedBox(
+          width: larguraDisponivel.isFinite ? larguraDisponivel : null,
+          height: alturaEfetiva,
+          child: GestureDetector(
+            onTap: () {
+              TelemetryService.instance.logAbrirMapa(
+                widget.cragId,
+                widget.nomeContexto ?? widget.setorContext?.nome ?? 'Geral',
+              );
+              final mapasParaNavegar = widget.carrosselItensOverride ??
+                  widget.mapas
+                      .map((m) => CarrosselItemData(
+                            mapaCaminhoImagem: m.caminhoImagemMapa,
+                            setorContextNome: widget.setorContext?.nome,
+                            grupoContextNome: widget.grupoContext?.nome,
+                          ))
+                      .toList();
+              AppNav.toMapas(
+                context,
+                cragId: widget.cragId,
+                mapas: mapasParaNavegar,
+                imageProviderOverride: widget.imageProviderOverride,
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Stack(
+                alignment: Alignment.center,
+                fit: StackFit.expand,
+                children: [
+                  // Camada 0: Fundo sólido do tema enquanto a imagem carrega
+                  Container(
+                    color: colors.deepBasalt,
+                  ),
+
+                  // Camada 1: Imagem de fundo assíncrona com fade suave
+                  FutureBuilder<ImageProvider?>(
+                    future: _imageProviderFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return Image(
+                          image: snapshot.data!,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                          frameBuilder:
+                              (context, child, frame, wasSynchronouslyLoaded) {
+                            if (wasSynchronouslyLoaded) return child;
+                            return AnimatedOpacity(
+                              opacity: frame == null ? 0.0 : 1.0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                              child: child,
+                            );
+                          },
                         );
-                      },
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-
-              // Camada 2: Overlay escuro para contraste e legibilidade
-              Container(
-                color: Colors.black.withValues(alpha: 0.3),
-              ),
-
-              // Camada 3: Botão translúcido central sempre visível e interativo
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandColor.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+
+                  // Camada 2: Overlay escuro para contraste e legibilidade
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.map, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Text(
-                        (widget.carrosselItensOverride?.length ?? widget.mapas.length) > 1
-                            ? 'Mapas Interativos (${widget.carrosselItensOverride?.length ?? widget.mapas.length})'
-                            : 'Abrir Mapa Interativo',
-                        style: TextStyle(
-                          color: fishBone,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+
+                  // Camada 3: Botão translúcido central sempre visível e interativo
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: AppColors.brandColor.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: beastHide.withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.map, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              (widget.carrosselItensOverride?.length ?? widget.mapas.length) > 1
+                                  ? 'Mapas Interativos (${widget.carrosselItensOverride?.length ?? widget.mapas.length})'
+                                  : 'Abrir Mapa Interativo',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: fishBone,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

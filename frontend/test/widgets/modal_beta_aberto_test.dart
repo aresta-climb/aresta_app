@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -307,6 +307,12 @@ void main() {
       expect(params['acao'], 'clique_feedback');
       expect(params['origem'], 'modal_beta');
       expect(params['detalhe'], 'feedback');
+
+      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
+      final feedbackParams = mockTelemetry.recordedParams['acao_feedback']!;
+      expect(feedbackParams['acao'], 'abrir_feedback');
+      expect(feedbackParams['origem'], 'modal_beta');
+      expect(feedbackParams['tem_croqui'], 'false');
     });
   });
 }

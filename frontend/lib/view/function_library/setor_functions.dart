@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -32,7 +32,6 @@ Widget buildSetorBody(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (setor.descricao.isNotEmpty) ...[
-          _buildHeader('Descrição'),
           OfflineMarkdown(data: setor.descricao, cragId: cragId),
           const SizedBox(height: 20),
         ],

@@ -11,6 +11,7 @@ import 'package:frontend/application_managers/feedback/orquestrador_feedback.dar
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import '../../widgets/feedback/construtor_feedback_usuario.dart';
 
 // Paleta de Cores Compartilhada (Dinâmica por Tema)
 bool get _isLight {
@@ -48,7 +49,16 @@ Widget buildFeedbackButton(BuildContext context, {Color? color}) {
         return;
       }
 
-      TelemetryService.instance.logAcaoFeedback('abrir_feedback');
+      final temCroqui = temCroquiAtivoNaArvore(context);
+      final cragId = obterCragIdAtivoNaArvore();
+      TelemetryService.instance.logAcaoFeedback(
+        'abrir_feedback',
+        origem: 'app_bar',
+        temCroqui: temCroqui,
+        idCroqui: cragId,
+      );
+
+      GerenciadorFeedbackSheet.sincronizarDimensoes(context);
 
       BetterFeedback.of(context).show((UserFeedback feedback) async {
         await processFeedbackSubmission(context, feedback);
@@ -149,11 +159,11 @@ Widget buildInfoCard(
   );
 }
 
-@visibleForTesting
+/// Processa a submissão de feedback capturada pelo pacote [BetterFeedback].
 Future<void> processFeedbackSubmission(
   BuildContext context,
   UserFeedback feedback, {
-  SubmitFeedbackUseCase? useCase,
+  @visibleForTesting SubmitFeedbackUseCase? useCase,
 }) async {
   await (useCase ?? SubmitFeedbackUseCase()).execute(context, feedback);
 }

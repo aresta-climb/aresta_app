@@ -307,9 +307,28 @@ class MockTelemetryService implements TelemetryService {
   }
 
   @override
-  Future<void> logAcaoFeedback(String acao) async {
+  Future<void> logAcaoFeedback(
+    String acao, {
+    String? origem,
+    String? tipoFeedback,
+    String? idCroqui,
+    bool? temCroqui,
+    int? qtdCaracteres,
+    String? dispatcher,
+    String? status,
+    String? erro,
+  }) async {
     recordedEvents.add('acao_feedback');
-    recordedParams['acao_feedback'] = {'acao': acao};
+    final params = <String, Object>{'acao': acao};
+    if (origem != null) params['origem'] = origem;
+    if (tipoFeedback != null) params['tipo_feedback'] = tipoFeedback;
+    if (idCroqui != null) params['id_croqui'] = idCroqui;
+    if (temCroqui != null) params['tem_croqui'] = temCroqui.toString();
+    if (qtdCaracteres != null) params['qtd_caracteres'] = qtdCaracteres;
+    if (dispatcher != null) params['dispatcher'] = dispatcher;
+    if (status != null) params['status'] = status;
+    if (erro != null) params['erro'] = erro;
+    recordedParams['acao_feedback'] = params;
   }
 
   @override

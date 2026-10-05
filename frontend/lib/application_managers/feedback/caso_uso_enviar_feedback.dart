@@ -17,6 +17,9 @@ import '../../../theme/cores_app.dart';
 class SubmitFeedbackUseCase {
   static final ValueNotifier<bool> isFeedbackOpen = ValueNotifier<bool>(false);
 
+  /// Indica se o fechamento mais recente da folha de feedback ocorreu por submissão com sucesso.
+  static bool ultimoEnvioConcluido = false;
+
   final FeedbackMetadataCollector _metadataCollector;
   final FeedbackQueueService _queueService;
   final TelemetryService _telemetryService;
@@ -33,16 +36,23 @@ class SubmitFeedbackUseCase {
     // 1. Hide the feedback UI
     BetterFeedback.of(context).hide();
     isFeedbackOpen.value = false;
+    ultimoEnvioConcluido = true;
 
-    // 2. Log telemetry
-    _telemetryService.logAcaoFeedback('enviar_feedback');
-
-    // 3. Collect domain metadata
+    // 2. Collect domain metadata
     final rawMetadata = await _metadataCollector.collect(context: context);
     final tipoSelecionado = TipoFeedback.fromString(
       feedback.extra?['tipo_feedback'] as String?,
     );
     final metadata = rawMetadata.copyWith(tipoFeedback: tipoSelecionado);
+
+    // 3. Log telemetry enriquecida
+    _telemetryService.logAcaoFeedback(
+      'enviar_feedback',
+      tipoFeedback: tipoSelecionado.valor,
+      idCroqui: metadata.croquiId,
+      temCroqui: metadata.croquiId != null && metadata.croquiId!.isNotEmpty,
+      qtdCaracteres: feedback.text.trim().length,
+    );
 
     // 4. Enqueue in local storage for background processing
     await _queueService.enqueueFeedback(

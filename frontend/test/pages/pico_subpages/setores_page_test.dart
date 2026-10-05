@@ -131,13 +131,12 @@ void main() {
       expect(find.text('Setor Noturno'), findsOneWidget);
       expect(find.text('Blocos da Floresta'), findsOneWidget);
 
-      // Barra de ordenação presente e alinhada com as margens de 16px da página
-      final barraFinder = find.byType(BarraOrdenacaoExploracao);
-      expect(barraFinder, findsOneWidget);
-      expect(tester.getTopLeft(barraFinder).dx, 16.0);
+      // Barra de ordenação não deve estar solta na página inicial (agora fica dentro de Controles)
+      expect(find.byType(BarraOrdenacaoExploracao), findsNothing);
 
-      // Painel de filtros presente
+      // Painel de controles presente
       expect(find.byType(PainelFiltrosIndice), findsOneWidget);
+      expect(find.text('Filtros e Ordenação'), findsOneWidget);
     });
 
     testWidgets('alterna para aba de modalidade (Esportivas) e exibe lista de vias com cards', (tester) async {
@@ -172,8 +171,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Expande o painel de filtros
-      await tester.tap(find.text('Filtros'));
+      // Abre o modal de controles
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
 
       // Garante visibilidade e seleciona o conquistador "Bruno" (apenas tem via no Setor Noturno)
@@ -184,8 +183,8 @@ void main() {
       await tester.tap(find.text('Bruno').last);
       await tester.pumpAndSettle();
 
-      // Colapsa os filtros para ver a lista com clareza
-      await tester.tap(find.text('Filtros'));
+      // Fecha o modal de controles
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Na aba Setores, apenas o Setor Noturno deve estar visível
@@ -220,8 +219,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Expande filtros e seleciona conquistador "Renato" (vias: Escola e Sol Nascente)
-      await tester.tap(find.text('Filtros'));
+      // Abre controles e seleciona conquistador "Renato" (vias: Escola e Sol Nascente)
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Adicionar conquistador...'));
       await tester.pumpAndSettle();
@@ -230,8 +229,8 @@ void main() {
       await tester.tap(find.text('Renato').last);
       await tester.pumpAndSettle();
 
-      // Colapsa filtros para inspecionar os cartões
-      await tester.tap(find.text('Filtros'));
+      // Fecha controles para inspecionar os cartões
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Setor Alvorada tem 2 vias no filtro (de 3 totais) e faixa 4º a 6ºsup
@@ -245,8 +244,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Toca no botão Filtros e Ordenação para abrir o modal
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
       // Toca no botão GRAU na barra de ordenação
       await tester.tap(find.text('GRAU'));
+      await tester.pumpAndSettle();
+
+      // Fecha o modal para verificar a listagem
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Mediana crescente:
@@ -259,8 +266,12 @@ void main() {
 
       expect(tester.getTopLeft(finderAlvorada).dy, lessThan(tester.getTopLeft(finderNoturno).dy));
 
-      // Alterna a direção da ordenação para decrescente tocando no ícone de seta
+      // Alterna a direção da ordenação para decrescente tocando no modal de controles
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.arrow_upward));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Agora Noturno deve estar acima de Alvorada
@@ -273,8 +284,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Toca em Filtros e Ordenação
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
       // Toca em ALFABÉTICO
       await tester.tap(find.text('ALFABÉTICO'));
+      await tester.pumpAndSettle();
+
+      // Fecha o modal
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Ordem alfabética crescente:
@@ -285,8 +304,12 @@ void main() {
       final finderNoturno = find.text('Setor Noturno');
       expect(tester.getTopLeft(finderFloresta).dy, lessThan(tester.getTopLeft(finderNoturno).dy));
 
-      // Inverte direção
+      // Inverte direção abrindo Filtros e Ordenação
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.arrow_upward));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       expect(tester.getTopLeft(finderNoturno).dy, lessThan(tester.getTopLeft(finderFloresta).dy));
@@ -298,12 +321,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Expande filtros
-      await tester.tap(find.text('Filtros'));
+      // Abre controles
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
 
       // Desmarca 'Boulder' no seletor de modalidades ativas
       await tester.tap(find.widgetWithText(FilterChip, 'Boulder'));
+      await tester.pumpAndSettle();
+
+      // Fecha controles para visualizar a listagem
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Blocos da Floresta (que só tem boulder) deve ser omitido
@@ -401,7 +428,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Adicionar conquistador...'));
       await tester.pumpAndSettle();
@@ -416,8 +443,8 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, 'Esportiva'));
       await tester.pumpAndSettle();
 
-      // Colapsa filtros
-      await tester.tap(find.text('Filtros'));
+      // Fecha controles
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       expect(find.text('Nenhum setor encontrado com os filtros selecionados.'), findsOneWidget);
@@ -436,8 +463,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Expande filtros e seleciona conquistador "Bruno"
-      await tester.tap(find.text('Filtros'));
+      // Expande controles e seleciona conquistador "Bruno"
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Adicionar conquistador...'));
       await tester.pumpAndSettle();
@@ -446,8 +473,8 @@ void main() {
       await tester.tap(find.text('Bruno').last);
       await tester.pumpAndSettle();
 
-      // Colapsa filtros
-      await tester.tap(find.text('Filtros'));
+      // Fecha controles
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Alterna para aba Boulders (Bruno não tem boulder)
@@ -504,8 +531,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Toca em GRAU
+      // Toca em Filtros e Ordenação e depois em GRAU
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('GRAU'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Como têm o mesmo grau (5º), desempata por nome: Anta antes de Zebra
@@ -529,12 +560,16 @@ void main() {
       // O grupo exibe a modalidade e faixa de graus no badge
       expect(find.text('1 esportiva - 5º'), findsOneWidget);
 
-      // Toca em GRAU e verifica ordenação estável
+      // Toca em Filtros e Ordenação e depois em GRAU e verifica ordenação estável
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('GRAU'));
       await tester.pumpAndSettle();
 
       // Toca em ALFABÉTICO
       await tester.tap(find.text('ALFABÉTICO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       expect(find.text('Grupo das Agulhas'), findsOneWidget);
@@ -582,8 +617,8 @@ void main() {
       expect(find.text('Complexo Pedra Alta'), findsOneWidget);
       expect(find.text('2 esportivas - 4º a 8a'), findsOneWidget);
 
-      // Expande filtros e filtra por conquistador "Lucas"
-      await tester.tap(find.text('Filtros'));
+      // Abre controles e filtra por conquistador "Lucas"
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Adicionar conquistador...'));
       await tester.pumpAndSettle();
@@ -592,8 +627,8 @@ void main() {
       await tester.tap(find.text('Lucas').last);
       await tester.pumpAndSettle();
 
-      // Colapsa filtros
-      await tester.tap(find.text('Filtros'));
+      // Fecha controles
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Agora o grupo deve exibir a proporção e faixa filtrada no badge
@@ -636,7 +671,9 @@ void main() {
       // Já deve inicializar com o filtro de clássicas ativo nos contadores de Setores (2 com clássica de 3)
       expect(find.text('Setores (2/3)'), findsOneWidget);
 
-      // Ao alterar ordenação na UI, o GerenciadorFiltrosCroqui deve ser sincronizado
+      // Ao alterar ordenação na UI através de Filtros e Ordenação, o GerenciadorFiltrosCroqui deve ser sincronizado
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('GRAU'));
       await tester.pumpAndSettle();
 

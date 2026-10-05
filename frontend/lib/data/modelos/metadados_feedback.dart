@@ -49,6 +49,9 @@ class FeedbackMetadata {
   /// Status de integridade da thumbnail ('INTEGRO', 'DIVERGENTE' ou 'NAO_BAIXADO').
   final String? thumbnailStatus;
 
+  /// Modo de acesso ao croqui no momento do feedback ('online' ou 'offline').
+  final String? modoAcessoCroqui;
+
   const FeedbackMetadata({
     required this.navigationTree,
     required this.submittedAt,
@@ -72,6 +75,7 @@ class FeedbackMetadata {
     this.thumbnailSha256Esperado,
     this.thumbnailSha256Real,
     this.thumbnailStatus,
+    this.modoAcessoCroqui,
   });
 
   /// Reconstrói uma instância de [FeedbackMetadata] a partir do mapa [json].
@@ -101,6 +105,7 @@ class FeedbackMetadata {
       thumbnailSha256Esperado: (json['thumbnail_sha256_esperado'] ?? json['thumbnailSha256Esperado']) as String?,
       thumbnailSha256Real: (json['thumbnail_sha256_real'] ?? json['thumbnailSha256Real']) as String?,
       thumbnailStatus: (json['thumbnail_status'] ?? json['thumbnailStatus']) as String?,
+      modoAcessoCroqui: (json['modo_acesso_croqui'] ?? json['modoAcessoCroqui']) as String?,
     );
   }
 
@@ -129,6 +134,7 @@ class FeedbackMetadata {
       if (thumbnailSha256Esperado != null) 'thumbnail_sha256_esperado': thumbnailSha256Esperado,
       if (thumbnailSha256Real != null) 'thumbnail_sha256_real': thumbnailSha256Real,
       if (thumbnailStatus != null) 'thumbnail_status': thumbnailStatus,
+      if (modoAcessoCroqui != null) 'modo_acesso_croqui': modoAcessoCroqui,
     };
   }
 
@@ -156,6 +162,7 @@ class FeedbackMetadata {
     String? thumbnailSha256Esperado,
     String? thumbnailSha256Real,
     String? thumbnailStatus,
+    String? modoAcessoCroqui,
   }) {
     return FeedbackMetadata(
       navigationTree: navigationTree ?? this.navigationTree,
@@ -180,6 +187,7 @@ class FeedbackMetadata {
       thumbnailSha256Esperado: thumbnailSha256Esperado ?? this.thumbnailSha256Esperado,
       thumbnailSha256Real: thumbnailSha256Real ?? this.thumbnailSha256Real,
       thumbnailStatus: thumbnailStatus ?? this.thumbnailStatus,
+      modoAcessoCroqui: modoAcessoCroqui ?? this.modoAcessoCroqui,
     );
   }
 
@@ -208,7 +216,8 @@ class FeedbackMetadata {
         other.croquiStatus == croquiStatus &&
         other.thumbnailSha256Esperado == thumbnailSha256Esperado &&
         other.thumbnailSha256Real == thumbnailSha256Real &&
-        other.thumbnailStatus == thumbnailStatus;
+        other.thumbnailStatus == thumbnailStatus &&
+        other.modoAcessoCroqui == modoAcessoCroqui;
   }
 
   @override
@@ -235,5 +244,6 @@ class FeedbackMetadata {
         thumbnailSha256Esperado,
         thumbnailSha256Real,
         thumbnailStatus,
+        modoAcessoCroqui,
       ]);
 }

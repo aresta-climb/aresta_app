@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -81,6 +82,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final BrowseViewModel _browseViewModel;
   late final MeusCroquisViewModel _meusCroquisViewModel;
   FeedbackController? _feedbackController;
+  bool _ultimoFeedbackAberto = false;
 
   /// Expõe o SyncService para páginas filhas acessarem via TreeNavigationWrapper.of(context).
   // ignore: unreachable_from_main
@@ -129,12 +131,25 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     if (_feedbackController != controller) {
       _feedbackController?.removeListener(_onFeedbackChanged);
       _feedbackController = controller;
+      _ultimoFeedbackAberto = controller?.isVisible ?? false;
       _feedbackController?.addListener(_onFeedbackChanged);
     }
   }
 
   void _onFeedbackChanged() {
     final isVisible = _feedbackController?.isVisible ?? false;
+    final wasOpen = _ultimoFeedbackAberto;
+    _ultimoFeedbackAberto = isVisible;
+
+    if (wasOpen && !isVisible && !SubmitFeedbackUseCase.ultimoEnvioConcluido) {
+      TelemetryService.instance.logAcaoFeedback(
+        'cancelar_feedback',
+        origem: 'descarte_usuario',
+      );
+    }
+    if (isVisible) {
+      SubmitFeedbackUseCase.ultimoEnvioConcluido = false;
+    }
 
     // Posterga a atualização para evitar erro de setState durante a fase de build
     Future.microtask(() {
@@ -232,6 +247,10 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         currentCragId = node.cragId;
         break;
       }
+      if (node is ControlesNode && node.cragId != null) {
+        currentCragId = node.cragId;
+        break;
+      }
     }
 
     widget.syncService.picoAbertoId.value = currentCragId;
@@ -298,7 +317,18 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   @override
   Widget build(BuildContext context) {
     if (widget.child != null) {
-      return widget.child!;
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (SubmitFeedbackUseCase.isFeedbackOpen.value) {
+            BetterFeedback.of(context).hide();
+            return;
+          }
+          treeController.goBack();
+        },
+        child: widget.child!,
+      );
     }
 
     // 1. Extraímos o caminho completo da raiz até o nó atual
@@ -316,13 +346,16 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     );
 
     // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
+    // Nós que representam overlays locais (como ControlesNode, gerenciado pelo modal bottom sheet de PainelFiltrosIndice)
+    // não devem gerar uma rota de página isolada no Navigator declarativo.
     final pushedNodes = fullPath
         .where(
           (n) =>
               !(n is HomeNode ||
                   n is MeusCroquisNode ||
                   n is BrowseNode ||
-                  n is ComunidadeNode),
+                  n is ComunidadeNode ||
+                  n is ControlesNode),
         )
         .toList();
 
@@ -364,7 +397,6 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         // Se o feedback estiver aberto, apenas feche o feedback
         if (SubmitFeedbackUseCase.isFeedbackOpen.value) {
           BetterFeedback.of(context).hide();
-          SubmitFeedbackUseCase.isFeedbackOpen.value = false;
           return;
         }
 

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -307,6 +307,47 @@ void main() {
 
       expect(metadata.croquiSha256Real, equals(croquiHash));
       expect(metadata.croquiStatus, equals('INTEGRO'));
+    });
+
+    test('coleta modoAcessoCroqui como offline quando o croqui está baixado', () async {
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_offline',
+        getIsPicoDownloadedOverride: (id) => id == 'pico_offline',
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiId, equals('pico_offline'));
+      expect(metadata.modoAcessoCroqui, equals('offline'));
+    });
+
+    test('coleta modoAcessoCroqui como online quando o croqui não está baixado permanentemente', () async {
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => 'pico_streaming',
+        getIsPicoDownloadedOverride: (id) => false,
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiId, equals('pico_streaming'));
+      expect(metadata.modoAcessoCroqui, equals('online'));
+    });
+
+    test('modoAcessoCroqui permanece nulo quando nenhum croqui ativo está em visualização', () async {
+      final collector = FeedbackMetadataCollector(
+        getDocsPathOverride: () async => tempDocsDir.path,
+        getTempCachePathOverride: () async => tempCacheDir.path,
+        getCragIdOverride: () => null,
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.croquiId, isNull);
+      expect(metadata.modoAcessoCroqui, isNull);
     });
   });
 }

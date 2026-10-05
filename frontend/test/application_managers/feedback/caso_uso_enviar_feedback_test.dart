@@ -12,14 +12,12 @@ import 'package:frontend/data/modelos/metadados_feedback.dart';
 import 'package:frontend/data/modelos/tipo_feedback.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
+import '../../mocks/mock_telemetria.dart';
 
 class MockFeedbackMetadataCollector extends Mock
     implements FeedbackMetadataCollector {}
 
 class MockFeedbackQueueService extends Mock implements FeedbackQueueService {}
-
-class MockTelemetryService extends Mock implements TelemetryService {}
 
 void main() {
   group('SubmitFeedbackUseCase', () {
@@ -63,11 +61,6 @@ void main() {
     testWidgets('execute realiza a coleta e salva na fila corretamente', (
       tester,
     ) async {
-      // Mock da telemetria
-      when(
-        () => mockTelemetryService.logAcaoFeedback(any()),
-      ).thenAnswer((_) async {});
-
       // Mock da coleta de metadados
       const fakeMetadata = FeedbackMetadata(
         navigationTree: 'Home',
@@ -125,10 +118,14 @@ void main() {
       await useCase.execute(testContext, fakeFeedback);
       await tester.pumpAndSettle();
 
-      // Verifica interações
-      verify(
-        () => mockTelemetryService.logAcaoFeedback('enviar_feedback'),
-      ).called(1);
+      // Verifica telemetria e estado de envio
+      expect(mockTelemetryService.recordedEvents, contains('acao_feedback'));
+      final params = mockTelemetryService.recordedParams['acao_feedback']!;
+      expect(params['acao'], 'enviar_feedback');
+      expect(params['tipo_feedback'], 'app');
+      expect(params['qtd_caracteres'], 'This is a test bug'.length);
+      expect(SubmitFeedbackUseCase.ultimoEnvioConcluido, isTrue);
+
       verify(
         () => mockMetadataCollector.collect(context: testContext),
       ).called(1);
@@ -148,14 +145,12 @@ void main() {
     testWidgets('execute propaga tipo_feedback: croqui dos extras para os metadados', (
       tester,
     ) async {
-      when(() => mockTelemetryService.logAcaoFeedback(any()))
-          .thenAnswer((_) async {});
-
       const fakeMetadata = FeedbackMetadata(
         navigationTree: 'Croqui',
         submittedAt: 'test',
         submittedAtTimestamp: 'test-ts',
         feedbackId: 'uuid-456',
+        croquiId: 'pedra-do-bau',
         appInstanceId: 'instance',
         os: 'android',
         osVersion: '14',
@@ -206,6 +201,14 @@ void main() {
 
       expect(metadadosEnfileirados, isNotNull);
       expect(metadadosEnfileirados!.tipoFeedback, TipoFeedback.croqui);
+      expect(mockTelemetryService.recordedEvents, contains('acao_feedback'));
+      final params = mockTelemetryService.recordedParams['acao_feedback']!;
+      expect(params['acao'], 'enviar_feedback');
+      expect(params['tipo_feedback'], 'croqui');
+      expect(params['id_croqui'], 'pedra-do-bau');
+      expect(params['tem_croqui'], 'true');
+      expect(params['qtd_caracteres'], 'Via com linha errada'.length);
+      expect(SubmitFeedbackUseCase.ultimoEnvioConcluido, isTrue);
     });
   });
 }

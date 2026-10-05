@@ -30,6 +30,7 @@ void main() {
         thumbnailSha256Esperado: 'hash_thumb_exp_789',
         thumbnailSha256Real: 'hash_thumb_real_789',
         thumbnailStatus: 'INTEGRO',
+        modoAcessoCroqui: 'online',
       );
 
       final json = metadata.toJson();
@@ -55,6 +56,7 @@ void main() {
       expect(json['thumbnail_sha256_esperado'], 'hash_thumb_exp_789');
       expect(json['thumbnail_sha256_real'], 'hash_thumb_real_789');
       expect(json['thumbnail_status'], 'INTEGRO');
+      expect(json['modo_acesso_croqui'], 'online');
     });
 
     test('fromJson converte Map para FeedbackMetadata corretamente', () {
@@ -80,6 +82,7 @@ void main() {
         'thumbnail_sha256_esperado': 'hash_thumb_exp_789',
         'thumbnail_sha256_real': 'hash_thumb_real_789',
         'thumbnail_status': 'INTEGRO',
+        'modo_acesso_croqui': 'offline',
       };
 
       final metadata = FeedbackMetadata.fromJson(json);
@@ -105,6 +108,7 @@ void main() {
       expect(metadata.thumbnailSha256Esperado, 'hash_thumb_exp_789');
       expect(metadata.thumbnailSha256Real, 'hash_thumb_real_789');
       expect(metadata.thumbnailStatus, 'INTEGRO');
+      expect(metadata.modoAcessoCroqui, 'offline');
     });
 
     test('fromJson utiliza valores default para chaves ausentes', () {
@@ -156,8 +160,12 @@ void main() {
         tipoFeedback: TipoFeedback.aplicativo,
       );
 
-      final alterado = original.copyWith(tipoFeedback: TipoFeedback.croqui);
+      final alterado = original.copyWith(
+        tipoFeedback: TipoFeedback.croqui,
+        modoAcessoCroqui: 'online',
+      );
       expect(alterado.tipoFeedback, TipoFeedback.croqui);
+      expect(alterado.modoAcessoCroqui, 'online');
       expect(alterado.feedbackId, 'id');
       expect(alterado.navigationTree, 'Nav');
     });

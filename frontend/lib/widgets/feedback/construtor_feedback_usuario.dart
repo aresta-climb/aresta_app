@@ -31,11 +31,160 @@ Widget construtorFeedbackUsuario(
 /// Alias de compatibilidade retroativa para [construtorFeedbackUsuario].
 const customFeedbackBuilder = construtorFeedbackUsuario;
 
+/// Altura líquida estimada do formulário de feedback compacto quando há um croqui ativo (com seletor).
+const double kAlturaAlvoComCroqui = 216.0;
+
+/// Altura líquida estimada do formulário de feedback compacto em telas neutras (sem seletor de croqui).
+const double kAlturaAlvoSemCroqui = 168.0;
+
+/// Alias de compatibilidade retroativa para [kAlturaAlvoComCroqui].
+const double kAlturaAlvoFeedbackSheet = kAlturaAlvoComCroqui;
+
+/// Limite mínimo da fração da tela ocupada pela folha de feedback.
+const double kFracaoMinimaFeedbackSheet = 0.18;
+
+/// Limite máximo da fração da tela ocupada pela folha de feedback.
+const double kFracaoMaximaFeedbackSheet = 0.45;
+
+/// Calcula a fração adaptativa da altura do bottom sheet de feedback.
+///
+/// Adota [kAlturaAlvoComCroqui] (216.0 dp) quando [temCroquiAtivo] for verdadeiro
+/// (incluindo o seletor `SegmentedButton` e margem inferior de 12 dp) ou
+/// [kAlturaAlvoSemCroqui] (160.0 dp) em telas neutras sem seletor.
+///
+/// Soma a altura líquida do formulário com o [paddingInferiorSO] (barra de navegação de
+/// 3 botões ou gestos do SO) e divide pela [alturaTela], limitando o resultado entre
+/// [kFracaoMinimaFeedbackSheet] (0.18) e [kFracaoMaximaFeedbackSheet] (0.45).
+///
+/// Dispositivos sem barra do SO (modo imersivo ou gestos finos) recebem apenas
+/// a altura líquida necessária, mantendo o máximo de tela livre para marcação.
+/// Caso [alturaTela] seja nulo ou não-positivo, adota como padrão 800 dp.
+/// Caso [paddingInferiorSO] seja nulo ou negativo, adota 0.0 dp.
+double calcularFracaoAlturaFeedbackSheet([
+  double? alturaTela,
+  double? paddingInferiorSO,
+  bool temCroquiAtivo = false,
+]) {
+  final altura = (alturaTela != null && alturaTela > 0) ? alturaTela : 800.0;
+  final padding = (paddingInferiorSO != null && paddingInferiorSO > 0)
+      ? paddingInferiorSO
+      : 0.0;
+  final alturaAlvo =
+      temCroquiAtivo ? kAlturaAlvoComCroqui : kAlturaAlvoSemCroqui;
+  final alturaTotal = alturaAlvo + padding;
+  return (alturaTotal / altura).clamp(
+    kFracaoMinimaFeedbackSheet,
+    kFracaoMaximaFeedbackSheet,
+  );
+}
+
+/// Obtém o identificador do croqui (cragId) ativo na árvore de navegação atual, se houver.
+String? obterCragIdAtivoNaArvore([
+  String? Function()? resolverCragId,
+]) {
+  if (resolverCragId != null) {
+    return resolverCragId();
+  }
+  try {
+    final treeController = TreeNavigationWrapper.currentTreeController;
+    if (treeController != null) {
+      NavNode? current = treeController.currentNode;
+      while (current != null) {
+        if (current is PicoContextNode && current.cragId.isNotEmpty) {
+          return current.cragId;
+        }
+        current = current.parent;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+/// Verifica se há um croqui (pico/crag) ativo no contexto de navegação atual.
+///
+/// Consulta opcionalmente o [resolverCragId] se fornecido, ou inspeciona o
+/// controlador da árvore de navegação global em busca de nós do tipo [PicoContextNode].
+bool temCroquiAtivoNaArvore([
+  BuildContext? context,
+  String? Function()? resolverCragId,
+]) {
+  return obterCragIdAtivoNaArvore(resolverCragId) != null;
+}
+
+/// Gerenciador reativo da dimensão e contexto da folha de feedback.
+///
+/// Mantém um [ValueNotifier] com a fração calculada para a folha de feedback,
+/// permitindo que o [BetterFeedback] seja atualizado dinamicamente antes da exibição,
+/// garantindo ajuste preciso com ou sem croqui e com ou sem barra de navegação do SO.
+class GerenciadorFeedbackSheet {
+  /// Fração reativa da altura do sheet em relação à altura total da tela.
+  static final ValueNotifier<double> fracaoAlturaSheet =
+      ValueNotifier<double>(calcularFracaoAlturaFeedbackSheet());
+
+  /// Sincroniza a fração da folha de feedback com base no contexto visual atual.
+  ///
+  /// Extrai altura da tela, padding inferior da janela física do SO (imune ao consumo
+  /// de padding por [Scaffold] ou [BottomNavigationBar]) e presença de croqui ativo
+  /// na árvore de navegação para calcular e notificar a fração ideal.
+  static void sincronizarDimensoes(
+    BuildContext context, {
+    bool? temCroquiAtivo,
+  }) {
+    final view = View.maybeOf(context) ??
+        (WidgetsBinding.instance.platformDispatcher.views.isNotEmpty
+            ? WidgetsBinding.instance.platformDispatcher.views.first
+            : null);
+
+    double altura = 800.0;
+    double paddingInferior = 0.0;
+
+    if (view != null && view.devicePixelRatio > 0) {
+      final windowData = MediaQueryData.fromView(view);
+      altura = windowData.size.height;
+      final viewPad = windowData.viewPadding.bottom;
+      final pad = windowData.padding.bottom;
+      paddingInferior = viewPad > pad ? viewPad : pad;
+    }
+
+    final mediaQuery = MediaQuery.maybeOf(context);
+    if (mediaQuery != null) {
+      if (mediaQuery.size.height > 0) {
+        altura = mediaQuery.size.height;
+      }
+      if (mediaQuery.padding.bottom > paddingInferior) {
+        paddingInferior = mediaQuery.padding.bottom;
+      }
+    }
+
+    final croqui = temCroquiAtivo ?? temCroquiAtivoNaArvore(context);
+
+    fracaoAlturaSheet.value = calcularFracaoAlturaFeedbackSheet(
+      altura,
+      paddingInferior,
+      croqui,
+    );
+  }
+
+  /// Permite atualizar a fração manualmente com valores explícitos (útil em testes ou arranque sem contexto).
+  static void atualizarDimensoesManuais({
+    double? alturaTela,
+    double? paddingInferiorSO,
+    bool temCroquiAtivo = false,
+  }) {
+    fracaoAlturaSheet.value = calcularFracaoAlturaFeedbackSheet(
+      alturaTela,
+      paddingInferiorSO,
+      temCroquiAtivo,
+    );
+  }
+}
+
+
 /// Widget Stateful que renderiza o formulário de feedback do Aresta.
 ///
 /// Apresenta o título "Sobre o que é a sugestão?", seleção contextual
 /// via [SegmentedButton] quando um croqui está ativo, campo descritivo,
-/// aviso de transparência do GitHub e despacho com extras tipados.
+/// aviso de transparência pública em linha única e despacho com extras tipados.
 class CustomStringFeedback extends StatefulWidget {
   const CustomStringFeedback({
     super.key,
@@ -118,8 +267,8 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
     final temCroquiAtivo = cragIdAtivo != null && cragIdAtivo.isNotEmpty;
 
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final minLines = isKeyboardVisible ? 2 : 1;
-    final maxLines = isKeyboardVisible ? 3 : 2;
+    final minLines = 1;
+    final maxLines = isKeyboardVisible ? 1 : 2;
 
     return SafeArea(
       bottom: true,
@@ -127,33 +276,33 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
       child: SingleChildScrollView(
         controller: widget.scrollController,
         physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
               'Sobre o que é a sugestão?',
-              maxLines: 2,
+              maxLines: 1,
               style: TextStyle(
                 color: textColor,
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
             if (temCroquiAtivo) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               SegmentedButton<TipoFeedback>(
                 segments: const [
                   ButtonSegment<TipoFeedback>(
                     value: TipoFeedback.croqui,
                     label: Text('Sobre o Croqui'),
-                    icon: Icon(Icons.terrain_rounded, size: 18),
+                    icon: Icon(Icons.terrain_rounded, size: 16),
                   ),
                   ButtonSegment<TipoFeedback>(
                     value: TipoFeedback.aplicativo,
                     label: Text('Sobre o App'),
-                    icon: Icon(Icons.phone_android_rounded, size: 18),
+                    icon: Icon(Icons.phone_android_rounded, size: 16),
                   ),
                 ],
                 selected: _tipoSelecionado != null
@@ -167,6 +316,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                   });
                 },
                 style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
                   backgroundColor:
                       WidgetStateProperty.resolveWith<Color>((states) {
                     if (states.contains(WidgetState.selected)) {
@@ -187,7 +337,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                 ),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Theme(
               data: Theme.of(context).copyWith(
                 textSelectionTheme: TextSelectionThemeData(
@@ -210,6 +360,10 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                     hintStyle: TextStyle(color: hintColor),
                     filled: true,
                     fillColor: fillColor,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: borderColor),
@@ -226,30 +380,20 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                 ),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.only(top: 8, bottom: 8),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: fillColor.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: borderColor.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('💡', style: TextStyle(fontSize: 13)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Seu relato e a captura da tela serão registrados publicamente no nosso GitHub comunitário para que os mantenedores possam atuar. Nenhum dado pessoal ou de dispositivo é exposto.',
-                      style: TextStyle(
-                        color: hintColor,
-                        fontSize: 11,
-                        height: 1.35,
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  'Feedback público. Nenhum dado pessoal é exposto.',
+                  style: TextStyle(
+                    color: hintColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
                   ),
-                ],
+                  maxLines: 1,
+                ),
               ),
             ),
             ValueListenableBuilder<TextEditingValue>(
@@ -267,7 +411,7 @@ class _CustomStringFeedbackState extends State<CustomStringFeedback>
                     disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
                     disabledForegroundColor:
                         context.colors.chalkWhite.withValues(alpha: 0.5),
-                    minimumSize: const Size(double.infinity, 48),
+                    minimumSize: const Size(double.infinity, 42),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

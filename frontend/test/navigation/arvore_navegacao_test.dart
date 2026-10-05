@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -237,6 +237,23 @@ void main() {
     test('GPSNode toString()', () {
       const node = GPSNode(cragId: 'pico_santuario', parent: HomeNode());
       expect(node.toString(), 'GPSNode(pico_santuario)');
+    });
+
+    test('ControlesNode rotuloAmigavel, obterCaminhoCurto e copyWithMergedAncestor', () {
+      final root = HomeNode();
+      final picoNode = PicoNode(cragId: 'pedra_bela', parent: root);
+      final controlesNode = ControlesNode(cragId: 'pedra_bela', parent: picoNode);
+
+      expect(controlesNode.rotuloAmigavel, 'Filtros e Ordenação');
+      expect(controlesNode.obterCaminhoCurto(), 'Início -> Pico (pedra_bela) -> Filtros e Ordenação');
+      expect(controlesNode.toString(), 'ControlesNode(pedra_bela)');
+      expect(controlesNode.isSameNode(const ControlesNode(cragId: 'pedra_bela', parent: null)), isTrue);
+      expect(controlesNode.isSameNode(const ControlesNode(cragId: 'outro_pico', parent: null)), isFalse);
+
+      final newPico = PicoNode(cragId: 'pedra_bela', parent: HomeNode());
+      final merged = controlesNode.copyWithMergedAncestor(ControlesNode(cragId: 'pedra_bela', parent: newPico));
+      expect(merged.parent, newPico);
+      expect((merged as ControlesNode).cragId, 'pedra_bela');
     });
   });
 

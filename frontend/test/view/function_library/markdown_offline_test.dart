@@ -163,5 +163,44 @@ void main() {
 
       expect(find.byType(InteractiveViewer), findsNothing);
     });
+
+    testWidgets('deve renderizar tag <small> com escala reduzida e sem tags literais', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: OfflineMarkdown(
+              data: 'Setor Principal <small>(grau sugerido: V4)</small>',
+              cragId: 'test_crag',
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Não deve exibir as tags HTML como texto literal
+      expect(find.textContaining('<small>'), findsNothing);
+      expect(find.textContaining('</small>'), findsNothing);
+
+      // Deve renderizar o texto reduzido
+      expect(find.textContaining('(grau sugerido: V4)'), findsOneWidget);
+
+      final textWidget = tester.widget<Text>(find.byType(Text));
+      final spanPrincipal = textWidget.textSpan! as TextSpan;
+
+      bool encontrouTextoReduzido = false;
+      spanPrincipal.visitChildren((span) {
+        if (span is TextSpan && span.text == '(grau sugerido: V4)') {
+          encontrouTextoReduzido = true;
+          // No OfflineMarkdown p tem fontSize: 16. Logo 80% é 12.8
+          expect(span.style?.fontSize, closeTo(12.8, 0.01));
+        }
+        return true;
+      });
+
+      expect(encontrouTextoReduzido, isTrue);
+    });
   });
 }

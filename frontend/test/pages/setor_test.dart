@@ -163,5 +163,21 @@ void main() {
     expect(params['origem'], 'setor');
     expect(params['detalhe'], 'gradeAsc');
   });
+
+  testWidgets('SetorPage exibe descrição sem o cabeçalho "Descrição"', (tester) async {
+    final setor = Setor()
+      ..nome = 'Setor Cachoeira'
+      ..descricao = 'Acesso fácil pela trilha principal.';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetorPage(setor: setor, cragId: 'crag1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Descrição'), findsNothing);
+    expect(find.text('Acesso fácil pela trilha principal.'), findsOneWidget);
+  });
 }
 

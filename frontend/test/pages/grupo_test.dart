@@ -108,6 +108,8 @@ void main() {
     await tester.pumpAndSettle();
 
     mockTelemetria.clear();
+    await tester.tap(find.text('Filtros e Ordenação'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('ALFABÉTICO'));
     await tester.pumpAndSettle();
 
@@ -179,7 +181,7 @@ void main() {
       expect(find.text('Boulders (1)'), findsOneWidget);
     });
 
-    testWidgets('renderiza PainelFiltrosIndice e BarraOrdenacaoExploracao', (tester) async {
+    testWidgets('renderiza PainelFiltrosIndice com botão Filtros e Ordenação e sem barra de ordenação solta', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData.dark(),
@@ -189,7 +191,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(PainelFiltrosIndice), findsOneWidget);
-      expect(find.byType(BarraOrdenacaoExploracao), findsOneWidget);
+      expect(find.text('Filtros e Ordenação'), findsOneWidget);
+      expect(find.byType(BarraOrdenacaoExploracao), findsNothing);
     });
 
     testWidgets('alterna entre aba de Setores e aba de modalidade exibindo escaladas individuais', (tester) async {
@@ -244,7 +247,9 @@ void main() {
       expect(find.text('Setor Sol'), findsOneWidget);
       expect(find.text('Setor das Pedras'), findsNothing);
 
-      // Ao alternar ordenação por GRAU na GrupoPage, sincroniza com GerenciadorFiltrosCroqui
+      // Ao alternar ordenação por GRAU na GrupoPage através de Filtros e Ordenação, sincroniza com GerenciadorFiltrosCroqui
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('GRAU'));
       await tester.pumpAndSettle();
 

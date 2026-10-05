@@ -4,7 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
 import '../mocks/mock_telemetria.dart';
@@ -38,8 +42,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Filtros'), findsOneWidget);
-      expect(find.byIcon(Icons.expand_more), findsOneWidget);
+      expect(find.text('Filtros e Ordenação'), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
       // No modo colapsado, exibe os chips dos filtros ativos
       expect(find.text('Falésia Norte'), findsOneWidget);
       expect(find.text('Clássicas (★)'), findsOneWidget);
@@ -63,7 +67,7 @@ void main() {
       expect(find.byType(RangeSlider), findsNothing);
 
       // Toca no cabeçalho para expandir
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
 
       expect(find.byType(RangeSlider), findsOneWidget);
@@ -90,6 +94,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Abre dropdown de setor
       await tester.tap(find.byType(DropdownButton<String>).first);
@@ -118,12 +123,13 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      expect(find.text('Falésia Central'), findsOneWidget);
-      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(find.text('Falésia Central'), findsWidgets);
+      expect(find.byIcon(Icons.close), findsWidgets);
 
       // Clica no X do chip para remover
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close).last);
       await tester.pumpAndSettle();
 
       expect(estadoRemovido, isNotNull);
@@ -147,6 +153,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Abre dropdown de conquistador
       await tester.ensureVisible(find.byType(DropdownButton<String>).last);
@@ -176,9 +183,10 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      expect(find.text('Alice'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.close));
+      expect(find.text('Alice'), findsWidgets);
+      await tester.tap(find.byIcon(Icons.close).last);
       await tester.pumpAndSettle();
 
       expect(estadoRemovido, isNotNull);
@@ -206,6 +214,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Limpar'));
       await tester.tap(find.text('Limpar'));
@@ -232,6 +241,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Nenhum setor nos filtros atuais'), findsOneWidget);
       expect(find.text('Nenhum conquistador nos filtros atuais'), findsOneWidget);
@@ -253,6 +263,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Todos os setores adicionados'), findsOneWidget);
       expect(find.text('Todos os conquistadores adicionados'), findsOneWidget);
@@ -272,6 +283,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Conquista (Autores)'), findsNothing);
     });
@@ -330,6 +342,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Apenas Clássicas (★)'), findsNothing);
     });
@@ -348,6 +361,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Apenas Clássicas (★)'), findsOneWidget);
     });
@@ -377,7 +391,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expande
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
@@ -388,7 +402,7 @@ void main() {
 
       // Colapsa
       mockTelemetry.clear();
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
@@ -542,6 +556,199 @@ void main() {
       expect(params['origem'], 'indice_esportiva');
     });
 
+    testWidgets('dispara alterar_ordenacao ao mudar tipo ou direcao de ordenacao no bottom sheet', (tester) async {
+      EstadoFiltrosUnificado estado = const EstadoFiltrosUnificado();
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                cragId: 'crag_pedra',
+                estadoUnificado: estado,
+                abaAtiva: 'Esportiva',
+                modalidadesDisponiveis: const ['Esportiva'],
+                setoresDisponiveis: const [],
+                conquistadoresDisponiveis: const [],
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() => estado = novo);
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+
+      // Clica em 'GRAU' na barra de ordenação
+      await tester.tap(find.text('GRAU'));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
+
+      var paramsIndice = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(paramsIndice['id_croqui'], 'crag_pedra');
+      expect(paramsIndice['acao'], 'alterar_ordenacao');
+      expect(paramsIndice['origem'], 'indice_esportiva');
+      expect(paramsIndice['detalhe'], 'grau_asc');
+
+      var paramsOrd = mockTelemetry.recordedParams['alterar_ordenacao']!;
+      expect(paramsOrd['origem'], 'esportiva');
+      expect(paramsOrd['detalhe'], 'grau_asc');
+
+      // Alterna a direção da ordenação tocando no botão de seta
+      mockTelemetry.clear();
+      await tester.tap(find.byIcon(Icons.arrow_upward));
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
+
+      paramsIndice = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(paramsIndice['id_croqui'], 'crag_pedra');
+      expect(paramsIndice['acao'], 'alterar_ordenacao');
+      expect(paramsIndice['origem'], 'indice_esportiva');
+      expect(paramsIndice['detalhe'], 'grau_desc');
+
+      paramsOrd = mockTelemetry.recordedParams['alterar_ordenacao']!;
+      expect(paramsOrd['origem'], 'esportiva');
+      expect(paramsOrd['detalhe'], 'grau_desc');
+    });
+
+    testWidgets('dispara alterar_ordenacao ao excluir chip de ordenacao na barra externa', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estadoUnificado: const EstadoFiltrosUnificado(
+              tipoOrdenacao: TipoOrdenacaoExploracao.grau,
+              direcaoCrescente: false,
+            ),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+
+      final closeIcon = find.descendant(
+        of: find.widgetWithText(Chip, 'Grau ▼'),
+        matching: find.byIcon(Icons.close),
+      );
+      expect(closeIcon, findsOneWidget);
+      await tester.tap(closeIcon);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
+
+      final paramsIndice = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(paramsIndice['id_croqui'], 'crag_pedra');
+      expect(paramsIndice['acao'], 'alterar_ordenacao');
+      expect(paramsIndice['origem'], 'indice_esportiva');
+      expect(paramsIndice['detalhe'], 'padrao_asc');
+
+      final paramsOrd = mockTelemetry.recordedParams['alterar_ordenacao']!;
+      expect(paramsOrd['origem'], 'esportiva');
+      expect(paramsOrd['detalhe'], 'padrao_asc');
+    });
+
+    testWidgets('dispara filtrar_modalidade ao alternar modalidade no bottom sheet da aba Setores', (tester) async {
+      EstadoFiltrosUnificado estado = const EstadoFiltrosUnificado();
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                cragId: 'crag_pedra',
+                estadoUnificado: estado,
+                abaAtiva: 'Setores',
+                modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+                setoresDisponiveis: const [],
+                conquistadoresDisponiveis: const [],
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() => estado = novo);
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+
+      // Clica em 'Boulder' no seletor de modalidades
+      await tester.tap(find.text('Boulder').first);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      var params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_modalidade');
+      expect(params['origem'], 'indice_setores');
+      expect(params['detalhe'], 'Boulder:inativo');
+
+      // Clica novamente em 'Boulder' para reativar
+      mockTelemetry.clear();
+      await tester.tap(find.text('Boulder').first);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_modalidade');
+      expect(params['origem'], 'indice_setores');
+      expect(params['detalhe'], 'Boulder:ativo');
+    });
+
+    testWidgets('dispara filtrar_modalidade ao excluir chip de modalidade na barra externa', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            cragId: 'crag_pedra',
+            estadoUnificado: const EstadoFiltrosUnificado(
+              modalidadesAtivas: {'Esportiva'},
+            ),
+            abaAtiva: 'Setores',
+            modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      mockTelemetry.clear();
+
+      final closeIcon = find.descendant(
+        of: find.widgetWithText(Chip, 'Esportiva'),
+        matching: find.byIcon(Icons.close),
+      );
+      expect(closeIcon, findsOneWidget);
+      await tester.tap(closeIcon);
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
+      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
+      expect(params['id_croqui'], 'crag_pedra');
+      expect(params['acao'], 'filtrar_modalidade');
+      expect(params['origem'], 'indice_setores');
+      expect(params['detalhe'], 'Esportiva:inativo');
+    });
+
     testWidgets('no modo Superset (Setores), renderiza seleção de modalidades e omite dropdown de setores', (tester) async {
       EstadoFiltrosUnificado? estadoEmitido;
 
@@ -558,6 +765,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Deve exibir os seletores de modalidade ativa
       expect(find.text('Esportiva'), findsWidgets);
@@ -586,6 +794,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Exibe RangeSlider da modalidade
       expect(find.byType(RangeSlider), findsOneWidget);
@@ -610,6 +819,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Desmarca Boulder: estado deve ter apenas Esportiva
       await tester.tap(find.text('Boulder').first);
@@ -630,6 +840,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Boulder').first);
       await tester.pumpAndSettle();
@@ -669,6 +880,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Localização (Grupos)'), findsNothing);
       expect(find.text('Adicionar grupo...'), findsNothing);
@@ -692,6 +904,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Deve exibir um único título de "Localização", e o hint "Adicionar setor ou grupo..."
       expect(find.text('Localização'), findsOneWidget);
@@ -729,6 +942,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('1 ativo'), findsOneWidget);
       expect(find.text('2 ativos'), findsNothing);
@@ -750,6 +964,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byType(DropdownButton<String>).last);
       await tester.pumpAndSettle();
@@ -801,6 +1016,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('1 ativo'), findsOneWidget);
       expect(find.text('2 ativos'), findsNothing);
@@ -866,6 +1082,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Deve encontrar exatamente 2 RangeSliders: 1 para Vias e 1 para Boulders
       expect(find.byType(RangeSlider), findsNWidgets(2));
@@ -889,6 +1106,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Apenas 1 RangeSlider para vias
       expect(find.byType(RangeSlider), findsOneWidget);
@@ -913,6 +1131,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       final sliders = find.byType(RangeSlider);
       expect(sliders, findsNWidgets(2));
@@ -953,7 +1172,7 @@ void main() {
       expect(find.text('Vias: 6º a 9c'), findsNothing);
 
       // Ao expandir, o contador deve indicar exatamente 1 ativo (apenas o grau de via relevante para a aba)
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       expect(find.text('1 ativo'), findsOneWidget);
       expect(find.text('2 ativos'), findsNothing);
@@ -985,7 +1204,7 @@ void main() {
       expect(find.text('Boulders: V5 a V11'), findsNothing);
 
       // Ao expandir, o contador deve indicar exatamente 1 ativo
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       expect(find.text('1 ativo'), findsOneWidget);
       expect(find.text('2 ativos'), findsNothing);
@@ -1015,7 +1234,7 @@ void main() {
       expect(find.text('Boulders: V5 a V11'), findsOneWidget);
 
       // Ao expandir, o contador indica 2 ativos
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       expect(find.text('2 ativos'), findsOneWidget);
     });
@@ -1040,7 +1259,7 @@ void main() {
       );
 
       expect(find.text('Esportiva'), findsOneWidget);
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
       expect(find.text('1 ativo'), findsOneWidget);
 
@@ -1084,6 +1303,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Limpar'));
       await tester.pumpAndSettle();
@@ -1098,7 +1318,329 @@ void main() {
       expect(estadoEmitido!.minGrauPorModalidade['Boulder'], 600);
       expect(estadoEmitido!.maxGrauPorModalidade['Boulder'], 1200);
     });
+
+    testWidgets('barra externa exibe botão Filtros e Ordenação com ícone tune e chips em scroll horizontal em linha única', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        setores: {'Falésia Central', 'Setor Leste'},
+        apenasClassicas: true,
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const ['Falésia Central', 'Setor Leste'],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Filtros e Ordenação'), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+
+      // Fila de chips em scroll horizontal
+      final scrollFinder = find.byWidgetPredicate(
+        (w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+      );
+      expect(scrollFinder, findsOneWidget);
+
+      expect(find.text('Falésia Central'), findsOneWidget);
+      expect(find.text('Setor Leste'), findsOneWidget);
+      expect(find.text('Clássicas (★)'), findsOneWidget);
+    });
+
+    testWidgets('ordenação não-padrão renderiza chip dinâmico na barra externa e permite reset rápido via X', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+      final estado = const EstadoFiltrosUnificado(
+        tipoOrdenacao: TipoOrdenacaoExploracao.grau,
+        direcaoCrescente: true,
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+
+      // Exibe chip com rótulo Grau ▲
+      expect(find.text('Grau ▲'), findsOneWidget);
+
+      // Clica no X do chip de ordenação
+      final closeIcon = find.descendant(
+        of: find.widgetWithText(Chip, 'Grau ▲'),
+        matching: find.byIcon(Icons.close),
+      );
+      expect(closeIcon, findsOneWidget);
+      await tester.tap(closeIcon);
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido, isNotNull);
+      expect(estadoEmitido!.tipoOrdenacao, TipoOrdenacaoExploracao.padrao);
+      expect(estadoEmitido!.direcaoCrescente, isTrue);
+    });
+
+    testWidgets('ordenação padrão Padrão ▲ não renderiza chip de ordenação para evitar poluição', (tester) async {
+      final estado = const EstadoFiltrosUnificado(
+        tipoOrdenacao: TipoOrdenacaoExploracao.padrao,
+        direcaoCrescente: true,
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Padrão ▲'), findsNothing);
+      expect(find.byType(Chip), findsNothing);
+    });
+
+    testWidgets('toque no botão Filtros e Ordenação abre Modal Bottom Sheet com seções de Ordenação, Filtros e botão de Feedback', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const ['Falésia Central'],
+            conquistadoresDisponiveis: const ['Carlos'],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+
+      // Não está visível antes do toque
+      expect(find.text('ORDENAÇÃO'), findsNothing);
+      expect(find.text('FILTROS'), findsNothing);
+
+      // Toca em Filtros e Ordenação
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      // Modal Bottom Sheet aberto com as duas seções
+      expect(find.text('ORDENAÇÃO'), findsOneWidget);
+      expect(find.text('FILTROS'), findsOneWidget);
+      expect(find.text('PADRÃO'), findsOneWidget);
+      expect(find.text('GRAU'), findsOneWidget);
+      expect(find.text('ALFABÉTICO'), findsOneWidget);
+      expect(find.text('Faixa de Grau'), findsOneWidget);
+
+      // Botão de feedback na extrema direita do cabeçalho do Bottom Sheet
+      expect(find.byTooltip('Enviar Feedback/Bug'), findsOneWidget);
+    });
+
+    testWidgets('botão Limpar no Bottom Sheet zera filtros e restaura ordenação para padrão', (tester) async {
+      EstadoFiltrosUnificado? estadoEmitido;
+      final estado = const EstadoFiltrosUnificado(
+        tipoOrdenacao: TipoOrdenacaoExploracao.grau,
+        direcaoCrescente: false,
+        setores: {'Falésia Central'},
+        minGrauPorModalidade: {'Via': 700},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: estado,
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const ['Falésia Central'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (e) => estadoEmitido = e,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Limpar'));
+      await tester.pumpAndSettle();
+
+      expect(estadoEmitido, isNotNull);
+      expect(estadoEmitido!.setores, isEmpty);
+      expect(estadoEmitido!.minGrauPorModalidade.containsKey('Via'), isFalse);
+      expect(estadoEmitido!.tipoOrdenacao, TipoOrdenacaoExploracao.padrao);
+      expect(estadoEmitido!.direcaoCrescente, isTrue);
+    });
+
+    testWidgets('abrir modal de filtros com controlador de navegação ativo registra ControlesNode e restaura ao fechar', (tester) async {
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final controller = TreeNavigationController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: controller,
+            child: Scaffold(
+              body: PainelFiltrosIndice(
+                cragId: 'pedra_bela',
+                estado: const EstadoFiltrosIndice(),
+                modalidade: 'Esportiva',
+                setoresDisponiveis: const ['Setor 1'],
+                conquistadoresDisponiveis: const [],
+                onFiltrosChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Clica em 'Filtros e Ordenação' para abrir o bottom sheet
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      // Confirma que NÃO exibe Unknown Node e que o nó ativo na árvore é ControlesNode
+      expect(find.text('Unknown Node'), findsNothing);
+      expect(controller.currentNode, isA<ControlesNode>());
+      expect((controller.currentNode as ControlesNode).cragId, 'pedra_bela');
+      expect((controller.currentNode as ControlesNode).rotuloAmigavel, 'Filtros e Ordenação');
+
+      // Fecha o modal pelo botão X
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+
+      // O nó na árvore deve voltar ao nó original
+      expect(controller.currentNode, isA<HomeNode>());
+    });
+
+    testWidgets('botão back do SO com modal de filtros aberto fecha o modal na primeira vez e preserva a página', (tester) async {
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final controller = TreeNavigationController();
+      controller.navigateTo(PicoNode(cragId: 'pedra_bela', parent: controller.currentNode));
+      controller.navigateTo(SetoresNode(cragId: 'pedra_bela', parent: controller.currentNode));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: controller,
+            child: Scaffold(
+              body: PainelFiltrosIndice(
+                cragId: 'pedra_bela',
+                estado: const EstadoFiltrosIndice(),
+                modalidade: 'Esportiva',
+                setoresDisponiveis: const ['Setor 1'],
+                conquistadoresDisponiveis: const [],
+                onFiltrosChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Clica em 'Filtros e Ordenação' para abrir o bottom sheet
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(controller.currentNode, isA<ControlesNode>());
+      // Verifica que o modal está visível
+      expect(find.text('Adicionar setor...'), findsOneWidget);
+
+      // Simula o primeiro clique de "back" do SO (chamando controller.goBack())
+      final retornoPrimeiroBack = controller.goBack();
+      await tester.pumpAndSettle();
+
+      expect(retornoPrimeiroBack, isTrue);
+      // No primeiro back, o modal DEVE ter fechado
+      expect(find.text('Adicionar setor...'), findsNothing);
+      // E a página atual DEVE ser mantida (SetoresNode), não pode ter saído para PicoNode!
+      expect(controller.currentNode, isA<SetoresNode>());
+
+      // Segundo back: agora sim deve voltar da página (SetoresNode -> PicoNode)
+      final retornoSegundoBack = controller.goBack();
+      await tester.pumpAndSettle();
+
+      expect(retornoSegundoBack, isTrue);
+      expect(controller.currentNode, isA<PicoNode>());
+    });
+
+    testWidgets('botão back nativo do SO (handlePopRoute) fecha bottom sheet na primeira invocação e preserva a página', (tester) async {
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final controller = TreeNavigationController();
+      controller.navigateTo(PicoNode(cragId: 'pedra_bela', parent: controller.currentNode));
+      controller.navigateTo(SetoresNode(cragId: 'pedra_bela', parent: controller.currentNode));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: controller,
+            child: Scaffold(
+              body: PainelFiltrosIndice(
+                cragId: 'pedra_bela',
+                estado: const EstadoFiltrosIndice(),
+                modalidade: 'Esportiva',
+                setoresDisponiveis: const ['Setor 1'],
+                conquistadoresDisponiveis: const [],
+                onFiltrosChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Clica em 'Filtros e Ordenação' para abrir o bottom sheet
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(controller.currentNode, isA<ControlesNode>());
+      expect(find.text('Adicionar setor...'), findsOneWidget);
+
+      // Simula o evento de pop disparado pelo SO (como a tecla Back do Android)
+      await WidgetsBinding.instance.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // O modal DEVE ter fechado
+      expect(find.text('Adicionar setor...'), findsNothing);
+      // E a página atual SetoresNode deve ser preservada
+      expect(controller.currentNode, isA<SetoresNode>());
+
+      // Segundo pop do SO
+      await WidgetsBinding.instance.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // Agora sim recua para PicoNode
+      expect(controller.currentNode, isA<PicoNode>());
+    });
   });
 }
+
+
 
 

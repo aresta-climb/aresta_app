@@ -12,7 +12,6 @@ import '../utils/indexador_escaladas.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/markdown_offline.dart';
 import '../view/function_library/pico_functions.dart';
-import '../widgets/barra_ordenacao_exploracao.dart';
 import '../widgets/card_indice_escalada.dart';
 import '../widgets/mapa_thumbnail.dart';
 import '../widgets/painel_filtros_indice.dart';
@@ -81,6 +80,13 @@ class _GrupoPageState extends State<GrupoPage>
   }
 
   void _atualizarEstadoFiltros(EstadoFiltrosUnificado novo) {
+    if (novo.tipoOrdenacao != _estadoFiltros.tipoOrdenacao ||
+        novo.direcaoCrescente != _estadoFiltros.direcaoCrescente) {
+      final modoStr = novo.tipoOrdenacao == TipoOrdenacaoExploracao.alfabetico
+          ? (novo.direcaoCrescente ? 'alphaAsc' : 'alphaDesc')
+          : novo.tipoOrdenacao.name;
+      TelemetryService.instance.logAlterarOrdenacao('grupo', modoStr);
+    }
     _estadoFiltros = novo;
     GerenciadorFiltrosCroqui.instance.atualizarFiltros(widget.cragId, novo);
     setState(() {});
@@ -509,36 +515,6 @@ class _GrupoPageState extends State<GrupoPage>
                         _obterConquistadoresDisponiveis(abaAtual),
                     temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
                     onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
-                  ),
-
-                  // Barra de Ordenação
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: BarraOrdenacaoExploracao(
-                      ordenacaoAtual: _estadoFiltros.tipoOrdenacao,
-                      direcaoCrescente: _estadoFiltros.direcaoCrescente,
-                      onOrdenacaoChanged: (novoModo) {
-                        final modoStr = novoModo == TipoOrdenacaoExploracao.alfabetico
-                            ? (_estadoFiltros.direcaoCrescente ? 'alphaAsc' : 'alphaDesc')
-                            : novoModo.name;
-                        TelemetryService.instance.logAlterarOrdenacao('grupo', modoStr);
-                        _atualizarEstadoFiltros(
-                          _estadoFiltros.copyWith(tipoOrdenacao: novoModo),
-                        );
-                      },
-                      onDirecaoChanged: (novaDirecao) {
-                        if (_estadoFiltros.tipoOrdenacao ==
-                            TipoOrdenacaoExploracao.alfabetico) {
-                          TelemetryService.instance.logAlterarOrdenacao(
-                            'grupo',
-                            novaDirecao ? 'alphaAsc' : 'alphaDesc',
-                          );
-                        }
-                        _atualizarEstadoFiltros(
-                          _estadoFiltros.copyWith(direcaoCrescente: novaDirecao),
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),

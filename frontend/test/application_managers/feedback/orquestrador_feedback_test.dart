@@ -1,12 +1,14 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import '../../mocks/mock_telemetria.dart';
 
 class MockHttpClient extends Mock implements http.Client {}
 
@@ -24,17 +26,21 @@ void main() {
 
   group('FeedbackOrchestrator (Atomic File System Queue & App Check)', () {
     late MockHttpClient mockClient;
+    late MockTelemetryService mockTelemetry;
     late Directory tempDir;
     late Directory queueDir;
 
     setUp(() async {
       mockClient = MockHttpClient();
+      mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
       tempDir = await Directory.systemTemp.createTemp('worker_test');
       queueDir = Directory('${tempDir.path}/feedback_queue');
       await queueDir.create();
     });
 
     tearDown(() async {
+      TelemetryService.resetForTesting();
       if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);
       }
@@ -314,5 +320,88 @@ void main() {
         expect(queueDir.listSync().isEmpty, isTrue);
       },
     );
+
+    test('registra telemetria de despacho_feedback com sucesso ao enviar feedback pendente', () async {
+      when(
+        () => mockClient.send(any()),
+      ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 200));
+
+      final pngFile = File('${queueDir.path}/uuid-telemetria.png');
+      pngFile.writeAsBytesSync([1, 2, 3]);
+
+      final jsonFile = File('${queueDir.path}/uuid-telemetria.json');
+      jsonFile.writeAsStringSync(
+        jsonEncode({
+          'id': 'uuid-telemetria',
+          'description': 'bug de telemetria',
+          'metadata': {
+            'os': 'android',
+            'feedbackId': 'uuid-telemetria',
+            'tipo_feedback': 'croqui',
+            'croqui_id': 'falasia-pedra-do-bau',
+          },
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      final result = await FeedbackOrchestrator.processFeedbackQueue(
+        client: mockClient,
+        getSupportDirectoryOverride: () async => tempDir,
+        getAppCheckTokenOverride: () async => 'token-valido',
+        dispatcher: 'workmanager',
+        isDebugModeOverride: false,
+      );
+
+      expect(result, isTrue);
+      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
+      final params = mockTelemetry.recordedParams['acao_feedback']!;
+      expect(params['acao'], 'despacho_feedback');
+      expect(params['status'], 'sucesso');
+      expect(params['dispatcher'], 'workmanager');
+      expect(params['tipo_feedback'], 'croqui');
+      expect(params['id_croqui'], 'falasia-pedra-do-bau');
+    });
+
+    test('registra telemetria de despacho_feedback com falha quando o envio HTTP falha', () async {
+      when(
+        () => mockClient.send(any()),
+      ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 500));
+
+      final pngFile = File('${queueDir.path}/uuid-telemetria-falha.png');
+      pngFile.writeAsBytesSync([1, 2, 3]);
+
+      final jsonFile = File('${queueDir.path}/uuid-telemetria-falha.json');
+      jsonFile.writeAsStringSync(
+        jsonEncode({
+          'id': 'uuid-telemetria-falha',
+          'description': 'bug falha',
+          'metadata': {
+            'os': 'android',
+            'feedbackId': 'uuid-telemetria-falha',
+            'tipo_feedback': 'app',
+          },
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      await expectLater(
+        FeedbackOrchestrator.processFeedbackQueue(
+          client: mockClient,
+          getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'token-valido',
+          dispatcher: 'connectivity_plus',
+          isDebugModeOverride: false,
+        ),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
+      final params = mockTelemetry.recordedParams['acao_feedback']!;
+      expect(params['acao'], 'despacho_feedback');
+      expect(params['status'], 'falha');
+      expect(params['dispatcher'], 'connectivity_plus');
+      expect(params['tipo_feedback'], 'app');
+      expect(params['erro'], contains('HTTP Status 500'));
+    });
   });
 }

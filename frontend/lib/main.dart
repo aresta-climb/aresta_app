@@ -174,48 +174,74 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final view = View.maybeOf(context) ??
+        (WidgetsBinding.instance.platformDispatcher.views.isNotEmpty
+            ? WidgetsBinding.instance.platformDispatcher.views.first
+            : null);
+    final double? alturaLogica = (view != null && view.devicePixelRatio > 0)
+        ? view.physicalSize.height / view.devicePixelRatio
+        : null;
+    final double paddingInferior = (view != null && view.devicePixelRatio > 0)
+        ? (view.viewPadding.bottom > view.padding.bottom
+                ? view.viewPadding.bottom
+                : view.padding.bottom) /
+            view.devicePixelRatio
+        : 0.0;
+    if (alturaLogica != null) {
+      GerenciadorFeedbackSheet.atualizarDimensoesManuais(
+        alturaTela: alturaLogica,
+        paddingInferiorSO: paddingInferior,
+        temCroquiAtivo: false,
+      );
+    }
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController().themeMode,
       builder: (context, currentMode, _) {
-        return BetterFeedback(
-          feedbackBuilder: (context, onSubmit, scrollController) {
-            return Theme(
-              data: ThemeData(
-                brightness: Brightness.dark,
-                extensions: const [AppColors.dark],
+        return ValueListenableBuilder<double>(
+          valueListenable: GerenciadorFeedbackSheet.fracaoAlturaSheet,
+          builder: (context, fracaoSheet, _) {
+            return BetterFeedback(
+              feedbackBuilder: (context, onSubmit, scrollController) {
+                return Theme(
+                  data: ThemeData(
+                    brightness: Brightness.dark,
+                    extensions: const [AppColors.dark],
+                  ),
+                  child: customFeedbackBuilder(context, onSubmit, scrollController),
+                );
+              },
+              themeMode: ThemeMode.dark,
+              theme: FeedbackThemeData(
+                background: AppColors.light.slateStone,
+                feedbackSheetColor: AppColors.light.obsidianBrown,
+                activeFeedbackModeColor: AppColors.light.beastHide,
+                sheetIsDraggable: false,
+                feedbackSheetHeight: fracaoSheet,
+                drawColors: const [
+                  AppColors.brandColor,
+                  Colors.red,
+                  Colors.green,
+                  Colors.blue,
+                  Colors.yellow,
+                ],
               ),
-              child: customFeedbackBuilder(context, onSubmit, scrollController),
-            );
-          },
-          themeMode: ThemeMode.dark,
-          theme: FeedbackThemeData(
-            background: AppColors.light.slateStone,
-            feedbackSheetColor: AppColors.light.obsidianBrown,
-            activeFeedbackModeColor: AppColors.light.beastHide,
-            sheetIsDraggable: false,
-            drawColors: const [
-              AppColors.brandColor,
-              Colors.red,
-              Colors.green,
-              Colors.blue,
-              Colors.yellow,
-            ],
-          ),
-          darkTheme: FeedbackThemeData(
-            background: AppColors.dark.deepBasalt,
-            feedbackSheetColor: AppColors.dark.caveShadow,
-            activeFeedbackModeColor: AppColors.dark.rustIron,
-            sheetIsDraggable: false,
-            drawColors: const [
-              AppColors.brandColor,
-              Colors.red,
-              Colors.green,
-              Colors.blue,
-              Colors.yellow,
-            ],
-          ),
-          localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
-          localeOverride: const Locale('pt', 'BR'),
+              darkTheme: FeedbackThemeData(
+                background: AppColors.dark.deepBasalt,
+                feedbackSheetColor: AppColors.dark.caveShadow,
+                activeFeedbackModeColor: AppColors.dark.rustIron,
+                sheetIsDraggable: false,
+                feedbackSheetHeight: fracaoSheet,
+                drawColors: const [
+                  AppColors.brandColor,
+                  Colors.red,
+                  Colors.green,
+                  Colors.blue,
+                  Colors.yellow,
+                ],
+              ),
+              localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
+              localeOverride: const Locale('pt', 'BR'),
           child: MaterialApp(
             navigatorKey: appNavigatorKey,
             title: 'Aresta Climb',
@@ -270,6 +296,8 @@ class _MyAppState extends State<MyApp> {
                     assetBundle: widget.assetBundle,
                   ),
           ),
+            );
+          },
         );
       },
     );

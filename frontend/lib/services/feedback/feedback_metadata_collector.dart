@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Sistema/Dispositivo.
@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import '../repositorio_dataset.dart';
 import '../../data/modelos/metadados_feedback.dart';
 
 /// Serviço responsável por coletar informações de contexto e ambiente no momento
@@ -33,6 +34,7 @@ import '../../data/modelos/metadados_feedback.dart';
 /// - Status da Conexão com a Internet
 /// - Árvore de navegação atual (`TreeNavigationController`)
 /// - Auditoria de integridade criptográfica de hash (`indice.binarypb`, `compilado.binarypb`, `thumbnail.webp`)
+/// - Modo de acesso do croqui ('online' sob demanda vs 'offline' baixado)
 class FeedbackMetadataCollector {
   /// Override opcional para substituir a representação string do nó ativo (último nó da árvore)
   static String? globalActiveNodeOverride;
@@ -70,6 +72,9 @@ class FeedbackMetadataCollector {
   /// Função opcional para sobrescrever o identificador do croqui ativo (útil para testes).
   final String? Function()? getCragIdOverride;
 
+  /// Função opcional para sobrescrever a verificação se o croqui está baixado offline (útil para testes).
+  final bool Function(String picoId)? getIsPicoDownloadedOverride;
+
   /// Cria um coletor de metadados de feedback.
   ///
   /// É possível passar funções *override* para facilitar o isolamento em testes unitários.
@@ -85,6 +90,7 @@ class FeedbackMetadataCollector {
     this.getDocsPathOverride,
     this.getTempCachePathOverride,
     this.getCragIdOverride,
+    this.getIsPicoDownloadedOverride,
   });
 
   /// Executa a coleta de todas as informações de metadados.
@@ -248,6 +254,7 @@ class FeedbackMetadataCollector {
     String? thumbnailSha256Esperado;
     String? thumbnailSha256Real;
     String? thumbnailStatus;
+    String? modoAcessoCroqui;
 
     try {
       final docsPath = getDocsPathOverride != null
@@ -290,8 +297,20 @@ class FeedbackMetadataCollector {
         }
       }
 
-      // 2. Se houver um croqui ativo, audita o croqui e a thumbnail
+      // 2. Se houver um croqui ativo, audita o modo de acesso (online vs offline) e integridade
       if (croquiId != null && croquiId.isNotEmpty) {
+        bool baixadoOffline = false;
+        if (getIsPicoDownloadedOverride != null) {
+          baixadoOffline = getIsPicoDownloadedOverride!(croquiId);
+        } else if (DatasetRepository.instance != null) {
+          baixadoOffline = DatasetRepository.instance!.isPicoDownloaded(croquiId);
+        } else {
+          final permanente = File('$docsPath/downloads/$croquiId/compilado.binarypb');
+          final legado = File('$docsPath/downloads/$croquiId/$croquiId.binarypb');
+          baixadoOffline = permanente.existsSync() || legado.existsSync();
+        }
+        modoAcessoCroqui = baixadoOffline ? 'offline' : 'online';
+
         ResumoCroqui? resumo;
         if (indice != null) {
           for (final r in indice.croquis) {
@@ -417,6 +436,7 @@ class FeedbackMetadataCollector {
       thumbnailSha256Esperado: thumbnailSha256Esperado,
       thumbnailSha256Real: thumbnailSha256Real,
       thumbnailStatus: thumbnailStatus,
+      modoAcessoCroqui: modoAcessoCroqui,
     );
   }
 

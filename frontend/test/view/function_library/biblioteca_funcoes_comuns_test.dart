@@ -261,6 +261,8 @@ void main() {
       'NÃO deve mostrar SnackBar de erro se ESTIVER configurado (abre a UI)',
       (WidgetTester tester) async {
         FeedbackOrchestrator.debugIsConfiguredOverride = true;
+        final mockTelemetry = MockTelemetryService();
+        TelemetryService.instance = mockTelemetry;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -293,7 +295,12 @@ void main() {
         // Fecha o feedback para a animação de dismiss ocorrer e a árvore ser destruída limpa
         // O plugin BetterFeedback coloca um botão de fechar, mas como estamos apenas testando,
         // podemos destruir explicitamente passando null no override.
+        final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));
+        BetterFeedback.of(scaffoldState.context).hide();
+        await tester.pumpAndSettle();
+
         FeedbackOrchestrator.debugIsConfiguredOverride = null; // cleanup
+        TelemetryService.resetForTesting();
       },
     );
 
@@ -327,6 +334,14 @@ void main() {
       expect(
         mockTelemetry.recordedParams['acao_feedback']?['acao'],
         'abrir_feedback',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_feedback']?['origem'],
+        'app_bar',
+      );
+      expect(
+        mockTelemetry.recordedParams['acao_feedback']?['tem_croqui'],
+        'false',
       );
 
       final ScaffoldState scaffoldState = tester.state(find.byType(Scaffold));

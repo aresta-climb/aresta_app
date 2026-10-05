@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -191,3 +191,47 @@ class MapasCarrosselNode extends NavNode {
   String toString() =>
       'MapasCarrosselNode(${mapas.map((m) => m.mapaCaminhoImagem.split('/').last).join(',')})';
 }
+
+/// Nó que representa o Modal Bottom Sheet de Controles (ordenação e filtros) aberto sobre a página de exploração.
+///
+/// Permite rastrear na árvore de navegação ativa quando o usuário estiver configurando
+/// critérios de ordenação e filtros no croqui, possibilitando auditoria de contexto e
+/// captura precisa da trilha no fluxo de feedback in-app.
+class ControlesNode extends NavNode {
+  /// Identificador do croqui/pico atual, caso exista.
+  final String? cragId;
+
+  const ControlesNode({
+    this.cragId,
+    required super.parent,
+  });
+
+  @override
+  bool isSameNode(NavNode other) {
+    if (other is! ControlesNode) return false;
+    return cragId == other.cragId;
+  }
+
+  @override
+  NavNode copyWithMergedAncestor(covariant ControlesNode matchingAncestor) {
+    return ControlesNode(
+      cragId: cragId ?? matchingAncestor.cragId,
+      parent: matchingAncestor.parent,
+    );
+  }
+
+  @override
+  String get rotuloAmigavel => 'Filtros e Ordenação';
+
+  @override
+  String obterCaminhoCurto() {
+    if (parent != null) {
+      return '${parent!.obterCaminhoCurto()} -> $rotuloAmigavel';
+    }
+    return 'Início -> $rotuloAmigavel';
+  }
+
+  @override
+  String toString() => 'ControlesNode($cragId)';
+}
+

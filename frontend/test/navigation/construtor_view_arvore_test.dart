@@ -107,6 +107,17 @@ void main() {
       expect(widget, isA<PageListenableBuilder>());
     });
 
+    testWidgets('resolve ControlesNode para widget defensivo sem Unknown Node', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const ControlesNode(cragId: 'pico_1', parent: HomeNode()),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      await tester.pumpWidget(MaterialApp(home: widget));
+      expect(find.text('Unknown Node'), findsNothing);
+    });
+
     testWidgets('retorna mensagem para nó desconhecido', (tester) async {
       final widget = construirPaginaParaNo(
         node: const DummyNavNode(),
@@ -118,6 +129,7 @@ void main() {
       expect(find.text('Unknown Node'), findsOneWidget);
     });
   });
+
 
   group('Resolvedor de Modais da Árvore (construirModalParaNo)', () {
     testWidgets('cria página modal para TextNode', (tester) async {

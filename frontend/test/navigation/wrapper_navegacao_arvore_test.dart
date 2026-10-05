@@ -1,15 +1,19 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:feedback/feedback.dart';
+import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import '../mocks/mock_telemetria.dart';
 
 class MockDatasetRepository extends Mock implements DatasetRepository {}
 
@@ -110,5 +114,110 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(controller.currentNode, isA<ComunidadeNode>());
     });
+
+    testWidgets('navegar para ControlesNode não gera Unknown Node nem quebra Navigator', (tester) async {
+      final controller = TreeNavigationController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+            treeController: controller,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      controller.navigateTo(ControlesNode(cragId: 'pedra_bela', parent: controller.currentNode));
+      await tester.pump();
+
+      expect(find.text('Unknown Node'), findsNothing);
+    });
+
+    testWidgets('registra telemetria de cancelar_feedback ao fechar feedback sem envio', (tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+      SubmitFeedbackUseCase.ultimoEnvioConcluido = false;
+
+      late BuildContext buildContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BetterFeedback(
+            child: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              child: Builder(
+                builder: (context) {
+                  buildContext = context;
+                  return const Scaffold(body: Text('Base'));
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Abre o feedback
+      BetterFeedback.of(buildContext).show((_) {});
+      await tester.pumpAndSettle();
+      expect(SubmitFeedbackUseCase.isFeedbackOpen.value, isTrue);
+
+      // Fecha o feedback sem enviar (descarte do usuário)
+      BetterFeedback.of(buildContext).hide();
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
+      final params = mockTelemetry.recordedParams['acao_feedback']!;
+      expect(params['acao'], 'cancelar_feedback');
+      expect(params['origem'], 'descarte_usuario');
+
+      TelemetryService.resetForTesting();
+    });
+
+    testWidgets('não registra cancelar_feedback quando envio for concluído com sucesso', (tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      late BuildContext buildContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BetterFeedback(
+            child: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+              child: Builder(
+                builder: (context) {
+                  buildContext = context;
+                  return const Scaffold(body: Text('Base'));
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Abre o feedback
+      BetterFeedback.of(buildContext).show((_) {});
+      await tester.pumpAndSettle();
+
+      // Simula submissão bem-sucedida
+      SubmitFeedbackUseCase.ultimoEnvioConcluido = true;
+      mockTelemetry.clear();
+
+      // Fecha o feedback
+      BetterFeedback.of(buildContext).hide();
+      await tester.pumpAndSettle();
+
+      expect(mockTelemetry.recordedEvents, isNot(contains('acao_feedback')));
+
+      TelemetryService.resetForTesting();
+    });
   });
 }
+

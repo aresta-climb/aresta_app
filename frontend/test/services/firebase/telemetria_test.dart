@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +24,39 @@ void main() {
         'crag1',
       );
       expect(mockTelemetry.recordedParams['acao_explorar']!['acao'], 'baixar');
+    });
+
+    test('logAcaoFeedback registra evento básico e parâmetros enriquecidos', () async {
+      await TelemetryService.instance.logAcaoFeedback(
+        'abrir_feedback',
+        origem: 'app_bar',
+        temCroqui: true,
+        idCroqui: 'br_mg_pedra_grande',
+      );
+      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
+      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'abrir_feedback');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['origem'], 'app_bar');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['tem_croqui'], 'true');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['id_croqui'], 'br_mg_pedra_grande');
+
+      await TelemetryService.instance.logAcaoFeedback(
+        'enviar_feedback',
+        tipoFeedback: 'croqui',
+        idCroqui: 'br_mg_pedra_grande',
+        qtdCaracteres: 42,
+      );
+      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'enviar_feedback');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['tipo_feedback'], 'croqui');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['qtd_caracteres'], 42);
+
+      await TelemetryService.instance.logAcaoFeedback(
+        'despacho_feedback',
+        status: 'sucesso',
+        dispatcher: 'connectivity_plus',
+      );
+      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'despacho_feedback');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['status'], 'sucesso');
+      expect(mockTelemetry.recordedParams['acao_feedback']!['dispatcher'], 'connectivity_plus');
     });
 
     test('getAppInstanceId retorna valor mockado', () async {
