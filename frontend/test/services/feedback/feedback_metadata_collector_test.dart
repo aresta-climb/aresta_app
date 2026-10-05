@@ -349,5 +349,24 @@ void main() {
       expect(metadata.croquiId, isNull);
       expect(metadata.modoAcessoCroqui, isNull);
     });
+
+    test('coleta breadcrumbs via getBreadcrumbsOverride', () async {
+      final collector = FeedbackMetadataCollector(
+        getBreadcrumbsOverride: () => [
+          {
+            'timestamp': '2026-10-05T00:00:00.000-03:00',
+            'evento': 'acao_croqui',
+            'parametros': {'id_croqui': 'pico_override'},
+          },
+        ],
+      );
+
+      final metadata = await collector.collect();
+
+      expect(metadata.breadcrumbs.length, 1);
+      expect(metadata.breadcrumbs.first['evento'], 'acao_croqui');
+      expect(metadata.breadcrumbs.first['parametros'], {'id_croqui': 'pico_override'});
+    });
   });
 }
+

@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import '../feedback/gravador_breadcrumbs.dart';
 import 'app_logger.dart';
 
 /// Serviço responsável por disparar eventos de telemetria para o Firebase Analytics.
@@ -63,6 +64,10 @@ class TelemetryService {
 
   /// Método interno de utilidade para printar no console local e despachar ao Firebase.
   Future<void> _logEvent(String name, [Map<String, Object>? parameters]) async {
+    GravadorBreadcrumbs.instance.registrar(
+      evento: name,
+      parametros: parameters,
+    );
     AppLogger.instance.logInfo('📈 [Telemetry] Evento disparado: $name | Parâmetros: $parameters');
     try {
       await _analytics.logEvent(

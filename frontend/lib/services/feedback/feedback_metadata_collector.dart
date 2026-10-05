@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import 'gravador_breadcrumbs.dart';
 import '../repositorio_dataset.dart';
 import '../../data/modelos/metadados_feedback.dart';
 
@@ -35,6 +36,7 @@ import '../../data/modelos/metadados_feedback.dart';
 /// - Árvore de navegação atual (`TreeNavigationController`)
 /// - Auditoria de integridade criptográfica de hash (`indice.binarypb`, `compilado.binarypb`, `thumbnail.webp`)
 /// - Modo de acesso do croqui ('online' sob demanda vs 'offline' baixado)
+/// - Trilha recente de telemetria e ações (breadcrumbs)
 class FeedbackMetadataCollector {
   /// Override opcional para substituir a representação string do nó ativo (último nó da árvore)
   static String? globalActiveNodeOverride;
@@ -75,6 +77,9 @@ class FeedbackMetadataCollector {
   /// Função opcional para sobrescrever a verificação se o croqui está baixado offline (útil para testes).
   final bool Function(String picoId)? getIsPicoDownloadedOverride;
 
+  /// Função opcional para sobrescrever a obtenção dos breadcrumbs (útil para testes).
+  final List<Map<String, dynamic>> Function()? getBreadcrumbsOverride;
+
   /// Cria um coletor de metadados de feedback.
   ///
   /// É possível passar funções *override* para facilitar o isolamento em testes unitários.
@@ -91,6 +96,7 @@ class FeedbackMetadataCollector {
     this.getTempCachePathOverride,
     this.getCragIdOverride,
     this.getIsPicoDownloadedOverride,
+    this.getBreadcrumbsOverride,
   });
 
   /// Executa a coleta de todas as informações de metadados.
@@ -412,6 +418,15 @@ class FeedbackMetadataCollector {
       );
     }
 
+    List<Map<String, dynamic>> breadcrumbs = const [];
+    try {
+      if (getBreadcrumbsOverride != null) {
+        breadcrumbs = getBreadcrumbsOverride!();
+      } else {
+        breadcrumbs = GravadorBreadcrumbs.instance.obterBreadcrumbs();
+      }
+    } catch (_) {}
+
     return FeedbackMetadata(
       navigationTree: navigationTree.isEmpty ? 'unknown' : navigationTree,
       submittedAt: submittedAt,
@@ -437,6 +452,7 @@ class FeedbackMetadataCollector {
       thumbnailSha256Real: thumbnailSha256Real,
       thumbnailStatus: thumbnailStatus,
       modoAcessoCroqui: modoAcessoCroqui,
+      breadcrumbs: breadcrumbs,
     );
   }
 

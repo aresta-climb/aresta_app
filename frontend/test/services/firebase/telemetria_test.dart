@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/feedback/gravador_breadcrumbs.dart';
 import '../../mocks/mock_app_logger.dart';
 import '../../mocks/mock_telemetria.dart';
 
@@ -360,12 +361,30 @@ void main() {
         final id = await TelemetryService.instance.getAppInstanceId();
 
         expect(id, isNull);
-        expect(mockLogger.recordedErrors, isNotEmpty);
         expect(
           mockLogger.recordedErrors.first['contextMessage'],
           '⚠️ [Telemetry] Erro ao obter appInstanceId',
         );
       },
     );
+
+    test(
+      'Deve alimentar o GravadorBreadcrumbs automaticamente em _logEvent',
+      () async {
+        TelemetryService.resetForTesting();
+        GravadorBreadcrumbs.resetForTesting();
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        await TelemetryService.instance.logNavegarAba('explorar');
+
+        final breadcrumbs = GravadorBreadcrumbs.instance.obterBreadcrumbs();
+        expect(breadcrumbs, isNotEmpty);
+        expect(breadcrumbs.last['evento'], 'navegar_aba');
+        expect(breadcrumbs.last['parametros'], {'acao': 'explorar'});
+      },
+    );
   });
 }
+
+

@@ -5,6 +5,7 @@
 /// Contém as propriedades estruturadas e a serialização direta de/para JSON.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'tipo_feedback.dart';
 
 class FeedbackMetadata {
@@ -52,6 +53,9 @@ class FeedbackMetadata {
   /// Modo de acesso ao croqui no momento do feedback ('online' ou 'offline').
   final String? modoAcessoCroqui;
 
+  /// Trilha de telemetria das últimas ações registradas pelo usuário antes do feedback.
+  final List<Map<String, dynamic>> breadcrumbs;
+
   const FeedbackMetadata({
     required this.navigationTree,
     required this.submittedAt,
@@ -76,6 +80,7 @@ class FeedbackMetadata {
     this.thumbnailSha256Real,
     this.thumbnailStatus,
     this.modoAcessoCroqui,
+    this.breadcrumbs = const [],
   });
 
   /// Reconstrói uma instância de [FeedbackMetadata] a partir do mapa [json].
@@ -106,6 +111,10 @@ class FeedbackMetadata {
       thumbnailSha256Real: (json['thumbnail_sha256_real'] ?? json['thumbnailSha256Real']) as String?,
       thumbnailStatus: (json['thumbnail_status'] ?? json['thumbnailStatus']) as String?,
       modoAcessoCroqui: (json['modo_acesso_croqui'] ?? json['modoAcessoCroqui']) as String?,
+      breadcrumbs: (json['breadcrumbs'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          const [],
     );
   }
 
@@ -135,6 +144,7 @@ class FeedbackMetadata {
       if (thumbnailSha256Real != null) 'thumbnail_sha256_real': thumbnailSha256Real,
       if (thumbnailStatus != null) 'thumbnail_status': thumbnailStatus,
       if (modoAcessoCroqui != null) 'modo_acesso_croqui': modoAcessoCroqui,
+      if (breadcrumbs.isNotEmpty) 'breadcrumbs': breadcrumbs,
     };
   }
 
@@ -163,6 +173,7 @@ class FeedbackMetadata {
     String? thumbnailSha256Real,
     String? thumbnailStatus,
     String? modoAcessoCroqui,
+    List<Map<String, dynamic>>? breadcrumbs,
   }) {
     return FeedbackMetadata(
       navigationTree: navigationTree ?? this.navigationTree,
@@ -188,6 +199,7 @@ class FeedbackMetadata {
       thumbnailSha256Real: thumbnailSha256Real ?? this.thumbnailSha256Real,
       thumbnailStatus: thumbnailStatus ?? this.thumbnailStatus,
       modoAcessoCroqui: modoAcessoCroqui ?? this.modoAcessoCroqui,
+      breadcrumbs: breadcrumbs ?? this.breadcrumbs,
     );
   }
 
@@ -217,7 +229,8 @@ class FeedbackMetadata {
         other.thumbnailSha256Esperado == thumbnailSha256Esperado &&
         other.thumbnailSha256Real == thumbnailSha256Real &&
         other.thumbnailStatus == thumbnailStatus &&
-        other.modoAcessoCroqui == modoAcessoCroqui;
+        other.modoAcessoCroqui == modoAcessoCroqui &&
+        listEquals(other.breadcrumbs, breadcrumbs);
   }
 
   @override
@@ -245,5 +258,6 @@ class FeedbackMetadata {
         thumbnailSha256Real,
         thumbnailStatus,
         modoAcessoCroqui,
+        Object.hashAll(breadcrumbs),
       ]);
 }

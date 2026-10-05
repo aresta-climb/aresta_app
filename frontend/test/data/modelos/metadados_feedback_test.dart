@@ -163,11 +163,53 @@ void main() {
       final alterado = original.copyWith(
         tipoFeedback: TipoFeedback.croqui,
         modoAcessoCroqui: 'online',
+        breadcrumbs: [
+          {'evento': 'acao_croqui', 'timestamp': '2026-10-05T00:00:00Z'},
+        ],
       );
       expect(alterado.tipoFeedback, TipoFeedback.croqui);
       expect(alterado.modoAcessoCroqui, 'online');
       expect(alterado.feedbackId, 'id');
       expect(alterado.navigationTree, 'Nav');
+      expect(alterado.breadcrumbs.length, 1);
+    });
+
+    test('serializa e deserializa breadcrumbs corretamente', () {
+      final breadcrumbsExemplo = [
+        {
+          'timestamp': '2026-10-05T00:00:00.000-03:00',
+          'evento': 'acao_croqui',
+          'parametros': {'id_croqui': 'pico_1'},
+        },
+        {
+          'timestamp': '2026-10-05T00:01:00.000-03:00',
+          'evento': 'abrir_setor',
+          'parametros': {'nome_setor': 'Setor 1'},
+        },
+      ];
+
+      final metadata = FeedbackMetadata(
+        navigationTree: 'Nav',
+        submittedAt: 'sub',
+        submittedAtTimestamp: 'ts',
+        feedbackId: 'id',
+        appInstanceId: 'inst',
+        os: 'os',
+        osVersion: 'v',
+        deviceModel: 'model',
+        appVersion: 'appV',
+        screenSize: 'screen',
+        deviceOrientation: 'ori',
+        isDarkMode: 'dark',
+        connectivity: 'conn',
+        breadcrumbs: breadcrumbsExemplo,
+      );
+
+      final json = metadata.toJson();
+      expect(json['breadcrumbs'], breadcrumbsExemplo);
+
+      final restaurado = FeedbackMetadata.fromJson(json);
+      expect(restaurado.breadcrumbs, breadcrumbsExemplo);
     });
   });
 }
