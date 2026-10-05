@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo atua como o 'Trabalhador' (Worker) da Fila.
@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
 import '../../data/modelos/metadados_feedback.dart';
+import 'compressor_imagem.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks
 /// antes deles serem despachados pelo `FeedbackOrchestrator`.
@@ -20,12 +21,15 @@ import '../../data/modelos/metadados_feedback.dart';
 /// **Arquitetura (File-System Queue):**
 /// Ao invés de usar `SharedPreferences` que é propenso a falhas de concorrência e
 /// corrupção, este serviço grava cada feedback como um conjunto de arquivos individuais
-/// (`.json` e `.png`) num diretório isolado gerado via `getApplicationSupportDirectory()`.
+/// (`.json` e `.webp`/`.png`) num diretório isolado gerado via `getApplicationSupportDirectory()`.
 /// O Sistema Operacional garante que este diretório não seja apagado aleatoriamente para
 /// liberar cache.
 class FeedbackQueueService {
   /// Override opcional para injeção de dependência do diretório base em testes unitários.
   final Future<Directory> Function()? getSupportDirectoryOverride;
+
+  /// Compressor de imagens nativo com suporte a WebP e fallback automático para PNG.
+  final CompressorImagem compressorImagem;
 
   /// Override opcional para injeção de dependência do agendamento nativo do Workmanager.
   final Future<void> Function(
@@ -49,7 +53,8 @@ class FeedbackQueueService {
   FeedbackQueueService({
     this.getSupportDirectoryOverride,
     this.registerOneOffTaskOverride,
-  });
+    CompressorImagem? compressorImagem,
+  }) : compressorImagem = compressorImagem ?? const CompressorImagem();
 
   /// Retorna o diretório base da fila, criando-o se não existir.
   Future<Directory> _getQueueDirectory() async {
@@ -67,7 +72,7 @@ class FeedbackQueueService {
   /// Salva um novo feedback localmente e agenda o seu envio no background.
   ///
   /// 1. Gera um UUID único para esta ocorrência de feedback.
-  /// 2. Salva a imagem ([screenshot]) como `UUID.png` no diretório de suporte.
+  /// 2. Comprime a imagem ([screenshot]) para `.webp` (ou `.png` em fallback gracioso).
   /// 3. Salva os metadados como `UUID.json` no mesmo diretório.
   /// 4. Dispara/Agenda uma task `send_feedback_task` no Workmanager.
   ///
@@ -82,15 +87,17 @@ class FeedbackQueueService {
     final uuid = metadata.feedbackId;
     final queueDir = await _getQueueDirectory();
 
-    // 1. Salvar a imagem .png
-    final File imageFile = File(p.join(queueDir.path, '$uuid.png'));
-    await imageFile.writeAsBytes(screenshot);
+    // 1. Comprimir e salvar a imagem (.webp ou .png)
+    final resultado = await compressorImagem.comprimirParaWebp(screenshot);
+    final File imageFile = File(p.join(queueDir.path, '$uuid.${resultado.extensao}'));
+    await imageFile.writeAsBytes(resultado.bytes);
 
     // 2. Criar e salvar o arquivo .json atômico correspondente
     final Map<String, dynamic> feedbackData = {
       'description': description,
       'metadata': metadata.toJson(),
       'timestamp': metadata.submittedAtTimestamp,
+      'formatoImagem': resultado.formato,
     };
 
     final File jsonFile = File(p.join(queueDir.path, '$uuid.json'));

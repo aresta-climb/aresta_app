@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/feedback/compressor_imagem.dart';
 import 'package:frontend/services/feedback/feedback_queue_service.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -121,6 +122,59 @@ void main() {
         expect(task['taskName'], 'send_feedback_task');
         expect(task['backoffPolicy'], BackoffPolicy.exponential);
         expect(task['backoffPolicyDelay'], const Duration(minutes: 1));
+      },
+    );
+
+    test(
+      'salva imagem como .webp quando CompressorImagem comprime com sucesso',
+      () async {
+        final bytesOriginais = Uint8List.fromList([1, 2, 3]);
+        final bytesWebp = Uint8List.fromList([82, 73, 70, 70, 87, 69, 66, 80]); // RIFF...WEBP
+
+        final compressorMock = CompressorImagem(
+          compressaoNativaOverride: (bytes, {minHeight = 1920, minWidth = 1080, quality = 80}) async {
+            return bytesWebp;
+          },
+        );
+
+        final service = FeedbackQueueService(
+          getSupportDirectoryOverride: () async => tempDir,
+          compressorImagem: compressorMock,
+          registerOneOffTaskOverride: (taskName, {uniqueName, initialDelay, constraints, backoffPolicy, backoffPolicyDelay, inputData}) async {},
+        );
+
+        const metadata = FeedbackMetadata(
+          os: 'android',
+          appVersion: '1.0.0',
+          feedbackId: 'test-webp-uuid',
+          submittedAt: '16 de junho de 2026',
+          submittedAtTimestamp: '2026-06-16T21:00:00.000-03:00',
+          navigationTree: 'unknown',
+          appInstanceId: 'unknown',
+          osVersion: 'unknown',
+          deviceModel: 'unknown',
+          screenSize: 'unknown',
+          deviceOrientation: 'unknown',
+          isDarkMode: 'unknown',
+          connectivity: 'unknown',
+        );
+
+        await service.enqueueFeedback(
+          description: 'Feedback com WebP',
+          screenshot: bytesOriginais,
+          metadata: metadata,
+        );
+
+        final queueDir = Directory('${tempDir.path}/feedback_queue');
+        final webpFile = File('${queueDir.path}/test-webp-uuid.webp');
+        final jsonFile = File('${queueDir.path}/test-webp-uuid.json');
+
+        expect(webpFile.existsSync(), isTrue);
+        expect(webpFile.readAsBytesSync(), equals(bytesWebp));
+        expect(jsonFile.existsSync(), isTrue);
+
+        final jsonContent = jsonDecode(jsonFile.readAsStringSync());
+        expect(jsonContent['formatoImagem'], 'webp');
       },
     );
   });

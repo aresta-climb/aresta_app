@@ -86,22 +86,27 @@ class FeedbackLocalRepository {
             processingFile.deleteSync();
             final oldId = jsonContent['id'];
             if (oldId != null) {
+              final webpFile = File(p.join(queueDir.path, '$oldId.webp'));
               final pngFile = File(p.join(queueDir.path, '$oldId.png'));
+              if (webpFile.existsSync()) webpFile.deleteSync();
               if (pngFile.existsSync()) pngFile.deleteSync();
             }
           } catch (_) {}
           continue; // Pula para o próximo arquivo
         }
 
-        final pngPath = p.join(queueDir.path, '$feedbackId.png');
-        final pngFile = File(pngPath);
+        final webpFile = File(p.join(queueDir.path, '$feedbackId.webp'));
+        final pngFile = File(p.join(queueDir.path, '$feedbackId.png'));
+        final imageFile = webpFile.existsSync()
+            ? webpFile
+            : (pngFile.existsSync() ? pngFile : null);
 
         tasks.add(
           TarefaFeedback(
             arquivoProcessamento: processingFile,
             id: feedbackId,
             conteudoJson: jsonContent,
-            arquivoPng: pngFile.existsSync() ? pngFile : null,
+            arquivoScreenshot: imageFile,
           ),
         );
       } catch (e, stackTrace) {
@@ -133,8 +138,8 @@ class FeedbackLocalRepository {
       if (task.processingFile.existsSync()) {
         task.processingFile.deleteSync();
       }
-      if (task.pngFile != null && task.pngFile!.existsSync()) {
-        task.pngFile!.deleteSync();
+      if (task.arquivoScreenshot != null && task.arquivoScreenshot!.existsSync()) {
+        task.arquivoScreenshot!.deleteSync();
       }
     } catch (_) {}
   }

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Este arquivo atua como o 'Trabalhador' (Worker) de Rede de Feedback.
@@ -8,6 +8,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../data/modelos/metadados_feedback.dart';
 
 /// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
@@ -38,6 +39,7 @@ class FeedbackNetworkService {
     required String description,
     required dynamic metadata,
     required String dispatcher,
+    File? screenshotFile,
     File? pngFile,
     File? indiceFile,
     File? croquiFile,
@@ -57,9 +59,19 @@ class FeedbackNetworkService {
     finalMetadata['dispatcher'] = dispatcher;
     request.fields['metadata'] = jsonEncode(finalMetadata);
 
-    if (pngFile != null && pngFile.existsSync()) {
+    final arquivoImagem = screenshotFile ?? pngFile;
+    if (arquivoImagem != null && arquivoImagem.existsSync()) {
+      final isWebp = arquivoImagem.path.toLowerCase().endsWith('.webp');
+      final contentType = isWebp ? MediaType('image', 'webp') : MediaType('image', 'png');
+      final filename = isWebp ? 'screenshot.webp' : 'screenshot.png';
+
       request.files.add(
-        await http.MultipartFile.fromPath('screenshot', pngFile.path),
+        await http.MultipartFile.fromPath(
+          'screenshot',
+          arquivoImagem.path,
+          filename: filename,
+          contentType: contentType,
+        ),
       );
     }
 

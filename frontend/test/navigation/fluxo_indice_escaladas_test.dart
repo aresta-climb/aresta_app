@@ -12,6 +12,7 @@ import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/gerenciador_filtros_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 
@@ -27,6 +28,7 @@ void main() {
     TelemetryService.instance = mockTelemetry;
     datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
     syncService = SyncService(datasetRepository: datasetRepo);
+    GerenciadorFiltrosCroqui.instance.redefinir();
   });
 
   Pico criarPicoCompleto() {
@@ -182,7 +184,7 @@ void main() {
               animation: treeController,
               builder: (context, _) {
                 final pushedNodes = treeController.currentNode.path
-                    .where((n) => n is! HomeNode)
+                    .where((n) => n is! HomeNode && n is! ControlesNode)
                     .toList();
 
                 return Navigator(
@@ -232,7 +234,7 @@ void main() {
 
       expect(find.text('Mister Magoo'), findsOneWidget);
 
-      await tester.tap(find.text('Filtros'));
+      await tester.tap(find.text('Filtros e Ordenação'));
       await tester.pumpAndSettle();
 
       expect(find.byType(RangeSlider), findsOneWidget);
@@ -240,6 +242,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Setor do Meio').last);
+      await tester.pumpAndSettle();
+
+      // Fecha o modal bottom sheet de filtros pelo botão fechar
+      await tester.tap(find.byTooltip('Fechar'));
       await tester.pumpAndSettle();
 
       // Chip com 'Setor do Meio' e botão X deve estar presente
@@ -266,9 +272,11 @@ void main() {
       expect(find.byType(SetoresPage), findsOneWidget);
       expect(find.text('Mister Magoo'), findsOneWidget);
 
-      // Limpa os filtros ativos para voltar a listar todas as vias e modalidades
-      await tester.ensureVisible(find.text('Limpar'));
-      await tester.tap(find.text('Limpar'));
+      // Remove o chip do setor selecionado para voltar a listar todas as vias e modalidades
+      await tester.tap(find.descendant(
+        of: find.widgetWithText(Chip, 'Setor do Meio'),
+        matching: find.byIcon(Icons.close),
+      ));
       await tester.pumpAndSettle();
 
       // 7. Mudar para a aba de Multienfiadas

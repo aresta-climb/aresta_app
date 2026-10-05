@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Modelo de domínio interno da fila de persistência local de feedback.
@@ -19,16 +19,17 @@ class TarefaFeedback {
   /// Conteúdo decodificado do arquivo JSON correspondente.
   final Map<String, dynamic> conteudoJson;
 
-  /// Arquivo da captura de tela associada, se houver.
-  final File? arquivoPng;
+  /// Arquivo da captura de tela associada (.webp ou .png), se houver.
+  final File? arquivoScreenshot;
 
   /// Cria uma nova instância de [TarefaFeedback].
   const TarefaFeedback({
     required this.arquivoProcessamento,
     required this.id,
     required this.conteudoJson,
-    this.arquivoPng,
-  });
+    File? arquivoScreenshot,
+    File? arquivoPng,
+  }) : arquivoScreenshot = arquivoScreenshot ?? arquivoPng;
 
   /// Construtor de compatibilidade para parâmetros nomeados em inglês.
   factory TarefaFeedback.legado({
@@ -41,7 +42,7 @@ class TarefaFeedback {
         arquivoProcessamento: processingFile,
         id: id,
         conteudoJson: jsonContent,
-        arquivoPng: pngFile,
+        arquivoScreenshot: pngFile,
       );
 
   /// Descrição textual informada pelo usuário.
@@ -55,7 +56,8 @@ class TarefaFeedback {
   // Acessores de conveniência
   File get processingFile => arquivoProcessamento;
   Map<String, dynamic> get jsonContent => conteudoJson;
-  File? get pngFile => arquivoPng;
+  File? get arquivoPng => arquivoScreenshot;
+  File? get pngFile => arquivoScreenshot;
   String get description => descricao;
   FeedbackMetadata get metadata => metadados;
 }

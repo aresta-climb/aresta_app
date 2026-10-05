@@ -155,7 +155,7 @@ class FeedbackOrchestrator {
               description: task.description,
               metadata: task.metadata,
               dispatcher: dispatcher,
-              pngFile: task.pngFile,
+              screenshotFile: task.arquivoScreenshot,
               indiceFile: indiceFile,
               croquiFile: croquiFile,
             );

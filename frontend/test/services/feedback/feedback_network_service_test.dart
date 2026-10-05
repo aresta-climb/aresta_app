@@ -75,6 +75,7 @@ void main() {
 
       expect(request.files.length, 1);
       expect(request.files.first.field, 'screenshot');
+      expect(request.files.first.contentType.mimeType, 'image/png');
     });
 
     test('sendFeedback funciona corretamente sem token do App Check quando for nulo', () async {
@@ -198,6 +199,36 @@ void main() {
 
       final arquivoCroqui = request.files.firstWhere((f) => f.field == 'croqui_file');
       expect(arquivoCroqui.filename, 'compilado.binarypb');
+    });
+
+    test('sendFeedback anexa imagem com MIME image/webp e filename screenshot.webp quando for .webp', () async {
+      when(() => mockHttpClient.send(any())).thenAnswer(
+        (_) async => http.StreamedResponse(
+          Stream.value(utf8.encode('{"success":true}')),
+          200,
+        ),
+      );
+
+      final webpFile = File('${tempDir.path}/screenshot.webp');
+      await webpFile.writeAsBytes([82, 73, 70, 70]);
+
+      await service.sendFeedback(
+        description: 'Feedback com imagem WebP',
+        metadata: {'feedbackId': 'uuid-webp'},
+        dispatcher: 'workmanager',
+        screenshotFile: webpFile,
+      );
+
+      final captured = verify(() => mockHttpClient.send(captureAny())).captured;
+      expect(captured.length, 1);
+
+      final request = captured.first as http.MultipartRequest;
+      expect(request.files.length, 1);
+
+      final screenshotUpload = request.files.first;
+      expect(screenshotUpload.field, 'screenshot');
+      expect(screenshotUpload.filename, 'screenshot.webp');
+      expect(screenshotUpload.contentType.mimeType, 'image/webp');
     });
   });
 }

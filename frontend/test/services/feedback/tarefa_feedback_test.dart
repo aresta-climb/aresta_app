@@ -22,12 +22,13 @@ void main() {
         arquivoProcessamento: arquivoProc,
         id: 'feedback-uuid-42',
         conteudoJson: json,
-        arquivoPng: arquivoImg,
+        arquivoScreenshot: arquivoImg,
       );
 
       expect(tarefa.id, 'feedback-uuid-42');
       expect(tarefa.arquivoProcessamento, arquivoProc);
       expect(tarefa.processingFile, arquivoProc);
+      expect(tarefa.arquivoScreenshot, arquivoImg);
       expect(tarefa.arquivoPng, arquivoImg);
       expect(tarefa.pngFile, arquivoImg);
       expect(tarefa.conteudoJson, json);
