@@ -12,10 +12,10 @@ Esta especificação consolida a fundação arquitetural definitiva do ecossiste
 
 O projeto resolve simultaneamente a sustentabilidade perpétua no modelo de custos e a perenidade dos dados nas montanhas a partir de quatro pilares inegociáveis:
 
-1. **Adoção Universal do NanoID 14c Base62:** Eliminação das tabelas intermediárias de mapeamento YAML e supressão de identificadores inteiros em múltiplos níveis. Toda entidade recebe um identificador imutável, único e universal.
+1. **Adoção Universal do NanoID 14c Base62:** Eliminação das tabelas intermediárias de mapeamento YAML e supressão de identificadores inteiros em múltiplos níveis. Toda entidade pública (`Croqui`, `Grupo`, `Setor`, `Escalada`, `PontoDeInteresse` e `autor_id_publico`) recebe um identificador imutável, único e universal de 14 caracteres Base62. Na caderneta privada esportiva, adota-se UUID binário nativo para os registros relacionais de cadenas sincronizados via PowerSync.
 2. **Sincronização Offline-First Full PowerSync:** Eliminação de qualquer gerenciamento manual ou avulso de SQLite no aplicativo móvel. O SDK do PowerSync gerencia de forma transparente a replicação bidirecional com o Supabase e a persistência reativa local.
 3. **Harmonia entre Caderneta Pessoal e Comunidade Aberta:** Rollback das redes privadas de amigos (feeds, grafos relacionais N x N). Foco estrito em duas frentes: a **Caderneta Pessoal Esportiva** (privada com backup em nuvem) e a **Sabedoria Comunitária Coletiva** (alertas de segurança, comentários de betas e consenso democrático de graduação, preservados sob licença aberta ODbL no Git).
-4. **Sustentabilidade Perpétua no Free Tier do Supabase:** O banco de dados PostgreSQL atua como backup pessoal estrito e como buffer transitório de ingestão (esvaziado de hora em hora pelo *Aresta Bot*), mantendo a ocupação abaixo de 45 MB (< 9% da cota gratuita) mesmo com 500.000 ascensões registradas.
+4. **Sustentabilidade Perpétua no Free Tier do Supabase:** O banco de dados PostgreSQL atua como backup pessoal estrito e como buffer transitório de ingestão (esvaziado de hora em hora pelo *Aresta Bot*), mantendo a ocupação abaixo de 40 MB (< 8% da cota gratuita) mesmo com 500.000 ascensões registradas (graças ao armazenamento de UUID binário nativo e à eliminação de redundâncias como `croqui_uid` na caderneta).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -61,7 +61,9 @@ A arquitetura do Aresta divide os dados conforme a sua frequência de atualizaç
 ## 3. Espaço de Identificadores: NanoID 14c Universal
 
 ### 3.1. A Racionalidade Técnica e Matemática
-Todas as entidades do ecossistema (`Croqui`, `Grupo`, `Setor`, `Escalada`, `PontoDeInteresse` e registros de `Cadena`) recebem nativamente um identificador **NanoID com 14 caracteres contínuos em Base62** (`[0-9a-zA-Z]`, ex: `x8siJek3FiG3aB`).
+Todas as entidades públicas do ecossistema (`Croqui`, `Grupo`, `Setor`, `Escalada`, `PontoDeInteresse` e o `autor_id_publico` dos escaladores) recebem nativamente um identificador **NanoID com 14 caracteres contínuos em Base62** (`[0-9a-zA-Z]`, ex: `x8siJek3FiG3aB`).
+
+O NanoID 14c é a escolha definitiva para dados que trafegam em texto, URLs, QR Codes, payloads públicos e arquivos YAML comunitários abertos. Por outro lado, para identificadores puramente internos e relacionais de sincronização privada (como o `id` da tabela `cadenas`), utiliza-se o padrão nativo `UUID` (16 bytes binários), que oferece desempenho e tipagem ideais no PostgreSQL e PowerSync sem consumo de espaço de texto.
 
 A tentativa preliminar de utilizar mapeamentos intermediários de inteiros de 4 bytes e arquivos YAML centrais (`ids_entidades.yaml`, `ids_pontos.yaml`) foi oficialmente revogada pelos seguintes motivos:
 * **Peso irrisório no acervo:** Todos os 42 croquis do país (637 setores, 4.318 vias, 4.811 POIs) somam apenas 1,16 MB de dados brutos Protobuf (475 KB comprimidos), enquanto as fotos WebP representam 353 MB (99,7% do volume). A diferença entre armazenar 4 bytes ou 14 caracteres é matematicamente desprezível em escala nacional.
@@ -174,6 +176,7 @@ bucket_definitions:
     parameters:
       - select request.user_id() as usuario_id
     data:
+      - select * from perfis where user_id = usuario_id
       - select * from cadenas where user_id = usuario_id
 ```
 Isso elimina muito do processamento de replicação lógica (WAL) e reduz o tráfego do Supabase a valores próximos de zero.
@@ -183,13 +186,30 @@ Em conformidade com a disciplina estrita de bytes, cada coluna e índice foi pen
 
 ```sql
 -- ============================================================================
+-- TABELA: perfis (Metadados Públicos do Escalador)
+-- ============================================================================
+CREATE TABLE public.perfis (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    autor_id_publico VARCHAR(14) UNIQUE NOT NULL, -- NanoID 14c do Autor
+    autor_nome_publico VARCHAR(50) NOT NULL       -- Apelido público ou "Anônimo"
+);
+
+-- Habilitação obrigatória de RLS
+ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
+
+-- Política RLS: O atleta tem controle exclusivo do seu próprio perfil
+CREATE POLICY "perfis_proprio_usuario" ON public.perfis
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- ============================================================================
 -- TABELA: cadenas (Backup Seguro e Privado da Caderneta do Escalador)
 -- ============================================================================
 CREATE TABLE public.cadenas (
-    id VARCHAR(14) PRIMARY KEY,                   -- NanoID 14c gerado no cliente
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- UUID binário nativo (16 bytes)
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    croqui_uid VARCHAR(14) NOT NULL,              -- NanoID 14c do Croqui
-    escalada_uid VARCHAR(14) NOT NULL,            -- NanoID 14c da Via
+    escalada_uid VARCHAR(14) NOT NULL,            -- NanoID 14c da Via (único global)
     data_ascensao DATE NOT NULL,                  -- Data da realização esportiva
     tipo_ascensao SMALLINT NOT NULL,              -- 1: À Vista, 2: Flash, 3: Trabalhado, 4: Tentativa
     tipo_escalada SMALLINT NOT NULL,              -- 1: Guiado, 2: Top Rope, 3: Boulder, 4: Solo
@@ -216,29 +236,33 @@ CREATE INDEX idx_cadenas_escalada ON public.cadenas(escalada_uid);
 -- ============================================================================
 CREATE TABLE public.fila_interacoes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    autor_id_publico VARCHAR(8) NOT NULL,          -- Hash Base36 (8 chars)
-    autor_nome_publico TEXT NOT NULL,              -- Nickname público ou "Anônimo"
-    croqui_uid VARCHAR(14) NOT NULL,               -- NanoID 14c do Croqui
-    escalada_uid VARCHAR(14) NOT NULL,             -- NanoID 14c da Via
-    tipo TEXT NOT NULL,                            -- 'VOTO_GRAU' | 'COMENTARIO'
-    grau_sugerido SMALLINT,                        -- Código numérico do grau sugerido
-    texto_comentario VARCHAR(1000),                -- Beta, métodos ou aviso de segurança
-    status TEXT NOT NULL DEFAULT 'PENDENTE',       -- 'PENDENTE' | 'PROCESSADO'
+    autor_id_publico VARCHAR(14) NOT NULL,        -- NanoID 14c do Autor (sem user_id privado)
+    autor_nome_publico VARCHAR(50) NOT NULL,      -- Nickname público ou "Anônimo"
+    escalada_uid VARCHAR(14) NOT NULL,            -- NanoID 14c da Via
+    tipo TEXT NOT NULL,                           -- 'VOTO_GRAU' | 'COMENTARIO'
+    grau_sugerido SMALLINT,                       -- Código numérico do grau sugerido
+    texto_comentario VARCHAR(280),                -- Beta, métodos ou aviso (máx 280 chars na UI)
+    status TEXT NOT NULL DEFAULT 'PENDENTE',      -- 'PENDENTE' | 'PROCESSADO'
     criado_em TIMESTAMPTZ DEFAULT now()
 );
 
 -- Habilitação obrigatória de RLS
 ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS: Leitura livre (transparência) e inserção restrita ao usuário logado
+-- Políticas RLS: Leitura livre (transparência) e inserção vinculada ao autor_id_publico
 CREATE POLICY "fila_interacoes_leitura" ON public.fila_interacoes
     FOR SELECT
     USING (true);
 
 CREATE POLICY "fila_interacoes_insercao" ON public.fila_interacoes
     FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.perfis p
+            WHERE p.user_id = auth.uid()
+              AND p.autor_id_publico = fila_interacoes.autor_id_publico
+        )
+    );
 
 CREATE INDEX idx_fila_pendentes ON public.fila_interacoes(status) WHERE status = 'PENDENTE';
 ```
@@ -316,8 +340,8 @@ escaladas:
         "0": 4
         "+1": 22
     comentarios:
-      - id: "m8Kq2L1x"
-        autor_id_publico: "k7x9m2p1" # Base36 (8 chars)
+      - id: "m8Kq2L1x9Y7zWq" # NanoID 14c do comentário
+        autor_id_publico: "c3Lk9P1x4Vw8Mn" # NanoID 14c do autor público
         autor_nome: "Mariana Silva"
         data: "2026-10-06T11:20:00Z"
         estilo_cadena: "FLASH"
@@ -341,13 +365,14 @@ O robô de automação roda a cada 60 minutos como cron job seguro:
 ## 9. Privacidade por Design, LGPD e Exclusão sem Rebase
 
 1. **Anonimização Pública por Design:**
-   * Nenhum dado de cadastro pessoal (e-mail, telefone, CPF ou UUID interno do Supabase) é exportado para os arquivos YAML públicos.
-   * Autores de comentários são identificados estritamente pelo `autor_id_publico` (hash determinístico de 8 caracteres em Base36) e pelo apelido esportivo informado.
+   * Nenhum dado de cadastro pessoal (e-mail, telefone, CPF ou UUID interno do Supabase) é exportado para os arquivos YAML públicos ou exposto na fila de ingestão comunitária.
+   * O escalador é identificado publicamente estritamente pelo seu `autor_id_publico` (NanoID de 14 caracteres Base62 gerado na criação do perfil) e pelo apelido esportivo informado.
+   * A tabela `fila_interacoes` já nasce desacoplada do `user_id` de autenticação, registrando apenas esses identificadores públicos.
 2. **Consentimento Explícito para Acervo Aberto:**
    * Nos termos de uso do aplicativo, ao submeter sugestões de graduação e alertas de rocha, o titular consente expressamente que esses dados integram o patrimônio coletivo do montanhismo sob licença internacional ODbL (Art. 7º, I e § 4º da Lei Geral de Proteção de Dados - LGPD).
 3. **Exclusão de Conta sem Rebase:**
-   * Caso o usuário decida encerrar sua conta, os dados pessoais e a caderneta de cadenas no Supabase são imediatamente destruídos (`ON DELETE CASCADE`).
-   * No repositório público Git, o *Aresta Bot* realiza um commit no `HEAD` alterando o nome de exibição do autor nos comentários históricos para `"Anônimo"`.
+   * Caso o usuário decida encerrar sua conta, seus dados de autenticação e os registros de seu perfil e caderneta privada no Supabase são imediatamente destruídos (`ON DELETE CASCADE` nas tabelas `perfis` e `cadenas`).
+   * No repositório público Git, o *Aresta Bot* realiza um commit no `HEAD` alterando o nome de exibição do autor nos comentários históricos para `"Anônimo"`, preservando o `autor_id_publico` para estabilidade referencial do histórico comunitário.
    * Preserva-se integralmente a árvore de commits anteriores do Git (sem necessidade de `git rebase -i` ou `git push --force`), evitando corrupção de clones de colaboradores e respeitando as práticas consolidadas de conformidade de plataformas abertas como GitHub e Wikipedia.
 
 ---
