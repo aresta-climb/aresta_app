@@ -4,9 +4,15 @@ Aplicativo de escalada da **ARESTA** — guia digital offline para centralizar e
 
 ## Estrutura do Repositório
 
-```
-Aresta Climb_App/
+```text
+aresta_app/
+├── docs/              Documentação do sistema e especificações arquiteturais
+│   ├── arquitetura/   Modelagem de UIDs estáveis, PowerSync, contas e design docs
+│   └── sistema_de_acesso.md
 ├── frontend/          Aplicativo Flutter (Android / iOS)
+├── openspec/          Especificações e propostas de mudanças (OpenSpec)
+├── AGENTS.md          Princípios de Engenharia e diretrizes inegociáveis para agentes
+├── CONTRIBUTING.md    Guia de contribuição (DCO)
 └── README.md
 ```
 
@@ -41,6 +47,10 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 | [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e streaming sob demanda |
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
+| [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação técnica unificada: NanoID 14c universal, PowerSync, contas e dados abertos ODbL |
+| [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos oficiais de design e arquitetura diagramados em PDF |
+| [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Especificação das regras e fluxos do sistema de acesso a croquis |
+| [`AGENTS.md`](AGENTS.md) | Princípios de Engenharia Aresta App (Tudo em Português, 100% Test Coverage, TDD, Anti-Abstração) |
 
 ---
 
@@ -72,5 +82,5 @@ Contribuições da comunidade são muito bem-vindas!
 
 Adotamos o **Developer Certificate of Origin (DCO v1.1)** para gerenciar as contribuições de forma ágil e sem a necessidade de contratos burocráticos de CLA. Ao enviar um Pull Request, você certifica que tem o direito de disponibilizar o código sob a licença MPL 2.0 assinando seus commits com a flag `-s` (`Signed-off-by`).
 
-Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md) e nossos [Princípios de Engenharia](PRINCIPIOS.md).
+Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md) e nossos [Princípios de Engenharia](AGENTS.md).
 
