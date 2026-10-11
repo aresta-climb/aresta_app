@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../firebase/app_logger.dart';
 import '../dataset/sessao_online/gerenciador_sessao_online.dart';
+import '../dataset/normalizador_croqui.dart';
 import '../../utils/construtor_caminho_trajeto.dart';
 
 /// Serviço responsável pelo carregamento sob demanda de arquivos `.binarypb` via HTTP
@@ -74,7 +75,7 @@ class ServicoCroquiOnline {
         if (await arquivoCache.exists()) {
           try {
             final bytes = await arquivoCache.readAsBytes();
-            final croqui = Croqui.fromBuffer(bytes);
+            final croqui = NormalizadorCroqui.deBuffer(bytes);
             _sessaoOnline.registrarCroquiOnline(picoId, croqui);
             return croqui;
           } catch (e) {
@@ -99,7 +100,7 @@ class ServicoCroquiOnline {
         final etag = response.headers['etag'];
         final bytes = response.bodyBytes;
 
-        final croqui = Croqui.fromBuffer(bytes);
+        final croqui = NormalizadorCroqui.deBuffer(bytes);
         await _salvarEmCacheVolatil(picoId, bytes, checksumSha256: hashEfetivo);
 
         _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: etag);
@@ -248,7 +249,7 @@ class ServicoCroquiOnline {
         final bytes = response.bodyBytes;
         if (bytes.isNotEmpty) {
           try {
-            final croqui = Croqui.fromBuffer(bytes);
+            final croqui = NormalizadorCroqui.deBuffer(bytes);
             await _salvarEmCacheVolatil(picoId, bytes);
             _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: novoEtag);
             ConstrutorCaminhoTrajeto.limparCache();

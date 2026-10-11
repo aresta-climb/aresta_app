@@ -10,6 +10,7 @@ A camada de serviços é responsável pelo gerenciamento de estado do aplicativo
 O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo de dados de escalada do armazenamento local e das sessões online até as camadas reativas da interface. Foi decomposto em submódulos desacoplados de responsabilidade única:
 
 - **`dataset/modelos/`**: Modelo de dados em memória `TopoDataset` e tipos auxiliares fortemente tipados.
+- **`dataset/normalizador_croqui.dart`**: Utilitário central de normalização in-place (`NormalizadorCroqui`) executado na leitura de bytes ou desserialização de croquis (`Croqui`, `Pico`, `Mapa`). Garante que entidades legadas recebam UIDs canônicos sintéticos, mapas migrem `label` para `rotulo` e `id` para `uid`, e referências preencham `alvoUid` e `pontosUids`, assegurando que toda a UI opere exclusivamente na especificação v5 sem branches legados.
 - **`dataset/armazenamento/`**: `GerenciadorArmazenamento` responsável pela estrutura de diretórios em `<app_docs>/downloads/<pico_id>/` e integridade física.
 - **`dataset/metadados/`**: `FormatadorMetadados` e `GerenciadorPrioridade` para ordenação, normalização e manipulação de `recent_picos.yaml`.
 - **`dataset/sessao_online/`**: `GerenciadorSessaoOnline` responsável pelo gerenciamento de croquis visualizados sob demanda na RAM e cache volátil (`/temp_cache`), além de notificações de atualização de versão via ETag.
@@ -136,7 +137,7 @@ Reúne utilitários de domínio para manipulação de dados, resolução de índ
 - **`consolidador_modalidades.dart`**: Utilitário puro responsável pela agregação quantitativa de modalidades de escalada em setores e grupos, tratamento de singular e plural para cada modalidade, formatação do resumo quantitativo de grupos (`"X setores • Y escaladas"`) e fallback automático para dados pré-computados quando disponíveis.
 - **`formatador_creditos.dart`**: Validação de placeholders genéricos e formatação de listas de autores/créditos em frases amigáveis (`"Croqui por ..."`).
 - **`construtor_caminho_trajeto.dart`**: Barreira arquitetural exclusiva para o subsistema de desenho vetorial com `package:path_drawing/`. Converte dados compilados SVG (`M ... C ...`) em `ui.Path` nativo, aplica estilos de traçado FEMEMG (sólido, tracejado, pontilhado), mantém cache em memória por rota/estilo para garantir 60/120 FPS no `InteractiveViewer`, realiza conversão defensiva de cores hexadecimais (`ponto.cor`) e amostra polilinhas para detecção ergonômica de toques (hit-testing por menor distância euclidiana com tolerância de 16dp).
-- **`indice_mapas_croqui.dart`**: Índice de busca de mapas em árvore por identificador de pico/setor.
-- **`consulta_dataset.dart`**: Resolução dinâmica de referências cruzadas entre marcadores do mapa e entidades do dataset (`Escalada`, `Setor`, `Pico`).
+- **`resolvedor_rotulos_referencia.dart`**: Resolvedor determinístico estritamente local de rótulos visuais (`extrairRotuloReferencia`) a partir de `ref.pontosUids` e `ponto.rotulo` no escopo da coleção de pontos de interesse de cada mapa.
+- **`consulta_dataset.dart`**: Catálogo relacional e resolvedor em tempo constante $O(1)$ de entidades estruturais ([`Botao`], [`Grupo`], [`Setor`], [`Escalada`]) indexadas exclusivamente por `uid` permanente através de [`DatasetResolver`]. Associa referências visuais pré-computadas ([`ReferenciaNoMapa`]) e gera os dados do carrossel unificado ([`resolverCarrosselUnificado`]), eliminando recursões lineares repetidas na renderização de páginas e substituindo definitivamente o antigo `CroquiMapIndex`.
 
 

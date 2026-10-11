@@ -10,6 +10,10 @@ Este diretório contém as telas e páginas principais de interação do usuári
 |---|---|---|
 | `PicoDetailsPage` | `pico.dart` | Hub principal de detalhes de um pico (guia), exibindo banner de status (online/offline), ações rápidas, visualização de setores e acesso ao catálogo. |
 | `SetoresPage` | `pico_subpages/setores_page.dart` | Tela unificada de exploração de setores e escaladas com abas por modalidade, filtros reativos e ordenações contextuais. |
+| `GrupoPage` | `grupo.dart` | Tela de exploração de um grupo agregado de setores com capa parallax, abas por modalidade, mapa e filtros sincronizados. |
+| `SetorPage` | `setor.dart` | Tela unificada de exploração de um setor com capa parallax, mapa, abas ordenadas por volume de vias, filtros reativos herdados do pico e cards com rótulos de croqui. |
+| `ViaPage` | `via.dart` | Visualização detalhada da escalada, integrando carrossel de mapas próprios e referências resolvidas via `DatasetResolver`. |
+| `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croquis vetoriais com pan/zoom fluido, foco por `uid` de POI, traçados com `pontosUids` e cartões flutuantes associados via `alvoUid`. |
 | `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações práticas de acesso, melhor época para escalar e croquis gerais de aproximação. |
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
 | `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |

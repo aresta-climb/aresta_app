@@ -27,18 +27,19 @@ void main() {
       final mapa1 = Mapa(
         referencias: [
           Mapa_Referencia(
-            escalada: 'Via dos Sonhos',
-            ids: ['p1', 'p2'],
+            alvoUid: 'via-sonhos-1',
+            pontosUids: ['p1', 'p2'],
           ),
         ],
         pontosDeInteresse: [
-          Mapa_PontoDeInteresse(id: 'p1', label: '1'),
-          Mapa_PontoDeInteresse(id: 'p2', label: '2'),
+          Mapa_PontoDeInteresse(uid: 'p1', rotulo: '1'),
+          Mapa_PontoDeInteresse(uid: 'p2', rotulo: '2'),
         ],
       );
       final mapa2 = Mapa();
       final setor = Setor(mapas: [mapa1, mapa2]);
       final escalada = Escalada(
+        uid: 'via-sonhos-1',
         viaEsportiva: ViaEsportiva(
           nome: 'Via dos Sonhos',
         ),
@@ -48,43 +49,46 @@ void main() {
       expect(rotulos.mapIndicator, 'M1');
       expect(rotulos.resolvedLabel, '1-2');
     });
-  });
 
-  group('buildEscaladaSortGrid', () {
-    testWidgets('renderiza botões e chama onSortChanged', (WidgetTester tester) async {
-      EscaladaSortMode? selectedMode;
-
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => buildEscaladaSortGrid(
-              context,
-              EscaladaSortMode.original,
-              (mode) {
-                selectedMode = mode;
-              },
-            ),
+    test('resolve rótulos por alvoUid em múltiplos mapas indicando M2 corretamente', () {
+      final mapa1 = Mapa(
+        referencias: [
+          Mapa_Referencia(
+            alvoUid: 'outra-via',
+            pontosUids: ['p-outra'],
           ),
-        ),
-      ));
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(uid: 'p-outra', rotulo: 'X'),
+        ],
+      );
+      final mapa2 = Mapa(
+        referencias: [
+          Mapa_Referencia(
+            alvoUid: 'via-alvo-uid',
+            pontosUids: ['p3'],
+          ),
+        ],
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(uid: 'p3', rotulo: '7B'),
+        ],
+      );
+      final setor = Setor(mapas: [mapa1, mapa2]);
+      final escalada = Escalada(
+        uid: 'via-alvo-uid',
+        viaEsportiva: ViaEsportiva(nome: 'Via do Alvo'),
+      );
 
-      expect(find.text('PADRÃO'), findsOneWidget);
-      expect(find.text('ALFABÉTICO'), findsOneWidget);
-      expect(find.text('DIFICULDADE'), findsOneWidget);
-
-      await tester.tap(find.text('ALFABÉTICO'));
-      await tester.pump();
-      expect(selectedMode, EscaladaSortMode.alphaAsc);
-      
-      await tester.tap(find.text('DIFICULDADE'));
-      await tester.pump();
-      expect(selectedMode, EscaladaSortMode.gradeAsc);
+      final rotulos = resolveRouteLabels(escalada, setor);
+      expect(rotulos.mapIndicator, 'M2');
+      expect(rotulos.resolvedLabel, '7B');
     });
   });
 
   group('resolveRouteLabels', () {
     test('retorna codenome correto para via com caminho vetorial de múltiplos segmentos', () {
       final via = Escalada(
+        uid: 'esc-polydance',
         viaEsportiva: ViaEsportiva(nome: 'Polydance'),
       );
       final setor = Setor(
@@ -92,7 +96,7 @@ void main() {
           Mapa(
             pontosDeInteresse: [
               Mapa_PontoDeInteresse(
-                id: 'linha_12',
+                uid: 'linha_12',
                 linha: LinhaTrajeto(
                   compilado: DadosCompiladosLinha(
                     marcadores: [
@@ -105,7 +109,7 @@ void main() {
                 ),
               ),
               Mapa_PontoDeInteresse(
-                id: 'linha_16',
+                uid: 'linha_16',
                 linha: LinhaTrajeto(
                   compilado: DadosCompiladosLinha(
                     marcadores: [
@@ -118,7 +122,7 @@ void main() {
                 ),
               ),
               Mapa_PontoDeInteresse(
-                id: 'linha_21',
+                uid: 'linha_21',
                 linha: LinhaTrajeto(
                   compilado: DadosCompiladosLinha(
                     marcadores: [
@@ -133,8 +137,8 @@ void main() {
             ],
             referencias: [
               Mapa_Referencia(
-                escalada: 'Polydance',
-                ids: ['linha_12', 'linha_16', 'linha_21'],
+                alvoUid: 'esc-polydance',
+                pontosUids: ['linha_12', 'linha_16', 'linha_21'],
               ),
             ],
           ),
@@ -147,6 +151,7 @@ void main() {
 
     test('retorna vazio e sem IDs técnicos para linhas sem nós de círculo identificador', () {
       final via = Escalada(
+        uid: 'esc-sem-circulo',
         viaEsportiva: ViaEsportiva(nome: 'Via Sem Circulo'),
       );
       final setor = Setor(
@@ -154,7 +159,7 @@ void main() {
           Mapa(
             pontosDeInteresse: [
               Mapa_PontoDeInteresse(
-                id: 'linha_curva',
+                uid: 'linha_curva',
                 linha: LinhaTrajeto(
                   compilado: DadosCompiladosLinha(
                     marcadores: [
@@ -169,8 +174,8 @@ void main() {
             ],
             referencias: [
               Mapa_Referencia(
-                escalada: 'Via Sem Circulo',
-                ids: ['linha_curva'],
+                alvoUid: 'esc-sem-circulo',
+                pontosUids: ['linha_curva'],
               ),
             ],
           ),
@@ -183,6 +188,7 @@ void main() {
 
     test('retorna rótulo de POI convencional', () {
       final via = Escalada(
+        uid: 'esc-tradicional',
         viaEsportiva: ViaEsportiva(nome: 'Via Tradicional'),
       );
       final setor = Setor(
@@ -190,15 +196,15 @@ void main() {
           Mapa(
             pontosDeInteresse: [
               Mapa_PontoDeInteresse(
-                id: 'p1',
-                label: '12',
+                uid: 'p1',
+                rotulo: '12',
                 circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
               ),
             ],
             referencias: [
               Mapa_Referencia(
-                escalada: 'Via Tradicional',
-                ids: ['p1'],
+                alvoUid: 'esc-tradicional',
+                pontosUids: ['p1'],
               ),
             ],
           ),

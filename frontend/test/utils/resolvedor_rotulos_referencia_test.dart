@@ -7,45 +7,59 @@ import 'package:frontend/utils/resolvedor_rotulos_referencia.dart';
 
 void main() {
   group('extrairRotuloReferencia', () {
-    test('retorna vazio se ref.ids for vazio', () {
+    test('retorna vazio se ref.pontosUids for vazio', () {
       final mapa = Mapa();
-      final ref = Mapa_Referencia(escalada: 'Via Teste');
+      final ref = Mapa_Referencia(alvoUid: 'esc-1');
       expect(extrairRotuloReferencia(mapa, ref), '');
     });
 
-    test('retorna rótulo de POI convencional com label', () {
+    test('retorna rótulo de POI convencional com rotulo', () {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'p1',
-            label: '12',
+            uid: 'p1',
+            rotulo: '12',
             circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
           ),
         ],
       );
-      final ref = Mapa_Referencia(ids: ['p1']);
+      final ref = Mapa_Referencia(pontosUids: ['p1']);
       expect(extrairRotuloReferencia(mapa, ref), '12');
     });
 
-    test('retorna vazio se POI convencional tiver label vazio (sem fallback para id)', () {
+    test('retorna vazio se POI convencional tiver rotulo vazio (sem fallback para id ou uid)', () {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'crayzy',
-            label: '',
+            uid: 'crayzy',
+            rotulo: '',
             circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
           ),
         ],
       );
-      final ref = Mapa_Referencia(ids: ['crayzy']);
+      final ref = Mapa_Referencia(pontosUids: ['crayzy']);
       expect(extrairRotuloReferencia(mapa, ref), '');
+    });
+
+    test('ignora pontos referenciados que não existem no mapa', () {
+      final mapa = Mapa(
+        pontosDeInteresse: [
+          Mapa_PontoDeInteresse(
+            uid: 'p1',
+            rotulo: '7A',
+            circulo: BoundingCirculo(x: 10, y: 10, raio: 5),
+          ),
+        ],
+      );
+      final ref = Mapa_Referencia(pontosUids: ['p-inexistente', 'p1']);
+      expect(extrairRotuloReferencia(mapa, ref), '7A');
     });
 
     test('extrai início e top de caminho vetorial com múltiplos segmentos (ex: 5-C)', () {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'linha_12',
+            uid: 'linha_12',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -58,7 +72,7 @@ void main() {
             ),
           ),
           Mapa_PontoDeInteresse(
-            id: 'linha_16',
+            uid: 'linha_16',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -71,7 +85,7 @@ void main() {
             ),
           ),
           Mapa_PontoDeInteresse(
-            id: 'linha_21',
+            uid: 'linha_21',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -87,8 +101,8 @@ void main() {
       );
 
       final ref = Mapa_Referencia(
-        ids: ['linha_12', 'linha_16', 'linha_21'],
-        escalada: 'Polydance',
+        pontosUids: ['linha_12', 'linha_16', 'linha_21'],
+        alvoUid: 'esc-polydance',
       );
 
       expect(extrairRotuloReferencia(mapa, ref), '5-C');
@@ -98,7 +112,7 @@ void main() {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'linha_boulder',
+            uid: 'linha_boulder',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -121,7 +135,7 @@ void main() {
         ],
       );
 
-      final ref = Mapa_Referencia(ids: ['linha_boulder']);
+      final ref = Mapa_Referencia(pontosUids: ['linha_boulder']);
       expect(extrairRotuloReferencia(mapa, ref), 'SS-1-TOP');
     });
 
@@ -129,7 +143,7 @@ void main() {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'linha_edit',
+            uid: 'linha_edit',
             linha: LinhaTrajeto(
               conteudo: DadosConteudoLinha(
                 nos: [
@@ -152,7 +166,7 @@ void main() {
         ],
       );
 
-      final ref = Mapa_Referencia(ids: ['linha_edit']);
+      final ref = Mapa_Referencia(pontosUids: ['linha_edit']);
       expect(extrairRotuloReferencia(mapa, ref), '7-B');
     });
 
@@ -160,7 +174,7 @@ void main() {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'seg_1',
+            uid: 'seg_1',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -173,7 +187,7 @@ void main() {
             ),
           ),
           Mapa_PontoDeInteresse(
-            id: 'seg_2',
+            uid: 'seg_2',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -192,7 +206,7 @@ void main() {
         ],
       );
 
-      final ref = Mapa_Referencia(ids: ['seg_1', 'seg_2']);
+      final ref = Mapa_Referencia(pontosUids: ['seg_1', 'seg_2']);
       expect(extrairRotuloReferencia(mapa, ref), '5-A');
     });
 
@@ -200,7 +214,7 @@ void main() {
       final mapa = Mapa(
         pontosDeInteresse: [
           Mapa_PontoDeInteresse(
-            id: 'linha_curva_1',
+            uid: 'linha_curva_1',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -213,7 +227,7 @@ void main() {
             ),
           ),
           Mapa_PontoDeInteresse(
-            id: 'linha_curva_2',
+            uid: 'linha_curva_2',
             linha: LinhaTrajeto(
               compilado: DadosCompiladosLinha(
                 marcadores: [
@@ -228,7 +242,7 @@ void main() {
         ],
       );
 
-      final ref = Mapa_Referencia(ids: ['linha_curva_1', 'linha_curva_2']);
+      final ref = Mapa_Referencia(pontosUids: ['linha_curva_1', 'linha_curva_2']);
       expect(extrairRotuloReferencia(mapa, ref), '');
     });
   });

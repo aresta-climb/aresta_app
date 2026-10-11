@@ -4,6 +4,7 @@
 import 'dart:io';
 import '../../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../firebase/app_logger.dart';
+import '../normalizador_croqui.dart';
 
 /// Gerencia as operações de entrada/saída de arquivos no armazenamento permanente (`/downloads`).
 ///
@@ -22,7 +23,7 @@ class GerenciadorArquivosLocais {
       final canonicalFile = File('$downloadsPath/$picoId/compilado.binarypb');
       if (await canonicalFile.exists()) {
         final bytes = await canonicalFile.readAsBytes();
-        return Croqui.fromBuffer(bytes);
+        return NormalizadorCroqui.deBuffer(bytes);
       }
 
       final legacyFile = File('$downloadsPath/$picoId/$picoId.binarypb');
@@ -30,10 +31,10 @@ class GerenciadorArquivosLocais {
         try {
           await legacyFile.rename(canonicalFile.path);
           final bytes = await canonicalFile.readAsBytes();
-          return Croqui.fromBuffer(bytes);
+          return NormalizadorCroqui.deBuffer(bytes);
         } catch (_) {
           final bytes = await legacyFile.readAsBytes();
-          return Croqui.fromBuffer(bytes);
+          return NormalizadorCroqui.deBuffer(bytes);
         }
       }
     } catch (e, stackTrace) {

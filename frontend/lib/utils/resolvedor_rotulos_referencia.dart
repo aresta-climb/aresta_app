@@ -5,27 +5,28 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 
 /// Extrai e formata o rótulo identificador (codenome) de uma referência visual de mapa.
 ///
-/// Itera sobre `ref.ids` e seus nós na ordem sequencial exata, coletando:
+/// Itera sobre `ref.pontosUids` e seus nós na ordem sequencial exata dentro do escopo
+/// local de `mapa.pontosDeInteresse`, coletando:
 /// - Rótulos de nós de traçados vetoriais do tipo `CIRCULO_IDENTIFICADOR`,
 ///   `INICIO_AGACHADO` ou `FIM_TOP` que possuam `rotulo` preenchido.
-/// - O campo `label` de pontos de interesse convencionais (não-linhas) que esteja preenchido.
+/// - O campo `rotulo` de pontos de interesse convencionais (não-linhas) que esteja preenchido.
 ///
 /// Deduplica rótulos idênticos consecutivos (ex: nós compartilhados entre segmentos)
 /// e une os identificadores com traço (ex: "5-C", "SS-1-TOP").
 ///
 /// Se nenhum rótulo válido for encontrado, retorna uma string vazia `""`
-/// (nunca realiza fallback para IDs técnicos internos como "linha_XX").
+/// (nunca realiza fallback para UIDs técnicos internos como "linha_XX").
 String extrairRotuloReferencia(Mapa mapa, Mapa_Referencia ref) {
-  if (ref.ids.isEmpty) return '';
+  if (ref.pontosUids.isEmpty) return '';
 
-  final Map<String, Mapa_PontoDeInteresse> poisMap = {
-    for (final p in mapa.pontosDeInteresse) p.id: p,
+  final Map<String, Mapa_PontoDeInteresse> mapaPois = {
+    for (final p in mapa.pontosDeInteresse) p.uid: p,
   };
 
   final List<String> rotulos = [];
 
-  for (final id in ref.ids) {
-    final p = poisMap[id];
+  for (final uid in ref.pontosUids) {
+    final p = mapaPois[uid];
     if (p == null) continue;
 
     if (p.hasLinha()) {
@@ -50,7 +51,7 @@ String extrairRotuloReferencia(Mapa mapa, Mapa_Referencia ref) {
         }
       }
     } else {
-      final rot = p.label.trim();
+      final rot = p.rotulo.trim();
       if (rot.isNotEmpty) {
         rotulos.add(rot);
       }

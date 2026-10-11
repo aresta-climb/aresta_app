@@ -138,10 +138,10 @@ class RotulosVia {
   });
 }
 
-/// Localiza a primeira referência associada ao nome da escalada no mapa.
-Mapa_Referencia? _buscarReferenciaNoMapa(Mapa mapa, String escaladaNome) {
+/// Localiza a primeira referência associada ao UID da escalada no mapa.
+Mapa_Referencia? _buscarReferenciaNoMapa(Mapa mapa, Escalada escalada) {
   for (final ref in mapa.referencias) {
-    if (ref.escalada == escaladaNome) {
+    if (ref.alvoUid == escalada.uid) {
       return ref;
     }
   }
@@ -154,13 +154,11 @@ RotulosVia resolveRouteLabels(Escalada escalada, Setor setor) {
     return const RotulosVia(mapIndicator: '', resolvedLabel: '');
   }
 
-  final nome = getEscaladaNome(escalada);
-
   for (int i = 0; i < setor.mapas.length; i++) {
     final mapa = setor.mapas[i];
-    final referencia = _buscarReferenciaNoMapa(mapa, nome);
+    final referencia = _buscarReferenciaNoMapa(mapa, escalada);
 
-    if (referencia != null && referencia.ids.isNotEmpty) {
+    if (referencia != null && referencia.pontosUids.isNotEmpty) {
       final mapIndicator = setor.mapas.length > 1 ? 'M${i + 1}' : '';
       return RotulosVia(
         mapIndicator: mapIndicator,
@@ -384,118 +382,4 @@ Widget _buildRouteTile(
   );
 
   return _buildEfeitoRealceAlvo(child: card, isTarget: isTarget);
-}
-
-enum EscaladaSortMode {
-  original,
-  alphaAsc,
-  alphaDesc,
-  gradeAsc,
-  gradeDesc,
-  protectionsAsc,
-  protectionsDesc,
-}
-
-Widget buildEscaladaSortGrid(
-  BuildContext context,
-  EscaladaSortMode currentMode,
-  Function(EscaladaSortMode)? onSortChanged,
-) {
-  return GridView.count(
-    crossAxisCount: 3,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    crossAxisSpacing: 10,
-    mainAxisSpacing: 10,
-    childAspectRatio: 1.6,
-    children: [
-      _buildEscaladaSortCard(
-        context: context,
-        label: 'PADRÃO',
-        icon: Icons.grid_view_rounded,
-        isActive: currentMode == EscaladaSortMode.original,
-        onTap: () => onSortChanged?.call(EscaladaSortMode.original),
-      ),
-      _buildEscaladaSortCard(
-        context: context,
-        label: 'ALFABÉTICO',
-        icon: Icons.sort_by_alpha,
-        isActive:
-            currentMode == EscaladaSortMode.alphaAsc ||
-            currentMode == EscaladaSortMode.alphaDesc,
-        onTap: () {
-          if (currentMode == EscaladaSortMode.alphaAsc) {
-            onSortChanged?.call(EscaladaSortMode.alphaDesc);
-          } else {
-            onSortChanged?.call(EscaladaSortMode.alphaAsc);
-          }
-        },
-      ),
-      _buildEscaladaSortCard(
-        context: context,
-        label: 'DIFICULDADE',
-        icon: Icons.trending_up,
-        isActive:
-            currentMode == EscaladaSortMode.gradeAsc ||
-            currentMode == EscaladaSortMode.gradeDesc,
-        onTap: () {
-          if (currentMode == EscaladaSortMode.gradeAsc) {
-            onSortChanged?.call(EscaladaSortMode.gradeDesc);
-          } else {
-            onSortChanged?.call(EscaladaSortMode.gradeAsc);
-          }
-        },
-      ),
-    ],
-  );
-}
-
-Widget _buildEscaladaSortCard({
-  required BuildContext context,
-  required String label,
-  required IconData icon,
-  required bool isActive,
-  required VoidCallback onTap,
-}) {
-  final Color activeColor = AppColors.brandColor;
-  final Color inactiveColor = context.colors.fishBone.withValues(alpha: 0.5);
-  final Color bgColor = context.colors.caveShadow;
-
-  return Material(
-    color: bgColor,
-    borderRadius: BorderRadius.circular(10),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? activeColor : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: isActive ? activeColor : inactiveColor, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isActive ? activeColor : inactiveColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
 }

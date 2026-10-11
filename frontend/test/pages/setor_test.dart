@@ -3,10 +3,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/main.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
-import '../mocks/mock_telemetria.dart';
+import 'package:frontend/services/gerenciador_filtros_croqui.dart';
+import 'package:frontend/utils/filtro_grau_escalada.dart';
+import 'package:frontend/widgets/painel_filtros_indice.dart';
 
 void main() {
   testWidgets('SetorPage should wrap body in SafeArea', (tester) async {
@@ -124,46 +126,6 @@ void main() {
     expect(find.text('SETOR SEM CAPA'), findsOneWidget);
   });
 
-  testWidgets('SetorPage dispara logAlterarOrdenacao ao alternar critérios de ordenação', (tester) async {
-    final mockTelemetria = MockTelemetryService();
-    TelemetryService.instance = mockTelemetria;
-
-    final via1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Beta'));
-    final via2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Alfa'));
-    final setor = Setor()
-      ..nome = 'Setor Ordenação'
-      ..escaladas.addAll([via1, via2]);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SetorPage(setor: setor, cragId: 'crag1'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // 1. Toca em ALFABÉTICO
-    mockTelemetria.clear();
-    await tester.tap(find.text('ALFABÉTICO'));
-    await tester.pumpAndSettle();
-
-    expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
-    var params = mockTelemetria.recordedParams['alterar_ordenacao']!;
-    expect(params['acao'], 'alterar_ordenacao');
-    expect(params['origem'], 'setor');
-    expect(params['detalhe'], 'alphaAsc');
-
-    // 2. Toca em DIFICULDADE
-    mockTelemetria.clear();
-    await tester.tap(find.text('DIFICULDADE'));
-    await tester.pumpAndSettle();
-
-    expect(mockTelemetria.recordedEvents, contains('alterar_ordenacao'));
-    params = mockTelemetria.recordedParams['alterar_ordenacao']!;
-    expect(params['acao'], 'alterar_ordenacao');
-    expect(params['origem'], 'setor');
-    expect(params['detalhe'], 'gradeAsc');
-  });
-
   testWidgets('SetorPage exibe descrição sem o cabeçalho "Descrição"', (tester) async {
     final setor = Setor()
       ..nome = 'Setor Cachoeira'
@@ -171,6 +133,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: construirTemaEscuro(),
         home: SetorPage(setor: setor, cragId: 'crag1'),
       ),
     );
@@ -179,5 +142,143 @@ void main() {
     expect(find.text('Descrição'), findsNothing);
     expect(find.text('Acesso fácil pela trilha principal.'), findsOneWidget);
   });
-}
 
+  testWidgets('SetorPage com múltiplas modalidades exibe abas ordenadas por volume decrescente sem aba Todas', (tester) async {
+    final via1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Esportiva 1', dificuldade: GrauVia_GrauVia.BR_6));
+    final via2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Esportiva 2', dificuldade: GrauVia_GrauVia.BR_7A));
+    final via3 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Esportiva 3', dificuldade: GrauVia_GrauVia.BR_7B));
+    final boulder = Escalada(boulder: Boulder(nome: 'Boulder Único', dificuldade: GrauBoulder_GrauBoulder.V4));
+
+    final setor = Setor()
+      ..nome = 'Setor Misto'
+      ..escaladas.addAll([boulder, via1, via2, via3]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(setor: setor, cragId: 'crag-misto'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Deve exibir TabBar com abas Esportivas (3) e Boulders (1), nessa ordem (volume decrescente)
+    expect(find.byType(TabBar), findsOneWidget);
+    expect(find.text('Esportivas (3)'), findsOneWidget);
+    expect(find.text('Boulders (1)'), findsOneWidget);
+    expect(find.text('Todas'), findsNothing);
+
+    // Na aba inicial (Esportivas), exibe as vias esportivas e não o boulder
+    expect(find.text('Esportiva 1'), findsOneWidget);
+    expect(find.text('Esportiva 2'), findsOneWidget);
+    expect(find.text('Esportiva 3'), findsOneWidget);
+    expect(find.text('Boulder Único'), findsNothing);
+
+    // Alterna para Boulders
+    await tester.tap(find.text('Boulders (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Boulder Único'), findsOneWidget);
+    expect(find.text('Esportiva 1'), findsNothing);
+  });
+
+  testWidgets('SetorPage com modalidade única oculta a barra de abas e exibe vias diretamente', (tester) async {
+    final via1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Só Esportiva 1'));
+    final via2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Só Esportiva 2'));
+
+    final setor = Setor()
+      ..nome = 'Falésia Monomodal'
+      ..escaladas.addAll([via1, via2]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(setor: setor, cragId: 'crag-mono'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Sem barra de abas
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.text('Via Só Esportiva 1'), findsOneWidget);
+    expect(find.text('Via Só Esportiva 2'), findsOneWidget);
+  });
+
+  testWidgets('SetorPage herda e reflete filtros reativos do GerenciadorFiltrosCroqui', (tester) async {
+    final via1 = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via Fácil',
+        dificuldade: GrauVia_GrauVia.BR_5,
+        destaque: false,
+      ),
+    );
+    final via2 = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via Clássica Difícil',
+        dificuldade: GrauVia_GrauVia.BR_8A,
+        destaque: true,
+      ),
+    );
+
+    final setor = Setor()
+      ..nome = 'Setor Filtravel'
+      ..escaladas.addAll([via1, via2]);
+
+    final cragId = 'crag-filtros';
+    GerenciadorFiltrosCroqui.instance.atualizarFiltros(
+      cragId,
+      EstadoFiltrosUnificado(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(setor: setor, cragId: cragId),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Ambas aparecem inicialmente
+    expect(find.text('Via Fácil'), findsOneWidget);
+    expect(find.text('Via Clássica Difícil'), findsOneWidget);
+    expect(find.byType(PainelFiltrosIndice), findsOneWidget);
+
+    // Aplica filtro global de apenas clássicas
+    GerenciadorFiltrosCroqui.instance.atualizarFiltros(
+      cragId,
+      EstadoFiltrosUnificado(apenasClassicas: true),
+    );
+    await tester.pumpAndSettle();
+
+    // Apenas a clássica permanece visível
+    expect(find.text('Via Fácil'), findsNothing);
+    expect(find.text('Via Clássica Difícil'), findsOneWidget);
+    expect(find.textContaining('Clássicas'), findsWidgets);
+  });
+
+  testWidgets('SetorPage seleciona automaticamente a aba correspondente quando scrollToEscalada for modalidade secundária', (tester) async {
+    final via1 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Esportiva 1'));
+    final via2 = Escalada(viaEsportiva: ViaEsportiva(nome: 'Esportiva 2'));
+    final boulder = Escalada(boulder: Boulder(nome: 'Boulder Alvo'));
+
+    final setor = Setor()
+      ..nome = 'Setor com Alvo'
+      ..escaladas.addAll([via1, via2, boulder]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(
+          setor: setor,
+          cragId: 'crag-alvo',
+          scrollToEscalada: boulder,
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // A aba Boulders deve estar selecionada automaticamente
+    expect(find.text('Boulder Alvo'), findsOneWidget);
+  });
+}

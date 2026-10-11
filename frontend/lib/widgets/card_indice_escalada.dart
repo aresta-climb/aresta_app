@@ -1,17 +1,27 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../theme/cores_app.dart';
 import '../utils/indexador_escaladas.dart';
+import '../view/function_library/setor_functions.dart';
 
-/// Card de exibição de uma escalada no Índice de Escaladas.
+/// Card de exibição de uma escalada no Índice de Escaladas ou na página de Setor.
 ///
-/// Exibe o grau em destaque visual à esquerda, nome, modalidade, proteções,
-/// localização hierárquica do setor/grupo e ação para abrir a tela de detalhes.
+/// Exibe o grau ou rótulo de croqui em destaque visual à esquerda, nome, modalidade,
+/// proteções, localização opcional e ação para abrir a tela de detalhes.
 class CardIndiceEscalada extends StatelessWidget {
   /// O item indexado contendo os dados da escalada e localização.
   final ItemIndiceEscalada item;
+
+  /// Rótulo opcional de referência do croqui/mapa quando exibido no contexto do setor.
+  final RotulosVia? rotuloCroqui;
+
+  /// Define se o caminho de localização (Setor / Grupo > Setor) deve ser exibido.
+  final bool mostrarLocalizacao;
+
+  /// Indica se a via é o alvo direto de foco/rolagem (`scrollToEscalada`), aplicando realce visual suave.
+  final bool isTarget;
 
   /// Ação disparada ao tocar no card.
   final VoidCallback onTap;
@@ -19,6 +29,9 @@ class CardIndiceEscalada extends StatelessWidget {
   const CardIndiceEscalada({
     super.key,
     required this.item,
+    this.rotuloCroqui,
+    this.mostrarLocalizacao = true,
+    this.isTarget = false,
     required this.onTap,
   });
 
@@ -26,10 +39,19 @@ class CardIndiceEscalada extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    // Subtítulo técnico com modalidade e proteções
+    // Subtítulo técnico com modalidade, grau (quando em modo setor) e proteções
     final partesSubtitulo = <String>[];
-    if (item.modalidade.isNotEmpty) {
-      partesSubtitulo.add(item.modalidade);
+    if (rotuloCroqui != null) {
+      final modalidadeComGrau = item.grau.isNotEmpty
+          ? '${item.modalidade} | ${item.grau}'
+          : item.modalidade;
+      if (modalidadeComGrau.isNotEmpty) {
+        partesSubtitulo.add(modalidadeComGrau);
+      }
+    } else {
+      if (item.modalidade.isNotEmpty) {
+        partesSubtitulo.add(item.modalidade);
+      }
     }
     if (item.protecoes.isNotEmpty) {
       partesSubtitulo.add(item.protecoes);
@@ -37,7 +59,52 @@ class CardIndiceEscalada extends StatelessWidget {
 
     final subtituloTecnico = partesSubtitulo.join(' • ');
 
-    return Padding(
+    Widget buildBadgeConteudo() {
+      if (rotuloCroqui != null) {
+        if (rotuloCroqui!.resolvedLabel.isNotEmpty) {
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (rotuloCroqui!.mapIndicator.isNotEmpty)
+                Text(
+                  rotuloCroqui!.mapIndicator,
+                  style: TextStyle(
+                    color: colors.ashGrey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              Text(
+                rotuloCroqui!.resolvedLabel,
+                style: TextStyle(
+                  color: colors.chalkWhite,
+                  fontWeight: FontWeight.bold,
+                  fontSize: rotuloCroqui!.resolvedLabel.length > 3 ? 12 : 15,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          );
+        } else {
+          return Icon(
+            Icons.terrain_outlined,
+            color: colors.rustIron,
+            size: 22,
+          );
+        }
+      }
+
+      return Text(
+        item.grau.isNotEmpty ? item.grau : '—',
+        style: TextStyle(
+          color: colors.chalkWhite,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      );
+    }
+
+    final card = Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: colors.caveShadow,
@@ -52,7 +119,7 @@ class CardIndiceEscalada extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                // Badge de Grau em destaque
+                // Badge à esquerda (Grau no índice geral, Rótulo do croqui no setor)
                 Container(
                   width: 58,
                   height: 48,
@@ -68,14 +135,7 @@ class CardIndiceEscalada extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(
-                        item.grau.isNotEmpty ? item.grau : '—',
-                        style: TextStyle(
-                          color: colors.chalkWhite,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      child: buildBadgeConteudo(),
                     ),
                   ),
                 ),
@@ -124,29 +184,30 @@ class CardIndiceEscalada extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      const SizedBox(height: 3),
-                      // Localização (Setor ou Grupo > Setor)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 12,
-                            color: colors.rustIron,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              item.localizacaoFormatada,
-                              style: TextStyle(
-                                color: colors.ashGrey.withValues(alpha: 0.8),
-                                fontSize: 11,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      if (mostrarLocalizacao && item.localizacaoFormatada.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 12,
+                              color: colors.rustIron,
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                item.localizacaoFormatada,
+                                style: TextStyle(
+                                  color: colors.ashGrey.withValues(alpha: 0.8),
+                                  fontSize: 11,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -162,6 +223,66 @@ class CardIndiceEscalada extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    return _buildEfeitoRealceAlvo(
+      child: card,
+      isTarget: isTarget,
+      context: context,
+    );
+  }
+
+  /// Constrói a animação de realce suave quando a via é o alvo direto de busca ou deep link.
+  Widget _buildEfeitoRealceAlvo({
+    required Widget child,
+    required bool isTarget,
+    required BuildContext context,
+  }) {
+    if (!isTarget) return child;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 2500),
+      builder: (context, value, childWidget) {
+        final double fadeProgress = value < 0.40 ? 0.0 : (value - 0.40) / 0.60;
+        final Color brandColor = context.colors.rustIron;
+        final Color color = value < 0.40
+            ? Colors.transparent
+            : brandColor.withValues(alpha: 0.3 * (1.0 - fadeProgress));
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            childWidget!,
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 10,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: (color.a * 255.0).round().clamp(0, 255) == 0
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: brandColor.withValues(
+                                alpha: 0.6 * (1.0 - fadeProgress),
+                              ),
+                              blurRadius: 15 * (1.0 - fadeProgress),
+                              spreadRadius: 2 * (1.0 - fadeProgress),
+                            ),
+                          ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: child,
     );
   }
 }

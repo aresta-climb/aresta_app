@@ -3,22 +3,37 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../view/function_library/setor_functions.dart';
-import '../view/function_library/via_functions.dart';
-import '../theme/cores_app.dart';
+import '../navigation/funcoes_navegacao.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetria.dart';
+import '../services/gerenciador_filtros_croqui.dart';
+import '../theme/cores_app.dart';
+import '../utils/filtro_grau_escalada.dart';
+import '../utils/indexador_escaladas.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../view/function_library/markdown_offline.dart';
+import '../view/function_library/setor_functions.dart';
+import '../widgets/card_indice_escalada.dart';
 import '../widgets/mapa_thumbnail.dart';
+import '../widgets/painel_filtros_indice.dart';
 
-/// Uma página que fornece uma visão geral de um setor específico.
+/// Página unificada de exploração de um setor específico de escalada.
 ///
-/// Ela exibe a descrição do setor e apresenta uma lista de todas as vias
-/// de escalada ([Escalada]) e quaisquer subsetores contidos nele.
+/// Apresenta cabeçalho com foto de capa ou título colapsável, descrição em Markdown,
+/// mapas thumbnails, abas de modalidades ordenadas por volume (quando existirem múltiplas),
+/// painel de filtros e ordenação reativo sincronizado com o croqui e lista de escaladas
+/// com rótulos de croqui e animação de realce para vias alvo.
 class SetorPage extends StatefulWidget {
+  /// O setor a ser explorado.
   final Setor setor;
+
+  /// O grupo agregador opcional ao qual este setor pertence.
   final Grupo? grupoContext;
+
+  /// O identificador do croqui/pico para eventos de telemetria e persistência de filtros.
   final String cragId;
+
+  /// Escalada alvo opcional para navegação direta com rolagem e realce.
   final Escalada? scrollToEscalada;
 
   const SetorPage({
@@ -33,8 +48,15 @@ class SetorPage extends StatefulWidget {
   State<SetorPage> createState() => _SetorPageState();
 }
 
-class _SetorPageState extends State<SetorPage> {
-  EscaladaSortMode _sortMode = EscaladaSortMode.original;
+class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
+  late List<ItemIndiceEscalada> _todasEscaladas;
+  late Map<String, List<ItemIndiceEscalada>> _escaladasPorModalidade;
+  late List<String> _modalidadesDisponiveis;
+
+  TabController? _tabController;
+  int _indiceAbaAtual = 0;
+
+  late EstadoFiltrosUnificado _estadoFiltros;
   Future<ImageProvider?>? _coverProviderFuture;
   GlobalKey? _targetKey;
 
@@ -42,6 +64,10 @@ class _SetorPageState extends State<SetorPage> {
   void initState() {
     super.initState();
     _coverProviderFuture = _resolveCoverImage();
+    _estadoFiltros =
+        GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
+    GerenciadorFiltrosCroqui.instance.addListener(_onFiltrosGlobaisAlterados);
+    _inicializarDados();
 
     if (widget.scrollToEscalada != null) {
       _targetKey = GlobalKey();
@@ -49,19 +75,108 @@ class _SetorPageState extends State<SetorPage> {
     }
   }
 
+  void _onFiltrosGlobaisAlterados() {
+    final atualizado =
+        GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
+    if (atualizado != _estadoFiltros && mounted) {
+      setState(() {
+        _estadoFiltros = atualizado;
+      });
+    }
+  }
+
+  void _atualizarEstadoFiltros(EstadoFiltrosUnificado novo) {
+    _estadoFiltros = novo;
+    GerenciadorFiltrosCroqui.instance.atualizarFiltros(widget.cragId, novo);
+    setState(() {});
+  }
+
+  /// Inicializa as escaladas indexadas e organiza as modalidades por volume decrescente.
+  void _inicializarDados() {
+    _todasEscaladas = indexarEscaladasDoSetor(
+      widget.setor,
+      widget.cragId,
+      grupoContext: widget.grupoContext,
+    );
+
+    _escaladasPorModalidade = {};
+    for (final item in _todasEscaladas) {
+      _escaladasPorModalidade.putIfAbsent(item.modalidade, () => []).add(item);
+    }
+
+    _modalidadesDisponiveis = _escaladasPorModalidade.keys.toList()
+      ..sort((a, b) {
+        final countA = _escaladasPorModalidade[a]?.length ?? 0;
+        final countB = _escaladasPorModalidade[b]?.length ?? 0;
+        final comp = countB.compareTo(countA);
+        if (comp != 0) return comp;
+        return a.compareTo(b);
+      });
+
+    int initialIndex = 0;
+    if (widget.scrollToEscalada != null) {
+      for (final item in _todasEscaladas) {
+        if (item.escalada == widget.scrollToEscalada) {
+          final idx = _modalidadesDisponiveis.indexOf(item.modalidade);
+          if (idx != -1) {
+            initialIndex = idx;
+          }
+          break;
+        }
+      }
+    }
+
+    _tabController?.dispose();
+    if (_modalidadesDisponiveis.length > 1) {
+      _tabController = TabController(
+        length: _modalidadesDisponiveis.length,
+        initialIndex: initialIndex,
+        vsync: this,
+      );
+      _tabController!.addListener(() {
+        if (!_tabController!.indexIsChanging &&
+            _tabController!.index != _indiceAbaAtual) {
+          final novaAba = _modalidadesDisponiveis[_tabController!.index];
+          _indiceAbaAtual = _tabController!.index;
+          TelemetryService.instance.logAcaoIndiceEscaladas(
+            widget.cragId,
+            'trocar_aba',
+            modalidade: novaAba,
+            detalhe: 'setor_${widget.setor.nome}',
+          );
+          setState(() {});
+        }
+      });
+    } else {
+      _tabController = null;
+    }
+
+    _indiceAbaAtual = initialIndex;
+  }
+
   @override
   void didUpdateWidget(SetorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    setState(() {
+    if (oldWidget.setor != widget.setor || oldWidget.cragId != widget.cragId) {
       _coverProviderFuture = _resolveCoverImage();
-      if (widget.scrollToEscalada != oldWidget.scrollToEscalada &&
-          widget.scrollToEscalada != null) {
-        _targetKey = GlobalKey();
-        _scheduleScrollToTarget();
-      }
-    });
+      _estadoFiltros =
+          GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
+      _inicializarDados();
+    }
+
+    if (widget.scrollToEscalada != oldWidget.scrollToEscalada &&
+        widget.scrollToEscalada != null) {
+      _targetKey = GlobalKey();
+      _scheduleScrollToTarget();
+    }
   }
 
+  @override
+  void dispose() {
+    GerenciadorFiltrosCroqui.instance.removeListener(_onFiltrosGlobaisAlterados);
+    _tabController?.dispose();
+    super.dispose();
+  }
 
   void _scheduleScrollToTarget() {
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -109,41 +224,75 @@ class _SetorPageState extends State<SetorPage> {
     return null;
   }
 
-  List<Escalada> get _sortedEscaladas {
-    if (_sortMode == EscaladaSortMode.original) return widget.setor.escaladas;
+  String _obterNomePluralModalidade(String modalidade) {
+    switch (modalidade) {
+      case 'Esportiva':
+        return 'Esportivas';
+      case 'Boulder':
+        return 'Boulders';
+      case 'Móvel':
+        return 'Móveis';
+      case 'Multienfiada':
+        return 'Multienfiadas';
+      case 'Highline':
+        return 'Highlines';
+      default:
+        return modalidade;
+    }
+  }
 
-    final list = List<Escalada>.from(widget.setor.escaladas);
-    list.sort((a, b) {
-      switch (_sortMode) {
-        case EscaladaSortMode.alphaAsc:
-          return getEscaladaNome(
-            a,
-          ).toLowerCase().compareTo(getEscaladaNome(b).toLowerCase());
-        case EscaladaSortMode.alphaDesc:
-          return getEscaladaNome(
-            b,
-          ).toLowerCase().compareTo(getEscaladaNome(a).toLowerCase());
-        case EscaladaSortMode.gradeAsc:
-          return getGrauValue(a).compareTo(getGrauValue(b));
-        case EscaladaSortMode.gradeDesc:
-          return getGrauValue(b).compareTo(getGrauValue(a));
-        case EscaladaSortMode.protectionsAsc:
-          return getProtecoesValue(a).compareTo(getProtecoesValue(b));
-        case EscaladaSortMode.protectionsDesc:
-          return getProtecoesValue(b).compareTo(getProtecoesValue(a));
-        default:
-          return 0;
-      }
-    });
-    return list;
+  String _formatarRotuloAba(String modalidade) {
+    final nomePlural = _obterNomePluralModalidade(modalidade);
+    final viasBase = _escaladasPorModalidade[modalidade] ?? [];
+    if (_estadoFiltros.temFiltrosAtivos) {
+      final filtradas = _estadoFiltros
+          .filtrarEscaladas(viasBase, modalidadeEspecifica: modalidade)
+          .length;
+      return '$nomePlural ($filtradas/${viasBase.length})';
+    }
+    return '$nomePlural (${viasBase.length})';
+  }
+
+  List<String> _obterConquistadoresDisponiveis(String modalidade) {
+    final viasBase = _escaladasPorModalidade[modalidade] ?? _todasEscaladas;
+    return viasBase
+        .expand((v) => v.conquistadores)
+        .map((c) => c.trim())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+  }
+
+  bool _temClassicasDisponiveis(String modalidade) {
+    final viasBase = _escaladasPorModalidade[modalidade] ?? _todasEscaladas;
+    return viasBase.any((v) => v.isDestaque);
+  }
+
+  Map<String, FaixaGrauDisponivel> _obterFaixasGrauDisponiveis(String modalidade) {
+    final viasBase = _escaladasPorModalidade[modalidade] ?? _todasEscaladas;
+    return calcularFaixasGrauDisponiveis(viasBase);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final validMapas = widget.setor.mapas
+        .where((m) =>
+            m.caminhoImagemMapa.isNotEmpty &&
+            m.larguraMapa > 0 &&
+            m.alturaMapa > 0)
+        .toList();
+
+    final String abaAtual = _modalidadesDisponiveis.isNotEmpty
+        ? _modalidadesDisponiveis[_tabController?.index ?? _indiceAbaAtual]
+        : '';
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
+          // 1. Cabeçalho com Capa Animada ou Barra Simples
           SliverAppBar(
             expandedHeight: _temCapa ? 300.0 : null,
             pinned: true,
@@ -173,12 +322,9 @@ class _SetorPageState extends State<SetorPage> {
                       final collapsedHeight =
                           MediaQuery.of(context).padding.top + kToolbarHeight;
                       const expandedHeight = 300.0;
-                      // A variável 't' (progresso) vai de 1.0 (totalmente expandido) a 0.0 (totalmente colapsado).
-                      // Usamos isso para animar manualmente o padding e o tamanho da fonte.
-                      double t =
-                          (top - collapsedHeight) /
+                      double t = (top - collapsedHeight) /
                           (expandedHeight - collapsedHeight);
-                      t = t.clamp(0.0, 1.0); // 1.0 = expanded, 0.0 = collapsed
+                      t = t.clamp(0.0, 1.0);
 
                       return Stack(
                         fit: StackFit.expand,
@@ -215,9 +361,7 @@ class _SetorPageState extends State<SetorPage> {
                                               end: Alignment.bottomCenter,
                                               colors: [
                                                 Colors.black,
-                                                Colors.black.withValues(
-                                                  alpha: 0.7,
-                                                ),
+                                                Colors.black.withValues(alpha: 0.7),
                                                 Colors.transparent,
                                               ],
                                               stops: const [0.0, 0.4, 1.0],
@@ -236,12 +380,9 @@ class _SetorPageState extends State<SetorPage> {
                                               begin: Alignment.bottomCenter,
                                               end: Alignment.topCenter,
                                               colors: [
-                                                Colors.black.withValues(
-                                                  alpha: 0.9,
-                                                ),
-                                                Colors.black.withValues(
-                                                  alpha: 0.6,
-                                                ),
+                                                Colors.black,
+                                                Colors.black.withValues(alpha: 0.9),
+                                                Colors.black.withValues(alpha: 0.6),
                                                 Colors.transparent,
                                               ],
                                               stops: const [0.0, 0.4, 1.0],
@@ -259,23 +400,18 @@ class _SetorPageState extends State<SetorPage> {
                             ),
                           ),
                           Positioned(
-                            // Anima a margem esquerda de 16 (expandido) para 72 (colapsado) para não sobrepor o botão de voltar.
                             left: 16 + (56 * (1 - t)),
-                            // Anima a margem direita para dar espaço ao botão de feedback.
-                            right:
-                                16 + (72 * (1 - t)), // Make room for feedback button
+                            right: 16 + (72 * (1 - t)),
                             bottom: 16,
                             child: Text(
                               widget.setor.nome.toUpperCase(),
                               style: TextStyle(
                                 fontFamily: 'BebasNeue',
-                                // A fonte diminui suavemente de 28 para 20.
                                 fontSize: 20 + (8 * t),
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.5,
                                 color: Colors.white,
                               ),
-                              // Força para 1 linha a partir da metade do scroll para evitar que o texto bata na status bar.
                               maxLines: t > 0.5 ? 2 : 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -286,28 +422,185 @@ class _SetorPageState extends State<SetorPage> {
                   )
                 : null,
           ),
+
+          // 2. Seção Fixa: Descrição, Mapa, Abas de Modalidade e Painel de Filtros
           SliverToBoxAdapter(
             child: SafeArea(
               top: false,
-              bottom: true,
-              child: buildSetorBody(
-                context,
-                widget.setor,
-                widget.cragId,
-                _sortedEscaladas,
-                widget.scrollToEscalada,
-                _targetKey,
-                buildEscaladaSortGrid(context, _sortMode, (mode) {
-                  TelemetryService.instance.logAlterarOrdenacao('setor', mode.name);
-                  setState(() {
-                    _sortMode = mode;
-                  });
-                }),
-                widget.grupoContext,
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Descrição do Setor em Markdown
+                  if (widget.setor.descricao.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: OfflineMarkdown(
+                        data: widget.setor.descricao,
+                        cragId: widget.cragId,
+                      ),
+                    ),
+
+                  // Mapa Thumbnail do Setor
+                  if (validMapas.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: AspectRatio(
+                          aspectRatio: validMapas.first.larguraMapa /
+                              validMapas.first.alturaMapa,
+                          child: MapaThumbnail(
+                            mapas: validMapas,
+                            cragId: widget.cragId,
+                            setorContext: widget.setor,
+                            grupoContext: widget.grupoContext,
+                            nomeContexto: widget.setor.nome,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Barra de Abas Dinâmicas (apenas se houver > 1 modalidade)
+                  if (_modalidadesDisponiveis.length > 1 && _tabController != null)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colors.caveShadow,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: colors.graniteEdge),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        indicatorColor: colors.rustIron,
+                        indicatorWeight: 3,
+                        labelColor: colors.chalkWhite,
+                        unselectedLabelColor: colors.ashGrey,
+                        dividerColor: Colors.transparent,
+                        onTap: (_) => setState(() {}),
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        tabs: _modalidadesDisponiveis.map((mod) {
+                          return Tab(text: _formatarRotuloAba(mod));
+                        }).toList(),
+                      ),
+                    ),
+
+                  // Painel de Filtros Unificado
+                  PainelFiltrosIndice(
+                    cragId: widget.cragId,
+                    estadoUnificado: _estadoFiltros,
+                    abaAtiva: abaAtual,
+                    modalidadesDisponiveis: _modalidadesDisponiveis,
+                    setoresDisponiveis: [widget.setor.nome],
+                    gruposDisponiveis: widget.grupoContext != null
+                        ? [widget.grupoContext!.nome]
+                        : const [],
+                    conquistadoresDisponiveis:
+                        _obterConquistadoresDisponiveis(abaAtual),
+                    temClassicasDisponiveis:
+                        _temClassicasDisponiveis(abaAtual),
+                    faixasGrauDisponiveis:
+                        _obterFaixasGrauDisponiveis(abaAtual),
+                    onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
+                  ),
+                ],
               ),
             ),
           ),
+
+          // 3. Conteúdo da aba ativa: Lista de Escaladas
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              24 + MediaQuery.of(context).padding.bottom,
+            ),
+            sliver: _buildSliverEscaladas(context, abaAtual),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// Constrói o sliver com a lista de escaladas filtradas e ordenadas.
+  Widget _buildSliverEscaladas(BuildContext context, String modalidade) {
+    final colors = context.colors;
+    final List<ItemIndiceEscalada> viasBase = modalidade.isNotEmpty
+        ? (_escaladasPorModalidade[modalidade] ?? [])
+        : _todasEscaladas;
+
+    final viasFiltradas = _estadoFiltros.filtrarEscaladas(
+      viasBase,
+      modalidadeEspecifica: modalidade.isNotEmpty ? modalidade : null,
+    );
+
+    if (viasFiltradas.isEmpty) {
+      return SliverToBoxAdapter(
+        child: SafeArea(
+          top: false,
+          bottom: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Text(
+                'Nenhuma escalada encontrada nos filtros atuais.',
+                style: TextStyle(color: colors.ashGrey, fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final item = viasFiltradas[index];
+          final rotulos = resolveRouteLabels(item.escalada, widget.setor);
+          final bool isTarget = widget.scrollToEscalada != null &&
+              item.escalada == widget.scrollToEscalada;
+
+          final card = CardIndiceEscalada(
+            item: item,
+            rotuloCroqui: rotulos,
+            mostrarLocalizacao: false,
+            isTarget: isTarget,
+            onTap: () {
+              TelemetryService.instance.logAcaoEscalada(
+                widget.cragId,
+                widget.setor.nome,
+                item.nome,
+                'abrir_detalhes',
+                'setor_${modalidade.toLowerCase()}',
+              );
+              AppNav.toVia(
+                context,
+                escalada: item.escalada,
+                setor: widget.setor,
+                grupo: widget.grupoContext,
+              );
+            },
+          );
+
+          final child = SafeArea(
+            top: false,
+            bottom: index == viasFiltradas.length - 1,
+            child: isTarget
+                ? KeyedSubtree(key: _targetKey, child: card)
+                : card,
+          );
+
+          return child;
+        },
+        childCount: viasFiltradas.length,
       ),
     );
   }

@@ -729,6 +729,85 @@ void main() {
         expect(filtrados.map((e) => e.nome).toSet(), {'Via Qualquer', 'V5'});
       });
     });
+
+    group('calcularFaixasGrauDisponiveis', () {
+      test('calcula corretamente a amplitude de graus para Vias e Boulders em conjunto', () {
+        final via1 = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Fácil', dificuldade: GrauVia_GrauVia.BR_4)), // 500
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final via2 = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Média', dificuldade: GrauVia_GrauVia.BR_7A)), // 810
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final via3 = ItemIndiceEscalada(
+          escalada: Escalada(viaMovel: ViaMovel(nome: 'Via Dura', dificuldade: GrauVia_GrauVia.BR_9A)), // 1010
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final boulder1 = ItemIndiceEscalada(
+          escalada: Escalada(boulder: Boulder(nome: 'V2', dificuldade: GrauBoulder_GrauBoulder.V2)), // 300
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final boulder2 = ItemIndiceEscalada(
+          escalada: Escalada(boulder: Boulder(nome: 'V8', dificuldade: GrauBoulder_GrauBoulder.V8)), // 900
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+
+        final faixas = calcularFaixasGrauDisponiveis([via1, via2, via3, boulder1, boulder2]);
+
+        expect(faixas.containsKey('Via'), isTrue);
+        expect(faixas['Via']!.minValor, 500);
+        expect(faixas['Via']!.maxValor, 1010);
+
+        expect(faixas.containsKey('Boulder'), isTrue);
+        expect(faixas['Boulder']!.minValor, 300);
+        expect(faixas['Boulder']!.maxValor, 900);
+      });
+
+      test('lida com pico com apenas uma escalada ou grau único', () {
+        final viaUnica = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via 6º', dificuldade: GrauVia_GrauVia.BR_6)), // 700
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+
+        final faixas = calcularFaixasGrauDisponiveis([viaUnica]);
+
+        expect(faixas.containsKey('Via'), isTrue);
+        expect(faixas['Via']!.minValor, 700);
+        expect(faixas['Via']!.maxValor, 700);
+        expect(faixas.containsKey('Boulder'), isFalse);
+      });
+
+      test('retorna mapa vazio para lista sem escaladas ou sem graduações válidas', () {
+        expect(calcularFaixasGrauDisponiveis([]), isEmpty);
+
+        final viaSemGrau = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Projeto')),
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+
+        expect(calcularFaixasGrauDisponiveis([viaSemGrau]), isEmpty);
+      });
+
+      test('FaixaGrauDisponivel implementa igualdade e toString de forma consistente', () {
+        const faixa1 = FaixaGrauDisponivel(minValor: 500, maxValor: 900);
+        const faixa2 = FaixaGrauDisponivel(minValor: 500, maxValor: 900);
+        const faixa3 = FaixaGrauDisponivel(minValor: 600, maxValor: 900);
+
+        expect(faixa1, equals(faixa2));
+        expect(faixa1.hashCode, equals(faixa2.hashCode));
+        expect(faixa1, isNot(equals(faixa3)));
+        expect(faixa1.toString(), contains('500'));
+        expect(faixa1.toString(), contains('900'));
+      });
+    });
   });
 }
 

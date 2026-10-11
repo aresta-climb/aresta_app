@@ -26,7 +26,7 @@ A página de exploração DEVE (MUST) renderizar uma barra de abas onde a primei
 - **THEN** as abas passam a exibir imediatamente "Setores (4/13)" e "Esportivas (12/95)".
 
 ### Requirement: Painel de Filtros Reativo e Superset
-O sistema DEVE (MUST) disponibilizar uma barra de "Controles" na página de exploração que aciona um Modal Bottom Sheet reativo com estado global compartilhado. Na página principal, a barra DEVE exibir uma trilha de chips em linha única com rolagem horizontal (scroll horizontal), contendo chips com remoção rápida (`✕`) para filtros ativos e para ordenação não-padrão. O Modal Bottom Sheet DEVE conter duas seções distintas: "Ordenação" e "Filtros". Na aba "Setores", a seção de filtros DEVE exibir o superset com modalidades ativas, sliders de grau específicos para cada modalidade, grupos, conquistadores e vias clássicas. Nas abas de modalidade, a seção de filtros DEVE exibir a projeção contextual com slider de grau da modalidade ativa, localização unificada (setores e grupos), conquistadores e clássicas. O cabeçalho do Bottom Sheet DEVE conter o botão "Limpar" (que redefine todos os filtros e restaura a ordenação para o padrão) e o botão de feedback in-app na extrema direita, associando o nó `ControlesNode` à árvore de navegação.
+O sistema DEVE (MUST) disponibilizar um card unificado de "Filtros e Ordenação" na página de exploração que aciona um Modal Bottom Sheet reativo com estado global compartilhado. Na linha superior do card, o botão de abertura DEVE ser 100% clicável em toda a sua extensão horizontal com efeito tátil uniforme. Quando houver filtros ativos ou ordenação não-padrão, os chips com remoção rápida (`✕`) DEVEM ser exibidos na linha inferior dentro do mesmo card, distribuídos confortavelmente com quebra de linha fluida (`Wrap`) ocupando a largura total sem rolagem lateral comprimida. O Modal Bottom Sheet DEVE ser empilhado no navegador raiz (`useRootNavigator: true`), assegurando que o botão voltar do sistema operacional feche o modal no primeiro toque sem afetar a página subjacente. O Modal Bottom Sheet DEVE conter duas seções distintas: "Ordenação" e "Filtros". A seção de filtros DEVE disponibilizar sliders de grau com régua adaptativa recortada conforme a amplitude real dos graus das escaladas cadastradas para a modalidade ativa (ou para cada categoria no modo superset). Na aba "Setores", a seção de filtros DEVE exibir o superset com modalidades ativas, réguas adaptativas específicas para cada categoria (Vias e Boulders), grupos, conquistadores e vias clássicas. Nas abas de modalidade, a seção de filtros DEVE exibir a projeção contextual com régua adaptativa da modalidade ativa, localização unificada (setores e grupos), conquistadores e clássicas. O cabeçalho do Bottom Sheet DEVE conter o botão "Limpar" (que redefine todos os filtros e restaura a ordenação para o padrão) e o botão de feedback in-app na extrema direita, associando o nó `ControlesNode` à árvore de navegação.
 
 #### Scenario: Compartilhamento de critérios comuns entre abas
 - **WHEN** o usuário seleciona um conquistador específico na aba "Setores" através do modal de Controles
@@ -40,8 +40,9 @@ O sistema DEVE (MUST) disponibilizar uma barra de "Controles" na página de expl
 
 #### Scenario: Visualização em linha única com scroll horizontal
 - **WHEN** o usuário aplica múltiplos filtros e uma ordenação personalizada
-- **THEN** a barra de controles na página acomoda os chips ativos em uma linha única rolável horizontalmente
-- **AND** nenhum chip causa quebra para uma segunda linha vertical.
+- **THEN** o card unificado renderiza o botão "Filtros e Ordenação" na linha superior com 100% de largura
+- **AND** renderiza os chips ativos logo abaixo em um layout com quebra de linha fluida (`Wrap`)
+- **AND** nenhum chip é cortado na borda ou restrito a scroll horizontal comprimido.
 
 #### Scenario: Ação do botão Limpar no modal de Controles
 - **WHEN** o usuário toca no botão "Limpar" dentro do Bottom Sheet de Controles
@@ -52,6 +53,34 @@ O sistema DEVE (MUST) disponibilizar uma barra de "Controles" na página de expl
 - **WHEN** o usuário abre o Modal Bottom Sheet de Controles
 - **THEN** o sistema adiciona o nó `ControlesNode` à árvore de navegação ativa
 - **AND** tocar no botão de feedback na extrema direita do cabeçalho abre o formulário de feedback com o caminho `Pico -> Setores -> Controles` (ou `Pico -> Grupo -> Controles`).
+
+#### Scenario: Barra externa sem filtros é 100% clicável
+- **WHEN** o usuário visualiza a página de exploração sem filtros ativos
+- **AND** toca em qualquer ponto da barra externa (inclusive no centro ou na extrema direita)
+- **THEN** o sistema aciona a abertura do Modal Bottom Sheet de filtros e ordenação
+- **AND** exibe o efeito visual de ondulação (ripple) por toda a extensão da barra.
+
+#### Scenario: Toque no espaço vazio dos chips abre o modal
+- **WHEN** o card externo exibe chips ativos na área inferior
+- **AND** o usuário toca no cabeçalho ou no espaço ao redor dos chips
+- **THEN** o sistema abre o Modal Bottom Sheet de filtros e ordenação
+- **AND** os botões de remoção rápida (✕) dos chips continuam funcionando independentemente.
+
+#### Scenario: Régua adaptativa de grau baseada nas escaladas do pico
+- **WHEN** o usuário abre o modal de filtros em um pico cujas vias variam entre 4º e 9a
+- **THEN** o slider de faixa de grau de vias tem como limite mínimo exatamente 4º e limite máximo 9a
+- **AND** o badge superior indica a amplitude total (ex: "Todos os graus (4º a 9a)") quando nenhuma restrição de grau estiver aplicada.
+
+#### Scenario: Pico com grau único expande régua para estabilidade
+- **WHEN** o usuário abre o modal de filtros em um setor ou pico onde todas as escaladas possuem o mesmo grau (ex: 6º)
+- **THEN** o sistema expande a régua com margem de segurança de ±1 grau vizinho
+- **AND** o RangeSlider permanece interativo e operável sem erros.
+
+#### Scenario: Fechamento imediato do modal com botão voltar do sistema
+- **WHEN** o Modal Bottom Sheet de controles está visível sobre uma página de exploração (Pico, Grupo ou Setor)
+- **AND** o usuário aciona o botão ou gesto de voltar nativo do sistema operacional (Android Back)
+- **THEN** o modal é fechado imediatamente na primeira invocação
+- **AND** a página de exploração subjacente permanece aberta e ativa sem efeito cascata.
 
 ### Requirement: Ocultação e Enriquecimento de Setores Filtrados
 Na aba "Setores", o sistema DEVE (MUST) ocultar setores que não contenham nenhuma escalada correspondente aos filtros ativos e DEVE enriquecer o cartão de cada setor exibindo a faixa de graduação das vias e a quantidade de vias que atendem ao filtro em relação ao total.
@@ -88,3 +117,34 @@ Ao selecionar o modo "GRAU", o sistema DEVE (MUST) ordenar a lista de escaladas 
 #### Scenario: Ordenação de vias por grau
 - **WHEN** o usuário seleciona a ordenação por "GRAU" na aba de uma modalidade
 - **THEN** as vias são ordenadas por seu grau de dificuldade conforme a direção selecionada.
+
+### Requirement: Exploração de Escaladas no Setor com Filtros Unificados
+A página de setor (`SetorPage`) DEVE (MUST) unificar a visualização de escaladas conectando-se ao estado global de filtros e ordenação do pico. Quando o setor possuir múltiplas modalidades, o sistema DEVE ordenar as abas por volume decrescente de vias (selecionando a mais volumosa por padrão) e ocultar a barra de abas se houver apenas uma modalidade. O sistema DEVE exibir o `PainelFiltrosIndice` adaptado ao setor e renderizar cards de escalada com o rótulo do croqui à esquerda e grau no subtítulo.
+
+#### Scenario: Setor com múltiplas modalidades ordenadas por volume
+- **WHEN** o usuário abre a página de um setor com 10 vias esportivas e 3 boulders
+- **THEN** as abas são exibidas na ordem "Esportivas (10)" e "Boulders (3)"
+- **AND** a aba "Esportivas" é aberta inicialmente por padrão
+- **AND** nenhuma aba agregadora "Todas" é exibida.
+
+#### Scenario: Setor com modalidade única oculta barra de abas
+- **WHEN** o usuário abre a página de um setor que possui apenas vias de uma única modalidade (ex: 8 vias esportivas)
+- **THEN** a barra de abas de modalidade é ocultada da interface
+- **AND** a lista de vias esportivas é renderizada diretamente abaixo dos filtros.
+
+#### Scenario: Herança e sincronização de filtros globais no setor
+- **WHEN** o usuário define filtros de grau ou ordenação na página do pico e entra em um setor
+- **THEN** a página do setor exibe as escaladas filtradas e ordenadas segundo esses mesmos critérios
+- **AND** a barra de filtros reflete os chips ativos
+- **AND** alterações de filtros no setor são sincronizadas com o estado global do croqui.
+
+#### Scenario: Card de escalada com rótulo do croqui e grau no subtítulo
+- **WHEN** uma escalada do setor é renderizada na lista
+- **THEN** o card exibe no badge à esquerda o número ou indicador de referência no croqui
+- **AND** exibe o grau e proteções no subtítulo técnico abaixo do nome da via.
+
+#### Scenario: Abertura contextual e rolagem para scrollToEscalada
+- **WHEN** a página de setor é aberta informando uma escalada alvo (`scrollToEscalada`) pertencente a uma modalidade secundária (ex: Boulder)
+- **THEN** a aba daquela modalidade é selecionada automaticamente
+- **AND** a tela rola até o card da escalada aplicando o efeito de realce pulsante.
+

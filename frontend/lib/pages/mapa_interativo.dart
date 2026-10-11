@@ -11,6 +11,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../utils/consulta_dataset.dart';
+import '../services/dataset/normalizador_croqui.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../navigation/hierarquia_mapas.dart';
 import '../theme/cores_app.dart';
@@ -20,7 +21,6 @@ import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
 import '../utils/resolvedor_rotulos_referencia.dart';
-import '../utils/indice_mapas_croqui.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -232,13 +232,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           if (!mounted) return;
           Mapa_PontoDeInteresse? targetMarker;
           for (var p in widget.mapa.pontosDeInteresse) {
-            if (p.id == _selectedId) {
+            if (p.uid == _selectedId) {
               targetMarker = p;
               break;
             }
           }
           if (targetMarker != null && _imageSize != null && _viewportSize != null) {
-            final refs = _poiToRefs[targetMarker.id];
+            final refs = _poiToRefs[targetMarker.uid];
             if (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length) {
               final ref = refs[_focusedItemIndex];
               final pontos = _getPontosForRef(ref);
@@ -256,6 +256,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
 
   void _buildReferenceMaps() {
+    NormalizadorCroqui.normalizarPico(widget.pico);
+    NormalizadorCroqui.normalizarMapa(
+      widget.mapa,
+      grupoNomeContexto: widget.grupoContext?.nome,
+      setorNomeContexto: widget.setorContext?.nome,
+    );
     _poiToRefs.clear();
     _refToResolved.clear();
 
@@ -273,9 +279,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
         _refToResolved[ref] = resolved;
 
-        for (var id in ref.ids) {
-          if (id.isNotEmpty) {
-            _poiToRefs.putIfAbsent(id, () => []).add(ref);
+        for (var uid in ref.pontosUids) {
+          if (uid.isNotEmpty) {
+            _poiToRefs.putIfAbsent(uid, () => []).add(ref);
           }
         }
       } catch (e, stackTrace) {
@@ -296,7 +302,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       final ref = (refs != null && refs.isNotEmpty && _focusedItemIndex < refs.length)
           ? refs[_focusedItemIndex]
           : (refs != null && refs.isNotEmpty ? refs.first : null);
-      final viaName = ref?.nome ?? _selectedId;
+      final viaName = (ref != null ? _refToResolved[ref]?.nome : null) ?? _selectedId;
       final fileName = widget.mapa.caminhoImagemMapa.split('/').last;
       FeedbackMetadataCollector.globalActiveNodeOverride =
           'MapaInterativoNode($fileName, Ref: $viaName)';
@@ -321,9 +327,9 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
   List<Mapa_PontoDeInteresse> _getPontosForRef(Mapa_Referencia? ref) {
     if (ref == null) return [];
-    final ids = ref.ids.where((id) => id.isNotEmpty).toList();
+    final uids = ref.pontosUids.where((uid) => uid.isNotEmpty).toSet();
     return widget.mapa.pontosDeInteresse
-        .where((p) => ids.contains(p.id))
+        .where((p) => uids.contains(p.uid))
         .toList();
   }
 
@@ -334,7 +340,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     bool isUserInteraction = true,
   }) {
     setState(() {
-      _selectedId = marker.id;
+      _selectedId = marker.uid;
 
       int targetIndex = 0;
 
@@ -343,7 +349,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       // Evita focar erroneamente no primeiro item do carrossel caso vários itens
       // compartilhem o mesmo marcador no croqui.
       if (!isUserInteraction && widget.escaladaContextNome != null) {
-        final refs = _poiToRefs[marker.id];
+        final refs = _poiToRefs[marker.uid];
         if (refs != null) {
           for (int i = 0; i < refs.length; i++) {
             final resolved = _refToResolved[refs[i]];
@@ -361,7 +367,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       _updateFeedbackNode();
     });
 
-    final refs = _poiToRefs[marker.id];
+    final refs = _poiToRefs[marker.uid];
     if (refs != null && refs.isNotEmpty) {
       final ref = refs[_focusedItemIndex]; // Use correct ref!
       final resolved = _refToResolved[ref];
@@ -423,7 +429,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     double maxY = double.negativeInfinity;
 
     for (var p in pontos) {
-      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${p.id}';
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${p.uid}';
       final areaInfo = AreaHelper.getAreaInfo(p, chaveCache: chaveCanonica);
       if (areaInfo != null) {
         if (areaInfo.bounds.left < minX) minX = areaInfo.bounds.left;
@@ -513,10 +519,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         !hasLinha &&
         ref != null &&
         _refToResolved[ref]?.escalada != null) {
-      final ids = ref.ids;
-      bool hasInicio = ids.isNotEmpty && ids[0].isNotEmpty;
-      bool hasMeio = ids.length > 1 && ids[1].isNotEmpty;
-      bool hasFim = ids.length > 2 && ids[2].isNotEmpty;
+      final pontosUids = ref.pontosUids;
+      bool hasInicio = pontosUids.isNotEmpty && pontosUids[0].isNotEmpty;
+      bool hasMeio = pontosUids.length > 1 && pontosUids[1].isNotEmpty;
+      bool hasFim = pontosUids.length > 2 && pontosUids[2].isNotEmpty;
 
       if (hasInicio && !hasMeio && !hasFim) {
         // Só início: joga o ponto mais pra baixo (perto do card) para ver a parede pra cima
@@ -616,7 +622,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     if (widget.mapa.larguraMapa == 0 || widget.mapa.alturaMapa == 0) return [];
 
     return widget.mapa.pontosDeInteresse.map((ponto) {
-      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${ponto.id}';
+      final chaveCanonica = '${widget.mapa.caminhoImagemMapa}#${ponto.uid}';
       final areaInfo = AreaHelper.getAreaInfo(ponto, chaveCache: chaveCanonica);
       if (areaInfo == null) return const SizedBox.shrink();
 
@@ -635,13 +641,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       // Pontos de interesse que não possuem referências não devem ser desenhados, conforme fase 4.5.
       // Exceção: traçados vetoriais (linhas de vias ou caminhadas) são elementos topográficos
       // da rocha e devem sempre ser exibidos, mesmo se ainda não possuírem referência associada.
-      if (!isLinha && !_poiToRefs.containsKey(ponto.id)) {
+      if (!isLinha && !_poiToRefs.containsKey(ponto.uid)) {
         return const SizedBox.shrink();
       }
 
       bool isSelected = false;
       if (_selectedId != null) {
-        if (_selectedId == ponto.id) {
+        if (_selectedId == ponto.uid) {
           isSelected = true;
         } else {
           final refs = _poiToRefs[_selectedId!];
@@ -649,7 +655,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               refs.isNotEmpty &&
               _focusedItemIndex < refs.length) {
             final focusedRef = refs[_focusedItemIndex];
-            isSelected = focusedRef.ids.contains(ponto.id);
+            isSelected = focusedRef.pontosUids.contains(ponto.uid);
           }
         }
       }
@@ -662,7 +668,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         width: (relWidth * constraints.maxWidth) + (hitBoxPadding * 2),
         height: (relHeight * constraints.maxHeight) + (hitBoxPadding * 2),
         child: GestureDetector(
-          key: Key('marker_${ponto.id}'),
+          key: Key('marker_${ponto.uid}'),
           // HitTestBehavior default is deferToChild, which forwards the hit test down to CustomPainter.
           // This ensures accurate clicks on rotated polygons rather than their larger AABBs.
           onTap: () => _onMarkerTap(ponto, constraints, viewportSize),
@@ -793,7 +799,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       onAction: () {
         bool isOriginal = false;
         if (widget.initialSelectedId != null &&
-            ref.ids.contains(widget.initialSelectedId)) {
+            ref.pontosUids.contains(widget.initialSelectedId)) {
           isOriginal = true;
         }
 
@@ -832,8 +838,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
               List<CarrosselItemData> mapasData;
               if (resolved != null) {
-                final index = CroquiMapIndex(widget.pico);
-                mapasData = index.resolverCarrosselUnificado(resolved);
+                mapasData = resolved.resolverCarrosselUnificado();
               } else {
                 mapasData = escalada.mapas
                     .where((m) => m.caminhoImagemMapa.isNotEmpty)
@@ -862,11 +867,12 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   /// exibindo as badges consolidadas de modalidades de escalada disponíveis.
   Widget _buildSetorCard(Mapa_Referencia ref, Setor setor) {
     final itens = ConsolidadorModalidades.consolidarSetor(setor);
+    final rotuloRef = extrairRotuloReferencia(widget.mapa, ref);
 
     return _buildBaseCard(
       title: setor.nome,
       badges: itens.isNotEmpty ? BadgesModalidades(itens: itens) : null,
-      resolvedLabel: ref.nome,
+      resolvedLabel: rotuloRef,
       onClose: () {
         setState(() {
           _selectedId = null;
@@ -880,13 +886,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           : null,
       onSecondaryAction: setor.mapas.isNotEmpty
           ? () {
-              int indiceMapa = 0;
-              if (ref.hasIndiceMapaAlvo()) {
-                indiceMapa = ref.indiceMapaAlvo;
-              }
-              if (indiceMapa < 0 || indiceMapa >= setor.mapas.length) {
-                indiceMapa = 0;
-              }
+              const int indiceMapa = 0;
 
               final resolved = _refToResolved[ref];
               if (setor.mapas.length > 1) {
@@ -943,12 +943,13 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       totalSetores: totalSetores,
       totalEscaladas: totalEscaladas,
     );
+    final rotuloRef = extrairRotuloReferencia(widget.mapa, ref);
 
     return _buildBaseCard(
       title: grupo.nome,
       subtitle: resumoTexto,
       badges: itens.isNotEmpty ? BadgesModalidades(itens: itens) : null,
-      resolvedLabel: ref.nome,
+      resolvedLabel: rotuloRef,
       onClose: () {
         setState(() {
           _selectedId = null;
@@ -962,13 +963,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
           : null,
       onSecondaryAction: grupo.mapas.isNotEmpty
           ? () {
-              int indiceMapa = 0;
-              if (ref.hasIndiceMapaAlvo()) {
-                indiceMapa = ref.indiceMapaAlvo;
-              }
-              if (indiceMapa < 0 || indiceMapa >= grupo.mapas.length) {
-                indiceMapa = 0;
-              }
+              const int indiceMapa = 0;
 
               if (grupo.mapas.length > 1) {
                 final mapasData = grupo.mapas
@@ -1385,7 +1380,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                 _initialZoom = true;
                                 Mapa_PontoDeInteresse? targetMarker;
                                 for (var p in widget.mapa.pontosDeInteresse) {
-                                  if (p.id == _selectedId) {
+                                  if (p.uid == _selectedId) {
                                     targetMarker = p;
                                     break;
                                   }

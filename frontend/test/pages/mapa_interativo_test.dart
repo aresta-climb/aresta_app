@@ -3788,6 +3788,252 @@ void main() {
         );
       },
     );
+
+    group('Suporte Nativo v5 a UIDs', () {
+      testWidgets('deve focar inicialmente via initialSelectedId correspondente a ponto.uid', (tester) async {
+        final ponto = Mapa_PontoDeInteresse(
+          uid: 'poi-uid-v5-1',
+          rotulo: '8A',
+          circulo: BoundingCirculo(x: 100, y: 100, raio: 10),
+        );
+
+        final esc = Escalada(
+          uid: 'esc-v5-1',
+          viaEsportiva: ViaEsportiva(nome: 'Sinfonia de Pedra'),
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapas/parede_v5.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          pontosDeInteresse: [ponto],
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'esc-v5-1',
+              pontosUids: ['poi-uid-v5-1'],
+            ),
+          ],
+        );
+
+        final setor = Setor(
+          uid: 'set-v5-1',
+          nome: 'Setor Principal',
+          escaladas: [esc],
+          mapas: [mapa],
+        );
+
+        final pico = Pico(
+          nome: 'Pico v5',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag-v5',
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+              initialSelectedId: 'poi-uid-v5-1',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('marker_poi-uid-v5-1')), findsOneWidget);
+        expect(find.text('Sinfonia de Pedra'), findsOneWidget);
+        expect(find.text('8A'), findsOneWidget);
+      });
+
+      testWidgets('deve abrir cartão de via ao tocar em traçado vetorial indexado por pontos_uids', (tester) async {
+        final pontoLinha = Mapa_PontoDeInteresse(
+          uid: 'linha-v5-1',
+          linha: LinhaTrajeto(
+            estilo: LinhaTrajeto_EstiloTraco.SOLIDO,
+            compilado: DadosCompiladosLinha(
+              caminhoSvg: 'M 100 100 L 200 200',
+              caixaDelimitadora: BoundingRetangulo(x: 100, y: 100, comprimento: 100, largura: 100),
+              marcadores: [
+                MarcadorCompilado(
+                  tipo: NoTrajeto_TipoNo.CIRCULO_IDENTIFICADOR,
+                  rotulo: '4-B',
+                  x: 150,
+                  y: 150,
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final esc = Escalada(
+          uid: 'esc-v5-tracado',
+          boulder: Boulder(nome: 'Dinamite'),
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapas/bloco.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          pontosDeInteresse: [pontoLinha],
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'esc-v5-tracado',
+              pontosUids: ['linha-v5-1'],
+            ),
+          ],
+        );
+
+        final setor = Setor(
+          uid: 'set-bloco',
+          nome: 'Setor dos Blocos',
+          escaladas: [esc],
+          mapas: [mapa],
+        );
+
+        final pico = Pico(
+          nome: 'Pico Boulder',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag-boulder',
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final marcadorFinder = find.byKey(const Key('marker_linha-v5-1'));
+        expect(marcadorFinder, findsOneWidget);
+        await tester.tap(marcadorFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dinamite'), findsOneWidget);
+        expect(find.text('4-B'), findsOneWidget);
+      });
+
+      testWidgets('deve exibir cartão de Setor ao selecionar referência com alvoUid de Setor', (tester) async {
+        final ponto = Mapa_PontoDeInteresse(
+          uid: 'poi-setor-v5',
+          rotulo: 'S1',
+          circulo: BoundingCirculo(x: 200, y: 200, raio: 12),
+        );
+
+        final setorAlvo = Setor(
+          uid: 'set-alvo-v5',
+          nome: 'Setor Falésia Alta',
+          escaladas: [
+            Escalada(uid: 'via-1', viaEsportiva: ViaEsportiva(nome: 'Via 1')),
+          ],
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapas/visao_geral.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          pontosDeInteresse: [ponto],
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'set-alvo-v5',
+              pontosUids: ['poi-setor-v5'],
+            ),
+          ],
+        );
+
+        final pico = Pico(
+          nome: 'Pico Geral',
+          mapasGerais: ArquivoMapas(conteudo: ColecaoDeMapas(mapas: [mapa])),
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setorAlvo)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag-geral',
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+              initialSelectedId: 'poi-setor-v5',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Setor Falésia Alta'), findsOneWidget);
+        expect(find.text('Ir para Setor'), findsOneWidget);
+      });
+
+      testWidgets('deve exibir cartão de Grupo ao selecionar referência com alvoUid de Grupo', (tester) async {
+        final ponto = Mapa_PontoDeInteresse(
+          uid: 'poi-grupo-v5',
+          rotulo: 'G1',
+          circulo: BoundingCirculo(x: 250, y: 250, raio: 15),
+        );
+
+        final grupoAlvo = Grupo(
+          uid: 'grp-alvo-v5',
+          nome: 'Maciço Central',
+          setores: [
+            ArquivoSetor(
+              conteudo: Setor(
+                uid: 'set-macico-1',
+                nome: 'Sub-setor',
+                escaladas: [
+                  Escalada(uid: 'via-macico', viaEsportiva: ViaEsportiva(nome: 'Via Central')),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        final mapa = Mapa(
+          caminhoImagemMapa: 'mapas/pico_panoramica.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          pontosDeInteresse: [ponto],
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'grp-alvo-v5',
+              pontosUids: ['poi-grupo-v5'],
+            ),
+          ],
+        );
+
+        final pico = Pico(
+          nome: 'Pico Panorâmico',
+          mapasGerais: ArquivoMapas(conteudo: ColecaoDeMapas(mapas: [mapa])),
+          setoresOuGrupos: [
+            SetorOuGrupo(grupo: ArquivoGrupo(conteudo: grupoAlvo)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MapaInterativoPage(
+              mapa: mapa,
+              pico: pico,
+              cragId: 'crag-panoramico',
+              imageProviderOverride: MemoryImage(Uint8List(0)),
+              initialSelectedId: 'poi-grupo-v5',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Maciço Central'), findsOneWidget);
+        expect(find.text('Ir para Grupo'), findsOneWidget);
+      });
+    });
   });
 }
 

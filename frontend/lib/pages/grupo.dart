@@ -247,6 +247,14 @@ class _GrupoPageState extends State<GrupoPage>
     return viasBase.any((v) => v.isDestaque);
   }
 
+  /// Retorna as faixas mínima e máxima de grau disponíveis no contexto da aba ativa do grupo.
+  Map<String, FaixaGrauDisponivel> _obterFaixasGrauDisponiveis(String abaAtual) {
+    final List<ItemIndiceEscalada> viasBase = abaAtual == 'Setores'
+        ? _todasEscaladas
+        : (_escaladasPorModalidade[abaAtual] ?? []);
+    return calcularFaixasGrauDisponiveis(viasBase);
+  }
+
   /// Retorna os setores do grupo filtrados e ordenados.
   List<Setor> _obterSetoresFiltrados() {
     final List<Setor> setoresValidos = widget.grupo.setores
@@ -514,6 +522,7 @@ class _GrupoPageState extends State<GrupoPage>
                     conquistadoresDisponiveis:
                         _obterConquistadoresDisponiveis(abaAtual),
                     temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
+                    faixasGrauDisponiveis: _obterFaixasGrauDisponiveis(abaAtual),
                     onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
                   ),
                 ],

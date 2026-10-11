@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../dataset/normalizador_croqui.dart';
 import '../repositorio_dataset.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -870,7 +871,7 @@ class SyncService {
           updates.filesToRename.addAll(message.filesToRename);
 
           if (message.newPicoDataBytes != null) {
-            final newPicoData = Croqui.fromBuffer(message.newPicoDataBytes!);
+            final newPicoData = NormalizadorCroqui.deBuffer(message.newPicoDataBytes!);
             updates.metadataToUpdate[id] = newPicoData;
           }
 

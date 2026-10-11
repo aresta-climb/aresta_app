@@ -410,5 +410,129 @@ void main() {
         expect(find.text('7b barra 7c'), findsNothing);
       },
     );
+
+    testWidgets(
+      'deve renderizar botão "VER NO CROQUI INTERATIVO" quando via possui referência no mapa via ResolvedDataset',
+      (tester) async {
+        final esc = Escalada(
+          uid: 'via-ref-1',
+          viaEsportiva: ViaEsportiva(nome: 'Via com Referencia'),
+        );
+
+        final mapaSetor = Mapa(
+          caminhoImagemMapa: 'mapas/setor.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'via-ref-1',
+              pontosUids: ['p1'],
+            ),
+          ],
+        );
+
+        final setor = Setor(
+          uid: 'set-1',
+          nome: 'Setor Único',
+          escaladas: [esc],
+          mapas: [mapaSetor],
+        );
+
+        final pico = Pico(
+          nome: 'Pico Teste',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  esc,
+                  'crag1',
+                  pico: pico,
+                  setor: setor,
+                  grupo: null,
+                  fromSetorPage: false,
+                  fromMapaPage: false,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+        expect(find.byType(MapaThumbnail), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deve renderizar MapaThumbnail rico quando via possui mapas próprios e referências',
+      (tester) async {
+        final mapaProprio = Mapa(
+          caminhoImagemMapa: 'mapas/via_propria.png',
+          larguraMapa: 600,
+          alturaMapa: 800,
+        );
+
+        final esc = Escalada(
+          uid: 'via-propria-1',
+          viaEsportiva: ViaEsportiva(nome: 'Via com Mapa Próprio'),
+          mapas: [mapaProprio],
+        );
+
+        final mapaSetor = Mapa(
+          caminhoImagemMapa: 'mapas/setor.png',
+          larguraMapa: 800,
+          alturaMapa: 600,
+          referencias: [
+            Mapa_Referencia(
+              alvoUid: 'via-propria-1',
+              pontosUids: ['p1'],
+            ),
+          ],
+        );
+
+        final setor = Setor(
+          uid: 'set-2',
+          nome: 'Setor Dois',
+          escaladas: [esc],
+          mapas: [mapaSetor],
+        );
+
+        final pico = Pico(
+          nome: 'Pico Teste',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  esc,
+                  'crag1',
+                  pico: pico,
+                  setor: setor,
+                  grupo: null,
+                  fromSetorPage: false,
+                  fromMapaPage: false,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MapaThumbnail), findsOneWidget);
+      },
+    );
   });
 }

@@ -149,5 +149,43 @@ void main() {
       expect(itens.first.grupo?.nome, 'Grupo Esmeralda');
       expect(itens.first.localizacaoFormatada, 'Grupo Esmeralda › Setor Interno');
     });
+
+    test('indexa escaladas diretamente de um setor com e sem grupo contextual', () {
+      final via1 = ViaEsportiva()
+        ..nome = 'Via Direta 1'
+        ..dificuldade = GrauVia_GrauVia.BR_7A;
+      final boulder = Boulder()
+        ..nome = 'Bloco Raiz'
+        ..dificuldade = GrauBoulder_GrauBoulder.V3;
+
+      final setor = Setor()
+        ..nome = 'Falésia Central'
+        ..escaladas.addAll([
+          Escalada()..viaEsportiva = via1,
+          Escalada()..boulder = boulder,
+        ]);
+
+      // 1. Sem grupoContext
+      final itensSemGrupo = indexarEscaladasDoSetor(setor, 'crag-setor');
+      expect(itensSemGrupo.length, 2);
+      expect(itensSemGrupo[0].nome, 'Via Direta 1');
+      expect(itensSemGrupo[0].modalidade, 'Esportiva');
+      expect(itensSemGrupo[0].setor.nome, 'Falésia Central');
+      expect(itensSemGrupo[0].grupo, isNull);
+      expect(itensSemGrupo[0].localizacaoFormatada, 'Falésia Central');
+      expect(itensSemGrupo[1].nome, 'Bloco Raiz');
+      expect(itensSemGrupo[1].modalidade, 'Boulder');
+
+      // 2. Com grupoContext
+      final grupo = Grupo()..nome = 'Setor Superior';
+      final itensComGrupo = indexarEscaladasDoSetor(
+        setor,
+        'crag-setor',
+        grupoContext: grupo,
+      );
+      expect(itensComGrupo.length, 2);
+      expect(itensComGrupo[0].grupo?.nome, 'Setor Superior');
+      expect(itensComGrupo[0].localizacaoFormatada, 'Setor Superior › Falésia Central');
+    });
   });
 }

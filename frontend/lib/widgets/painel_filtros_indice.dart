@@ -50,6 +50,10 @@ class PainelFiltrosIndice extends StatefulWidget {
   /// Indica se há escaladas clássicas disponíveis dentro dos filtros atuais.
   final bool temClassicasDisponiveis;
 
+  /// Mapa opcional com a amplitude mínima e máxima de graus existente no pico/setor,
+  /// indexado por categoria ('Via' e/ou 'Boulder'), permitindo adaptar a régua do slider.
+  final Map<String, FaixaGrauDisponivel>? faixasGrauDisponiveis;
+
   /// Callback legado emitido sempre que o usuário alterar qualquer critério de filtragem.
   final ValueChanged<EstadoFiltrosIndice>? onFiltrosChanged;
 
@@ -72,6 +76,7 @@ class PainelFiltrosIndice extends StatefulWidget {
     this.conquistadoresDisponiveis = const [],
     this.possuiConquistadores,
     this.temClassicasDisponiveis = true,
+    this.faixasGrauDisponiveis,
     this.onFiltrosChanged,
     this.onFiltrosUnificadosChanged,
     this.inicialmenteExpandido = false,
@@ -287,50 +292,37 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     } catch (_) {
       ctrl = TreeNavigationWrapper.currentTreeController;
     }
+    final bool Function()? interceptorAnterior = ctrl?.onBackInterceptor;
     if (ctrl != null) {
       ctrl.navigateTo(ControlesNode(cragId: widget.cragId, parent: ctrl.currentNode));
-    }
-
-    final bool Function()? interceptorAnterior = ctrl?.onBackInterceptor;
-    BuildContext? sheetContextRef;
-    bool fechandoModal = false;
-
-    if (ctrl != null) {
       ctrl.onBackInterceptor = () {
-        if (fechandoModal) return true;
-        if (sheetContextRef != null && sheetContextRef!.mounted) {
-          fechandoModal = true;
-          Navigator.of(sheetContextRef!).pop();
-          return true;
-        }
+        try {
+          final navigator = Navigator.of(context, rootNavigator: true);
+          if (navigator.canPop()) {
+            navigator.pop();
+            return true;
+          }
+        } catch (_) {}
         return false;
       };
     }
 
+
     try {
       await showModalBottomSheet<void>(
         context: context,
+        useRootNavigator: true,
         isScrollControlled: true,
         backgroundColor: context.colors.deepBasalt,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) {
-          sheetContextRef = sheetContext;
-          return PopScope(
-            canPop: true,
-            onPopInvokedWithResult: (didPop, result) {
-              if (didPop && ctrl != null && ctrl.onBackInterceptor != null) {
-                fechandoModal = true;
-                ctrl.onBackInterceptor = interceptorAnterior;
-              }
+          return ValueListenableBuilder<int>(
+            valueListenable: _versaoNotificador,
+            builder: (context, versao, child) {
+              return _buildModalControlesConteudo(sheetContext);
             },
-            child: ValueListenableBuilder<int>(
-              valueListenable: _versaoNotificador,
-              builder: (context, versao, child) {
-                return _buildModalControlesConteudo(sheetContext);
-              },
-            ),
           );
         },
       );
@@ -344,7 +336,9 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       }
       _logTelemetria('colapsar_filtros');
     }
+
   }
+
 
   /// Renderiza o conteúdo estruturado do Modal Bottom Sheet com Ordenação e Filtros.
   Widget _buildModalControlesConteudo(BuildContext context) {
@@ -589,78 +583,77 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               : colors.graniteEdge,
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            onTap: () => _abrirModalControles(context),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.tune_rounded,
-                    size: 20,
-                    color: totalAtivos > 0 ? colors.rustIron : colors.chalkWhite,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Filtros e Ordenação',
-                    style: TextStyle(
-                      color: colors.chalkWhite,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _abrirModalControles(context),
+              borderRadius: chips.isEmpty
+                  ? BorderRadius.circular(16)
+                  : const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 20,
+                      color: totalAtivos > 0 ? colors.rustIron : colors.chalkWhite,
                     ),
-                  ),
-                  if (totalAtivos > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                    const SizedBox(width: 8),
+                    Text(
+                      'Filtros e Ordenação',
+                      style: TextStyle(
+                        color: colors.chalkWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      decoration: BoxDecoration(
-                        color: colors.rustIron.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: colors.rustIron.withValues(alpha: 0.4),
+                    ),
+                    if (totalAtivos > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.rustIron.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: colors.rustIron.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Text(
+                          '$totalAtivos',
+                          style: TextStyle(
+                            color: colors.rustIron,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        '$totalAtivos',
-                        style: TextStyle(
-                          color: colors.rustIron,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    ],
+                    const Spacer(),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: colors.ashGrey,
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           ),
           if (chips.isNotEmpty) ...[
-            Container(
-              width: 1,
-              height: 24,
-              color: colors.graniteEdge,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: chips
-                      .map((chip) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: chip,
-                          ))
-                      .toList(),
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: chips,
               ),
             ),
           ],
@@ -668,6 +661,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       ),
     );
   }
+
 
   List<String> _obterCategoriasParaSliders() {
     if (!_isUnificado) {
@@ -1062,7 +1056,28 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     bool temAmbasCategorias = false,
   }) {
     final colors = context.colors;
-    final opcoes = OpcoesGrau.opcoesParaModalidade(categoria);
+    final opcoesCompletas = OpcoesGrau.opcoesParaModalidade(categoria);
+    List<OpcaoGrauFiltro> opcoes = opcoesCompletas;
+
+    final faixaDisponivel = widget.faixasGrauDisponiveis?[categoria];
+    if (faixaDisponivel != null) {
+      int startSub = opcoesCompletas.indexWhere((o) => o.valor >= faixaDisponivel.minValor);
+      int endSub = opcoesCompletas.lastIndexWhere((o) => o.valor <= faixaDisponivel.maxValor);
+
+      if (startSub == -1) startSub = 0;
+      if (endSub == -1) endSub = opcoesCompletas.length - 1;
+
+      // Se for grau único (min == max), expande ±1 grau para o RangeSlider ter min < max
+      if (startSub == endSub) {
+        if (startSub > 0) startSub--;
+        if (endSub < opcoesCompletas.length - 1) endSub++;
+      }
+
+      if (startSub < endSub) {
+        opcoes = opcoesCompletas.sublist(startSub, endSub + 1);
+      }
+    }
+
     final maxIndex = opcoes.length - 1;
 
     int? minGrauAtual;
@@ -1080,14 +1095,24 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
     int startIdx = 0;
     if (minGrauAtual != null) {
-      final idx = opcoes.indexWhere((o) => o.valor >= minGrauAtual!);
-      if (idx != -1) startIdx = idx;
+      final minVal = minGrauAtual;
+      final idx = opcoes.indexWhere((o) => o.valor >= minVal);
+      if (idx != -1) {
+        startIdx = idx;
+      } else if (minVal > opcoes.last.valor) {
+        startIdx = maxIndex;
+      }
     }
 
     int endIdx = maxIndex;
     if (maxGrauAtual != null) {
-      final idx = opcoes.lastIndexWhere((o) => o.valor <= maxGrauAtual!);
-      if (idx != -1) endIdx = idx;
+      final maxVal = maxGrauAtual;
+      final idx = opcoes.lastIndexWhere((o) => o.valor <= maxVal);
+      if (idx != -1) {
+        endIdx = idx;
+      } else if (maxVal < opcoes.first.valor) {
+        endIdx = 0;
+      }
     }
 
     if (startIdx > endIdx) startIdx = endIdx;
@@ -1095,7 +1120,9 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     final bool cobreTudo = startIdx == 0 && endIdx == maxIndex;
     final String textoRotulo;
     if (cobreTudo) {
-      textoRotulo = 'Todos os graus';
+      textoRotulo = faixaDisponivel != null
+          ? 'Todos os graus (${opcoes.first.rotulo} a ${opcoes.last.rotulo})'
+          : 'Todos os graus';
     } else if (startIdx == endIdx) {
       textoRotulo = 'Grau: ${opcoes[startIdx].rotulo}';
     } else {
@@ -1117,7 +1144,8 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildSecaoTitulo(context, tituloSecao),
+            Flexible(child: _buildSecaoTitulo(context, tituloSecao)),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -1202,6 +1230,30 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               detalhe: '${opcoes[s].rotulo}_a_${opcoes[e].rotulo}',
             );
           },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                opcoes.first.rotulo,
+                style: TextStyle(
+                  color: colors.ashGrey,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                opcoes.last.rotulo,
+                style: TextStyle(
+                  color: colors.ashGrey,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

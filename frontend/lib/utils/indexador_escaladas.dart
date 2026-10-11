@@ -157,3 +157,21 @@ List<ItemIndiceEscalada> indexarEscaladasDoGrupo(Grupo grupo, String cragId) {
   return resultado;
 }
 
+/// Indexa todas as escaladas contidas diretamente em um [Setor], permitindo opcionalmente
+/// vincular o [Grupo] agregador caso o setor pertença a um grupo.
+List<ItemIndiceEscalada> indexarEscaladasDoSetor(
+  Setor setor,
+  String cragId, {
+  Grupo? grupoContext,
+}) {
+  return setor.escaladas
+      .map(
+        (escalada) => ItemIndiceEscalada(
+          escalada: escalada,
+          setor: setor,
+          grupo: grupoContext,
+          cragId: cragId,
+        ),
+      )
+      .toList();
+}

@@ -256,6 +256,14 @@ class _SetoresPageState extends State<SetoresPage>
     return viasBase.any((v) => v.isDestaque);
   }
 
+  /// Retorna as faixas mínima e máxima de grau disponíveis no contexto da aba ativa.
+  Map<String, FaixaGrauDisponivel> _obterFaixasGrauDisponiveis(String abaAtual) {
+    final List<ItemIndiceEscalada> viasBase = abaAtual == 'Setores'
+        ? _todasEscaladas
+        : (_escaladasPorModalidade[abaAtual] ?? []);
+    return calcularFaixasGrauDisponiveis(viasBase);
+  }
+
   /// Retorna a lista de escaladas de um setor específico que atendem aos filtros ativos.
   List<ItemIndiceEscalada> _obterEscaladasFiltradasDoSetor(String setorNome) {
     final viasDoSetor = _todasEscaladas.where((v) => v.setor.nome == setorNome).toList();
@@ -397,6 +405,7 @@ class _SetoresPageState extends State<SetoresPage>
                   gruposDisponiveis: _obterGruposDisponiveis(),
                   conquistadoresDisponiveis: _obterConquistadoresDisponiveis(abaAtual),
                   temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
+                  faixasGrauDisponiveis: _obterFaixasGrauDisponiveis(abaAtual),
                   onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
                 ),
               ],

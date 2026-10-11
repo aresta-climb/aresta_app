@@ -1319,7 +1319,7 @@ void main() {
       expect(estadoEmitido!.maxGrauPorModalidade['Boulder'], 1200);
     });
 
-    testWidgets('barra externa exibe botão Filtros e Ordenação com ícone tune e chips em scroll horizontal em linha única', (tester) async {
+    testWidgets('card unificado exibe botão Filtros e Ordenação 100% clicável no topo e chips em Wrap na linha inferior sem scroll horizontal', (tester) async {
       final estado = const EstadoFiltrosUnificado(
         setores: {'Falésia Central', 'Setor Leste'},
         apenasClassicas: true,
@@ -1340,16 +1340,134 @@ void main() {
 
       expect(find.text('Filtros e Ordenação'), findsOneWidget);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
 
-      // Fila de chips em scroll horizontal
+      // Não deve conter SingleChildScrollView horizontal no card externo
       final scrollFinder = find.byWidgetPredicate(
         (w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
       );
-      expect(scrollFinder, findsOneWidget);
+      expect(scrollFinder, findsNothing);
+
+      // Deve organizar os chips em Wrap
+      final wrapFinder = find.byType(Wrap);
+      expect(wrapFinder, findsOneWidget);
 
       expect(find.text('Falésia Central'), findsOneWidget);
       expect(find.text('Setor Leste'), findsOneWidget);
       expect(find.text('Clássicas (★)'), findsOneWidget);
+    });
+
+    testWidgets('barra externa sem filtros é 100% clicável em toda a extensão horizontal e exibe seta indicadora', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Exibe ícone indicador de abertura à direita
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+
+      // Toca na extrema direita da barra (onde fica o ícone de seta)
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+      await tester.pumpAndSettle();
+
+      // O modal de filtros deve abrir normalmente
+      expect(find.text('ORDENAÇÃO'), findsOneWidget);
+      expect(find.text('FILTROS'), findsOneWidget);
+    });
+
+    testWidgets('card unificado com chips ativos abre modal ao tocar na linha superior de cabeçalho', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(
+              setores: {'Falésia Central'},
+            ),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const ['Falésia Central'],
+            conquistadoresDisponiveis: const [],
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Falésia Central'), findsOneWidget);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+
+      // Toca na linha do cabeçalho superior (no texto "Filtros e Ordenação" ou na seta)
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      // Modal de filtros deve ter aberto
+      expect(find.text('ORDENAÇÃO'), findsOneWidget);
+      expect(find.text('FILTROS'), findsOneWidget);
+    });
+
+
+    testWidgets('régua adaptativa recorta limites da escala de grau conforme faixasGrauDisponiveis', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            faixasGrauDisponiveis: const {
+              'Via': FaixaGrauDisponivel(minValor: 500, maxValor: 1010), // 4º a 9a
+            },
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Badge superior inicial com a amplitude recortada
+      expect(find.text('Todos os graus (4º a 9a)'), findsOneWidget);
+
+      // Rótulos de extremidade abaixo do RangeSlider
+      expect(find.text('4º'), findsOneWidget);
+      expect(find.text('9a'), findsOneWidget);
+
+      // Extremos gerais padrão de 1º e 12a NÃO devem estar presentes nos rótulos de extremidade
+      expect(find.text('1º'), findsNothing);
+      expect(find.text('12a'), findsNothing);
+    });
+
+    testWidgets('régua adaptativa com grau único expande com segurança ±1 grau vizinho', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estadoUnificado: const EstadoFiltrosUnificado(),
+            abaAtiva: 'Esportiva',
+            modalidadesDisponiveis: const ['Esportiva'],
+            setoresDisponiveis: const [],
+            conquistadoresDisponiveis: const [],
+            faixasGrauDisponiveis: const {
+              'Via': FaixaGrauDisponivel(minValor: 700, maxValor: 700), // Apenas 6º
+            },
+            inicialmenteExpandido: true,
+            onFiltrosUnificadosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Deve expandir para 5ºsup e 6ºsup para manter estabilidade do RangeSlider
+      expect(find.text('Todos os graus (5ºsup a 6ºsup)'), findsOneWidget);
+      expect(find.text('5ºsup'), findsOneWidget);
+      expect(find.text('6ºsup'), findsOneWidget);
     });
 
     testWidgets('ordenação não-padrão renderiza chip dinâmico na barra externa e permite reset rápido via X', (tester) async {
@@ -1638,8 +1756,62 @@ void main() {
       // Agora sim recua para PicoNode
       expect(controller.currentNode, isA<PicoNode>());
     });
+
+    testWidgets('botão back nativo do SO com navegação em árvore fecha bottom sheet de filtros no 1º pop sem desempilhar página subjacente', (tester) async {
+      final editorDeCroqui = EditorDeCroqui();
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final controller = TreeNavigationController();
+      controller.navigateTo(PicoNode(cragId: 'pedra_bela', parent: controller.currentNode));
+      controller.navigateTo(SetoresNode(cragId: 'pedra_bela', parent: controller.currentNode));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: controller,
+            child: Scaffold(
+              body: PainelFiltrosIndice(
+                cragId: 'pedra_bela',
+                estado: const EstadoFiltrosIndice(),
+                modalidade: 'Esportiva',
+                setoresDisponiveis: const ['Setor 1'],
+                conquistadoresDisponiveis: const [],
+                onFiltrosChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Clica em 'Filtros e Ordenação' para abrir o bottom sheet
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(controller.currentNode, isA<ControlesNode>());
+      expect(find.text('ORDENAÇÃO'), findsOneWidget);
+
+      // 1º pop disparado pelo SO (como botão voltar do Android)
+      await WidgetsBinding.instance.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // Modal fechou imediatamente no 1º pop
+      expect(find.text('ORDENAÇÃO'), findsNothing);
+      // Nó da árvore recuou com segurança para SetoresNode
+      expect(controller.currentNode, isA<SetoresNode>());
+
+      // 2º pop do SO recua da página Setores para o Pico
+      await WidgetsBinding.instance.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(controller.currentNode, isA<PicoNode>());
+    });
   });
 }
+
 
 
 

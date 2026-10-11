@@ -20,6 +20,7 @@ import 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 import 'dataset/armazenamento/extrator_assets_preload.dart';
 import 'dataset/metadados/extrator_metadados_croqui.dart';
 import 'dataset/sessao_online/gerenciador_sessao_online.dart';
+import 'dataset/normalizador_croqui.dart';
 import 'http/servico_croqui_online.dart';
 
 export 'dataset/modelos/conjunto_dados_croqui.dart';
@@ -654,7 +655,7 @@ class DatasetRepository {
       if (await arquivoCache.exists()) {
         try {
           final bytes = await arquivoCache.readAsBytes();
-          final croquiCache = Croqui.fromBuffer(bytes);
+          final croquiCache = NormalizadorCroqui.deBuffer(bytes);
           gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiCache);
           indexarMidiasDoCroqui(id, croquiCache);
           return croquiCache;

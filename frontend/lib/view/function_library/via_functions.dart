@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -11,7 +11,6 @@ import '../../widgets/mapa_thumbnail.dart';
 import '../../widgets/linha_localizacao_setor.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
-import '../../utils/indice_mapas_croqui.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../navigation/arvore_navegacao.dart';
 
@@ -1450,6 +1449,18 @@ Widget _buildInteractiveMapButton(
   Grupo? grupo,
   bool fromMapaPage,
 ) {
+  ResolvedDataset? resolved;
+  if (pico != null) {
+    final resolver = DatasetResolver(pico: pico);
+    resolved = escalada.uid.isNotEmpty
+        ? resolver.obterPorUid(escalada.uid)
+        : resolver.buscarPorNome(
+            grupoNome: grupo?.nome,
+            setorNome: setor?.nome,
+            escaladaNome: getEscaladaNome(escalada),
+          );
+  }
+
   // 1. Se a escalada possui mapas próprios locais, exibe o MapaThumbnail rico
   if (escalada.mapas.isNotEmpty) {
     final validMapas = escalada.mapas
@@ -1460,15 +1471,9 @@ Widget _buildInteractiveMapButton(
         .toList();
 
     if (validMapas.isNotEmpty) {
-      List<CarrosselItemData>? carrosselItens;
-      if (pico != null) {
-        final index = CroquiMapIndex(pico);
-        final resolved = ResolvedDataset(
-          grupo: grupo,
-          setor: setor,
-          escalada: escalada,
-        );
-        carrosselItens = index.resolverCarrosselUnificado(resolved);
+      final List<CarrosselItemData> carrosselItens;
+      if (resolved != null) {
+        carrosselItens = resolved.resolverCarrosselUnificado();
       } else {
         carrosselItens = validMapas
             .map(
@@ -1506,18 +1511,8 @@ Widget _buildInteractiveMapButton(
   }
 
   // 2. Se a escalada não possui mapas próprios, verifica mapas onde ela é referenciada
-  List<IndexedMap> foundMaps = [];
-  if (pico != null) {
-    final index = CroquiMapIndex(pico);
-    final resolved = ResolvedDataset(
-      grupo: grupo,
-      setor: setor,
-      escalada: escalada,
-    );
-    foundMaps = index.getMapasForReference(resolved);
-  }
-
-  if (foundMaps.isEmpty) return const SizedBox.shrink();
+  final referencias = resolved?.referencias ?? const [];
+  if (referencias.isEmpty) return const SizedBox.shrink();
 
   return Padding(
     padding: const EdgeInsets.only(bottom: 20),
@@ -1533,14 +1528,16 @@ Widget _buildInteractiveMapButton(
         if (fromMapaPage) {
           AppNav.back(context);
         } else {
-          final mapasData = foundMaps
+          final mapasData = referencias
               .map(
-                (fm) => CarrosselItemData(
-                  mapaCaminhoImagem: fm.mapa!.caminhoImagemMapa,
-                  setorContextNome: fm.setorContext?.nome,
-                  grupoContextNome: fm.grupoContext?.nome,
+                (refNoMapa) => CarrosselItemData(
+                  mapaCaminhoImagem: refNoMapa.mapa.caminhoImagemMapa,
+                  setorContextNome: refNoMapa.setorContexto?.nome,
+                  grupoContextNome: refNoMapa.grupoContexto?.nome,
                   escaladaContextNome: getEscaladaNome(escalada),
-                  initialSelectedId: fm.referencedId,
+                  initialSelectedId: refNoMapa.referencia.pontosUids.isNotEmpty
+                      ? refNoMapa.referencia.pontosUids.first
+                      : null,
                 ),
               )
               .toList();

@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../dataset/normalizador_croqui.dart';
 import '../firebase/app_logger.dart';
 
 /// Gerencia o armazenamento local de arquivos para sincronização,
@@ -78,7 +79,7 @@ class SyncStorage {
     final file = File(croquiPath);
     if (await file.exists()) {
       try {
-        return Croqui.fromBuffer(await file.readAsBytes());
+        return NormalizadorCroqui.deBuffer(await file.readAsBytes());
       } catch (e, stackTrace) {
         AppLogger.instance.logError(
           '[SyncStorage] Erro ao ler croqui local (possível breaking change)',

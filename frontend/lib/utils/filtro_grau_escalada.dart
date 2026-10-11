@@ -741,4 +741,67 @@ class EstadoFiltrosUnificado {
   }
 }
 
+/// Representa os limites mínimo e máximo de graduação encontrados nas escaladas
+/// cadastradas de um determinado pico ou setor.
+class FaixaGrauDisponivel {
+  /// O valor numérico do menor grau disponível no local.
+  final int minValor;
+
+  /// O valor numérico do maior grau disponível no local.
+  final int maxValor;
+
+  const FaixaGrauDisponivel({
+    required this.minValor,
+    required this.maxValor,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FaixaGrauDisponivel &&
+          runtimeType == other.runtimeType &&
+          minValor == other.minValor &&
+          maxValor == other.maxValor;
+
+  @override
+  int get hashCode => minValor.hashCode ^ maxValor.hashCode;
+
+  @override
+  String toString() => 'FaixaGrauDisponivel(min: $minValor, max: $maxValor)';
+}
+
+/// Extrai a amplitude real de graduação existente nas escaladas fornecidas,
+/// agrupando por categoria ('Via' e/ou 'Boulder').
+///
+/// Permite que a régua do slider de filtros adapte dinamicamente sua escala
+/// aos extremos do pico ou setor, evitando áreas vazias inoperantes.
+Map<String, FaixaGrauDisponivel> calcularFaixasGrauDisponiveis(
+  List<ItemIndiceEscalada> escaladas,
+) {
+  final Map<String, int> menores = {};
+  final Map<String, int> maiores = {};
+
+  for (final item in escaladas) {
+    final valor = item.grauValor;
+    if (valor <= 0 || valor >= 9990) continue;
+
+    final cat = EstadoFiltrosUnificado.obterCategoriaGrau(item.modalidade);
+    if (!menores.containsKey(cat) || valor < menores[cat]!) {
+      menores[cat] = valor;
+    }
+    if (!maiores.containsKey(cat) || valor > maiores[cat]!) {
+      maiores[cat] = valor;
+    }
+  }
+
+  final resultado = <String, FaixaGrauDisponivel>{};
+  for (final cat in menores.keys) {
+    resultado[cat] = FaixaGrauDisponivel(
+      minValor: menores[cat]!,
+      maxValor: maiores[cat]!,
+    );
+  }
+  return resultado;
+}
+
 
