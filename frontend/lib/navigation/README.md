@@ -1,4 +1,4 @@
-﻿# Navegação do App (Tree Navigation)
+# Navegação do App (Tree Navigation)
 
 Este diretório contém a lógica principal de navegação do aplicativo, que foi desenhada usando uma estrutura baseada em **árvore de nós** (Tree Navigation) em vez do tradicional sistema de pilha (Stack/Push-Pop) do Flutter.
 
@@ -80,6 +80,9 @@ AppNav.toVia(context, escalada: minhaVia, setor: meuSetor);
 
 // Para abrir o Mapa de forma integrada à árvore:
 AppNav.toMapaInterativo(context, mapa: mapa, cragId: id, escaladas: vias, setores: setores);
+
+// Para abrir o Perfil do Escalador e a Caderneta Pessoal:
+AppNav.toPerfil(context);
 ```
 
 Para voltar para a página anterior:

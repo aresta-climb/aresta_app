@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import '../main.dart';
 import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../pages/perfil.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -254,6 +255,13 @@ class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
     ctrl.navigateTo(BrowseNode(ctrl.currentNode));
+  }
+
+  /// Navega para a página de Perfil e Caderneta Esportiva do Escalador.
+  static void toPerfil(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const PerfilPage()),
+    );
   }
 
   /// Volta um nível na árvore de navegação.

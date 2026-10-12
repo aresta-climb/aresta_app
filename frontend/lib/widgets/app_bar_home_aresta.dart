@@ -7,6 +7,7 @@ import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
 import '../navigation/wrapper_navegacao_arvore.dart';
 import '../navigation/arvore/nos_globais.dart';
+import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import 'micro_badge_beta.dart';
 import 'modal_beta_aberto.dart';
@@ -14,7 +15,7 @@ import 'modal_beta_aberto.dart';
 /// Barra de aplicativo superior dedicada da página inicial do Aresta Climb.
 ///
 /// Apresenta o logotipo vetorizado, a marca com selo interativo [MicroBadgeBeta]
-/// e os botões de ação para sincronização manual, feedback e configurações.
+/// e os botões de ação para sincronização manual, feedback, perfil do escalador e configurações.
 class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// ViewModel da tela inicial para sincronização manual padrão.
   final HomeViewModel? viewModel;
@@ -25,11 +26,15 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Callback executado ao pressionar o botão de configurações.
   final VoidCallback? onSettings;
 
+  /// Callback executado ao pressionar o botão de perfil do escalador.
+  final VoidCallback? onProfile;
+
   const ArestaHomeAppBar({
     super.key,
     this.viewModel,
     this.onSync,
     this.onSettings,
+    this.onProfile,
   });
 
   @override
@@ -40,6 +45,14 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       onSync!();
     } else {
       viewModel?.sincronizarManual(context);
+    }
+  }
+
+  void _executarPerfil(BuildContext context) {
+    if (onProfile != null) {
+      onProfile!();
+    } else {
+      AppNav.toPerfil(context);
     }
   }
 
@@ -116,6 +129,12 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: () => _executarSincronizacao(context),
               ),
               buildFeedbackButton(context, color: context.colors.ashGrey),
+              IconButton(
+                key: const Key('btn_home_perfil'),
+                icon: Icon(Icons.person_outline, color: context.colors.ashGrey),
+                tooltip: 'Meu Perfil',
+                onPressed: () => _executarPerfil(context),
+              ),
               IconButton(
                 icon: Icon(Icons.settings, color: context.colors.ashGrey),
                 onPressed: () => _executarConfiguracoes(context),

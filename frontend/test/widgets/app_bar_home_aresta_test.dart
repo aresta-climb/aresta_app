@@ -92,6 +92,27 @@ void main() {
   );
 
   testWidgets(
+    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil',
+    (tester) async {
+      bool abriuPerfil = false;
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: ArestaHomeAppBar(
+            onProfile: () => abriuPerfil = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('btn_home_perfil')));
+      await tester.pump();
+
+      expect(abriuPerfil, isTrue);
+    },
+  );
+
+  testWidgets(
     'ArestaHomeAppBar abre ModalBetaAberto ao tocar na marca',
     (tester) async {
       await tester.pumpWidget(
