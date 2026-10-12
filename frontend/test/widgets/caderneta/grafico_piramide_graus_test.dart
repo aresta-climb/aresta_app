@@ -1,0 +1,75 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/widgets/caderneta/grafico_piramide_graus.dart';
+
+void main() {
+  testWidgets('GraficoPiramideGraus renderiza estado vazio quando pirâmide não tem dados',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: const Scaffold(
+          body: GraficoPiramideGraus(
+            piramide: {},
+            modoVias: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pirâmide de Graduação'), findsOneWidget);
+    expect(
+      find.text('Nenhuma ascensão registrada nesta modalidade.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('GraficoPiramideGraus renderiza barras de graduação e alterna modalidade',
+      (tester) async {
+    bool? modoAlternado;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: Scaffold(
+          body: GraficoPiramideGraus(
+            piramide: const {
+              '5º': 2,
+              '6a': 5,
+              '7a': 8,
+              '8a': 3,
+            },
+            modoVias: true,
+            onAlternarModo: (vias) {
+              modoAlternado = vias;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('5º'), findsOneWidget);
+    expect(find.text('6a'), findsOneWidget);
+    expect(find.text('7a'), findsOneWidget);
+    expect(find.text('8a'), findsOneWidget);
+
+    expect(find.text('8'), findsOneWidget); // Quantidade máxima
+    expect(find.text('2'), findsOneWidget);
+
+    // Toca no botão de Boulders
+    await tester.tap(find.text('Boulders'));
+    await tester.pumpAndSettle();
+    expect(modoAlternado, isFalse);
+
+    // Toca no botão de Vias
+    await tester.tap(find.text('Vias'));
+    await tester.pumpAndSettle();
+    expect(modoAlternado, isTrue);
+  });
+}

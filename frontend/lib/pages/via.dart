@@ -1,8 +1,9 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/caderneta/repositorio_caderneta.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 
@@ -20,6 +21,7 @@ class ViaPage extends StatelessWidget {
   fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
   final bool
   fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
+  final RepositorioCaderneta? repositorio;
 
   const ViaPage({
     super.key,
@@ -30,6 +32,7 @@ class ViaPage extends StatelessWidget {
     this.grupo,
     this.fromSetorPage = false,
     this.fromMapaPage = false,
+    this.repositorio,
   });
 
   @override
@@ -51,6 +54,7 @@ class ViaPage extends StatelessWidget {
           grupo: grupo,
           fromSetorPage: fromSetorPage,
           fromMapaPage: fromMapaPage,
+          repositorio: repositorio,
         ),
       ),
       // bottomNavigationBar: buildSecondaryBottomNav(context),

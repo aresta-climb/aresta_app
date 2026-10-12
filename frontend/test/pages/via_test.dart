@@ -5,6 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/theme/cores_app.dart';
 
 void main() {
   testWidgets('ViaPage should wrap body in SafeArea', (tester) async {
@@ -111,4 +115,64 @@ void main() {
       expect(find.text('Ver no croqui'), findsOneWidget);
     },
   );
+
+  testWidgets('ViaPage exibe botão de registrar cadena e abre modal ao ser clicado', (tester) async {
+    final escalada = Escalada()
+      ..uid = 'via-uid-123'
+      ..viaEsportiva = (ViaEsportiva()..nome = 'Fenda da Esperança');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrar Cadena / Tentativa'), findsOneWidget);
+    expect(find.textContaining('Encadenada'), findsNothing);
+
+    await tester.tap(find.text('Registrar Cadena / Tentativa'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrar Ascensão'), findsOneWidget);
+    expect(find.text('Fenda da Esperança'), findsOneWidget);
+  });
+
+  testWidgets('ViaPage exibe selo esportivo com estilo Flash quando há ascensão registrada', (tester) async {
+    final escalada = Escalada()
+      ..uid = 'via-uid-encadenada'
+      ..viaEsportiva = (ViaEsportiva()..nome = 'Via Master');
+
+    final cadena = Cadena.criar(
+      escaladaUid: 'via-uid-encadenada',
+      dataAscensao: DateTime(2026, 9, 14),
+      tipoAscensao: TipoAscensao.flash,
+      notasPrivadas: 'Costurou leve e rápido',
+    );
+
+    // Mock do repositório
+    final repo = RepositorioCadernetaLocal();
+    await repo.salvarCadena(cadena);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+          repositorio: repo,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Encadenada'), findsOneWidget);
+    expect(find.textContaining('Flash'), findsOneWidget);
+    expect(find.textContaining('Costurou leve e rápido'), findsOneWidget);
+    expect(find.text('Nova Ascensão / Tentativa'), findsOneWidget);
+  });
 }

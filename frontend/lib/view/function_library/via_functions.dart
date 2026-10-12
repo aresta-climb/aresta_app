@@ -13,6 +13,10 @@ import '../../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../navigation/arvore_navegacao.dart';
+import '../../data/modelos/cadena.dart';
+import '../../data/modelos/tipo_escalada.dart';
+import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../widgets/caderneta/modal_registro_cadena.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
 String getEscaladaNome(Escalada escalada) {
@@ -198,12 +202,14 @@ Widget buildViaBody(
   Grupo? grupo,
   bool fromSetorPage = false,
   bool fromMapaPage = false,
+  RepositorioCaderneta? repositorio,
 }) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildSeloEBotaoCaderneta(context, escalada, repositorio: repositorio),
         _buildContentForEscalada(
           context,
           escalada,
@@ -238,6 +244,125 @@ Widget buildViaBody(
         ),
       ],
     ),
+  );
+}
+
+Widget _buildSeloEBotaoCaderneta(
+  BuildContext context,
+  Escalada escalada, {
+  RepositorioCaderneta? repositorio,
+}) {
+  final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
+  final cores = context.colors;
+
+  return ValueListenableBuilder<List<Cadena>>(
+    valueListenable: repo.cadenasNotifier,
+    builder: (context, _, child) {
+      final melhorAscensao = escalada.hasUid() && escalada.uid.isNotEmpty
+          ? repo.obterMelhorAscensao(escalada.uid)
+          : null;
+
+      final isCadena = melhorAscensao?.isCadena ?? false;
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isCadena
+              ? cores.darkPine.withValues(alpha: 0.5)
+              : cores.caveShadow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isCadena
+                ? cores.fernGreen.withValues(alpha: 0.6)
+                : cores.graniteEdge,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (melhorAscensao != null) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    isCadena
+                        ? Icons.check_circle_rounded
+                        : Icons.refresh_rounded,
+                    color: isCadena ? cores.fernGreen : cores.rustIron,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isCadena
+                          ? 'Encadenada em ${melhorAscensao.dataAscensao.day.toString().padLeft(2, '0')}/${melhorAscensao.dataAscensao.month.toString().padLeft(2, '0')} (${melhorAscensao.tipoAscensao.rotulo})'
+                          : 'Tentativa em ${melhorAscensao.dataAscensao.day.toString().padLeft(2, '0')}/${melhorAscensao.dataAscensao.month.toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        color: cores.chalkWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (melhorAscensao.notasPrivadas.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '“${melhorAscensao.notasPrivadas}”',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: cores.ashGrey,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
+            ElevatedButton.icon(
+              key: const Key('btn_registrar_cadena'),
+              onPressed: () {
+                final tipoEscalada = escalada.whichTipo() == Escalada_Tipo.boulder
+                    ? TipoEscalada.boulder
+                    : TipoEscalada.guiado;
+
+                exibirModalRegistroCadena(
+                  context,
+                  escaladaUid: escalada.uid,
+                  nomeEscalada: getEscaladaNome(escalada),
+                  tipoEscaladaPadrao: tipoEscalada,
+                  repositorio: repo,
+                );
+              },
+              icon: Icon(
+                melhorAscensao == null
+                    ? Icons.bookmark_add_outlined
+                    : Icons.add_circle_outline,
+                size: 18,
+                color: cores.chalkWhite,
+              ),
+              label: Text(
+                melhorAscensao == null
+                    ? 'Registrar Cadena / Tentativa'
+                    : 'Nova Ascensão / Tentativa',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCadena ? cores.fernGreen : cores.rustIron,
+                foregroundColor: cores.chalkWhite,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }
 
