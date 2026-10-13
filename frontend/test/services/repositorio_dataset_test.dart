@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Testes do DatasetRepository: lógica de estado público, busca recursiva de
@@ -16,6 +16,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:fixnum/fixnum.dart';
 import '../mocks/mock_telemetria.dart';
@@ -543,6 +544,46 @@ void main() {
         repoHierarquico.gerenciadorSessaoOnline.obterCroquiOnline(picoId)?.nome,
         equals('Croqui da Rede'),
       );
+      verify(() => mockServicoOnline.carregarCroquiRemoto(
+            expectedUrl,
+            picoId: picoId,
+            checksumSha256: checksum,
+          )).called(1);
+    });
+
+    test('Etapa 4 (fallback): Busca via metadadosDisponiveis de activeDataset quando indiceData não contém o resumo', () async {
+      final picoId = 'pico_fallback_meta';
+      final checksum = 'sha256_fallback';
+      final caminhoRelativo = 'picos/$picoId/compilado.binarypb';
+
+      repoHierarquico.indiceData.value = Indice(croquis: []);
+      repoHierarquico.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: [
+          MetadadosIndice(
+            id: picoId,
+            nome: 'Pico Fallback Meta',
+            caminhoRelativo: caminhoRelativo,
+            checksumSha256Croqui: checksum,
+          ),
+        ],
+        croquisBaixados: const [],
+        picosDisponiveis: const [],
+        picosBaixados: const [],
+      );
+
+      final croquiRede = Croqui(id: picoId, nome: 'Croqui Fallback Meta');
+      final expectedUrl = '${editor.activeBaseUrl}/$caminhoRelativo?v=$checksum';
+
+      when(() => mockServicoOnline.carregarCroquiRemoto(
+            expectedUrl,
+            picoId: picoId,
+            checksumSha256: checksum,
+          )).thenAnswer((_) async => croquiRede);
+
+      final resultado = await repoHierarquico.getCroqui(picoId);
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Croqui Fallback Meta'));
       verify(() => mockServicoOnline.carregarCroquiRemoto(
             expectedUrl,
             picoId: picoId,

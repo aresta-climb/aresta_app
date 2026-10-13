@@ -109,21 +109,52 @@ class AppNav {
   }
 
   /// Navega para o Mapa Global.
+  ///
+  /// Permite especificar [picoIds] em texto ou lista [crags] contendo cards/picos,
+  /// normalizando os identificadores para armazenamento no [MapaGlobalNode].
   static void toMapaGlobal(
     BuildContext context, {
     dynamic crags,
+    List<String>? picoIds,
   }) {
     final ctrl = _ctrl(context);
     if (ctrl == null) return;
 
+    final List<String> ids = [];
+    if (picoIds != null) {
+      ids.addAll(picoIds);
+    }
+
     final List<dynamic> picos;
     if (crags is Iterable) {
       picos = crags.toList();
+      if (ids.isEmpty) {
+        for (final item in picos) {
+          if (item is String && item.isNotEmpty) {
+            ids.add(item);
+          } else {
+            try {
+              final id = (item as dynamic).id?.toString();
+              if (id != null && id.isNotEmpty) {
+                ids.add(id);
+              }
+            } catch (_) {
+              if (item is Map && item['id'] != null) {
+                ids.add(item['id'].toString());
+              }
+            }
+          }
+        }
+      }
     } else {
       picos = const [];
     }
 
-    ctrl.navigateTo(MapaGlobalNode(crags: picos, parent: ctrl.currentNode));
+    ctrl.navigateTo(MapaGlobalNode(
+      picoIds: ids,
+      crags: picos,
+      parent: ctrl.currentNode,
+    ));
   }
 
   /// Navega para a página de um Setor.

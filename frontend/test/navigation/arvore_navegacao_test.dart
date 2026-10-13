@@ -127,6 +127,19 @@ void main() {
       expect(controller.currentNode.parent, isA<BrowseNode>());
       expect(controller.currentNode.parent?.parent, isA<HomeNode>());
     });
+
+    test('Navigating to MapaGlobal com picoIds armazena identificadores de texto', () {
+      final controller = TreeNavigationController();
+      final node = MapaGlobalNode(
+        picoIds: const ['bau', 'cipo'],
+        parent: controller.currentNode,
+      );
+      controller.navigateTo(node);
+
+      expect(controller.currentNode, isA<MapaGlobalNode>());
+      final atual = controller.currentNode as MapaGlobalNode;
+      expect(atual.picoIds, equals(['bau', 'cipo']));
+    });
   });
 
   group('NavNode toString() overrides', () {

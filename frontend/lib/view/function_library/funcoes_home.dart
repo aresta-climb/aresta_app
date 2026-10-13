@@ -7,6 +7,7 @@ import '../../services/repositorio_dataset.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
+import '../../services/firebase/app_logger.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/carrossel_picos_proximos.dart';
 import '../../widgets/busca_global.dart';
@@ -134,42 +135,6 @@ Future<void> handlePicoSelection(
 
   Croqui? croqui = await datasetRepo.getCroqui(id);
 
-  // Se não estiver salvo localmente, busca sob demanda para sessão online
-  if (croqui == null) {
-    String url = '';
-    String? checksum;
-
-    if (pico is MetadadosIndice) {
-      url = pico.caminhoRelativo;
-      checksum = pico.checksumSha256Croqui.isNotEmpty ? pico.checksumSha256Croqui : null;
-    } else if (pico is ResumoPico) {
-      url = pico.url;
-      checksum = pico.checksum.isNotEmpty ? pico.checksum : null;
-    } else if (pico is Map) {
-      url = pico['url']?.toString() ?? '';
-      checksum = pico['checksum']?.toString();
-    } else {
-      try {
-        final meta = datasetRepo.activeDataset.value?.metadadosDisponiveis.firstWhere((m) => m.id == id);
-        if (meta != null) {
-          url = meta.caminhoRelativo;
-          checksum = meta.checksumSha256Croqui.isNotEmpty ? meta.checksumSha256Croqui : null;
-        }
-      } catch (_) {}
-    }
-
-    if (url.isNotEmpty) {
-      final servicoOnline = ServicoCroquiOnline(
-        sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
-      );
-      croqui = await servicoOnline.carregarCroquiRemoto(
-        url,
-        picoId: id,
-        checksumSha256: checksum,
-      );
-    }
-  }
-
   if (!context.mounted) return;
 
   Navigator.of(context, rootNavigator: true).pop();
@@ -190,6 +155,11 @@ Future<void> handlePicoSelection(
       datasetRepo.triggerHomeReset();
     });
   } else {
+    AppLogger.instance.logFalhaSyncOuDownload(
+      'Falha ao abrir guia do pico: $id (origem: $source)',
+      error: Exception('Croqui nulo ou sem picos após consulta ao repositório'),
+      stackTrace: StackTrace.current,
+    );
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o guia. Verifique sua conexão.')));

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Testes de widget para a tela principal do Mapa Global.
@@ -17,6 +17,9 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/view_models/mapa_global_view_model.dart';
+import 'package:frontend/view/view_models/card_croqui_view_model.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../mocks/mock_geolocator_platform.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
@@ -118,6 +121,76 @@ void main() {
     await tester.pump();
 
     mapWidget = tester.widget<GoogleMap>(googleMapFinder);
+    expect(mapWidget.markers.length, equals(1));
+  });
+
+  testWidgets('MapaGlobalPage exibe exatamente um botão de feedback na AppBar', (
+    WidgetTester tester,
+  ) async {
+    final mockEditor = EditorDeCroqui();
+    final mockRepo = FakeDatasetRepository(mockEditor);
+    final mockSync = FakeSyncService(mockRepo);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapaGlobalPage(
+          viewModel: MapaGlobalViewModel(
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
+        ),
+      ),
+    );
+
+    // Deve conter exatamente 1 botão de alerta/feedback na AppBar
+    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+  });
+
+  testWidgets('MapaGlobalPage renderiza marcadores ao receber CardCroquiViewModel com resolução via dataset', (
+    WidgetTester tester,
+  ) async {
+    final mockEditor = EditorDeCroqui();
+    final mockRepo = FakeDatasetRepository(mockEditor);
+    final mockSync = FakeSyncService(mockRepo);
+
+    final picosIndice = [
+      ResumoCroqui(
+        id: 'cipo',
+        nome: 'Serra do Cipó',
+        localizacao: Coordenada(
+          latitude: -193333330,
+          longitude: -436000000,
+        ),
+      ),
+    ];
+
+    mockRepo.activeDataset.value = ConjuntoDadosCroqui(
+      metadadosDisponiveis: picosIndice,
+    );
+
+    final card = CardCroquiViewModel.deValores(
+      id: 'cipo',
+      titulo: 'SERRA DO CIPÓ',
+      textoEstatisticas: '10 setores',
+      caminhoMiniatura: '',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapaGlobalPage(
+          viewModel: MapaGlobalViewModel(
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+            picosIniciais: [card],
+          ),
+        ),
+      ),
+    );
+
+    final googleMapFinder = find.byType(GoogleMap);
+    expect(googleMapFinder, findsOneWidget);
+
+    final GoogleMap mapWidget = tester.widget<GoogleMap>(googleMapFinder);
     expect(mapWidget.markers.length, equals(1));
   });
 }

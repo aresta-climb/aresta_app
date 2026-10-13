@@ -87,6 +87,21 @@ void main() {
       expect(widget, isA<MapaGlobalPage>());
     });
 
+    testWidgets('resolve MapaGlobalNode com picoIds para MapaGlobalPage com ViewModel configurado', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const MapaGlobalNode(
+          picoIds: ['bau', 'cipo'],
+          parent: HomeNode(),
+        ),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      expect(widget, isA<MapaGlobalPage>());
+      final page = widget as MapaGlobalPage;
+      expect(page.viewModel.picosIniciais, equals(['bau', 'cipo']));
+    });
+
     testWidgets('resolve SetoresNode para PageListenableBuilder', (tester) async {
       final widget = construirPaginaParaNo(
         node: const SetoresNode(cragId: 'pico_1', parent: HomeNode()),

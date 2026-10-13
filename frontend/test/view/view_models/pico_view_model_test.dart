@@ -5,10 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
+import 'package:http/http.dart' as http;
+import 'package:mocktail/mocktail.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
+
+class _MockHttpClient extends Mock implements http.Client {}
 
 class _FakeDatasetRepository extends DatasetRepository {
   bool deleteCalled = false;
@@ -263,6 +268,26 @@ void main() {
 
       vm1.dispose();
       expect(servico.isPollingAtivo(cragId), isFalse);
+    });
+
+    test('PicoViewModel.dispose() não descarta o ServicoCroquiOnline compartilhado nem fecha seu cliente HTTP', () {
+      final mockClient = _MockHttpClient();
+      final servico = ServicoCroquiOnline(
+        client: mockClient,
+        sessaoOnline: repositorio.gerenciadorSessaoOnline,
+      );
+
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+        servicoCroquiOnline: servico,
+      );
+
+      vm.dispose();
+
+      verifyNever(() => mockClient.close());
     });
   });
 }

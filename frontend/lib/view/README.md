@@ -68,6 +68,7 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 ### Principais View Models
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.
+- **`MapaGlobalViewModel`**: Gerencia a conversão de identificadores de picos e cartões (`CardCroquiViewModel`) em marcadores geográficos com coordenadas (`MapaPicoViewModel`), provendo fallback transparente para o catálogo completo e monitoramento reativo de downloads.
 - **`PicoProximoViewModel`**: Computa a distância geográfica em quilômetros entre a localização GPS do dispositivo e as coordenadas do pico, ordenando o carrossel de picos mais próximos.
 - **View Models de Páginas**: Coordenam o ciclo de vida reativo e filtros de páginas como `ExplorarPage`, `HomePage`, `PicoPage` e `MeusCroquisPage`.
 

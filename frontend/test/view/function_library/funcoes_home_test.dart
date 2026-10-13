@@ -18,6 +18,8 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../mocks/mock_geolocator_platform.dart';
 import '../../mocks/mock_telemetria.dart';
+import '../../mocks/mock_app_logger.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -439,6 +441,152 @@ void main() {
 
       expect(find.byIcon(Icons.search), findsNWidgets(2));
       expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection reporta falha via AppLogger.logFalhaSyncOuDownload e exibe SnackBar quando croqui for nulo',
+    (WidgetTester tester) async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      const dummyPico = ResumoPico(
+        id: 'pico_com_falha',
+        nome: 'Pico Quebrado',
+        local: '',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const Scaffold(
+            body: SizedBox(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final context = tester.element(find.byType(Scaffold));
+      await tester.runAsync(() async {
+        await handlePicoSelection(
+          context,
+          mockRepo,
+          dummyPico,
+          source: 'home',
+        );
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Erro ao abrir o guia. Verifique sua conexão.'), findsOneWidget);
+
+      final totalLogs = mockLogger.recordedErrors.length + mockLogger.recordedWarnings.length;
+      expect(totalLogs, greaterThanOrEqualTo(1));
+      final todosLogs = [
+        ...mockLogger.recordedErrors.map((e) => e['contextMessage'].toString()),
+        ...mockLogger.recordedWarnings,
+      ];
+      expect(todosLogs.any((msg) => msg.contains('pico_com_falha')), isTrue);
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection permite abrir múltiplos croquis online consecutivamente após retorno à tela inicial',
+    (WidgetTester tester) async {
+      final dummyCroqui1 = Croqui(
+        id: 'pico_consec_1',
+        nome: 'Pico 1',
+        picos: [Pico(nome: 'Pico 1')],
+      );
+      final dummyCroqui2 = Croqui(
+        id: 'pico_consec_2',
+        nome: 'Pico 2',
+        picos: [Pico(nome: 'Pico 2')],
+      );
+
+      mockRepo.indiceData.value = Indice(
+        croquis: [
+          ResumoCroqui(
+            id: 'pico_consec_1',
+            nome: 'Pico 1',
+            checksumSha256Croqui: 'hash1',
+            caminhoRelativo: 'picos/pico_consec_1/compilado.binarypb',
+          ),
+          ResumoCroqui(
+            id: 'pico_consec_2',
+            nome: 'Pico 2',
+            checksumSha256Croqui: 'hash2',
+            caminhoRelativo: 'picos/pico_consec_2/compilado.binarypb',
+          ),
+        ],
+      );
+
+      final tempDir1 = Directory(
+        '${(await mockRepo.servicoCroquiOnline.obterDiretorioCache())}/pico_consec_1',
+      )..createSync(recursive: true);
+      File('${tempDir1.path}/compilado.binarypb.hash1')
+          .writeAsBytesSync(dummyCroqui1.writeToBuffer());
+
+      final tempDir2 = Directory(
+        '${(await mockRepo.servicoCroquiOnline.obterDiretorioCache())}/pico_consec_2',
+      )..createSync(recursive: true);
+      File('${tempDir2.path}/compilado.binarypb.hash2')
+          .writeAsBytesSync(dummyCroqui2.writeToBuffer());
+
+      const pico1 = ResumoPico(
+        id: 'pico_consec_1',
+        nome: 'Pico 1',
+        local: '',
+      );
+      const pico2 = ResumoPico(
+        id: 'pico_consec_2',
+        nome: 'Pico 2',
+        local: '',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final context = tester.element(find.byType(TreeNavigationWrapper));
+
+      // 1. Abre primeiro pico
+      await tester.runAsync(() async {
+        await handlePicoSelection(context, mockRepo, pico1, source: 'home');
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
+        isA<PicoNode>(),
+      );
+
+      // Simula retorno para a Home
+      TreeNavigationWrapper.navKey.currentState?.treeController.navigateTo(const HomeNode());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // 2. Abre segundo pico online consecutivamente
+      await tester.runAsync(() async {
+        await handlePicoSelection(context, mockRepo, pico2, source: 'home');
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
+        isA<PicoNode>(),
+      );
+      final currentNode =
+          TreeNavigationWrapper.navKey.currentState?.treeController.currentNode as PicoNode;
+      expect(currentNode.cragId, equals('pico_consec_2'));
     },
   );
 }

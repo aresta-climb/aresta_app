@@ -198,11 +198,13 @@ Widget construirPaginaParaNo({
   }
 
   if (node is MapaGlobalNode) {
+    final List<dynamic> picosIniciais =
+        node.picoIds.isNotEmpty ? node.picoIds : node.crags;
     return MapaGlobalPage(
       viewModel: MapaGlobalViewModel(
         datasetRepo: datasetRepo,
         syncService: syncService,
-        picosIniciais: node.crags,
+        picosIniciais: picosIniciais,
       ),
     );
   }

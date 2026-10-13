@@ -30,7 +30,7 @@ lib/navigation/
 ```
 
 ### `arvore/no_navegacao.dart`
-Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`), nunca os objetos complexos do Protobuf instanciados na memória.
+Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`, `picoIds`), nunca os objetos complexos instanciados na memória.
 - **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
 
 ### `arvore/modelo_arvore_navegacao.dart`

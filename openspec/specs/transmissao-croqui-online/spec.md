@@ -5,7 +5,7 @@ Permite a transmissão, exploração sob demanda e atualização contínua de cr
 ## Requirements
 
 ### Requirement: Carregamento Sob Demanda do Protobuf `.binarypb`
-O sistema DEVE (MUST) permitir a recuperação e desserialização direta do arquivo `.binarypb` de um croqui via HTTP a partir do servidor remoto (`NetworkConstants.officialServerUrl`) quando o croqui não estiver salvo localmente em `/downloads`. O buffer obtido DEVE ser mantido em memória e opcionalmente em cache temporário volátil (`getTemporaryDirectory()`), permitindo renderização imediata da hierarquia de setores e vias, e seus arquivos externos (`arquivosExternos`) DEVEM ser indexados imediatamente na tabela de dispersão de SHA-256 do `DatasetRepository`.
+O sistema DEVE (MUST) permitir a recuperação e desserialização direta do arquivo `.binarypb` de um croqui via HTTP a partir do servidor remoto (`NetworkConstants.officialServerUrl`) quando o croqui não estiver salvo localmente em `/downloads`. O buffer obtido DEVE ser mantido em memória e opcionalmente em cache temporário volátil (`getTemporaryDirectory()`), permitindo renderização imediata da hierarquia de setores e vias, e seus arquivos externos (`arquivosExternos`) DEVEM ser indexados imediatamente na tabela de dispersão de SHA-256 do `DatasetRepository`. O cliente de transporte HTTP e o serviço de croqui online compartilhados DEVEM permanecer operacionais e reutilizáveis através de múltiplas navegações consecutivas de abertura e fechamento de guias. Qualquer falha que impeça o carregamento do croqui DEVE ser registrada no Firebase Crashlytics com diagnóstico detalhado via `AppLogger`.
 
 #### Scenario: Acesso a croqui não baixado
 - **WHEN** o usuário seleciona um pico disponível que não possui arquivos na pasta `/downloads`
@@ -14,9 +14,15 @@ O sistema DEVE (MUST) permitir a recuperação e desserialização direta do arq
 - **AND** indexa imediatamente os hashes SHA-256 de todas as mídias externas no repositório.
 
 #### Scenario: Fallback de falha de rede ao tentar carregar croqui online
-- **WHEN** o usuário tenta abrir um croqui não baixado e o dispositivo está sem conectividade com a internet
-- **THEN** o sistema exibe uma mensagem de erro amigável informando a ausência de conexão
+- **WHEN** o usuário tenta abrir um croqui não baixado e o dispositivo está sem conectividade com a internet ou o carregamento falha
+- **THEN** o sistema DEVE registrar o diagnóstico da falha no Firebase Crashlytics via `AppLogger.instance.logFalhaSyncOuDownload`
+- **AND** DEVE exibir uma mensagem de erro amigável na interface informando o ocorrido
 - **AND** não insere o croqui no estado ativo de navegação.
+
+#### Scenario: Acesso consecutivo a múltiplos croquis online após navegação de retorno
+- **WHEN** o usuário abre um primeiro croqui online, retorna para a tela inicial ou de exploração e subsequentemente seleciona outro croqui online
+- **THEN** o sistema DEVE manter o cliente de transporte de rede operacional
+- **AND** DEVE carregar e abrir com sucesso o segundo croqui online sem lançar exceções de conexão encerrada.
 
 ### Requirement: Polling Periódico com ETag para Atualizações Online
 Enquanto o usuário estiver ativamente navegando nas telas de um croqui em modo online (não baixado), o sistema DEVE (MUST) executar verificações periódicas leves (a cada 30 segundos) enviando o cabeçalho `If-None-Match: <etag>` para a URL do `.binarypb`. Caso uma conexão WebSocket de Live Reload esteja ativa e conectada, o sistema DEVE suspender (manter dormente) o timer de polling HTTP, confiando exclusivamente no canal push em tempo real para evitar consumo desnecessário de requisições no servidor ou retransmissor. Caso o servidor retorne status `304 Not Modified`, nenhum dado de corpo deve ser trafegado e a interface não deve ser recarregada. Caso o servidor retorne status `200 OK`, o sistema DEVE consumir o buffer retornado no corpo da resposta para desserializar a nova instância de `Croqui`, atualizar o `GerenciadorSessaoOnline`, persistir a cópia atualizada no cache volátil (`/temp_cache`), reindexar os hashes SHA-256 de arquivos externos no `DatasetRepository` e emitir notificação para atualização da interface. Se a atualização ocorrer fora do modo experimental, a interface DEVE exibir uma notificação visual informando que o croqui foi atualizado. Se a atualização ocorrer em modo experimental, a recarga da tela DEVE ser imediata com pulso visual no banner. Em caso de perda de conexão com a internet ou timeout durante a verificação de ETag, o sistema DEVE tratar o evento como operacional esperado emitindo apenas `logAviso` (breadcrumb), abstendo-se de emitir `logError` para o Crashlytics. O timer de polling DEVE ser gerenciado de forma determinística e cancelado assim que o usuário sair das telas do referido pico ou quando o componente correspondente for reconstruído ou descartado.

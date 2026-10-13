@@ -106,13 +106,14 @@ class ServicoCroquiOnline {
         _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: etag);
         return croqui;
       } else {
-        AppLogger.instance.logError(
+        AppLogger.instance.logFalhaSyncOuDownload(
           '[ServicoCroquiOnline] Falha ao carregar croqui online $picoId. Status: ${response.statusCode}',
+          error: HttpException('HTTP ${response.statusCode}', uri: uri),
           stackTrace: StackTrace.current,
         );
       }
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
+      AppLogger.instance.logFalhaSyncOuDownload(
         '[ServicoCroquiOnline] Erro de rede ao carregar croqui $picoId',
         error: e,
         stackTrace: stackTrace,

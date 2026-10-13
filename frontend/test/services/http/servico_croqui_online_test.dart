@@ -217,6 +217,23 @@ void main() {
       expect(sessaoOnline.obterCroquiOnline('pico_offline'), isNull);
     });
 
+    test('carregarCroquiRemoto registra falha no AppLogger via logFalhaSyncOuDownload em caso de erro HTTP', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('Server error', 500));
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/croquis/pico_500.binarypb',
+        picoId: 'pico_500',
+      );
+
+      expect(resultado, isNull);
+      final totalLogs = mockLogger.recordedErrors.length + mockLogger.recordedWarnings.length;
+      expect(totalLogs, greaterThanOrEqualTo(1));
+    });
+
     test('verificarAtualizacaoEtag trata exceções de rede retornando false', () async {
       sessaoOnline.registrarCroquiOnline(
         'pico_1',

@@ -634,18 +634,30 @@ class DatasetRepository {
     }
 
     // Localiza o resumo correspondente no índice para obter o checksum cadastrado
-    ResumoCroqui? resumo;
+    String? caminhoRelativo;
+    String? checksum;
+
     final indice = indiceData.value;
     if (indice != null) {
       for (final r in indice.croquis) {
         if (r.id == id) {
-          resumo = r;
+          caminhoRelativo = r.caminhoRelativo;
+          checksum = r.checksumSha256Croqui;
           break;
         }
       }
     }
 
-    final checksum = resumo?.checksumSha256Croqui;
+    // Salvaguarda: se não estiver no indiceData, busca em activeDataset.value?.metadadosDisponiveis
+    if (caminhoRelativo == null || caminhoRelativo.isEmpty) {
+      try {
+        final meta = activeDataset.value?.metadadosDisponiveis.firstWhere((m) => m.id == id);
+        if (meta != null) {
+          caminhoRelativo = meta.caminhoRelativo;
+          checksum = meta.checksumSha256Croqui.isNotEmpty ? meta.checksumSha256Croqui : checksum;
+        }
+      } catch (_) {}
+    }
 
     // 3. Cache volátil (/temp_cache/<picoId>/compilado.binarypb.<sha256>)
     if (checksum != null && checksum.isNotEmpty) {
@@ -670,9 +682,9 @@ class DatasetRepository {
     }
 
     // 4. Rede remota (CDN com ?v=<sha256>)
-    if (resumo != null && resumo.caminhoRelativo.isNotEmpty) {
-      final url =
-          '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=$checksum';
+    if (caminhoRelativo != null && caminhoRelativo.isNotEmpty) {
+      final queryParam = (checksum != null && checksum.isNotEmpty) ? '?v=$checksum' : '';
+      final url = '${editorDeCroqui.activeBaseUrl}/$caminhoRelativo$queryParam';
       final croquiRemoto = await servicoCroquiOnline.carregarCroquiRemoto(
         url,
         picoId: id,

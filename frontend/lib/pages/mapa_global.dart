@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -207,7 +207,6 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
       appBar: buildCommonAppBar(
         context,
         'Mapa Global',
-        actions: [buildFeedbackButton(context)],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).brightness == Brightness.dark
