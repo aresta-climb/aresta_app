@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -43,11 +43,16 @@ void main() {
     //   - Grupo: "Grupo Estacionamento"
     //       - Setor filho: "Setor do Bloco"
     //           - Via: "Via do Bloco"
-    croquiTeste = Croqui()..id = 'br_mg_igarape_pedra_grande';
+    croquiTeste = Croqui()
+      ..id = 'br_mg_igarape_pedra_grande'
+      ..uid = 'pQ9mRt2Kx1Vw8L';
     picoTeste = Pico()..nome = 'Pedra Grande de Igarapé';
 
-    setorDireto = Setor()..nome = 'Savassinha';
+    setorDireto = Setor()
+      ..nome = 'Savassinha'
+      ..uid = 's1Lk9P1x4Vw8Mn';
     viaNoSetor = Escalada()
+      ..uid = 'v1siJek3FiG3aB'
       ..viaEsportiva = (ViaEsportiva()..nome = 'Teto da Savassinha');
     setorDireto.escaladas.add(viaNoSetor);
 
@@ -276,6 +281,65 @@ void main() {
       expect(params['tipo_start'], equals('warm_start'));
       expect(params['motivo_erro'], isNotNull);
       expect(params['utm_source'], equals('teste'));
+    });
+  });
+
+  group('DeepLinkNavigatorService - Localização por NanoID 14c (aresta.cc)', () {
+    test('navega diretamente para ViaNode ao ler QR code de via canônica https://aresta.cc/<nanoid>', () async {
+      final sucesso = await service.processarLink(
+        'https://aresta.cc/v1siJek3FiG3aB?utm_source=placa_inox&utm_medium=qrcode',
+        tipoStart: 'cold_start',
+      );
+
+      expect(sucesso, isTrue);
+      expect(treeController.currentNode, isA<ViaNode>());
+      final viaNode = treeController.currentNode as ViaNode;
+      expect(viaNode.escaladaNome, equals('Teto da Savassinha'));
+      expect(viaNode.setorNome, equals('Savassinha'));
+
+      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('br_mg_igarape_pedra_grande'));
+      expect(params['destino'], equals('via'));
+      expect(params['sucesso'], equals('true'));
+      expect(params['tipo_start'], equals('cold_start'));
+      expect(params['utm_source'], equals('placa_inox'));
+    });
+
+    test('navega para SetorNode ao processar link https://aresta.cc/<setor_uid>', () async {
+      final sucesso = await service.processarLink('https://aresta.cc/s1Lk9P1x4Vw8Mn');
+
+      expect(sucesso, isTrue);
+      expect(treeController.currentNode, isA<SetorNode>());
+      final setorNode = treeController.currentNode as SetorNode;
+      expect(setorNode.setorNome, equals('Savassinha'));
+      expect(setorNode.parent, isA<PicoNode>());
+    });
+
+    test('navega para PicoNode ao processar link https://aresta.cc/<croqui_uid>', () async {
+      final sucesso = await service.processarLink('https://aresta.cc/pQ9mRt2Kx1Vw8L');
+
+      expect(sucesso, isTrue);
+      expect(treeController.currentNode, isA<PicoNode>());
+      final picoNode = treeController.currentNode as PicoNode;
+      expect(picoNode.cragId, equals('br_mg_igarape_pedra_grande'));
+    });
+
+    test('emite aviso e telemetria de erro quando o UID não for encontrado', () async {
+      String? mensagemEmitida;
+      service.onMensagemAviso = (msg) => mensagemEmitida = msg;
+
+      final sucesso = await service.processarLink(
+        'https://aresta.cc/z9zzZzZzZzZzZz?utm_source=placa_danificada',
+      );
+
+      expect(sucesso, isFalse);
+      expect(mensagemEmitida, contains('z9zzZzZzZzZzZz'));
+      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('z9zzZzZzZzZzZz'));
+      expect(params['sucesso'], equals('false'));
+      expect(params['motivo_erro'], equals('uid_nao_encontrado_no_acervo'));
     });
   });
 }
