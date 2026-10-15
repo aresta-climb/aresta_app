@@ -7,7 +7,7 @@ Este diretório contém os componentes modulares e independentes de interface (*
 ## 1. Componentes
 
 ### `ModalRegistroCadena`
-Bottom sheet modal para registro e edição de cadenas:
+Bottom sheet modal para registro e edição de cadenas, seguindo o padrão de **Dumb UI / Humble View** alimentado pelo `RegistroCadenaViewModel`:
 - **Chips de Estilo Esportivo**: Permite a seleção entre *À Vista*, *Flash*, *Trabalhado* e *Tentativa*.
 - **Contador de Tentativas**: Campo numérico com validação para garantir que tentativas sejam sempre maiores ou iguais a 1.
 - **Seletor de Data**: `DatePicker` integrado permitindo registrar ascensões passadas com data retroativa.
