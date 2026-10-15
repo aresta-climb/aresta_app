@@ -128,5 +128,11 @@ void main() {
       expect(viewModel.obterNomeEscalada('sem-nome-uid'), 'Via (sem-nome-uid)');
       viewModel.dispose();
     });
+
+    test('formatarDataAscensao formata datas corretamente em padrão DD/MM/AAAA', () {
+      final viewModel = PerfilViewModel(repositorio: repositorio);
+      expect(viewModel.formatarDataAscensao(DateTime(2026, 4, 9)), '09/04/2026');
+      viewModel.dispose();
+    });
   });
 }

@@ -90,4 +90,11 @@ class PerfilViewModel extends ChangeNotifier {
   String? obterGrauEscalada(String uid) {
     return resolvedorGrau?.call(uid);
   }
+
+  /// Formata a data de uma ascensão em padrão textual legível brasileiro (DD/MM/AAAA).
+  String formatarDataAscensao(DateTime data) {
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    return '$dia/$mes/${data.year}';
+  }
 }
