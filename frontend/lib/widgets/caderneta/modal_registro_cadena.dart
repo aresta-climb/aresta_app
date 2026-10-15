@@ -7,15 +7,20 @@ import '../../data/modelos/tipo_ascensao.dart';
 import '../../data/modelos/tipo_escalada.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../theme/cores_app.dart';
+import '../../view/view_models/registro_cadena_view_model.dart';
 
 /// Exibe o modal de registro de cadena em formato Bottom Sheet.
+///
+/// Aceita diretamente um [viewModel] ou instancia um automaticamente a partir
+/// dos parâmetros fornecidos.
 Future<void> exibirModalRegistroCadena(
   BuildContext context, {
-  required String escaladaUid,
-  required String nomeEscalada,
+  String? escaladaUid,
+  String? nomeEscalada,
   TipoEscalada tipoEscaladaPadrao = TipoEscalada.guiado,
   int? grauSugerido,
   RepositorioCaderneta? repositorio,
+  RegistroCadenaViewModel? viewModel,
   void Function(Cadena cadenaSalva)? onSalvo,
 }) {
   return showModalBottomSheet<void>(
@@ -32,6 +37,7 @@ Future<void> exibirModalRegistroCadena(
           bottom: MediaQuery.of(modalContext).viewInsets.bottom,
         ),
         child: ModalRegistroCadena(
+          viewModel: viewModel,
           escaladaUid: escaladaUid,
           nomeEscalada: nomeEscalada,
           tipoEscaladaPadrao: tipoEscaladaPadrao,
@@ -44,24 +50,28 @@ Future<void> exibirModalRegistroCadena(
   );
 }
 
-/// Modal interativo para registro de ascensão esportiva ou tentativa na caderneta.
+/// Interface gráfica declarativa (Dumb UI) para o registro de ascensões e cadenas.
 ///
-/// Permite selecionar o estilo esportivo ([TipoAscensao]), ajustar o contador de tentativas,
-/// definir a data de realização e redigir notas técnicas privadas limitadas a 200 caracteres.
+/// Todas as regras de negócio, persistência e estados de formulário são delegados ao
+/// [RegistroCadenaViewModel], garantindo uma camada de apresentação desacoplada, elegante
+/// e facilmente testável.
 class ModalRegistroCadena extends StatefulWidget {
-  /// Identificador NanoID 14c estável da via associada.
-  final String escaladaUid;
+  /// ViewModel injetado contendo a lógica e o estado da tela.
+  final RegistroCadenaViewModel? viewModel;
 
-  /// Nome legível da escalada para exibição no cabeçalho.
-  final String nomeEscalada;
+  /// Identificador NanoID 14c estável da via associada (usado se [viewModel] for omitido).
+  final String? escaladaUid;
 
-  /// Modalidade padrão da via de escalada.
+  /// Nome legível da escalada (usado se [viewModel] for omitido).
+  final String? nomeEscalada;
+
+  /// Modalidade padrão da via de escalada (usada se [viewModel] for omitido).
   final TipoEscalada tipoEscaladaPadrao;
 
   /// Grau sugerido oficial ou pré-calculado.
   final int? grauSugerido;
 
-  /// Instância opcional do repositório de caderneta (injetável em testes).
+  /// Repositório opcional de caderneta para testes.
   final RepositorioCaderneta? repositorio;
 
   /// Callback opcional executado imediatamente após o salvamento.
@@ -69,8 +79,9 @@ class ModalRegistroCadena extends StatefulWidget {
 
   const ModalRegistroCadena({
     super.key,
-    required this.escaladaUid,
-    required this.nomeEscalada,
+    this.viewModel,
+    this.escaladaUid,
+    this.nomeEscalada,
     this.tipoEscaladaPadrao = TipoEscalada.guiado,
     this.grauSugerido,
     this.repositorio,
@@ -82,48 +93,45 @@ class ModalRegistroCadena extends StatefulWidget {
 }
 
 class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
-  late TipoAscensao _tipoAscensao;
-  late TipoEscalada _tipoEscalada;
-  int _tentativas = 1;
-  late DateTime _dataAscensao;
+  late final RegistroCadenaViewModel _viewModel;
   late final TextEditingController _notasController;
+  bool _criouViewModelInterno = false;
 
   @override
   void initState() {
     super.initState();
-    _tipoAscensao = TipoAscensao.trabalhado;
-    _tipoEscalada = widget.tipoEscaladaPadrao;
-    _dataAscensao = DateTime.now();
-    _notasController = TextEditingController();
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+    } else {
+      _viewModel = RegistroCadenaViewModel(
+        escaladaUid: widget.escaladaUid ?? '',
+        nomeEscalada: widget.nomeEscalada ?? '',
+        tipoEscaladaPadrao: widget.tipoEscaladaPadrao,
+        grauSugerido: widget.grauSugerido,
+        repositorio: widget.repositorio,
+      );
+      _criouViewModelInterno = true;
+    }
+
+    _notasController = TextEditingController(text: _viewModel.notasPrivadas);
     _notasController.addListener(() {
-      setState(() {});
+      _viewModel.definirNotasPrivadas(_notasController.text);
     });
   }
 
   @override
   void dispose() {
     _notasController.dispose();
+    if (_criouViewModelInterno) {
+      _viewModel.dispose();
+    }
     super.dispose();
   }
 
-  void _incrementarTentativas() {
-    setState(() {
-      _tentativas++;
-    });
-  }
-
-  void _decrementarTentativas() {
-    if (_tentativas > 1) {
-      setState(() {
-        _tentativas--;
-      });
-    }
-  }
-
-  Future<void> _selecionarData() async {
+  Future<void> _abrirSeletorData() async {
     final dataEscolhida = await showDatePicker(
       context: context,
-      initialDate: _dataAscensao,
+      initialDate: _viewModel.dataAscensao,
       firstDate: DateTime(1980),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -140,27 +148,13 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
     );
 
     if (dataEscolhida != null) {
-      setState(() {
-        _dataAscensao = dataEscolhida;
-      });
+      _viewModel.definirDataAscensao(dataEscolhida);
     }
   }
 
-  Future<void> _salvar() async {
-    final repo = widget.repositorio ?? RepositorioCadernetaLocal.instancia;
-
-    final cadena = Cadena.criar(
-      escaladaUid: widget.escaladaUid,
-      dataAscensao: _dataAscensao,
-      tipoAscensao: _tipoAscensao,
-      tipoEscalada: _tipoEscalada,
-      tentativas: _tentativas,
-      grauSugerido: widget.grauSugerido,
-      notasPrivadas: _notasController.text.trim(),
-    );
-
-    await repo.salvarCadena(cadena);
-    widget.onSalvo?.call(cadena);
+  Future<void> _salvarAscensao() async {
+    final cadenaSalva = await _viewModel.salvar();
+    widget.onSalvo?.call(cadenaSalva);
 
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -169,254 +163,379 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
 
   @override
   Widget build(BuildContext context) {
-    final cores = context.colors;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Alça de arraste superior
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: cores.ashGrey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _AlcaArrasteModal(),
+              _CabecalhoModal(nomeEscalada: _viewModel.nomeEscalada),
+              const SizedBox(height: 20),
+              _SeletorEstiloEsportivo(
+                estiloSelecionado: _viewModel.tipoAscensao,
+                onSelecionar: _viewModel.definirTipoAscensao,
               ),
-            ),
+              const SizedBox(height: 20),
+              _ContadorTentativas(
+                tentativas: _viewModel.tentativas,
+                podeDecrementar: _viewModel.podeDecrementarTentativas,
+                onIncrementar: _viewModel.incrementarTentativas,
+                onDecrementar: _viewModel.decrementarTentativas,
+              ),
+              const SizedBox(height: 20),
+              _SeletorDataAscensao(
+                dataTexto: _viewModel.dataAscensaoFormatada,
+                onTap: _abrirSeletorData,
+              ),
+              const SizedBox(height: 20),
+              _CampoNotasPrivadas(
+                controller: _notasController,
+                contadorTexto: _viewModel.contadorNotasTexto,
+                atingiuLimite: _viewModel.atingiuLimiteNotas,
+              ),
+              const SizedBox(height: 24),
+              _BotaoSalvarCadena(onPressed: _salvarAscensao),
+            ],
           ),
+        );
+      },
+    );
+  }
+}
 
-          // Título e identificador da via
-          Text(
-            'Registrar Ascensão',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: cores.chalkWhite,
-                  fontWeight: FontWeight.bold,
-                ),
+/// Alça visual superior indicando capacidade de arraste no bottom sheet.
+class _AlcaArrasteModal extends StatelessWidget {
+  const _AlcaArrasteModal();
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: cores.ashGrey.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cabeçalho textual do modal contendo título da ação e nome da via.
+class _CabecalhoModal extends StatelessWidget {
+  final String nomeEscalada;
+
+  const _CabecalhoModal({required this.nomeEscalada});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Registrar Ascensão',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        if (nomeEscalada.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
-            widget.nomeEscalada,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: cores.ashGrey,
-                ),
-          ),
-          const SizedBox(height: 20),
-
-          // Seção 1: Estilo Esportivo
-          Text(
-            'Estilo Esportivo',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: cores.chalkWhite,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: TipoAscensao.values.map((estilo) {
-              final selecionado = _tipoAscensao == estilo;
-              return ChoiceChip(
-                label: Text(
-                  estilo.rotulo,
-                  style: TextStyle(
-                    color: selecionado ? cores.chalkWhite : cores.ashGrey,
-                    fontWeight:
-                        selecionado ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                selected: selecionado,
-                selectedColor: cores.rustIron,
-                backgroundColor: cores.caveShadow,
-                side: BorderSide(
-                  color: selecionado
-                      ? cores.rustIron
-                      : cores.graniteEdge.withValues(alpha: 0.6),
-                ),
-                onSelected: (bool selected) {
-                  if (selected) {
-                    setState(() {
-                      _tipoAscensao = estilo;
-                    });
-                  }
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-
-          // Seção 2: Quantidade de Tentativas
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tentativas / Pegas',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: cores.chalkWhite,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: cores.caveShadow,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cores.graniteEdge),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      key: const Key('btn_decrementar_tentativas'),
-                      icon: const Icon(Icons.remove, size: 18),
-                      color: _tentativas > 1 ? cores.chalkWhite : cores.ashGrey,
-                      onPressed: _decrementarTentativas,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        '$_tentativas',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: cores.chalkWhite,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                    IconButton(
-                      key: const Key('btn_incrementar_tentativas'),
-                      icon: const Icon(Icons.add, size: 18),
-                      color: cores.chalkWhite,
-                      onPressed: _incrementarTentativas,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Seção 3: Data da Ascensão
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Data da Ascensão',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: cores.chalkWhite,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              InkWell(
-                key: const Key('btn_selecionar_data'),
-                onTap: _selecionarData,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: cores.caveShadow,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: cores.graniteEdge),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_today_outlined,
-                          size: 16, color: cores.rustIron),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_dataAscensao.day.toString().padLeft(2, '0')}/${_dataAscensao.month.toString().padLeft(2, '0')}/${_dataAscensao.year}',
-                        style: TextStyle(color: cores.chalkWhite),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Seção 4: Notas Privadas (Máximo 200 caracteres)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Notas Privadas (Crux / Métodos)',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: cores.chalkWhite,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              Text(
-                '${_notasController.text.length}/200',
-                style: TextStyle(
-                  color: _notasController.text.length >= 200
-                      ? cores.rustIron
-                      : cores.ashGrey,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            key: const Key('campo_notas_privadas'),
-            controller: _notasController,
-            maxLength: 200,
-            maxLines: 3,
-            buildCounter: (
-              context, {
-              required currentLength,
-              required isFocused,
-              maxLength,
-            }) =>
-                null, // Esconde contador nativo inferior
-            style: TextStyle(color: cores.chalkWhite),
-            decoration: InputDecoration(
-              hintText:
-                  'Ex: Crux no 3º grampo com calcanhar esquerdo, levar costura longa...',
-              hintStyle: TextStyle(
-                color: cores.ashGrey.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-              filled: true,
-              fillColor: cores.caveShadow,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: cores.graniteEdge),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: cores.graniteEdge),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: cores.rustIron),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Botão de Confirmação
-          ElevatedButton(
-            key: const Key('btn_salvar_cadena'),
-            onPressed: _salvar,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cores.rustIron,
-              foregroundColor: cores.chalkWhite,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Salvar na Caderneta',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+            nomeEscalada,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: cores.ashGrey),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Seletor em chips para escolha do estilo esportivo da ascensão.
+class _SeletorEstiloEsportivo extends StatelessWidget {
+  final TipoAscensao estiloSelecionado;
+  final ValueChanged<TipoAscensao> onSelecionar;
+
+  const _SeletorEstiloEsportivo({
+    required this.estiloSelecionado,
+    required this.onSelecionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Estilo Esportivo',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: TipoAscensao.values.map((estilo) {
+            final selecionado = estiloSelecionado == estilo;
+            return ChoiceChip(
+              label: Text(
+                estilo.rotulo,
+                style: TextStyle(
+                  color: selecionado ? cores.chalkWhite : cores.ashGrey,
+                  fontWeight: selecionado ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              selected: selecionado,
+              selectedColor: cores.rustIron,
+              backgroundColor: cores.caveShadow,
+              side: BorderSide(
+                color: selecionado
+                    ? cores.rustIron
+                    : cores.graniteEdge.withValues(alpha: 0.6),
+              ),
+              onSelected: (bool ativo) {
+                if (ativo) onSelecionar(estilo);
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Seletor numérico de tentativas despendidas na ascensão.
+class _ContadorTentativas extends StatelessWidget {
+  final int tentativas;
+  final bool podeDecrementar;
+  final VoidCallback onIncrementar;
+  final VoidCallback onDecrementar;
+
+  const _ContadorTentativas({
+    required this.tentativas,
+    required this.podeDecrementar,
+    required this.onIncrementar,
+    required this.onDecrementar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Tentativas / Pegas',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: cores.caveShadow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cores.graniteEdge),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                key: const Key('btn_decrementar_tentativas'),
+                icon: const Icon(Icons.remove, size: 18),
+                color: podeDecrementar ? cores.chalkWhite : cores.ashGrey,
+                onPressed: podeDecrementar ? onDecrementar : null,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  '$tentativas',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: cores.chalkWhite,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                key: const Key('btn_incrementar_tentativas'),
+                icon: const Icon(Icons.add, size: 18),
+                color: cores.chalkWhite,
+                onPressed: onIncrementar,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Botão de acionamento do diálogo de seleção de data.
+class _SeletorDataAscensao extends StatelessWidget {
+  final String dataTexto;
+  final VoidCallback onTap;
+
+  const _SeletorDataAscensao({required this.dataTexto, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Data da Ascensão',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        InkWell(
+          key: const Key('btn_selecionar_data'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: cores.rustIron,
+                ),
+                const SizedBox(width: 8),
+                Text(dataTexto, style: TextStyle(color: cores.chalkWhite)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Campo de texto para inserção das notas técnicas pessoais do escalador.
+class _CampoNotasPrivadas extends StatelessWidget {
+  final TextEditingController controller;
+  final String contadorTexto;
+  final bool atingiuLimite;
+
+  const _CampoNotasPrivadas({
+    required this.controller,
+    required this.contadorTexto,
+    required this.atingiuLimite,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Notas Privadas (Crux / Métodos)',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: cores.chalkWhite,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              contadorTexto,
+              style: TextStyle(
+                color: atingiuLimite ? cores.rustIron : cores.ashGrey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const Key('campo_notas_privadas'),
+          controller: controller,
+          maxLength: RegistroCadenaViewModel.limiteNotasPrivadas,
+          maxLines: 3,
+          buildCounter:
+              (
+                context, {
+                required currentLength,
+                required isFocused,
+                maxLength,
+              }) => null,
+          style: TextStyle(color: cores.chalkWhite),
+          decoration: InputDecoration(
+            hintText:
+                'Ex: Crux no 3º grampo com calcanhar esquerdo, levar costura longa...',
+            hintStyle: TextStyle(
+              color: cores.ashGrey.withValues(alpha: 0.7),
+              fontSize: 13,
+            ),
+            filled: true,
+            fillColor: cores.caveShadow,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cores.graniteEdge),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cores.graniteEdge),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: cores.rustIron),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Botão de submissão do formulário de cadena.
+class _BotaoSalvarCadena extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _BotaoSalvarCadena({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return ElevatedButton(
+      key: const Key('btn_salvar_cadena'),
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: cores.rustIron,
+        foregroundColor: cores.chalkWhite,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: const Text(
+        'Salvar na Caderneta',
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
     );
   }
