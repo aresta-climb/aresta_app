@@ -8,6 +8,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 void main() {
@@ -116,7 +117,34 @@ void main() {
     },
   );
 
+  tearDown(() {
+    ConfiguracaoRecursos.redefinirParaTestes();
+  });
+
+  testWidgets('ViaPage oculta botão de registrar cadena quando perfilHabilitado for false', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+
+    final escalada = Escalada()
+      ..uid = 'via-uid-123'
+      ..viaEsportiva = (ViaEsportiva()..nome = 'Fenda da Esperança');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registrar Cadena / Tentativa'), findsNothing);
+  });
+
   testWidgets('ViaPage exibe botão de registrar cadena e abre modal ao ser clicado', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+
     final escalada = Escalada()
       ..uid = 'via-uid-123'
       ..viaEsportiva = (ViaEsportiva()..nome = 'Fenda da Esperança');
@@ -143,6 +171,8 @@ void main() {
   });
 
   testWidgets('ViaPage exibe selo esportivo com estilo Flash quando há ascensão registrada', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+
     final escalada = Escalada()
       ..uid = 'via-uid-encadenada'
       ..viaEsportiva = (ViaEsportiva()..nome = 'Via Master');
