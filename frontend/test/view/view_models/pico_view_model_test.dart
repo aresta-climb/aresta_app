@@ -10,7 +10,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 
 class _MockHttpClient extends Mock implements http.Client {}
