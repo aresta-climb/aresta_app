@@ -7,6 +7,7 @@ import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/widgets/app_bar_home_aresta.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../mocks/mock_telemetria.dart';
 
@@ -91,9 +92,30 @@ void main() {
     },
   );
 
+  tearDown(() {
+    ConfiguracaoRecursos.redefinirParaTestes();
+  });
+
   testWidgets(
-    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil',
+    'ArestaHomeAppBar oculta o botão de perfil quando o recurso está desabilitado',
     (tester) async {
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: const ArestaHomeAppBar(),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil quando habilitado',
+    (tester) async {
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
       bool abriuPerfil = false;
 
       await tester.pumpWidget(
@@ -105,6 +127,7 @@ void main() {
       );
       await tester.pump();
 
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       await tester.tap(find.byKey(const Key('btn_home_perfil')));
       await tester.pump();
 
