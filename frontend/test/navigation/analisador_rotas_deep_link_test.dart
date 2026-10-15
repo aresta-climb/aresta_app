@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +120,78 @@ void main() {
       );
       expect(rota, isNotNull);
       expect(rota!.parametros, isEmpty);
+    });
+
+    group('Links Canonicos aresta.cc (NanoID 14c)', () {
+      test('faz parsing de link canônico físico https://aresta.cc/<nanoid>', () {
+        final rota = DeepLinkRouteParser.parse('https://aresta.cc/x8siJek3FiG3aB');
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+        expect(rota.picoId, isNull);
+        expect(rota.segmentos, isEmpty);
+        expect(rota.parametros, isEmpty);
+      });
+
+      test('preserva parâmetros UTM em links canônicos aresta.cc', () {
+        final rota = DeepLinkRouteParser.parse(
+          'https://aresta.cc/x8siJek3FiG3aB?utm_source=placa_inox&utm_medium=qrcode',
+        );
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+        expect(rota.parametros, equals({
+          'utm_source': 'placa_inox',
+          'utm_medium': 'qrcode',
+        }));
+      });
+
+      test('suporta custom scheme aresta://aresta.cc/<nanoid>', () {
+        final rota = DeepLinkRouteParser.parse('aresta://aresta.cc/x8siJek3FiG3aB');
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+      });
+
+      test('suporta URL sem esquema aresta.cc/<nanoid>', () {
+        final rota = DeepLinkRouteParser.parse('aresta.cc/x8siJek3FiG3aB');
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+      });
+
+      test('suporta subdomínio www.aresta.cc/<nanoid>', () {
+        final rota = DeepLinkRouteParser.parse('https://www.aresta.cc/x8siJek3FiG3aB');
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+      });
+
+      test('reconhece NanoID 14c também sob o domínio app.arestaclimb.com', () {
+        final rota = DeepLinkRouteParser.parse(
+          'https://app.arestaclimb.com/x8siJek3FiG3aB',
+        );
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isTrue);
+        expect(rota.uid, equals('x8siJek3FiG3aB'));
+        expect(rota.picoId, isNull);
+      });
+
+      test('suporta rota hierárquica sob domínio aresta.cc como fallback', () {
+        final rota = DeepLinkRouteParser.parse(
+          'https://aresta.cc/br_mg_igarape_pedra_grande/savassinha',
+        );
+        expect(rota, isNotNull);
+        expect(rota!.isPorUid, isFalse);
+        expect(rota.uid, isNull);
+        expect(rota.picoId, equals('br_mg_igarape_pedra_grande'));
+        expect(rota.primeiroSegmento, equals('savassinha'));
+      });
+
+      test('retorna null para aresta.cc sem caminho ou vazio', () {
+        expect(DeepLinkRouteParser.parse('https://aresta.cc/'), isNull);
+        expect(DeepLinkRouteParser.parse('https://aresta.cc'), isNull);
+      });
     });
   });
 }
