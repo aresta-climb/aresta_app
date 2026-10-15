@@ -33,6 +33,26 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Android App Links para aresta.cc (Link Canônico de Placas QR Code Físicas) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="aresta.cc" />
+            </intent-filter>
+
+            <!-- Custom Scheme Deep Link aresta://aresta.cc/* -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="aresta"
+                    android:host="aresta.cc" />
+            </intent-filter>
+
             <!-- Android App Links para app.arestaclimb.com (Setores, Vias e Picos) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
