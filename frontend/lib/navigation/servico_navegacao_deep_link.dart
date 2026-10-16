@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -9,6 +9,7 @@ import '../utils/consulta_dataset.dart';
 import '../utils/utilitarios_slug.dart';
 import 'analisador_rotas_deep_link.dart';
 import 'arvore_navegacao.dart';
+import 'localizador_destino_uid.dart';
 
 /// Serviço responsável por interceptar, resolver e navegar para rotas profundas
 /// acionadas via Deep Links ou leitura de QR Codes.
@@ -16,6 +17,7 @@ class DeepLinkNavigatorService {
   final DatasetRepository datasetRepo;
   final TreeNavigationController treeController;
   final TelemetryService telemetryService;
+  final LocalizadorDestinoUid localizadorUid;
 
   /// Callback para emissão de mensagens de aviso/erro à interface (opcional).
   void Function(String mensagem)? onMensagemAviso;
@@ -25,7 +27,10 @@ class DeepLinkNavigatorService {
     required this.treeController,
     this.onMensagemAviso,
     TelemetryService? telemetryService,
-  }) : telemetryService = telemetryService ?? TelemetryService.instance;
+    LocalizadorDestinoUid? localizadorUid,
+  })  : telemetryService = telemetryService ?? TelemetryService.instance,
+        localizadorUid =
+            localizadorUid ?? LocalizadorDestinoUid(datasetRepo: datasetRepo);
 
   /// Processa uma URL ou Uri de deep link.
   ///
@@ -43,11 +48,82 @@ class DeepLinkNavigatorService {
 
     final parametrosUtm = rota.parametros.isEmpty ? null : rota.parametros;
 
+    // 1. Processa rotas canônicas por identificador único universal (NanoID 14c)
+    if (rota.isPorUid) {
+      return _processarRotaPorUid(
+        rota,
+        context: context,
+        tipoStart: tipoStart,
+        parametrosUtm: parametrosUtm,
+      );
+    }
+
+    // 2. Processa rotas hierárquicas legadas (picoId + subsegmentos)
+    return _processarRotaHierarquica(
+      rota,
+      context: context,
+      tipoStart: tipoStart,
+      parametrosUtm: parametrosUtm,
+    );
+  }
+
+  /// Processa e navega para um destino a partir de um NanoID 14c universal (ex: placas QR code `aresta.cc/<nanoid>`).
+  Future<bool> _processarRotaPorUid(
+    RotaDeepLink rota, {
+    BuildContext? context,
+    String? tipoStart,
+    Map<String, String>? parametrosUtm,
+  }) async {
+    final uid = rota.uid!;
+    final destino = await localizadorUid.localizar(uid);
+
+    if (destino == null) {
+      await telemetryService.logDeepLinkAberto(
+        idCroqui: uid,
+        destino: 'uid_desconhecido',
+        sucesso: false,
+        tipoStart: tipoStart,
+        motivoErro: 'uid_nao_encontrado_no_acervo',
+        parametrosUtm: parametrosUtm,
+      );
+
+      final mensagem =
+          'Não foi possível encontrar a via ou setor correspondente ao código "$uid". Verifique sua conexão à internet ou baixe o pico previamente.';
+      if (context != null && !context.mounted) {
+        if (onMensagemAviso != null) {
+          onMensagemAviso!(mensagem);
+        }
+        return false;
+      }
+      _notificarAviso(mensagem, context);
+      return false;
+    }
+
+    treeController.navigateTo(destino.noNavegacao);
+    await telemetryService.logDeepLinkAberto(
+      idCroqui: destino.idCroqui,
+      destino: destino.tipoDestino,
+      sucesso: true,
+      tipoStart: tipoStart,
+      parametrosUtm: parametrosUtm,
+    );
+    return true;
+  }
+
+  /// Processa e navega para uma rota estruturada hierarquicamente por slugs.
+  Future<bool> _processarRotaHierarquica(
+    RotaDeepLink rota, {
+    BuildContext? context,
+    String? tipoStart,
+    Map<String, String>? parametrosUtm,
+  }) async {
+    final picoId = rota.picoId!;
+
     // 1. Resolve o Pico e Croqui correspondente
-    final dadosPico = await _obterPicoECroqui(rota.picoId);
+    final dadosPico = await _obterPicoECroqui(picoId);
     if (dadosPico == null) {
       await telemetryService.logDeepLinkAberto(
-        idCroqui: rota.picoId,
+        idCroqui: picoId,
         destino: _inferirDestino(rota),
         sucesso: false,
         tipoStart: tipoStart,
@@ -56,7 +132,7 @@ class DeepLinkNavigatorService {
       );
 
       final mensagem =
-          'Não foi possível abrir o croqui de "${rota.picoId}". Verifique sua conexão à internet ou baixe o pico previamente.';
+          'Não foi possível abrir o croqui de "$picoId". Verifique sua conexão à internet ou baixe o pico previamente.';
       if (context != null && !context.mounted) {
         if (onMensagemAviso != null) {
           onMensagemAviso!(mensagem);
@@ -71,13 +147,13 @@ class DeepLinkNavigatorService {
 
     // 2. Monta a linhagem ascendente da árvore a partir da raiz (Home)
     final NavNode raiz = const HomeNode();
-    final picoNode = PicoNode(cragId: rota.picoId, parent: raiz);
+    final picoNode = PicoNode(cragId: picoId, parent: raiz);
 
     // Função auxiliar para navegar e registrar telemetria de sucesso
     Future<bool> navegarPara(NavNode node, String destino) async {
       treeController.navigateTo(node);
       await telemetryService.logDeepLinkAberto(
-        idCroqui: rota.picoId,
+        idCroqui: picoId,
         destino: destino,
         sucesso: true,
         tipoStart: tipoStart,
@@ -107,7 +183,7 @@ class DeepLinkNavigatorService {
     if (grupoCorrespondente != null) {
       final grupoNode = GrupoNode(
         grupoNome: grupoCorrespondente.nome,
-        cragId: rota.picoId,
+        cragId: picoId,
         parent: picoNode,
       );
 
@@ -132,7 +208,7 @@ class DeepLinkNavigatorService {
         final setorNode = SetorNode(
           setorNome: setorNoGrupo.nome,
           grupoNome: grupoCorrespondente.nome,
-          cragId: rota.picoId,
+          cragId: picoId,
           parent: grupoNode,
         );
 
@@ -155,7 +231,7 @@ class DeepLinkNavigatorService {
             escaladaNome: viaNoSetor.nome,
             setorNome: setorNoGrupo.nome,
             grupoNome: grupoCorrespondente.nome,
-            cragId: rota.picoId,
+            cragId: picoId,
             parent: setorNode,
           );
           return navegarPara(viaNode, 'via');
@@ -208,7 +284,7 @@ class DeepLinkNavigatorService {
       if (grupoCorrespondente != null) {
         paiDoSetor = GrupoNode(
           grupoNome: grupoCorrespondente.nome,
-          cragId: rota.picoId,
+          cragId: picoId,
           parent: picoNode,
         );
       }
@@ -216,7 +292,7 @@ class DeepLinkNavigatorService {
       final setorNode = SetorNode(
         setorNome: setorDireto.nome,
         grupoNome: grupoCorrespondente?.nome,
-        cragId: rota.picoId,
+        cragId: picoId,
         parent: paiDoSetor,
       );
 
@@ -239,7 +315,7 @@ class DeepLinkNavigatorService {
           escaladaNome: viaNoSetor.nome,
           setorNome: setorDireto.nome,
           grupoNome: grupoCorrespondente?.nome,
-          cragId: rota.picoId,
+          cragId: picoId,
           parent: setorNode,
         );
         return navegarPara(viaNode, 'via');

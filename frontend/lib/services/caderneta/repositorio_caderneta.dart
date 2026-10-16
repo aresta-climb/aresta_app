@@ -46,7 +46,7 @@ abstract interface class RepositorioCaderneta {
 
   /// Compila as métricas analíticas e pirâmide de graduação com os dados da caderneta.
   EstatisticasCaderneta calcularEstatisticas({
-    String? Function(String escaladaUid)? resolvedorGrau,
+    String? Function(String escaladaUid)? obterGrauDaVia,
   });
 }
 
@@ -78,7 +78,7 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   /// Construtor que aceita opcionalmente uma instância injetada de [SharedPreferences].
   RepositorioCadernetaLocal({SharedPreferences? preferencias})
-      : _preferencias = preferencias;
+    : _preferencias = preferencias;
 
   @override
   ValueListenable<List<Cadena>> get cadenasNotifier => _cadenasNotifier;
@@ -145,8 +145,9 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   @override
   List<Cadena> obterCadenasPorEscalada(String escaladaUid) {
-    final filtradas =
-        _cadenas.where((c) => c.escaladaUid == escaladaUid).toList();
+    final filtradas = _cadenas
+        .where((c) => c.escaladaUid == escaladaUid)
+        .toList();
     filtradas.sort((a, b) => b.dataAscensao.compareTo(a.dataAscensao));
     return List.unmodifiable(filtradas);
   }
@@ -158,8 +159,7 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
     final ordenadas = List<Cadena>.from(ascensoes)
       ..sort((a, b) {
-        final prioridade =
-            b.prioridadeVisual.compareTo(a.prioridadeVisual);
+        final prioridade = b.prioridadeVisual.compareTo(a.prioridadeVisual);
         if (prioridade != 0) return prioridade;
         return b.dataAscensao.compareTo(a.dataAscensao);
       });
@@ -178,11 +178,11 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   @override
   EstatisticasCaderneta calcularEstatisticas({
-    String? Function(String escaladaUid)? resolvedorGrau,
+    String? Function(String escaladaUid)? obterGrauDaVia,
   }) {
     return EstatisticasCaderneta.calcular(
       _cadenas,
-      resolvedorGrau: resolvedorGrau,
+      obterGrauDaVia: obterGrauDaVia,
     );
   }
 

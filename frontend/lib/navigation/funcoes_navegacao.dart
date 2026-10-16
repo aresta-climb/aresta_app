@@ -6,6 +6,7 @@ import '../main.dart';
 import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../services/configuracao_recursos.dart';
 import '../pages/perfil.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
@@ -288,8 +289,12 @@ class AppNav {
     ctrl.navigateTo(BrowseNode(ctrl.currentNode));
   }
 
-  /// Navega para a página de Perfil e Caderneta Esportiva do Escalador.
+  /// Navega para a página de Perfil e Caderneta Esportiva do Escalador,
+  /// caso o recurso esteja habilitado nas configurações de ambiente.
   static void toPerfil(BuildContext context) {
+    if (!ConfiguracaoRecursos.perfilHabilitado) {
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const PerfilPage()),
     );

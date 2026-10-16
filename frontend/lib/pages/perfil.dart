@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/modelos/cadena.dart';
+import '../data/modelos/perfil_escalador.dart';
+import '../services/caderneta/estatisticas_caderneta.dart';
 import '../services/caderneta/repositorio_caderneta.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -13,11 +15,10 @@ import '../widgets/caderneta/grafico_piramide_graus.dart';
 
 /// Página de exibição do Perfil do Escalador e Caderneta Esportiva pessoal.
 ///
-/// Apresenta o cabeçalho esportivo com identificador público permanente ([autorIdPublico]),
-/// apelido customizável, cartões de métricas agregadas, pirâmide de graduação interativa
-/// e o histórico cronológico de ascensões com suporte a exclusão segura.
+/// Implementada sob o padrão de interface estritamente declarativa (Dumb UI), delegando
+/// a orquestração de dados, cálculo de métricas e reatividade ao [PerfilViewModel].
 class PerfilPage extends StatefulWidget {
-  /// ViewModel injetado (ou inicializado por padrão).
+  /// ViewModel injetado (ou inicializado por padrão com a instância local-first).
   final PerfilViewModel? viewModel;
 
   const PerfilPage({super.key, this.viewModel});
@@ -64,54 +65,9 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 
   Future<void> _editarApelido() async {
-    final controller = TextEditingController(
-      text: _viewModel.perfil.autorNomePublico,
-    );
-
-    final novoNome = await showDialog<String>(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          backgroundColor: dialogCtx.colors.deepBasalt,
-          title: Text(
-            'Editar Apelido',
-            style: TextStyle(color: dialogCtx.colors.chalkWhite),
-          ),
-          content: TextField(
-            key: const Key('campo_novo_nome_atleta'),
-            controller: controller,
-            maxLength: 50,
-            style: TextStyle(color: dialogCtx.colors.chalkWhite),
-            decoration: InputDecoration(
-              hintText: 'Digite seu apelido esportivo...',
-              hintStyle: TextStyle(color: dialogCtx.colors.ashGrey),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: dialogCtx.colors.rustIron),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(color: dialogCtx.colors.ashGrey),
-              ),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogCtx).pop(controller.text.trim()),
-              child: Text(
-                'Salvar',
-                style: TextStyle(
-                  color: dialogCtx.colors.rustIron,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    final novoNome = await _DialogoEditarApelido.exibir(
+      context,
+      nomeAtual: _viewModel.perfil.autorNomePublico,
     );
 
     if (novoNome != null && novoNome.isNotEmpty) {
@@ -120,42 +76,7 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 
   Future<void> _confirmarExclusaoCadena(Cadena cadena) async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          backgroundColor: dialogCtx.colors.deepBasalt,
-          title: Text(
-            'Excluir Ascensão?',
-            style: TextStyle(color: dialogCtx.colors.chalkWhite),
-          ),
-          content: Text(
-            'Tem certeza de que deseja remover esta ascensão da sua caderneta esportiva?',
-            style: TextStyle(color: dialogCtx.colors.ashGrey),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(false),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(color: dialogCtx.colors.ashGrey),
-              ),
-            ),
-            TextButton(
-              key: const Key('btn_confirmar_exclusao'),
-              onPressed: () => Navigator.of(dialogCtx).pop(true),
-              child: Text(
-                'Excluir',
-                style: TextStyle(
-                  color: dialogCtx.colors.rustIron,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    final confirmado = await _DialogoConfirmarExclusao.exibir(context);
 
     if (confirmado == true) {
       await _viewModel.excluirCadena(cadena.id);
@@ -164,8 +85,6 @@ class _PerfilPageState extends State<PerfilPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cores = context.colors;
-
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
@@ -183,303 +102,26 @@ class _PerfilPageState extends State<PerfilPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Cabeçalho do Perfil
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: cores.caveShadow,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cores.graniteEdge),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: cores.deepBasalt,
-                          child: Icon(
-                            Icons.terrain_rounded,
-                            color: cores.rustIron,
-                            size: 34,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      perfil.autorNomePublico,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: cores.chalkWhite,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    key: const Key('btn_editar_nome_atleta'),
-                                    icon: Icon(
-                                      Icons.edit,
-                                      size: 16,
-                                      color: cores.ashGrey,
-                                    ),
-                                    onPressed: _editarApelido,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              InkWell(
-                                key: const Key('chip_autor_id_publico'),
-                                onTap: () =>
-                                    _copiarIdPublico(perfil.autorIdPublico),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cores.deepBasalt,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: cores.graniteEdge,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'ID: ${perfil.autorIdPublico}',
-                                        style: TextStyle(
-                                          color: cores.ashGrey,
-                                          fontSize: 12,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Icon(
-                                        Icons.copy_rounded,
-                                        size: 13,
-                                        color: cores.rustIron,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  _CabecalhoPerfil(
+                    perfil: perfil,
+                    onEditarApelido: _editarApelido,
+                    onCopiarIdPublico: () =>
+                        _copiarIdPublico(perfil.autorIdPublico),
                   ),
                   const SizedBox(height: 16),
-
-                  // 2. Painel de Métricas (2x2)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CardEstatistica(
-                          titulo: 'Total de Cadenas',
-                          valor: '${stats.totalCadenas}',
-                          icone: Icons.emoji_events_outlined,
-                          subtitulo: '${stats.totalAscensoes} registros',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CardEstatistica(
-                          titulo: 'À Vista / Flash',
-                          valor: '${stats.taxaAVistaFlash.toStringAsFixed(0)}%',
-                          icone: Icons.bolt,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CardEstatistica(
-                          titulo: 'Maior Grau (Via)',
-                          valor: stats.maiorGrauVia ?? '-',
-                          icone: Icons.vertical_align_top_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CardEstatistica(
-                          titulo: 'Maior Grau (Boulder)',
-                          valor: stats.maiorGrauBoulder ?? '-',
-                          icone: Icons.crop_square_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
+                  _PainelMetricasPerfil(estatisticas: stats),
                   const SizedBox(height: 20),
-
-                  // 3. Pirâmide de Graduação
                   GraficoPiramideGraus(
                     piramide: _viewModel.piramideAtiva,
                     modoVias: _viewModel.modoVias,
                     onAlternarModo: _viewModel.alternarModoModalidade,
                   ),
                   const SizedBox(height: 24),
-
-                  // 4. Histórico Cronológico de Ascensões
-                  Text(
-                    'Histórico de Ascensões (${historico.length})',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: cores.chalkWhite,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  _SecaoHistoricoCadenas(
+                    historico: historico,
+                    viewModel: _viewModel,
+                    onExcluirCadena: _confirmarExclusaoCadena,
                   ),
-                  const SizedBox(height: 12),
-
-                  if (historico.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Nenhuma ascensão registrada ainda.\nSuas cadenas salvas nas páginas das vias aparecerão aqui.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: cores.ashGrey, fontSize: 13),
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: historico.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final cadena = historico[index];
-                        final dataStr =
-                            '${cadena.dataAscensao.day.toString().padLeft(2, '0')}/${cadena.dataAscensao.month.toString().padLeft(2, '0')}/${cadena.dataAscensao.year}';
-                        final nomeVia =
-                            _viewModel.obterNomeEscalada(cadena.escaladaUid);
-                        final grauVia =
-                            _viewModel.obterGrauEscalada(cadena.escaladaUid);
-
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: cores.caveShadow,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: cores.graniteEdge),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: cadena.isCadena
-                                      ? cores.fernGreen.withValues(alpha: 0.2)
-                                      : cores.rustIron.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  cadena.tipoAscensao.rotulo,
-                                  style: TextStyle(
-                                    color: cadena.isCadena
-                                        ? cores.fernGreen
-                                        : cores.rustIron,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            nomeVia,
-                                            style: TextStyle(
-                                              color: cores.chalkWhite,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ),
-                                        if (grauVia != null &&
-                                            grauVia.isNotEmpty) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: cores.deepBasalt,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              grauVia,
-                                              style: TextStyle(
-                                                color: cores.chalkWhite,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      dataStr,
-                                      style: TextStyle(
-                                        color: cores.ashGrey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    if (cadena.notasPrivadas.isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '“${cadena.notasPrivadas}”',
-                                        style: TextStyle(
-                                          color: cores.ashGrey,
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                key: Key('btn_excluir_cadena_${cadena.id}'),
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: cores.ashGrey,
-                                ),
-                                onPressed: () =>
-                                    _confirmarExclusaoCadena(cadena),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -487,6 +129,444 @@ class _PerfilPageState extends State<PerfilPage> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Cabeçalho esportivo do perfil com avatar, apelido editável e chip de ID público.
+class _CabecalhoPerfil extends StatelessWidget {
+  final PerfilEscalador perfil;
+  final VoidCallback onEditarApelido;
+  final VoidCallback onCopiarIdPublico;
+
+  const _CabecalhoPerfil({
+    required this.perfil,
+    required this.onEditarApelido,
+    required this.onCopiarIdPublico,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: cores.deepBasalt,
+            child: Icon(Icons.terrain_rounded, color: cores.rustIron, size: 34),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        perfil.autorNomePublico,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: cores.chalkWhite,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const Key('btn_editar_nome_atleta'),
+                      icon: Icon(Icons.edit, size: 16, color: cores.ashGrey),
+                      onPressed: onEditarApelido,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                InkWell(
+                  key: const Key('chip_autor_id_publico'),
+                  onTap: onCopiarIdPublico,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cores.deepBasalt,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: cores.graniteEdge),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'ID: ${perfil.autorIdPublico}',
+                          style: TextStyle(
+                            color: cores.ashGrey,
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.copy_rounded,
+                          size: 13,
+                          color: cores.rustIron,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Painel em grade 2x2 com os principais cartões métricos da caderneta.
+class _PainelMetricasPerfil extends StatelessWidget {
+  final EstatisticasCaderneta estatisticas;
+
+  const _PainelMetricasPerfil({required this.estatisticas});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CardEstatistica(
+                titulo: 'Total de Cadenas',
+                valor: '${estatisticas.totalCadenas}',
+                icone: Icons.emoji_events_outlined,
+                subtitulo: '${estatisticas.totalAscensoes} registros',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CardEstatistica(
+                titulo: 'À Vista / Flash',
+                valor: '${estatisticas.taxaAVistaFlash.toStringAsFixed(0)}%',
+                icone: Icons.bolt,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: CardEstatistica(
+                titulo: 'Maior Grau (Via)',
+                valor: estatisticas.maiorGrauVia ?? '-',
+                icone: Icons.vertical_align_top_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CardEstatistica(
+                titulo: 'Maior Grau (Boulder)',
+                valor: estatisticas.maiorGrauBoulder ?? '-',
+                icone: Icons.crop_square_rounded,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Seção com o histórico de ascensões cronológicas ou estado informativo vazio.
+class _SecaoHistoricoCadenas extends StatelessWidget {
+  final List<Cadena> historico;
+  final PerfilViewModel viewModel;
+  final ValueChanged<Cadena> onExcluirCadena;
+
+  const _SecaoHistoricoCadenas({
+    required this.historico,
+    required this.viewModel,
+    required this.onExcluirCadena,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Histórico de Ascensões (${historico.length})',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (historico.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            alignment: Alignment.center,
+            child: Text(
+              'Nenhuma ascensão registrada ainda.\nSuas cadenas salvas nas páginas das vias aparecerão aqui.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cores.ashGrey, fontSize: 13),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: historico.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final cadena = historico[index];
+              return _ItemHistoricoCadena(
+                cadena: cadena,
+                nomeVia: viewModel.obterNomeEscalada(cadena.escaladaUid),
+                grauVia: viewModel.obterGrauEscalada(cadena.escaladaUid),
+                dataFormatada: viewModel.formatarDataAscensao(
+                  cadena.dataAscensao,
+                ),
+                onExcluir: () => onExcluirCadena(cadena),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+/// Card de exibição individual de uma ascensão esportiva no histórico.
+class _ItemHistoricoCadena extends StatelessWidget {
+  final Cadena cadena;
+  final String nomeVia;
+  final String? grauVia;
+  final String dataFormatada;
+  final VoidCallback onExcluir;
+
+  const _ItemHistoricoCadena({
+    required this.cadena,
+    required this.nomeVia,
+    this.grauVia,
+    required this.dataFormatada,
+    required this.onExcluir,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: cadena.isCadena
+                  ? cores.fernGreen.withValues(alpha: 0.2)
+                  : cores.rustIron.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              cadena.tipoAscensao.rotulo,
+              style: TextStyle(
+                color: cadena.isCadena ? cores.fernGreen : cores.rustIron,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nomeVia,
+                        style: TextStyle(
+                          color: cores.chalkWhite,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (grauVia != null && grauVia!.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cores.deepBasalt,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          grauVia!,
+                          style: TextStyle(
+                            color: cores.chalkWhite,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  dataFormatada,
+                  style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                ),
+                if (cadena.notasPrivadas.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '“${cadena.notasPrivadas}”',
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontStyle: FontStyle.italic,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            key: Key('btn_excluir_cadena_${cadena.id}'),
+            icon: Icon(Icons.delete_outline, size: 18, color: cores.ashGrey),
+            onPressed: onExcluir,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Diálogo modal conciso para edição do apelido esportivo público do atleta.
+class _DialogoEditarApelido extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _DialogoEditarApelido({required this.controller});
+
+  static Future<String?> exibir(
+    BuildContext context, {
+    required String nomeAtual,
+  }) {
+    final controller = TextEditingController(text: nomeAtual);
+
+    return showDialog<String>(
+      context: context,
+      builder: (dialogCtx) => _DialogoEditarApelido(controller: controller),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      title: Text('Editar Apelido', style: TextStyle(color: cores.chalkWhite)),
+      content: TextField(
+        key: const Key('campo_novo_nome_atleta'),
+        controller: controller,
+        maxLength: 50,
+        style: TextStyle(color: cores.chalkWhite),
+        decoration: InputDecoration(
+          hintText: 'Digite seu apelido esportivo...',
+          hintStyle: TextStyle(color: cores.ashGrey),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: cores.rustIron),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancelar', style: TextStyle(color: cores.ashGrey)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: Text(
+            'Salvar',
+            style: TextStyle(
+              color: cores.rustIron,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Diálogo modal de confirmação de exclusão segura de uma ascensão da caderneta.
+class _DialogoConfirmarExclusao extends StatelessWidget {
+  const _DialogoConfirmarExclusao();
+
+  static Future<bool?> exibir(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => const _DialogoConfirmarExclusao(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      title: Text(
+        'Excluir Ascensão?',
+        style: TextStyle(color: cores.chalkWhite),
+      ),
+      content: Text(
+        'Tem certeza de que deseja remover esta ascensão da sua caderneta esportiva?',
+        style: TextStyle(color: cores.ashGrey),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text('Cancelar', style: TextStyle(color: cores.ashGrey)),
+        ),
+        TextButton(
+          key: const Key('btn_confirmar_exclusao'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(
+            'Excluir',
+            style: TextStyle(
+              color: cores.rustIron,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

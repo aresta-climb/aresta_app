@@ -26,8 +26,21 @@ lib/navigation/
 ├── construtor_reativo_pagina.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
 ├── construtor_view_arvore.dart       - Fábrica e resolução modular de nós da árvore para telas e modais
 ├── wrapper_navegacao_arvore.dart       - Roteador principal e envoltório declarativo com suporte a abas persistentes
-└── funcoes_navegacao.dart          - API pública simplificada AppNav
+├── funcoes_navegacao.dart          - API pública simplificada AppNav
+├── analisador_rotas_deep_link.dart     - Parser normalizador de URLs, QR Codes e parâmetros UTM (aresta.cc e legados)
+├── localizador_destino_uid.dart        - Localizador de UIDs universais (NanoID 14c) para nós da árvore de navegação
+├── servico_navegacao_deep_link.dart    - Orquestrador de linhagem e transição de rotas para deep links
+└── gerenciador_deep_links.dart         - Gerenciador de ciclo de vida de links externos do sistema (Cold e Warm Start)
 ```
+
+## Deep Links e Placas Físicas nas Falésias (`aresta.cc`)
+
+Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis (v3.0)**, o aplicativo oferece suporte de primeira classe à navegação por placas físicas e links compartilháveis:
+
+- **Domínio Físico:** `https://aresta.cc/<nanoid>` (32 caracteres exatos, otimizados para QR Code Versão 3 Nível H gravado a laser em Aço Inox 316L).
+- **NanoID 14c Universal:** Identificadores estáveis Base62 de 14 caracteres (`[0-9a-zA-Z]`), imunes a colisões e conflitos de merge.
+- **Localização em Cascata (`LocalizadorDestinoUid`):** Mapeia o NanoID 14c instantaneamente para o nó correto (`ViaNode`, `SetorNode`, `GrupoNode` ou `PicoNode`), consultando o índice em memória, os croquis offline locais e as sessões ativas online.
+- **Preservação de Atribuição e Telemetria:** Preserva parâmetros UTM (`utm_source`, `utm_medium`, `utm_campaign`) e registra métricas na telemetria sem afetar a rota de navegação.
 
 ### `arvore/no_navegacao.dart`
 Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`, `picoIds`), nunca os objetos complexos instanciados na memória.

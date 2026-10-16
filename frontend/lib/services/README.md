@@ -16,6 +16,7 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
 | `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), foreground takeover (`setupAppServices`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
+| `configuracao_recursos.dart` | Controle de flags de compilação (`--dart-define`) e chaves secretas de acesso para recursos em desenvolvimento (Perfil do Escalador e Caderneta Esportiva) |
 
 ---
 
@@ -140,3 +141,44 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 - Logs com `[LiveReload]` mostram conexões e eventos push recebidos pelo servidor de desenvolvimento.
 - O banner vermelho global `BannerModoExperimental` é injetado via `MaterialApp.builder` para persistir em todas as telas.
 - O estado de **Developer Mode** persiste no disco; os **Dados Experimentais** não persistem entre sessões.
+
+---
+
+## Controle de Recursos em Desenvolvimento (Feature Flags & Chaves de Acesso)
+
+Para garantir que funcionalidades em desenvolvimento (como o **Perfil do Escalador** e a **Caderneta Esportiva**) não fiquem expostas prematuramente em compilações de produção e versões de release, o acesso é protegido por flags de compilação gerenciadas pela classe `ConfiguracaoRecursos` (`configuracao_recursos.dart`).
+
+### Comportamento Padrão (Produção / Release)
+Em qualquer compilação ou execução convencional (`flutter build apk --release`, `flutter run`) onde nenhuma chave ou flag for explicitamente informada:
+- `ConfiguracaoRecursos.perfilHabilitado` avalia como `false`.
+- O botão de Perfil (`btn_home_perfil`) na AppBar da Home (`ArestaHomeAppBar`) permanece oculto.
+- O cartão e o botão de registro de ascensão/cadena (`btn_registrar_cadena`) na tela da via (`via_functions.dart`) permanecem ocultos.
+- Tentativas programáticas ou diretas de navegação via `AppNav.toPerfil` são bloqueadas silenciosamente.
+
+### Como Desbloquear Recursos em Desenvolvimento
+Desenvolvedores e testadores podem liberar o acesso completo aos recursos durante a execução ou build passando flags via `--dart-define`:
+
+```bash
+# Opção 1: Via chave de API / Segredo (conforme exemplo em desenvolvimento)
+flutter run --dart-define=API_KEY=my_secret_key --dart-define=APP_MODE=production
+
+# Opção 2: Via chave específica de acesso ao perfil
+flutter run --dart-define=CHAVE_ACESSO_PERFIL=aresta_segredo_perfil_2026
+
+# Opção 3: Via flag booleana direta
+flutter run --dart-define=HABILITAR_PERFIL=true
+```
+
+### Chaves Secretas Autorizadas
+O sistema reconhece o seguinte conjunto de chaves padronizadas:
+- `my_secret_key`
+- `aresta_segredo_perfil_2026`
+- `minha_chave_secreta`
+- `aresta_dev_secret`
+
+### Testes Automatizados
+Para testes unitários e de widget, a classe provê métodos estáticos com a anotação `@visibleForTesting`:
+- `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true)`: Força o estado habilitado.
+- `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false)`: Força o estado desabilitado.
+- `ConfiguracaoRecursos.redefinirParaTestes()`: Restaura o estado original derivado do ambiente.
+

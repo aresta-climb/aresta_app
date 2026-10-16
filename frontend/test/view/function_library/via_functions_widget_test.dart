@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
 
 void main() {
@@ -200,6 +202,68 @@ void main() {
         expect(find.text('DIFICULDADE'), findsNothing);
         expect(find.text('PROTEÇÕES'), findsNothing);
         expect(find.textContaining(RegExp(r'indefinido', caseSensitive: false)), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deve ocultar botão e selo de caderneta quando perfilHabilitado for false',
+      (WidgetTester tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        final escalada = Escalada()
+          ..uid = 'escalada_teste_1'
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Via Teste Caderneta');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deve exibir botão e selo de caderneta quando perfilHabilitado for true',
+      (WidgetTester tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        final escalada = Escalada()
+          ..uid = 'escalada_teste_2'
+          ..viaEsportiva = (ViaEsportiva()
+            ..nome = 'Via Teste Caderneta 2');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('btn_registrar_cadena')), findsOneWidget);
       },
     );
   });

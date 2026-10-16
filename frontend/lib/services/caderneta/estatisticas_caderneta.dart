@@ -3,7 +3,7 @@
 
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_ascensao.dart';
-import '../../utils/filtro_grau_escalada.dart';
+import 'compilador_estatisticas.dart';
 
 /// Consolidação analítica e métricas de desempenho esportivo da caderneta do escalador.
 ///
@@ -55,138 +55,26 @@ class EstatisticasCaderneta {
 
   /// Cria uma instância zerada para quando não houver ascensões registradas.
   factory EstatisticasCaderneta.vazia() => const EstatisticasCaderneta(
-        totalAscensoes: 0,
-        totalCadenas: 0,
-        totalTentativas: 0,
-        contagemPorEstilo: {},
-        piramideVias: {},
-        piramideBoulders: {},
-        maiorGrauVia: null,
-        maiorGrauBoulder: null,
-        taxaAVistaFlash: 0.0,
-      );
+    totalAscensoes: 0,
+    totalCadenas: 0,
+    totalTentativas: 0,
+    contagemPorEstilo: {},
+    piramideVias: {},
+    piramideBoulders: {},
+    maiorGrauVia: null,
+    maiorGrauBoulder: null,
+    taxaAVistaFlash: 0.0,
+  );
 
-  /// Processa a lista de [cadenas] e compila as estatísticas consolidadas.
-  ///
-  /// O parâmetro opcional [resolvedorGrau] permite resolver o grau oficial da via
-  /// a partir de seu `escaladaUid` (por exemplo, consultando o catálogo do dataset).
+  /// Processa a lista de [cadenas] e compila as estatísticas consolidadas delegando
+  /// a lógica de cálculo ao [CompiladorEstatisticasCaderneta].
   factory EstatisticasCaderneta.calcular(
     List<Cadena> cadenas, {
-    String? Function(String escaladaUid)? resolvedorGrau,
-  }) {
-    if (cadenas.isEmpty) {
-      return EstatisticasCaderneta.vazia();
-    }
-
-    final contagemEstilo = <TipoAscensao, int>{
-      for (final tipo in TipoAscensao.values) tipo: 0,
-    };
-    final mapaVias = <String, int>{};
-    final mapaBoulders = <String, int>{};
-
-    int totalCadenas = 0;
-    int totalTentativas = 0;
-    int totalAVistaFlash = 0;
-
-    for (final cadena in cadenas) {
-      contagemEstilo[cadena.tipoAscensao] =
-          (contagemEstilo[cadena.tipoAscensao] ?? 0) + 1;
-
-      if (!cadena.isCadena) {
-        totalTentativas++;
-        continue;
-      }
-
-      totalCadenas++;
-      if (cadena.tipoAscensao == TipoAscensao.aVista ||
-          cadena.tipoAscensao == TipoAscensao.flash) {
-        totalAVistaFlash++;
-      }
-
-      final grau = resolvedorGrau?.call(cadena.escaladaUid);
-      if (grau != null && grau.trim().isNotEmpty) {
-        final grauLimpo = grau.trim();
-        if (cadena.tipoEscalada.isBoulder) {
-          mapaBoulders[grauLimpo] = (mapaBoulders[grauLimpo] ?? 0) + 1;
-        } else {
-          mapaVias[grauLimpo] = (mapaVias[grauLimpo] ?? 0) + 1;
-        }
-      }
-    }
-
-    final piramideViasOrdenada = _ordenarPiramide(mapaVias, _pesoGrauVia);
-    final piramideBouldersOrdenada =
-        _ordenarPiramide(mapaBoulders, _pesoGrauBoulder);
-
-    final maiorVia = piramideViasOrdenada.isNotEmpty
-        ? piramideViasOrdenada.keys.last
-        : null;
-    final maiorBoulder = piramideBouldersOrdenada.isNotEmpty
-        ? piramideBouldersOrdenada.keys.last
-        : null;
-
-    final taxa = totalCadenas > 0
-        ? (totalAVistaFlash / totalCadenas) * 100.0
-        : 0.0;
-
-    return EstatisticasCaderneta(
-      totalAscensoes: cadenas.length,
-      totalCadenas: totalCadenas,
-      totalTentativas: totalTentativas,
-      contagemPorEstilo: contagemEstilo,
-      piramideVias: piramideViasOrdenada,
-      piramideBoulders: piramideBouldersOrdenada,
-      maiorGrauVia: maiorVia,
-      maiorGrauBoulder: maiorBoulder,
-      taxaAVistaFlash: taxa,
-    );
-  }
-
-  static Map<String, int> _ordenarPiramide(
-    Map<String, int> mapa,
-    int Function(String) pesoFn,
-  ) {
-    final entradas = mapa.entries.toList()
-      ..sort((a, b) {
-        final pesoA = pesoFn(a.key);
-        final pesoB = pesoFn(b.key);
-        if (pesoA != pesoB) {
-          return pesoA.compareTo(pesoB);
-        }
-        return a.key.compareTo(b.key);
-      });
-
-    return {for (final e in entradas) e.key: e.value};
-  }
-
-  static int _pesoGrauVia(String grau) {
-    for (final opcao in OpcoesGrau.grausVia) {
-      if (opcao.rotulo.toLowerCase() == grau.toLowerCase()) {
-        return opcao.valor;
-      }
-    }
-    // Fallback numérico simples para graus não mapeados
-    final match = RegExp(r'\d+').firstMatch(grau);
-    if (match != null) {
-      final numero = int.tryParse(match.group(0)!) ?? 0;
-      return numero * 100;
-    }
-    return 0;
-  }
-
-  static int _pesoGrauBoulder(String grau) {
-    for (final opcao in OpcoesGrau.grausBoulder) {
-      if (opcao.rotulo.toLowerCase() == grau.toLowerCase()) {
-        return opcao.valor;
-      }
-    }
-    final match = RegExp(r'\d+').firstMatch(grau);
-    if (match != null) {
-      final numero = int.tryParse(match.group(0)!) ?? 0;
-      return numero * 100;
-    }
-    return 0;
-  }
+    String? Function(String escaladaUid)? obterGrauDaVia,
+  }) => CompiladorEstatisticasCaderneta.compilar(
+    cadenas,
+    obterGrauDaVia: obterGrauDaVia,
+  );
 
   /// Retorna uma cópia das estatísticas com campos seletivamente substituídos.
   EstatisticasCaderneta copyWith({
@@ -242,13 +130,13 @@ class EstatisticasCaderneta {
 
   @override
   int get hashCode => Object.hash(
-        totalAscensoes,
-        totalCadenas,
-        totalTentativas,
-        maiorGrauVia,
-        maiorGrauBoulder,
-        taxaAVistaFlash.round(),
-      );
+    totalAscensoes,
+    totalCadenas,
+    totalTentativas,
+    maiorGrauVia,
+    maiorGrauBoulder,
+    taxaAVistaFlash.round(),
+  );
 
   @override
   String toString() {

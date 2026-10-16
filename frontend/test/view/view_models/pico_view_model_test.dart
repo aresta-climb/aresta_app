@@ -66,9 +66,7 @@ void main() {
 
       final setor2 = Setor(
         nome: 'Setor 2',
-        escaladas: [
-          Escalada(viaMovel: ViaMovel(nome: 'Fissura Móvel')),
-        ],
+        escaladas: [Escalada(viaMovel: ViaMovel(nome: 'Fissura Móvel'))],
       );
 
       final grupo1 = Grupo(
@@ -97,27 +95,28 @@ void main() {
       vm.dispose();
     });
 
-    test('define tooltipBusca como boulder quando pico é focado em boulders', () {
-      final setor = Setor(
-        nome: 'Setor Boulder',
-        escaladas: [
-          Escalada(boulder: Boulder(nome: 'V3 dos Sonhos')),
-        ],
-      );
-      pico.setoresOuGrupos.add(
-        SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
-      );
+    test(
+      'define tooltipBusca como boulder quando pico é focado em boulders',
+      () {
+        final setor = Setor(
+          nome: 'Setor Boulder',
+          escaladas: [Escalada(boulder: Boulder(nome: 'V3 dos Sonhos'))],
+        );
+        pico.setoresOuGrupos.add(
+          SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+        );
 
-      final vm = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-      );
+        final vm = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+        );
 
-      expect(vm.tooltipBusca, 'Buscar boulder');
-      vm.dispose();
-    });
+        expect(vm.tooltipBusca, 'Buscar boulder');
+        vm.dispose();
+      },
+    );
 
     test('obtém tamanhoFormatado e data de atualização do dataset', () {
       repositorio.activeDataset.value = TopoDataset(
@@ -138,7 +137,9 @@ void main() {
           ResumoCroqui()
             ..id = cragId
             ..nome = 'Pedra do Baú'
-            ..timestampUpdate = Timestamp.fromDateTime(DateTime(2026, 5, 20, 14, 30)),
+            ..timestampUpdate = Timestamp.fromDateTime(
+              DateTime(2026, 5, 20, 14, 30),
+            ),
         );
 
       final vm = PicoViewModel(
@@ -155,17 +156,20 @@ void main() {
   });
 
   group('PicoViewModel - Interceptação e Ciclo de Vida de Download', () {
-    test('deveInterceptarSaida retorna falso quando permanece no mesmo croqui', () {
-      final vm = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-      );
+    test(
+      'deveInterceptarSaida retorna falso quando permanece no mesmo croqui',
+      () {
+        final vm = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+        );
 
-      expect(vm.deveInterceptarSaida(staysInSameCroqui: true), isFalse);
-      vm.dispose();
-    });
+        expect(vm.deveInterceptarSaida(staysInSameCroqui: true), isFalse);
+        vm.dispose();
+      },
+    );
 
     test('deveInterceptarSaida retorna falso quando croqui está baixado', () {
       repositorio.activeDataset.value = TopoDataset(
@@ -187,45 +191,51 @@ void main() {
       vm.dispose();
     });
 
-    test('deveInterceptarSaida retorna verdadeiro quando não baixado e sai do croqui', () {
-      repositorio.activeDataset.value = TopoDataset(
-        availablePicos: [
-          {'id': cragId, 'nome': 'Pedra do Baú'},
-        ],
-        downloadedPicos: [],
-      );
+    test(
+      'deveInterceptarSaida retorna verdadeiro quando não baixado e sai do croqui',
+      () {
+        repositorio.activeDataset.value = TopoDataset(
+          availablePicos: [
+            {'id': cragId, 'nome': 'Pedra do Baú'},
+          ],
+          downloadedPicos: [],
+        );
 
-      final vm = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-      );
+        final vm = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+        );
 
-      expect(vm.isDownloaded, isFalse);
-      expect(vm.deveInterceptarSaida(staysInSameCroqui: false), isTrue);
-      vm.dispose();
-    });
+        expect(vm.isDownloaded, isFalse);
+        expect(vm.deveInterceptarSaida(staysInSameCroqui: false), isTrue);
+        vm.dispose();
+      },
+    );
 
-    test('excluirPico transiciona croqui para sessão online e chama deleteCrag', () async {
-      final vm = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-      );
+    test(
+      'excluirPico transiciona croqui para sessão online e chama deleteCrag',
+      () async {
+        final vm = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+        );
 
-      final sucesso = await vm.excluirPico();
+        final sucesso = await vm.excluirPico();
 
-      expect(sucesso, isTrue);
-      expect(repositorio.deleteCalled, isTrue);
-      expect(repositorio.deletedCragId, cragId);
-      expect(
-        repositorio.gerenciadorSessaoOnline.obterCroquiOnline(cragId),
-        croqui,
-      );
-      vm.dispose();
-    });
+        expect(sucesso, isTrue);
+        expect(repositorio.deleteCalled, isTrue);
+        expect(repositorio.deletedCragId, cragId);
+        expect(
+          repositorio.gerenciadorSessaoOnline.obterCroquiOnline(cragId),
+          croqui,
+        );
+        vm.dispose();
+      },
+    );
 
     test('baixarPico executa download com sucesso e atualiza estado', () async {
       repositorio.indiceData.value = Indice()
@@ -251,43 +261,49 @@ void main() {
       vm.dispose();
     });
 
-    test('PicoViewModel utiliza ServicoCroquiOnline compartilhado sem vazamento de polling', () {
-      final servico = ServicoCroquiOnline(
-        sessaoOnline: repositorio.gerenciadorSessaoOnline,
-      );
+    test(
+      'PicoViewModel utiliza ServicoCroquiOnline compartilhado sem vazamento de polling',
+      () {
+        final servico = ServicoCroquiOnline(
+          sessaoOnline: repositorio.gerenciadorSessaoOnline,
+        );
 
-      final vm1 = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-        servicoCroquiOnline: servico,
-      );
+        final vm1 = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+          servicoCroquiOnline: servico,
+        );
 
-      expect(servico.isPollingAtivo(cragId), isFalse);
+        expect(servico.isPollingAtivo(cragId), isFalse);
 
-      vm1.dispose();
-      expect(servico.isPollingAtivo(cragId), isFalse);
-    });
+        vm1.dispose();
+        expect(servico.isPollingAtivo(cragId), isFalse);
+      },
+    );
 
-    test('PicoViewModel.dispose() não descarta o ServicoCroquiOnline compartilhado nem fecha seu cliente HTTP', () {
-      final mockClient = _MockHttpClient();
-      final servico = ServicoCroquiOnline(
-        client: ClienteHttpAresta.paraTestes(mockClient),
-        sessaoOnline: repositorio.gerenciadorSessaoOnline,
-      );
+    test(
+      'PicoViewModel.dispose() não descarta o ServicoCroquiOnline compartilhado nem fecha seu cliente HTTP',
+      () {
+        final mockClient = _MockHttpClient();
+        final servico = ServicoCroquiOnline(
+          client: ClienteHttpAresta.paraTestes(mockClient),
+          sessaoOnline: repositorio.gerenciadorSessaoOnline,
+        );
 
-      final vm = PicoViewModel(
-        pico: pico,
-        croqui: croqui,
-        cragId: cragId,
-        datasetRepo: repositorio,
-        servicoCroquiOnline: servico,
-      );
+        final vm = PicoViewModel(
+          pico: pico,
+          croqui: croqui,
+          cragId: cragId,
+          datasetRepo: repositorio,
+          servicoCroquiOnline: servico,
+        );
 
-      vm.dispose();
+        vm.dispose();
 
-      verifyNever(() => mockClient.close());
-    });
+        verifyNever(() => mockClient.close());
+      },
+    );
   });
 }

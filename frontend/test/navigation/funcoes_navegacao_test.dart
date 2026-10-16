@@ -11,6 +11,9 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/pages/perfil.dart';
+import 'package:frontend/theme/cores_app.dart';
 
 class FakeDatasetRepository extends Fake implements DatasetRepository {
   @override
@@ -271,6 +274,50 @@ void main() {
         final controller = TreeNavigationWrapper.currentTreeController;
         expect(controller?.currentNode, isA<PicoNode>());
         expect((controller?.currentNode as PicoNode).cragId, 'test_crag');
+      },
+    );
+
+    testWidgets(
+      'AppNav.toPerfil não navega para PerfilPage quando perfilHabilitado for false',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(body: Text('Tela Inicial')),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.text('Tela Inicial'));
+        AppNav.toPerfil(context);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PerfilPage), findsNothing);
+        expect(find.text('Tela Inicial'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'AppNav.toPerfil navega para PerfilPage quando perfilHabilitado for true',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: const [AppColors.dark]),
+            home: const Scaffold(body: Text('Tela Inicial')),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.text('Tela Inicial'));
+        AppNav.toPerfil(context);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PerfilPage), findsOneWidget);
       },
     );
   });

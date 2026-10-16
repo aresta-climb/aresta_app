@@ -35,83 +35,92 @@ void main() {
       viewModel.dispose();
     });
 
-    test('construtor padrão utiliza a instância singleton de RepositorioCadernetaLocal', () {
-      RepositorioCadernetaLocal.instancia = repositorio;
-      final viewModel = PerfilViewModel();
-      expect(viewModel.repositorio, equals(repositorio));
-      viewModel.dispose();
-    });
+    test(
+      'construtor padrão utiliza a instância singleton de RepositorioCadernetaLocal',
+      () {
+        RepositorioCadernetaLocal.instancia = repositorio;
+        final viewModel = PerfilViewModel();
+        expect(viewModel.repositorio, equals(repositorio));
+        viewModel.dispose();
+      },
+    );
 
-    test('reage automaticamente a inserções e exclusões no repositório', () async {
-      final viewModel = PerfilViewModel(
-        repositorio: repositorio,
-        resolvedorGrau: (uid) => uid == 'v1' ? '7a' : 'V4',
-        resolvedorNomeEscalada: (uid) => uid == 'v1' ? 'Via Alfa' : 'Bloco Beta',
-      );
+    test(
+      'reage automaticamente a inserções e exclusões no repositório',
+      () async {
+        final viewModel = PerfilViewModel(
+          repositorio: repositorio,
+          obterGrauDaVia: (uid) => uid == 'v1' ? '7a' : 'V4',
+          obterNomeDaVia: (uid) => uid == 'v1' ? 'Via Alfa' : 'Bloco Beta',
+        );
 
-      bool notificado = false;
-      viewModel.addListener(() {
-        notificado = true;
-      });
+        bool notificado = false;
+        viewModel.addListener(() {
+          notificado = true;
+        });
 
-      final c1 = Cadena.criar(
-        escaladaUid: 'v1',
-        dataAscensao: DateTime(2026, 9, 10),
-        tipoAscensao: TipoAscensao.flash,
-        tipoEscalada: TipoEscalada.guiado,
-      );
-
-      await repositorio.salvarCadena(c1);
-
-      expect(notificado, isTrue);
-      expect(viewModel.historicoCadenas.length, 1);
-      expect(viewModel.estatisticas.totalCadenas, 1);
-      expect(viewModel.estatisticas.maiorGrauVia, '7a');
-      expect(viewModel.obterNomeEscalada('v1'), 'Via Alfa');
-      expect(viewModel.obterGrauEscalada('v1'), '7a');
-
-      // Exclui a cadena
-      await viewModel.excluirCadena(c1.id);
-      expect(viewModel.historicoCadenas, isEmpty);
-      expect(viewModel.estatisticas.totalCadenas, 0);
-
-      viewModel.dispose();
-    });
-
-    test('alterna a modalidade ativa da pirâmide entre Vias e Boulders', () async {
-      final viewModel = PerfilViewModel(
-        repositorio: repositorio,
-        resolvedorGrau: (uid) => uid == 'v1' ? '8a' : 'V7',
-      );
-
-      await repositorio.salvarCadena(
-        Cadena.criar(
+        final c1 = Cadena.criar(
           escaladaUid: 'v1',
-          dataAscensao: DateTime(2026, 9, 1),
-          tipoAscensao: TipoAscensao.trabalhado,
-          tipoEscalada: TipoEscalada.guiado,
-        ),
-      );
-      await repositorio.salvarCadena(
-        Cadena.criar(
-          escaladaUid: 'b1',
-          dataAscensao: DateTime(2026, 9, 2),
+          dataAscensao: DateTime(2026, 9, 10),
           tipoAscensao: TipoAscensao.flash,
-          tipoEscalada: TipoEscalada.boulder,
-        ),
-      );
+          tipoEscalada: TipoEscalada.guiado,
+        );
 
-      expect(viewModel.modoVias, isTrue);
-      expect(viewModel.piramideAtiva.containsKey('8a'), isTrue);
-      expect(viewModel.piramideAtiva.containsKey('V7'), isFalse);
+        await repositorio.salvarCadena(c1);
 
-      viewModel.alternarModoModalidade(false);
-      expect(viewModel.modoVias, isFalse);
-      expect(viewModel.piramideAtiva.containsKey('V7'), isTrue);
-      expect(viewModel.piramideAtiva.containsKey('8a'), isFalse);
+        expect(notificado, isTrue);
+        expect(viewModel.historicoCadenas.length, 1);
+        expect(viewModel.estatisticas.totalCadenas, 1);
+        expect(viewModel.estatisticas.maiorGrauVia, '7a');
+        expect(viewModel.obterNomeEscalada('v1'), 'Via Alfa');
+        expect(viewModel.obterGrauEscalada('v1'), '7a');
 
-      viewModel.dispose();
-    });
+        // Exclui a cadena
+        await viewModel.excluirCadena(c1.id);
+        expect(viewModel.historicoCadenas, isEmpty);
+        expect(viewModel.estatisticas.totalCadenas, 0);
+
+        viewModel.dispose();
+      },
+    );
+
+    test(
+      'alterna a modalidade ativa da pirâmide entre Vias e Boulders',
+      () async {
+        final viewModel = PerfilViewModel(
+          repositorio: repositorio,
+          obterGrauDaVia: (uid) => uid == 'v1' ? '8a' : 'V7',
+        );
+
+        await repositorio.salvarCadena(
+          Cadena.criar(
+            escaladaUid: 'v1',
+            dataAscensao: DateTime(2026, 9, 1),
+            tipoAscensao: TipoAscensao.trabalhado,
+            tipoEscalada: TipoEscalada.guiado,
+          ),
+        );
+        await repositorio.salvarCadena(
+          Cadena.criar(
+            escaladaUid: 'b1',
+            dataAscensao: DateTime(2026, 9, 2),
+            tipoAscensao: TipoAscensao.flash,
+            tipoEscalada: TipoEscalada.boulder,
+          ),
+        );
+
+        expect(viewModel.modoVias, isTrue);
+        expect(viewModel.piramideAtiva.containsKey('8a'), isTrue);
+        expect(viewModel.piramideAtiva.containsKey('V7'), isFalse);
+
+        viewModel.alternarModoModalidade(false);
+        expect(viewModel.modoVias, isFalse);
+        expect(viewModel.piramideAtiva.containsKey('V7'), isTrue);
+        expect(viewModel.piramideAtiva.containsKey('8a'), isFalse);
+
+        viewModel.dispose();
+      },
+    );
 
     test('permite atualizar o apelido público do escalador', () async {
       final viewModel = PerfilViewModel(repositorio: repositorio);
@@ -123,10 +132,28 @@ void main() {
       viewModel.dispose();
     });
 
-    test('obterNomeEscalada retorna identificador como fallback quando não resolvido', () {
-      final viewModel = PerfilViewModel(repositorio: repositorio);
-      expect(viewModel.obterNomeEscalada('sem-nome-uid'), 'Via (sem-nome-uid)');
-      viewModel.dispose();
-    });
+    test(
+      'obterNomeEscalada retorna identificador como fallback quando não resolvido',
+      () {
+        final viewModel = PerfilViewModel(repositorio: repositorio);
+        expect(
+          viewModel.obterNomeEscalada('sem-nome-uid'),
+          'Via (sem-nome-uid)',
+        );
+        viewModel.dispose();
+      },
+    );
+
+    test(
+      'formatarDataAscensao formata datas corretamente em padrão DD/MM/AAAA',
+      () {
+        final viewModel = PerfilViewModel(repositorio: repositorio);
+        expect(
+          viewModel.formatarDataAscensao(DateTime(2026, 4, 9)),
+          '09/04/2026',
+        );
+        viewModel.dispose();
+      },
+    );
   });
 }

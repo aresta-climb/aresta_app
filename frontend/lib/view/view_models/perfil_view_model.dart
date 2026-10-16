@@ -16,19 +16,19 @@ class PerfilViewModel extends ChangeNotifier {
   /// Repositório da caderneta esportiva utilizado para persistência e consultas.
   final RepositorioCaderneta repositorio;
 
-  /// Função resolvedora opcional para converter `escaladaUid` no grau textual oficial da via.
-  final String? Function(String escaladaUid)? resolvedorGrau;
+  /// Função opcional para obter o grau textual oficial da via a partir de seu `escaladaUid`.
+  final String? Function(String escaladaUid)? obterGrauDaVia;
 
-  /// Função resolvedora opcional para obter o nome legível da escalada por `escaladaUid`.
-  final String? Function(String escaladaUid)? resolvedorNomeEscalada;
+  /// Função opcional para obter o nome legível da via a partir de seu `escaladaUid`.
+  final String? Function(String escaladaUid)? obterNomeDaVia;
 
   bool _modoVias = true;
 
   /// Construtor que aceita o repositório injetado ou utiliza a instância padrão local.
   PerfilViewModel({
     RepositorioCaderneta? repositorio,
-    this.resolvedorGrau,
-    this.resolvedorNomeEscalada,
+    this.obterGrauDaVia,
+    this.obterNomeDaVia,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
     this.repositorio.perfilNotifier.addListener(_aoAtualizarRepositorio);
@@ -53,7 +53,7 @@ class PerfilViewModel extends ChangeNotifier {
 
   /// Retorna as estatísticas agregadas atualizadas.
   EstatisticasCaderneta get estatisticas =>
-      repositorio.calcularEstatisticas(resolvedorGrau: resolvedorGrau);
+      repositorio.calcularEstatisticas(obterGrauDaVia: obterGrauDaVia);
 
   /// Indica se a visualização da pirâmide está ativa para vias (true) ou boulders (false).
   bool get modoVias => _modoVias;
@@ -83,11 +83,18 @@ class PerfilViewModel extends ChangeNotifier {
 
   /// Obtém o nome amigável da escalada pelo seu [uid], provendo fallback quando não localizado.
   String obterNomeEscalada(String uid) {
-    return resolvedorNomeEscalada?.call(uid) ?? 'Via ($uid)';
+    return obterNomeDaVia?.call(uid) ?? 'Via ($uid)';
   }
 
   /// Obtém a graduação formatada da escalada pelo seu [uid].
   String? obterGrauEscalada(String uid) {
-    return resolvedorGrau?.call(uid);
+    return obterGrauDaVia?.call(uid);
+  }
+
+  /// Formata a data de uma ascensão em padrão textual legível brasileiro (DD/MM/AAAA).
+  String formatarDataAscensao(DateTime data) {
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    return '$dia/$mes/${data.year}';
   }
 }
