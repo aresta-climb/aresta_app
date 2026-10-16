@@ -7,17 +7,17 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../../data/modelos/metadados_feedback.dart';
+import '../http/cliente_http_aresta.dart';
 
 /// Serviço de comunicação HTTP para despacho de feedbacks dos usuários.
 ///
 /// Encapsula a construção do formulário multipart (`description`, `metadata`, `screenshot`),
 /// a anexação do token criptográfico do Firebase App Check e a validação do status code de resposta.
 class FeedbackNetworkService {
-  /// Cliente HTTP injetável para permitir cancelamento, timeouts e mocks em testes.
-  final http.Client httpClient;
+  /// Cliente HTTP compartilhado ou injetável para testes.
+  final ClienteHttpAresta httpClient;
 
   /// URL absoluta da Edge Function do Supabase (ex: `https://.../functions/v1/app-feedback`).
   final String edgeFunctionUrl;
@@ -44,7 +44,7 @@ class FeedbackNetworkService {
     File? indiceFile,
     File? croquiFile,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse(edgeFunctionUrl));
+    final request = MultipartRequest('POST', Uri.parse(edgeFunctionUrl));
 
     // Anexa o token de atestação do Firebase App Check se disponível
     if (appCheckToken != null && appCheckToken!.isNotEmpty) {
@@ -66,7 +66,7 @@ class FeedbackNetworkService {
       final filename = isWebp ? 'screenshot.webp' : 'screenshot.png';
 
       request.files.add(
-        await http.MultipartFile.fromPath(
+        await MultipartFile.fromPath(
           'screenshot',
           arquivoImagem.path,
           filename: filename,
@@ -77,7 +77,7 @@ class FeedbackNetworkService {
 
     if (indiceFile != null && indiceFile.existsSync()) {
       request.files.add(
-        await http.MultipartFile.fromPath(
+        await MultipartFile.fromPath(
           'indice_file',
           indiceFile.path,
           filename: 'indice.binarypb',
@@ -87,7 +87,7 @@ class FeedbackNetworkService {
 
     if (croquiFile != null && croquiFile.existsSync()) {
       request.files.add(
-        await http.MultipartFile.fromPath(
+        await MultipartFile.fromPath(
           'croqui_file',
           croquiFile.path,
           filename: 'compilado.binarypb',

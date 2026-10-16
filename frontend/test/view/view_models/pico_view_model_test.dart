@@ -10,7 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
-import 'package:frontend/services/http/servico_croqui_online.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 
 class _MockHttpClient extends Mock implements http.Client {}
@@ -273,7 +273,7 @@ void main() {
     test('PicoViewModel.dispose() não descarta o ServicoCroquiOnline compartilhado nem fecha seu cliente HTTP', () {
       final mockClient = _MockHttpClient();
       final servico = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: repositorio.gerenciadorSessaoOnline,
       );
 

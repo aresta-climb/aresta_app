@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:http/http.dart' as http;
+import '../http/cliente_http_aresta.dart';
 
 /// Serviço para centralizar logs de erro silenciosos, falhas críticas e mensagens informativas do aplicativo.
 /// No modo de debug, as mensagens e erros são impressos no console local.
@@ -95,7 +95,7 @@ class AppLogger {
         error is HttpException ||
         error is HandshakeException ||
         error is CertificateException ||
-        error is http.ClientException) {
+        error is ClientException) {
       return true;
     }
 

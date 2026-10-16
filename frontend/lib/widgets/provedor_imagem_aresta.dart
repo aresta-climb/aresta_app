@@ -1,14 +1,14 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../services/repositorio_dataset.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/remote_config.dart';
+import '../services/http/cliente_http_aresta.dart';
 import 'imagem_arquivo_aresta.dart';
 
 /// Provedor unificado e em camadas para resolução de imagens do ecossistema Aresta.
@@ -16,9 +16,13 @@ import 'imagem_arquivo_aresta.dart';
 /// Ordem de precedência:
 /// 1. Armazenamento local permanente (`/downloads/<picoId>/...` ou `$docsDir/thumbnails/...`)
 /// 2. Cache temporário volátil do sistema operacional (`/temp_cache/<picoId>/<caminho>.<hash>`)
-/// 3. Streaming remoto da CDN HTTP com gravação atômica em disco temporário.
+/// 3. Streaming remoto da CDN HTTP com gravação atômica em disco temporário reutilizando
+///    o pool Keep-Alive de [ClienteHttpAresta].
 class ProvedorImagemAresta {
   const ProvedorImagemAresta._();
+
+  /// Tempo limite máximo para o download completo de uma imagem remota.
+  static const Duration tempoLimiteDownload = Duration(seconds: 15);
 
   /// Registro em memória de downloads ativos para evitar requisições redundantes simultâneas.
   static final Map<String, Future<ImageProvider?>> _downloadsEmAndamento = {};
@@ -39,7 +43,7 @@ class ProvedorImagemAresta {
     String? caminhoDownloads,
     String? caminhoCacheVolatil,
     DatasetRepository? datasetRepository,
-    http.Client? clienteHttp,
+    ClienteHttpAresta? clienteHttp,
     int? larguraAlvo,
     int? alturaAlvo,
   }) async {
@@ -91,15 +95,13 @@ class ProvedorImagemAresta {
       }
 
       if (hashEfetivo == null || hashEfetivo.isEmpty) {
-        try {
-          final repo = datasetRepository ?? DatasetRepository.instance;
-          if (repo != null) {
-            hashEfetivo = repo.obterSha256DaMidia(picoId, cleanPath);
-            if (hashEfetivo == null && ehThumbnail) {
-              hashEfetivo = repo.obterSha256DaMidia(picoId, 'thumbnails/$picoId.webp');
-            }
+        final repo = datasetRepository ?? DatasetRepository.instance;
+        if (repo != null) {
+          hashEfetivo = repo.obterSha256DaMidia(picoId, cleanPath);
+          if (hashEfetivo == null && ehThumbnail) {
+            hashEfetivo = repo.obterSha256DaMidia(picoId, 'thumbnails/$picoId.webp');
           }
-        } catch (_) {}
+        }
       }
 
       // 1. Armazenamento Local Permanente (/downloads ou thumbnails permanentes)
@@ -191,7 +193,7 @@ class ProvedorImagemAresta {
           if (serverBase.isEmpty) {
             try {
               serverBase = EditorDeCroqui.instance.activeBaseUrl;
-            } catch (_) {
+            } on AssertionError {
               serverBase = RemoteConfigService.instance.officialServerUrl;
             }
           }
@@ -289,7 +291,7 @@ class ProvedorImagemAresta {
     String? caminhoDownloads,
     String? caminhoCacheVolatil,
     DatasetRepository? datasetRepository,
-    http.Client? clienteHttp,
+    ClienteHttpAresta? clienteHttp,
   }) async {
     if (picoId.trim().isEmpty || caminho.trim().isEmpty) return null;
 
@@ -312,17 +314,19 @@ class ProvedorImagemAresta {
     return null;
   }
 
-  /// Realiza o download atômico da imagem remota e persiste no cache volátil.
+  /// Realiza o download atômico da imagem remota reutilizando a conexão Keep-Alive de
+  /// [ClienteHttpAresta] e persiste no cache volátil.
   static Future<ImageProvider?> _baixarESalvarNoCache({
     required String urlFinal,
     required String caminhoDestino,
     required String hashEsperado,
-    http.Client? clienteHttp,
+    ClienteHttpAresta? clienteHttp,
   }) async {
-    final client = clienteHttp ?? http.Client();
-    final bool deveFecharCliente = clienteHttp == null;
+    final cliente = clienteHttp ?? ClienteHttpAresta.instancia;
     try {
-      final response = await client.get(Uri.parse(urlFinal));
+      final response = await cliente
+          .get(Uri.parse(urlFinal))
+          .timeout(tempoLimiteDownload);
       if (response.statusCode == 200) {
         final arquivoDestino = File(caminhoDestino);
         await arquivoDestino.parent.create(recursive: true);
@@ -348,10 +352,6 @@ class ProvedorImagemAresta {
           error: e,
           stackTrace: stackTrace,
         );
-      }
-    } finally {
-      if (deveFecharCliente) {
-        client.close();
       }
     }
     return null;
@@ -413,22 +413,20 @@ class ProvedorImagemAresta {
 
   /// Recupera o diretório base do pico a partir do índice carregado em memória.
   static String _obterBaseDirDoIndice(String picoId) {
-    try {
-      final repo = DatasetRepository.instance;
-      if (repo != null) {
-        final indice = repo.indiceData.value;
-        if (indice != null) {
-          final match = indice.croquis.where((r) => r.id == picoId);
-          if (match.isNotEmpty) {
-            final caminhoRelativo = match.first.caminhoRelativo;
-            final lastSlash = caminhoRelativo.lastIndexOf('/');
-            if (lastSlash != -1) {
-              return caminhoRelativo.substring(0, lastSlash);
-            }
+    final repo = DatasetRepository.instance;
+    if (repo != null) {
+      final indice = repo.indiceData.value;
+      if (indice != null) {
+        final match = indice.croquis.where((r) => r.id == picoId);
+        if (match.isNotEmpty) {
+          final caminhoRelativo = match.first.caminhoRelativo;
+          final lastSlash = caminhoRelativo.lastIndexOf('/');
+          if (lastSlash != -1) {
+            return caminhoRelativo.substring(0, lastSlash);
           }
         }
       }
-    } catch (_) {}
+    }
     return 'picos/$picoId';
   }
 
@@ -479,7 +477,11 @@ class ProvedorImagemAresta {
             if (eBaseName == searchBaseName) return entity;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.logAviso(
+          'Falha ao buscar arquivo recursivamente em $rootDir para $path: $e',
+        );
+      }
     }
     return null;
   }

@@ -3,7 +3,6 @@
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
@@ -14,6 +13,7 @@ import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/constants/constantes_rede.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:isolate';
+import 'cliente_http_aresta.dart';
 import 'sync_armazenamento.dart';
 import 'sync_rede.dart';
 import 'sync_isolate.dart';
@@ -133,12 +133,12 @@ class SyncService {
 
   SyncService({
     required this.datasetRepository,
-    http.Client? client,
+    ClienteHttpAresta? client,
     SyncStorage? storage,
     SyncNetwork? network,
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
-       _network = network ?? SyncNetwork(client ?? http.Client()) {
+       _network = network ?? SyncNetwork(client ?? ClienteHttpAresta.instancia) {
     picoAbertoId.addListener(() {
       final currentOpenId = picoAbertoId.value;
       final idsToCommit = _pendenciasAtomicas.keys
@@ -993,8 +993,6 @@ class SyncService {
     }
   }
 
-  /// Fecha o HttpClient da dependência de rede, liberando recursos.
-  void dispose() {
-    _network.client.close();
-  }
+  /// Libera recursos locais do serviço sem fechar o cliente HTTP compartilhado.
+  void dispose() {}
 }

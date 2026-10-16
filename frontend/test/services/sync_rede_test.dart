@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_rede.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../mocks/mock_app_logger.dart';
@@ -33,7 +34,7 @@ void main() {
           );
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
           'https://base.com',
           'etag_123',
@@ -58,7 +59,7 @@ void main() {
           );
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
           'https://base.com',
           'etag_123',
@@ -74,7 +75,7 @@ void main() {
         return http.Response('', 304);
       });
 
-      final network = SyncNetwork(client);
+      final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
       final response = await network.fetchIndiceWithRetries(
         'https://base.com',
         'etag_123',
@@ -95,7 +96,7 @@ void main() {
           return http.Response.bytes(Uint8List(0), 200);
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
           'https://base.com',
           null,
@@ -119,7 +120,7 @@ void main() {
           throw const SocketException('Always fails');
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
           'https://base.com',
           null,
@@ -141,7 +142,7 @@ void main() {
           return http.Response.bytes(Uint8List.fromList([0xFF, 0xFF, 0xFF]), 200);
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
           'https://base.com',
           null,
@@ -162,7 +163,7 @@ void main() {
           return http.Response.bytes(Uint8List.fromList([1, 2, 3]), 200);
         });
 
-        final network = SyncNetwork(client);
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final bytes = await network.downloadFile('https://file.com/image.png');
 
         expect(bytes, isNotNull);
@@ -175,7 +176,7 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final network = SyncNetwork(client);
+      final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
       final bytes = await network.downloadFile('https://file.com/image.png');
 
       expect(bytes, isNull);

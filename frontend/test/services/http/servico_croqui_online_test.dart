@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/servico_croqui_online.dart';
 import 'package:frontend/services/dataset/sessao_online/gerenciador_sessao_online.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -47,7 +48,7 @@ void main() {
     sessaoOnline = GerenciadorSessaoOnline();
     tempDir = await Directory.systemTemp.createTemp('online_test_');
     servico = ServicoCroquiOnline(
-      client: mockClient,
+      client: ClienteHttpAresta.paraTestes(mockClient),
       sessaoOnline: sessaoOnline,
       caminhoCacheVolatil: tempDir.path,
     );
@@ -55,6 +56,7 @@ void main() {
 
   tearDown(() async {
     servico.dispose();
+    verifyNever(() => mockClient.close());
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -283,7 +285,7 @@ void main() {
 
     test('iniciarPollingEtag não agenda timer se o pico já estiver baixado', () async {
       final servicoComCheck = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: sessaoOnline,
         caminhoCacheVolatil: tempDir.path,
         verificarPicoBaixado: (id) => id == 'pico_baixado',
@@ -302,7 +304,7 @@ void main() {
     test('verificarAtualizacaoEtag cancela polling e não faz requisição HTTP se o pico estiver baixado', () async {
       bool baixado = false;
       final servicoComCheck = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: sessaoOnline,
         caminhoCacheVolatil: tempDir.path,
         verificarPicoBaixado: (id) => baixado,
@@ -352,7 +354,7 @@ void main() {
     test('verificarAtualizacaoEtag e timer de polling permanecem dormentes sem disparar HTTP quando WebSocket de Live Reload estiver conectado', () async {
       bool wsConectado = true;
       final servicoComWs = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: sessaoOnline,
         caminhoCacheVolatil: tempDir.path,
         verificarLiveReloadAtivo: () => wsConectado,
@@ -454,7 +456,7 @@ void main() {
     test('usa getTemporaryDirectory quando caminhoCacheVolatil for nulo', () async {
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
       final servicoPadrao = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: sessaoOnline,
       );
 
@@ -533,7 +535,7 @@ void main() {
       await arquivoFalso.writeAsString('bloqueado');
 
       final servicoComErroCache = ServicoCroquiOnline(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         sessaoOnline: sessaoOnline,
         caminhoCacheVolatil: arquivoFalso.path,
       );

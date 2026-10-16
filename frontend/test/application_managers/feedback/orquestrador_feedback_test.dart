@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import '../../mocks/mock_telemetria.dart';
@@ -87,7 +88,7 @@ void main() {
         createFeedbackFiles('uuid-1');
 
         final result = await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'test-app-check-jwt',
           dispatcher: 'connectivity_plus',
@@ -138,7 +139,7 @@ void main() {
         );
 
         final result = await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getDocumentsDirectoryOverride: () async => docsDir,
           getAppCheckTokenOverride: () async => 'test-token',
@@ -164,7 +165,7 @@ void main() {
         createFeedbackFiles('uuid-dev');
 
         final result = await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => null, // Sem token (dev não cadastrado)
           dispatcher: 'manual_debug',
@@ -191,7 +192,7 @@ void main() {
       // Deve lançar exceção para o Workmanager aplicar retry com backoff
       expect(
         () => FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'valid-token',
           dispatcher: 'work_manager',
@@ -224,7 +225,7 @@ void main() {
         oldProcessingFile.setLastModifiedSync(pastTime);
 
         await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'valid-token',
           isDebugModeOverride: false,
@@ -251,7 +252,7 @@ void main() {
         recentProcessingFile.setLastModifiedSync(pastTime);
 
         await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'valid-token',
           isDebugModeOverride: false,
@@ -277,7 +278,7 @@ void main() {
         veryOldPng.setLastModifiedSync(pastTime);
 
         await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'valid-token',
           isDebugModeOverride: false,
@@ -310,7 +311,7 @@ void main() {
         );
 
         await FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'valid-token',
           isDebugModeOverride: false,
@@ -345,7 +346,7 @@ void main() {
       );
 
       final result = await FeedbackOrchestrator.processFeedbackQueue(
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
         getSupportDirectoryOverride: () async => tempDir,
         getAppCheckTokenOverride: () async => 'token-valido',
         dispatcher: 'workmanager',
@@ -386,7 +387,7 @@ void main() {
 
       await expectLater(
         FeedbackOrchestrator.processFeedbackQueue(
-          client: mockClient,
+          client: ClienteHttpAresta.paraTestes(mockClient),
           getSupportDirectoryOverride: () async => tempDir,
           getAppCheckTokenOverride: () async => 'token-valido',
           dispatcher: 'connectivity_plus',

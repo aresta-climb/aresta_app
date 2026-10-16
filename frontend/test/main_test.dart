@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/main.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/setor.dart';
@@ -541,7 +542,7 @@ void main() {
 
       final fakeSync = SyncService(
         datasetRepository: mockRepo,
-        client: _Fake304HttpClient(),
+        client: ClienteHttpAresta.paraTestes(_Fake304HttpClient()),
       );
       fakeSync.syncStatus.value = SyncStatus.updated;
 

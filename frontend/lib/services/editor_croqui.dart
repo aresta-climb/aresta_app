@@ -5,13 +5,13 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:yaml/yaml.dart';
 import 'editor_croqui/modelos/configuracao_editor.dart';
 import 'editor_croqui/modelos/metadados_previa.dart';
+import 'http/cliente_http_aresta.dart';
 
 /// Evento disparado quando o Editor Desktop solicita uma atualização em tempo real (Live Reload).
 class LiveReloadEvent {
@@ -165,7 +165,7 @@ class EditorDeCroqui {
   /// Resolve a melhor URL (Direct LAN vs Cloudflare Relay) testando a rede local concorrentemente.
   Future<String> resolverUrlHibrida(
     String codigoOuUrl, {
-    http.Client? client,
+    ClienteHttpAresta? client,
     Duration timeoutLan = const Duration(milliseconds: 1000),
   }) async {
     final codigo = extrairCodigoPrevia(codigoOuUrl);
@@ -173,7 +173,7 @@ class EditorDeCroqui {
       return codigoOuUrl;
     }
 
-    final httpClient = client ?? http.Client();
+    final httpClient = client ?? ClienteHttpAresta.instancia;
     final urlRelay = urlPreviaParaCodigo(codigo);
 
     try {
@@ -208,10 +208,6 @@ class EditorDeCroqui {
       AppLogger.instance.logInfo(
         '[EditorCroqui] Descoberta LAN via broker indisponível ($e). Usando Cloudflare Relay.',
       );
-    } finally {
-      if (client == null) {
-        httpClient.close();
-      }
     }
 
     // Fallback: Retransmissor na Nuvem

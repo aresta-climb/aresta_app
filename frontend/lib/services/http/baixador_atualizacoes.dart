@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import '../firebase/app_logger.dart';
+import 'cliente_http_aresta.dart';
 
 /// Um modelo representando uma entrada de arquivo do índice mestre.
 class IndexEntry {
@@ -24,8 +24,11 @@ class IndexEntry {
 /// Ela garante que os arquivos baixados correspondam aos seus checksums esperados
 /// antes de serem considerados válidos e armazenados no diretório de preparação (staging).
 class UpdateDownloader {
-  /// Um cliente HTTP reutilizável para baixar arquivos.
-  final http.Client _client = http.Client();
+  /// Cliente HTTP compartilhado para baixar arquivos.
+  final ClienteHttpAresta _client;
+
+  UpdateDownloader({ClienteHttpAresta? client})
+      : _client = client ?? ClienteHttpAresta.instancia;
 
   /// Baixa atualizações, verifica-as e as coloca no diretório de preparação.
   ///
@@ -83,10 +86,5 @@ class UpdateDownloader {
 
     // Compara a string hexadecimal resultante com o hash esperado
     return hashResult.toString() == expectedHexHash;
-  }
-
-  /// Fecha o cliente HTTP.
-  void dispose() {
-    _client.close();
   }
 }

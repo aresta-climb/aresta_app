@@ -21,3 +21,10 @@ Fiscaliza o isolamento de dependências de renderização vetorial e desenho de 
 
 ### 4. `android_manifest_test.dart`
 Valida integridade estrutural e permissões exigidas no `AndroidManifest.xml`.
+
+### 5. `isolamento_cliente_http_test.dart`
+Garante o isolamento arquitetural de conexões HTTP em todo o código de produção (`lib/`):
+- Proíbe `import 'package:http/...` e referências a `http.Client`, `IOClient(` ou `HttpClient(` fora de `lib/services/http/cliente_http_aresta.dart`.
+- Proíbe o uso de `ClienteHttpAresta.paraTestes` dentro de `lib/`.
+- Proíbe chamadas a `.close()` em clientes HTTP para preservar o pool persistente de conexões Keep-Alive.
+

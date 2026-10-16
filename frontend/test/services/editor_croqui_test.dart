@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Suíte de testes do EditorDeCroqui.
@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
 
@@ -181,7 +182,7 @@ void main() {
 
       final urlResolvida = await editor.resolverUrlHibrida(
         'k9x2-p83a',
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
       );
 
       expect(urlResolvida, 'http://192.168.1.50:8421');
@@ -206,7 +207,7 @@ void main() {
 
       final urlResolvida = await editor.resolverUrlHibrida(
         'k9x2-p83a',
-        client: mockClient,
+        client: ClienteHttpAresta.paraTestes(mockClient),
       );
 
       expect(urlResolvida, 'https://previa.arestaclimb.com/k9x2-p83a');

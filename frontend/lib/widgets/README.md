@@ -17,9 +17,9 @@ Fachada unificada e assíncrona para resolução e exibição de imagens em todo
    - Verifica se o arquivo já foi baixado previamente em sessões online sob o padrão `<temp_cache>/<picoId>/<caminho>.<hash>` (ou `<temp_cache>/thumbnails/<picoId>.webp.<hash>` para miniaturas de catálogo).
    - Se encontrado no disco, resolve imediatamente como `ImagemArquivoAresta`, evitando qualquer consumo de banda ou requisições HTTP.
 3. **Download Atômico da CDN e Persistência Volátil**:
-   - Caso a mídia não exista localmente, realiza o streaming HTTP a partir da URL base da CDN (`serverBase`).
+   - Caso a mídia não exista localmente, realiza o download HTTP a partir da URL base da CDN (`serverBase`) utilizando a instância compartilhada `ClienteHttpAresta.instancia` (com pool de conexões Keep-Alive de 120 segundos e timeout de 20 segundos por imagem, aceitando `clienteHttp` opcional via `ClienteHttpAresta.paraTestes` em testes).
    - **Exigência de SHA-256**: O checksum SHA-256 é obrigatório para persistência em disco. Se ausente no índice/croqui, emite log de erro no `AppLogger` e recorre a `NetworkImage` sem gravar no disco.
-   - **Gravação Atômica**: Grava em arquivo temporário `.tmp` e aplica renomeação atômica para o arquivo final com extensão `.<hash>`.
+   - **Gravação Atômica e Tratamento Rastreável**: Grava em arquivo temporário `.tmp` e aplica renomeação atômica para o arquivo final com extensão `.<hash>`, sem blocos `catch` silenciosos.
    - **Expurgo de Versões Obsoletas**: Ao salvar com sucesso uma nova versão, varre o diretório pai e remove arquivos anteriores da mesma mídia que possuam hashes divergentes, evitando acúmulo de lixo.
    - **Deduplicação de Requisições Concorrentes**: Mantém um mapa em memória (`_downloadsEmAndamento`) indexado pelo caminho de destino. Múltiplos widgets solicitando a mesma imagem concorrentemente compartilham o mesmo `Future`, disparando apenas uma requisição HTTP real.
 4. **Downsampling Opcional na Decodificação**:

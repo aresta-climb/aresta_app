@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -11,6 +11,7 @@ import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:http/http.dart' as http;
@@ -420,7 +421,7 @@ void main() {
 
         final testSyncService = SyncService(
           datasetRepository: datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
         );
         testSyncService.mockIsolateSpawn = (entryPoint, args) async {
           args.sendPort.send(DownloadIsolateResult(
@@ -447,7 +448,7 @@ void main() {
         mostrarDialogConexao(
           pageContext,
           datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
           syncService: testSyncService,
         );
         await tester.pump();
@@ -513,7 +514,7 @@ void main() {
 
         final testSyncService = SyncService(
           datasetRepository: datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
         );
 
         await tester.pumpWidget(
@@ -532,7 +533,7 @@ void main() {
         mostrarDialogConexao(
           pageContext,
           datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
           syncService: testSyncService,
         );
         await tester.pump();
@@ -717,7 +718,7 @@ void main() {
 
         final testSyncService = SyncService(
           datasetRepository: datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
         );
         testSyncService.mockIsolateSpawn = (entryPoint, args) async {
           args.sendPort.send(DownloadIsolateResult(
@@ -743,7 +744,7 @@ void main() {
         mostrarDialogConexao(
           pageContext,
           datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
           syncService: testSyncService,
           construtorScannerQr: (context) => Scaffold(
             body: Center(
@@ -796,7 +797,7 @@ void main() {
 
         final testSyncService = SyncService(
           datasetRepository: datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
         );
 
         await tester.pumpWidget(
@@ -815,7 +816,7 @@ void main() {
         mostrarDialogConexao(
           pageContext,
           datasetRepo,
-          client: mockHttpClient,
+          client: ClienteHttpAresta.paraTestes(mockHttpClient),
           syncService: testSyncService,
           construtorScannerQr: (context) => Scaffold(
             body: Center(

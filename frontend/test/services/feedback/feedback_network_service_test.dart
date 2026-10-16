@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/feedback/feedback_network_service.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 
@@ -28,7 +29,7 @@ void main() {
       mockHttpClient = MockHttpClient();
       tempDir = await Directory.systemTemp.createTemp('network_service_test');
       service = FeedbackNetworkService(
-        httpClient: mockHttpClient,
+        httpClient: ClienteHttpAresta.paraTestes(mockHttpClient),
         edgeFunctionUrl: 'https://test-supabase.supabase.co/functions/v1/app-feedback',
         appCheckToken: 'fake-app-check-jwt',
       );
@@ -80,7 +81,7 @@ void main() {
 
     test('sendFeedback funciona corretamente sem token do App Check quando for nulo', () async {
       final serviceWithoutToken = FeedbackNetworkService(
-        httpClient: mockHttpClient,
+        httpClient: ClienteHttpAresta.paraTestes(mockHttpClient),
         edgeFunctionUrl: 'https://test-supabase.supabase.co/functions/v1/app-feedback',
         appCheckToken: null,
       );

@@ -18,6 +18,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:crypto/crypto.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -272,7 +273,7 @@ void main() {
 
       final fakeClient = FakeClient(newIndice);
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -297,7 +298,7 @@ void main() {
         final fakeClient = FakeClient(newIndice);
         final syncService = SyncService(
           datasetRepository: repo,
-          client: fakeClient,
+          client: ClienteHttpAresta.paraTestes(fakeClient),
         );
 
         syncService.mockIsolateSpawn = (mainFunc, args) async {
@@ -343,7 +344,7 @@ void main() {
         final fakeClient = FakeClient(newIndice);
         final syncService = SyncService(
           datasetRepository: repo,
-          client: fakeClient,
+          client: ClienteHttpAresta.paraTestes(fakeClient),
         );
 
         syncService.mockIsolateSpawn = (mainFunc, args) async {
@@ -420,7 +421,7 @@ void main() {
         'picos/$picoId.binarypb': croqui.writeToBuffer(),
       });
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -483,7 +484,7 @@ void main() {
         'picos/imagem.webp': [2],
       });
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -537,7 +538,7 @@ void main() {
         'picos/$picoId.binarypb': newCroqui.writeToBuffer(),
       });
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -590,7 +591,7 @@ void main() {
           'picos/nova.webp': [3],
         });
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -688,7 +689,7 @@ void main() {
         'picos/nova.webp': [44],
       });
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -763,7 +764,7 @@ void main() {
           'picos/nova.webp': [44],
         });
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -837,7 +838,7 @@ void main() {
           'thumbnails/pico_thumb.webp': [10],
         });
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -898,7 +899,7 @@ void main() {
         'thumbnails/$picoId.webp': [11], // Mock pra caso tente baixar
       });
       final syncService =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -946,7 +947,7 @@ void main() {
 
         final fakeClient = FakeClient(newIndice, {});
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1005,7 +1006,7 @@ void main() {
         final mockClient = FakeClient(newIndice, {});
 
         final syncService =
-            SyncService(datasetRepository: repo, client: mockClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(mockClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1088,7 +1089,7 @@ void main() {
           'picos/pico_orfao.binarypb': newCroqui.writeToBuffer(),
         });
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1144,7 +1145,7 @@ void main() {
 
         final fakeClient = FakeClient(newIndice);
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1174,7 +1175,7 @@ void main() {
         // Simula uma falha de rede completa para fetchIndiceWithRetries retornar null
         final errorClient = _ErrorClient();
         final syncService =
-            SyncService(datasetRepository: repo, client: errorClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(errorClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1249,7 +1250,7 @@ void main() {
         );
 
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1308,7 +1309,7 @@ void main() {
       final newIndice = Indice()..croquis.add(ResumoCroqui()..id = 'pico1');
       final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: fakeClient)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1327,7 +1328,7 @@ void main() {
           ..croquis.add(ResumoCroqui()..id = 'pico_fake_nao_deve_baixar');
         final fakeClient = FakeClient(newIndice, {}, 'mock_etag_123');
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1366,7 +1367,7 @@ void main() {
       () async {
         final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1411,7 +1412,7 @@ void main() {
           );
         final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1494,7 +1495,7 @@ void main() {
 
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: client)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1537,7 +1538,7 @@ void main() {
 
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: client)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1589,7 +1590,7 @@ void main() {
             'http://${localServer.address.address}:${localServer.port}/v3';
         repo = DatasetRepository(editorDeCroqui: editor);
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: client)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1627,7 +1628,7 @@ void main() {
           'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: client)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1672,7 +1673,7 @@ void main() {
           'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: client)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1730,7 +1731,7 @@ void main() {
           'http://${localServer.address.address}:${localServer.port}/v3';
       repo = DatasetRepository(editorDeCroqui: editor);
       final syncServiceFake =
-          SyncService(datasetRepository: repo, client: client)
+          SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
             ..mockIsolateSpawn = (mainFunc, args) async {
               await downloadIsolateMain(args);
             };
@@ -1785,7 +1786,7 @@ void main() {
             'http://${localServer.address.address}:${localServer.port}/v3';
         repo = DatasetRepository(editorDeCroqui: editor);
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: client)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1835,7 +1836,7 @@ void main() {
             'http://${localServer.address.address}:${localServer.port}/v3';
         repo = DatasetRepository(editorDeCroqui: editor);
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: client)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -1904,7 +1905,7 @@ void main() {
             'http://${localServer.address.address}:${localServer.port}/v3';
         repo = DatasetRepository(editorDeCroqui: editor);
         final syncServiceFake =
-            SyncService(datasetRepository: repo, client: client)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2012,7 +2013,7 @@ void main() {
         'picos/$picoId.binarypb': croquiBytes,
       });
 
-      final syncService = SyncService(datasetRepository: repo, client: client)
+      final syncService = SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(client))
         ..mockIsolateSpawn = (mainFunc, args) async {
           await downloadIsolateMain(args);
         };
@@ -2104,7 +2105,7 @@ void main() {
         );
 
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2146,7 +2147,7 @@ void main() {
 
         final fakeClient = FakeClient(newIndice);
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2167,7 +2168,7 @@ void main() {
       () async {
         final fakeClient = FakeClient(Indice(), {}, 'mock_etag_123');
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2236,7 +2237,7 @@ void main() {
         });
 
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2328,7 +2329,7 @@ void main() {
         });
 
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2370,7 +2371,7 @@ void main() {
 
         final fakeClient = FakeClient(newIndice);
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2436,7 +2437,7 @@ void main() {
         });
 
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2526,7 +2527,7 @@ void main() {
         });
 
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };
@@ -2560,7 +2561,7 @@ void main() {
           );
         final fakeClient = FakeClient(localIndice, {}, 'etag_coalesce');
         final syncService =
-            SyncService(datasetRepository: repo, client: fakeClient)
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
                 await downloadIsolateMain(args);
               };

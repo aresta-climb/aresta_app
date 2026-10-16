@@ -9,7 +9,6 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../../services/feedback/feedback_local_repository.dart';
@@ -18,6 +17,7 @@ import '../../services/firebase/validador_app.dart';
 import '../../services/firebase/app_logger.dart';
 import '../../services/firebase/remote_config.dart';
 import '../../services/firebase/telemetria.dart';
+import '../../services/http/cliente_http_aresta.dart';
 
 /// Gerenciador responsável por coordenar a leitura, travamento atômico e despacho
 /// das tarefas de feedback salvas no disco local do dispositivo.
@@ -46,7 +46,7 @@ class FeedbackOrchestrator {
   /// **5. Despacho de Rede:** Envia o payload via [FeedbackNetworkService] para a Edge Function `app-feedback`,
   ///    anexando os arquivos binários locais `indice.binarypb` e `compilado.binarypb` quando disponíveis.
   static Future<bool> processFeedbackQueue({
-    http.Client? client,
+    ClienteHttpAresta? client,
     Future<Directory> Function()? getSupportDirectoryOverride,
     Future<Directory> Function()? getDocumentsDirectoryOverride,
     Future<String?> Function()? getAppCheckTokenOverride,
@@ -57,7 +57,7 @@ class FeedbackOrchestrator {
     if (_isProcessing) return true;
     _isProcessing = true;
 
-    final httpClient = client ?? http.Client();
+    final httpClient = client ?? ClienteHttpAresta.instancia;
     final localRepository = FeedbackLocalRepository(
       getSupportDirectoryOverride: getSupportDirectoryOverride,
     );
@@ -191,9 +191,6 @@ class FeedbackOrchestrator {
 
       return true;
     } finally {
-      if (client == null) {
-        httpClient.close();
-      }
       _isProcessing = false;
     }
   }

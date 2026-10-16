@@ -4,18 +4,18 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../firebase/app_logger.dart';
 import '../dataset/sessao_online/gerenciador_sessao_online.dart';
 import '../dataset/normalizador_croqui.dart';
 import '../../utils/construtor_caminho_trajeto.dart';
+import 'cliente_http_aresta.dart';
 
 /// Serviço responsável pelo carregamento sob demanda de arquivos `.binarypb` via HTTP
 /// e verificação periódica de ETag para atualizações em tempo real durante a navegação online.
 class ServicoCroquiOnline {
-  final http.Client _client;
+  final ClienteHttpAresta _client;
   final GerenciadorSessaoOnline _sessaoOnline;
   final String? _caminhoCacheVolatil;
   final bool Function(String picoId)? _verificarPicoBaixado;
@@ -25,13 +25,13 @@ class ServicoCroquiOnline {
   final Map<String, Timer> _timersPolling = {};
 
   ServicoCroquiOnline({
-    http.Client? client,
+    ClienteHttpAresta? client,
     required GerenciadorSessaoOnline sessaoOnline,
     String? caminhoCacheVolatil,
     bool Function(String picoId)? verificarPicoBaixado,
     bool Function()? verificarLiveReloadAtivo,
     void Function(String picoId, Croqui croqui)? aoAtualizarCroqui,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client ?? ClienteHttpAresta.instancia,
         _sessaoOnline = sessaoOnline,
         _caminhoCacheVolatil = caminhoCacheVolatil,
         _verificarPicoBaixado = verificarPicoBaixado,
@@ -313,12 +313,11 @@ class ServicoCroquiOnline {
     _timersPolling.remove(picoId);
   }
 
-  /// Descarta todos os timers e fecha o cliente HTTP.
+  /// Descarta todos os timers de polling ativos sem fechar o cliente HTTP compartilhado.
   void dispose() {
     for (var timer in _timersPolling.values) {
       timer.cancel();
     }
     _timersPolling.clear();
-    _client.close();
   }
 }

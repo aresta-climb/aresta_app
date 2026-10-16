@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import '../../mocks/mock_app_logger.dart';
 
 void main() {
@@ -203,6 +204,7 @@ void main() {
       expect(AppLogger.isFalhaConexaoOuTimeout(const HttpException('Connection closed')), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout(const HandshakeException('Handshake failed')), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout(TimeoutException('Timed out')), isTrue);
+      expect(AppLogger.isFalhaConexaoOuTimeout(ClientException('Connection reset by peer')), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout('Exceção ao baixar: TimeoutException after 0:00:30'), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout('SocketException: Network is unreachable'), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout(Exception('Falha de rede')), isTrue);

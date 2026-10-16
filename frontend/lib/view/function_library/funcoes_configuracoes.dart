@@ -1,12 +1,12 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../services/repositorio_dataset.dart';
 import '../../services/editor_croqui.dart';
 import 'biblioteca_funcoes_comuns.dart';
 import '../../pages/qr_scanner.dart';
+import '../../services/http/cliente_http_aresta.dart';
 import '../../services/http/sync_service.dart';
 import '../../services/http/servico_download_segundo_plano.dart';
 import '../../main.dart';
@@ -51,7 +51,7 @@ Future<bool> conectarEditor(
   DatasetRepository datasetRepo,
   EditorDeCroqui configService,
   String url, {
-  http.Client? client,
+  ClienteHttpAresta? client,
   SyncService? syncService,
 }) async {
   if (url.isEmpty) return false;
@@ -64,7 +64,7 @@ Future<bool> conectarEditor(
     );
     String checkUrl = normalizeEditorUrl(resolvedUrl);
 
-    final httpClient = client ?? http.Client();
+    final httpClient = client ?? ClienteHttpAresta.instancia;
     final response = await httpClient
         .get(Uri.parse('$checkUrl/indice.binarypb'))
         .timeout(const Duration(seconds: 5));
@@ -192,7 +192,7 @@ void mostrarDialogConexao(
   BuildContext context,
   DatasetRepository datasetRepo, {
   String? titulo,
-  http.Client? client,
+  ClienteHttpAresta? client,
   SyncService? syncService,
   WidgetBuilder? construtorScannerQr,
 }) {

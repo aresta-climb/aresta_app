@@ -15,14 +15,14 @@ The interactive map SHALL support tapping POIs that refer to sectors or groups, 
 
 #### Scenario: Navigating to another map from a sector reference
 - **WHEN** the user clicks "View Sector Map" on a Sector Card triggered from a POI
-- **THEN** the map navigates to the target sector's map using the specified `indice_mapa_alvo`
+- **THEN** the map navigates to the target sector's map carousel opening the first map by default without relying on deprecated `indice_mapa_alvo`
 
 ### Requirement: Pre-computation of references
-The interactive map SHALL index references upon initialization to ensure 60fps performance during map interaction.
+The interactive map SHALL index references upon initialization using `alvo_uid` and `pontos_uids` (or legacy fallbacks) to ensure 60fps performance during map interaction.
 
 #### Scenario: Map initialization
 - **WHEN** the map is loaded or the dataset changes
-- **THEN** it resolves all references once and stores them in O(1) lookup dictionaries
+- **THEN** it resolves all references via `DatasetResolver` and populates the local `_poiToRefs` dictionary using the POI UIDs (or legacy IDs)
 
 ### Requirement: Interactive Map context-free resolution
 The interactive map SHALL support being rendered without an explicit Sector or Group context, using a global search across the Pico to resolve tapped POI references.
@@ -267,3 +267,15 @@ Os widgets `MapaThumbnail`, bem como as capas de `SetorPage` e `GrupoPage`, MUST
 #### Scenario: Falha de rede na imagem de capa de setor ou grupo
 - **WHEN** a imagem de capa de um setor ou grupo falhar ao carregar via streaming remoto
 - **THEN** a tela DEVE manter a cor de fundo do tema e o gradiente escuro de cabeçalho sem exibir caixas de erro do framework.
+
+### Requirement: Resolução Local de Traçados e Rótulos no Escopo do Mapa
+O sistema MUST resolver os traçados vetoriais e rótulos de identificação consultando os pontos de interesse estritamente dentro da coleção local `mapa.pontosDeInteresse`, priorizando o campo `rotulo` sobre `label` e os identificadores `pontos_uids` sobre `ids`.
+
+#### Scenario: Extração de rótulo por rotulo e pontos_uids
+- **WHEN** `extrairRotuloReferencia` processa uma referência que contém `pontos_uids` e o ponto de interesse possui `rotulo` preenchido
+- **THEN** o rótulo retornado utiliza o valor de `rotulo` correspondente aos pontos daquele mapa
+
+#### Scenario: Fallback para croquis com id e label legados
+- **WHEN** uma referência contém `ids` e os pontos possuem apenas `label` preenchido
+- **THEN** o rótulo é extraído com sucesso garantindo retrocompatibilidade
+

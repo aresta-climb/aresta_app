@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -12,6 +12,7 @@ import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/widgets/imagem_arquivo_aresta.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -106,7 +107,7 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -124,7 +125,7 @@ void main() {
         checksumSha256: 'xyz789',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -151,7 +152,7 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -175,7 +176,7 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -193,7 +194,7 @@ void main() {
         checksumSha256: 'xyz999',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -249,7 +250,7 @@ void main() {
         baseUrl: 'https://cdn.arestaclimb.com',
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -275,7 +276,7 @@ void main() {
         caminhoDownloads: tempDownloadsDir.path,
         caminhoCacheVolatil: tempCacheDir.path,
         datasetRepository: repo,
-        clienteHttp: cliente,
+        clienteHttp: ClienteHttpAresta.paraTestes(cliente),
       );
 
       expect(provedor, isA<ImagemArquivoAresta>());
@@ -478,7 +479,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(provedor, isA<NetworkImage>());
@@ -510,7 +511,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(provedor1, isA<ImagemArquivoAresta>());
@@ -527,7 +528,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(provedor2, isA<ImagemArquivoAresta>());
@@ -555,7 +556,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         final versaoNova = File('${pastaSetor.path}/foto.png.hash_novo_999');
@@ -576,7 +577,7 @@ void main() {
             baseUrl: 'https://cdn.arestaclimb.com',
             caminhoDownloads: tempDownloadsDir.path,
             caminhoCacheVolatil: tempCacheDir.path,
-            clienteHttp: cliente,
+            clienteHttp: ClienteHttpAresta.paraTestes(cliente),
           ),
           ProvedorImagemAresta.resolver(
             picoId: 'pico_remoto',
@@ -585,7 +586,7 @@ void main() {
             baseUrl: 'https://cdn.arestaclimb.com',
             caminhoDownloads: tempDownloadsDir.path,
             caminhoCacheVolatil: tempCacheDir.path,
-            clienteHttp: cliente,
+            clienteHttp: ClienteHttpAresta.paraTestes(cliente),
           ),
           ProvedorImagemAresta.resolver(
             picoId: 'pico_remoto',
@@ -594,7 +595,7 @@ void main() {
             baseUrl: 'https://cdn.arestaclimb.com',
             caminhoDownloads: tempDownloadsDir.path,
             caminhoCacheVolatil: tempCacheDir.path,
-            clienteHttp: cliente,
+            clienteHttp: ClienteHttpAresta.paraTestes(cliente),
           ),
         ]);
 
@@ -616,7 +617,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(provedor, isA<ImagemArquivoAresta>());
@@ -632,7 +633,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
         expect(provedor2, isA<ImagemArquivoAresta>());
         expect(cliente.chamadas, equals(1));
@@ -682,7 +683,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: clienteQuebrado,
+          clienteHttp: ClienteHttpAresta.paraTestes(clienteQuebrado),
         );
 
         expect(provedor, isNull);
@@ -704,7 +705,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: clienteTimeout,
+          clienteHttp: ClienteHttpAresta.paraTestes(clienteTimeout),
         );
 
         expect(provedor, isNull);
@@ -722,7 +723,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente404,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente404),
         );
 
         expect(provedor, isNull);
@@ -740,11 +741,40 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: clienteErroGrave,
+          clienteHttp: ClienteHttpAresta.paraTestes(clienteErroGrave),
         );
 
         expect(provedor, isNull);
         expect(mockLogger.recordedErrors, isNotEmpty);
+      });
+
+      test('reutiliza a mesma instância de ClienteHttpAresta em múltiplos downloads consecutivos sem nunca fechar o cliente subjacente', () async {
+        final clienteEspiao = _ClienteHttpEspiao();
+        final clienteAresta = ClienteHttpAresta.paraTestes(clienteEspiao);
+
+        final p1 = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_reuso',
+          caminho: 'setor/foto_1.webp',
+          checksumSha256: 'hash_1',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: clienteAresta,
+        );
+        final p2 = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_reuso',
+          caminho: 'setor/foto_2.webp',
+          checksumSha256: 'hash_2',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: clienteAresta,
+        );
+
+        expect(p1, isA<ImagemArquivoAresta>());
+        expect(p2, isA<ImagemArquivoAresta>());
+        expect(clienteEspiao.chamadas, equals(2));
+        expect(clienteEspiao.foiFechado, isFalse);
       });
 
       test('TDD: resolve miniatura local permanente quando caminho for URL remota legada contendo imagens/thumbnail.webp', () async {
@@ -777,7 +807,7 @@ void main() {
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(provedor, isA<ImagemArquivoAresta>());
@@ -804,7 +834,7 @@ void main() {
           checksumSha256: hashPre,
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(arquivo, isNotNull);
@@ -829,7 +859,7 @@ void main() {
           caminho: 'mapas/mapa_1.webp',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(arquivo, isNotNull);
@@ -851,7 +881,7 @@ void main() {
           checksumSha256: 'hash_existente',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(arquivo, isNotNull);
@@ -871,7 +901,7 @@ void main() {
             checksumSha256: hashConcorrente,
             caminhoDownloads: tempDownloadsDir.path,
             caminhoCacheVolatil: tempCacheDir.path,
-            clienteHttp: cliente,
+            clienteHttp: ClienteHttpAresta.paraTestes(cliente),
           ),
           ProvedorImagemAresta.preCarregarNoDisco(
             picoId: 'pico_disco',
@@ -879,7 +909,7 @@ void main() {
             checksumSha256: hashConcorrente,
             caminhoDownloads: tempDownloadsDir.path,
             caminhoCacheVolatil: tempCacheDir.path,
-            clienteHttp: cliente,
+            clienteHttp: ClienteHttpAresta.paraTestes(cliente),
           ),
         ]);
 
@@ -898,7 +928,7 @@ void main() {
           checksumSha256: 'hash_offline',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          clienteHttp: cliente,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
         expect(arquivo, isNull);
@@ -951,11 +981,18 @@ class _ClienteHttpComErroGrave extends http.BaseClient {
 class _ClienteHttpEspiao extends http.BaseClient {
   final Duration atraso;
   int chamadas = 0;
+  bool foiFechado = false;
   final List<Uri> urlsRequisitadas = [];
 
   _ClienteHttpEspiao({
     this.atraso = Duration.zero,
   });
+
+  @override
+  void close() {
+    foiFechado = true;
+    super.close();
+  }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {

@@ -1,12 +1,12 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../firebase/app_logger.dart';
+import 'cliente_http_aresta.dart';
 import 'sync_armazenamento.dart';
 
 /// Argumentos necessários para instanciar o [downloadIsolateMain].
@@ -78,7 +78,7 @@ bool ehStatusTransitorio(int statusCode) {
 /// Como este método apenas baixa para `.tmp` e não faz o `rename` dos arquivos originais,
 /// ele nunca interfere na leitura em disco que o App possa estar fazendo na Thread principal.
 Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
-  final client = http.Client();
+  final client = ClienteHttpAresta.instancia;
   try {
     final storage = SyncStorage();
     final newResumo = ResumoCroqui.fromBuffer(args.newResumoBytes);
@@ -387,7 +387,5 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
         rastreamentoPilha: stack.toString(),
       ),
     );
-  } finally {
-    client.close();
   }
 }

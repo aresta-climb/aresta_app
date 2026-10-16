@@ -3,9 +3,9 @@
 
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
+import 'cliente_http_aresta.dart';
 
 /// Resultado base para a busca do índice de croquis.
 sealed class FetchIndiceResult {}
@@ -29,9 +29,10 @@ class IndiceUpdated extends FetchIndiceResult {
 /// Gerencia as requisições de rede para sincronização,
 /// ocultando detalhes como retries, cabeçalhos HTTP e caminhos de fallback.
 class SyncNetwork {
-  final http.Client client;
+  final ClienteHttpAresta client;
 
-  SyncNetwork(this.client);
+  SyncNetwork([ClienteHttpAresta? client])
+      : client = client ?? ClienteHttpAresta.instancia;
 
   /// Executa uma função [action] com repetições automáticas em caso de erro.
   Future<T?> _executeWithRetries<T>(
@@ -77,12 +78,12 @@ class SyncNetwork {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         urlStr += '?t=$timestamp';
       }
-      final request = http.Request('GET', Uri.parse(urlStr));
+      final request = Request('GET', Uri.parse(urlStr));
       if (localEtag != null && localEtag.isNotEmpty) {
         request.headers['If-None-Match'] = localEtag;
       }
       final streamedResponse = await client.send(request);
-      return await http.Response.fromStream(streamedResponse);
+      return await Response.fromStream(streamedResponse);
     }, retries: retries);
 
     if (response == null) {
