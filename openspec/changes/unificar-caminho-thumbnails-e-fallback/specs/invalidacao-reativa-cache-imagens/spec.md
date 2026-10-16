@@ -10,7 +10,7 @@ O `DatasetRepository` MUST manter uma tabela de dispersão indexada $O(1)$ mapea
 - **THEN** o sistema DEVE extrair todos os pares `(caminho, checksumSha256)` de `arquivosExternos` e disponibilizá-los para consulta imediata $O(1)$
 - **AND** os caminhos DEVEM ser normalizados removendo prefixos `./`, `/` e convertendo separadores de barra invertida (`\`) em barras normais (`/`)
 
-#### Scenario: Indexação de miniatura de pico ao carregar índice sem colisão com capa interna
+#### Scenario: Indexação de miniatura de pico ao carregar índice
 - **WHEN** o `Indice` é carregado ou atualizado na memória pelo `DatasetRepository`
 - **THEN** o sistema DEVE mapear a miniatura de cada pico sob `thumbnails/<picoId>.webp` associada ao respectivo `checksumSha256Thumbnail`
 - **AND** NÃO DEVE mapear a chave `thumbnail.webp` com o hash do índice, preservando `thumbnail.webp` exclusivamente para o arquivo interno `imagens/thumbnail.webp` de `croqui.arquivosExternos`.
@@ -60,7 +60,7 @@ O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas ch
 - **THEN** o sistema DEVE registrar um erro na telemetria via `AppLogger.instance.logError`
 - **AND** seguir em frente utilizando o timestamp de modificação (`lastModifiedSync`) como hash substituto para preservar a diferenciação de chave no Flutter.
 
-#### Scenario: Mídia remota sem hash de integridade para croqui baixado offline
+#### Scenario: Anomalia de mídia remota sem hash de integridade
 - **WHEN** uma imagem remota for solicitada e não possuir `checksumSha256` na tabela de dispersão nem nos argumentos
 - **AND** o croqui correspondente estiver marcado como baixado offline (`isPicoDownloaded(picoId) == true`)
 - **THEN** o sistema DEVE emitir erro na telemetria via `AppLogger.instance.logError`

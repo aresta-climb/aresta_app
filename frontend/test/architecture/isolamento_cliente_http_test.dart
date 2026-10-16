@@ -34,7 +34,7 @@ void main() {
 
         final regexImportHttp = RegExp(r'''import\s+['"]package:http/''');
         final regexClienteBruto = RegExp(
-          r'(\bhttp\.Client\b|\bIOClient\s*\(|\bHttpClient\s*\()',
+          r'\b(http\.Client|IOClient|HttpClient)\b',
         );
 
         for (final file in arquivos) {
