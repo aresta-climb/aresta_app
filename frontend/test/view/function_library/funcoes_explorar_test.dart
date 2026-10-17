@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -289,21 +289,21 @@ void main() {
       final Image imageWidget = tester.widget(imageFinder);
       expect(imageWidget.image, isA<ResizeImage>());
       final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(300));
+      expect(resize.width, equals(450));
     });
 
     testWidgets('buildCragBackground resolve miniatura local via ProvedorImagemAresta com ImagemArquivoAresta', (
       WidgetTester tester,
     ) async {
       EditorDeCroqui();
-      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbDir = Directory('${tempDir.path}/downloads/thumbnails')..createSync(recursive: true);
       final thumbFile = File('${thumbDir.path}/crag_local.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: buildCragBackground('', cragId: 'crag_local'),
+            body: buildCragBackground('thumbnails/crag_local.webp', cragId: 'crag_local'),
           ),
         ),
       );
@@ -315,7 +315,7 @@ void main() {
       final Image imageWidget = tester.widget(imageFinder);
       expect(imageWidget.image, isA<ResizeImage>());
       final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(300));
+      expect(resize.width, equals(450));
       expect(resize.imageProvider, isA<ImagemArquivoAresta>());
     });
 
@@ -323,7 +323,7 @@ void main() {
       WidgetTester tester,
     ) async {
       EditorDeCroqui();
-      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbDir = Directory('${tempDir.path}/downloads/thumbnails')..createSync(recursive: true);
       final thumbFile = File('${thumbDir.path}/crag_legado.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
@@ -346,7 +346,7 @@ void main() {
       final Image imageWidget = tester.widget(imageFinder);
       expect(imageWidget.image, isA<ResizeImage>());
       final resize = imageWidget.image as ResizeImage;
-      expect(resize.width, equals(300));
+      expect(resize.width, equals(450));
       expect(resize.imageProvider, isA<ImagemArquivoAresta>());
     });
   });

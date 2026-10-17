@@ -73,7 +73,7 @@ void main() {
       final loadedIndice = Indice.fromBuffer(await localIndiceFile.readAsBytes());
       expect(loadedIndice.croquis.first.id, equals('pico_demo'));
 
-      final thumbFile = File('${tempDir.path}/thumbnails/pico_demo.webp');
+      final thumbFile = File('${tempDir.path}/downloads/thumbnails/pico_demo.webp');
       expect(await thumbFile.exists(), isTrue);
       expect(await thumbFile.readAsBytes(), equals([1, 2, 3, 4]));
     });

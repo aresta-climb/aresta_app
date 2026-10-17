@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -123,7 +123,7 @@ void main() {
     );
 
     testWidgets(
-      'Deve usar icone de fallback se cragId NAO existir (sem imagens de rede)',
+      'Deve usar logo padrão do app se thumbnailUrl for vazia (sem imagens de rede)',
       (WidgetTester tester) async {
         final Map<String, dynamic> crag = {
           'nome': 'Pico Sem ID',
@@ -145,11 +145,15 @@ void main() {
         final futureBuilderFinder = find.byType(FutureBuilder<ImageProvider?>);
         expect(futureBuilderFinder, findsNothing);
 
-        final imageFinder = find.byType(Image);
-        expect(imageFinder, findsNothing);
+        expect(find.byIcon(Icons.terrain), findsNothing);
 
-        final iconFinder = find.byIcon(Icons.terrain);
-        expect(iconFinder, findsOneWidget);
+        final imageFinder = find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+        );
+        expect(imageFinder, findsOneWidget);
       },
     );
   });

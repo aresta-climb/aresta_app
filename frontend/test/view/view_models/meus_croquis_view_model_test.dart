@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -51,6 +51,7 @@ void main() {
       final croqui = Croqui(
         id: 'pico_offline_teste',
         nome: 'Falésia Paraíso',
+        caminhoThumbnail: 'thumbnails/pico_offline_teste.webp',
         picos: [
           Pico(
             estado: 'Minas Gerais',

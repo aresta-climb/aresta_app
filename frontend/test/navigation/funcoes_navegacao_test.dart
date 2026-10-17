@@ -68,6 +68,9 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
 
   @override
   DateTime? obterDataAtualizacaoCroqui(String cragId) => null;
+
+  @override
+  String? obterSha256DaMidia(String cragId, String? caminhoMidia) => null;
 }
 
 
