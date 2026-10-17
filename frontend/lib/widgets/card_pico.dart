@@ -332,7 +332,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
       picoId: cragId ?? '',
       caminho: caminhoFinal,
       checksumSha256: widget.checksumSha256,
-      larguraAlvo: 300,
+      larguraAlvo: 450,
     );
   }
 

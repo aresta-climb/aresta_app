@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-License-Identifier: MPL-2.0
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -230,6 +233,50 @@ void main() {
       expect(bgWidget.capaPath, equals('/downloads/pico_teste/capa.webp'));
       expect(bgWidget.checksumSha256, equals('sha256_teste'));
     });
+
+    testWidgets(
+      'buildCragBackground resolve imagem solicitando larguraAlvo 450 para alta resolução',
+      (WidgetTester tester) async {
+        const bytesPng1 = <int>[
+          137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+          0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
+          0, 13, 73, 68, 65, 84, 120, 156, 99, 100, 248, 207, 80, 15, 0, 3,
+          134, 1, 128, 90, 52, 125, 107, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+          66, 96, 130
+        ];
+        final picoDir = Directory('${tempDir.path}/downloads/pico_res_450')
+          ..createSync(recursive: true);
+        final capaFile = File('${picoDir.path}/capa.webp');
+        capaFile.writeAsBytesSync(bytesPng1);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 300,
+                height: 200,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_res_450',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_450',
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final imageFinder = find.byType(Image);
+        expect(imageFinder, findsOneWidget);
+
+        final Image imageWidget = tester.widget(imageFinder);
+        expect(imageWidget.image, isA<ResizeImage>());
+        final resize = imageWidget.image as ResizeImage;
+        expect(resize.width, equals(450));
+      },
+    );
 
     testWidgets('opera como Dumb Component recebendo diretamente CardCroquiViewModel', (
       WidgetTester tester,

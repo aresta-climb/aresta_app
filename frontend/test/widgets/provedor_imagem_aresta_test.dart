@@ -1012,6 +1012,92 @@ void main() {
         expect(await ProvedorImagemAresta.preCarregarNoDisco(picoId: 'pico', caminho: '   '), isNull);
       });
     });
+
+    group('Priorização da Thumbnail de Catálogo Local (Task 1.1)', () {
+      test(
+        'ao resolver imagens/thumbnail.webp quando o arquivo local do pico não existe mas a miniatura de catálogo existe, retorna a miniatura local sem disparar requisição HTTP',
+        () async {
+          final thumbsDir = Directory('${tempDownloadsDir.path}/thumbnails');
+          await thumbsDir.create(recursive: true);
+          final thumbFile = File('${thumbsDir.path}/pico_prioriza.webp');
+          await thumbFile.writeAsBytes([10, 20, 30, 40]);
+
+          final clienteEspiao = _ClienteHttpEspiao();
+
+          final provedor = await ProvedorImagemAresta.resolver(
+            picoId: 'pico_prioriza',
+            caminho: 'imagens/thumbnail.webp',
+            checksumSha256: 'hash_capa_123',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: ClienteHttpAresta.paraTestes(clienteEspiao),
+          );
+
+          expect(provedor, isA<ImagemArquivoAresta>());
+          final imgAresta = provedor as ImagemArquivoAresta;
+          expect(imgAresta.arquivo.path, equals(thumbFile.path));
+          expect(
+            clienteEspiao.chamadas,
+            equals(0),
+            reason:
+                'Não deve disparar requisição HTTP se a thumbnail de catálogo já existe localmente',
+          );
+        },
+      );
+
+      test(
+        'ao resolver imagens/thumbnail.webp quando nem a capa local nem a miniatura de catálogo existem, faz download da CDN para temp_cache',
+        () async {
+          final clienteEspiao = _ClienteHttpEspiao();
+
+          final provedor = await ProvedorImagemAresta.resolver(
+            picoId: 'pico_sem_thumb_local',
+            caminho: 'imagens/thumbnail.webp',
+            checksumSha256: 'hash_capa_remota_456',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: ClienteHttpAresta.paraTestes(clienteEspiao),
+          );
+
+          expect(provedor, isA<ImagemArquivoAresta>());
+          expect(clienteEspiao.chamadas, equals(1));
+          final imgAresta = provedor as ImagemArquivoAresta;
+          expect(imgAresta.arquivo.path, startsWith(tempCacheDir.path));
+        },
+      );
+
+      test(
+        'mantém prioridade do arquivo local permanente do pico se este já existir',
+        () async {
+          final picoDir = Directory('${tempDownloadsDir.path}/pico_offline');
+          await picoDir.create(recursive: true);
+          final capaFile = File('${picoDir.path}/imagens/thumbnail.webp');
+          await capaFile.parent.create(recursive: true);
+          await capaFile.writeAsBytes([99, 98, 97]);
+
+          final thumbsDir = Directory('${tempDownloadsDir.path}/thumbnails');
+          await thumbsDir.create(recursive: true);
+          final thumbFile = File('${thumbsDir.path}/pico_offline.webp');
+          await thumbFile.writeAsBytes([1, 2, 3]);
+
+          final clienteEspiao = _ClienteHttpEspiao();
+
+          final provedor = await ProvedorImagemAresta.resolver(
+            picoId: 'pico_offline',
+            caminho: 'imagens/thumbnail.webp',
+            checksumSha256: 'hash_offline_789',
+            caminhoDownloads: tempDownloadsDir.path,
+            caminhoCacheVolatil: tempCacheDir.path,
+            clienteHttp: ClienteHttpAresta.paraTestes(clienteEspiao),
+          );
+
+          expect(provedor, isA<ImagemArquivoAresta>());
+          final imgAresta = provedor as ImagemArquivoAresta;
+          expect(imgAresta.arquivo.path, equals(capaFile.path));
+          expect(clienteEspiao.chamadas, equals(0));
+        },
+      );
+    });
   });
 }
 
