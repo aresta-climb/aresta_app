@@ -1,20 +1,17 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Stack tecnológica: Flutter (Dart 3.x), Protobuf (aresta_api), SQLite/PowerSync, MVVM com navegação em árvore reativa.
+  Domínio: Aresta Climb App - Guia digital de escalada offline-first com sincronização delta atômica e live reload com o Editor Desktop.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  IMPORTANTE: Você DEVE seguir rigorosamente os princípios de engenharia definidos no arquivo `AGENTS.md` na raiz do repositório. Leia este arquivo antes de tomar decisões arquiteturais, propor mudanças ou implementar código e testes.
+
+rules:
+  proposal:
+    - OBRIGATÓRIO estar escrito em português brasileiro (PT-BR).
+    - Considerar integralmente os 8 princípios do AGENTS.md em qualquer proposição.
+  tasks:
+    - OBRIGATÓRIO estar escrito em português brasileiro (PT-BR).
+    - Seguir a arquitetura modular, TDD com espelhamento 1:1, testes orientados a comportamento e Fakes determinísticos conforme AGENTS.md.
+  design:
+    - OBRIGATÓRIO estar escrito em português brasileiro (PT-BR).

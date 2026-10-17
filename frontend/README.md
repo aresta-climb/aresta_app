@@ -255,6 +255,6 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 
 - **Código-Fonte**: Licenciado sob a [Mozilla Public License 2.0 (MPL 2.0)](../LICENSE).
 - **Diretrizes de Contribuição**: Adotamos o Developer Certificate of Origin (DCO com `git commit -s`). Veja detalhes em [CONTRIBUTING.md](../CONTRIBUTING.md).
-- **Princípios de Engenharia**: Desenvolvimento orientado a testes (TDD), 100% de cobertura e tudo em português brasileiro. Consulte [PRINCIPIOS.md](../PRINCIPIOS.md).
+- **Princípios de Engenharia**: Desenvolvimento orientado a testes (TDD), 100% de cobertura e tudo em português brasileiro. Consulte [AGENTS.md](../AGENTS.md).
 
 

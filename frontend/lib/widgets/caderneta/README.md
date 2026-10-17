@@ -29,7 +29,7 @@ Card modular de resumo métrico:
 
 ## 2. Testes de Widget
 
-Seguindo o princípio **V. Testes de Widget em Primeiro Lugar** do `AGENTS.md`, cada componente possui uma suíte dedicada em `test/widgets/caderneta/`:
+Seguindo os princípios **V e VIII (Testes de Widget em Primeiro Lugar)** do `AGENTS.md`, cada componente possui uma suíte dedicada em `test/widgets/caderneta/`:
 - `modal_registro_cadena_test.dart`
 - `grafico_piramide_graus_test.dart`
 - `card_estatistica_test.dart`

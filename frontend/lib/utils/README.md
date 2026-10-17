@@ -7,7 +7,7 @@ Este diretório (`lib/utils/`) reúne utilitários e serviços de suporte de dom
 O `ConstrutorCaminhoTrajeto` é o componente central responsável por converter traçados vetoriais de escalada compilados em formato SVG Path Data (`M ... C ...`) para caminhos gráficos nativos (`ui.Path`) e viabilizar interações ergonômicas de toque no mapa interativo.
 
 ### Isolamento Arquitetural de Pacotes
-Seguindo as diretrizes de engenharia do repositório (`PRINCIPIOS.md`), o uso de bibliotecas externas de parsing de caminhos vetoriais é estritamente isolado:
+Seguindo as diretrizes de engenharia do repositório (`AGENTS.md`), o uso de bibliotecas externas de parsing de caminhos vetoriais é estritamente isolado:
 - **Barreira Exclusiva**: Apenas o arquivo `lib/utils/construtor_caminho_trajeto.dart` tem autorização para importar o pacote `package:path_drawing/`.
 - **Garantia por Teste**: O teste arquitetural `test/architecture/path_drawing_isolation_test.dart` varre todos os arquivos do projeto em `lib/` e falha automaticamente o CI se qualquer outro arquivo violar este isolamento.
 

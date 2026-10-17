@@ -6,7 +6,7 @@ Obrigado pelo interesse em contribuir com o Aresta! Este documento orienta como 
 
 ## 1. Princípios de Engenharia (Obrigatório)
 
-Antes de propor alterações ou escrever qualquer linha de código, leia atentamente nossos [Princípios de Engenharia](PRINCIPIOS.md). 
+Antes de propor alterações ou escrever qualquer linha de código, leia atentamente nossos [Princípios de Engenharia](AGENTS.md). 
 Eles são a diretriz máxima do projeto e incluem regras inegociáveis:
 - **Tudo em Português Brasileiro**: Código, documentação, variáveis, nomes de widgets, commits e comentários.
 - **TDD (Test-Driven Development)**: Os testes devem ser escritos e rodados (falhando inicialmente) antes de qualquer implementação.
