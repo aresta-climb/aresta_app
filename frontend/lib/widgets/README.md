@@ -10,15 +10,15 @@ Este diretório reúne os componentes visuais e utilitários de interface compar
 Fachada unificada e assíncrona para resolução e exibição de imagens em todo o ecossistema do Aresta Climb. Elimina dependências de pacotes externos pesados de cache HTTP e implementa persistência direta no sistema de arquivos do dispositivo.
 
 #### Pipeline de Resolução em Três Camadas:
-1. **Armazenamento Local Permanente (`/downloads` ou `/thumbnails`)**:
-   - Mídias de croquis baixados offline pelo usuário ou miniaturas persistentes.
+1. **Armazenamento Local Permanente (`$downloadsRoot/<picoId>/` ou `$downloadsRoot/thumbnails/`)**:
+   - Mídias de croquis baixados offline pelo usuário ou miniaturas persistentes sincronizadas do índice (onde `downloadsRoot = editorDeCroqui.downloadsPath(docsPath)`).
    - Retorna uma instância de `ImagemArquivoAresta`.
 2. **Cache Volátil Endereçado por Conteúdo (`/temp_cache`)**:
    - Verifica se o arquivo já foi baixado previamente em sessões online sob o padrão `<temp_cache>/<picoId>/<caminho>.<hash>` (ou `<temp_cache>/thumbnails/<picoId>.webp.<hash>` para miniaturas de catálogo).
    - Se encontrado no disco, resolve imediatamente como `ImagemArquivoAresta`, evitando qualquer consumo de banda ou requisições HTTP.
 3. **Download Atômico da CDN e Persistência Volátil**:
    - Caso a mídia não exista localmente, realiza o download HTTP a partir da URL base da CDN (`serverBase`) utilizando a instância compartilhada `ClienteHttpAresta.instancia` (com pool de conexões Keep-Alive de 120 segundos e timeout de 20 segundos por imagem, aceitando `clienteHttp` opcional via `ClienteHttpAresta.paraTestes` em testes).
-   - **Exigência de SHA-256**: O checksum SHA-256 é obrigatório para persistência em disco. Se ausente no índice/croqui, emite log de erro no `AppLogger` e recorre a `NetworkImage` sem gravar no disco.
+   - **Exigência de SHA-256 e Severidade Condicional**: O checksum SHA-256 é obrigatório para persistência em disco. Se ausente no índice/croqui, recorre a `NetworkImage` sem gravar no disco, emitindo `logError` no `AppLogger` caso o croqui esteja baixado offline (`isPicoDownloaded == true`) ou `logAviso` durante navegação online.
    - **Gravação Atômica e Tratamento Rastreável**: Grava em arquivo temporário `.tmp` e aplica renomeação atômica para o arquivo final com extensão `.<hash>`, sem blocos `catch` silenciosos.
    - **Expurgo de Versões Obsoletas**: Ao salvar com sucesso uma nova versão, varre o diretório pai e remove arquivos anteriores da mesma mídia que possuam hashes divergentes, evitando acúmulo de lixo.
    - **Deduplicação de Requisições Concorrentes**: Mantém um mapa em memória (`_downloadsEmAndamento`) indexado pelo caminho de destino. Múltiplos widgets solicitando a mesma imagem concorrentemente compartilham o mesmo `Future`, disparando apenas uma requisição HTTP real.
@@ -39,7 +39,8 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 
 | Widget | Responsabilidade |
 |---|---|
-| `BannerModoExperimental` | Faixa fixa no topo da interface durante o Modo de Desenvolvimento/Live Reload, exibindo tempo restante e animação de pulso ao receber atualizações via WebSocket. |
+| `BannerModoExperimental` | Faixa fixa no topo da interface durante o Modo de Desenvolvimento/Live Reload, exibindo animação de pulso ao receber atualizações via WebSocket e botão de encerramento rápido. |
+| `ModalSessaoExperimentalEncerrada` | Diálogo modal exibido quando a sessão efêmera do Editor Desktop expira ou é encerrada remotamente (`HTTP 404`), informando o retorno automático ao catálogo oficial do Aresta Climb. |
 | `BannerModoOnline` | Alerta visual discreto indicando navegação em croqui sob demanda (sem download offline completo). |
 | `ModalConfirmacaoSaida` | Diálogo de confirmação que impede a perda de dados ou saída acidental de telas de exploração. |
 | `CarrosselPicosProximos` | Carrossel horizontal de picos próximos com miniaturas otimizadas. |

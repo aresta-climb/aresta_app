@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -70,13 +70,15 @@ void main() {
     testWidgets('renderiza miniatura via ProvedorImagemAresta com ResizeImage e larguraAlvo 300', (
       WidgetTester tester,
     ) async {
-      final thumbDir = Directory('${tempDir.path}/thumbnails')..createSync(recursive: true);
-      final thumbFile = File('${thumbDir.path}/pico_1.webp');
+      final picoDir = Directory('${tempDir.path}/downloads/pico_1/imagens')
+        ..createSync(recursive: true);
+      final thumbFile = File('${picoDir.path}/thumbnail.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
       final crag = Croqui(
         id: 'pico_1',
         nome: 'Pico da Falésia',
+        caminhoThumbnail: 'imagens/thumbnail.webp',
         picos: [
           Pico(
             estado: 'Serra do Cipó',
@@ -108,7 +110,7 @@ void main() {
       expect(resize.width, equals(300));
     });
 
-    testWidgets('exibe ícone de fallback terrain quando miniatura não existe', (
+    testWidgets('exibe logo_splash.png como fallback quando croqui não possui miniatura', (
       WidgetTester tester,
     ) async {
       final crag = Croqui(
@@ -133,7 +135,14 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.terrain), findsOneWidget);
+      expect(find.byIcon(Icons.terrain), findsNothing);
+      final imageFinder = find.byWidgetPredicate(
+        (w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName == 'assets/logo_splash.png',
+      );
+      expect(imageFinder, findsOneWidget);
     });
 
     testWidgets('OfflineCragCard renderiza dados tipados de Croqui', (

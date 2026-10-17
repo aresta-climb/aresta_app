@@ -14,7 +14,7 @@ import 'imagem_arquivo_aresta.dart';
 /// Provedor unificado e em camadas para resolução de imagens do ecossistema Aresta.
 ///
 /// Ordem de precedência:
-/// 1. Armazenamento local permanente (`/downloads/<picoId>/...` ou `$docsDir/thumbnails/...`)
+/// 1. Armazenamento local permanente (`$downloadsRoot/<picoId>/...` ou `$downloadsRoot/thumbnails/...`)
 /// 2. Cache temporário volátil do sistema operacional (`/temp_cache/<picoId>/<caminho>.<hash>`)
 /// 3. Streaming remoto da CDN HTTP com gravação atômica em disco temporário reutilizando
 ///    o pool Keep-Alive de [ClienteHttpAresta].
@@ -61,16 +61,14 @@ class ProvedorImagemAresta {
           ? uriCaminho.path
           : cleanPath;
 
-      // Identifica se a mídia solicitada é uma miniatura (thumbnail) do pico, aceitando
-      // rotas canônicas (thumbnails/<picoId>.webp) ou legadas (/imagens/thumbnail.webp).
+      // Identifica se a mídia solicitada é a miniatura global do catálogo (thumbnails/<picoId>.webp).
+      // Não captura imagens internas de capa do croqui (ex: imagens/thumbnail.webp), que possuem
+      // resolução e hash próprios registrados em Croqui.arquivos_externos.
       final bool ehThumbnail = picoId.isNotEmpty &&
           (cleanPath.startsWith('thumbnails/') ||
               cleanPath.contains('/thumbnails/') ||
-              pathSemQuery.endsWith('/thumbnail.webp') ||
-              pathSemQuery == 'thumbnail.webp' ||
               pathSemQuery.endsWith('/$picoId.webp') ||
-              pathSemQuery == '$picoId.webp' ||
-              pathSemQuery.contains('thumbnail'));
+              pathSemQuery == '$picoId.webp');
 
       if (ehThumbnail) {
         cleanPath = 'thumbnails/$picoId.webp';
@@ -104,27 +102,18 @@ class ProvedorImagemAresta {
         }
       }
 
-      // 1. Armazenamento Local Permanente (/downloads ou thumbnails permanentes)
+      // 1. Armazenamento Local Permanente ($downloadsRoot/<picoId>/... ou $downloadsRoot/thumbnails/...)
       String downloadsRoot = caminhoDownloads ?? '';
-      String docsDirPath = '';
       if (downloadsRoot.isEmpty) {
         final docsDir = await getApplicationDocumentsDirectory();
-        docsDirPath = docsDir.path;
         final editor = EditorDeCroqui.instance;
         downloadsRoot = editor.downloadsPath(docsDir.path);
-      } else {
-        docsDirPath = downloadsRoot;
       }
 
       if (ehThumbnail) {
-        final thumbDocs = File('$docsDirPath/thumbnails/$picoId.webp');
-        if (thumbDocs.existsSync()) {
-          provedorBase = ImagemArquivoAresta(thumbDocs, checksumSha256: hashEfetivo);
-        } else {
-          final thumbDownloads = File('$downloadsRoot/thumbnails/$picoId.webp');
-          if (thumbDownloads.existsSync()) {
-            provedorBase = ImagemArquivoAresta(thumbDownloads, checksumSha256: hashEfetivo);
-          }
+        final thumbDownloads = File('$downloadsRoot/thumbnails/$picoId.webp');
+        if (thumbDownloads.existsSync()) {
+          provedorBase = ImagemArquivoAresta(thumbDownloads, checksumSha256: hashEfetivo);
         }
       }
 
@@ -216,12 +205,21 @@ class ProvedorImagemAresta {
           urlFinal = '$serverBase/$remotePath';
         }
 
-        // Se o hash for ausente ou nulo, recorre ao NetworkImage sem persistir em disco
+        // Se o hash for ausente ou nulo, recorre ao NetworkImage sem persistir em disco.
+        // Emite logError apenas se o croqui estiver baixado offline; caso contrário, emite logAviso.
         if (hashEfetivo == null || hashEfetivo.isEmpty) {
-          AppLogger.instance.logError(
-            'Checksum SHA-256 ausente ou nulo para mídia remota $picoId em $caminho. Recorrendo a NetworkImage sem cache volátil.',
-            stackTrace: StackTrace.current,
-          );
+          final repo = datasetRepository ?? DatasetRepository.instance;
+          final bool ehBaixadoOffline = repo?.isPicoDownloaded(picoId) ?? false;
+          final mensagem =
+              'Checksum SHA-256 ausente ou nulo para mídia remota $picoId em $caminho. Recorrendo a NetworkImage sem cache volátil.';
+          if (ehBaixadoOffline) {
+            AppLogger.instance.logError(
+              mensagem,
+              stackTrace: StackTrace.current,
+            );
+          } else {
+            AppLogger.instance.logAviso(mensagem);
+          }
           provedorBase = NetworkImage(urlFinal);
         } else {
           final uri = Uri.parse(urlFinal);

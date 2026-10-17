@@ -1,9 +1,12 @@
 # data-sync-feedback Specification
 
+## Purpose
+Define o comportamento visual, notificações e telemetria de sincronização de dados entre o aplicativo e os servidores de catálogo (produção oficial e modo experimental).
+
 ## Requirements
 
 ### Requirement: Feedback Contextual de Sincronização
-O sistema MUST informar visualmente ao usuário o resultado preciso da verificação de atualizações no servidor, diferenciando sincronizações manuais/explícitas, automáticas de abertura em produção e eventos em tempo real no modo experimental.
+O sistema MUST informar visualmente ao usuário o resultado preciso da verificação de atualizações no servidor, diferenciando sincronizações manuais/explícitas, automáticas de abertura em produção, eventos em tempo real no modo experimental, falhas de conectividade (`SyncStatus.offline`) e erros HTTP do servidor (`SyncStatus.error`).
 
 #### Scenario: Sincronização explícita encontrou novos dados
 - **WHEN** o usuário aciona manualmente a sincronização (via botão nas configurações ou scroll para baixo / *pull-to-refresh* na Home) e novos dados são recebidos (HTTP 200)
@@ -12,6 +15,20 @@ O sistema MUST informar visualmente ao usuário o resultado preciso da verifica�
 #### Scenario: Sincronização explícita sem novos dados
 - **WHEN** o usuário aciona manualmente a sincronização (via botão nas configurações ou scroll para baixo / *pull-to-refresh* na Home) e não existem novos dados (HTTP 304)
 - **THEN** a interface de usuário DEVE exibir um feedback indicando que nenhum croqui precisava ser atualizado
+
+#### Scenario: Sincronização explícita falha por falta de conexão com a internet
+- **WHEN** o usuário aciona manualmente a sincronização e `fetchIndiceWithRetries` retorna `IndiceOffline` (falha de socket/timeout)
+- **THEN** o `SyncService` DEVE definir `syncStatus` como `SyncStatus.offline`
+- **AND** a interface de usuário DEVE exibir a SnackBar `"Sem conexão com a internet."`
+
+#### Scenario: Sincronização explícita falha por erro HTTP do servidor oficial
+- **WHEN** o usuário aciona manualmente a sincronização no Modo Oficial e `fetchIndiceWithRetries` retorna `IndiceErroServidor` (ex: HTTP 500 ou 404 na CDN oficial)
+- **THEN** o `SyncService` DEVE definir `syncStatus` como `SyncStatus.error`
+- **AND** a interface de usuário DEVE exibir a SnackBar `"Erro ao verificar atualizações. Tente novamente mais tarde."`
+
+#### Scenario: Sincronização explícita detecta sessão experimental expirada (HTTP 404)
+- **WHEN** o usuário aciona manualmente a sincronização enquanto estava no Modo Experimental e a sessão de prévia é encerrada automaticamente por `HTTP 404`
+- **THEN** a função de sincronização manual NÃO DEVE exibir SnackBar de erro ou de falta de conexão, deixando apenas o diálogo modal de encerramento da sessão experimental visível na tela
 
 #### Scenario: Sincronização automática de abertura com atualização de croquis baixados em produção
 - **WHEN** o aplicativo realiza sincronização automática na inicialização no modo oficial e um ou mais croquis armazenados localmente são atualizados

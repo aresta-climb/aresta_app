@@ -182,7 +182,7 @@ class DatasetRepository {
       }
     }
 
-    // Fallback: Consulta o índice em memória para thumbnails
+    // Fallback: Consulta o índice em memória para thumbnails globais do catálogo
     final indice = indiceData.value;
     if (indice != null) {
       for (final r in indice.croquis) {
@@ -193,10 +193,11 @@ class DatasetRepository {
           final mapa = _tabelaSha256PorPico.putIfAbsent(picoId, () => {});
           mapa['thumbnails/$picoId.webp'] = thumbHash;
           mapa['$picoId.webp'] = thumbHash;
-          mapa['thumbnail.webp'] = thumbHash;
 
-          if (caminhoLimpo.contains('thumbnail') ||
-              caminhoLimpo.endsWith('$picoId.webp')) {
+          if (caminhoLimpo.startsWith('thumbnails/') ||
+              caminhoLimpo.contains('/thumbnails/') ||
+              caminhoLimpo == '$picoId.webp' ||
+              caminhoLimpo.endsWith('/$picoId.webp')) {
             return thumbHash;
           }
         }
@@ -306,7 +307,6 @@ class DatasetRepository {
         final thumbHash = resumo.checksumSha256Thumbnail;
         mapaPico['thumbnails/${resumo.id}.webp'] = thumbHash;
         mapaPico['${resumo.id}.webp'] = thumbHash;
-        mapaPico['thumbnail.webp'] = thumbHash;
       }
     }
     try {
@@ -338,7 +338,10 @@ class DatasetRepository {
 
           final String picoId = resumo.id;
           final baseUrl = editorDeCroqui.activeBaseUrl;
-          final String thumbnailUrl = '$baseUrl/thumbnails/$picoId.webp';
+          final bool temThumbnail = resumo.hasChecksumSha256Thumbnail() &&
+              resumo.checksumSha256Thumbnail.isNotEmpty;
+          final String thumbnailUrl =
+              temThumbnail ? '$baseUrl/thumbnails/$picoId.webp' : '';
 
           final bool isStored = await gerenciadorArquivosLocais
               .verificarPicoBaixado(downloadsPath, picoId);

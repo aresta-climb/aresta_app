@@ -4,6 +4,7 @@
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
+import '../../services/repositorio_dataset.dart';
 
 /// ViewModel de item para exibição de cards de croquis na interface (Dumb UI).
 ///
@@ -25,7 +26,7 @@ abstract class CardCroquiViewModel {
   /// Resumo textual de setores e modalidades de escalada já formatado.
   String get textoEstatisticas;
 
-  /// Caminho relativo da miniatura visual no armazenamento local ou CDN.
+  /// Caminho relativo da miniatura visual no armazenamento local ou CDN (vazio se o croqui não possuir thumbnail).
   String get caminhoMiniatura;
 
   /// Indica se os dados do croqui já foram baixados para acesso offline.
@@ -159,7 +160,11 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
   String get descricao => _metadados.descricao;
 
   @override
-  String get caminhoMiniatura => 'thumbnails/${_metadados.id}.webp';
+  String get caminhoMiniatura =>
+      (_metadados.hasChecksumSha256Thumbnail() &&
+              _metadados.checksumSha256Thumbnail.isNotEmpty)
+          ? 'thumbnails/${_metadados.id}.webp'
+          : '';
 
   @override
   String? get caminhoCapa => null;
@@ -233,7 +238,21 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
   String get descricao => _croqui.descricao;
 
   @override
-  String get caminhoMiniatura => 'thumbnails/${_croqui.id}.webp';
+  String get caminhoMiniatura {
+    if (_croqui.hasCaminhoThumbnail() &&
+        _croqui.caminhoThumbnail.trim().isNotEmpty) {
+      return _croqui.caminhoThumbnail.trim();
+    }
+    final repo = DatasetRepository.instance;
+    final hashIndice = repo?.obterSha256DaMidia(
+      _croqui.id,
+      'thumbnails/${_croqui.id}.webp',
+    );
+    if (hashIndice != null && hashIndice.isNotEmpty) {
+      return 'thumbnails/${_croqui.id}.webp';
+    }
+    return '';
+  }
 
   @override
   bool get salvoOffline => true;

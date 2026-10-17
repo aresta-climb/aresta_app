@@ -48,10 +48,11 @@ O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
 ### Saída do Modo Experimental & Restauração de Produção
 
-Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperimental` ou programmaticamente):
+Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperimental`, programaticamente ou automaticamente por expiração da sessão):
 1. **Limpeza e Desconexão Coordenada (`nukeExperimentalData`)**: Encerra o WebSocket de Live Reload, remove recursivamente os diretórios voláteis (`editor/experimental` e `edited`), grava a configuração atômica e redefine `isExperimentalMode.value = false` antes de zerar `editorUrl.value`. Isso previne que ouvintes de mudanças de estado tentem ler arquivos no caminho experimental já excluído.
 2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: O repositório recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
-3. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
+3. **Encerramento Automático de Sessão Expirada (`HTTP 404`)**: Quando o Editor Desktop é fechado pelo autor ou o túnel Cloudflare Relay (`previa.arestaclimb.com`) expira e `SyncNetwork.fetchIndiceWithRetries` retorna `IndiceErroServidor(statusCode: 404)` com `isExperimentalMode.value == true`, o `SyncService` executa `nukeExperimentalData()`, restaura o índice oficial em memória (`datasetRepository.init()`), define `syncStatus.value = SyncStatus.updated` e aciona `notificarSessaoExperimentalExpirada()`. O widget raiz `MyApp` escuta `notificadorSessaoExpirada`, redireciona a navegação para a Home (`AppNav.home`) e apresenta o diálogo `ModalSessaoExperimentalEncerrada`.
+4. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
 
 ### Estabilização de Cotas e Proteção do Relay (Cloudflare & WebSocket)
 
@@ -79,10 +80,11 @@ Para evitar exaustão de requisições e consumo excessivo de cotas em túneis d
 
 ### `EditorDeCroqui`
 - Singleton acessível via `EditorDeCroqui.instance`
-- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `notificadorGatilhoRecarregamento`
+- Notificadores: `editorUrl`, `isExperimentalMode`, `isDevModeEnabled`, `notificadorGatilhoRecarregamento`, `notificadorSessaoExpirada`
 - `activeBaseUrl` retorna a URL correta para o modo ativo
+- `EditorDeCroqui.isUrlExperimental(url)` identifica se uma URL pertence a uma sessão efêmera do Editor Desktop (`previa.arestaclimb.com`, IPs privados de LAN ou modo experimental ativo)
 - `downloadsPath(docsPath)` e `indicePath(docsPath)` retornam os caminhos corretos por modo
-- Gerencia o listener de WebSocket para Live Reload e emite `dispararPulsoRecarregamento()` ao receber atualizações
+- Gerencia o listener de WebSocket para Live Reload e emite `dispararPulsoRecarregamento()` ao receber atualizações, além de `notificarSessaoExperimentalExpirada()` quando a sessão do editor expira
 - Persiste configuração em `editor_config.yaml`
 
 ### `BannerModoExperimental` (Widget Global)
@@ -92,7 +94,7 @@ Para evitar exaustão de requisições e consumo excessivo de cotas em túneis d
 - Animação de pulso luminoso (300ms) reativa disparada quando o WebSocket recebe eventos de Hot Reload
 
 ### `SyncService` e `SyncIsolate`
-- Orquestra toda a checagem Delta via API.
+- Orquestra toda a checagem Delta via API utilizando as variantes seladas de `FetchIndiceResult` (`IndiceUpdated`, `IndiceUnchanged`, `IndiceOffline`, `IndiceErroServidor`) retornadas por `SyncNetwork.fetchIndiceWithRetries`.
 - Executa os processamentos pesados (SHA256, parseamento de arrays binários, escritas de dezenas de imagens no disco local e compactação) em background via Dart Isolates (`downloadIsolateMain`).
 - **Padronização de Downloads e Limpeza de Resíduos**: Grava os dados do croqui permanentemente como `compilado.binarypb` (em substituição a `<picoId>.binarypb`) e remove resíduos de arquivos legados após a finalização atômica do commit no disco.
 - **Reutilização de Cache Volátil (`temp_cache`)**: Ao realizar o download de croquis offline, o isolate recebe o caminho `tempCacheDirPath`. Caso uma mídia externa já tenha sido baixada previamente durante a navegação online sob demanda (persistida como `<temp_cache>/<picoId>/<caminho>.<hash>`), o isolate copia o arquivo localmente para o destino final via escrita atômica (`.tmp` seguido de renomeação), zerando requisições de rede redundantes para a CDN.
@@ -116,15 +118,15 @@ A partir da versão atual, o usuário pode navegar livremente por qualquer croqu
 - **`GerenciadorSessaoOnline` (`dataset/sessao_online/`)**: Mantém instâncias de `Croqui` carregadas sob demanda em memória RAM (e cache volátil `/temp_cache`), atualizando reativamente o estado sem exigir downloads prévios.
 - **`ServicoCroquiOnline` (`http/`)**: Baixa arquivos `.binarypb` leves sob demanda diretamente para a sessão volátil utilizando o `ClienteHttpAresta` compartilhado, suporta re-fetch com bypass de cache HTTP (`recarregarCroquiOnline`) e processa respostas HTTP 200 OK no polling periódico de ETag, integrando-se diretamente ao ciclo de Live Reload.
 - **`ProvedorImagemAresta` (`widgets/provedor_imagem_aresta.dart`)**: Resolução de imagens em camadas com persistência em disco sob demanda:
-  1. Armazenamento local permanente (`/downloads` ou thumbnails permanentes em `/thumbnails/<picoId>.webp`).
+  1. Armazenamento local permanente (`$downloadsRoot/<picoId>/<caminho>` ou thumbnails permanentes em `$downloadsRoot/thumbnails/<picoId>.webp`).
   2. Cache temporário volátil endereçado por conteúdo (`/temp_cache/<picoId>/<caminho>.<hash>` e `/temp_cache/thumbnails/<picoId>.webp.<hash>`).
-  3. Download atômico da CDN com streaming, validação de integridade por checksum SHA-256 obrigatório, expurgo de versões antigas do mesmo arquivo com hashes divergentes, deduplicação de downloads concorrentes e persistência imediata em disco no `/temp_cache` (com fallback para `NetworkImage` sem persistência e log de erro no `AppLogger` caso o hash esteja ausente).
+  3. Download atômico da CDN com streaming, validação de integridade por checksum SHA-256 obrigatório, expurgo de versões antigas do mesmo arquivo com hashes divergentes, deduplicação de downloads concorrentes e persistência imediata em disco no `/temp_cache` (com fallback para `NetworkImage` sem persistência, emitindo `logError` quando o croqui está baixado offline ou `logAviso` durante navegação online caso o hash esteja ausente).
   4. Suporte a downsampling integrado via `ResizeImage.resizeIfNeeded` com `larguraAlvo`/`alturaAlvo` (padronizado em 300px para miniaturas de cartões e carrosséis).
 - **Invalidação Reativa de Cache em Live Reload**: Ao receber eventos de recarregamento push via WebSocket, o aplicativo purga o cache de imagens do Flutter (`PaintingBinding.instance.imageCache.clear()` e `clearLiveImages()`), garantindo a substituição visual instantânea de texturas na GPU sem necessidade de desempilhar ou reabrir telas, tanto para croquis baixados quanto para croquis em sessão online.
 - **Guardião de Saída & Banner Online**: Componentes de UI (`BannerModoOnline`, `ModalConfirmacaoSaida`) que garantem que o usuário saiba que está online e possa salvar o croqui offline antes de ir para a pedra com recarregamento contínuo em tempo real.
 - **Notificações Reativas Simétricas**: No modo experimental, a recarga por WebSocket ou ETag é seamless com animação no `BannerModoExperimental`; fora do modo experimental, a interface exibe um aviso amigável via `SnackBar` informando que o guia do pico foi atualizado.
 - **`GerenciadorNotificacaoDownload` (`notificacoes/gerenciador_notificacao_download.dart`)**: Gestão de notificações nativas na barra de status do sistema operacional. No Android, ancora a execução a um Foreground Service nativo ininterrupto com notificação contínua sticky (`ongoing: true`) e barra de progresso, transitando atomicamente para uma notificação dispensável de sucesso/erro. No iOS, emite a notificação nativa ao concluir o salvamento.
-- **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves no pipeline de download offline e sincronização de índice são tratadas com a mesma seriedade de um crash (`logCrash`, `fatal: true`), impactando imediatamente as métricas de estabilidade no Firebase Crashlytics e disparando alertas para a equipe de desenvolvimento.
+- **`AppLogger` e Crash Reporting (`firebase/app_logger.dart`)**: Falhas graves de integridade no pipeline de download offline e sincronização de índice (como divergência de checksum SHA-256 ou HTTP 404/500 na CDN oficial `serving.arestaclimb.com`) são tratadas no Crashlytics. Já erros HTTP originados de sessões efêmeras do Editor Desktop (`EditorDeCroqui.isUrlExperimental(url) == true`, como `previa.arestaclimb.com` ou LAN local) são registrados apenas como `logAviso` (breadcrumb) em `SyncNetwork`, evitando alertas falsos quando o autor encerra o editor. Para evitar falsos positivos quando o escalador estiver sem conexão na rocha (`SocketException`, `ClientException`, `TimeoutException` ou HTTP `502/503/504/429`), apenas a camada que possui o objeto `error` original (`ServicoCroquiOnline.carregarCroquiRemoto` e `SyncService.tratarErroDownloadIsolate`) invoca `logFalhaSyncOuDownload`, enquanto orquestradores de nível superior (`handlePicoSelection`, `SyncService.downloadCrag` e `ServicoDownloadSegundoPlano.executarDownload`) registram o encerramento sem sucesso como breadcrumb (`logAviso`).
 - **`TelemetryService` e Analytics (`firebase/telemetria.dart`)**: Rastreamento de telemetria analítica com taxonomia padronizada em português via GA4:
   - *Deep Links & QR Codes*: `logDeepLinkAberto` captura parâmetros de rota, tipo de inicialização (`cold_start`/`warm_start`), status de sucesso/falha e dimensões UTM (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
   - *Índice de Escaladas*: `logAcaoIndiceEscaladas` instrumenta alternância de abas de modalidade e aplicação de filtros dinâmicos de graduação (`filtrar_grau`), setor (`filtrar_setor`), conquistadores (`filtrar_conquistador`), clássicas (`filtrar_classicas`) e limpeza (`limpar_filtros`) com valores no parâmetro `detalhe`.

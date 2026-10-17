@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -237,6 +237,28 @@ void main() {
       expect(find.text('5 setores • 40 escaladas'), findsOneWidget);
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.text('500m'), findsOneWidget);
+    });
+
+    testWidgets('exibe logo_splash.png como fallback e não usa Icons.terrain quando croqui não possui thumbnail nem capa', (
+      WidgetTester tester,
+    ) async {
+      final cragSemThumb = MetadadosIndice(
+        id: 'pico_sem_thumb_card',
+        nome: 'Pico Sem Thumbnail',
+        descricao: 'Betim',
+      );
+
+      await tester.pumpWidget(buildTestCard(crag: cragSemThumb));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.terrain), findsNothing);
+      final logoFinder = find.byWidgetPredicate(
+        (w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName == 'assets/logo_splash.png',
+      );
+      expect(logoFinder, findsOneWidget);
     });
   });
 }

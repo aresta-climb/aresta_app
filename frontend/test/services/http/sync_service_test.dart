@@ -19,7 +19,9 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 import '../../mocks/mock_app_logger.dart';
+import '../../mocks/mock_telemetria.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
@@ -89,6 +91,7 @@ void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
+    TelemetryService.instance = MockTelemetryService();
 
     tempDir = await Directory.systemTemp.createTemp('sync_service_test');
     PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
@@ -311,6 +314,50 @@ void main() {
         final recorded = mockLogger.recordedErrors.first;
         expect(recorded['fatal'], isTrue);
         expect(recorded['stackTrace'], isNotNull);
+      },
+    );
+
+    test(
+      'downloadCrag quando isolate falha por queda de conexão registra apenas logAviso e não dispara logCrash fatal',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        final resumo = ResumoCroqui(
+          id: 'pico_sem_rede',
+          nome: 'Pedra Grande',
+          caminhoRelativo: 'br_mg_igarape_pedra_grande/compilado.binarypb',
+          checksumSha256Croqui: 'hash123',
+        );
+        final indice = Indice(croquis: [resumo]);
+        datasetRepository.indiceData.value = indice;
+
+        final fakeClient = _SyncTestFakeClient(indice);
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepository,
+          storage: storage,
+          client: ClienteHttpAresta.paraTestes(fakeClient),
+        );
+
+        testSyncService.mockIsolateSpawn = (mainFunc, args) async {
+          args.sendPort.send(
+            DownloadIsolateResult(
+              filesToDelete: [],
+              filesToRename: {},
+              error: "ClientException with SocketException: Failed host lookup: 'serving.arestaclimb.com'",
+              rastreamentoPilha: 'sync_isolate.dart:90',
+            ),
+          );
+        };
+
+        final sucesso = await testSyncService.downloadCrag(resumo);
+
+        expect(sucesso, isFalse);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(
+          mockLogger.recordedWarnings.any((w) => w.contains('pico_sem_rede')),
+          isTrue,
+        );
       },
     );
   });

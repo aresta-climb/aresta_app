@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -11,7 +11,9 @@ import '../../firebase/app_logger.dart';
 /// Extrai os assets pré-embutidos (pre-bundled) do pacote do aplicativo
 /// para o diretório de documentos do dispositivo no primeiro acesso.
 class ExtratorAssetsPreload {
-  /// Desempacota o `indice.binarypb` e as thumbnails pré-baixadas do bundle de assets.
+  /// Desempacota o `indice.binarypb` e as thumbnails pré-baixadas do bundle de assets
+  /// para `$docsPath/downloads/thumbnails/`, removendo o diretório legado `$docsPath/thumbnails/`
+  /// caso ainda exista no dispositivo.
   Future<void> desempacotarAssetsPreload({
     required String docsPath,
     required String indicePath,
@@ -47,7 +49,14 @@ class ExtratorAssetsPreload {
         ),
       );
 
-      final thumbnailsDir = Directory('$docsPath/thumbnails');
+      final legacyThumbnailsDir = Directory('$docsPath/thumbnails');
+      if (legacyThumbnailsDir.existsSync()) {
+        try {
+          legacyThumbnailsDir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+
+      final thumbnailsDir = Directory('$docsPath/downloads/thumbnails');
       if (!thumbnailsDir.existsSync()) {
         thumbnailsDir.createSync(recursive: true);
       }

@@ -41,7 +41,7 @@ Quando o usuário está no Modo Experimental conectado ao Editor Desktop (via Cl
   - `lib/view/function_library/biblioteca_funcoes_comuns.dart` (supressão de SnackBar quando a sessão experimental foi encerrada durante o sync manual)
 - **Testes Afetados (`frontend/test/`)**:
   - `test/widgets/modal_sessao_experimental_encerrada_test.dart` (novo)
-  - `test/services/http/sync_rede_test.dart`
-  - `test/services/http/sync_service_test.dart`
+  - `test/services/sync_rede_test.dart`
+  - `test/services/sync_service_test.dart` e `test/services/http/sync_service_test.dart`
   - `test/services/editor_croqui_test.dart`
   - `test/view/function_library/biblioteca_funcoes_comuns_test.dart`

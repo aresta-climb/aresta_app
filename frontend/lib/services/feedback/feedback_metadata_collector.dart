@@ -382,19 +382,31 @@ class FeedbackMetadataCollector {
           croquiStatus = 'NAO_BAIXADO';
         }
 
-        // Procura arquivo de thumbnail local
+        // Procura arquivo de thumbnail local no caminho canônico ($downloadsRoot/thumbnails/<croquiId>.webp) ou em temp_cache
         File? thumbFile;
-        final thumbDocs = File('$docsPath/thumbnails/$croquiId.webp');
-        final thumbDownloads =
-            File('$docsPath/downloads/$croquiId/thumbnail.webp');
-        final thumbCache = File('$tempCachePath/thumbnails/$croquiId.webp');
+        final downloadsPath = DatasetRepository.instance != null
+            ? DatasetRepository.instance!.editorDeCroqui.downloadsPath(docsPath)
+            : '$docsPath/downloads';
+        final thumbDownloads = File('$downloadsPath/thumbnails/$croquiId.webp');
 
-        if (await thumbDocs.exists()) {
-          thumbFile = thumbDocs;
-        } else if (await thumbDownloads.exists()) {
+        if (await thumbDownloads.exists()) {
           thumbFile = thumbDownloads;
-        } else if (await thumbCache.exists()) {
-          thumbFile = thumbCache;
+        } else {
+          if (thumbnailSha256Esperado != null &&
+              thumbnailSha256Esperado.isNotEmpty) {
+            final cacheComHash = File(
+              '$tempCachePath/thumbnails/$croquiId.webp.$thumbnailSha256Esperado',
+            );
+            if (await cacheComHash.exists()) {
+              thumbFile = cacheComHash;
+            }
+          }
+          if (thumbFile == null) {
+            final thumbCache = File('$tempCachePath/thumbnails/$croquiId.webp');
+            if (await thumbCache.exists()) {
+              thumbFile = thumbCache;
+            }
+          }
         }
 
         if (thumbFile != null && await thumbFile.exists()) {

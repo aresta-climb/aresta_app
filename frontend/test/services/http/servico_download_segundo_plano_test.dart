@@ -70,7 +70,7 @@ void main() {
       verify(() => mockNotificador.notificarConclusao('crag_1', 'Pedra Grande')).called(1);
     });
 
-    test('executarDownload notifica falha e registra crash quando syncService retorna false', () async {
+    test('executarDownload notifica falha e registra apenas logAviso (sem crash fatal duplicado) quando syncService retorna false', () async {
       final resumo = ResumoCroqui(id: 'crag_2', nome: 'Falha Baú');
 
       when(() => mockSyncService.downloadCrag(any())).thenAnswer((_) async => false);
@@ -81,9 +81,9 @@ void main() {
       verify(() => mockNotificador.solicitarPermissoes()).called(1);
       verify(() => mockNotificador.notificarFalha('crag_2', 'Falha Baú', any())).called(1);
 
-      final crashErrors = mockLogger.recordedErrors.where((e) => e['fatal'] == true).toList();
-      expect(crashErrors, isNotEmpty);
-      expect(crashErrors.first['contextMessage'], contains('crag_2'));
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedWarnings.first, contains('crag_2'));
     });
 
     test('executarDownload captura exceção de rede e registra como logAviso sem abrir issue fatal', () async {

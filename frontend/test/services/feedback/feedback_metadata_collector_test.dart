@@ -180,7 +180,7 @@ void main() {
       final croquiDir = Directory('${tempDocsDir.path}/downloads/pico_integro')..createSync(recursive: true);
       await File('${croquiDir.path}/compilado.binarypb').writeAsBytes(croquiBytes);
 
-      final thumbDir = Directory('${tempDocsDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbDir = Directory('${tempDocsDir.path}/downloads/thumbnails')..createSync(recursive: true);
       await File('${thumbDir.path}/pico_integro.webp').writeAsBytes(thumbBytes);
 
       final collector = FeedbackMetadataCollector(
@@ -217,7 +217,7 @@ void main() {
       final croquiDir = Directory('${tempDocsDir.path}/downloads/pico_divergente')..createSync(recursive: true);
       await File('${croquiDir.path}/compilado.binarypb').writeAsBytes([9, 9, 9]);
 
-      final thumbDir = Directory('${tempDocsDir.path}/thumbnails')..createSync(recursive: true);
+      final thumbDir = Directory('${tempDocsDir.path}/downloads/thumbnails')..createSync(recursive: true);
       await File('${thumbDir.path}/pico_divergente.webp').writeAsBytes([8, 8, 8]);
 
       final collector = FeedbackMetadataCollector(
@@ -236,7 +236,10 @@ void main() {
       expect(metadata.thumbnailSha256Real, equals(sha256.convert([8, 8, 8]).toString()));
     });
 
-    test('identifica status NAO_BAIXADO quando os arquivos não existem localmente', () async {
+    test('identifica status NAO_BAIXADO quando os arquivos não existem localmente (e ignora caminho legado \$docsPath/thumbnails)', () async {
+      // Mesmo se existir arquivo no diretório legado $docsPath/thumbnails, não deve ser lido
+      final legacyThumbDir = Directory('${tempDocsDir.path}/thumbnails')..createSync(recursive: true);
+      await File('${legacyThumbDir.path}/pico_nao_baixado.webp').writeAsBytes([1, 2, 3]);
       final indice = Indice(
         croquis: [
           ResumoCroqui(

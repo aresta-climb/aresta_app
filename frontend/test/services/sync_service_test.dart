@@ -813,10 +813,12 @@ void main() {
       HttpOverrides.global = null;
       tempDir = await Directory.systemTemp.createTemp('sync_thumbnails_test');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
-      thumbnailsDir = Directory('${tempDir.path}/thumbnails');
+      thumbnailsDir = Directory('${editor.downloadsPath(tempDir.path)}/thumbnails');
     });
 
     tearDown(() async {
+      editor.isExperimentalMode.value = false;
+      editor.editorUrl.value = null;
       try {
         if (tempDir.existsSync()) {
           tempDir.deleteSync(recursive: true);
@@ -858,14 +860,61 @@ void main() {
         );
         expect(thumbUrl, contains('?v=$expectedHash'));
 
-        // Verifica que o arquivo foi salvo no disco
+        // Verifica que o arquivo foi salvo no disco em $downloadsRoot/thumbnails
         final thumbFile = File('${thumbnailsDir.path}/pico_thumb.webp');
         expect(
           thumbFile.existsSync(),
           isTrue,
-          reason: 'O arquivo da thumbnail deve existir no cache local',
+          reason: 'O arquivo da thumbnail deve existir em \$downloadsRoot/thumbnails',
         );
         expect(await thumbFile.readAsBytes(), equals([10]));
+      },
+    );
+
+    test(
+      'deve sincronizar thumbnails também em modo experimental no diretório isolado e remover diretório legado \$docsDir/thumbnails',
+      () async {
+        editor.isExperimentalMode.value = true;
+        editor.editorUrl.value = 'https://exp.example.com';
+
+        // Cria diretório legado $docsDir/thumbnails para validar limpeza automática
+        final dirLegado = Directory('${tempDir.path}/thumbnails')
+          ..createSync(recursive: true);
+        File('${dirLegado.path}/legado.webp').writeAsBytesSync([99]);
+        expect(dirLegado.existsSync(), isTrue);
+
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_exp'
+              ..checksumSha256Thumbnail = sha256.convert([42]).toString(),
+          );
+
+        final fakeClient = FakeClient(newIndice, {
+          'thumbnails/pico_exp.webp': [42],
+        });
+        final syncService =
+            SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
+              ..mockIsolateSpawn = (mainFunc, args) async {
+                await downloadIsolateMain(args);
+              };
+
+        await syncService.syncIndex();
+
+        final expThumbFile = File(
+          '${editor.downloadsPath(tempDir.path)}/thumbnails/pico_exp.webp',
+        );
+        expect(
+          expThumbFile.existsSync(),
+          isTrue,
+          reason: 'Thumbnail experimental deve ser salva em editor/experimental/downloads/thumbnails/',
+        );
+        expect(await expThumbFile.readAsBytes(), equals([42]));
+        expect(
+          dirLegado.existsSync(),
+          isFalse,
+          reason: 'Diretório legado \$docsDir/thumbnails deve ser removido',
+        );
       },
     );
 
@@ -2351,10 +2400,14 @@ void main() {
       'Modo Experimental - syncIndex não deve poluir a pasta oficial de thumbnails',
       () async {
         final picoId = 'pico_exp_sem_thumb_oficial';
+        final thumbBytes = [7, 8, 9];
+        final thumbHash = sha256.convert(thumbBytes).toString();
         editor.isExperimentalMode.value = true;
         editor.editorUrl.value = 'http://127.0.0.1:8080';
 
-        final officialThumbnailsDir = Directory('${tempDir.path}/thumbnails');
+        final officialThumbnailsDir = Directory(
+          '${tempDir.path}/downloads/thumbnails',
+        );
         if (officialThumbnailsDir.existsSync()) {
           officialThumbnailsDir.deleteSync(recursive: true);
         }
@@ -2366,10 +2419,12 @@ void main() {
               ..nome = 'Pico Teste'
               ..caminhoRelativo = '$picoId/$picoId.binarypb'
               ..checksumSha256Croqui = 'HASH_CROQUI'
-              ..checksumSha256Thumbnail = 'HASH_THUMB',
+              ..checksumSha256Thumbnail = thumbHash,
           );
 
-        final fakeClient = FakeClient(newIndice);
+        final fakeClient = FakeClient(newIndice, {
+          'thumbnails/$picoId.webp': thumbBytes,
+        });
         final syncService =
             SyncService(datasetRepository: repo, client: ClienteHttpAresta.paraTestes(fakeClient))
               ..mockIsolateSpawn = (mainFunc, args) async {
@@ -2378,10 +2433,17 @@ void main() {
 
         await syncService.syncIndex();
 
-        // Pasta oficial de thumbnails não deve ter sido criada/populada em modo experimental
+        // Pasta oficial de thumbnails não deve ter sido poluída em modo experimental
         expect(
           File('${officialThumbnailsDir.path}/$picoId.webp').existsSync(),
           isFalse,
+        );
+        // Pasta experimental isolada deve conter a thumbnail sincronizada
+        expect(
+          File(
+            '${editor.downloadsPath(tempDir.path)}/thumbnails/$picoId.webp',
+          ).existsSync(),
+          isTrue,
         );
       },
     );
@@ -2588,6 +2650,96 @@ void main() {
         );
       },
     );
+
+    test(
+      'deve definir syncStatus para error se o servidor oficial retornar HTTP 500 em indice.binarypb',
+      () async {
+        editor.isExperimentalMode.value = false;
+        final statusClient = _StatusCodeClient(500);
+        final syncService =
+            SyncService(
+              datasetRepository: repo,
+              client: ClienteHttpAresta.paraTestes(statusClient),
+            )..mockIsolateSpawn = (mainFunc, args) async {
+              await downloadIsolateMain(args);
+            };
+
+        await syncService.syncIndex();
+
+        expect(
+          syncService.syncStatus.value,
+          SyncStatus.error,
+          reason:
+              'Quando o servidor oficial responde com erro HTTP (500), syncStatus deve ser SyncStatus.error e não offline.',
+        );
+      },
+    );
+
+    test(
+      'deve encerrar o modo experimental automaticamente, restaurar o índice oficial e notificar expiração quando indice.binarypb retornar 404 no modo experimental',
+      () async {
+        // 1. Prepara um índice oficial salvo no disco
+        editor.isExperimentalMode.value = false;
+        final officialIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_oficial_restaurado'
+              ..nome = 'Pico Oficial Restaurado',
+          );
+        final officialIndiceFile = File(editor.indicePath(tempDir.path));
+        await officialIndiceFile.parent.create(recursive: true);
+        await officialIndiceFile.writeAsBytes(officialIndice.writeToBuffer());
+
+        // 2. Ativa o Modo Experimental apontando para uma sessão expirada (404)
+        editor.editorUrl.value = 'https://previa.arestaclimb.com/blo5-uw8c';
+        editor.isExperimentalMode.value = true;
+        SyncService.baseUrlOverride = null;
+
+        final expDownloadsDir = Directory(editor.downloadsPath(tempDir.path));
+        await expDownloadsDir.create(recursive: true);
+        await File('${expDownloadsDir.path}/dummy.txt').writeAsString('exp');
+
+        final status404Client = _StatusCodeClient(404);
+        final syncService =
+            SyncService(
+              datasetRepository: repo,
+              client: ClienteHttpAresta.paraTestes(status404Client),
+            )..mockIsolateSpawn = (mainFunc, args) async {
+              await downloadIsolateMain(args);
+            };
+
+        expect(editor.notificadorSessaoExpirada.value, 0);
+
+        await syncService.syncIndex(auto: false);
+
+        // 3. Verifica que o modo experimental foi encerrado e limpo
+        expect(editor.isExperimentalMode.value, isFalse);
+        expect(editor.editorUrl.value, isNull);
+        expect(expDownloadsDir.existsSync(), isFalse);
+
+        // 4. Verifica que o índice oficial foi restaurado na memória e o notificador disparou
+        expect(editor.notificadorSessaoExpirada.value, 1);
+        expect(syncService.syncStatus.value, SyncStatus.updated);
+        expect(
+          repo.activeDataset.value?.availablePicos.any(
+            (p) => p['id'] == 'pico_oficial_restaurado',
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }
+
+class _StatusCodeClient extends http.BaseClient {
+  final int statusCode;
+
+  _StatusCodeClient(this.statusCode);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(const Stream.empty(), statusCode);
+  }
+}
+
 

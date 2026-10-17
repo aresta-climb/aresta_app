@@ -28,11 +28,12 @@ void main() {
   });
 
   group('mapearMetadadosParaCard', () {
-    test('mapeia informações básicas e estatísticas resumidas por padrão', () {
+    test('mapeia informações básicas e estatísticas resumidas quando possui checksumSha256Thumbnail', () {
       final metadados = MetadadosIndice(
         id: 'pico_alpha',
         nome: 'Pico Alpha',
         caminhoRelativo: 'brasil/mg/serra_do_cipo/croqui.binarypb',
+        checksumSha256Thumbnail: 'hash_thumb_alpha',
         precomputados: PrecomputadosResumoCroqui(
           totalSetores: 4,
           totalEscaladas: 20,
@@ -48,6 +49,16 @@ void main() {
       expect(vm.caminhoMiniatura, equals('thumbnails/pico_alpha.webp'));
       expect(vm.salvoOffline, isTrue);
       expect(vm.textoDistancia, equals('1.5km'));
+    });
+
+    test('retorna caminhoMiniatura vazio quando ResumoCroqui não possui checksumSha256Thumbnail', () {
+      final metadados = MetadadosIndice(
+        id: 'pico_sem_thumb',
+        nome: 'Pico Sem Thumb',
+      );
+      final vm = mapearMetadadosParaCard(metadados);
+
+      expect(vm.caminhoMiniatura, isEmpty);
     });
 
     test('aplica fallback SEM NOME quando nome estiver vazio', () {
@@ -84,10 +95,11 @@ void main() {
   });
 
   group('mapearCroquiParaCard', () {
-    test('mapeia Croqui offline completo com todas as propriedades', () {
+    test('mapeia Croqui offline completo usando caminhoThumbnail quando preenchido', () {
       final croqui = Croqui(
         id: 'croqui_1',
         nome: 'Pedra do Baú',
+        caminhoThumbnail: 'imagens/thumbnail.webp',
         picos: [
           Pico(
             nome: 'Baú',
@@ -106,8 +118,19 @@ void main() {
       expect(vm.titulo, equals('PEDRA DO BAÚ'));
       expect(vm.localizacao, equals('SÃO PAULO'));
       expect(vm.textoEstatisticas, equals('5 setores • 42 escaladas'));
-      expect(vm.caminhoMiniatura, equals('thumbnails/croqui_1.webp'));
+      expect(vm.caminhoMiniatura, equals('imagens/thumbnail.webp'));
       expect(vm.salvoOffline, isTrue);
+    });
+
+    test('retorna caminhoMiniatura vazio quando Croqui não possui caminhoThumbnail nem hash no índice', () {
+      final croqui = Croqui(
+        id: 'croqui_sem_thumb_total',
+        nome: 'Croqui Sem Capa',
+      );
+
+      final vm = mapearCroquiParaCard(croqui);
+
+      expect(vm.caminhoMiniatura, isEmpty);
     });
 
     test('usa nome do primeiro pico e fallback de localização quando nome for vazio', () {

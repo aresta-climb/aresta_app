@@ -206,7 +206,10 @@ void main() {
       expect(sessaoOnline.atualizacoesPendentes.value['pico_1'], equals('"etag_novo"'));
     });
 
-    test('carregarCroquiRemoto trata exceções de rede (ex: SocketException) retornando null', () async {
+    test('carregarCroquiRemoto trata exceções de rede (ex: SocketException) retornando null e registrando apenas logAviso', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
       when(() => mockClient.get(any(), headers: any(named: 'headers')))
           .thenThrow(const SocketException('Falha de conexão com o servidor'));
 
@@ -217,23 +220,39 @@ void main() {
 
       expect(resultado, isNull);
       expect(sessaoOnline.obterCroquiOnline('pico_offline'), isNull);
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
     });
 
-    test('carregarCroquiRemoto registra falha no AppLogger via logFalhaSyncOuDownload em caso de erro HTTP', () async {
+    test('carregarCroquiRemoto registra erro no Crashlytics em caso de HTTP 500/404 e apenas logAviso em HTTP 503 transitório', () async {
       final mockLogger = MockAppLogger();
       AppLogger.instance = mockLogger;
 
       when(() => mockClient.get(any(), headers: any(named: 'headers')))
           .thenAnswer((_) async => http.Response('Server error', 500));
 
-      final resultado = await servico.carregarCroquiRemoto(
+      final resultado500 = await servico.carregarCroquiRemoto(
         'https://servidor.com/croquis/pico_500.binarypb',
         picoId: 'pico_500',
       );
 
-      expect(resultado, isNull);
-      final totalLogs = mockLogger.recordedErrors.length + mockLogger.recordedWarnings.length;
-      expect(totalLogs, greaterThanOrEqualTo(1));
+      expect(resultado500, isNull);
+      expect(mockLogger.recordedErrors, isNotEmpty);
+
+      mockLogger.recordedErrors.clear();
+      mockLogger.recordedWarnings.clear();
+
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('Service Unavailable', 503));
+
+      final resultado503 = await servico.carregarCroquiRemoto(
+        'https://servidor.com/croquis/pico_503.binarypb',
+        picoId: 'pico_503',
+      );
+
+      expect(resultado503, isNull);
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
     });
 
     test('verificarAtualizacaoEtag trata exceções de rede retornando false', () async {

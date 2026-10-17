@@ -313,9 +313,8 @@ class SyncService {
         }
 
         if (!success) {
-          AppLogger.instance.logFalhaSyncOuDownload(
-            'Falha definitiva no download do croqui $id',
-            stackTrace: StackTrace.current,
+          AppLogger.instance.logAviso(
+            '[SyncService] Falha definitiva no download do croqui $id após retentativa.',
           );
         }
       }
@@ -434,14 +433,27 @@ class SyncService {
         forceBypassCache: forceBypassCache,
       );
 
-      if (result == null) {
-        await _loadLocalIndiceAndNotify(localIndicePath);
-        syncStatus.value = SyncStatus.offline;
-        TelemetryService.instance.logResultadoSincronizacao('erro');
-        return failedPicos;
-      }
-
       switch (result) {
+        case IndiceOffline():
+          await _loadLocalIndiceAndNotify(localIndicePath);
+          syncStatus.value = SyncStatus.offline;
+          TelemetryService.instance.logResultadoSincronizacao('erro');
+          return failedPicos;
+        case IndiceErroServidor(:final statusCode):
+          if (statusCode == 404 && editorDeCroqui.isExperimentalMode.value) {
+            AppLogger.instance.logAviso(
+              '[SyncService] Sessão experimental expirada (HTTP 404). Encerrando modo experimental e restaurando catálogo oficial.',
+            );
+            await editorDeCroqui.nukeExperimentalData();
+            await datasetRepository.init();
+            syncStatus.value = SyncStatus.updated;
+            editorDeCroqui.notificarSessaoExperimentalExpirada();
+            return failedPicos;
+          }
+          await _loadLocalIndiceAndNotify(localIndicePath);
+          syncStatus.value = SyncStatus.error;
+          TelemetryService.instance.logResultadoSincronizacao('erro');
+          return failedPicos;
         case IndiceUpdated():
           final responseBytes = result.rawBytes;
           final newIndice = result.newIndice;
@@ -451,14 +463,12 @@ class SyncService {
 
           final globalUpdates = _SyncUpdates();
 
-          if (!editorDeCroqui.isExperimentalMode.value) {
-            final thumbUpdates = await _syncThumbnails(
-              oldIndice,
-              newIndice,
-              baseUrl,
-            );
-            globalUpdates.merge(thumbUpdates);
-          }
+          final thumbUpdates = await _syncThumbnails(
+            oldIndice,
+            newIndice,
+            baseUrl,
+          );
+          globalUpdates.merge(thumbUpdates);
 
           final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
           globalUpdates.merge(croquiUpdates);
@@ -696,8 +706,10 @@ class SyncService {
     return updates;
   }
 
-  /// Sincroniza as thumbnails globais para a tela "Explorar".
-  /// Baixa as thumbnails de todos os picos do índice caso elas sejam novas ou tenham mudado.
+  /// Sincroniza as thumbnails globais para a tela "Explorar" em `$downloadsRoot/thumbnails/`.
+  /// Baixa as thumbnails de todos os picos do índice caso elas sejam novas ou tenham mudado,
+  /// respeitando o isolamento entre o modo oficial e o modo experimental, e remove o
+  /// diretório legado `$docsDir/thumbnails/` caso ainda exista.
   Future<_SyncUpdates> _syncThumbnails(
     Indice? oldIndice,
     Indice newIndice,
@@ -706,7 +718,16 @@ class SyncService {
     final updates = _SyncUpdates();
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final thumbnailsDir = Directory('${directory.path}/thumbnails');
+      final legacyThumbnailsDir = Directory('${directory.path}/thumbnails');
+      if (await legacyThumbnailsDir.exists()) {
+        try {
+          await legacyThumbnailsDir.delete(recursive: true);
+        } catch (_) {}
+      }
+
+      final downloadsPath =
+          datasetRepository.editorDeCroqui.downloadsPath(directory.path);
+      final thumbnailsDir = Directory('$downloadsPath/thumbnails');
       if (!await thumbnailsDir.exists()) {
         await thumbnailsDir.create(recursive: true);
       }

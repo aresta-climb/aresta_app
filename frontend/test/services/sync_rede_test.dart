@@ -112,7 +112,7 @@ void main() {
     );
 
     test(
-      'fetchIndiceWithRetries retorna null apos falhar todas as tentativas e registra logAviso',
+      'fetchIndiceWithRetries retorna IndiceOffline apos falhar todas as tentativas e registra logAviso',
       () async {
         int attempts = 0;
         final client = MockClient((request) async {
@@ -122,12 +122,12 @@ void main() {
 
         final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
-          'https://base.com',
+          'https://serving.arestaclimb.com/v4',
           null,
           retries: 2,
         );
 
-        expect(response, isNull);
+        expect(response, isA<IndiceOffline>());
         expect(attempts, 2);
         expect(mockLogger.recordedErrors, isEmpty);
         expect(mockLogger.recordedWarnings.any((w) => w.contains('Falha de conexão após várias tentativas')), isTrue);
@@ -135,7 +135,7 @@ void main() {
     );
 
     test(
-      'fetchIndiceWithRetries com binário corrompido registra logError com stackTrace',
+      'fetchIndiceWithRetries com binário corrompido registra logError com stackTrace e retorna IndiceOffline',
       () async {
         final client = MockClient((request) async {
           // Bytes inválidos que falham ao parsear Indice
@@ -144,14 +144,62 @@ void main() {
 
         final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
         final response = await network.fetchIndiceWithRetries(
-          'https://base.com',
+          'https://serving.arestaclimb.com/v4',
           null,
         );
 
-        expect(response, isNull);
+        expect(response, isA<IndiceOffline>());
         expect(mockLogger.recordedErrors, isNotEmpty);
         expect(mockLogger.recordedErrors.first['contextMessage'], contains('Falha ao parsear binário do índice'));
         expect(mockLogger.recordedErrors.first['stackTrace'], isNotNull);
+      },
+    );
+
+    test(
+      'fetchIndiceWithRetries retorna IndiceErroServidor(404) e registra logError na CDN oficial',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response('Not Found', 404);
+        });
+
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
+        final response = await network.fetchIndiceWithRetries(
+          'https://serving.arestaclimb.com/v4',
+          null,
+        );
+
+        expect(response, isA<IndiceErroServidor>());
+        final erro = response as IndiceErroServidor;
+        expect(erro.statusCode, 404);
+        expect(mockLogger.recordedErrors, isNotEmpty);
+        expect(
+          mockLogger.recordedErrors.first['contextMessage'],
+          contains('Server returned an error: 404'),
+        );
+      },
+    );
+
+    test(
+      'fetchIndiceWithRetries retorna IndiceErroServidor(404) em URL experimental previa.arestaclimb.com registrando apenas logAviso sem logError',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response('Session Expired', 404);
+        });
+
+        final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
+        final response = await network.fetchIndiceWithRetries(
+          'https://previa.arestaclimb.com/blo5-uw8c',
+          null,
+        );
+
+        expect(response, isA<IndiceErroServidor>());
+        final erro = response as IndiceErroServidor;
+        expect(erro.statusCode, 404);
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(
+          mockLogger.recordedWarnings.any((w) => w.contains('404')),
+          isTrue,
+        );
       },
     );
 
@@ -171,15 +219,29 @@ void main() {
       },
     );
 
-    test('downloadFile retorna null em caso de erro', () async {
+    test('downloadFile retorna null em caso de erro 404 na CDN oficial e registra logError', () async {
       final client = MockClient((request) async {
         return http.Response('Not Found', 404);
       });
 
       final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
-      final bytes = await network.downloadFile('https://file.com/image.png');
+      final bytes = await network.downloadFile('https://serving.arestaclimb.com/v4/image.png');
 
       expect(bytes, isNull);
+      expect(mockLogger.recordedErrors, isNotEmpty);
+    });
+
+    test('downloadFile retorna null em caso de erro 404 em URL experimental registrando apenas logAviso', () async {
+      final client = MockClient((request) async {
+        return http.Response('Not Found', 404);
+      });
+
+      final network = SyncNetwork(ClienteHttpAresta.paraTestes(client));
+      final bytes = await network.downloadFile('https://previa.arestaclimb.com/blo5-uw8c/image.png');
+
+      expect(bytes, isNull);
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
     });
   });
 }

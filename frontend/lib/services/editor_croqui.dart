@@ -85,6 +85,15 @@ class EditorDeCroqui {
     notificadorGatilhoRecarregamento.value++;
   }
 
+  /// Notificador incrementado sempre que uma sessão experimental expira automaticamente
+  /// (por exemplo, quando o Editor Desktop é fechado e o servidor responde HTTP 404).
+  final ValueNotifier<int> notificadorSessaoExpirada = ValueNotifier(0);
+
+  /// Emite um sinal reativo informando que a sessão experimental ativa expirou e foi encerrada.
+  void notificarSessaoExperimentalExpirada() {
+    notificadorSessaoExpirada.value++;
+  }
+
   WebSocket? _wsLiveReload;
 
   /// Indica se o canal WebSocket de Live Reload está ativamente conectado.
@@ -132,8 +141,7 @@ class EditorDeCroqui {
 
     final uri = Uri.tryParse(limpo.contains('://') ? limpo : 'https://$limpo');
     if (uri != null) {
-      if (uri.host.toLowerCase() == dominioPrevia ||
-          (uri.scheme == 'aresta' && uri.host == 'previa')) {
+      if (uri.host.toLowerCase() == dominioPrevia) {
         final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
         if (segments.isNotEmpty) {
           final code = normalizarCodigo(segments.first);
@@ -151,6 +159,56 @@ class EditorDeCroqui {
     }
 
     return null;
+  }
+
+  /// Verifica se uma [url] pertence a uma sessão efêmera do Modo Experimental
+  /// (Cloudflare Relay `previa.arestaclimb.com`, IPs de rede local LAN,
+  /// ou quando a instância ativa de [EditorDeCroqui] está com [isExperimentalMode] habilitado).
+  ///
+  /// Utilizado pela camada de rede para evitar o envio de alertas falsos ao Crashlytics
+  /// quando o Editor Desktop é encerrado pelo autor.
+  static bool isUrlExperimental(String url) {
+    final limpo = url.trim();
+    if (limpo.isEmpty) return false;
+
+    if (extrairCodigoPrevia(limpo) != null) {
+      return true;
+    }
+
+    final uri = Uri.tryParse(limpo.contains('://') ? limpo : 'https://$limpo');
+    if (uri != null) {
+      final host = uri.host.toLowerCase();
+      if (host == 'serving.arestaclimb.com') {
+        return false;
+      }
+      if (host == dominioPrevia) {
+        return true;
+      }
+      if (_isHostRedeLocalPrivada(host)) {
+        return true;
+      }
+    }
+
+    if (_instance != null && _instance!.isExperimentalMode.value) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Identifica se o [host] é um endereço IPv4 de rede local privada (RFC 1918: 10.x.x.x, 192.168.x.x, 172.16-31.x.x).
+  static bool _isHostRedeLocalPrivada(String host) {
+    if (host.startsWith('192.168.') || host.startsWith('10.')) {
+      return true;
+    }
+    final match172 = RegExp(r'^172\.(\d{1,3})\.').firstMatch(host);
+    if (match172 != null) {
+      final segundoOcteto = int.tryParse(match172.group(1)!) ?? 0;
+      if (segundoOcteto >= 16 && segundoOcteto <= 31) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Constrói a URL canônica de prévia a partir de um código (com hífen por padrão para legibilidade: https://previa.arestaclimb.com/abcd-efgh).

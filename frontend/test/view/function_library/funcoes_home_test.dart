@@ -445,15 +445,15 @@ void main() {
   );
 
   testWidgets(
-    'handlePicoSelection reporta falha via AppLogger.logFalhaSyncOuDownload e exibe SnackBar quando croqui for nulo',
+    'handlePicoSelection para croqui não salvo offline registra apenas logAviso (sem logError/logCrash) e exibe SnackBar contextual com Tentar novamente',
     (WidgetTester tester) async {
       final mockLogger = MockAppLogger();
       AppLogger.instance = mockLogger;
 
       const dummyPico = ResumoPico(
-        id: 'pico_com_falha',
-        nome: 'Pico Quebrado',
-        local: '',
+        id: 'pico_offline_nao_salvo',
+        nome: 'Pedra Grande',
+        local: 'Igarapé - MG',
       );
 
       await tester.pumpWidget(
@@ -471,21 +471,143 @@ void main() {
           context,
           mockRepo,
           dummyPico,
-          source: 'home',
+          source: 'explorar',
         );
       });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Erro ao abrir o guia. Verifique sua conexão.'), findsOneWidget);
+      expect(
+        find.text('Este croqui ainda não está salvo offline. Conecte-se à internet para abri-lo.'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+      expect(find.text('Tentar novamente'), findsOneWidget);
 
-      final totalLogs = mockLogger.recordedErrors.length + mockLogger.recordedWarnings.length;
-      expect(totalLogs, greaterThanOrEqualTo(1));
-      final todosLogs = [
-        ...mockLogger.recordedErrors.map((e) => e['contextMessage'].toString()),
-        ...mockLogger.recordedWarnings,
-      ];
-      expect(todosLogs.any((msg) => msg.contains('pico_com_falha')), isTrue);
+      expect(mockLogger.recordedErrors, isEmpty);
+      expect(
+        mockLogger.recordedWarnings.any((msg) => msg.contains('pico_offline_nao_salvo')),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection reexecuta abertura ao tocar em Tentar novamente na SnackBar',
+    (WidgetTester tester) async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      const dummyPico = ResumoPico(
+        id: 'pico_retry_1',
+        nome: 'Pico Retry',
+        local: 'MG',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: mockRepo,
+            syncService: mockSync,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final context = tester.element(find.byType(TreeNavigationWrapper));
+
+      // 1ª tentativa: sem croqui em memória/cache/rede -> exibe SnackBar
+      await tester.runAsync(() async {
+        await handlePicoSelection(
+          context,
+          mockRepo,
+          dummyPico,
+          source: 'explorar',
+        );
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Tentar novamente'), findsOneWidget);
+
+      // Agora o croqui fica disponível (ex: reconectou ou entrou na sessão)
+      final croquiCarregado = Croqui(
+        id: 'pico_retry_1',
+        nome: 'Pico Retry',
+        picos: [Pico(nome: 'Pico Retry')],
+      );
+      mockRepo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_retry_1', croquiCarregado);
+
+      // Toca na SnackBarAction "Tentar novamente"
+      await tester.tap(find.text('Tentar novamente'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(
+        TreeNavigationWrapper.navKey.currentState?.treeController.currentNode,
+        isA<PicoNode>(),
+      );
+    },
+  );
+
+  testWidgets(
+    'handlePicoSelection registra logError de integridade quando croqui marcado como salvo offline retorna nulo',
+    (WidgetTester tester) async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      mockRepo.activeDataset.value = TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [
+          const ResumoPico(
+            id: 'pico_corrompido_local',
+            nome: 'Pico Corrompido',
+            local: 'MG',
+            isDownloaded: true,
+          ),
+        ],
+      );
+
+      const dummyPico = ResumoPico(
+        id: 'pico_corrompido_local',
+        nome: 'Pico Corrompido',
+        local: 'MG',
+        isDownloaded: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const Scaffold(
+            body: SizedBox(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final context = tester.element(find.byType(Scaffold));
+      await tester.runAsync(() async {
+        await handlePicoSelection(
+          context,
+          mockRepo,
+          dummyPico,
+          source: 'meus_croquis',
+        );
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.text('Erro ao abrir o croqui salvo. Tente sincronizar novamente.'),
+        findsOneWidget,
+      );
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      expect(
+        mockLogger.recordedErrors.any(
+          (e) => e['contextMessage'].toString().contains('pico_corrompido_local'),
+        ),
+        isTrue,
+      );
     },
   );
 

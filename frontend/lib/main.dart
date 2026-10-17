@@ -27,6 +27,7 @@ import 'package:frontend/theme/temas.dart';
 import 'package:frontend/theme/gerenciador_tema.dart';
 import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:frontend/widgets/banner_modo_experimental.dart';
+import 'package:frontend/widgets/modal_sessao_experimental_encerrada.dart';
 import 'package:frontend/widgets/feedback/construtor_feedback_usuario.dart';
 
 // Re-exports de compatibilidade retroativa para testes e módulos existentes
@@ -135,6 +136,10 @@ class _MyAppState extends State<MyApp> {
     _acceptedLegalVersion = widget.acceptedLegalVersion;
     _needsMigration = widget.needsMigration;
 
+    widget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada.addListener(
+      _aoExpirarSessaoExperimental,
+    );
+
     // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
     FeedbackOrchestrator.processFeedbackQueue(dispatcher: 'app_startup');
 
@@ -151,9 +156,38 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
+  void didUpdateWidget(covariant MyApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.datasetRepo.editorDeCroqui !=
+        widget.datasetRepo.editorDeCroqui) {
+      oldWidget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada
+          .removeListener(_aoExpirarSessaoExperimental);
+      widget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada.addListener(
+        _aoExpirarSessaoExperimental,
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    widget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada.removeListener(
+      _aoExpirarSessaoExperimental,
+    );
     _networkFeedbackTrigger?.dispose();
     super.dispose();
+  }
+
+  /// Redireciona o usuário para a Home do catálogo oficial e apresenta o diálogo
+  /// explicativo quando a sessão efêmera do Editor Desktop expira automaticamente.
+  void _aoExpirarSessaoExperimental() {
+    final navContext = TreeNavigationWrapper.navKey.currentContext;
+    if (navContext != null && navContext.mounted) {
+      AppNav.home(navContext);
+    }
+    final modalContext = appNavigatorKey.currentContext ?? navContext;
+    if (modalContext != null && modalContext.mounted) {
+      ModalSessaoExperimentalEncerrada.exibir(modalContext);
+    }
   }
 
   void _onTermsAccepted() async {

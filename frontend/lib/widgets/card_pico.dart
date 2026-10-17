@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
@@ -316,14 +316,14 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
       }
     }
 
-    // Prioriza capaPath local ou remoto; se ausente, recorre a thumbnailUrl ou padrão canônico
+    // Prioriza capaPath local ou remoto; se ausente, recorre a thumbnailUrl quando definida.
+    // Se nenhum caminho estiver disponível, não dispara resolução e exibe a logo da splash screen.
     final String caminhoFinal;
-    if (widget.capaPath != null && widget.capaPath!.isNotEmpty) {
-      caminhoFinal = widget.capaPath!;
-    } else if (widget.thumbnailUrl.isNotEmpty && !widget.thumbnailUrl.endsWith('/.webp')) {
-      caminhoFinal = widget.thumbnailUrl;
-    } else if (cragId != null && cragId.isNotEmpty) {
-      caminhoFinal = 'thumbnails/$cragId.webp';
+    if (widget.capaPath != null && widget.capaPath!.trim().isNotEmpty) {
+      caminhoFinal = widget.capaPath!.trim();
+    } else if (widget.thumbnailUrl.trim().isNotEmpty &&
+        !widget.thumbnailUrl.endsWith('/.webp')) {
+      caminhoFinal = widget.thumbnailUrl.trim();
     } else {
       return;
     }
@@ -339,11 +339,11 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   Widget _buildPlaceholder() {
     return Container(
       color: const Color(0xFF2C332A),
+      padding: const EdgeInsets.all(24.0),
       child: Center(
-        child: Icon(
-          Icons.terrain,
-          color: Colors.white.withValues(alpha: 0.1),
-          size: 64,
+        child: Image.asset(
+          'assets/logo_splash.png',
+          fit: BoxFit.contain,
         ),
       ),
     );

@@ -1,12 +1,14 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/validador_app.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:mocktail/mocktail.dart';
+import '../../mocks/mock_app_logger.dart';
 
 class MockFirebaseAppCheck extends Mock implements FirebaseAppCheck {}
 
@@ -20,11 +22,14 @@ void main() {
 
   late MockFirebaseAppCheck mockFirebaseAppCheck;
   late AppCheckService service;
+  late MockAppLogger mockLogger;
 
   setUp(() {
     mockFirebaseAppCheck = MockFirebaseAppCheck();
     service = AppCheckService.instance;
     service.debugAppCheck = mockFirebaseAppCheck;
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
   });
 
   group('AppCheckService', () {
@@ -80,13 +85,32 @@ void main() {
       verify(() => mockFirebaseAppCheck.getToken(true)).called(1);
     });
 
-    test('getToken retorna null quando o SDK lança exceção (ex: ambiente não cadastrado)', () async {
+    test('getToken retorna null e registra logError quando o SDK lança exceção não relacionada a rede', () async {
       when(() => mockFirebaseAppCheck.getToken(any()))
           .thenThrow(Exception('Token fetch error'));
 
       final token = await service.getToken();
 
       expect(token, isNull);
+      expect(mockLogger.recordedErrors, hasLength(1));
+      expect(mockLogger.recordedWarnings, isEmpty);
+    });
+
+    test('getToken retorna null e registra logAviso (sem logError) quando a falha for de rede ou indisponibilidade', () async {
+      when(() => mockFirebaseAppCheck.getToken(any())).thenThrow(
+        FirebaseException(
+          plugin: 'firebase_app_check',
+          code: 'unavailable',
+          message: 'Unable to connect to the server.',
+        ),
+      );
+
+      final token = await service.getToken();
+
+      expect(token, isNull);
+      expect(mockLogger.recordedWarnings, hasLength(1));
+      expect(mockLogger.recordedWarnings.first, contains('AppCheck'));
+      expect(mockLogger.recordedErrors, isEmpty);
     });
   });
 }

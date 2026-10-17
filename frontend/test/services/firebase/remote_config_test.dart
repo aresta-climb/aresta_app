@@ -1,6 +1,7 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/constants/constantes_rede.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
@@ -101,6 +102,47 @@ void main() {
       expect(mockLogger.recordedWarnings.first, contains('offline/timeout'));
       expect(mockLogger.recordedErrors, isEmpty);
     });
+
+    test(
+      'initialize deve tratar falha do Firebase Installations offline como logAviso e limpar _initFuture para permitir nova tentativa',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        when(
+          () => mockFirebaseRemoteConfig.setDefaults(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockFirebaseRemoteConfig.setConfigSettings(any()),
+        ).thenAnswer((_) async {});
+
+        var tentativas = 0;
+        when(() => mockFirebaseRemoteConfig.fetchAndActivate()).thenAnswer((_) async {
+          tentativas++;
+          if (tentativas == 1) {
+            throw FirebaseException(
+              plugin: 'firebase_remote_config',
+              code: 'internal',
+              message: 'Firebase Installations failed to get installation auth token for fetch.',
+            );
+          }
+          return true;
+        });
+
+        // 1ª chamada falha por estar offline
+        await expectLater(service.initialize(), completes);
+        expect(mockLogger.recordedWarnings, hasLength(1));
+        expect(
+          mockLogger.recordedWarnings.first,
+          contains('Firebase Installations failed to get installation auth token'),
+        );
+        expect(mockLogger.recordedErrors, isEmpty);
+
+        // 2ª chamada (sem clearInitFuture manual) deve executar novamente porque _initFuture foi limpo na falha transitória
+        await expectLater(service.initialize(), completes);
+        expect(tentativas, 2);
+      },
+    );
 
     test('initialize deve registrar erros inesperados de configuração via logError', () async {
       final mockLogger = MockAppLogger();

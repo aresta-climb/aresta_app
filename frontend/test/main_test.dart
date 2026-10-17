@@ -1071,5 +1071,38 @@ void main() {
       configurarGestaoMemoria();
     });
   });
+
+  testWidgets(
+    'MyApp exibe ModalSessaoExperimentalEncerrada quando notificadorSessaoExpirada é acionado e fecha ao tocar em ENTENDI',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Sessão de Prévia Encerrada'), findsNothing);
+
+      // Dispara o sinal de expiração da sessão experimental
+      mockEditor.notificarSessaoExperimentalExpirada();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Sessão de Prévia Encerrada'), findsOneWidget);
+      expect(find.text('ENTENDI'), findsOneWidget);
+
+      await tester.tap(find.text('ENTENDI'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Sessão de Prévia Encerrada'), findsNothing);
+    },
+  );
 }
 

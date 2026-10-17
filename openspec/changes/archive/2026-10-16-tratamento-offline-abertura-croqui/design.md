@@ -23,7 +23,7 @@ O problema arquitetural ocorre porque o tratamento está dividido em duas camada
 ### 1. Responsabilidade Única de Classificação de Erro na Camada de Origem
 - **Decisão**: Apenas o ponto que possui o objeto `error` real (ou que detecta uma violação de invariante local) deve invocar `logFalhaSyncOuDownload` ou `logError`. Orquestradores de nível superior que recebem apenas `null` ou `bool` devem usar `logAviso` para registrar o breadcrumb de fluxo.
 - **Aplicação por módulo**:
-  1. `ServicoCroquiOnline.carregarCroquiRemoto`: Mantém `logFalhaSyncOuDownload` com `error: e` (classifica `SocketException`/`ClientException` como `logAviso` e `HTTP != 200` não-transitório como crash/erro).
+  1. `ServicoCroquiOnline.carregarCroquiRemoto`: No bloco `catch`, mantém `logFalhaSyncOuDownload` com `error: e` (classifica `SocketException`/`ClientException`/`TimeoutException` como `logAviso`). Quando `response.statusCode != 200`, passa `error: response.statusCode` para `logFalhaSyncOuDownload` (em vez de `HttpException`, pois `AppLogger.isFalhaConexaoOuTimeout` trata qualquer `HttpException` como falha de socket, o que mascarava `HTTP 404/500`; passando o `int` `response.statusCode`, códigos transitórios `502/503/504/429` emitem `logAviso` e erros `404/500` são reportados ao Crashlytics).
   2. `ServicoCroquiOnline.recarregarCroquiOnline`: Troca `logError` por `logFalhaSyncOuDownload` no bloco `catch`.
   3. `handlePicoSelection` (`funcoes_home.dart`):
      - Se `isBaixado == true` e `croqui == null || croqui.picos.isEmpty`: trata-se de uma falha real de integridade em um croqui que deveria existir em `/downloads`. Registra `AppLogger.instance.logError` com contexto claro (`'Falha de integridade ao abrir croqui salvo offline: $id (origem: $source)'`).
@@ -41,5 +41,5 @@ O problema arquitetural ocorre porque o tratamento está dividido em duas camada
 
 ## Risks / Trade-offs
 
-- **[Risco] Ocultar acidentalmente um erro HTTP 404/500 ao abrir croqui online** → **Mitigação**: `ServicoCroquiOnline.carregarCroquiRemoto` continua chamando `logFalhaSyncOuDownload` com `HttpException('HTTP ${response.statusCode}', uri: uri)`. Como HTTP 404/500 não são classificados como falha de conexão por `AppLogger.isFalhaConexaoOuTimeout`, eles continuam sendo reportados integralmente ao Crashlytics na camada do `ServicoCroquiOnline`.
+- **[Risco] Ocultar acidentalmente um erro HTTP 404/500 ao abrir croqui online** → **Mitigação**: Passando `error: response.statusCode` em `ServicoCroquiOnline.carregarCroquiRemoto`, `AppLogger.isFalhaConexaoOuTimeout(int)` retorna `true` apenas para `502, 503, 504, 429`, garantindo que HTTP `404` ou `500` na CDN sejam reportados integralmente ao Crashlytics.
 - **[Risco] Usuário clicar em "Tentar novamente" após sair da tela** → **Mitigação**: Verificar `if (context.mounted)` dentro do callback da `SnackBarAction` antes de reexecutar `handlePicoSelection`.

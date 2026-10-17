@@ -46,16 +46,26 @@ class AppCheckService {
   }
 
   /// Obtém o token JWT atual do App Check. Retorna `null` se falhar ou estiver em ambiente não atestado.
+  ///
+  /// Falhas transitórias de conectividade (ex: dispositivo offline ao tentar renovar token)
+  /// são registradas apenas como aviso/breadcrumb via [AppLogger.instance.logAviso],
+  /// evitando falsos positivos de erro não-fatal no Crashlytics.
   Future<String?> getToken([bool forceRefresh = false]) async {
     try {
       final token = await _appCheck.getToken(forceRefresh);
       return token;
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        '🛡️ [AppCheck] Não foi possível obter o token do App Check',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          '🛡️ [AppCheck] Falha de conexão ao obter token do App Check (offline/timeout): $e',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '🛡️ [AppCheck] Não foi possível obter o token do App Check',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       return null;
     }
   }

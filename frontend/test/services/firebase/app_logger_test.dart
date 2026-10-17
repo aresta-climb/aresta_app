@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
@@ -333,6 +334,91 @@ void main() {
       expect(errorReported, isFalse,
           reason: 'Erros HTTP 504 transitórios não devem gerar issue no Crashlytics');
       expect(loggedBreadcrumb, contains('504'));
+    });
+
+    test('isFalhaConexaoOuTimeout reconhece falhas de rede nativas de SDKs do Firebase (Remote Config, Installations e App Check)', () {
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_remote_config',
+            code: 'internal',
+            message: 'Firebase Installations failed to get installation auth token for fetch.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_remote_config',
+            code: 'internal',
+            message: 'The client had an error while calling the backend!',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_remote_config',
+            code: 'internal',
+            message: 'Unable to connect to the server. Check your connection and try again.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_remote_config',
+            code: 'internal',
+            message: 'Fetch failed: server returned error.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_app_check',
+            code: 'unavailable',
+            message: 'Service unavailable',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_auth',
+            code: 'network-request-failed',
+            message: 'A network error has occurred.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_remote_config',
+            code: 'throttled',
+            message: 'Fetch throttled.',
+          ),
+        ),
+        isTrue,
+      );
+
+      // Exceções do Firebase não relacionadas a conectividade/indisponibilidade devem retornar false
+      expect(
+        AppLogger.isFalhaConexaoOuTimeout(
+          FirebaseException(
+            plugin: 'firebase_core',
+            code: 'permission-denied',
+            message: 'Missing or insufficient permissions.',
+          ),
+        ),
+        isFalse,
+      );
     });
   });
 }

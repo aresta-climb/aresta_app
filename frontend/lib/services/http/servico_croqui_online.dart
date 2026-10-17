@@ -108,7 +108,7 @@ class ServicoCroquiOnline {
       } else {
         AppLogger.instance.logFalhaSyncOuDownload(
           '[ServicoCroquiOnline] Falha ao carregar croqui online $picoId. Status: ${response.statusCode}',
-          error: HttpException('HTTP ${response.statusCode}', uri: uri),
+          error: response.statusCode,
           stackTrace: StackTrace.current,
         );
       }
@@ -138,7 +138,7 @@ class ServicoCroquiOnline {
 
       return await carregarCroquiRemoto(urlBypass, picoId: picoId, checksumSha256: checksumSha256);
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
+      AppLogger.instance.logFalhaSyncOuDownload(
         '[ServicoCroquiOnline] Erro ao recarregar croqui online $picoId',
         error: e,
         stackTrace: stackTrace,

@@ -1,7 +1,8 @@
 # rastreamento-falhas-isolates-rede Specification
 
 ## Purpose
-TBD - created by archiving change correcao-crashes-v024. Update Purpose after archive.
+Padroniza a resiliência de rede, a propagação de stack traces entre isolates de download e a classificação de erros HTTP para o Firebase Crashlytics, evitando falsos alertas em falhas transitórias ou sessões efêmeras do editor.
+
 ## Requirements
 ### Requirement: Retentativa Resiliente para Erros Transitórios de Download
 O sistema SHALL realizar até 3 tentativas automáticas com espera progressiva ao encontrar erros transitórios de rede ou gateway antes de considerar um download atômico como falho.
@@ -27,4 +28,17 @@ O `AppLogger` SHALL identificar códigos de erro HTTP transitórios (502, 503, 5
 #### Scenario: Registro de erro com HTTP 504 Gateway Timeout
 - **WHEN** o método `isFalhaConexaoOuTimeout` for invocado com uma mensagem contendo "HTTP 504", "504 Gateway Timeout", "502" ou "503"
 - **THEN** ele DEVE retornar `true` e o método `logFalhaSyncOuDownload` DEVE registrar o evento no Crashlytics com `fatal: false`.
+
+### Requirement: Supressão de Erros no Crashlytics para Servidores Efêmeros do Modo Experimental
+O sistema SHALL registrar falhas HTTP (`404`, `5xx`, etc.) originadas de URLs efêmeras do Modo Experimental/Prévia (`previa.arestaclimb.com` ou endereços privados de rede local LAN) exclusivamente como avisos contextuais (`AppLogger.instance.logAviso`), nunca reportando-as como exceções não-fatais ou crashes (`logError`/`logCrash`) no Firebase Crashlytics.
+
+#### Scenario: Servidor de prévia experimental retorna HTTP 404 na busca do índice
+- **WHEN** `SyncNetwork.fetchIndiceWithRetries` ou `SyncNetwork.downloadFile` recebe HTTP 404 (ou qualquer status diferente de 200/304) de uma URL pertencente ao domínio `previa.arestaclimb.com` ou rede local de editor
+- **THEN** o sistema DEVE registrar o evento via `AppLogger.instance.logAviso` (apenas breadcrumb)
+- **AND** NÃO DEVE invocar `AppLogger.instance.logError` ou `AppLogger.instance.logCrash`.
+
+#### Scenario: Servidor oficial de produção retorna HTTP 404 na busca do índice
+- **WHEN** `SyncNetwork.fetchIndiceWithRetries` recebe HTTP 404 da CDN oficial de produção (`serving.arestaclimb.com`)
+- **THEN** o sistema DEVE invocar `AppLogger.instance.logError` com o `StackTrace` correspondente para alertar a equipe no Firebase Crashlytics.
+
 

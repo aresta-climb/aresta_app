@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -38,6 +38,16 @@ class OfflineCragCard extends StatelessWidget {
     );
   }
 
+  Widget _construirPlaceholderLogo() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Image.asset(
+        'assets/logo_splash.png',
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String id = dados.id;
@@ -58,35 +68,35 @@ class OfflineCragCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Miniatura unificada com downsampling para 300px via ProvedorImagemAresta
+              // ou fallback visual com a logo oficial da splash screen quando ausente
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   width: 60,
                   height: 60,
                   color: context.colors.graniteEdge,
-                  child: FutureBuilder<ImageProvider?>(
-                    future: ProvedorImagemAresta.resolver(
-                      picoId: id,
-                      caminho: dados.caminhoMiniatura,
-                      larguraAlvo: 300,
-                    ),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(color: context.colors.graniteEdge);
-                      }
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return Image(
-                          image: snapshot.data!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Icon(
-                            Icons.terrain,
-                            color: context.colors.ashGrey,
+                  child: dados.caminhoMiniatura.trim().isEmpty
+                      ? _construirPlaceholderLogo()
+                      : FutureBuilder<ImageProvider?>(
+                          future: ProvedorImagemAresta.resolver(
+                            picoId: id,
+                            caminho: dados.caminhoMiniatura,
+                            larguraAlvo: 300,
                           ),
-                        );
-                      }
-                      return Icon(Icons.terrain, color: context.colors.ashGrey);
-                    },
-                  ),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return _construirPlaceholderLogo();
+                            }
+                            if (snapshot.hasData && snapshot.data != null) {
+                              return Image(
+                                image: snapshot.data!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => _construirPlaceholderLogo(),
+                              );
+                            }
+                            return _construirPlaceholderLogo();
+                          },
+                        ),
                 ),
               ),
               const SizedBox(width: 16),

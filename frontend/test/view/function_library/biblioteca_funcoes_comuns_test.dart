@@ -14,6 +14,7 @@ import 'package:feedback/feedback.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../../mocks/mock_telemetria.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
@@ -26,6 +27,9 @@ class MockDatasetRepository implements DatasetRepository {
   final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
     TopoDataset(availablePicos: [], downloadedPicos: [{}]),
   );
+
+  @override
+  final EditorDeCroqui editorDeCroqui = EditorDeCroqui();
   
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -37,6 +41,7 @@ class MockBuildContext extends Mock implements BuildContext {}
 class MockSyncService implements SyncService {
   bool networkDisabled = false;
   List<String> mockFailed = [];
+  void Function()? onSyncIndex;
   final ValueNotifier<SyncStatus> _status = ValueNotifier(SyncStatus.updated);
 
   @override
@@ -44,6 +49,7 @@ class MockSyncService implements SyncService {
 
   @override
   Future<List<String>> syncIndex({bool auto = true, bool forceBypassCache = false}) async {
+    onSyncIndex?.call();
     return mockFailed;
   }
 
@@ -561,6 +567,34 @@ group('handleManualSync', () {
     await tester.pumpAndSettle();
 
     expect(find.text('Catálogo já está atualizado.'), findsOneWidget);
+  });
+
+  testWidgets('não deve exibir SnackBar de resultado quando a sessão experimental expira e é encerrada durante handleManualSync', (WidgetTester tester) async {
+    final mockSync = MockSyncService();
+    final mockRepo = MockDatasetRepository();
+    mockRepo.editorDeCroqui.isExperimentalMode.value = true;
+    mockSync.onSyncIndex = () {
+      // Simula o encerramento automático da sessão experimental durante o syncIndex
+      mockRepo.editorDeCroqui.isExperimentalMode.value = false;
+      mockSync._status.value = SyncStatus.updated;
+    };
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: const [AppColors.light]),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => handleManualSync(context, mockRepo, mockSync),
+            child: const Text('Update'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Update'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsNothing);
   });
 });
 

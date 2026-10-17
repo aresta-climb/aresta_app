@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../http/cliente_http_aresta.dart';
 
@@ -80,7 +81,9 @@ class AppLogger {
   }
 
   /// Verifica se o erro ou mensagem descreve uma falha transitória de conectividade,
-  /// timeout de socket ou instabilidade de gateway/servidor (HTTP 502, 503, 504, 429).
+  /// timeout de socket, instabilidade de gateway/servidor (HTTP 502, 503, 504, 429) ou
+  /// falha de transporte nos SDKs nativos do Firebase (Installations, Remote Config e App Check)
+  /// quando o dispositivo encontra-se offline.
   static bool isFalhaConexaoOuTimeout(dynamic error) {
     if (error == null) return false;
 
@@ -99,7 +102,19 @@ class AppLogger {
       return true;
     }
 
-    // 3. Análise por mensagem textual
+    // 3. Códigos padronizados de indisponibilidade/rede em FirebaseException
+    if (error is FirebaseException) {
+      final codigo = error.code.toLowerCase();
+      if (codigo == 'unavailable' ||
+          codigo == 'network-request-failed' ||
+          codigo == 'network_error' ||
+          codigo == 'deadline-exceeded' ||
+          codigo == 'throttled') {
+        return true;
+      }
+    }
+
+    // 4. Análise por mensagem textual
     final msg = error.toString().toLowerCase();
 
     // Códigos de erro HTTP transitórios (Gateway/CDN/Rate-limit)
@@ -111,6 +126,19 @@ class AppLogger {
         msg.contains('bad gateway') ||
         msg.contains('service unavailable') ||
         msg.contains('too many requests')) {
+      return true;
+    }
+
+    // Mensagens nativas de falha de transporte dos SDKs do Firebase (Android/iOS via Pigeon)
+    if (msg.contains('firebase installations failed to get installation auth token') ||
+        msg.contains('error while calling the backend') ||
+        msg.contains('unable to connect to the server') ||
+        msg.contains('fetch failed') ||
+        msg.contains('fetch throttled') ||
+        msg.contains('network-request-failed') ||
+        msg.contains('network_error') ||
+        msg.contains('network error') ||
+        msg.contains('unavailable')) {
       return true;
     }
 

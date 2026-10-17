@@ -1,4 +1,4 @@
-﻿# Integração Firebase - Aresta Climb
+# Integração Firebase - Aresta Climb
 
 Este diretório (`lib/services/firebase/`) consolida **absolutamente todos** os contatos da aplicação com os SDKs do Firebase. Essa arquitetura de isolamento foi construída para evitar acoplamento forte da UI com provedores analíticos de terceiros, garantindo que o resto do sistema desconheça a existência do Firebase.
 
@@ -26,7 +26,7 @@ Nenhuma tela ou componente no Aresta Climb deve chamar o Firebase Analytics dire
 Abstração do `firebase_remote_config`. 
 Ele funciona mantendo uma tabela de _feature flags_ ou valores remotos de configuração.
 - **Valores Padrão**: Toda flag invocada neste app deve ter um fallback inquebrável caso o dispositivo não tenha internet.
-- **Cache**: Valores são armazenados localmente e atualizados com cache para evitar excesso de banda.
+- **Cache e Resiliência Offline**: Valores são armazenados localmente e atualizados com cache (12h). Quando o dispositivo inicia sem conexão (ou quando o SDK nativo falha ao obter o token do *Firebase Installations* / contatar o backend), a falha é registrada apenas como `logAviso` (breadcrumb) e `_initFuture` é limpo para permitir nova tentativa futura na sessão.
 - **URLs Dinâmicas**: Permite alterar dinamicamente a URL do endpoint de feedback (`feedback_edge_function_url`) e a URL base do servidor de dados (`serving_base_url`) sem necessidade de nova compilação do app.
 - **Como expandir**: Para adicionar uma nova flag, declare-a nos fallbacks internos e crie um _getter_ tipado para a UI ler de forma nativa e simples.
 
@@ -35,6 +35,7 @@ Abstração do `firebase_app_check`.
 Responsável pela atestação de integridade de hardware e software da aplicação.
 - **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
 - **Desenvolvimento (Debug)**: Utiliza o Provedor de Depuração com suporte a UUIDs cadastrados no Firebase Console, permitindo que os desenvolvedores testem a rota real, ou realiza fallback silencioso em ambiente de desenvolvimento sem bloquear a interface.
+- **Degradação Offline em `getToken`**: Falhas de rede ou indisponibilidade ao renovar o token do App Check são reconhecidas via `AppLogger.isFalhaConexaoOuTimeout` e registradas como `logAviso` (breadcrumb), evitando falsos positivos de erro não-fatal no Crashlytics.
 
 ### 5. `app_logger.dart`
 Abstração centralizada de logging e relatórios de erro construída sobre o `firebase_crashlytics`.
@@ -49,8 +50,8 @@ O aplicativo adota a regra arquitetural estrita de que nenhum código em `lib/` 
   - *Release*: Envia ao Crashlytics com o `stackTrace` de origem obrigatório para permitir agrupamento correto e diagnóstico preciso de falhas.
 - **`logCrash(String contextMessage, {error, required StackTrace stackTrace})`**:
   - Registra falhas severas com nível crítico (`fatal: true`).
-- **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`**:
-  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, 502, 503, 504, 429), tratando como não-fatal (`fatal: false`), ou se é falha de integridade/corrupção de dados (`fatal: true`).
+- **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`** e **`isFalhaConexaoOuTimeout(dynamic error)`**:
+  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, HTTP 502/503/504/429 ou erros nativos de transporte de `FirebaseException` no Installations, Remote Config e App Check), registrando apenas como breadcrumb (`logAviso`), ou se é falha de integridade/corrupção de dados (`fatal: true`).
 
 ### 6. Desofuscação e Símbolos no Crashlytics (CI/CD)
 Para que os relatórios de crash no painel do Firebase Crashlytics exibam os nomes de funções, arquivos e linhas de código (ao invés de ponteiros hexadecimais *unsymbolicated*), a pipeline do GitHub Actions realiza o upload automático de dois tipos de símbolos a cada release:

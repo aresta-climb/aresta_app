@@ -2,7 +2,9 @@
 
 ## Purpose
 Padronizar todas as emissões de logs e capturas de erro no aplicativo através do serviço `AppLogger`, garantindo rastreamento obrigatório de pilha (`stackTrace`) para o Firebase Crashlytics, emissão de breadcrumbs em produção e fiscalização por teste arquitetural automatizado que impede chamadas diretas a `print` e `debugPrint`.
+
 ## Requirements
+
 ### Requirement: Rastreamento Obrigatório de Pilha (StackTrace) no Registro de Erros
 O `AppLogger` SHALL exigir obrigatoriamente um parâmetro de rastreamento de pilha (`required StackTrace stackTrace`) nos métodos de registro de falhas `logError`, `logCrash` e `logFalhaSyncOuDownload`, garantindo que nenhuma falha seja registrada no Firebase Crashlytics sem as informações de rastreamento da linha e arquivo de origem.
 
@@ -50,3 +52,30 @@ Todas as alterações no serviço de log e no teste arquitetural SHALL seguir o 
 - **WHEN** a suíte de testes do `AppLogger` for executada via `flutter test test/services/firebase/app_logger_test.dart`
 - **THEN** todos os cenários de `logError`, `logCrash`, `logFalhaSyncOuDownload`, `logInfo` e `logAviso` DEVEM passar com 100% de cobertura.
 
+### Requirement: Reconhecimento de Falhas de Rede Nativas de SDKs do Firebase
+O método `AppLogger.isFalhaConexaoOuTimeout` SHALL reconhecer exceções e mensagens de erro originadas nos SDKs nativos do Firebase (`FirebaseException`, Firebase Installations, Firebase Remote Config e Firebase App Check) quando decorrentes de indisponibilidade de rede, falha ao obter token de instalação para busca ou falha de comunicação do cliente com o backend.
+
+#### Scenario: Falha ao obter token do Firebase Installations durante fetch do Remote Config
+- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma exceção contendo `[firebase_remote_config/internal] Firebase Installations failed to get installation auth token for fetch.`
+- **THEN** o método DEVE retornar `true`.
+
+#### Scenario: Falha de comunicação do cliente nativo do Firebase com o backend
+- **WHEN** `AppLogger.isFalhaConexaoOuTimeout` for invocado com uma `FirebaseException` de código `unavailable` ou `network-request-failed`, ou mensagem contendo `the client had an error while calling the backend`, `unable to connect to the server` ou `fetch failed`
+- **THEN** o método DEVE retornar `true`.
+
+#### Scenario: Falha de rede ao obter token do App Check
+- **WHEN** `AppCheckService.instance.getToken()` capturar uma exceção de rede ou indisponibilidade reconhecida por `AppLogger.isFalhaConexaoOuTimeout`
+- **THEN** o serviço DEVE registrar a ocorrência via `AppLogger.instance.logAviso` (breadcrumb) em vez de `logError`, retornando `null` sem abrir issue não-fatal no Crashlytics.
+
+### Requirement: Prevenção de Falsos Crashes Fatais por Omissão da Exceção de Rede Original
+Os serviços e orquestradores de UI (`handlePicoSelection`, `SyncService.downloadCrag`, `ServicoDownloadSegundoPlano.executarDownload` e `ServicoCroquiOnline.recarregarCroquiOnline`) SHALL preservar a classificação de falhas de conectividade realizada pela camada de transporte inferior, sendo proibido invocar `AppLogger.instance.logFalhaSyncOuDownload` ou `AppLogger.instance.logCrash` sem o objeto de erro original (`error: null`) ou com exceções sintéticas genéricas quando uma operação retornar `null` ou `false` em decorrência de falha de rede já registrada.
+
+#### Scenario: Falha de download de croqui por ausência de conexão no SyncService
+- **WHEN** `SyncService.downloadCrag` falha após as tentativas porque o isolate de download encontrou `SocketException`, `ClientException` ou `TimeoutException` (já registrado via `tratarErroDownloadIsolate`)
+- **THEN** o encerramento de `downloadCrag` DEVE registrar o resumo de falha via `AppLogger.instance.logAviso`
+- **AND** NÃO DEVE invocar `logFalhaSyncOuDownload` sem o erro original, evitando o disparo de `logCrash(fatal: true)`.
+
+#### Scenario: Falha de download em segundo plano por ausência de conexão
+- **WHEN** `ServicoDownloadSegundoPlano.executarDownload` recebe `sucesso == false` de `syncService.downloadCrag`
+- **THEN** o serviço DEVE registrar o encerramento sem sucesso via `AppLogger.instance.logAviso` e exibir a notificação de falha ao usuário
+- **AND** NÃO DEVE invocar `logFalhaSyncOuDownload` sem objeto `error`, evitando duplicação de crash fatal no Crashlytics.

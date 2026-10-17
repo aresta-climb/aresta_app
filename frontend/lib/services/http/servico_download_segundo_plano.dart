@@ -46,9 +46,8 @@ class ServicoDownloadSegundoPlano {
       if (sucesso) {
         await gerenciadorNotificacao.notificarConclusao(picoId, nomePico);
       } else {
-        AppLogger.instance.logFalhaSyncOuDownload(
-          'Falha no download do croqui $picoId ($nomePico) em segundo plano',
-          stackTrace: StackTrace.current,
+        AppLogger.instance.logAviso(
+          '[ServicoDownloadSegundoPlano] Falha no download do croqui $picoId ($nomePico) em segundo plano.',
         );
         await gerenciadorNotificacao.notificarFalha(picoId, nomePico);
       }

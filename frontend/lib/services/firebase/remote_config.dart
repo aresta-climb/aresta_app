@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
@@ -40,6 +40,9 @@ class RemoteConfigService extends ChangeNotifier {
   /// Inicializa o serviço definindo os padrões (defaults) e buscando atualizações em segundo plano.
   ///
   /// Retorna um [Future] que conclui após a definição dos defaults e tentativa de fetch.
+  /// Caso a etapa de rede (`fetchAndActivate`) falhe por ausência de conectividade ou
+  /// indisponibilidade transitória do Firebase Installations/Remote Config, o estado
+  /// de `_initFuture` é limpo para permitir nova tentativa em chamadas subsequentes.
   Future<void> initialize() {
     _initFuture ??= _initializeInternal();
     return _initFuture!;
@@ -82,6 +85,7 @@ class RemoteConfigService extends ChangeNotifier {
       notifyListeners();
     } catch (e, stackTrace) {
       if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        _initFuture = null;
         AppLogger.instance.logAviso(
           '🔧 [RemoteConfig] Falha ao atualizar (offline/timeout). Usando cache e defaults: $e',
         );

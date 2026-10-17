@@ -81,6 +81,13 @@ List<PicoProximo> calcularPicosMaisProximos({
 /// Registra evento de telemetria [abrir_croqui] com a [source] de origem, o [modoAcesso]
 /// (`'offline'` se estiver previamente baixado ou `'online'` se sob demanda) e se é
 /// a [primeiraVisita] do usuário a este croqui.
+///
+/// Caso o carregamento retorne nulo ou sem picos:
+/// - Se o croqui não estiver salvo localmente (`!isBaixado`), registra apenas aviso operacional
+///   ([AppLogger.logAviso], pois a falha de rede já foi classificada pelo [ServicoCroquiOnline])
+///   e exibe [SnackBar] contextualizada informando a necessidade de conexão com ação `"Tentar novamente"`.
+/// - Se o croqui constava como salvo offline (`isBaixado`), registra erro de integridade no
+///   Crashlytics ([AppLogger.logError]) e orienta o usuário a sincronizar novamente.
 Future<void> handlePicoSelection(
   BuildContext context,
   DatasetRepository datasetRepo,
@@ -154,15 +161,58 @@ Future<void> handlePicoSelection(
       datasetRepo.updatePriorityAfterNavigation(id);
       datasetRepo.triggerHomeReset();
     });
-  } else {
-    AppLogger.instance.logFalhaSyncOuDownload(
-      'Falha ao abrir guia do pico: $id (origem: $source)',
-      error: Exception('Croqui nulo ou sem picos após consulta ao repositório'),
+  } else if (isBaixado) {
+    AppLogger.instance.logError(
+      'Falha de integridade ao abrir croqui salvo offline: $id (origem: $source)',
+      error: Exception('Croqui nulo ou sem picos após consulta ao armazenamento local'),
       stackTrace: StackTrace.current,
     );
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Erro ao abrir o guia. Verifique sua conexão.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Erro ao abrir o croqui salvo. Tente sincronizar novamente.'),
+      ),
+    );
+  } else {
+    AppLogger.instance.logAviso(
+      'Não foi possível abrir o croqui online $id (origem: $source): sem conexão ou indisponível.',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: context.colors.caveShadow,
+        content: Row(
+          children: [
+            Icon(
+              Icons.cloud_off_outlined,
+              color: context.colors.beastHide,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Este croqui ainda não está salvo offline. Conecte-se à internet para abri-lo.',
+                style: TextStyle(color: context.colors.chalkWhite),
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'Tentar novamente',
+          textColor: context.colors.beastHide,
+          onPressed: () {
+            if (context.mounted) {
+              handlePicoSelection(
+                context,
+                datasetRepo,
+                pico,
+                source: source,
+                registroPrimeiraVisita: registroPrimeiraVisita,
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 }
 

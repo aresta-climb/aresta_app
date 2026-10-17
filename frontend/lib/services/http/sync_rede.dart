@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
+import '../editor_croqui.dart';
 import 'cliente_http_aresta.dart';
 
 /// Resultado base para a busca do índice de croquis.
@@ -24,6 +25,17 @@ class IndiceUpdated extends FetchIndiceResult {
     required this.rawBytes,
     this.newEtag,
   });
+}
+
+/// Retornado quando não foi possível obter ou decodificar o índice por falha de conexão/offline.
+class IndiceOffline extends FetchIndiceResult {}
+
+/// Retornado quando o servidor respondeu com um código HTTP de erro (ex: 404, 500).
+class IndiceErroServidor extends FetchIndiceResult {
+  /// Código de status HTTP retornado pelo servidor.
+  final int statusCode;
+
+  IndiceErroServidor(this.statusCode);
 }
 
 /// Gerencia as requisições de rede para sincronização,
@@ -65,8 +77,9 @@ class SyncNetwork {
 
   /// Busca o arquivo de índice mestre (`indice.binarypb`) com suporte automático a retries.
   ///
-  /// Retorna as uniões da classe [FetchIndiceResult] (Unchanged, Updated, ou Failed).
-  Future<FetchIndiceResult?> fetchIndiceWithRetries(
+  /// Retorna uma variante de [FetchIndiceResult] ([IndiceUnchanged], [IndiceUpdated],
+  /// [IndiceOffline] ou [IndiceErroServidor]).
+  Future<FetchIndiceResult> fetchIndiceWithRetries(
     String baseUrl,
     String? localEtag, {
     int retries = 3,
@@ -90,7 +103,7 @@ class SyncNetwork {
       AppLogger.instance.logAviso(
         '[SyncNetwork] Falha de conexão após várias tentativas de sincronização do índice.',
       );
-      return null;
+      return IndiceOffline();
     }
 
     if (response.statusCode == 200) {
@@ -108,7 +121,7 @@ class SyncNetwork {
           error: e,
           stackTrace: stackTrace,
         );
-        return null;
+        return IndiceOffline();
       }
     } else if (response.statusCode == 304) {
       return IndiceUnchanged();
@@ -117,13 +130,17 @@ class SyncNetwork {
         AppLogger.instance.logAviso(
           '[SyncNetwork] Servidor retornou erro transitório: ${response.statusCode}',
         );
+      } else if (EditorDeCroqui.isUrlExperimental(baseUrl)) {
+        AppLogger.instance.logAviso(
+          '[SyncNetwork] Servidor experimental retornou status ${response.statusCode} em $baseUrl',
+        );
       } else {
         AppLogger.instance.logError(
           'Server returned an error: ${response.statusCode}',
           stackTrace: StackTrace.current,
         );
       }
-      return null;
+      return IndiceErroServidor(response.statusCode);
     }
   }
 
@@ -149,6 +166,10 @@ class SyncNetwork {
       if (AppLogger.isFalhaConexaoOuTimeout(response.statusCode)) {
         AppLogger.instance.logAviso(
           '[SyncNetwork] Falha transitória ao baixar $url, status: ${response.statusCode}',
+        );
+      } else if (EditorDeCroqui.isUrlExperimental(url)) {
+        AppLogger.instance.logAviso(
+          '[SyncNetwork] Servidor experimental retornou status ${response.statusCode} ao baixar $url',
         );
       } else {
         AppLogger.instance.logError(

@@ -470,15 +470,17 @@ void main() {
     });
 
     group('Motor de Cache Volátil e Integridade (Tasks 2.1 - 2.5)', () {
-      test('TDD 2.1: exige checksumSha256 para salvar em temp_cache; na ausência, emite telemetria e recorre a NetworkImage', () async {
+      test('TDD 2.1: exige checksumSha256 para salvar em temp_cache; na ausência em croqui não baixado (online), emite logAviso e recorre a NetworkImage', () async {
+        final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
         final cliente = _ClienteHttpEspiao();
         final provedor = await ProvedorImagemAresta.resolver(
-          picoId: 'pico_remoto',
+          picoId: 'pico_remoto_online',
           caminho: 'setor/foto.png',
           checksumSha256: null,
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
+          datasetRepository: repo,
           clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
@@ -488,15 +490,54 @@ void main() {
         expect(netImg.url, isNot(contains('?v=')));
 
         // Verifica que NENHUM arquivo foi gravado no temp_cache
-        final pastaPico = Directory('${tempCacheDir.path}/pico_remoto');
+        final pastaPico = Directory('${tempCacheDir.path}/pico_remoto_online');
         expect(pastaPico.existsSync(), isFalse);
         expect(cliente.chamadas, equals(0));
 
-        // Verifica telemetria de erro
-        expect(mockLogger.recordedErrors.any((e) =>
-          e['contextMessage'].contains('ausente ou nulo') &&
-          e['contextMessage'].contains('pico_remoto')
-        ), isTrue);
+        // Para croqui online (não baixado), registra apenas logAviso e NÃO logError
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(
+          mockLogger.recordedWarnings.any(
+            (w) => w.contains('ausente ou nulo') && w.contains('pico_remoto_online'),
+          ),
+          isTrue,
+        );
+      });
+
+      test('TDD 2.1b: quando checksumSha256 está ausente em mídia remota de croqui baixado offline, emite logError na telemetria', () async {
+        final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            const ResumoPico(
+              id: 'pico_baixado_offline',
+              nome: 'Pico Baixado',
+              local: 'MG',
+              isDownloaded: true,
+            ),
+          ],
+        );
+
+        final cliente = _ClienteHttpEspiao();
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_baixado_offline',
+          caminho: 'setor/foto_ausente.png',
+          checksumSha256: null,
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          datasetRepository: repo,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
+        );
+
+        expect(provedor, isA<NetworkImage>());
+        expect(
+          mockLogger.recordedErrors.any(
+            (e) =>
+                e['contextMessage'].contains('ausente ou nulo') &&
+                e['contextMessage'].contains('pico_baixado_offline'),
+          ),
+          isTrue,
+        );
       });
 
       test('TDD 2.2: baixa imagem da CDN, persiste em temp_cache com <caminho>.<hash> e resolve localmente na segunda chamada', () async {
@@ -777,47 +818,77 @@ void main() {
         expect(clienteEspiao.foiFechado, isFalse);
       });
 
-      test('TDD: resolve miniatura local permanente quando caminho for URL remota legada contendo imagens/thumbnail.webp', () async {
-        final thumbDocsDir = Directory('${tempDownloadsDir.path}/thumbnails');
-        await thumbDocsDir.create(recursive: true);
-        final thumbFile = File('${thumbDocsDir.path}/pico_legado_local.webp');
-        await thumbFile.writeAsBytes([1, 2, 3, 4]);
+      test('TDD: não reescreve imagens/thumbnail.webp para thumbnails/<picoId>.webp e resolve como mídia interna do croqui', () async {
+        final picoDir = Directory('${tempDownloadsDir.path}/pico_com_capa/imagens');
+        await picoDir.create(recursive: true);
+        final capaFile = File('${picoDir.path}/thumbnail.webp');
+        await capaFile.writeAsBytes([10, 20, 30, 40]);
 
-        final provedor = await ProvedorImagemAresta.resolver(
-          picoId: 'pico_legado_local',
-          caminho: 'https://serving.arestaclimb.com/v4/pico_legado_local/imagens/thumbnail.webp',
+        final provedorLocal = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_com_capa',
+          caminho: 'imagens/thumbnail.webp',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
-          checksumSha256: 'hash_legado_local',
+          checksumSha256: 'hash_capa_interna_1200',
         );
 
-        expect(provedor, isA<ImagemArquivoAresta>());
-        final img = provedor as ImagemArquivoAresta;
-        expect(img.arquivo.path.replaceAll(r'\', '/'), endsWith('thumbnails/pico_legado_local.webp'));
-      });
+        expect(provedorLocal, isA<ImagemArquivoAresta>());
+        final imgLocal = provedorLocal as ImagemArquivoAresta;
+        expect(
+          imgLocal.arquivo.path.replaceAll(r'\', '/'),
+          endsWith('pico_com_capa/imagens/thumbnail.webp'),
+        );
+        expect(imgLocal.checksumSha256, equals('hash_capa_interna_1200'));
 
-      test('TDD: resolve e baixa miniatura remota sob thumbnails/<picoId>.webp quando caminho for imagens/thumbnail.webp', () async {
         final cliente = _ClienteHttpEspiao();
-        const hashThumb = 'hash_thumb_canonica';
-
-        final provedor = await ProvedorImagemAresta.resolver(
-          picoId: 'pico_legado_remoto',
-          caminho: 'https://serving.arestaclimb.com/v4/pico_legado_remoto/imagens/thumbnail.webp',
-          checksumSha256: hashThumb,
+        final provedorRemoto = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_remoto_capa',
+          caminho: 'imagens/thumbnail.webp',
+          checksumSha256: 'hash_capa_remota_1200',
           baseUrl: 'https://cdn.arestaclimb.com',
           caminhoDownloads: tempDownloadsDir.path,
           caminhoCacheVolatil: tempCacheDir.path,
           clienteHttp: ClienteHttpAresta.paraTestes(cliente),
         );
 
-        expect(provedor, isA<ImagemArquivoAresta>());
+        expect(provedorRemoto, isA<ImagemArquivoAresta>());
         expect(cliente.chamadas, equals(1));
-        // A requisição enviada à CDN DEVE usar a rota canônica /thumbnails/<picoId>.webp, NUNCA imagens/thumbnail.webp
-        expect(cliente.urlsRequisitadas.first.path, equals('/thumbnails/pico_legado_remoto.webp'));
-        expect(cliente.urlsRequisitadas.first.queryParameters['v'], equals(hashThumb));
+        expect(
+          cliente.urlsRequisitadas.first.path,
+          equals('/picos/pico_remoto_capa/imagens/thumbnail.webp'),
+        );
+        expect(
+          cliente.urlsRequisitadas.first.queryParameters['v'],
+          equals('hash_capa_remota_1200'),
+        );
 
-        final arquivoSalvo = File('${tempCacheDir.path}/thumbnails/pico_legado_remoto.webp.$hashThumb');
+        final arquivoSalvo = File(
+          '${tempCacheDir.path}/pico_remoto_capa/imagens/thumbnail.webp.hash_capa_remota_1200',
+        );
         expect(arquivoSalvo.existsSync(), isTrue);
+      });
+
+      test('TDD: resolve thumbnails/<picoId>.webp exclusivamente de \$downloadsRoot/thumbnails/ e ignora \$docsDir/thumbnails/ legado', () async {
+        // Cria arquivo apenas na pasta legada $docsDir/thumbnails/ (onde docsDir = tempDownloadsDir.path)
+        final legacyThumbDir = Directory('${tempDownloadsDir.path}/thumbnails');
+        await legacyThumbDir.create(recursive: true);
+        final legacyFile = File('${legacyThumbDir.path}/pico_isolado.webp');
+        await legacyFile.writeAsBytes([1, 1, 1]);
+
+        final cliente = _ClienteHttpEspiao();
+        // Sem informar caminhoDownloads explícito, downloadsRoot = $docsDir/downloads
+        final provedor = await ProvedorImagemAresta.resolver(
+          picoId: 'pico_isolado',
+          caminho: 'thumbnails/pico_isolado.webp',
+          checksumSha256: 'hash_catalogo_600',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
+        );
+
+        expect(provedor, isA<ImagemArquivoAresta>());
+        // Como não havia em $docsDir/downloads/thumbnails/, precisou baixar da CDN (ignorando $docsDir/thumbnails/)
+        expect(cliente.chamadas, equals(1));
       });
     });
 

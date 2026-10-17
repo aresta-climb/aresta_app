@@ -584,10 +584,20 @@ Future<void> handleManualSync(
       );
   }
 
+  final estavaEmModoExperimental =
+      datasetRepo.editorDeCroqui.isExperimentalMode.value;
   final dataset = datasetRepo.activeDataset.value;
   final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
 
   final failed = await syncService.syncIndex(auto: false);
+
+  if (estavaEmModoExperimental &&
+      !datasetRepo.editorDeCroqui.isExperimentalMode.value) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+    }
+    return;
+  }
 
   if (context.mounted) {
     final status = syncService.syncStatus.value;
@@ -650,10 +660,21 @@ Future<void> handleSyncServing(
       );
   }
 
+  final estavaEmModoExperimental =
+      datasetRepo.editorDeCroqui.isExperimentalMode.value;
+
   final failed = await syncService.syncIndex(
     auto: false,
     forceBypassCache: true,
   );
+
+  if (estavaEmModoExperimental &&
+      !datasetRepo.editorDeCroqui.isExperimentalMode.value) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+    }
+    return;
+  }
 
   if (context.mounted) {
     final status = syncService.syncStatus.value;

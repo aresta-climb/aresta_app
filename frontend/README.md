@@ -100,8 +100,9 @@ frontend/
 │   │   ├── firebase/
 │   │   │   ├── inicializar_firebase.dart       - Inicialização e captura de Crashlytics
 │   │   │   ├── telemetria.dart   - Isolamento do Analytics
-│   │   │   ├── remote_config.dart - Fallbacks e cache local
-│   │   │   └── app_logger.dart          - Logger de eventos local (debug)
+│   │   │   ├── remote_config.dart - Fallbacks, cache local e degradação graciosa offline
+│   │   │   ├── validador_app.dart - Atestação de integridade via App Check resiliente a quedas de rede
+│   │   │   └── app_logger.dart          - Logger centralizado com filtro de falhas transitórias HTTP e Firebase
 │   │   ├── http/
 │   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
 │   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread

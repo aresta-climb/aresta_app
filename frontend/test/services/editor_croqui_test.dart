@@ -104,22 +104,9 @@ void main() {
         'abcdefgh',
       );
 
-      // Scheme customizado aresta://
-      expect(
-        EditorDeCroqui.extrairCodigoPrevia('aresta://previa/k9x2p83a'),
-        'k9x2p83a',
-      );
       expect(
         EditorDeCroqui.extrairCodigoPrevia('aresta://previa/k9x2-p83a'),
-        'k9x2p83a',
-      );
-      expect(
-        EditorDeCroqui.extrairCodigoPrevia('aresta://previa/abcdefgh'),
-        'abcdefgh',
-      );
-      expect(
-        EditorDeCroqui.extrairCodigoPrevia('aresta://previa/abcd-efgh'),
-        'abcdefgh',
+        isNull,
       );
 
       // Código digitado diretamente
@@ -367,6 +354,60 @@ void main() {
       expect(editor.notificadorGatilhoRecarregamento.value, 0);
       editor.dispararPulsoRecarregamento();
       expect(editor.notificadorGatilhoRecarregamento.value, 1);
+    });
+
+    test('notificarSessaoExperimentalExpirada deve incrementar notificadorSessaoExpirada', () {
+      expect(editor.notificadorSessaoExpirada.value, 0);
+      editor.notificarSessaoExperimentalExpirada();
+      expect(editor.notificadorSessaoExpirada.value, 1);
+    });
+  });
+
+  group('Detecção de URL Experimental (isUrlExperimental)', () {
+    test('deve retornar true para URLs previa.arestaclimb.com', () {
+      editor.isExperimentalMode.value = false;
+      expect(
+        EditorDeCroqui.isUrlExperimental('https://previa.arestaclimb.com/blo5-uw8c/indice.binarypb'),
+        isTrue,
+      );
+      expect(
+        EditorDeCroqui.isUrlExperimental('aresta://previa/blo5-uw8c'),
+        isFalse,
+      );
+    });
+
+    test('deve retornar true para IPs privados de LAN local', () {
+      editor.isExperimentalMode.value = false;
+      expect(
+        EditorDeCroqui.isUrlExperimental('http://192.168.1.50:8421/indice.binarypb'),
+        isTrue,
+      );
+      expect(
+        EditorDeCroqui.isUrlExperimental('http://10.0.2.2:8156/indice.binarypb'),
+        isTrue,
+      );
+      expect(
+        EditorDeCroqui.isUrlExperimental('http://172.16.0.10:8080/indice.binarypb'),
+        isTrue,
+      );
+    });
+
+    test('deve retornar false para CDN oficial quando isExperimentalMode é false e true quando isExperimentalMode é true', () {
+      editor.isExperimentalMode.value = false;
+      expect(
+        EditorDeCroqui.isUrlExperimental('https://serving.arestaclimb.com/v4/indice.binarypb'),
+        isFalse,
+      );
+      expect(
+        EditorDeCroqui.isUrlExperimental('http://127.0.0.1:8080/v3/indice.binarypb'),
+        isFalse,
+      );
+
+      editor.isExperimentalMode.value = true;
+      expect(
+        EditorDeCroqui.isUrlExperimental('http://127.0.0.1:8080/v3/indice.binarypb'),
+        isTrue,
+      );
     });
   });
 }

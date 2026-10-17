@@ -157,7 +157,7 @@ void main() {
         final localIndiceFile = File(editor.indicePath(docsPath));
         expect(localIndiceFile.existsSync(), isTrue);
 
-        final thumbFile = File('$docsPath/thumbnails/crag1.webp');
+        final thumbFile = File('$docsPath/downloads/thumbnails/crag1.webp');
         expect(thumbFile.existsSync(), isTrue);
 
         // Deve ter carregado na memoria
@@ -269,7 +269,7 @@ void main() {
     );
 
     test(
-      'loadIndiceToMemory mapeia thumbnailUrl com a rota canônica thumbnails/<picoId>.webp',
+      'loadIndiceToMemory mapeia thumbnailUrl com a rota canônica thumbnails/<picoId>.webp apenas quando checksumSha256Thumbnail está preenchido',
       () async {
         final indice = Indice(
           croquis: [
@@ -277,6 +277,12 @@ void main() {
               id: 'br_mg_caete_pedra_filha',
               nome: 'Pedra da Filha',
               caminhoRelativo: 'picos/br_mg_caete_pedra_filha/br_mg_caete_pedra_filha.binarypb',
+              checksumSha256Thumbnail: 'hash_thumb_pedra_filha',
+            ),
+            ResumoCroqui(
+              id: 'br_mg_betim_sem_thumb',
+              nome: 'Pico Sem Thumb',
+              caminhoRelativo: 'picos/br_mg_betim_sem_thumb/compilado.binarypb',
             ),
           ],
         );
@@ -284,10 +290,12 @@ void main() {
         await repo.loadIndiceToMemory(indice);
 
         final available = repo.activeDataset.value!.availablePicos;
-        expect(available.length, 1);
-        final pico = available.first;
+        expect(available.length, 2);
+        final picoComThumb = available.firstWhere((p) => p.id == 'br_mg_caete_pedra_filha');
+        final picoSemThumb = available.firstWhere((p) => p.id == 'br_mg_betim_sem_thumb');
         final baseUrl = repo.editorDeCroqui.activeBaseUrl;
-        expect(pico['thumbnailUrl'], equals('$baseUrl/thumbnails/br_mg_caete_pedra_filha.webp'));
+        expect(picoComThumb['thumbnailUrl'], equals('$baseUrl/thumbnails/br_mg_caete_pedra_filha.webp'));
+        expect(picoSemThumb['thumbnailUrl'], isEmpty);
       },
     );
 
@@ -805,6 +813,40 @@ void main() {
       expect(
         repo.obterSha256DaMidia('pico_com_thumb', 'imagens/mapa_setor.webp'),
         equals('hash_mapa_456'),
+      );
+    });
+
+    test('TDD: loadIndiceToMemory e obterSha256DaMidia não colidem hash de thumbnails/<id>.webp do Indice com imagens/thumbnail.webp de arquivosExternos', () async {
+      final indice = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'pico_capa_vs_thumb'
+            ..checksumSha256Thumbnail = 'hash_catalogo_600x600',
+        );
+      await repo.loadIndiceToMemory(indice);
+
+      // Antes de indexar o croqui, imagens/thumbnail.webp não deve receber o hash do catálogo
+      expect(
+        repo.obterSha256DaMidia('pico_capa_vs_thumb', 'imagens/thumbnail.webp'),
+        isNull,
+      );
+
+      final croquiOnline = Croqui()
+        ..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'imagens/thumbnail.webp',
+            checksumSha256: 'hash_capa_interna_1200x1200',
+          ),
+        );
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_capa_vs_thumb', croquiOnline);
+
+      expect(
+        repo.obterSha256DaMidia('pico_capa_vs_thumb', 'thumbnails/pico_capa_vs_thumb.webp'),
+        equals('hash_catalogo_600x600'),
+      );
+      expect(
+        repo.obterSha256DaMidia('pico_capa_vs_thumb', 'imagens/thumbnail.webp'),
+        equals('hash_capa_interna_1200x1200'),
       );
     });
 
