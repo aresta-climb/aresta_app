@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
@@ -914,6 +915,41 @@ void main() {
       expect(find.text('PICO 2'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'PicoDetailsPage exibe logo_in_app.jpg sobre fundo Colors.black quando croqui não possui capa definida',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final croqui = Croqui(); // sem caminhoThumbnail
+      final pico = Pico()..nome = 'Pico Sem Capa';
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: 'pico_sem_capa',
+        datasetRepo: datasetRepo,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(viewModel: vm),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byIcon(Icons.broken_image), findsNothing);
+      final logoFinder = find.byWidgetPredicate(
+        (w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+      );
+      expect(logoFinder, findsOneWidget);
+    },
+  );
 }
+
 
 

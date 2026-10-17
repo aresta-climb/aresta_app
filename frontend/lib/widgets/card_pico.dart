@@ -336,14 +336,34 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     );
   }
 
-  Widget _buildPlaceholder() {
+  /// Constrói a capa padrão com a logo do Aresta preenchendo 100% do espaço sobre fundo preto.
+  /// Usado exclusivamente quando o croqui não possui capa declarada no Protobuf.
+  Widget _construirCapaPadraoAresta() {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black,
+      child: Image.asset(
+        'assets/logo_in_app.jpg',
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+      ),
+    );
+  }
+
+  /// Constrói o container com ícone de imagem indisponível ([Icons.broken_image]).
+  /// Usado quando o croqui possui capa no Protobuf mas ela não foi baixada ou falhou.
+  Widget _construirImagemIndisponivel() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
       color: const Color(0xFF2C332A),
-      padding: const EdgeInsets.all(24.0),
-      child: Center(
-        child: Image.asset(
-          'assets/logo_splash.png',
-          fit: BoxFit.contain,
+      child: const Center(
+        child: Icon(
+          Icons.broken_image,
+          color: Colors.grey,
+          size: 50,
         ),
       ),
     );
@@ -356,20 +376,25 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
         future: _provedorImagemFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildPlaceholder();
+            return Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: const Color(0xFF2C332A),
+            );
           }
           if (snapshot.hasData && snapshot.data != null) {
             return Image(
               image: snapshot.data!,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+              errorBuilder: (context, error, stackTrace) =>
+                  _construirImagemIndisponivel(),
             );
           }
-          return _buildPlaceholder();
+          return _construirImagemIndisponivel();
         },
       );
     }
-    return _buildPlaceholder();
+    return _construirCapaPadraoAresta();
   }
 }
 

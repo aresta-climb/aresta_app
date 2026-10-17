@@ -288,6 +288,11 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                             buildCragBackground(
                               widget.croqui.caminhoThumbnail,
                               cragId: widget.cragId,
+                              checksumSha256: _viewModel.datasetRepo
+                                  .obterSha256DaMidia(
+                                widget.cragId,
+                                widget.croqui.caminhoThumbnail,
+                              ),
                             ),
                             DecoratedBox(
                               decoration: BoxDecoration(

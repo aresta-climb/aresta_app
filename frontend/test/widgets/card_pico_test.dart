@@ -1,15 +1,41 @@
-// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
-// SPDX-License-Identifier: MPL-2.0
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
+import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 import 'package:frontend/widgets/card_pico.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+class _MockPathProvider extends PathProviderPlatform with MockPlatformInterfaceMixin {
+  final String path;
+  _MockPathProvider(this.path);
+  @override
+  Future<String?> getApplicationDocumentsPath() async => path;
+  @override
+  Future<String?> getTemporaryPath() async => path;
+}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory tempDir;
+
+  setUp(() async {
+    EditorDeCroqui();
+    tempDir = await Directory.systemTemp.createTemp('card_pico_test_');
+    PathProviderPlatform.instance = _MockPathProvider(tempDir.path);
+  });
+
+  tearDown(() async {
+    try {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    } catch (_) {}
+  });
   Widget buildTestCard({
     required MetadadosIndice crag,
     String? distanceStr,
@@ -239,26 +265,97 @@ void main() {
       expect(find.text('500m'), findsOneWidget);
     });
 
-    testWidgets('exibe logo_splash.png como fallback e não usa Icons.terrain quando croqui não possui thumbnail nem capa', (
-      WidgetTester tester,
-    ) async {
-      final cragSemThumb = MetadadosIndice(
-        id: 'pico_sem_thumb_card',
-        nome: 'Pico Sem Thumbnail',
-        descricao: 'Betim',
-      );
+    testWidgets(
+      'exibe logo_in_app.jpg sobre fundo Colors.black sem padding quando croqui não possui thumbnail nem capa no Protobuf',
+      (WidgetTester tester) async {
+        final cragSemThumb = MetadadosIndice(
+          id: 'pico_sem_thumb_card',
+          nome: 'Pico Sem Thumbnail',
+          descricao: 'Betim',
+        );
 
-      await tester.pumpWidget(buildTestCard(crag: cragSemThumb));
-      await tester.pump();
+        await tester.pumpWidget(buildTestCard(crag: cragSemThumb));
+        await tester.pump();
 
-      expect(find.byIcon(Icons.terrain), findsNothing);
-      final logoFinder = find.byWidgetPredicate(
-        (w) =>
-            w is Image &&
-            w.image is AssetImage &&
-            (w.image as AssetImage).assetName == 'assets/logo_splash.png',
-      );
-      expect(logoFinder, findsOneWidget);
-    });
+        expect(find.byIcon(Icons.terrain), findsNothing);
+        expect(find.byIcon(Icons.broken_image), findsNothing);
+
+        final logoFinder = find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg' &&
+              w.fit == BoxFit.contain,
+        );
+        expect(logoFinder, findsOneWidget);
+
+        // Verifica que o container de fundo é preto puro cobrindo a área e sem Padding
+        final containerFinder = find.ancestor(
+          of: logoFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is Container && w.color == Colors.black,
+          ),
+        );
+        expect(containerFinder, findsOneWidget);
+        expect(find.descendant(of: containerFinder, matching: find.byType(Padding)), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'exibe Icons.broken_image e não exibe logo_in_app.jpg quando croqui tem thumbnail declarada no Protobuf mas imagem não está disponível',
+      (WidgetTester tester) async {
+        final cragComThumbIndisponivel = MetadadosIndice(
+          id: 'pico_com_thumb_indisponivel',
+          nome: 'Pico Com Thumbnail Indisponível',
+          descricao: 'Diamantina',
+          checksumSha256Thumbnail: 'hash_inexistente',
+        );
+
+        await tester.pumpWidget(buildTestCard(crag: cragComThumbIndisponivel));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.broken_image), findsOneWidget);
+        final Icon brokenIcon = tester.widget(find.byIcon(Icons.broken_image));
+        expect(brokenIcon.color, equals(Colors.grey));
+        expect(brokenIcon.size, equals(50));
+
+        final logoFinder = find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+        );
+        expect(logoFinder, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'exibe fundo neutro durante ConnectionState.waiting sem exibir logo do Aresta nem ícone de erro prematuramente',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: buildCragBackground('thumbnails/pico_aguardando.webp', cragId: 'pico_aguardando'),
+            ),
+          ),
+        );
+
+        // Apenas o primeiro frame antes de resolver o Future
+        await tester.pump();
+
+        expect(find.byIcon(Icons.broken_image), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Image &&
+                w.image is AssetImage &&
+                (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+          ),
+          findsNothing,
+        );
+      },
+    );
   });
 }
+

@@ -110,40 +110,131 @@ void main() {
       expect(resize.width, equals(300));
     });
 
-    testWidgets('exibe logo_splash.png como fallback quando croqui não possui miniatura', (
-      WidgetTester tester,
-    ) async {
-      final crag = Croqui(
-        id: 'pico_sem_thumb',
-        nome: 'Pico Sem Foto',
-        picos: [
-          Pico(estado: 'Itatiaia'),
-        ],
-      );
+    testWidgets(
+      'exibe logo_in_app.jpg sobre fundo Colors.black sem padding quando croqui não possui miniatura',
+      (WidgetTester tester) async {
+        final crag = Croqui(
+          id: 'pico_sem_thumb',
+          nome: 'Pico Sem Foto',
+          picos: [
+            Pico(estado: 'Itatiaia'),
+          ],
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: OfflineCragCard.deCroqui(
-              crag: crag,
-              onAbrir: () {},
-              onExcluir: () {},
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: OfflineCragCard.deCroqui(
+                crag: crag,
+                onAbrir: () {},
+                onExcluir: () {},
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
-      await tester.pumpAndSettle();
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.terrain), findsNothing);
-      final imageFinder = find.byWidgetPredicate(
-        (w) =>
-            w is Image &&
-            w.image is AssetImage &&
-            (w.image as AssetImage).assetName == 'assets/logo_splash.png',
-      );
-      expect(imageFinder, findsOneWidget);
-    });
+        expect(find.byIcon(Icons.terrain), findsNothing);
+        expect(find.byIcon(Icons.broken_image), findsNothing);
+        final imageFinder = find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg' &&
+              w.fit == BoxFit.contain,
+        );
+        expect(imageFinder, findsOneWidget);
+
+        final containerFinder = find.ancestor(
+          of: imageFinder,
+          matching: find.byWidgetPredicate(
+            (w) => w is Container && w.color == Colors.black,
+          ),
+        );
+        expect(containerFinder, findsOneWidget);
+        expect(find.descendant(of: containerFinder, matching: find.byType(Padding)), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'exibe Icons.broken_image quando croqui possui miniatura declarada mas arquivo está indisponível',
+      (WidgetTester tester) async {
+        final crag = Croqui(
+          id: 'pico_thumb_inexistente',
+          nome: 'Pico Com Foto Ausente',
+          caminhoThumbnail: 'thumbnails/pico_thumb_inexistente.webp',
+          picos: [
+            Pico(estado: 'Itatiaia'),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: OfflineCragCard.deCroqui(
+                crag: crag,
+                onAbrir: () {},
+                onExcluir: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.broken_image), findsOneWidget);
+        final Icon brokenIcon = tester.widget(find.byIcon(Icons.broken_image));
+        expect(brokenIcon.color, equals(Colors.grey));
+        expect(brokenIcon.size, equals(24));
+
+        final imageFinder = find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+        );
+        expect(imageFinder, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'exibe container neutro no OfflineCragCard durante ConnectionState.waiting',
+      (WidgetTester tester) async {
+        final crag = Croqui(
+          id: 'pico_thumb_waiting',
+          nome: 'Pico Aguardando',
+          caminhoThumbnail: 'thumbnails/pico_thumb_waiting.webp',
+          picos: [
+            Pico(estado: 'Itatiaia'),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: OfflineCragCard.deCroqui(
+                crag: crag,
+                onAbrir: () {},
+                onExcluir: () {},
+              ),
+            ),
+          ),
+        );
+        // Primeiro frame sem esperar o Future
+        await tester.pump();
+
+        expect(find.byIcon(Icons.broken_image), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Image &&
+                w.image is AssetImage &&
+                (w.image as AssetImage).assetName == 'assets/logo_in_app.jpg',
+          ),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets('OfflineCragCard renderiza dados tipados de Croqui', (
       WidgetTester tester,
