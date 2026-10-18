@@ -7,8 +7,9 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 ## Funcionalidades
 
 - **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`) e gerenciamento de notificações silenciosas em Foreground Service nativo ininterrupto.
-- **Home com Busca Global Unificada**: Carrossel dos guias baixados com ordenação por prioridade/acesso recente e barra de busca integrada que realiza Fuzzy Search aproximado (insensível a acentos) em todos os picos, setores e vias da aplicação.
-- **Explorar & Sincronização com Serving**: Lista todos os picos do índice remoto com download paralelo, botão de sincronização forçada com o serving ativo e acesso direto ao **Mapão Global**, projetando os crags em um mapa 2D interativo com Google Maps.
+- **Home com Busca Global Unificada (`catalogo.db`)**: Carrossel dos guias baixados com ordenação por prioridade/acesso recente e barra de busca integrada que carrega o catálogo relacional SQLite (`catalogo.db`), realiza Fuzzy Search aproximado (insensível a acentos) em todos os picos, grupos, setores e escaladas, prioriza picos baixados offline (exibindo badge **`Offline`**) e navega sob demanda para qualquer entidade via UID.
+- **Compartilhamento Nativo & Deep Links Compactos (`aresta.cc`)**: Botões de compartilhamento nativo (`share_plus`) nas páginas de Pico, Grupo, Setor, Via e Mapa Interativo, gerando URLs compactas de até 35 caracteres (`https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>`) e resolvendo deep links de placas físicas QR Code (`/q/<uid>`, `/qm/<uid>`) com telemetria de origem.
+- **Explorar & Sincronização com Serving**: Lista todos os picos do índice remoto com download paralelo, sincronização assíncrona incremental do catálogo SQLite (`catalogo.arestaclimb.com/sync`), botão de sincronização forçada com o serving ativo e acesso direto ao **Mapão Global**, projetando os crags em um mapa 2D interativo com Google Maps.
 - **Croquis Topográficos e Mapas Interativos**:
   - Renderização vetorial nativa de traçados de vias (sólido, tracejado, pontilhado) com hit-testing por distância euclidiana (16dp).
   - Contenção rígida de limites (`boundaryMargin: EdgeInsets.zero`) e zoom mínimo (`minScale: 1.0`) para evitar perda do mapa em telas pretas.
@@ -28,6 +29,8 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 |---|---|---|
 | **Flutter / Dart** | SDK `^3.11.3` | Framework principal (cross-platform: Android, iOS) |
 | **`protobuf`** | `^6.0.0` | Serialização binária de dados de escalada (`.binarypb`) |
+| **`sqflite`** | `^2.4.1` | Banco de dados relacional SQLite local (`catalogo.db`) com sincronização incremental (Delta Sync) |
+| **`share_plus`** | `^13.3.1` | Compartilhamento nativo de links compactos (`aresta.cc/s/<uid>` e `aresta.cc/sm/<uid>`) |
 | **`http`** | `^1.2.0` | Camada de rede e downloads atômicos |
 | **`path_provider`** | `^2.1.2` | Resolução de diretórios de armazenamento local |
 | **`shared_preferences`** | `^2.2.2` | Persistência leve de configurações |
@@ -74,7 +77,7 @@ frontend/
 │   │       ├── mapa_pico_view_model.dart   - Apresentação e coordenadas de picos no mapa
 │   │       ├── pico_proximo_view_model.dart- Apresentação de picos próximos e distâncias
 │   │       └── *_view_model.dart        - View models para páginas e componentes reativos
-│   ├── aresta_api/                      - Submodule: arquivos .proto e código Protobuf gerado
+│   ├── aresta_api/                      - Submodule: arquivos .proto, SQL, OpenAPI e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
 │   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
 │   │   ├── funcoes_navegacao.dart    - API estática AppNav com herança de contexto
@@ -85,7 +88,7 @@ frontend/
 │   │   ├── explorar.dart                - Índice remoto com download inline
 │   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
-│   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias
+│   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias e compartilhamento
 │   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
 │   │   ├── pico.dart                    - Nó raiz de um guia, atua como hub distribuindo para as sub-páginas
 │   │   ├── pico_subpages/               - Views tabulares do guia (Comunidade Local, Setores, Explorar Local, etc)
@@ -97,6 +100,10 @@ frontend/
 │   │   ├── termos_de_uso.dart           - Visualizador dos documentos legais
 │   │   └── qr_scanner.dart              - Scanner de QR code
 │   ├── services/                        - Serviços centrais
+│   │   ├── catalogo/
+│   │   │   └── repositorio_catalogo.dart - Banco SQLite local (catalogo.db), batch delta sync e consultas relacionais
+│   │   ├── compartilhamento/
+│   │   │   └── servico_compartilhamento.dart - Formatação de links compactos aresta.cc (/s/<uid>, /sm/<uid>) e share_plus
 │   │   ├── firebase/
 │   │   │   ├── inicializar_firebase.dart       - Inicialização e captura de Crashlytics
 │   │   │   ├── telemetria.dart   - Isolamento do Analytics
@@ -104,9 +111,9 @@ frontend/
 │   │   │   ├── validador_app.dart - Atestação de integridade via App Check resiliente a quedas de rede
 │   │   │   └── app_logger.dart          - Logger centralizado com filtro de falhas transitórias HTTP e Firebase
 │   │   ├── http/
-│   │   │   ├── sync_service.dart        - Orquestra download e validação de forma assíncrona
+│   │   │   ├── sync_service.dart        - Orquestra download, validação e sincronização assíncrona do catálogo
 │   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
-│   │   │   ├── sync_rede.dart        - Faz o download HTTP bruto e gestão de ETags
+│   │   │   ├── sync_rede.dart        - Faz o download HTTP bruto, consulta /sync do catálogo e gestão de ETags
 │   │   │   ├── sync_armazenamento.dart        - Trata arquivos `.tmp` e salva de forma atômica
 │   │   │   └── baixador_atualizacoes.dart   - Verificação e download de atualizações do APK
 │   │   ├── feedback/
@@ -121,7 +128,7 @@ frontend/
 │       │   └── construtor_feedback_usuario.dart - Construtor de interface customizada para formulário de in-app feedback
 │       ├── card_pico.dart               - Card interativo do pico com status, progresso de download e estatísticas
 │       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
-│       ├── busca_global.dart           - Busca global agregada de todos os croquis baixados
+│       ├── busca_global.dart           - Busca global Fuzzy sobre catalogo.db com prioridade e badge Offline
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/
     ├── architecture/                    - Testes arquiteturais e de convenção de código

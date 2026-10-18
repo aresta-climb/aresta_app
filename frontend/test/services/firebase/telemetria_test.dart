@@ -314,6 +314,32 @@ void main() {
       expect(params['origem'], 'comunidade');
       expect(params['detalhe'], 'https://instagram.com/aresta');
     });
+
+    test('logCompartilharEntidade registra página e mapa', () async {
+      await TelemetryService.instance.logCompartilharEntidade(
+        idCroqui: 'br_mg_igarape_pedra_grande',
+        tipoEntidade: 'setor',
+        uid: 'hv7YWgTBQGyWOX',
+        abrirMapa: false,
+      );
+      expect(mockTelemetry.recordedEvents, contains('compartilhar_entidade'));
+      var params = mockTelemetry.recordedParams['compartilhar_entidade']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
+      expect(params['tipo_entidade'], 'setor');
+      expect(params['uid'], 'hv7YWgTBQGyWOX');
+      expect(params['abrir_mapa'], 'false');
+      expect(params['origem'], 'pagina_detalhe');
+
+      await TelemetryService.instance.logCompartilharEntidade(
+        idCroqui: 'br_mg_igarape_pedra_grande',
+        tipoEntidade: 'via',
+        uid: 'x8siJek3FiG3aB',
+        abrirMapa: true,
+      );
+      params = mockTelemetry.recordedParams['compartilhar_entidade']!;
+      expect(params['abrir_mapa'], 'true');
+      expect(params['origem'], 'mapa_interativo');
+    });
   });
 
   group('TelemetryService Real Instance Tests', () {

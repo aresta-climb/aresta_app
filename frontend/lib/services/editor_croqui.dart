@@ -385,6 +385,14 @@ class EditorDeCroqui {
     return '$docsPath/editor/experimental/indice.binarypb';
   }
 
+  /// Retorna o caminho do banco SQLite local `catalogo.db`, isolado por modo (oficial vs experimental).
+  String catalogoPath(String docsPath) {
+    if (!isExperimentalMode.value) {
+      return '$docsPath/catalogo.db';
+    }
+    return '$docsPath/editor/experimental/catalogo.db';
+  }
+
   Future<String> getEditedPath() async {
     final directory = await getApplicationDocumentsDirectory();
     final editedDir = Directory('${directory.path}/edited');

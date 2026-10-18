@@ -12,6 +12,7 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/widgets/linha_credito_autor.dart';
 import 'package:frontend/widgets/modal_confirmacao_saida.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
@@ -51,6 +52,10 @@ PicoDetailsPage _criarPicoDetailsPage({
 }
 
 void main() {
+  tearDown(() {
+    ServicoCompartilhamento.restaurarPadrao();
+  });
+
   testWidgets('PicoDetailsPage should call logAcaoCroqui on search tap', (
     tester,
   ) async {
@@ -948,7 +953,49 @@ void main() {
       expect(logoFinder, findsOneWidget);
     },
   );
+
+  testWidgets(
+    'PicoDetailsPage exibe botão de compartilhamento quando croqui possui uid e dispara ServicoCompartilhamento',
+    (tester) async {
+      String? textoCompartilhado;
+      ServicoCompartilhamento.instancia = ServicoCompartilhamento(
+        executorCompartilhamento: (texto) async {
+          textoCompartilhado = texto;
+        },
+      );
+
+      final datasetRepo = _FakeDatasetRepository();
+      final croqui = Croqui()..uid = 'uidPicoShare77';
+      final pico = Pico()
+        ..nome = 'Serra do Cipó'
+        ..estado = 'MG';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: _criarPicoDetailsPage(
+            pico: pico,
+            croqui: croqui,
+            cragId: 'br_mg_serra_do_cipo',
+            datasetRepo: datasetRepo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final botaoShare = find.byIcon(Icons.share_outlined);
+      expect(botaoShare, findsOneWidget);
+
+      await tester.tap(botaoShare);
+      await tester.pumpAndSettle();
+
+      expect(textoCompartilhado, isNotNull);
+      expect(textoCompartilhado, contains('Serra do Cipó'));
+      expect(textoCompartilhado, contains('https://aresta.cc/s/uidPicoShare77'));
+    },
+  );
 }
+
 
 
 

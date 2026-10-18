@@ -613,6 +613,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.5"
+  glob:
+    dependency: transitive
+    description:
+      name: glob
+      sha256: "218aeb56050c714f62a3182775320dfa04602b55074873e24e31bbd39bda96fb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   google_fonts:
     dependency: "direct main"
     description:
@@ -837,6 +845,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.0"
+  mime:
+    dependency: transitive
+    description:
+      name: mime
+      sha256: bd47de35f07e27267e69c8c8b22edf9473bfee170a60d60fcc93730c5144b7f6
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   mobile_scanner:
     dependency: "direct main"
     description:
@@ -853,6 +869,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  native_toolchain_c:
+    dependency: transitive
+    description:
+      name: native_toolchain_c
+      sha256: "90eaad8059ebc2004a63810a4696ea9acdb02473e47ed3b6b3bafb100ac77e31"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.19.5"
   nm:
     dependency: transitive
     description:
@@ -997,6 +1021,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.2"
+  process:
+    dependency: transitive
+    description:
+      name: process
+      sha256: "4242ba3508d37e01808bdf71ad1d5bb93a8d671bf2e7450e6b1b353fb0808891"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.6"
   protobuf:
     dependency: "direct main"
     description:
@@ -1029,6 +1061,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  share_plus:
+    dependency: "direct main"
+    description:
+      name: share_plus
+      sha256: db40767f130189d53f3ae8a6393c217ff4a492da1baff718a9873679c0c00224
+      url: "https://pub.dev"
+    source: hosted
+    version: "13.3.1"
+  share_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: share_plus_platform_interface
+      sha256: "365ef7379fc22507256adda3385152942ffce08935452bc972c2e52a0bebae41"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.2.0"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1098,6 +1146,62 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.2"
+  sqflite:
+    dependency: "direct main"
+    description:
+      name: sqflite
+      sha256: "273218a1678360a3127fcf15e543381d9b813d413d783bc6e9a53eed4d2eb8fe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.4+2"
+  sqflite_android:
+    dependency: transitive
+    description:
+      name: sqflite_android
+      sha256: e4f659c14bdd14464127fcd234a7a96f61fe0f539b8568e5a38f99f5a568a835
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.4+1"
+  sqflite_common:
+    dependency: transitive
+    description:
+      name: sqflite_common
+      sha256: b80e94ff0d551d5f1f8c7d14348d29b576cca3ae30f6e195a7c380552c32b1e0
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.5.14"
+  sqflite_common_ffi:
+    dependency: "direct dev"
+    description:
+      name: sqflite_common_ffi
+      sha256: "4cb6179390549743fc1a5a2fb8f134e5ad87ce459f6f4e563531487dadd81710"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.4"
+  sqflite_darwin:
+    dependency: transitive
+    description:
+      name: sqflite_darwin
+      sha256: "8de68fc306040f992aaf378750c16f95e4298c4bb150dd45091d75e42b1f08ee"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.4+1"
+  sqflite_platform_interface:
+    dependency: transitive
+    description:
+      name: sqflite_platform_interface
+      sha256: c9177b2f3150ed0647b90a94307c28452fe0a5401863044216aed83addd6c7c5
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.2"
+  sqlite3:
+    dependency: transitive
+    description:
+      name: sqlite3
+      sha256: "144132790ec1947fad9f3ddceffd0af2ab80a1f0d1e81a4d094ee6707ec3df0b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.7.1"
   stack_trace:
     dependency: transitive
     description:
@@ -1138,6 +1242,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.2"
+  synchronized:
+    dependency: transitive
+    description:
+      name: synchronized
+      sha256: b3d516dbd3757ff2a458735e4f6cbac9ff261f576f6e87bcb17feabb39e657c5
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.0"
   term_glyph:
     dependency: transitive
     description:

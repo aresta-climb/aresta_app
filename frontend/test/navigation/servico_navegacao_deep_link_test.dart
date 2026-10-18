@@ -1,17 +1,36 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
-import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 import '../mocks/mock_telemetria.dart';
 
+class _FakePathProvider extends PathProviderPlatform {
+  final String caminhoBase;
+  _FakePathProvider(this.caminhoBase);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminhoBase;
+
+  @override
+  Future<String?> getTemporaryPath() async => '$caminhoBase/temp';
+}
+
 void main() {
+  sqfliteFfiInit();
+
+  late Directory dirTemp;
   late EditorDeCroqui editorDeCroqui;
+  late RepositorioCatalogo repositorioCatalogo;
   late DatasetRepository datasetRepo;
   late TreeNavigationController treeController;
   late DeepLinkNavigatorService service;
@@ -25,34 +44,55 @@ void main() {
   late Escalada viaNoSetor;
   late Escalada viaNoGrupoSetor;
 
-  setUp(() {
+  const String uidCroqui = 'pQ9mRt2Kx1Vw8L';
+  const String uidSetorDireto = 'sQ7YgEG6ONsPXt'; // UID da placa bloco_democracia
+  const String uidGrupo = 'cqT5nqQ4pvPub7'; // UID da placa grupo_sherpa
+  const String uidSetorNoGrupo = 'ZTPu3KeCXIJisV'; // UID da placa setor_familia_i
+  const String uidViaNoSetor = 'v1siJek3FiG3aB';
+  const String uidViaNoGrupoSetor = 'v2siJek3FiG3aB';
+
+  setUp(() async {
+    dirTemp = await Directory.systemTemp.createTemp('servico_deep_link_test_');
+    PathProviderPlatform.instance = _FakePathProvider(dirTemp.path);
+
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
     editorDeCroqui = EditorDeCroqui();
-    datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+    repositorioCatalogo = RepositorioCatalogo(
+      provedorCaminhoBanco: () async => '${dirTemp.path}/catalogo.db',
+      fabricaBanco: databaseFactoryFfi,
+    );
+    datasetRepo = DatasetRepository(
+      editorDeCroqui: editorDeCroqui,
+      repositorioCatalogo: repositorioCatalogo,
+    );
     treeController = TreeNavigationController();
     service = DeepLinkNavigatorService(
       datasetRepo: datasetRepo,
       treeController: treeController,
     );
 
-    // Constrói a árvore de dados de teste:
-    // Pico: "Pedra Grande de Igarapé" (id: "br_mg_igarape_pedra_grande")
-    //   - Setor direto: "Savassinha"
-    //       - Via: "Teto da Savassinha"
-    //   - Grupo: "Grupo Estacionamento"
-    //       - Setor filho: "Setor do Bloco"
-    //           - Via: "Via do Bloco"
     croquiTeste = Croqui()
       ..id = 'br_mg_igarape_pedra_grande'
-      ..uid = 'pQ9mRt2Kx1Vw8L';
+      ..uid = uidCroqui;
     picoTeste = Pico()..nome = 'Pedra Grande de Igarapé';
 
     setorDireto = Setor()
-      ..nome = 'Savassinha'
-      ..uid = 's1Lk9P1x4Vw8Mn';
+      ..nome = 'Bloco Democracia'
+      ..uid = uidSetorDireto
+      ..mapas.add(
+        Mapa()
+          ..caminhoImagemMapa = 'mapas/democracia.webp'
+          ..larguraMapa = 1200
+          ..alturaMapa = 800
+          ..referencias.add(
+            Mapa_Referencia()
+              ..alvoUid = uidViaNoSetor
+              ..pontosUids.add('pt_via_1'),
+          ),
+      );
     viaNoSetor = Escalada()
-      ..uid = 'v1siJek3FiG3aB'
+      ..uid = uidViaNoSetor
       ..viaEsportiva = (ViaEsportiva()..nome = 'Teto da Savassinha');
     setorDireto.escaladas.add(viaNoSetor);
 
@@ -60,9 +100,14 @@ void main() {
       SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorDireto),
     );
 
-    grupoEstacionamento = Grupo()..nome = 'Grupo Estacionamento';
-    setorNoGrupo = Setor()..nome = 'Setor do Bloco';
+    grupoEstacionamento = Grupo()
+      ..nome = 'Grupo Sherpa'
+      ..uid = uidGrupo;
+    setorNoGrupo = Setor()
+      ..nome = 'Setor Família I'
+      ..uid = uidSetorNoGrupo;
     viaNoGrupoSetor = Escalada()
+      ..uid = uidViaNoGrupoSetor
       ..boulder = (Boulder()..nome = 'Via do Bloco');
     setorNoGrupo.escaladas.add(viaNoGrupoSetor);
 
@@ -76,7 +121,6 @@ void main() {
 
     croquiTeste.picos.add(picoTeste);
 
-    // Popula o repositório como pico baixado em cache local
     datasetRepo.activeDataset.value = TopoDataset(
       picosBaixados: [
         {
@@ -88,10 +132,17 @@ void main() {
     );
   });
 
-  group('DeepLinkNavigatorService - Reconstrução de Linhagem', () {
-    test('navega para PicoNode a partir de link nivel 1', () async {
+  tearDown(() async {
+    await repositorioCatalogo.fechar();
+    if (dirTemp.existsSync()) {
+      await dirTemp.delete(recursive: true);
+    }
+  });
+
+  group('DeepLinkNavigatorService - Reconstrução de Linhagem por UID', () {
+    test('navega para PicoNode a partir de link https://aresta.cc/<croqui_uid>', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
+        'https://aresta.cc/$uidCroqui',
       );
 
       expect(sucesso, isTrue);
@@ -101,236 +152,136 @@ void main() {
       expect(picoNode.parent, isA<HomeNode>());
     });
 
-    test('navega para SetorNode direto a partir de link nivel 2', () async {
+    test('navega para SetorNode direto a partir de link https://aresta.cc/<setor_uid>', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/savassinha',
+        'https://aresta.cc/$uidSetorDireto',
       );
 
       expect(sucesso, isTrue);
       expect(treeController.currentNode, isA<SetorNode>());
       final setorNode = treeController.currentNode as SetorNode;
-      expect(setorNode.setorNome, equals('Savassinha'));
+      expect(setorNode.setorNome, equals('Bloco Democracia'));
       expect(setorNode.cragId, equals('br_mg_igarape_pedra_grande'));
-
-      // Verifica linhagem ascendente: Setor -> Pico -> Home
       expect(setorNode.parent, isA<PicoNode>());
       expect(setorNode.parent!.parent, isA<HomeNode>());
     });
 
-    test('navega para GrupoNode a partir de link nivel 2', () async {
+    test('navega para GrupoNode a partir de link https://aresta.cc/<grupo_uid>', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento',
+        'https://aresta.cc/$uidGrupo',
       );
 
       expect(sucesso, isTrue);
       expect(treeController.currentNode, isA<GrupoNode>());
       final grupoNode = treeController.currentNode as GrupoNode;
-      expect(grupoNode.grupoNome, equals('Grupo Estacionamento'));
+      expect(grupoNode.grupoNome, equals('Grupo Sherpa'));
       expect(grupoNode.parent, isA<PicoNode>());
       expect(grupoNode.parent!.parent, isA<HomeNode>());
     });
 
-    test('navega para SetorNode dentro de Grupo a partir de link nivel 3', () async {
+    test('navega para SetorNode dentro de Grupo a partir de link https://aresta.cc/<setor_uid>', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_do_bloco',
+        'https://aresta.cc/$uidSetorNoGrupo',
       );
 
       expect(sucesso, isTrue);
       expect(treeController.currentNode, isA<SetorNode>());
       final setorNode = treeController.currentNode as SetorNode;
-      expect(setorNode.setorNome, equals('Setor do Bloco'));
-      expect(setorNode.grupoNome, equals('Grupo Estacionamento'));
-
-      // Linhagem: Setor -> Grupo -> Pico -> Home
+      expect(setorNode.setorNome, equals('Setor Família I'));
+      expect(setorNode.grupoNome, equals('Grupo Sherpa'));
       expect(setorNode.parent, isA<GrupoNode>());
-      final grupoNode = setorNode.parent as GrupoNode;
-      expect(grupoNode.grupoNome, equals('Grupo Estacionamento'));
-      expect(grupoNode.parent, isA<PicoNode>());
-      expect(grupoNode.parent!.parent, isA<HomeNode>());
+      expect(setorNode.parent!.parent, isA<PicoNode>());
+      expect(setorNode.parent!.parent!.parent, isA<HomeNode>());
     });
 
-    test('navega para ViaNode dentro de Setor direto a partir de link nivel 3', () async {
+    test('navega para ViaNode dentro de Setor em Grupo e desempilha toda a linhagem no botão voltar', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/savassinha/teto_da_savassinha',
-      );
-
-      expect(sucesso, isTrue);
-      expect(treeController.currentNode, isA<ViaNode>());
-      final viaNode = treeController.currentNode as ViaNode;
-      expect(viaNode.escaladaNome, equals('Teto da Savassinha'));
-      expect(viaNode.setorNome, equals('Savassinha'));
-
-      // Linhagem: Via -> Setor -> Pico -> Home
-      expect(viaNode.parent, isA<SetorNode>());
-      expect(viaNode.parent!.parent, isA<PicoNode>());
-      expect(viaNode.parent!.parent!.parent, isA<HomeNode>());
-    });
-
-    test('navega para ViaNode dentro de Setor em Grupo a partir de link nivel 4', () async {
-      final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_do_bloco/via_do_bloco',
+        'https://aresta.cc/$uidViaNoGrupoSetor',
       );
 
       expect(sucesso, isTrue);
       expect(treeController.currentNode, isA<ViaNode>());
       final viaNode = treeController.currentNode as ViaNode;
       expect(viaNode.escaladaNome, equals('Via do Bloco'));
-      expect(viaNode.setorNome, equals('Setor do Bloco'));
-      expect(viaNode.grupoNome, equals('Grupo Estacionamento'));
+      expect(viaNode.setorNome, equals('Setor Família I'));
+      expect(viaNode.grupoNome, equals('Grupo Sherpa'));
 
-      // Linhagem completa: Via -> Setor -> Grupo -> Pico -> Home
-      expect(viaNode.parent, isA<SetorNode>());
-      final setorNode = viaNode.parent as SetorNode;
-      expect(setorNode.parent, isA<GrupoNode>());
-      final grupoNode = setorNode.parent as GrupoNode;
-      expect(grupoNode.parent, isA<PicoNode>());
-      expect(grupoNode.parent!.parent, isA<HomeNode>());
-    });
-
-    test('o botao voltar desempilha retroativamente toda a linhagem montada pelo deep link', () async {
-      await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_do_bloco/via_do_bloco',
-      );
-
-      expect(treeController.currentNode, isA<ViaNode>());
-
-      // Voltar 1: Setor
       expect(treeController.goBack(), isTrue);
       expect(treeController.currentNode, isA<SetorNode>());
 
-      // Voltar 2: Grupo
       expect(treeController.goBack(), isTrue);
       expect(treeController.currentNode, isA<GrupoNode>());
 
-      // Voltar 3: Pico
       expect(treeController.goBack(), isTrue);
       expect(treeController.currentNode, isA<PicoNode>());
 
-      // Voltar 4: Home
       expect(treeController.goBack(), isTrue);
       expect(treeController.currentNode, isA<HomeNode>());
     });
   });
 
-  group('DeepLinkNavigatorService - Resolução de Dados Online/Offline', () {
-    test('abre croqui atraves de sessao online se nao estiver baixado localmente', () async {
-      // Adiciona o croqui na sessão online simulando que foi pré-carregado
-      datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(
-        'br_mg_cipov2',
-        Croqui()..picos.add(Pico()..nome = 'Serra do Cipó'),
-      );
-
+  group('DeepLinkNavigatorService - Modo Mapa (/m/, /sm/, /qm/) e Placas Legadas', () {
+    test('abre MapasCarrosselNode focado na via ao processar https://aresta.cc/sm/<via_uid>', () async {
       final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_cipov2',
-      );
-
-      expect(sucesso, isTrue);
-      expect(treeController.currentNode, isA<PicoNode>());
-      final picoNode = treeController.currentNode as PicoNode;
-      expect(picoNode.cragId, equals('br_mg_cipov2'));
-    });
-
-    test('retorna false e emite aviso se o croqui nao existir nem local nem online', () async {
-      String? mensagemErro;
-      service.onMensagemAviso = (msg) => mensagemErro = msg;
-
-      final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/pico_inexistente',
-      );
-
-      expect(sucesso, isFalse);
-      expect(mensagemErro, isNotNull);
-      expect(mensagemErro, contains('Não foi possível abrir o croqui'));
-    });
-
-    test('retorna false se a URL for invalida ou de outro dominio', () async {
-      final sucesso = await service.processarLink('https://outrodominio.com/teste');
-      expect(sucesso, isFalse);
-    });
-  });
-
-  group('DeepLinkNavigatorService - Telemetria', () {
-    test('dispara logDeepLinkAberto com sucesso, destino via, cold_start e parametros UTM', () async {
-      final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_do_bloco/via_do_bloco?utm_source=placa_pedra&utm_medium=qrcode',
-        tipoStart: 'cold_start',
-      );
-
-      expect(sucesso, isTrue);
-      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
-      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
-      expect(params['id_croqui'], equals('br_mg_igarape_pedra_grande'));
-      expect(params['destino'], equals('via'));
-      expect(params['sucesso'], equals('true'));
-      expect(params['tipo_start'], equals('cold_start'));
-      expect(params['utm_source'], equals('placa_pedra'));
-      expect(params['utm_medium'], equals('qrcode'));
-    });
-
-    test('dispara logDeepLinkAberto com falha e motivo do erro quando croqui nao for encontrado', () async {
-      final sucesso = await service.processarLink(
-        'https://app.arestaclimb.com/pico_inexistente?utm_source=teste',
+        'https://aresta.cc/sm/$uidViaNoSetor',
         tipoStart: 'warm_start',
       );
 
-      expect(sucesso, isFalse);
-      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
-      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
-      expect(params['id_croqui'], equals('pico_inexistente'));
-      expect(params['sucesso'], equals('false'));
-      expect(params['tipo_start'], equals('warm_start'));
-      expect(params['motivo_erro'], isNotNull);
-      expect(params['utm_source'], equals('teste'));
-    });
-  });
-
-  group('DeepLinkNavigatorService - Localização por NanoID 14c (aresta.cc)', () {
-    test('navega diretamente para ViaNode ao ler QR code de via canônica https://aresta.cc/<nanoid>', () async {
-      final sucesso = await service.processarLink(
-        'https://aresta.cc/v1siJek3FiG3aB?utm_source=placa_inox&utm_medium=qrcode',
-        tipoStart: 'cold_start',
-      );
-
       expect(sucesso, isTrue);
-      expect(treeController.currentNode, isA<ViaNode>());
-      final viaNode = treeController.currentNode as ViaNode;
-      expect(viaNode.escaladaNome, equals('Teto da Savassinha'));
-      expect(viaNode.setorNome, equals('Savassinha'));
+      expect(treeController.currentNode, isA<MapasCarrosselNode>());
+      final carrosselNode = treeController.currentNode as MapasCarrosselNode;
+      expect(carrosselNode.parent, isA<ViaNode>());
+      expect(carrosselNode.mapas.first.initialSelectedId, equals('pt_via_1'));
 
-      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
       final params = mockTelemetry.recordedParams['deep_link_aberto']!;
       expect(params['id_croqui'], equals('br_mg_igarape_pedra_grande'));
       expect(params['destino'], equals('via'));
+      expect(params['origem_link'], equals('compartilhamento'));
+      expect(params['abrir_mapa'], equals('true'));
       expect(params['sucesso'], equals('true'));
-      expect(params['tipo_start'], equals('cold_start'));
-      expect(params['utm_source'], equals('placa_inox'));
     });
 
-    test('navega para SetorNode ao processar link https://aresta.cc/<setor_uid>', () async {
-      final sucesso = await service.processarLink('https://aresta.cc/s1Lk9P1x4Vw8Mn');
+    test('resolve placa física legada de app.arestaclimb.com mapeando para o UID correspondente', () async {
+      final sucesso = await service.processarLink(
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/bloco_democracia?utm_source=setor_igarameca&utm_medium=qrcode',
+        tipoStart: 'cold_start',
+      );
 
       expect(sucesso, isTrue);
       expect(treeController.currentNode, isA<SetorNode>());
       final setorNode = treeController.currentNode as SetorNode;
-      expect(setorNode.setorNome, equals('Savassinha'));
-      expect(setorNode.parent, isA<PicoNode>());
+      expect(setorNode.setorNome, equals('Bloco Democracia'));
+
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('br_mg_igarape_pedra_grande'));
+      expect(params['destino'], equals('setor'));
+      expect(params['origem_link'], equals('qrcode'));
+      expect(params['utm_source'], equals('setor_igarameca'));
+      expect(params['utm_medium'], equals('qrcode'));
     });
 
-    test('navega para PicoNode ao processar link https://aresta.cc/<croqui_uid>', () async {
-      final sucesso = await service.processarLink('https://aresta.cc/pQ9mRt2Kx1Vw8L');
-
-      expect(sucesso, isTrue);
-      expect(treeController.currentNode, isA<PicoNode>());
-      final picoNode = treeController.currentNode as PicoNode;
-      expect(picoNode.cragId, equals('br_mg_igarape_pedra_grande'));
+    test('retorna false se a URL for inválida, de outro domínio ou rota legada não cadastrada', () async {
+      expect(
+        await service.processarLink('https://outrodominio.com/teste'),
+        isFalse,
+      );
+      expect(
+        await service.processarLink(
+          'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/rota_desconhecida',
+        ),
+        isFalse,
+      );
     });
+  });
 
-    test('emite aviso e telemetria de erro quando o UID não for encontrado', () async {
+  group('DeepLinkNavigatorService - Erros, Avisos e Telemetria', () {
+    test('emite aviso via onMensagemAviso e telemetria de erro quando o UID não for encontrado', () async {
       String? mensagemEmitida;
       service.onMensagemAviso = (msg) => mensagemEmitida = msg;
 
       final sucesso = await service.processarLink(
-        'https://aresta.cc/z9zzZzZzZzZzZz?utm_source=placa_danificada',
+        'https://aresta.cc/q/z9zzZzZzZzZzZz?utm_source=placa_danificada',
+        tipoStart: 'warm_start',
       );
 
       expect(sucesso, isFalse);
@@ -339,7 +290,37 @@ void main() {
       final params = mockTelemetry.recordedParams['deep_link_aberto']!;
       expect(params['id_croqui'], equals('z9zzZzZzZzZzZz'));
       expect(params['sucesso'], equals('false'));
+      expect(params['origem_link'], equals('qrcode'));
+      expect(params['abrir_mapa'], equals('false'));
       expect(params['motivo_erro'], equals('uid_nao_encontrado_no_acervo'));
+      expect(params['utm_source'], equals('placa_danificada'));
+    });
+
+    testWidgets('exibe SnackBar quando onMensagemAviso é nulo e context montado é fornecido', (tester) async {
+      BuildContext? contextoCapturado;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) {
+                contextoCapturado = ctx;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final sucesso = await service.processarLink(
+        'https://aresta.cc/z9zzZzZzZzZzZz',
+        context: contextoCapturado,
+      );
+      await tester.pump();
+
+      expect(sucesso, isFalse);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining('z9zzZzZzZzZzZz'), findsOneWidget);
     });
   });
 }
+

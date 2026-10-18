@@ -8,12 +8,17 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
 import 'package:frontend/widgets/barra_ordenacao_exploracao.dart';
 import 'package:frontend/widgets/card_indice_escalada.dart';
+import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/gerenciador_filtros_croqui.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../mocks/mock_telemetria.dart';
 
 void main() {
+  tearDown(() {
+    ServicoCompartilhamento.restaurarPadrao();
+  });
+
   testWidgets('GrupoPage should wrap body in SafeArea', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -257,6 +262,44 @@ void main() {
       expect(filtrosGlobais.tipoOrdenacao, TipoOrdenacaoExploracao.grau);
     });
   });
+
+  testWidgets('GrupoPage exibe botão de compartilhamento quando grupo possui uid e dispara ServicoCompartilhamento', (tester) async {
+    String? textoCompartilhado;
+    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
+      executorCompartilhamento: (texto) async {
+        textoCompartilhado = texto;
+      },
+    );
+
+    final grupoComUid = Grupo()
+      ..uid = 'uidGrupoShare55'
+      ..nome = 'Grupo Sherpa';
+    final croqui = Croqui(picos: [Pico(nome: 'Pedra Grande')]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: GrupoPage(
+          grupo: grupoComUid,
+          cragId: 'br_mg_igarape_pedra_grande',
+          croqui: croqui,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final botaoShare = find.byIcon(Icons.share_outlined);
+    expect(botaoShare, findsOneWidget);
+
+    await tester.tap(botaoShare);
+    await tester.pumpAndSettle();
+
+    expect(textoCompartilhado, isNotNull);
+    expect(textoCompartilhado, contains('Grupo Sherpa'));
+    expect(textoCompartilhado, contains('Pedra Grande'));
+    expect(textoCompartilhado, contains('https://aresta.cc/s/uidGrupoShare55'));
+  });
 }
+
 
 

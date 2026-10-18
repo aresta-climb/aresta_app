@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 // ignore_for_file: avoid_print
@@ -69,10 +69,12 @@ class SyncPreloadRunner {
     // Construir mapa de hashes antigos
     final oldCroquiHashes = <String, String>{};
     final oldThumbnailHashes = <String, String>{};
+    String oldVersaoCatalogo = '';
     final indiceFile = File('$outputDir/indice.binarypb');
     if (indiceFile.existsSync()) {
       try {
         final oldIndice = Indice.fromBuffer(indiceFile.readAsBytesSync());
+        oldVersaoCatalogo = oldIndice.versaoCatalogo;
         for (var croqui in oldIndice.croquis) {
           final lastSlash = croqui.caminhoRelativo.lastIndexOf('/');
           if (lastSlash != -1) {
@@ -85,6 +87,23 @@ class SyncPreloadRunner {
           }
         }
       } catch (_) {}
+    }
+
+    // 1.5 Fetch catalogo.db se houver versão no índice e mudou ou não existir
+    final catalogoFile = File('$outputDir/catalogo.db');
+    final bool catalogoMudou = oldVersaoCatalogo != newIndice.versaoCatalogo;
+    if (newIndice.versaoCatalogo.isNotEmpty &&
+        (!catalogoFile.existsSync() || catalogoMudou)) {
+      final catalogoResponse = await client.get(
+        Uri.parse('$baseUrl/catalogo.db'),
+      );
+      if (catalogoResponse.statusCode == 200) {
+        catalogoFile.writeAsBytesSync(catalogoResponse.bodyBytes);
+      } else {
+        throw Exception(
+          'Falha em baixar catalogo.db: ${catalogoResponse.statusCode}',
+        );
+      }
     }
 
     // 2. Fetch thumbnails

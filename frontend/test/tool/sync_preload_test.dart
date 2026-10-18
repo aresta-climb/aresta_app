@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -381,6 +381,117 @@ void main() {
           headers: any(named: 'headers'),
         ),
       ).thenAnswer((_) async => http.Response('Not Found', 404));
+
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
+        outputDir: tempDir.path,
+      );
+
+      expect(() => runner.run(), throwsException);
+    },
+  );
+
+  test(
+    'Deve baixar catalogo.db quando versaoCatalogo estiver presente e mudar ou arquivo não existir',
+    () async {
+      final newIndice = Indice(
+        versaoCatalogo: '8f5027d0f987d808',
+        croquis: [],
+      );
+
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response.bytes(
+          newIndice.writeToBuffer(),
+          200,
+          headers: {'etag': 'etag_cat'},
+        ),
+      );
+
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/catalogo.db'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer((_) async => http.Response.bytes([83, 81, 76, 51], 200));
+
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
+        outputDir: tempDir.path,
+      );
+
+      await runner.run();
+
+      final catalogoFile = File('${tempDir.path}/catalogo.db');
+      expect(catalogoFile.existsSync(), isTrue);
+      expect(catalogoFile.readAsBytesSync(), equals([83, 81, 76, 51]));
+    },
+  );
+
+  test(
+    'Não deve rebaixar catalogo.db se já existir e versaoCatalogo não mudou',
+    () async {
+      final oldIndice = Indice(versaoCatalogo: 'mesma_versao_1234');
+      File('${tempDir.path}/indice.binarypb').writeAsBytesSync(oldIndice.writeToBuffer());
+      File('${tempDir.path}/catalogo.db').writeAsBytesSync([1, 2, 3]);
+
+      final newIndice = Indice(versaoCatalogo: 'mesma_versao_1234');
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response.bytes(
+          newIndice.writeToBuffer(),
+          200,
+          headers: {'etag': 'etag_2'},
+        ),
+      );
+
+      final runner = SyncPreloadRunner(
+        client: mockClient,
+        baseUrl: NetworkConstants.kDefaultOfficialServerUrl,
+        outputDir: tempDir.path,
+      );
+
+      await runner.run();
+
+      verifyNever(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/catalogo.db'),
+          headers: any(named: 'headers'),
+        ),
+      );
+      expect(File('${tempDir.path}/catalogo.db').readAsBytesSync(), equals([1, 2, 3]));
+    },
+  );
+
+  test(
+    'Deve lançar Exception se o download de catalogo.db retornar erro HTTP',
+    () async {
+      final newIndice = Indice(versaoCatalogo: 'nova_versao_9999');
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/indice.binarypb'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response.bytes(newIndice.writeToBuffer(), 200),
+      );
+
+      when(
+        () => mockClient.get(
+          Uri.parse('${NetworkConstants.kDefaultOfficialServerUrl}/catalogo.db'),
+          headers: any(named: 'headers'),
+        ),
+      ).thenAnswer((_) async => http.Response('Server Error', 500));
 
       final runner = SyncPreloadRunner(
         client: mockClient,

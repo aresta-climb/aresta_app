@@ -41,17 +41,25 @@ class DestinoUidLocalizado {
 /// 1. Verificação no índice catalogado em memória (metadados disponíveis).
 /// 2. Verificação nos croquis baixados no cache offline local.
 /// 3. Verificação nos croquis em sessão online ativa.
+/// 4. Verificação no banco SQLite local (`catalogo.db`) com carregamento sob demanda do croqui.
 class LocalizadorDestinoUid {
   final DatasetRepository datasetRepo;
 
   LocalizadorDestinoUid({required this.datasetRepo});
 
   /// Localiza o destino de um [uid] universal, retornando [DestinoUidLocalizado] ou `null` se não encontrado.
-  Future<DestinoUidLocalizado?> localizar(String uid) async {
+  ///
+  /// Quando [abrirMapa] é `true`, envolve o nó da entidade localizada como `parent` de um
+  /// [MapasCarrosselNode] caso a entidade possua mapas válidos, ou realiza fallback gracioso
+  /// para o nó principal caso contrário.
+  Future<DestinoUidLocalizado?> localizar(
+    String uid, {
+    bool abrirMapa = false,
+  }) async {
     final active = datasetRepo.activeDataset.value;
 
-    // 1. Verifica se o UID corresponde a um Croqui no catálogo de metadados
-    if (active != null) {
+    // 1. Verifica se o UID corresponde a um Croqui no catálogo de metadados (quando não requer abrirMapa)
+    if (!abrirMapa && active != null) {
       for (final meta in active.metadadosDisponiveis) {
         if (meta.croquiUid == uid || meta.id == uid) {
           return DestinoUidLocalizado(
@@ -73,6 +81,7 @@ class LocalizadorDestinoUid {
             pico: p.pico!,
             croqui: p.croqui!,
             uid: uid,
+            abrirMapa: abrirMapa,
           );
           if (destino != null) return destino;
         }
@@ -90,12 +99,51 @@ class LocalizadorDestinoUid {
           pico: pico,
           croqui: croqui,
           uid: uid,
+          abrirMapa: abrirMapa,
         );
         if (destino != null) return destino;
       }
     }
 
+    // 4. Consulta o catálogo SQLite (catalogo.db) e carrega o croqui sob demanda
+    final idSlug = await datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
+    if (idSlug != null) {
+      final croqui = await datasetRepo.getCroqui(idSlug);
+      if (croqui != null) {
+        for (final pico in croqui.picos) {
+          final destino = _localizarEmPicoECroqui(
+            idCroqui: idSlug,
+            pico: pico,
+            croqui: croqui,
+            uid: uid,
+            abrirMapa: abrirMapa,
+          );
+          if (destino != null) return destino;
+        }
+      }
+    }
+
     return null;
+  }
+
+  static bool _mapaValido(Mapa m) =>
+      m.caminhoImagemMapa.isNotEmpty && m.larguraMapa > 0 && m.alturaMapa > 0;
+
+  static NavNode _envolverComMapaSeSolicitado(
+    NavNode noBase,
+    String idCroqui,
+    List<CarrosselItemData> itensMapa,
+    bool abrirMapa,
+  ) {
+    if (!abrirMapa || itensMapa.isEmpty) {
+      return noBase;
+    }
+    return MapasCarrosselNode(
+      cragId: idCroqui,
+      initialIndex: 0,
+      mapas: itensMapa,
+      parent: noBase,
+    );
   }
 
   DestinoUidLocalizado? _localizarEmPicoECroqui({
@@ -103,11 +151,28 @@ class LocalizadorDestinoUid {
     required Pico pico,
     required Croqui croqui,
     required String uid,
+    required bool abrirMapa,
   }) {
     // Verifica se o próprio croqui possui este UID
     if (croqui.hasUid() && croqui.uid == uid) {
+      final picoNode = PicoNode(cragId: idCroqui, parent: const HomeNode());
+      final itensMapa = (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo())
+          ? pico.mapasGerais.conteudo.mapas
+              .where(_mapaValido)
+              .map(
+                (m) => CarrosselItemData(
+                  mapaCaminhoImagem: m.caminhoImagemMapa,
+                ),
+              )
+              .toList()
+          : const <CarrosselItemData>[];
       return DestinoUidLocalizado(
-        noNavegacao: PicoNode(cragId: idCroqui, parent: const HomeNode()),
+        noNavegacao: _envolverComMapaSeSolicitado(
+          picoNode,
+          idCroqui,
+          itensMapa,
+          abrirMapa,
+        ),
         idCroqui: idCroqui,
         tipoDestino: 'pico',
         nomeEntidade: pico.nome.isNotEmpty ? pico.nome : idCroqui,
@@ -123,7 +188,6 @@ class LocalizadorDestinoUid {
 
     switch (entidade.tipo) {
       case TipoEntidadeResolved.escalada:
-        if (entidade.escalada == null || entidade.setor == null) return null;
         NavNode paiDoSetor = picoNode;
         if (entidade.grupo != null) {
           paiDoSetor = GrupoNode(
@@ -146,14 +210,18 @@ class LocalizadorDestinoUid {
           parent: setorNode,
         );
         return DestinoUidLocalizado(
-          noNavegacao: viaNode,
+          noNavegacao: _envolverComMapaSeSolicitado(
+            viaNode,
+            idCroqui,
+            entidade.resolverCarrosselUnificado(),
+            abrirMapa,
+          ),
           idCroqui: idCroqui,
           tipoDestino: 'via',
           nomeEntidade: entidade.escalada!.nome,
         );
 
       case TipoEntidadeResolved.setor:
-        if (entidade.setor == null) return null;
         NavNode paiDoSetor = picoNode;
         if (entidade.grupo != null) {
           paiDoSetor = GrupoNode(
@@ -168,22 +236,50 @@ class LocalizadorDestinoUid {
           cragId: idCroqui,
           parent: paiDoSetor,
         );
+        final itensMapa = entidade.setor!.mapas
+            .where(_mapaValido)
+            .map(
+              (m) => CarrosselItemData(
+                mapaCaminhoImagem: m.caminhoImagemMapa,
+                setorContextNome: entidade.setor!.nome,
+                grupoContextNome: entidade.grupo?.nome,
+              ),
+            )
+            .toList();
         return DestinoUidLocalizado(
-          noNavegacao: setorNode,
+          noNavegacao: _envolverComMapaSeSolicitado(
+            setorNode,
+            idCroqui,
+            itensMapa,
+            abrirMapa,
+          ),
           idCroqui: idCroqui,
           tipoDestino: 'setor',
           nomeEntidade: entidade.setor!.nome,
         );
 
       case TipoEntidadeResolved.grupo:
-        if (entidade.grupo == null) return null;
         final grupoNode = GrupoNode(
           grupoNome: entidade.grupo!.nome,
           cragId: idCroqui,
           parent: picoNode,
         );
+        final itensMapa = entidade.grupo!.mapas
+            .where(_mapaValido)
+            .map(
+              (m) => CarrosselItemData(
+                mapaCaminhoImagem: m.caminhoImagemMapa,
+                grupoContextNome: entidade.grupo!.nome,
+              ),
+            )
+            .toList();
         return DestinoUidLocalizado(
-          noNavegacao: grupoNode,
+          noNavegacao: _envolverComMapaSeSolicitado(
+            grupoNode,
+            idCroqui,
+            itensMapa,
+            abrirMapa,
+          ),
           idCroqui: idCroqui,
           tipoDestino: 'grupo',
           nomeEntidade: entidade.grupo!.nome,
@@ -200,3 +296,4 @@ class LocalizadorDestinoUid {
     }
   }
 }
+

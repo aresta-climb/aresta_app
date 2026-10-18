@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/funcoes_navegacao.dart';
+import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/gerenciador_filtros_croqui.dart';
 import '../theme/cores_app.dart';
@@ -333,6 +334,26 @@ class _GrupoPageState extends State<GrupoPage>
                 : null,
             centerTitle: false,
             actions: [
+              if (widget.grupo.uid.isNotEmpty)
+                IconButton(
+                  icon: Icon(
+                    Icons.share_outlined,
+                    color: context.colors.chalkWhite,
+                  ),
+                  tooltip: 'Compartilhar grupo',
+                  onPressed: () {
+                    final nomePico = (widget.croqui != null &&
+                            widget.croqui!.picos.isNotEmpty)
+                        ? widget.croqui!.picos.first.nome
+                        : widget.cragId;
+                    ServicoCompartilhamento.instancia.compartilharGrupo(
+                      idCroqui: widget.cragId,
+                      uid: widget.grupo.uid,
+                      nomeGrupo: widget.grupo.nome,
+                      nomePico: nomePico,
+                    );
+                  },
+                ),
               buildFeedbackButton(context, color: context.colors.chalkWhite),
               const SizedBox(width: 8),
             ],

@@ -203,6 +203,8 @@ class MockTelemetryService implements TelemetryService {
     required String destino,
     required bool sucesso,
     String? tipoStart,
+    String? origemLink,
+    bool? abrirMapa,
     String? motivoErro,
     Map<String, String>? parametrosUtm,
   }) async {
@@ -216,6 +218,12 @@ class MockTelemetryService implements TelemetryService {
     if (tipoStart != null) {
       params['tipo_start'] = tipoStart;
       params['origem'] = tipoStart;
+    }
+    if (origemLink != null) {
+      params['origem_link'] = origemLink;
+    }
+    if (abrirMapa != null) {
+      params['abrir_mapa'] = abrirMapa ? 'true' : 'false';
     }
     if (motivoErro != null) {
       params['motivo_erro'] = motivoErro;
@@ -362,6 +370,23 @@ class MockTelemetryService implements TelemetryService {
     recordedEvents.add('migracao_db');
     recordedParams['migracao_db'] = {
       'acao': 'banner_versao_recomendada_mostrado',
+    };
+  }
+
+  @override
+  Future<void> logCompartilharEntidade({
+    required String idCroqui,
+    required String tipoEntidade,
+    required String uid,
+    bool abrirMapa = false,
+  }) async {
+    recordedEvents.add('compartilhar_entidade');
+    recordedParams['compartilhar_entidade'] = {
+      'id_croqui': idCroqui,
+      'tipo_entidade': tipoEntidade,
+      'uid': uid,
+      'abrir_mapa': abrirMapa ? 'true' : 'false',
+      'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
     };
   }
 

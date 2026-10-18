@@ -8,10 +8,16 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 void main() {
+  tearDown(() {
+    ConfiguracaoRecursos.redefinirParaTestes();
+    ServicoCompartilhamento.restaurarPadrao();
+  });
+
   testWidgets('ViaPage should wrap body in SafeArea', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -117,10 +123,6 @@ void main() {
     },
   );
 
-  tearDown(() {
-    ConfiguracaoRecursos.redefinirParaTestes();
-  });
-
   testWidgets('ViaPage oculta botão de registrar cadena quando perfilHabilitado for false', (tester) async {
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
 
@@ -184,7 +186,6 @@ void main() {
       notasPrivadas: 'Costurou leve e rápido',
     );
 
-    // Mock do repositório
     final repo = RepositorioCadernetaLocal();
     await repo.salvarCadena(cadena);
 
@@ -205,4 +206,45 @@ void main() {
     expect(find.textContaining('Costurou leve e rápido'), findsOneWidget);
     expect(find.text('Nova Ascensão / Tentativa'), findsOneWidget);
   });
+
+  testWidgets('ViaPage exibe botão de compartilhamento quando escalada possui uid e dispara ServicoCompartilhamento', (tester) async {
+    String? textoCompartilhado;
+    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
+      executorCompartilhamento: (texto) async {
+        textoCompartilhado = texto;
+      },
+    );
+
+    final pico = Pico()..nome = 'Serra do Cipó';
+    final setor = Setor()..nome = 'Fenda';
+    final escalada = Escalada()
+      ..uid = 'uidViaShare123'
+      ..viaEsportiva = (ViaEsportiva()
+        ..nome = 'Via do Meio'
+        ..dificuldade = GrauVia_GrauVia.BR_7A);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: ViaPage(
+          escalada: escalada,
+          cragId: 'br_mg_serra_do_cipo',
+          pico: pico,
+          setor: setor,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final botaoShare = find.byIcon(Icons.share_outlined);
+    expect(botaoShare, findsOneWidget);
+
+    await tester.tap(botaoShare);
+    await tester.pumpAndSettle();
+
+    expect(textoCompartilhado, isNotNull);
+    expect(textoCompartilhado, contains('Via do Meio'));
+    expect(textoCompartilhado, contains('https://aresta.cc/s/uidViaShare123'));
+  });
 }
+

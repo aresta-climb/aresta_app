@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import '../../aresta_api/openapi/generated/dart/catalogo.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../editor_croqui.dart';
 import 'cliente_http_aresta.dart';
@@ -43,8 +44,13 @@ class IndiceErroServidor extends FetchIndiceResult {
 class SyncNetwork {
   final ClienteHttpAresta client;
 
-  SyncNetwork([ClienteHttpAresta? client])
-      : client = client ?? ClienteHttpAresta.instancia;
+  /// Intervalo de espera entre retentativas em caso de falha de rede.
+  final Duration retryDelay;
+
+  SyncNetwork([
+    ClienteHttpAresta? client,
+    this.retryDelay = const Duration(seconds: 2),
+  ]) : client = client ?? ClienteHttpAresta.instancia;
 
   /// Executa uma função [action] com repetições automáticas em caso de erro.
   Future<T?> _executeWithRetries<T>(
@@ -68,7 +74,7 @@ class SyncNetwork {
         }
         retries--;
         if (retries > 0) {
-          await Future.delayed(const Duration(seconds: 2));
+          await Future.delayed(retryDelay);
         }
       }
     }
@@ -179,5 +185,64 @@ class SyncNetwork {
       }
     }
     return null;
+  }
+
+  /// Consulta o endpoint `/sync` do servidor do catálogo (`catalogo.arestaclimb.com/sync`)
+  /// para obter as atualizações incrementais (deltas) ou instrução de download completo (`full_download`).
+  ///
+  /// Retorna [RespostaSyncCatalogo] em caso de resposta HTTP 200 válida, ou `null`
+  /// em caso de erro de rede, status HTTP diferente de 200 ou JSON malformado.
+  Future<RespostaSyncCatalogo?> consultarSyncCatalogo({
+    required String versaoLocal,
+    required String versaoDestino,
+    String urlBaseCatalogo = urlServidorPadraoCatalogo,
+    int retries = 3,
+  }) async {
+    final uri = Uri.parse('$urlBaseCatalogo$rotaSincronizarCatalogo').replace(
+      queryParameters: <String, String>{
+        'versao_local': versaoLocal,
+        'versao_destino': versaoDestino,
+      },
+    );
+
+    final response = await _executeWithRetries(() async {
+      return await client.get(uri);
+    }, retries: retries);
+
+    if (response == null || response.statusCode != 200) {
+      if (response != null) {
+        AppLogger.instance.logAviso(
+          '[SyncNetwork] Falha ao consultar sync do catálogo em $uri, status: ${response.statusCode}',
+        );
+      }
+      return null;
+    }
+
+    try {
+      final jsonMap =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return RespostaSyncCatalogo.fromJson(jsonMap);
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[SyncNetwork] Falha ao decodificar resposta JSON de sync do catálogo',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Realiza o download binário completo do banco SQLite `catalogo.db` a partir de [baseUrl].
+  ///
+  /// Quando [versaoCatalogo] é informada, adiciona `?v=<versaoCatalogo>` para evitar cache stale na CDN.
+  Future<Uint8List?> baixarCatalogoCompleto(
+    String baseUrl, {
+    String? versaoCatalogo,
+    int retries = 3,
+  }) async {
+    final sufixoCache = (versaoCatalogo != null && versaoCatalogo.isNotEmpty)
+        ? '?v=$versaoCatalogo'
+        : '';
+    return downloadFile('$baseUrl/catalogo.db$sufixoCache', retries: retries);
   }
 }

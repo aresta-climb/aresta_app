@@ -35,12 +35,16 @@ lib/navigation/
 
 ## Deep Links e Placas Físicas nas Falésias (`aresta.cc`)
 
-Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis (v3.0)**, o aplicativo oferece suporte de primeira classe à navegação por placas físicas e links compartilháveis:
+Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte de primeira classe à navegação por placas físicas e links compartilháveis:
 
-- **Domínio Físico:** `https://aresta.cc/<nanoid>` (32 caracteres exatos, otimizados para QR Code Versão 3 Nível H gravado a laser em Aço Inox 316L).
+- **Protocolo Compacto (`≤ 35 chars`):**
+  - `https://aresta.cc/<uid>` (padrão) e `https://aresta.cc/m/<uid>` (abre o mapa interativo).
+  - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (ou `/ms/<uid>`): links de compartilhamento (`origem_link: 'compartilhamento'`).
+  - `https://aresta.cc/q/<uid>` e `https://aresta.cc/qm/<uid>` (ou `/mq/<uid>`): placas físicas QR Code Versão 3 Nível H (`origem_link: 'qrcode'`).
+  - Tabela estática de compatibilidade para as 8 placas físicas legadas já instaladas em `app.arestaclimb.com/br_mg_igarape_pedra_grande/...`.
 - **NanoID 14c Universal:** Identificadores estáveis Base62 de 14 caracteres (`[0-9a-zA-Z]`), imunes a colisões e conflitos de merge.
-- **Localização em Cascata (`LocalizadorDestinoUid`):** Mapeia o NanoID 14c instantaneamente para o nó correto (`ViaNode`, `SetorNode`, `GrupoNode` ou `PicoNode`), consultando o índice em memória, os croquis offline locais e as sessões ativas online.
-- **Preservação de Atribuição e Telemetria:** Preserva parâmetros UTM (`utm_source`, `utm_medium`, `utm_campaign`) e registra métricas na telemetria sem afetar a rota de navegação.
+- **Localização em Cascata (`LocalizadorDestinoUid`):** Mapeia o NanoID 14c instantaneamente para o nó correto (`ViaNode`, `SetorNode`, `GrupoNode`, `PicoNode` ou `MapasCarrosselNode` quando `abrirMapa: true`), consultando o índice em memória, os croquis offline locais, as sessões online ativas e o banco SQLite local (`catalogo.db`) com carregamento sob demanda do croqui.
+- **Preservação de Atribuição e Telemetria:** Preserva `origem_link`, `abrir_mapa` e parâmetros UTM (`utm_source`, `utm_medium`, `utm_campaign`) e registra métricas na telemetria sem afetar a rota de navegação.
 
 ### `arvore/no_navegacao.dart`
 Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcional para o seu `parent` e **armazena apenas IDs em formato de texto** (como `cragId`, `setorNome`, `mapaCaminhoImagem`, `picoIds`), nunca os objetos complexos instanciados na memória.

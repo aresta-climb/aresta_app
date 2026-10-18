@@ -11,12 +11,46 @@ import '../../firebase/app_logger.dart';
 /// Extrai os assets pré-embutidos (pre-bundled) do pacote do aplicativo
 /// para o diretório de documentos do dispositivo no primeiro acesso.
 class ExtratorAssetsPreload {
-  /// Desempacota o `indice.binarypb` e as thumbnails pré-baixadas do bundle de assets
+  /// Copia o `catalogo.db` pré-embutido no bundle para o armazenamento local
+  /// caso ainda não exista no disco (ou quando [sobrescrever] for `true`).
+  Future<void> extrairCatalogoPreload({
+    required String docsPath,
+    String? catalogoPath,
+    AssetBundle? bundle,
+    bool sobrescrever = false,
+  }) async {
+    final destinoCatalogo = File(catalogoPath ?? '$docsPath/catalogo.db');
+    if (!sobrescrever && destinoCatalogo.existsSync()) {
+      return;
+    }
+    try {
+      final bundleAtivo = bundle ?? rootBundle;
+      final catalogoData = await bundleAtivo.load('assets/preload/catalogo.db');
+      if (!destinoCatalogo.parent.existsSync()) {
+        destinoCatalogo.parent.createSync(recursive: true);
+      }
+      await destinoCatalogo.writeAsBytes(
+        catalogoData.buffer.asUint8List(
+          catalogoData.offsetInBytes,
+          catalogoData.lengthInBytes,
+        ),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        '[ExtratorAssetsPreload] Preload de catalogo.db não encontrado ou erro ao carregar',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Desempacota o `indice.binarypb`, o `catalogo.db` e as thumbnails pré-baixadas do bundle de assets
   /// para `$docsPath/downloads/thumbnails/`, removendo o diretório legado `$docsPath/thumbnails/`
   /// caso ainda exista no dispositivo.
   Future<void> desempacotarAssetsPreload({
     required String docsPath,
     required String indicePath,
+    String? catalogoPath,
     AssetBundle? bundle,
   }) async {
     try {
@@ -40,6 +74,13 @@ class ExtratorAssetsPreload {
           indiceData.offsetInBytes,
           indiceData.lengthInBytes,
         ),
+      );
+
+      await extrairCatalogoPreload(
+        docsPath: docsPath,
+        catalogoPath: catalogoPath,
+        bundle: bundleAtivo,
+        sobrescrever: true,
       );
 
       final indice = Indice.fromBuffer(

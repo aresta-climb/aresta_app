@@ -20,9 +20,11 @@ import 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 import 'dataset/armazenamento/extrator_assets_preload.dart';
 import 'dataset/metadados/extrator_metadados_croqui.dart';
 import 'dataset/sessao_online/gerenciador_sessao_online.dart';
+import 'catalogo/repositorio_catalogo.dart';
 import 'dataset/normalizador_croqui.dart';
 import 'http/servico_croqui_online.dart';
 
+export 'catalogo/repositorio_catalogo.dart';
 export 'dataset/modelos/conjunto_dados_croqui.dart';
 export 'dataset/modelos/resumo_pico.dart';
 export 'dataset/modelos/estatisticas_pico.dart';
@@ -47,6 +49,7 @@ class DatasetRepository {
   final ExtratorMetadadosCroqui extratorMetadados;
   final GerenciadorSessaoOnline gerenciadorSessaoOnline;
   final ServicoCroquiOnline servicoCroquiOnline;
+  final RepositorioCatalogo repositorioCatalogo;
 
   static DatasetRepository? _instance;
   static DatasetRepository? get instance => _instance;
@@ -60,6 +63,7 @@ class DatasetRepository {
     ExtratorMetadadosCroqui? extratorMetadados,
     GerenciadorSessaoOnline? gerenciadorSessaoOnline,
     ServicoCroquiOnline? servicoCroquiOnline,
+    RepositorioCatalogo? repositorioCatalogo,
   })  : gerenciadorPrioridade =
             gerenciadorPrioridade ?? GerenciadorPrioridadePicos(),
         gerenciadorArquivosLocais =
@@ -73,6 +77,13 @@ class DatasetRepository {
               sessaoOnline: gerenciadorSessaoOnline,
               verificarPicoBaixado: (id) => _instance?.isPicoDownloaded(id) ?? false,
               verificarLiveReloadAtivo: () => editorDeCroqui.isLiveReloadConectado,
+            ),
+        repositorioCatalogo = repositorioCatalogo ??
+            RepositorioCatalogo(
+              provedorCaminhoBanco: () async {
+                final directory = await getApplicationDocumentsDirectory();
+                return editorDeCroqui.catalogoPath(directory.path);
+              },
             ) {
     _instance = this;
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);
@@ -81,6 +92,7 @@ class DatasetRepository {
 
   void _handleModeChange() {
     AppLogger.instance.logInfo('[DatasetRepo] Modo alterado detectado. Recarregando índice...');
+    repositorioCatalogo.fechar();
     init();
   }
 
@@ -268,15 +280,23 @@ class DatasetRepository {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final localIndiceFile = File(editorDeCroqui.indicePath(directory.path));
+      final localCatalogoPath = editorDeCroqui.catalogoPath(directory.path);
 
       if (!await localIndiceFile.exists()) {
         if (!editorDeCroqui.isExperimentalMode.value) {
           await extratorAssets.desempacotarAssetsPreload(
             docsPath: directory.path,
             indicePath: localIndiceFile.path,
+            catalogoPath: localCatalogoPath,
             bundle: assetBundle,
           );
         }
+      } else if (!editorDeCroqui.isExperimentalMode.value) {
+        await extratorAssets.extrairCatalogoPreload(
+          docsPath: directory.path,
+          catalogoPath: localCatalogoPath,
+          bundle: assetBundle,
+        );
       }
 
       if (await localIndiceFile.exists()) {

@@ -6,192 +6,184 @@ import 'package:frontend/navigation/analisador_rotas_deep_link.dart';
 
 void main() {
   group('DeepLinkRouteParser', () {
-    test('retorna null para URLs de outros dominios', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://google.com/br_mg_igarape_pedra_grande',
+    test('retorna null para entrada nula, tipo invalido, URL vazia ou de outros dominios', () {
+      expect(DeepLinkRouteParser.parse(null), isNull);
+      expect(DeepLinkRouteParser.parse(12345), isNull);
+      expect(DeepLinkRouteParser.parse('   '), isNull);
+      expect(DeepLinkRouteParser.parse('https://:::invalido'), isNull);
+      expect(
+        DeepLinkRouteParser.parse('https://google.com/sQ7YgEG6ONsPXt'),
+        isNull,
       );
-      expect(rota, isNull);
-    });
-
-    test('retorna null para URL vazia ou sem segmentos de caminho', () {
-      expect(DeepLinkRouteParser.parse(''), isNull);
+      expect(DeepLinkRouteParser.parse('https://aresta.cc/'), isNull);
+      expect(DeepLinkRouteParser.parse('https://aresta.cc'), isNull);
       expect(DeepLinkRouteParser.parse('https://app.arestaclimb.com/'), isNull);
-      expect(DeepLinkRouteParser.parse('https://app.arestaclimb.com'), isNull);
     });
 
-    test('faz parsing de rota nivel 1 (apenas Pico)', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
-      );
+    test('faz parsing de link padrao https://aresta.cc/<uid> (sem fonte e sem modo mapa)', () {
+      final rota = DeepLinkRouteParser.parse('https://aresta.cc/x8siJek3FiG3aB');
       expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.profundidade, equals(0));
-      expect(rota.primeiroSegmento, isNull);
+      expect(rota!.isPorUid, isTrue);
+      expect(rota.uid, equals('x8siJek3FiG3aB'));
+      expect(rota.abrirMapa, isFalse);
+      expect(rota.origemLink, isNull);
+      expect(rota.parametros, isEmpty);
     });
 
-    test('faz parsing de rota nivel 2 (Pico + Setor ou Grupo)', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.profundidade, equals(1));
-      expect(rota.primeiroSegmento, equals('grupo_estacionamento'));
-      expect(rota.segundoSegmento, isNull);
-    });
+    test('faz parsing de todos os prefixos compactos (/m/, /s/, /sm/, /ms/, /q/, /qm/, /mq/) cabendo em <= 35 caracteres', () {
+      const uid = 'sQ7YgEG6ONsPXt';
 
-    test('faz parsing de rota nivel 3 (Pico + Grupo + Setor OU Pico + Setor + Via)', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/setor_b',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.profundidade, equals(2));
-      expect(rota.primeiroSegmento, equals('grupo_estacionamento'));
-      expect(rota.segundoSegmento, equals('setor_b'));
-      expect(rota.terceiroSegmento, isNull);
-    });
+      final rMapa = DeepLinkRouteParser.parse('https://aresta.cc/m/$uid');
+      expect(rMapa, isNotNull);
+      expect(rMapa!.uid, equals(uid));
+      expect(rMapa.abrirMapa, isTrue);
+      expect(rMapa.origemLink, isNull);
 
-    test('faz parsing de rota nivel 4 (Pico + Grupo + Setor + Via)', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_estacionamento/savassinha/teto_da_aresta',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.profundidade, equals(3));
-      expect(rota.primeiroSegmento, equals('grupo_estacionamento'));
-      expect(rota.segundoSegmento, equals('savassinha'));
-      expect(rota.terceiroSegmento, equals('teto_da_aresta'));
-    });
+      final rShare = DeepLinkRouteParser.parse('https://aresta.cc/s/$uid');
+      expect(rShare, isNotNull);
+      expect(rShare!.uid, equals(uid));
+      expect(rShare.abrirMapa, isFalse);
+      expect(rShare.origemLink, equals('compartilhamento'));
 
-    test('suporta objetos Uri diretamente', () {
-      final uri = Uri.parse(
-        'https://app.arestaclimb.com/br_mg_cipov2/vale_da_lapinha',
-      );
-      final rota = DeepLinkRouteParser.parse(uri);
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_cipov2'));
-      expect(rota.primeiroSegmento, equals('vale_da_lapinha'));
-    });
-
-    test('normaliza caracteres acentuados e maiusculos nos segmentos da URL', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/Fal%C3%A9sia%20Esperan%C3%A7a/P%C3%A9-de-Cabra',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.primeiroSegmento, equals('falesia_esperanca'));
-      expect(rota.segundoSegmento, equals('pe_de_cabra'));
-    });
-
-    test('suporta custom scheme aresta://app.arestaclimb.com/...', () {
-      final rota = DeepLinkRouteParser.parse(
-        'aresta://app.arestaclimb.com/br_mg_igarape_pedra_grande/savassinha',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.primeiroSegmento, equals('savassinha'));
-    });
-
-    test('suporta URLs com parametros de consulta UTM sem interferir na rota', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_estacionamento?utm_source=setor_igarameca&utm_medium=qrcode',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.picoId, equals('br_mg_igarape_pedra_grande'));
-      expect(rota.primeiroSegmento, equals('setor_estacionamento'));
-      expect(rota.profundidade, equals(1));
-    });
-
-    test('extrai queryParameters incluindo parametros UTM', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_estacionamento?utm_source=placa_pedra&utm_medium=qrcode&utm_campaign=guia_2026',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.parametros, equals({
-        'utm_source': 'placa_pedra',
-        'utm_medium': 'qrcode',
-        'utm_campaign': 'guia_2026',
-      }));
-    });
-
-    test('retorna mapa de parametros vazio quando URL nao possui queryParameters', () {
-      final rota = DeepLinkRouteParser.parse(
-        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
-      );
-      expect(rota, isNotNull);
-      expect(rota!.parametros, isEmpty);
-    });
-
-    group('Links Canonicos aresta.cc (NanoID 14c)', () {
-      test('faz parsing de link canônico físico https://aresta.cc/<nanoid>', () {
-        final rota = DeepLinkRouteParser.parse('https://aresta.cc/x8siJek3FiG3aB');
+      for (final prefixo in ['sm', 'ms']) {
+        final url = 'https://aresta.cc/$prefixo/$uid';
+        expect(url.length, lessThanOrEqualTo(35));
+        final rota = DeepLinkRouteParser.parse(url);
         expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-        expect(rota.picoId, isNull);
-        expect(rota.segmentos, isEmpty);
-        expect(rota.parametros, isEmpty);
-      });
+        expect(rota!.uid, equals(uid));
+        expect(rota.abrirMapa, isTrue);
+        expect(rota.origemLink, equals('compartilhamento'));
+      }
 
-      test('preserva parâmetros UTM em links canônicos aresta.cc', () {
-        final rota = DeepLinkRouteParser.parse(
-          'https://aresta.cc/x8siJek3FiG3aB?utm_source=placa_inox&utm_medium=qrcode',
-        );
+      final rQr = DeepLinkRouteParser.parse('https://aresta.cc/q/$uid');
+      expect(rQr, isNotNull);
+      expect(rQr!.uid, equals(uid));
+      expect(rQr.abrirMapa, isFalse);
+      expect(rQr.origemLink, equals('qrcode'));
+
+      for (final prefixo in ['qm', 'mq']) {
+        final url = 'https://aresta.cc/$prefixo/$uid';
+        expect(url.length, lessThanOrEqualTo(35));
+        final rota = DeepLinkRouteParser.parse(url);
         expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-        expect(rota.parametros, equals({
-          'utm_source': 'placa_inox',
-          'utm_medium': 'qrcode',
-        }));
-      });
+        expect(rota!.uid, equals(uid));
+        expect(rota.abrirMapa, isTrue);
+        expect(rota.origemLink, equals('qrcode'));
+      }
+    });
 
-      test('suporta custom scheme aresta://aresta.cc/<nanoid>', () {
-        final rota = DeepLinkRouteParser.parse('aresta://aresta.cc/x8siJek3FiG3aB');
-        expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-      });
+    test('preserva parametros UTM opcionais e aceita Uri, www.aresta.cc e string sem scheme', () {
+      final rotaUtm = DeepLinkRouteParser.parse(
+        'https://aresta.cc/qm/sQ7YgEG6ONsPXt?utm_source=placa_inox&utm_medium=qrcode',
+      );
+      expect(rotaUtm, isNotNull);
+      expect(rotaUtm!.uid, equals('sQ7YgEG6ONsPXt'));
+      expect(rotaUtm.abrirMapa, isTrue);
+      expect(rotaUtm.origemLink, equals('qrcode'));
+      expect(
+        rotaUtm.parametros,
+        equals({'utm_source': 'placa_inox', 'utm_medium': 'qrcode'}),
+      );
 
-      test('suporta URL sem esquema aresta.cc/<nanoid>', () {
-        final rota = DeepLinkRouteParser.parse('aresta.cc/x8siJek3FiG3aB');
-        expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-      });
+      final rotaUri = DeepLinkRouteParser.parse(
+        Uri.parse('https://www.aresta.cc/s/sQ7YgEG6ONsPXt'),
+      );
+      expect(rotaUri, isNotNull);
+      expect(rotaUri!.uid, equals('sQ7YgEG6ONsPXt'));
+      expect(rotaUri.origemLink, equals('compartilhamento'));
 
-      test('suporta subdomínio www.aresta.cc/<nanoid>', () {
-        final rota = DeepLinkRouteParser.parse('https://www.aresta.cc/x8siJek3FiG3aB');
-        expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-      });
+      final rotaSemScheme = DeepLinkRouteParser.parse('aresta.cc/sQ7YgEG6ONsPXt');
+      expect(rotaSemScheme, isNotNull);
+      expect(rotaSemScheme!.uid, equals('sQ7YgEG6ONsPXt'));
+    });
 
-      test('reconhece NanoID 14c também sob o domínio app.arestaclimb.com', () {
-        final rota = DeepLinkRouteParser.parse(
-          'https://app.arestaclimb.com/x8siJek3FiG3aB',
-        );
-        expect(rota, isNotNull);
-        expect(rota!.isPorUid, isTrue);
-        expect(rota.uid, equals('x8siJek3FiG3aB'));
-        expect(rota.picoId, isNull);
-      });
+    test('resolve estaticamente as 8 URLs de placas fisicas legadas e rejeita slugs arbitrarios', () {
+      const casosLegados = <String, String>{
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/bloco_democracia?utm_source=setor_igarameca&utm_medium=qrcode':
+            'sQ7YgEG6ONsPXt',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/bloco_viva_o_climb?utm_source=setor_igarameca&utm_medium=qrcode':
+            'xNOT4evG3tUx7A',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/grupo_sherpa?utm_source=setor_igarameca&utm_medium=qrcode':
+            'cqT5nqQ4pvPub7',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_estacionamento?utm_source=setor_igarameca&utm_medium=qrcode':
+            'hv7YWgTBQGyWOX',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_familia_i?utm_source=setor_igarameca&utm_medium=qrcode':
+            'ZTPu3KeCXIJisV',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_familia_ii?utm_source=setor_igarameca&utm_medium=qrcode':
+            '4GJDAcwWEJb4Ca',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/bloco_fugitivos_i?utm_source=setor_igarameca&utm_medium=qrcode':
+            '7TPrkAyBIkfebu',
+        'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/bloco_fugitivos_ii?utm_source=setor_igarameca&utm_medium=qrcode':
+            'jPzv6byW0dO0Gj',
+      };
 
-      test('suporta rota hierárquica sob domínio aresta.cc como fallback', () {
-        final rota = DeepLinkRouteParser.parse(
-          'https://aresta.cc/br_mg_igarape_pedra_grande/savassinha',
-        );
-        expect(rota, isNotNull);
-        expect(rota!.isPorUid, isFalse);
-        expect(rota.uid, isNull);
-        expect(rota.picoId, equals('br_mg_igarape_pedra_grande'));
-        expect(rota.primeiroSegmento, equals('savassinha'));
-      });
+      for (final entrada in casosLegados.entries) {
+        final rota = DeepLinkRouteParser.parse(entrada.key);
+        expect(rota, isNotNull, reason: 'Falhou para ${entrada.key}');
+        expect(rota!.uid, equals(entrada.value));
+        expect(rota.abrirMapa, isFalse);
+        expect(rota.origemLink, equals('qrcode'));
+        expect(rota.parametros['utm_source'], equals('setor_igarameca'));
+        expect(rota.parametros['utm_medium'], equals('qrcode'));
+      }
 
-      test('retorna null para aresta.cc sem caminho ou vazio', () {
-        expect(DeepLinkRouteParser.parse('https://aresta.cc/'), isNull);
-        expect(DeepLinkRouteParser.parse('https://aresta.cc'), isNull);
-      });
+      // Slugs arbitrários não listados nas 8 placas físicas devem retornar null
+      expect(
+        DeepLinkRouteParser.parse(
+          'https://app.arestaclimb.com/br_mg_igarape_pedra_grande/setor_inexistente',
+        ),
+        isNull,
+      );
+      expect(
+        DeepLinkRouteParser.parse(
+          'https://aresta.cc/prefixo_invalido/sQ7YgEG6ONsPXt',
+        ),
+        isNull,
+      );
+      expect(
+        DeepLinkRouteParser.parse('https://aresta.cc/m/uid_curto'),
+        isNull,
+      );
+    });
+
+    test('RotaDeepLink implementa igualdade, hashCode e toString corretamente', () {
+      final r1 = RotaDeepLink(
+        uid: 'sQ7YgEG6ONsPXt',
+        abrirMapa: true,
+        origemLink: 'qrcode',
+        parametros: {'utm_source': 'placa'},
+      );
+      final r2 = RotaDeepLink(
+        uid: 'sQ7YgEG6ONsPXt',
+        abrirMapa: true,
+        origemLink: 'qrcode',
+        parametros: {'utm_source': 'placa'},
+      );
+      final r3 = RotaDeepLink(
+        uid: 'sQ7YgEG6ONsPXt',
+        abrirMapa: false,
+        origemLink: 'compartilhamento',
+        parametros: {'utm_source': 'outro'},
+      );
+      final r4 = RotaDeepLink(
+        uid: 'sQ7YgEG6ONsPXt',
+        abrirMapa: true,
+        origemLink: 'qrcode',
+        parametros: {'utm_source': 'diferente'},
+      );
+      final r5 = RotaDeepLink(
+        uid: 'sQ7YgEG6ONsPXt',
+        abrirMapa: true,
+        origemLink: 'qrcode',
+        parametros: const {},
+      );
+
+      expect(r1, equals(r2));
+      expect(r1.hashCode, equals(r2.hashCode));
+      expect(r1 == r3, isFalse);
+      expect(r1 == r4, isFalse);
+      expect(r1 == r5, isFalse);
+      expect(r1.toString(), contains('sQ7YgEG6ONsPXt'));
     });
   });
 }

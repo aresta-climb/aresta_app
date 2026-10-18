@@ -277,6 +277,8 @@ class TelemetryService {
     required String destino,
     required bool sucesso,
     String? tipoStart,
+    String? origemLink,
+    bool? abrirMapa,
     String? motivoErro,
     Map<String, String>? parametrosUtm,
   }) {
@@ -289,6 +291,12 @@ class TelemetryService {
     if (tipoStart != null) {
       params['tipo_start'] = tipoStart;
       params['origem'] = tipoStart;
+    }
+    if (origemLink != null) {
+      params['origem_link'] = origemLink;
+    }
+    if (abrirMapa != null) {
+      params['abrir_mapa'] = abrirMapa ? 'true' : 'false';
     }
     if (motivoErro != null) {
       params['motivo_erro'] = motivoErro;
@@ -436,6 +444,27 @@ class TelemetryService {
   Future<void> logAppVersionRecommendedUpdate() {
     return _logEvent('migracao_db', {
       'acao': 'banner_versao_recomendada_mostrado',
+    });
+  }
+
+  /// Registra o compartilhamento nativo de um croqui, grupo, setor, via ou mapa.
+  ///
+  /// - [idCroqui]: Identificador do croqui/pico (ex: `'br_mg_igarape_pedra_grande'`).
+  /// - [tipoEntidade]: Tipo da entidade compartilhada (`'pico'`, `'grupo'`, `'setor'`, `'via'`).
+  /// - [uid]: Identificador universal (NanoID 14c) da entidade compartilhada.
+  /// - [abrirMapa]: `true` quando compartilhado a partir do mapa interativo (`/sm/<uid>`), `false` quando da página (`/s/<uid>`).
+  Future<void> logCompartilharEntidade({
+    required String idCroqui,
+    required String tipoEntidade,
+    required String uid,
+    bool abrirMapa = false,
+  }) {
+    return _logEvent('compartilhar_entidade', {
+      'id_croqui': idCroqui,
+      'tipo_entidade': tipoEntidade,
+      'uid': uid,
+      'abrir_mapa': abrirMapa ? 'true' : 'false',
+      'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
     });
   }
 

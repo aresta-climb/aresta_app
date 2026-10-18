@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../services/caderneta/repositorio_caderneta.dart';
+import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 
@@ -38,11 +39,31 @@ class ViaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Extrai o nome dinamicamente com base no tipo
-    String nome = getEscaladaNome(escalada);
+    final String nome = getEscaladaNome(escalada);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(context, nome.toUpperCase()),
+      appBar: buildCommonAppBar(
+        context,
+        nome.toUpperCase(),
+        actions: [
+          if (escalada.uid.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Compartilhar escalada',
+              onPressed: () {
+                ServicoCompartilhamento.instancia.compartilharEscalada(
+                  idCroqui: cragId,
+                  uid: escalada.uid,
+                  nomeEscalada: nome,
+                  grau: getGrauString(escalada),
+                  nomeSetor: setor?.nome ?? grupo?.nome ?? 'Geral',
+                  nomePico: pico?.nome ?? cragId,
+                );
+              },
+            ),
+        ],
+      ),
       body: SafeArea(
         bottom: true,
         child: buildViaBody(
@@ -61,3 +82,4 @@ class ViaPage extends StatelessWidget {
     );
   }
 }
+

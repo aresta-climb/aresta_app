@@ -1,16 +1,21 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/widgets/busca_global.dart';
-import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 import '../mocks/mock_telemetria.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
@@ -24,77 +29,498 @@ class MockPathProviderPlatform extends PathProviderPlatform
   Future<String?> getApplicationSupportPath() async => tempPath;
   @override
   Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => '$tempPath/temp';
 }
 
 void main() {
+  sqfliteFfiInit();
+
   group('Teste do Widget GlobalSearch', () {
     late DatasetRepository repo;
+    late RepositorioCatalogo repoCatalogo;
     late EditorDeCroqui editor;
     late Directory tempDir;
+    late MockTelemetryService mockTelemetry;
 
-    setUpAll(() {
-      TelemetryService.instance = MockTelemetryService();
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
       tempDir = Directory.systemTemp.createTempSync('global_search_test_');
       PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
-    });
 
-    tearDownAll(() {
-      try {
-        if (tempDir.existsSync()) {
-          tempDir.deleteSync(recursive: true);
-        }
-      } catch (_) {}
-    });
-
-    setUp(() async {
       editor = EditorDeCroqui();
-      repo = DatasetRepository(editorDeCroqui: editor);
+      repoCatalogo = RepositorioCatalogo(
+        provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+        fabricaBanco: databaseFactoryFfi,
+      );
+      repo = DatasetRepository(
+        editorDeCroqui: editor,
+        repositorioCatalogo: repoCatalogo,
+      );
     });
 
-    testWidgets('Renderiza a barra de pesquisa e expande ao clicar', (
+    tearDown(() {
+      if (tempDir.existsSync()) {
+        try {
+          tempDir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    });
+
+    testWidgets('Renderiza barra de pesquisa, expande/colapsa com autoFocus false, limpa busca e dispara telemetria no debounce', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: GlobalSearch(datasetRepo: repo, downloadedPicos: const []),
+            body: GlobalSearch(
+              datasetRepo: repo,
+              downloadedPicos: const [],
+              autoFocus: false,
+            ),
           ),
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
 
-      // Verifica o estado inicial com texto de dica atualizado
-      expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
+      // Inicialmente colapsado quando autoFocus == false
+      expect(find.text('Filtro: Todos'), findsNothing);
 
-      // Verifica a expansão procurando pelo dropdown de filtro
-      expect(find.text('Filtro: Todos'), findsOneWidget);
-      expect(
-        find.textContaining('Dica: pesquise por picos'),
-        findsOneWidget,
-      );
-
-      // Digita algo sem correspondência
-      await tester.enterText(find.byType(TextField), '7a_inexistente');
+      // Toca no TextField para expandir (carrega dados do SQLite via runAsync)
+      await tester.runAsync(() async {
+        await tester.tap(find.byType(TextField));
+        await Future.delayed(const Duration(milliseconds: 80));
+      });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Os resultados devem ser "Nenhum resultado"
+      expect(find.text('Filtro: Todos'), findsOneWidget);
+      expect(find.textContaining('Dica: pesquise por picos'), findsOneWidget);
+
+      // Digita algo sem correspondência e aguarda debounce de 1s
+      await tester.enterText(find.byType(TextField), '7a_inexistente');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1100));
+
       expect(find.text('Nenhum resultado encontrado.'), findsOneWidget);
+      expect(mockTelemetry.recordedEvents, contains('busca_escaladas'));
+
+      // Limpa a busca clicando no ícone clear
+      await tester.tap(find.byIcon(Icons.clear));
+      await tester.pump();
+      expect(find.text('Nenhum resultado encontrado.'), findsNothing);
+
+      // Colapsa clicando no botão de voltar
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+      expect(find.text('Filtro: Todos'), findsNothing);
+      await tester.runAsync(() => repoCatalogo.fechar());
     });
 
-    testWidgets('Busca encontra picos do catálogo e picos baixados por relevância fuzzy', (
+    testWidgets('Carrega picos, grupos, setores e escaladas do catalogo.db, filtra por modalidade, exibe badge Offline e prioriza itens offline', (
       WidgetTester tester,
     ) async {
+      final picoBaixadoResumo = ResumoPico(
+        id: 'br_mg_igarape',
+        nome: 'Pedra Grande',
+        local: 'Igarapé, MG',
+        descricao: '',
+        url: '',
+        checksum: '',
+        thumbnailUrl: '',
+        isDownloaded: true,
+      );
+
+      await tester.runAsync(() async {
+        await repoCatalogo.aplicarDelta(
+          RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v1',
+            versaoDestino: 'v1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'cUidOnline1234',
+                  idSlug: 'br_mg_cipo',
+                  nome: 'Serra do Cipó',
+                  cidade: 'Santana do Riacho',
+                  estado: 'MG',
+                ),
+                CatalogoCroqui(
+                  croquiUid: 'cUidOffline123',
+                  idSlug: 'br_mg_igarape',
+                  nome: 'Pedra Grande',
+                  cidade: 'Igarapé',
+                  estado: 'MG',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'gUidOnline1234',
+                  tipo: 'grupo',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Grupo Grande',
+                ),
+                CatalogoEntidade(
+                  uid: 'sUidOnline1234',
+                  tipo: 'setor',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Setor Fenda',
+                  grupoUid: 'gUidOnline1234',
+                ),
+                CatalogoEntidade(
+                  uid: 'sUidOffline123',
+                  tipo: 'setor',
+                  croquiUid: 'cUidOffline123',
+                  nome: 'Setor Savassinha',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidOnline1234',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Via Fenda Real',
+                  escaladaGrau: '7a',
+                  escaladaTipo: 'esportiva',
+                  setorUid: 'sUidOnline1234',
+                  grupoUid: 'gUidOnline1234',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidOffline123',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOffline123',
+                  nome: 'Via Fenda Real',
+                  escaladaGrau: '7a',
+                  escaladaTipo: 'esportiva',
+                  setorUid: 'sUidOffline123',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidMovel12345',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Diedro Clássico',
+                  escaladaGrau: '6sup',
+                  escaladaTipo: 'tradicional',
+                  setorUid: 'sUidOnline1234',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidBoulder123',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOffline123',
+                  nome: 'Teto do Crime',
+                  escaladaGrau: 'V4',
+                  escaladaTipo: 'boulder',
+                  setorUid: 'sUidOffline123',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidHighline12',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Travessia do Vento',
+                  escaladaGrau: '45m',
+                  escaladaTipo: 'highline',
+                  setorUid: 'sUidOnline1234',
+                ),
+                CatalogoEntidade(
+                  uid: 'vUidMulti12345',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOnline1234',
+                  nome: 'Parede Infinita',
+                  escaladaGrau: '5',
+                  escaladaTipo: 'multienfiada',
+                  setorUid: 'sUidOnline1234',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GlobalSearch(
+                datasetRepo: repo,
+                downloadedPicos: [picoBaixadoResumo],
+              ),
+            ),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 80));
+      });
+      await tester.pump();
+
+      // 1. Verifica priorização offline e badge "Offline" ao buscar "Via Fenda Real"
+      await tester.enterText(find.byType(TextField), 'Via Fenda Real');
+      await tester.pump();
+
+      expect(find.widgetWithText(ListTile, 'Via Fenda Real'), findsNWidgets(2));
+      expect(find.text('Offline'), findsOneWidget);
+      expect(find.byIcon(Icons.cloud_outlined), findsOneWidget);
+
+      // O primeiro ListTile deve ser o do croqui baixado ("Pedra Grande")
+      final listTiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
+      final subtituloPrimeiro = (listTiles.first.subtitle as Text).data!;
+      expect(subtituloPrimeiro, contains('Pedra Grande'));
+
+      // 2. Testa filtro "Picos"
+      await tester.tap(find.text('Filtro: Todos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Picos').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Cipo');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Serra do Cipó'), findsOneWidget);
+
+      // 3. Testa filtro "Setores" (inclui setores e grupos)
+      await tester.tap(find.text('Filtro: Picos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Setores').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Grupo Grande');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Grupo Grande'), findsOneWidget);
+
+      // 4. Testa filtro "Móveis"
+      await tester.tap(find.text('Filtro: Setores'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Móveis').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Diedro');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Diedro Clássico'), findsOneWidget);
+      expect(find.textContaining('Móvel | 6ºsup'), findsOneWidget);
+
+      // 5. Testa filtro "Boulders"
+      await tester.tap(find.text('Filtro: Móveis'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Boulders').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Crime');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Teto do Crime'), findsOneWidget);
+      expect(find.textContaining('Boulder | V4'), findsOneWidget);
+
+      // 6. Testa filtro "Highlines"
+      await tester.tap(find.text('Filtro: Boulders'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Highlines').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Travessia');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Travessia do Vento'), findsOneWidget);
+      expect(find.textContaining('Highline | 45m'), findsOneWidget);
+      await tester.runAsync(() => repoCatalogo.fechar());
+    });
+
+    testWidgets('Navega via LocalizadorDestinoUid ao tocar em resultado do catalogo.db carregando croqui sob demanda', (
+      WidgetTester tester,
+    ) async {
+      const String uidViaRemota = 'vCatRemoto1234';
+      const String uidCroquiRemoto = 'cCatRemoto1234';
+      const String idSlugRemoto = 'br_rj_urca';
+
+      final croquiRemoto = Croqui()
+        ..id = idSlugRemoto
+        ..uid = uidCroquiRemoto
+        ..picos.add(
+          Pico()
+            ..nome = 'Morro da Urca'
+            ..setoresOuGrupos.add(
+              SetorOuGrupo()
+                ..setor = (ArquivoSetor()
+                  ..conteudo = (Setor()
+                    ..uid = 'sCatRemoto1234'
+                    ..nome = 'Face Norte'
+                    ..escaladas.add(
+                      Escalada()
+                        ..uid = uidViaRemota
+                        ..viaEsportiva = (ViaEsportiva()..nome = 'Italianos'),
+                    ))),
+            ),
+        );
+
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+        idSlugRemoto,
+        croquiRemoto,
+      );
+
+      final treeController = TreeNavigationController();
+
+      await tester.runAsync(() async {
+        await repoCatalogo.aplicarDelta(
+          RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v1',
+            versaoDestino: 'v1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: uidCroquiRemoto,
+                  idSlug: idSlugRemoto,
+                  nome: 'Morro da Urca',
+                  cidade: 'Rio de Janeiro',
+                  estado: 'RJ',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: uidViaRemota,
+                  tipo: 'escalada',
+                  croquiUid: uidCroquiRemoto,
+                  nome: 'Italianos',
+                  escaladaGrau: '5sup',
+                  escaladaTipo: 'esportiva',
+                  setorUid: 'sCatRemoto1234',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).push(
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          body: GlobalSearch(
+                            datasetRepo: repo,
+                            downloadedPicos: const [],
+                            treeController: treeController,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Abrir Modal Busca'),
+                ),
+              ),
+            ),
+          ),
+        );
+      });
+      await tester.pump();
+
+      // Abre a rota modal e fecha pelo botão arrow_back (_toggleExpand com canPop == true)
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Abrir Modal Busca'));
+        await tester.pump();
+        await Future.delayed(const Duration(milliseconds: 80));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Reabre a rota modal e navega tocando em Italianos (_fecharModalSePossivel com canPop == true)
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Abrir Modal Busca'));
+        await tester.pump();
+        await Future.delayed(const Duration(milliseconds: 80));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      await tester.enterText(find.byType(TextField), 'Italianos');
+      await tester.pump();
+
+      expect(find.widgetWithText(ListTile, 'Italianos'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await tester.tap(find.widgetWithText(ListTile, 'Italianos'));
+        await Future.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(treeController.currentNode, isA<ViaNode>());
+      final viaNode = treeController.currentNode as ViaNode;
+      expect(viaNode.escaladaNome, equals('Italianos'));
+      expect(viaNode.setorNome, equals('Face Norte'));
+      expect(viaNode.cragId, equals(idSlugRemoto));
+      await tester.runAsync(() => repoCatalogo.fechar());
+    });
+
+    testWidgets('Mescla croquis da sessão online e baixados quando não constam no catalogo.db (incluindo Via Mista)', (
+      WidgetTester tester,
+    ) async {
+      final croqui = Croqui()
+        ..id = 'crag_teste'
+        ..uid = 'cUidSessao1234';
+      final pico = Pico()
+        ..nome = 'Pico Teste'
+        ..estado = 'SP';
+      final setorDireto = Setor()
+        ..uid = 'sUidSol1234567'
+        ..nome = 'Setor Sol';
+      setorDireto.escaladas.addAll([
+        Escalada(
+          uid: 'vUidEsp1234567',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Esportiva da Tarde',
+            dificuldade: GrauVia_GrauVia.BR_5,
+          ),
+        ),
+        Escalada(
+          uid: 'vUidMista12345',
+          viaMovel: ViaMovel(
+            nome: 'Fenda da Manhã',
+            dificuldade: GrauVia_GrauVia.BR_6SUP,
+            quantidadeProtecoesIntermediarias: 3,
+          ),
+        ),
+        Escalada(
+          uid: 'vUidBoulderMem',
+          boulder: Boulder(
+            nome: 'Bloco da Noite',
+            dificuldade: GrauBoulder_GrauBoulder.V3,
+          ),
+        ),
+        Escalada(
+          uid: 'vUidHighMem123',
+          highline: Highline(
+            nome: 'Fita nas Nuvens',
+            distancia: 60,
+          ),
+        ),
+        Escalada(uid: 'vUidSemTipo123'),
+      ]);
+      final grupoMem = Grupo()
+        ..uid = 'gUidMem1234567'
+        ..nome = 'Grupo Lua'
+        ..setores.add(
+          ArquivoSetor()
+            ..conteudo = (Setor()
+              ..uid = 'sUidLua1234567'
+              ..nome = 'Setor Lua'),
+        );
+      pico.setoresOuGrupos.addAll([
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorDireto),
+        SetorOuGrupo()..grupo = (ArquivoGrupo()..conteudo = grupoMem),
+      ]);
+      croqui.picos.add(pico);
+
+      repo.gerenciadorSessaoOnline.registrarCroquiOnline('crag_teste', croqui);
       repo.activeDataset.value = TopoDataset(
         availablePicos: [
-          {'id': 'pico_remoto', 'nome': 'Serra do Cipo', 'local': 'Santana do Riacho, MG'},
-          {'id': 'pico_baixado', 'nome': 'Pedra Grande', 'local': 'Igarape, MG'},
+          {'id': 'pico_disp_extra', 'nome': 'Pico Extra Disponível', 'local': 'Ouro Preto, MG'},
         ],
         downloadedPicos: [
-          {'id': 'pico_baixado', 'nome': 'Pedra Grande', 'local': 'Igarape, MG'},
+          {'id': 'pico_baixado_sem_proto', 'nome': 'Pico Sem Proto', 'local': 'Mariana, MG'},
         ],
       );
+
+      final treeController = TreeNavigationController();
 
       await tester.runAsync(() async {
         await tester.pumpWidget(
@@ -103,57 +529,110 @@ void main() {
               body: GlobalSearch(
                 datasetRepo: repo,
                 downloadedPicos: repo.activeDataset.value!.downloadedPicos,
+                treeController: treeController,
               ),
             ),
           ),
         );
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 80));
       });
       await tester.pump();
 
-      // Digita para buscar
-      await tester.enterText(find.byType(TextField), 'Pedra');
+      // Busca via esportiva
+      await tester.enterText(find.byType(TextField), 'Esportiva');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Esportiva da Tarde'), findsOneWidget);
+      expect(find.textContaining('Esportiva | 5º • Setor Sol • Pico Teste'), findsOneWidget);
+
+      // Busca via mista (via móvel com fixas)
+      await tester.enterText(find.byType(TextField), 'Fenda');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Fenda da Manhã'), findsOneWidget);
+      expect(find.textContaining('Mista | 6ºsup • Setor Sol • Pico Teste'), findsOneWidget);
+
+      // Toca no Setor Lua dentro do Grupo Lua
+      await tester.enterText(find.byType(TextField), 'Setor Lua');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Setor Lua'), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.widgetWithText(ListTile, 'Setor Lua'));
+        await Future.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+      expect(treeController.currentNode, isA<SetorNode>());
+
+      // Atualiza downloadedPicos no didUpdateWidget
+      final novaListaBaixados = [
+        ResumoPico(
+          id: 'pico_baixado_sem_proto',
+          nome: 'Pico Sem Proto',
+          local: 'Mariana, MG',
+          descricao: '',
+          url: '',
+          checksum: '',
+          thumbnailUrl: '',
+          isDownloaded: true,
+        ),
+      ];
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: GlobalSearch(
+                datasetRepo: repo,
+                downloadedPicos: novaListaBaixados,
+                treeController: treeController,
+              ),
+            ),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 80));
+      });
       await tester.pump();
 
-      // Deve encontrar Pedra Grande como salvo offline
-      expect(find.text('Pedra Grande'), findsOneWidget);
-      expect(find.textContaining('Salvo offline'), findsOneWidget);
-
-      // Digita para buscar o pico do catálogo não baixado
-      await tester.enterText(find.byType(TextField), 'Cipo');
+      // Toca no Pico Sem Proto (ResumoPico legado)
+      await tester.enterText(find.byType(TextField), 'Pico Sem Proto');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Pico Sem Proto'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ListTile, 'Pico Sem Proto'));
       await tester.pump();
 
-      expect(find.text('Serra do Cipo'), findsOneWidget);
-      expect(find.textContaining('Catálogo'), findsOneWidget);
-    });
-
-    testWidgets('Busca de vias exibe modalidade correta (incluindo Mista para via móvel com fixas)', (
-      WidgetTester tester,
-    ) async {
-      final croqui = Croqui();
-      final pico = Pico()..nome = 'Pico Teste';
-      final setor = Setor()..nome = 'Setor Sol';
-      setor.escaladas.addAll([
-        Escalada(
-          viaEsportiva: ViaEsportiva(
-            nome: 'Esportiva da Tarde',
-            dificuldade: GrauVia_GrauVia.BR_5,
+      // Quando indiceData está carregado, filtra croquis/entidades do catalogo.db que não constam no índice publicado
+      await tester.runAsync(() async {
+        await repoCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_filtro_indice',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'cUidPublico',
+                  idSlug: 'pico_publicado',
+                  nome: 'Pico Publicado Oficial',
+                ),
+                CatalogoCroqui(
+                  croquiUid: 'cUidRascunho',
+                  idSlug: 'pico_rascunho_oculto',
+                  nome: 'Pico Rascunho Oculto',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'vUidRascunho',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidRascunho',
+                  nome: 'Via Rascunho Oculta',
+                ),
+              ],
+            ),
           ),
-        ),
-        Escalada(
-          viaMovel: ViaMovel(
-            nome: 'Fenda da Manhã',
-            dificuldade: GrauVia_GrauVia.BR_6SUP,
-            quantidadeProtecoesIntermediarias: 3,
-          ),
-        ),
-      ]);
-      pico.setoresOuGrupos.add(
-        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+      });
+      repo.indiceData.value = Indice(
+        croquis: [
+          ResumoCroqui(id: 'pico_publicado', nome: 'Pico Publicado Oficial'),
+        ],
       );
-      croqui.picos.add(pico);
-
-      repo.gerenciadorSessaoOnline.registrarCroquiOnline('crag_teste', croqui);
 
       await tester.runAsync(() async {
         await tester.pumpWidget(
@@ -162,25 +641,35 @@ void main() {
               body: GlobalSearch(
                 datasetRepo: repo,
                 downloadedPicos: const [],
+                treeController: treeController,
               ),
             ),
           ),
         );
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 80));
       });
       await tester.pump();
 
-      // Busca via esportiva
-      await tester.enterText(find.byType(TextField), 'Esportiva');
+      await tester.enterText(find.byType(TextField), 'Pico Publicado');
       await tester.pump();
-      expect(find.text('Esportiva da Tarde'), findsOneWidget);
-      expect(find.textContaining('Esportiva | 5º • Setor Sol • Pico Teste'), findsOneWidget);
+      expect(
+        find.widgetWithText(ListTile, 'Pico Publicado Oficial'),
+        findsOneWidget,
+      );
 
-      // Busca via mista (via móvel com fixas)
-      await tester.enterText(find.byType(TextField), 'Fenda');
+      await tester.enterText(find.byType(TextField), 'Rascunho Ocult');
       await tester.pump();
-      expect(find.text('Fenda da Manhã'), findsOneWidget);
-      expect(find.textContaining('Mista | 6ºsup • Setor Sol • Pico Teste'), findsOneWidget);
+      expect(
+        find.widgetWithText(ListTile, 'Pico Rascunho Oculto'),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(ListTile, 'Via Rascunho Oculta'),
+        findsNothing,
+      );
+
+      await tester.runAsync(() => repoCatalogo.fechar());
     });
   });
 }
+

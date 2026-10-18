@@ -6,11 +6,25 @@ import 'package:flutter/material.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
+import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/gerenciador_filtros_croqui.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/utils/filtro_grau_escalada.dart';
 import 'package:frontend/widgets/painel_filtros_indice.dart';
 
 void main() {
+  setUp(() {
+    if (DatasetRepository.instance == null) {
+      DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    }
+  });
+
+  tearDown(() {
+    ServicoCompartilhamento.restaurarPadrao();
+  });
+
   testWidgets('SetorPage should wrap body in SafeArea', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -281,4 +295,50 @@ void main() {
     // A aba Boulders deve estar selecionada automaticamente
     expect(find.text('Boulder Alvo'), findsOneWidget);
   });
+
+  testWidgets('SetorPage exibe botão de compartilhamento quando setor possui uid e usa nome do croqui em vez do slug', (tester) async {
+    String? textoCompartilhado;
+    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
+      executorCompartilhamento: (texto) async {
+        textoCompartilhado = texto;
+      },
+    );
+    DatasetRepository.instance?.indiceData.value = Indice(
+      croquis: [
+        ResumoCroqui(
+          id: 'br_mg_igarape_pedra_grande',
+          nome: 'Pedra Grande',
+        ),
+      ],
+    );
+
+    final setor = Setor()
+      ..uid = 'uidSetorShare99'
+      ..nome = 'Setor Estacionamento';
+    final grupo = Grupo()..nome = 'Grupo Principal';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(
+          setor: setor,
+          grupoContext: grupo,
+          cragId: 'br_mg_igarape_pedra_grande',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final botaoShare = find.byIcon(Icons.share_outlined);
+    expect(botaoShare, findsOneWidget);
+
+    await tester.tap(botaoShare);
+    await tester.pumpAndSettle();
+
+    expect(textoCompartilhado, isNotNull);
+    expect(textoCompartilhado, contains('Confira o Setor Estacionamento, em Pedra Grande, no Aresta:'));
+    expect(textoCompartilhado, isNot(contains('br_mg_igarape_pedra_grande')));
+    expect(textoCompartilhado, contains('https://aresta.cc/s/uidSetorShare99'));
+  });
 }
+

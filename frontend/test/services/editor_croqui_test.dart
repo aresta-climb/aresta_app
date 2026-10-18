@@ -276,6 +276,22 @@ void main() {
     });
   });
 
+  group('catalogoPath', () {
+    const docsPath = '/data/user/0/app/files';
+
+    test('modo oficial: deve retornar caminho padrão do catálogo', () {
+      expect(editor.catalogoPath(docsPath), '$docsPath/catalogo.db');
+    });
+
+    test('modo experimental: deve retornar caminho experimental do catálogo', () {
+      editor.isExperimentalMode.value = true;
+      expect(
+        editor.catalogoPath(docsPath),
+        '$docsPath/editor/experimental/catalogo.db',
+      );
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // isExperimentalMode / editorUrl / isDevModeEnabled notificadores
   // ---------------------------------------------------------------------------

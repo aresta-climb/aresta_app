@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../navigation/funcoes_navegacao.dart';
+import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/gerenciador_filtros_croqui.dart';
@@ -312,6 +313,22 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
                 : null,
             centerTitle: false,
             actions: [
+              if (widget.setor.uid.isNotEmpty)
+                IconButton(
+                  icon: Icon(
+                    Icons.share_outlined,
+                    color: context.colors.chalkWhite,
+                  ),
+                  tooltip: 'Compartilhar setor',
+                  onPressed: () {
+                    ServicoCompartilhamento.instancia.compartilharSetor(
+                      idCroqui: widget.cragId,
+                      uid: widget.setor.uid,
+                      nomeSetor: widget.setor.nome,
+                      nomePico: widget.cragId,
+                    );
+                  },
+                ),
               buildFeedbackButton(context, color: context.colors.chalkWhite),
               const SizedBox(width: 8),
             ],

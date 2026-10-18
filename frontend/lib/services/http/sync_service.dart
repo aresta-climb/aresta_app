@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../aresta_api/openapi/generated/dart/catalogo.dart';
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../dataset/normalizador_croqui.dart';
@@ -58,6 +59,7 @@ enum SyncStatus {
 ///
 class SyncService {
   static String? baseUrlOverride;
+  static String? catalogoUrlOverride;
   final DatasetRepository datasetRepository;
   final SyncStorage _storage;
   final SyncNetwork _network;
@@ -461,6 +463,13 @@ class SyncService {
 
           await datasetRepository.loadIndiceToMemory(newIndice);
 
+          // Inicia a sincronização do catalogo.db de forma assíncrona e não-bloqueante
+          // na event loop enquanto thumbnails e croquis são atualizados em paralelo.
+          final futureCatalogo = sincronizarCatalogoSeNecessario(
+            newIndice,
+            baseUrl,
+          );
+
           final globalUpdates = _SyncUpdates();
 
           final thumbUpdates = await _syncThumbnails(
@@ -553,6 +562,8 @@ class SyncService {
               TelemetryService.instance.logResultadoSincronizacao('erro');
             }
           }
+
+          await futureCatalogo;
         case IndiceUnchanged():
           AppLogger.instance.logInfo(
             '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
@@ -560,6 +571,12 @@ class SyncService {
           if (datasetRepository.activeDataset.value == null ||
               datasetRepository.activeDataset.value!.isEmpty) {
             await _loadLocalIndiceAndNotify(localIndicePath);
+          }
+          final indiceAtual =
+              datasetRepository.indiceData.value ??
+              await _storage.readLocalIndice(localIndicePath);
+          if (indiceAtual != null) {
+            await sincronizarCatalogoSeNecessario(indiceAtual, baseUrl);
           }
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
@@ -578,6 +595,86 @@ class SyncService {
       TelemetryService.instance.logResultadoSincronizacao('erro');
     }
     return failedPicos;
+  }
+
+  /// Verifica se a versão do banco local `catalogo.db` coincide com [indiceAlvo.versaoCatalogo].
+  ///
+  /// Caso o `catalogo.db` ainda não exista localmente (e não esteja em modo experimental),
+  /// copia primeiro o `catalogo.db` do preload e em seguida verifica se há atualização:
+  /// - No modo experimental, baixa `$baseUrl/catalogo.db` diretamente do servidor de prévia.
+  /// - No modo oficial, consulta o endpoint `/sync` (`catalogo.arestaclimb.com/sync`) e aplica
+  ///   o delta transacional (`apply_delta`) ou substitui o arquivo completo (`full_download`).
+  Future<void> sincronizarCatalogoSeNecessario(
+    Indice indiceAlvo,
+    String baseUrl,
+  ) async {
+    final versaoDestino = indiceAlvo.versaoCatalogo;
+    if (versaoDestino.isEmpty) return;
+
+    final repoCatalogo = datasetRepository.repositorioCatalogo;
+    var versaoLocal = await repoCatalogo.obterVersaoCatalogo();
+
+    if (!datasetRepository.editorDeCroqui.isExperimentalMode.value &&
+        versaoLocal.isEmpty) {
+      final directory = await getApplicationDocumentsDirectory();
+      final localCatalogoPath = datasetRepository.editorDeCroqui.catalogoPath(
+        directory.path,
+      );
+      await datasetRepository.extratorAssets.extrairCatalogoPreload(
+        docsPath: directory.path,
+        catalogoPath: localCatalogoPath,
+        bundle: datasetRepository.assetBundle,
+      );
+      versaoLocal = await repoCatalogo.obterVersaoCatalogo();
+    }
+
+    if (versaoLocal == versaoDestino) {
+      return;
+    }
+
+    if (datasetRepository.editorDeCroqui.isExperimentalMode.value ||
+        versaoLocal.isEmpty) {
+      final bytes = await _network.baixarCatalogoCompleto(
+        baseUrl,
+        versaoCatalogo: versaoDestino,
+      );
+      if (bytes != null) {
+        await repoCatalogo.substituirBancoCompleto(bytes);
+      }
+      return;
+    }
+
+    final urlCatalogo = catalogoUrlOverride ?? urlServidorPadraoCatalogo;
+    final resposta = await _network.consultarSyncCatalogo(
+      versaoLocal: versaoLocal,
+      versaoDestino: versaoDestino,
+      urlBaseCatalogo: urlCatalogo,
+    );
+
+    if (resposta == null) {
+      AppLogger.instance.logAviso(
+        '[SyncService] Não foi possível sincronizar catalogo.db (de "$versaoLocal" para "$versaoDestino"). Mantendo versão local.',
+      );
+      return;
+    }
+
+    if (resposta.acao == 'apply_delta') {
+      await repoCatalogo.aplicarDelta(resposta);
+      AppLogger.instance.logInfo(
+        '[SyncService] Catálogo SQLite atualizado via delta para a versão $versaoDestino.',
+      );
+    } else if (resposta.acao == 'full_download') {
+      final bytes = await _network.baixarCatalogoCompleto(
+        baseUrl,
+        versaoCatalogo: versaoDestino,
+      );
+      if (bytes != null) {
+        await repoCatalogo.substituirBancoCompleto(bytes);
+        AppLogger.instance.logInfo(
+          '[SyncService] Catálogo SQLite atualizado via full_download para a versão $versaoDestino.',
+        );
+      }
+    }
   }
 
   /// Grava o novo índice baixado em disco, garantindo que o arquivo `.etag`

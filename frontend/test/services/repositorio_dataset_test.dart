@@ -722,6 +722,35 @@ void main() {
         );
       },
     );
+
+    test(
+      'init deve extrair catalogo.db do preload mesmo quando indice.binarypb ja existir no disco',
+      () async {
+        final indiceExistente = Indice(
+          croquis: [
+            ResumoCroqui(id: 'pico_existente', nome: 'Pico Existente'),
+          ],
+        );
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(indiceExistente.writeToBuffer());
+
+        final catalogoFile = File(editor.catalogoPath(tempDir.path));
+        expect(catalogoFile.existsSync(), isFalse);
+
+        final mockBundle = MockAssetBundle();
+        final bytesCatalogo = Uint8List.fromList([83, 81, 76, 51]);
+        when(
+          () => mockBundle.load('assets/preload/catalogo.db'),
+        ).thenAnswer((_) async => ByteData.view(bytesCatalogo.buffer));
+
+        repo.assetBundle = mockBundle;
+        await repo.init();
+
+        expect(catalogoFile.existsSync(), isTrue);
+        expect(catalogoFile.readAsBytesSync(), equals([83, 81, 76, 51]));
+      },
+    );
   });
 
   group('Tabela de Dispersão de Hashes de Mídia', () {

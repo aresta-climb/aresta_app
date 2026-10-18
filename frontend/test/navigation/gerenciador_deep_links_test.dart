@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -39,7 +39,10 @@ void main() {
 
     // Popula pico no repositório
     final pico = Pico()..nome = 'Pedra Grande';
-    final croqui = Croqui()..picos.add(pico);
+    final croqui = Croqui()
+      ..id = 'br_mg_igarape_pedra_grande'
+      ..uid = 'pQ9mRt2Kx1Vw8L'
+      ..picos.add(pico);
     datasetRepo.activeDataset.value = TopoDataset(
       picosBaixados: [
         {
@@ -63,7 +66,7 @@ void main() {
 
   test('processa link inicial no Cold Start quando disponivel', () async {
     final initialUri = Uri.parse(
-      'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
+      'https://aresta.cc/pQ9mRt2Kx1Vw8L',
     );
     when(() => mockAppLinks.getInitialLink())
         .thenAnswer((_) async => initialUri);
@@ -91,7 +94,7 @@ void main() {
 
     // Dispara evento na stream
     final warmUri = Uri.parse(
-      'https://app.arestaclimb.com/br_mg_igarape_pedra_grande',
+      'https://aresta.cc/pQ9mRt2Kx1Vw8L',
     );
     uriStreamController.add(warmUri);
 

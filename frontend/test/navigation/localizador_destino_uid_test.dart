@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -9,9 +11,26 @@ import 'package:frontend/navigation/localizador_destino_uid.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+
+class _FakePathProvider extends PathProviderPlatform {
+  final String caminhoBase;
+  _FakePathProvider(this.caminhoBase);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminhoBase;
+
+  @override
+  Future<String?> getTemporaryPath() async => '$caminhoBase/temp';
+}
 
 void main() {
+  sqfliteFfiInit();
+
+  late Directory dirTemp;
   late EditorDeCroqui editorDeCroqui;
+  late RepositorioCatalogo repositorioCatalogo;
   late DatasetRepository datasetRepo;
   late LocalizadorDestinoUid localizador;
 
@@ -33,9 +52,19 @@ void main() {
   const String uidBotao = 'b1siJek3FiG3aB';
   const String uidInexistente = 'z9zzZzZzZzZzZz';
 
-  setUp(() {
+  setUp(() async {
+    dirTemp = await Directory.systemTemp.createTemp('localizador_uid_test_');
+    PathProviderPlatform.instance = _FakePathProvider(dirTemp.path);
+
     editorDeCroqui = EditorDeCroqui();
-    datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
+    repositorioCatalogo = RepositorioCatalogo(
+      provedorCaminhoBanco: () async => '${dirTemp.path}/catalogo.db',
+      fabricaBanco: databaseFactoryFfi,
+    );
+    datasetRepo = DatasetRepository(
+      editorDeCroqui: editorDeCroqui,
+      repositorioCatalogo: repositorioCatalogo,
+    );
     localizador = LocalizadorDestinoUid(datasetRepo: datasetRepo);
 
     // 1. Constrói estrutura hierárquica completa com UIDs NanoID 14c
@@ -103,6 +132,13 @@ void main() {
     );
   });
 
+  tearDown(() async {
+    await repositorioCatalogo.fechar();
+    if (dirTemp.existsSync()) {
+      await dirTemp.delete(recursive: true);
+    }
+  });
+
   group('LocalizadorDestinoUid', () {
     test('localiza Croqui a partir de croquiUid do índice de metadados', () async {
       final destino = await localizador.localizar(uidCroqui);
@@ -111,8 +147,32 @@ void main() {
       expect(destino!.idCroqui, equals('br_mg_igarape_pedra_grande'));
       expect(destino.tipoDestino, equals('pico'));
       expect(destino.noNavegacao, isA<PicoNode>());
+      expect(
+        destino.toString(),
+        contains('DestinoUidLocalizado(idCroqui: br_mg_igarape_pedra_grande'),
+      );
       final picoNode = destino.noNavegacao as PicoNode;
       expect(picoNode.cragId, equals('br_mg_igarape_pedra_grande'));
+    });
+
+    test('localiza Croqui diretamente por croqui.uid nos picos baixados quando não está em metadadosDisponiveis', () async {
+      datasetRepo.activeDataset.value = TopoDataset(
+        picosBaixados: [
+          {
+            'id': 'br_mg_igarape_pedra_grande',
+            'data': {'pico': picoTeste, 'croqui': croquiTeste},
+          },
+        ],
+        picosDisponiveis: [],
+        metadadosDisponiveis: [],
+      );
+
+      final destino = await localizador.localizar(uidCroqui);
+
+      expect(destino, isNotNull);
+      expect(destino!.idCroqui, equals('br_mg_igarape_pedra_grande'));
+      expect(destino.tipoDestino, equals('pico'));
+      expect(destino.noNavegacao, isA<PicoNode>());
     });
 
     test('localiza Via em setor direto com linhagem correta da árvore', () async {
@@ -240,9 +300,176 @@ void main() {
       expect(destino.noNavegacao, isA<ViaNode>());
     });
 
+    test('consulta RepositorioCatalogo e carrega croqui online sob demanda quando não está em memória', () async {
+      const String uidViaCatalogo = 'vCatRemoto1234';
+      const String uidCroquiCatalogo = 'cCatRemoto1234';
+      const String idSlugRemoto = 'br_rj_urca';
+
+      final croquiRemoto = Croqui()
+        ..id = idSlugRemoto
+        ..uid = uidCroquiCatalogo;
+      final picoRemoto = Pico()..nome = 'Morro da Urca';
+      final setorRemoto = Setor()
+        ..uid = 'sCatRemoto1234'
+        ..nome = 'Face Norte';
+      final viaRemota = Escalada()
+        ..uid = uidViaCatalogo
+        ..viaEsportiva = (ViaEsportiva()..nome = 'Italianos');
+      setorRemoto.escaladas.add(viaRemota);
+      picoRemoto.setoresOuGrupos.add(
+        SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setorRemoto),
+      );
+      croquiRemoto.picos.add(picoRemoto);
+
+      // Popula o catalogo.db com o croqui e a via
+      await repositorioCatalogo.aplicarDelta(
+        RespostaSyncCatalogo(
+          acao: 'apply_delta',
+          versaoAtual: 'v1',
+          versaoDestino: 'v1',
+          upserts: UpsertsSyncCatalogo(
+            croquis: [
+              CatalogoCroqui(
+                croquiUid: uidCroquiCatalogo,
+                idSlug: idSlugRemoto,
+                nome: 'Morro da Urca',
+                cidade: 'Rio de Janeiro',
+                estado: 'RJ',
+              ),
+            ],
+            entidades: [
+              CatalogoEntidade(
+                uid: uidViaCatalogo,
+                tipo: 'escalada',
+                croquiUid: uidCroquiCatalogo,
+                nome: 'Italianos',
+                setorUid: 'sCatRemoto1234',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Inicia micro-servidor HTTP local para servir o compilado.binarypb do croqui remoto
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) {
+        request.response.statusCode = 200;
+        request.response.add(croquiRemoto.writeToBuffer());
+        request.response.close();
+      });
+
+      editorDeCroqui.isExperimentalMode.value = true;
+      editorDeCroqui.editorUrl.value =
+          'http://127.0.0.1:${server.port}/indice.binarypb';
+
+      final resumoRemoto = ResumoCroqui()
+        ..id = idSlugRemoto
+        ..croquiUid = uidCroquiCatalogo
+        ..nome = 'Morro da Urca'
+        ..caminhoRelativo = '$idSlugRemoto/compilado.binarypb'
+        ..checksumSha256Croqui = 'hash123';
+
+      datasetRepo.indiceData.value = Indice()..croquis.add(resumoRemoto);
+
+      final destino = await localizador.localizar(uidViaCatalogo);
+
+      expect(destino, isNotNull);
+      expect(destino!.idCroqui, equals(idSlugRemoto));
+      expect(destino.tipoDestino, equals('via'));
+      expect(destino.nomeEntidade, equals('Italianos'));
+      expect(destino.noNavegacao, isA<ViaNode>());
+    });
+
+    test('constrói MapasCarrosselNode com parent quando abrirMapa: true em Pico, Grupo, Setor e Via com mapas', () async {
+      // Adiciona mapas válidos ao Pico, Grupo, Setor e Via
+      final mapaGeral = Mapa()
+        ..caminhoImagemMapa = 'mapas/geral.webp'
+        ..larguraMapa = 1000
+        ..alturaMapa = 800;
+      picoTeste.mapasGerais = ArquivoMapas()
+        ..conteudo = (ColecaoDeMapas()..mapas.add(mapaGeral));
+
+      final mapaGrupo = Mapa()
+        ..caminhoImagemMapa = 'mapas/grupo.webp'
+        ..larguraMapa = 1200
+        ..alturaMapa = 900;
+      grupoTeste.mapas.add(mapaGrupo);
+
+      final mapaSetor = Mapa()
+        ..caminhoImagemMapa = 'mapas/savassinha.webp'
+        ..larguraMapa = 1600
+        ..alturaMapa = 1200
+        ..referencias.add(
+          Mapa_Referencia()
+            ..alvoUid = uidViaSetorDireto
+            ..pontosUids.add('pt_via_1'),
+        );
+      setorDireto.mapas.add(mapaSetor);
+
+      // 1. Pico com abrirMapa: true
+      final destinoPico = await localizador.localizar(
+        uidCroqui,
+        abrirMapa: true,
+      );
+      expect(destinoPico, isNotNull);
+      expect(destinoPico!.noNavegacao, isA<MapasCarrosselNode>());
+      final carrosselPico = destinoPico.noNavegacao as MapasCarrosselNode;
+      expect(carrosselPico.parent, isA<PicoNode>());
+      expect(carrosselPico.mapas.first.mapaCaminhoImagem, equals('mapas/geral.webp'));
+
+      // 2. Grupo com abrirMapa: true
+      final destinoGrupo = await localizador.localizar(
+        uidGrupo,
+        abrirMapa: true,
+      );
+      expect(destinoGrupo, isNotNull);
+      expect(destinoGrupo!.noNavegacao, isA<MapasCarrosselNode>());
+      final carrosselGrupo = destinoGrupo.noNavegacao as MapasCarrosselNode;
+      expect(carrosselGrupo.parent, isA<GrupoNode>());
+      expect(carrosselGrupo.mapas.first.mapaCaminhoImagem, equals('mapas/grupo.webp'));
+
+      // 3. Setor com abrirMapa: true
+      final destinoSetor = await localizador.localizar(
+        uidSetorDireto,
+        abrirMapa: true,
+      );
+      expect(destinoSetor, isNotNull);
+      expect(destinoSetor!.noNavegacao, isA<MapasCarrosselNode>());
+      final carrosselSetor = destinoSetor.noNavegacao as MapasCarrosselNode;
+      expect(carrosselSetor.parent, isA<SetorNode>());
+      expect(carrosselSetor.mapas.first.mapaCaminhoImagem, equals('mapas/savassinha.webp'));
+
+      // 4. Via com abrirMapa: true (focado no ponto da referência)
+      final destinoVia = await localizador.localizar(
+        uidViaSetorDireto,
+        abrirMapa: true,
+      );
+      expect(destinoVia, isNotNull);
+      expect(destinoVia!.noNavegacao, isA<MapasCarrosselNode>());
+      final carrosselVia = destinoVia.noNavegacao as MapasCarrosselNode;
+      expect(carrosselVia.parent, isA<ViaNode>());
+      expect(carrosselVia.mapas.first.initialSelectedId, equals('pt_via_1'));
+    });
+
+    test('faz fallback gracioso para o nó principal quando abrirMapa: true mas a entidade não possui mapas', () async {
+      final destinoPico = await localizador.localizar(uidCroqui, abrirMapa: true);
+      expect(destinoPico!.noNavegacao, isA<PicoNode>());
+
+      final destinoGrupo = await localizador.localizar(uidGrupo, abrirMapa: true);
+      expect(destinoGrupo!.noNavegacao, isA<GrupoNode>());
+
+      final destinoSetor = await localizador.localizar(uidSetorDireto, abrirMapa: true);
+      expect(destinoSetor!.noNavegacao, isA<SetorNode>());
+
+      final destinoVia = await localizador.localizar(uidViaSetorDireto, abrirMapa: true);
+      expect(destinoVia!.noNavegacao, isA<ViaNode>());
+    });
+
     test('retorna null para UID inexistente no acervo', () async {
       final destino = await localizador.localizar(uidInexistente);
       expect(destino, isNull);
     });
   });
 }
+

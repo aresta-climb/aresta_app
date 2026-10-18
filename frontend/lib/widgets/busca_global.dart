@@ -1,19 +1,23 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fuzzy/fuzzy.dart';
-import '../services/repositorio_dataset.dart';
-import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../view/function_library/via_functions.dart';
-import '../view/function_library/funcoes_home.dart';
-import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../aresta_api/proto/generated/indice.pb.dart';
+import '../main.dart';
+import '../navigation/arvore_navegacao.dart';
+import '../navigation/localizador_destino_uid.dart';
 import '../services/firebase/registro_primeira_visita.dart';
+import '../services/repositorio_dataset.dart';
 import '../theme/cores_app.dart';
+import '../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../view/function_library/funcoes_home.dart';
+import '../view/function_library/via_functions.dart';
 
+/// Item unificado exibido na lista de resultados da Busca Global.
 class GlobalSearchResult {
   final String title;
   final String subtitle;
@@ -22,6 +26,7 @@ class GlobalSearchResult {
   final Object? originalItem;
   final bool isDownloaded;
   final bool isPico;
+  final String categoriaFiltro;
 
   GlobalSearchResult({
     required this.title,
@@ -31,19 +36,24 @@ class GlobalSearchResult {
     required this.originalItem,
     this.isDownloaded = true,
     this.isPico = false,
+    this.categoriaFiltro = 'Todos',
   });
 }
 
+/// Barra e tela de Busca Global alimentada pelo catálogo SQLite (`catalogo.db`)
+/// mesclado com o estado em memória e offline do repositório.
 class GlobalSearch extends StatefulWidget {
   final DatasetRepository datasetRepo;
   final List<ResumoPico> downloadedPicos;
   final bool autoFocus;
+  final TreeNavigationController? treeController;
 
   const GlobalSearch({
     super.key,
     required this.datasetRepo,
     required this.downloadedPicos,
     this.autoFocus = true,
+    this.treeController,
   });
 
   @override
@@ -61,7 +71,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   List<GlobalSearchResult> _allData = [];
   List<GlobalSearchResult> _filteredResults = [];
 
-  final List<String> _filters = [
+  final List<String> _filters = const [
     'Todos',
     'Picos',
     'Setores',
@@ -86,27 +96,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
         }
       });
     }
-
-    _searchFocusNode.addListener(() {
-      if (_searchFocusNode.hasFocus && !_hasLoadedData && !_isLoading) {
-        _loadAllData();
-      }
-      if (_searchFocusNode.hasFocus && !_isExpanded) {
-        setState(() {
-          _isExpanded = true;
-        });
-      }
-    });
   }
 
   @override
   void didUpdateWidget(GlobalSearch oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _repoChangeWatcher(oldWidget);
-  }
-
-  /// Observa se a lista de picos mudou (ex: mudança de modo ou fim de download) e invalida o cache.
-  void _repoChangeWatcher(GlobalSearch oldWidget) {
     if (widget.downloadedPicos != oldWidget.downloadedPicos) {
       _hasLoadedData = false;
       if (_isExpanded && !_isLoading) {
@@ -121,6 +115,12 @@ class _GlobalSearchState extends State<GlobalSearch> {
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _fecharModalSePossivel() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _toggleExpand() {
@@ -144,6 +144,102 @@ class _GlobalSearchState extends State<GlobalSearch> {
     });
   }
 
+  GlobalSearchResult _criarResultadoPorUid({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isDownloaded,
+    required bool isPico,
+    required String categoriaFiltro,
+    required Object originalItem,
+    required String uid,
+    required String idSlug,
+    required bool ehEscalada,
+  }) {
+    return GlobalSearchResult(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      isDownloaded: isDownloaded,
+      isPico: isPico,
+      categoriaFiltro: categoriaFiltro,
+      originalItem: originalItem,
+      onTap: () => _abrirDestinoPorUid(
+        uid: uid,
+        idSlug: idSlug,
+        titulo: title,
+        isDownloaded: isDownloaded,
+        ehEscalada: ehEscalada,
+      ),
+    );
+  }
+
+  GlobalSearchResult _criarResultadoResumoPico(
+    ResumoPico crag, {
+    required bool isDownloaded,
+  }) {
+    final partes = [
+      'Pico',
+      if (crag.local.isNotEmpty) crag.local,
+      isDownloaded ? 'Salvo offline' : 'Catálogo',
+    ];
+    return GlobalSearchResult(
+      title: crag.nome,
+      subtitle: partes.join(' • '),
+      icon: isDownloaded ? Icons.landscape : Icons.travel_explore,
+      isDownloaded: isDownloaded,
+      isPico: true,
+      categoriaFiltro: 'Picos',
+      originalItem: crag,
+      onTap: () {
+        _fecharModalSePossivel();
+        handlePicoSelection(
+          context,
+          widget.datasetRepo,
+          crag,
+          source: 'busca_global',
+        );
+      },
+    );
+  }
+
+  Future<void> _abrirDestinoPorUid({
+    required String uid,
+    required String idSlug,
+    required String titulo,
+    required bool isDownloaded,
+    required bool ehEscalada,
+  }) async {
+    if (ehEscalada) {
+      TelemetryService.instance.logAcaoEscalada(
+        idSlug,
+        'global',
+        titulo,
+        'abrir_detalhes',
+        'busca_global',
+      );
+    } else {
+      final primeiraVisita = await RegistroPrimeiraVisita.instancia
+          .registrarEVerificarPrimeiraVisita(idSlug);
+      TelemetryService.instance.logAcaoCroqui(
+        idSlug,
+        'abrir_croqui',
+        origem: 'busca_global',
+        modoAcesso: isDownloaded ? 'offline' : 'online',
+        primeiraVisita: primeiraVisita,
+      );
+    }
+
+    final localizador = LocalizadorDestinoUid(datasetRepo: widget.datasetRepo);
+    final resultado = await localizador.localizar(uid);
+    if (!mounted || resultado == null) return;
+
+    _fecharModalSePossivel();
+    final controlador =
+        widget.treeController ?? TreeNavigationWrapper.currentTreeController;
+    controlador?.navigateTo(resultado.noNavegacao);
+  }
+
   Future<void> _loadAllData() async {
     setState(() {
       _isLoading = true;
@@ -151,163 +247,144 @@ class _GlobalSearchState extends State<GlobalSearch> {
 
     final List<GlobalSearchResult> aggregatedData = [];
     final Set<String> processedCragIds = {};
+    final Set<String> idsBaixados = widget.downloadedPicos
+        .map((p) => p.id)
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final Set<String> idsIndice =
+        (widget.datasetRepo.indiceData.value?.croquis ?? const <ResumoCroqui>[])
+            .map((c) => c.id)
+            .where((id) => id.isNotEmpty)
+            .toSet();
+    final Set<String> idsPermitidos = <String>{
+      ...idsIndice,
+      ...idsBaixados,
+      ...(widget.datasetRepo.activeDataset.value?.availablePicos ??
+              const <ResumoPico>[])
+          .map((p) => p.id)
+          .where((id) => id.isNotEmpty),
+      ...widget.datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.keys,
+    };
+    final bool restringirAoIndice = idsIndice.isNotEmpty;
 
     try {
-      // 1. Croquis Baixados
-      for (final cragData in widget.downloadedPicos) {
-        final cragIdStr = cragData.id;
-        if (cragIdStr.isEmpty) continue;
-        processedCragIds.add(cragIdStr);
+      // 1. Dados do catálogo SQLite (catalogo.db)
+      final croquisCatalogo =
+          await widget.datasetRepo.repositorioCatalogo.listarCroquis();
+      final entidadesCatalogo = await widget.datasetRepo.repositorioCatalogo
+          .listarEntidadesDetalhadas();
 
-        final picoNome =
-            cragData.nome.isNotEmpty ? cragData.nome : 'Sem Nome';
-        final picoLocal = cragData.local;
-        final picoSubtitle = picoLocal.isNotEmpty
-            ? 'Pico • $picoLocal • Salvo offline'
-            : 'Pico • Salvo offline';
-
-        Croqui? croqui;
-        try {
-          croqui = await widget.datasetRepo.getCroqui(cragIdStr);
-        } catch (_) {
-          croqui = null;
+      for (final croquiCat in croquisCatalogo) {
+        if (restringirAoIndice && !idsPermitidos.contains(croquiCat.idSlug)) {
+          continue;
         }
-
-        if (croqui != null && croqui.picos.isNotEmpty) {
-          final pico = croqui.picos.first;
-          final finalNome = pico.nome.isNotEmpty ? pico.nome : picoNome;
-          final finalLocal = picoLocal.isNotEmpty
-              ? picoLocal
-              : (pico.hasEstado() ? pico.estado : '');
-          final finalSubtitle = finalLocal.isNotEmpty
-              ? 'Pico • $finalLocal • Salvo offline'
-              : 'Pico • Salvo offline';
-
-          aggregatedData.add(
-            GlobalSearchResult(
-              title: finalNome,
-              subtitle: finalSubtitle,
-              icon: Icons.landscape,
-              isDownloaded: true,
-              isPico: true,
-              originalItem: pico,
-              onTap: () async {
-                final primeiraVisita = await RegistroPrimeiraVisita.instancia
-                    .registrarEVerificarPrimeiraVisita(cragIdStr);
-                TelemetryService.instance.logAcaoCroqui(
-                  cragIdStr,
-                  'abrir_croqui',
-                  origem: 'busca_global',
-                  modoAcesso: 'offline',
-                  primeiraVisita: primeiraVisita,
-                );
-                if (!mounted) return;
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-                AppNav.toPico(
-                  context,
-                  pico: pico,
-                  croqui: croqui,
-                  cragId: cragIdStr,
-                );
-              },
-            ),
-          );
-
-          _processPicoData(
-            aggregatedData,
-            pico,
-            croqui,
-            cragIdStr,
-            finalNome,
-            isDownloaded: true,
-          );
-        } else {
-          // Pico salvo mas sem protobuf carregado no momento
-          aggregatedData.add(
-            GlobalSearchResult(
-              title: picoNome,
-              subtitle: picoSubtitle,
-              icon: Icons.landscape,
-              isDownloaded: true,
-              isPico: true,
-              originalItem: cragData,
-              onTap: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-                handlePicoSelection(
-                  context,
-                  widget.datasetRepo,
-                  cragData,
-                  source: 'busca_global',
-                );
-              },
-            ),
-          );
-        }
-      }
-
-      // 2. Croquis da Sessão Online em Memória
-      for (final entry
-          in widget.datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria.entries) {
-        final cragId = entry.key;
-        if (processedCragIds.contains(cragId)) continue;
-        processedCragIds.add(cragId);
-
-        final croqui = entry.value;
-        if (croqui.picos.isEmpty) continue;
-        final pico = croqui.picos.first;
-        final picoNome = pico.nome.isNotEmpty ? pico.nome : 'Sem Nome';
-        final picoLocal = pico.hasEstado() ? pico.estado : '';
-        final picoSubtitle = picoLocal.isNotEmpty
-            ? 'Pico • $picoLocal'
-            : 'Pico';
+        processedCragIds.add(croquiCat.idSlug);
+        final baixado = idsBaixados.contains(croquiCat.idSlug);
+        final partesLocal = [
+          if ((croquiCat.cidade ?? '').isNotEmpty) croquiCat.cidade!,
+          if ((croquiCat.estado ?? '').isNotEmpty) croquiCat.estado!,
+        ];
+        final localStr = partesLocal.join(', ');
+        final subtitulo = baixado
+            ? (localStr.isNotEmpty
+                  ? 'Pico • $localStr • Salvo offline'
+                  : 'Pico • Salvo offline')
+            : (localStr.isNotEmpty ? 'Pico • $localStr' : 'Pico');
 
         aggregatedData.add(
-          GlobalSearchResult(
-            title: picoNome,
-            subtitle: picoSubtitle,
-            icon: Icons.landscape,
-            isDownloaded: false,
+          _criarResultadoPorUid(
+            title: croquiCat.nome,
+            subtitle: subtitulo,
+            icon: baixado ? Icons.landscape : Icons.travel_explore,
+            isDownloaded: baixado,
             isPico: true,
-            originalItem: pico,
-            onTap: () async {
-              final primeiraVisita = await RegistroPrimeiraVisita.instancia
-                  .registrarEVerificarPrimeiraVisita(cragId);
-              TelemetryService.instance.logAcaoCroqui(
-                cragId,
-                'abrir_croqui',
-                origem: 'busca_global',
-                modoAcesso: 'online',
-                primeiraVisita: primeiraVisita,
-              );
-              if (!mounted) return;
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-              AppNav.toPico(
-                context,
-                pico: pico,
-                croqui: croqui,
-                cragId: cragId,
-              );
-            },
+            categoriaFiltro: 'Picos',
+            originalItem: croquiCat,
+            uid: croquiCat.croquiUid,
+            idSlug: croquiCat.idSlug,
+            ehEscalada: false,
           ),
-        );
-
-        _processPicoData(
-          aggregatedData,
-          pico,
-          croqui,
-          cragId,
-          picoNome,
-          isDownloaded: false,
         );
       }
 
-      // 3. Croquis Disponíveis no Catálogo / Explorar
+      for (final ent in entidadesCatalogo) {
+        if (restringirAoIndice && !idsPermitidos.contains(ent.idSlug)) {
+          continue;
+        }
+        final baixado = idsBaixados.contains(ent.idSlug);
+        if (ent.tipo == 'grupo') {
+          aggregatedData.add(
+            _criarResultadoPorUid(
+              title: ent.nome,
+              subtitle: 'Grupo • ${ent.picoNome}',
+              icon: Icons.terrain,
+              isDownloaded: baixado,
+              isPico: false,
+              categoriaFiltro: 'Setores',
+              originalItem: ent,
+              uid: ent.uid,
+              idSlug: ent.idSlug,
+              ehEscalada: false,
+            ),
+          );
+        } else if (ent.tipo == 'setor') {
+          final temGrupo =
+              ent.grupoNome != null && ent.grupoNome!.trim().isNotEmpty;
+          final subtitulo = temGrupo
+              ? 'Setor (Grupo: ${ent.grupoNome}) • ${ent.picoNome}'
+              : 'Setor • ${ent.picoNome}';
+          aggregatedData.add(
+            _criarResultadoPorUid(
+              title: ent.nome,
+              subtitle: subtitulo,
+              icon: Icons.terrain,
+              isDownloaded: baixado,
+              isPico: false,
+              categoriaFiltro: 'Setores',
+              originalItem: ent,
+              uid: ent.uid,
+              idSlug: ent.idSlug,
+              ehEscalada: false,
+            ),
+          );
+        } else if (ent.tipo == 'escalada') {
+          _adicionarEscaladaCatalogo(aggregatedData, ent, baixado);
+        }
+      }
+
+      // 2. Croquis baixados que ainda não constam no catalogo.db
+      for (final cragData in widget.downloadedPicos) {
+        final cragIdStr = cragData.id;
+        if (cragIdStr.isEmpty || processedCragIds.contains(cragIdStr)) {
+          continue;
+        }
+        processedCragIds.add(cragIdStr);
+        aggregatedData.add(
+          _criarResultadoResumoPico(cragData, isDownloaded: true),
+        );
+      }
+
+      // 3. Croquis da sessão online em memória não presentes no catalogo.db
+      for (final entry in widget
+          .datasetRepo
+          .gerenciadorSessaoOnline
+          .croquisEmMemoria
+          .entries) {
+        final cragId = entry.key;
+        final croqui = entry.value;
+        if (processedCragIds.contains(cragId) || croqui.picos.isEmpty) {
+          continue;
+        }
+        processedCragIds.add(cragId);
+        _adicionarCroquiProtobuf(
+          aggregatedData,
+          croqui,
+          cragId,
+          isDownloaded: idsBaixados.contains(cragId),
+        );
+      }
+
+      // 4. Croquis disponíveis no índice que ainda não constam no catalogo.db
       final availablePicos =
           widget.datasetRepo.activeDataset.value?.availablePicos ?? const [];
       for (final crag in availablePicos) {
@@ -316,33 +393,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
           continue;
         }
         processedCragIds.add(cragId);
-
-        final cragNome = crag.nome.isNotEmpty ? crag.nome : 'Sem Nome';
-        final cragLocal = crag.local;
-        final cragSubtitle = cragLocal.isNotEmpty
-            ? 'Pico • $cragLocal • Catálogo'
-            : 'Pico • Catálogo';
-
         aggregatedData.add(
-          GlobalSearchResult(
-            title: cragNome,
-            subtitle: cragSubtitle,
-            icon: Icons.travel_explore,
-            isDownloaded: false,
-            isPico: true,
-            originalItem: crag,
-            onTap: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-              handlePicoSelection(
-                context,
-                widget.datasetRepo,
-                crag,
-                source: 'busca_global',
-              );
-            },
-          ),
+          _criarResultadoResumoPico(crag, isDownloaded: false),
         );
       }
     } finally {
@@ -357,157 +409,190 @@ class _GlobalSearchState extends State<GlobalSearch> {
     }
   }
 
-  void _processPicoData(
+  void _adicionarEscaladaCatalogo(
+    List<GlobalSearchResult> lista,
+    ItemCatalogoBusca ent,
+    bool baixado,
+  ) {
+    String rotuloTipo = 'Esportiva';
+    String categoriaFiltro = 'Esportivas';
+    IconData icon = Icons.trending_up;
+
+    switch (ent.escaladaTipo) {
+      case 'tradicional':
+        rotuloTipo = 'Móvel';
+        categoriaFiltro = 'Móveis';
+        break;
+      case 'boulder':
+        rotuloTipo = 'Boulder';
+        categoriaFiltro = 'Boulders';
+        icon = Icons.landscape;
+        break;
+      case 'highline':
+        rotuloTipo = 'Highline';
+        categoriaFiltro = 'Highlines';
+        icon = Icons.straighten;
+        break;
+      case 'multienfiada':
+        rotuloTipo = 'Multienfiada';
+        categoriaFiltro = 'Outros';
+        break;
+      default:
+        break;
+    }
+
+    final grauBruto = (ent.escaladaGrau ?? '').trim();
+    String grauFormatado = '';
+    if (grauBruto.isNotEmpty) {
+      grauFormatado =
+          (grauBruto.startsWith('V') || grauBruto.endsWith('m'))
+          ? grauBruto
+          : formatGradeString(grauBruto);
+    }
+    final grauDisplay = grauFormatado.isNotEmpty ? ' | $grauFormatado' : '';
+    final partesContexto = [
+      if ((ent.setorNome ?? '').isNotEmpty) ent.setorNome!,
+      ent.picoNome,
+    ];
+
+    lista.add(
+      _criarResultadoPorUid(
+        title: ent.nome,
+        subtitle: '$rotuloTipo$grauDisplay • ${partesContexto.join(' • ')}',
+        icon: icon,
+        isDownloaded: baixado,
+        isPico: false,
+        categoriaFiltro: categoriaFiltro,
+        originalItem: ent,
+        uid: ent.uid,
+        idSlug: ent.idSlug,
+        ehEscalada: true,
+      ),
+    );
+  }
+
+  void _adicionarCroquiProtobuf(
     List<GlobalSearchResult> aggregatedData,
-    Pico pico,
     Croqui croqui,
-    String cragId,
-    String picoNome, {
-    bool isDownloaded = true,
+    String cragId, {
+    required bool isDownloaded,
   }) {
+    final pico = croqui.picos.first;
+    final picoNome = pico.nome;
+    final picoLocal = pico.estado;
+    final picoSubtitle = picoLocal.isNotEmpty ? 'Pico • $picoLocal' : 'Pico';
+
+    aggregatedData.add(
+      _criarResultadoPorUid(
+        title: picoNome,
+        subtitle: picoSubtitle,
+        icon: Icons.landscape,
+        isDownloaded: isDownloaded,
+        isPico: true,
+        categoriaFiltro: 'Picos',
+        originalItem: pico,
+        uid: croqui.uid,
+        idSlug: cragId,
+        ehEscalada: false,
+      ),
+    );
+
     for (final sg in pico.setoresOuGrupos) {
       if (sg.whichTipo() == SetorOuGrupo_Tipo.setor && sg.setor.hasConteudo()) {
-        final setor = sg.setor.conteudo;
-
-        aggregatedData.add(
-          GlobalSearchResult(
-            title: setor.nome,
-            subtitle: 'Setor • $picoNome',
-            icon: Icons.terrain,
-            isDownloaded: isDownloaded,
-            isPico: false,
-            originalItem: setor,
-            onTap: () async {
-              final primeiraVisita = await RegistroPrimeiraVisita.instancia
-                  .registrarEVerificarPrimeiraVisita(cragId);
-              final modoAcesso = isDownloaded ? 'offline' : 'online';
-              TelemetryService.instance.logAcaoCroqui(
-                cragId,
-                'abrir_croqui',
-                origem: 'busca_global',
-                modoAcesso: modoAcesso,
-                primeiraVisita: primeiraVisita,
-              );
-              if (!mounted) return;
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-              AppNav.toPico(
-                context,
-                pico: pico,
-                croqui: croqui,
-                cragId: cragId,
-              );
-              AppNav.toSetor(
-                context,
-                setor: setor,
-                pico: pico,
-                croqui: croqui,
-                cragId: cragId,
-              );
-            },
-          ),
+        _adicionarSetorProtobuf(
+          aggregatedData,
+          sg.setor.conteudo,
+          cragId: cragId,
+          picoNome: picoNome,
+          grupoNome: null,
+          isDownloaded: isDownloaded,
         );
-
-        for (final escalada in setor.escaladas) {
-          _addEscalada(
-            aggregatedData,
-            escalada,
-            cragId,
-            picoNome,
-            pico,
-            setor,
-            croqui,
-            isDownloaded: isDownloaded,
-          );
-        }
       } else if (sg.whichTipo() == SetorOuGrupo_Tipo.grupo &&
           sg.grupo.hasConteudo()) {
-        for (final s in sg.grupo.conteudo.setores) {
-          if (s.hasConteudo()) {
-            final setor = s.conteudo;
-
-            aggregatedData.add(
-              GlobalSearchResult(
-                title: setor.nome,
-                subtitle: 'Setor (Grupo: ${sg.grupo.conteudo.nome}) • $picoNome',
-                icon: Icons.terrain,
-                isDownloaded: isDownloaded,
-                isPico: false,
-                originalItem: setor,
-                onTap: () async {
-                  final primeiraVisita = await RegistroPrimeiraVisita.instancia
-                      .registrarEVerificarPrimeiraVisita(cragId);
-                  final modoAcesso = isDownloaded ? 'offline' : 'online';
-                  TelemetryService.instance.logAcaoCroqui(
-                    cragId,
-                    'abrir_croqui',
-                    origem: 'busca_global',
-                    modoAcesso: modoAcesso,
-                    primeiraVisita: primeiraVisita,
-                  );
-                  if (!mounted) return;
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
-                  }
-                  AppNav.toPico(
-                    context,
-                    pico: pico,
-                    croqui: croqui,
-                    cragId: cragId,
-                  );
-                  AppNav.toSetor(
-                    context,
-                    setor: setor,
-                    pico: pico,
-                    croqui: croqui,
-                    cragId: cragId,
-                  );
-                },
-              ),
+        final grupo = sg.grupo.conteudo;
+        for (final arqSetor in grupo.setores) {
+          if (arqSetor.hasConteudo()) {
+            _adicionarSetorProtobuf(
+              aggregatedData,
+              arqSetor.conteudo,
+              cragId: cragId,
+              picoNome: picoNome,
+              grupoNome: grupo.nome,
+              isDownloaded: isDownloaded,
             );
-
-            for (final escalada in setor.escaladas) {
-              _addEscalada(
-                aggregatedData,
-                escalada,
-                cragId,
-                picoNome,
-                pico,
-                setor,
-                croqui,
-                isDownloaded: isDownloaded,
-              );
-            }
           }
         }
       }
     }
   }
 
-  void _addEscalada(
-    List<GlobalSearchResult> list,
-    Escalada escalada,
-    String cragId,
-    String picoNome,
-    Pico pico,
-    Setor setor,
-    Croqui croqui, {
-    bool isDownloaded = true,
+  void _adicionarSetorProtobuf(
+    List<GlobalSearchResult> aggregatedData,
+    Setor setor, {
+    required String cragId,
+    required String picoNome,
+    required String? grupoNome,
+    required bool isDownloaded,
   }) {
-    String escaladaNome = getEscaladaNome(escalada);
+    final subtitulo = (grupoNome != null && grupoNome.isNotEmpty)
+        ? 'Setor (Grupo: $grupoNome) • $picoNome'
+        : 'Setor • $picoNome';
+
+    aggregatedData.add(
+      _criarResultadoPorUid(
+        title: setor.nome,
+        subtitle: subtitulo,
+        icon: Icons.terrain,
+        isDownloaded: isDownloaded,
+        isPico: false,
+        categoriaFiltro: 'Setores',
+        originalItem: setor,
+        uid: setor.uid,
+        idSlug: cragId,
+        ehEscalada: false,
+      ),
+    );
+
+    for (final escalada in setor.escaladas) {
+      _adicionarEscaladaProtobuf(
+        aggregatedData,
+        escalada,
+        cragId: cragId,
+        picoNome: picoNome,
+        setorNome: setor.nome,
+        isDownloaded: isDownloaded,
+      );
+    }
+  }
+
+  void _adicionarEscaladaProtobuf(
+    List<GlobalSearchResult> list,
+    Escalada escalada, {
+    required String cragId,
+    required String picoNome,
+    required String setorNome,
+    required bool isDownloaded,
+  }) {
+    final escaladaNome = getEscaladaNome(escalada);
     String tipoStr = getModalidadeEscalada(escalada);
+    String categoriaFiltro = 'Esportivas';
     IconData icon = Icons.trending_up;
 
     switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaMovel:
+        categoriaFiltro = 'Móveis';
+        break;
       case Escalada_Tipo.boulder:
         icon = Icons.landscape;
+        categoriaFiltro = 'Boulders';
         break;
       case Escalada_Tipo.highline:
         icon = Icons.straighten;
+        categoriaFiltro = 'Highlines';
         break;
       case Escalada_Tipo.notSet:
         tipoStr = 'Outro';
+        categoriaFiltro = 'Outros';
         break;
       default:
         break;
@@ -517,42 +602,17 @@ class _GlobalSearchState extends State<GlobalSearch> {
     final grauDisplay = grauStr.isNotEmpty ? ' | $grauStr' : '';
 
     list.add(
-      GlobalSearchResult(
+      _criarResultadoPorUid(
         title: escaladaNome,
-        subtitle: '$tipoStr$grauDisplay • ${setor.nome} • $picoNome',
+        subtitle: '$tipoStr$grauDisplay • $setorNome • $picoNome',
         icon: icon,
         isDownloaded: isDownloaded,
         isPico: false,
+        categoriaFiltro: categoriaFiltro,
         originalItem: escalada,
-        onTap: () {
-          TelemetryService.instance.logAcaoEscalada(
-            cragId,
-            'global',
-            escaladaNome,
-            'abrir_detalhes',
-            'busca_global',
-          );
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-          AppNav.toPico(context, pico: pico, croqui: croqui, cragId: cragId);
-          AppNav.toSetor(
-            context,
-            setor: setor,
-            scrollToEscalada: escalada,
-            pico: pico,
-            croqui: croqui,
-            cragId: cragId,
-          );
-          AppNav.toVia(
-            context,
-            escalada: escalada,
-            setor: setor,
-            pico: pico,
-            croqui: croqui,
-            cragId: cragId,
-          );
-        },
+        uid: escalada.uid,
+        idSlug: cragId,
+        ehEscalada: true,
       ),
     );
   }
@@ -591,37 +651,8 @@ class _GlobalSearchState extends State<GlobalSearch> {
     }
 
     final typeFilteredData = _allData.where((item) {
-      if (_selectedFilter != 'Todos') {
-        if (_selectedFilter == 'Picos') {
-          return item.isPico;
-        }
-        if (_selectedFilter == 'Setores') {
-          return item.originalItem is Setor;
-        }
-
-        final esc = item.originalItem;
-        if (esc is Escalada) {
-          if (_selectedFilter == 'Esportivas' &&
-              esc.whichTipo() != Escalada_Tipo.viaEsportiva) {
-            return false;
-          }
-          if (_selectedFilter == 'Móveis' &&
-              esc.whichTipo() != Escalada_Tipo.viaMovel) {
-            return false;
-          }
-          if (_selectedFilter == 'Boulders' &&
-              esc.whichTipo() != Escalada_Tipo.boulder) {
-            return false;
-          }
-          if (_selectedFilter == 'Highlines' &&
-              esc.whichTipo() != Escalada_Tipo.highline) {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-      return true;
+      if (_selectedFilter == 'Todos') return true;
+      return item.categoriaFiltro == _selectedFilter;
     }).toList();
 
     final fuse = Fuzzy<GlobalSearchResult>(
@@ -644,7 +675,14 @@ class _GlobalSearchState extends State<GlobalSearch> {
     );
 
     final queryLower = normalizeSearchString(_searchQuery);
-    final results = fuse.search(queryLower);
+    final results = fuse.search(queryLower).toList();
+
+    // Prioriza itens já baixados offline aplicando boost determinístico no score
+    results.sort((a, b) {
+      final scoreA = a.item.isDownloaded ? (a.score * 0.5) - 0.15 : a.score;
+      final scoreB = b.item.isDownloaded ? (b.score * 0.5) - 0.15 : b.score;
+      return scoreA.compareTo(scoreB);
+    });
 
     setState(() {
       _filteredResults = results.map((r) => r.item).toList();
@@ -709,7 +747,6 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ],
             ),
           ),
-
           if (_isExpanded) ...[
             const SizedBox(height: 12),
             Row(
@@ -785,12 +822,11 @@ class _GlobalSearchState extends State<GlobalSearch> {
               ],
             ),
             const SizedBox(height: 12),
-
             if (_isLoading)
-              Expanded(
+              const Expanded(
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: const Color(0xFFC04F34),
+                    color: Color(0xFFC04F34),
                   ),
                 ),
               )
@@ -843,10 +879,36 @@ class _GlobalSearchState extends State<GlobalSearch> {
                           ),
                         ),
                         trailing: item.isDownloaded
-                            ? Icon(
-                                Icons.check_circle_outline,
-                                size: 16,
-                                color: context.colors.dryMoss,
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.dryMoss.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle_outline,
+                                      size: 14,
+                                      color: context.colors.dryMoss,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Offline',
+                                      style: TextStyle(
+                                        color: context.colors.dryMoss,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               )
                             : Icon(
                                 Icons.cloud_outlined,
@@ -868,7 +930,6 @@ class _GlobalSearchState extends State<GlobalSearch> {
                   ),
                 ),
               ),
-
             const SizedBox(height: 10),
           ],
         ],
