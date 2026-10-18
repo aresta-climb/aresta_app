@@ -78,7 +78,6 @@ void main() {
                 nome: 'Pedra Grande de Igarapé',
                 cidade: 'Igarapé',
                 estado: 'MG',
-                atualizadoEm: 1700000000,
               ),
               CatalogoCroqui(
                 croquiUid: 'croqui_uid_2',
@@ -254,10 +253,19 @@ void main() {
         );
         await dbRemoto.close();
 
+        // Cria arquivos residuais simulando estado WAL/SHM/Journal anterior
+        File('$caminhoBanco-wal').writeAsStringSync('residuo-wal');
+        File('$caminhoBanco-shm').writeAsStringSync('residuo-shm');
+        File('$caminhoBanco-journal').writeAsStringSync('residuo-journal');
+
         final bytesRemoto = await File(caminhoRemoto).readAsBytes();
         await repositorio.substituirBancoCompleto(
           Uint8List.fromList(bytesRemoto),
         );
+
+        expect(File('$caminhoBanco-wal').existsSync(), isFalse);
+        expect(File('$caminhoBanco-shm').existsSync(), isFalse);
+        expect(File('$caminhoBanco-journal').existsSync(), isFalse);
 
         expect(
           await repositorio.obterVersaoCatalogo(),
@@ -267,6 +275,75 @@ void main() {
           await repositorio.obterIdSlugPorUid('c_r2'),
           equals('br_sp_sao_bento_bau'),
         );
+      },
+    );
+
+    test(
+      'deve serializar operacoes concorrentes evitando race conditions entre substituicao, consultas e fechamento',
+      () async {
+        final caminhoRemoto = '${dirTemp.path}/remoto_concorrente.db';
+        final dbRemoto = await databaseFactoryFfi.openDatabase(caminhoRemoto);
+        for (final ddl in comandosDdlCatalogo) {
+          await dbRemoto.execute(ddl);
+        }
+        await dbRemoto.insert(
+          'catalogo_meta',
+          const LinhaCatalogoMeta(
+            chave: 'versao_catalogo',
+            valor: 'versao_concorrente_1',
+          ).toMap(),
+        );
+        await dbRemoto.insert(
+          'catalogo_croquis',
+          const LinhaCatalogoCroquis(
+            croquiUid: 'c_conc',
+            idSlug: 'br_mg_ferros_pico',
+            nome: 'Pico dos Ferros',
+            cidade: 'Ferros',
+            estado: 'MG',
+          ).toMap(),
+        );
+        await dbRemoto.insert(
+          'catalogo_aresta',
+          const LinhaCatalogoAresta(
+            uid: 'e_conc',
+            tipo: 'escalada',
+            croquiUid: 'c_conc',
+            nome: 'Via Concorrente',
+          ).toMap(),
+        );
+        await dbRemoto.close();
+
+        final bytesRemoto =
+            Uint8List.fromList(await File(caminhoRemoto).readAsBytes());
+
+        final repoConcorrente = RepositorioCatalogo(
+          provedorCaminhoBanco: () async {
+            await Future<void>.delayed(const Duration(milliseconds: 15));
+            return caminhoBanco;
+          },
+          fabricaBanco: databaseFactoryFfi,
+        );
+
+        // Dispara substituição, leituras e fechamento em paralelo sem aguardar individualmente
+        final futuroSubstituicao =
+            repoConcorrente.substituirBancoCompleto(bytesRemoto);
+        final futuroVersao = repoConcorrente.obterVersaoCatalogo();
+        final futuroEntidades = repoConcorrente.listarEntidadesDetalhadas();
+        final futuroSlug = repoConcorrente.obterIdSlugPorUid('e_conc');
+        final futuroFechar = repoConcorrente.fechar();
+
+        await Future.wait([
+          futuroSubstituicao,
+          futuroVersao,
+          futuroEntidades,
+          futuroSlug,
+          futuroFechar,
+        ]);
+
+        expect(await futuroVersao, equals('versao_concorrente_1'));
+        expect((await futuroEntidades).single.nome, equals('Via Concorrente'));
+        expect(await futuroSlug, equals('br_mg_ferros_pico'));
       },
     );
 
@@ -307,7 +384,7 @@ void main() {
     );
 
     test(
-      'deve migrar automaticamente coluna legada uf para estado ao abrir catalogo.db antigo',
+      'deve migrar automaticamente coluna legada uf para estado e remover atualizado_em ao abrir catalogo.db antigo',
       () async {
         final caminhoLegado = '${dirTemp.path}/catalogo_legado_uf.db';
         final dbLegado = await databaseFactoryFfi.openDatabase(caminhoLegado);
@@ -366,6 +443,13 @@ void main() {
         expect(entidades.single.estado, equals('MG'));
 
         await repoMigrado.fechar();
+
+        final dbInspecao = await databaseFactoryFfi.openDatabase(caminhoLegado);
+        final colunas =
+            await dbInspecao.rawQuery('PRAGMA table_info(catalogo_croquis)');
+        final nomesColunas = colunas.map((c) => c['name'] as String?).toSet();
+        expect(nomesColunas.contains('atualizado_em'), isFalse);
+        await dbInspecao.close();
       },
     );
   });

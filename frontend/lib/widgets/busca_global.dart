@@ -87,6 +87,7 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   void initState() {
     super.initState();
+    _registrarOuvintesDados(widget.datasetRepo);
     if (widget.autoFocus) {
       _isExpanded = true;
       _loadAllData();
@@ -101,20 +102,43 @@ class _GlobalSearchState extends State<GlobalSearch> {
   @override
   void didUpdateWidget(GlobalSearch oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.downloadedPicos != oldWidget.downloadedPicos) {
-      _hasLoadedData = false;
-      if (_isExpanded && !_isLoading) {
-        _loadAllData();
-      }
+    if (widget.datasetRepo != oldWidget.datasetRepo) {
+      _removerOuvintesDados(oldWidget.datasetRepo);
+      _registrarOuvintesDados(widget.datasetRepo);
+      _aoAtualizarFonteDados();
+    } else if (widget.downloadedPicos != oldWidget.downloadedPicos) {
+      _aoAtualizarFonteDados();
     }
   }
 
   @override
   void dispose() {
+    _removerOuvintesDados(widget.datasetRepo);
     _debounceTimer?.cancel();
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _registrarOuvintesDados(DatasetRepository repo) {
+    repo.repositorioCatalogo.versaoNotificador.addListener(
+      _aoAtualizarFonteDados,
+    );
+    repo.activeDataset.addListener(_aoAtualizarFonteDados);
+  }
+
+  void _removerOuvintesDados(DatasetRepository repo) {
+    repo.repositorioCatalogo.versaoNotificador.removeListener(
+      _aoAtualizarFonteDados,
+    );
+    repo.activeDataset.removeListener(_aoAtualizarFonteDados);
+  }
+
+  void _aoAtualizarFonteDados() {
+    _hasLoadedData = false;
+    if (_isExpanded) {
+      _loadAllData();
+    }
   }
 
   void _fecharModalSePossivel() {

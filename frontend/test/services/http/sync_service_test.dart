@@ -595,6 +595,42 @@ void main() {
           await datasetRepository.repositorioCatalogo.obterVersaoCatalogo(),
           equals('v_full_10'),
         );
+
+        // 4. Em modo experimental com forceBypassCache=true (Live Reload), força re-download mesmo se a versão já coincidir
+        final caminhoFonteLive = '${tempDir.path}/fonte_live.db';
+        final repoFonteLive = RepositorioCatalogo(
+          provedorCaminhoBanco: () async => caminhoFonteLive,
+        );
+        await repoFonteLive.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_full_10',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'uid_c_live',
+                  idSlug: 'br_mg_live_reload',
+                  nome: 'Pico Live Reload',
+                ),
+              ],
+              entidades: [],
+            ),
+          ),
+        );
+        await repoFonteLive.fechar();
+        bytesBancoRemoto.setRange(
+          0,
+          bytesBancoRemoto.length,
+          await File(caminhoFonteLive).readAsBytes(),
+        );
+
+        await syncService.syncIndex(auto: false, forceBypassCache: true);
+        expect(
+          await datasetRepository.repositorioCatalogo.obterIdSlugPorUid(
+            'uid_c_live',
+          ),
+          equals('br_mg_live_reload'),
+        );
       },
     );
 

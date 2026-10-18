@@ -60,6 +60,12 @@ enum SyncStatus {
 class SyncService {
   static String? baseUrlOverride;
   static String? catalogoUrlOverride;
+
+  static SyncService? _instance;
+
+  /// Instância ativa de [SyncService] compartilhada na sessão para coalescência de sincronizações.
+  static SyncService? get instance => _instance;
+
   final DatasetRepository datasetRepository;
   final SyncStorage _storage;
   final SyncNetwork _network;
@@ -141,6 +147,7 @@ class SyncService {
     this.remoteConfigService,
   }) : _storage = storage ?? SyncStorage(),
        _network = network ?? SyncNetwork(client ?? ClienteHttpAresta.instancia) {
+    _instance = this;
     picoAbertoId.addListener(() {
       final currentOpenId = picoAbertoId.value;
       final idsToCommit = _pendenciasAtomicas.keys
@@ -468,6 +475,7 @@ class SyncService {
           final futureCatalogo = sincronizarCatalogoSeNecessario(
             newIndice,
             baseUrl,
+            forcarDownloadExperimental: forceBypassCache,
           );
 
           final globalUpdates = _SyncUpdates();
@@ -576,7 +584,11 @@ class SyncService {
               datasetRepository.indiceData.value ??
               await _storage.readLocalIndice(localIndicePath);
           if (indiceAtual != null) {
-            await sincronizarCatalogoSeNecessario(indiceAtual, baseUrl);
+            await sincronizarCatalogoSeNecessario(
+              indiceAtual,
+              baseUrl,
+              forcarDownloadExperimental: forceBypassCache,
+            );
           }
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
@@ -606,16 +618,18 @@ class SyncService {
   ///   o delta transacional (`apply_delta`) ou substitui o arquivo completo (`full_download`).
   Future<void> sincronizarCatalogoSeNecessario(
     Indice indiceAlvo,
-    String baseUrl,
-  ) async {
+    String baseUrl, {
+    bool forcarDownloadExperimental = false,
+  }) async {
+    final isExperimental =
+        datasetRepository.editorDeCroqui.isExperimentalMode.value;
     final versaoDestino = indiceAlvo.versaoCatalogo;
-    if (versaoDestino.isEmpty) return;
+    if (versaoDestino.isEmpty && !isExperimental) return;
 
     final repoCatalogo = datasetRepository.repositorioCatalogo;
     var versaoLocal = await repoCatalogo.obterVersaoCatalogo();
 
-    if (!datasetRepository.editorDeCroqui.isExperimentalMode.value &&
-        versaoLocal.isEmpty) {
+    if (!isExperimental && versaoLocal.isEmpty) {
       final directory = await getApplicationDocumentsDirectory();
       final localCatalogoPath = datasetRepository.editorDeCroqui.catalogoPath(
         directory.path,
@@ -628,15 +642,19 @@ class SyncService {
       versaoLocal = await repoCatalogo.obterVersaoCatalogo();
     }
 
-    if (versaoLocal == versaoDestino) {
+    if (versaoLocal.isNotEmpty &&
+        versaoLocal == versaoDestino &&
+        !(isExperimental && forcarDownloadExperimental)) {
       return;
     }
 
-    if (datasetRepository.editorDeCroqui.isExperimentalMode.value ||
-        versaoLocal.isEmpty) {
+    if (isExperimental || versaoLocal.isEmpty) {
+      final versaoCacheBusting = (isExperimental && forcarDownloadExperimental)
+          ? '${versaoDestino}_${DateTime.now().millisecondsSinceEpoch}'
+          : versaoDestino;
       final bytes = await _network.baixarCatalogoCompleto(
         baseUrl,
-        versaoCatalogo: versaoDestino,
+        versaoCatalogo: versaoCacheBusting,
       );
       if (bytes != null) {
         await repoCatalogo.substituirBancoCompleto(bytes);

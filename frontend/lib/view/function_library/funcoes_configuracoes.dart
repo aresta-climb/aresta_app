@@ -74,11 +74,15 @@ Future<bool> conectarEditor(
         url: checkUrl,
       );
       final servicoSync = syncService ??
+          ((SyncService.instance != null &&
+                  SyncService.instance!.datasetRepository == datasetRepo)
+              ? SyncService.instance
+              : null) ??
           SyncService(
             datasetRepository: datasetRepo,
             client: httpClient,
           );
-      await servicoSync.syncIndex();
+      await servicoSync.syncIndex(auto: false, forceBypassCache: true);
       await datasetRepo.init();
 
       // Auto-download imediato se houver exatamente 1 croqui no índice

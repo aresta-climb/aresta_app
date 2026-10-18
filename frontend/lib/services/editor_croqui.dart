@@ -96,6 +96,10 @@ class EditorDeCroqui {
 
   WebSocket? _wsLiveReload;
 
+  /// Callback assíncrono executado antes de remover recursivamente o diretório experimental,
+  /// permitindo fechar conexões abertas (como o arquivo `catalogo.db` do SQLite) e evitar locks de SO.
+  Future<void> Function()? aoAntesDeLimparDadosExperimentais;
+
   /// Indica se o canal WebSocket de Live Reload está ativamente conectado.
   bool get isLiveReloadConectado => _wsLiveReload != null;
 
@@ -562,6 +566,7 @@ class EditorDeCroqui {
     encerrarEscutaLiveReload();
 
     try {
+      await aoAntesDeLimparDadosExperimentais?.call();
       final directory = await getApplicationDocumentsDirectory();
       final experimentalDir = Directory(
         '${directory.path}/editor/experimental',

@@ -6,12 +6,24 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
+
+class _PathProviderEditorFake extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String caminho;
+  _PathProviderEditorFake(this.caminho);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminho;
+}
 
 void main() {
   late EditorDeCroqui editor;
@@ -425,5 +437,50 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  group('nukeExperimentalData', () {
+    test(
+      'deve aguardar aoAntesDeLimparDadosExperimentais antes de excluir a pasta experimental',
+      () async {
+        final dirTemp =
+            await Directory.systemTemp.createTemp('editor_nuke_test_');
+        addTearDown(() async {
+          if (dirTemp.existsSync()) {
+            dirTemp.deleteSync(recursive: true);
+          }
+        });
+        PathProviderPlatform.instance = _PathProviderEditorFake(dirTemp.path);
+
+        final pastaExperimental =
+            Directory('${dirTemp.path}/editor/experimental')
+              ..createSync(recursive: true);
+        final arquivoCatalogo = File('${pastaExperimental.path}/catalogo.db')
+          ..writeAsBytesSync([1, 2, 3]);
+
+        final ordemEventos = <String>[];
+        var arquivoExistiaAoFechar = false;
+        editor.aoAntesDeLimparDadosExperimentais = () async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          arquivoExistiaAoFechar = arquivoCatalogo.existsSync();
+          ordemEventos.add('fechou_catalogo');
+        };
+        editor.isExperimentalMode.addListener(() {
+          if (!editor.isExperimentalMode.value) {
+            ordemEventos.add('desativou_modo_experimental');
+          }
+        });
+
+        editor.isExperimentalMode.value = true;
+        await editor.nukeExperimentalData();
+
+        expect(arquivoExistiaAoFechar, isTrue);
+        expect(pastaExperimental.existsSync(), isFalse);
+        expect(
+          ordemEventos,
+          equals(['fechou_catalogo', 'desativou_modo_experimental']),
+        );
+      },
+    );
   });
 }

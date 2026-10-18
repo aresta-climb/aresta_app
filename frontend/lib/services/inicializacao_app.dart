@@ -92,7 +92,7 @@ void registrarOuvintesLiveReload(
         AppLogger.instance.logInfo(
           '⚡ [LiveReload] Evento push recebido no Flutter! (Setor/ID: ${evento.setorId}). Disparando sync...',
         );
-        await syncService.syncIndex();
+        await syncService.syncIndex(auto: false, forceBypassCache: true);
 
         // Recarrega sob demanda croquis que estejam abertos em sessão online
         final servicoOnline = servicoCroquiOnline ??
@@ -102,14 +102,15 @@ void registrarOuvintesLiveReload(
         for (final picoId in croquisOnlineIds) {
           final picosDisponiveis =
               datasetRepo.activeDataset.value?.picosDisponiveis ?? [];
-          final picoItem = picosDisponiveis.firstWhere(
-            (p) => p.id == picoId,
-            orElse: () => const ResumoPico(id: '', nome: '', local: ''),
-          );
-          final url = picoItem.url;
-          if (url.isNotEmpty) {
-            await servicoOnline.recarregarCroquiOnline(url, picoId: picoId);
-            datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+          for (final picoItem in picosDisponiveis) {
+            if (picoItem.id == picoId && picoItem.url.isNotEmpty) {
+              await servicoOnline.recarregarCroquiOnline(
+                picoItem.url,
+                picoId: picoId,
+              );
+              datasetRepo.notificarAtualizacaoSessaoOnline(picoId);
+              break;
+            }
           }
         }
 

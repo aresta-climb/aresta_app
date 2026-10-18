@@ -670,6 +670,136 @@ void main() {
 
       await tester.runAsync(() => repoCatalogo.fechar());
     });
+
+    testWidgets(
+      'Recarrega resultados automaticamente quando repositorioCatalogo.versaoNotificador ou activeDataset mudam (ou ao trocar datasetRepo)',
+      (WidgetTester tester) async {
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: GlobalSearch(
+                  datasetRepo: repo,
+                  downloadedPicos: const [],
+                ),
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        // Digita uma consulta que ainda não existe no catálogo
+        await tester.enterText(find.byType(TextField), 'Via Live Reload');
+        await tester.pump();
+        expect(find.widgetWithText(ListTile, 'Via Live Reload'), findsNothing);
+
+        // 1. Atualiza o catálogo enquanto GlobalSearch já está aberto/expandido
+        await tester.runAsync(() async {
+          await repoCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoDestino: 'v_live_1',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'cUidLive1',
+                    idSlug: 'pico_live_1',
+                    nome: 'Pico Live 1',
+                  ),
+                ],
+                entidades: [
+                  CatalogoEntidade(
+                    uid: 'vUidLive1',
+                    tipo: 'escalada',
+                    croquiUid: 'cUidLive1',
+                    nome: 'Via Live Reload',
+                    escaladaGrau: '7b',
+                    escaladaTipo: 'esportiva',
+                  ),
+                ],
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        // Deve exibir imediatamente a nova via sem precisar fechar e reabrir a busca
+        expect(find.widgetWithText(ListTile, 'Via Live Reload'), findsOneWidget);
+
+        // 2. Atualiza datasetRepo.activeDataset enquanto GlobalSearch está aberto
+        await tester.enterText(find.byType(TextField), 'Pico Novo Dataset');
+        await tester.pump();
+        expect(find.widgetWithText(ListTile, 'Pico Novo Dataset'), findsNothing);
+
+        await tester.runAsync(() async {
+          repo.activeDataset.value = TopoDataset(
+            availablePicos: [
+              {
+                'id': 'pico_novo_dataset',
+                'nome': 'Pico Novo Dataset',
+                'local': 'Itabirito, MG',
+              },
+            ],
+            downloadedPicos: const [],
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        expect(find.widgetWithText(ListTile, 'Pico Novo Dataset'), findsOneWidget);
+
+        // 3. Troca a instância de datasetRepo via didUpdateWidget
+        final outroRepoCatalogo = RepositorioCatalogo(
+          provedorCaminhoBanco: () async => '${tempDir.path}/outro_catalogo.db',
+          fabricaBanco: databaseFactoryFfi,
+        );
+        final outroRepo = DatasetRepository(
+          editorDeCroqui: editor,
+          repositorioCatalogo: outroRepoCatalogo,
+        );
+        await tester.runAsync(() async {
+          await outroRepoCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoDestino: 'v_outro_1',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'cUidOutro1',
+                    idSlug: 'pico_outro_1',
+                    nome: 'Pico Outro Repo',
+                  ),
+                ],
+                entidades: [],
+              ),
+            ),
+          );
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: GlobalSearch(
+                  datasetRepo: outroRepo,
+                  downloadedPicos: const [],
+                ),
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), 'Pico Outro Repo');
+        await tester.pump();
+        expect(find.widgetWithText(ListTile, 'Pico Outro Repo'), findsOneWidget);
+
+        await tester.runAsync(() async {
+          await repoCatalogo.fechar();
+          await outroRepoCatalogo.fechar();
+        });
+      },
+    );
   });
 }
 

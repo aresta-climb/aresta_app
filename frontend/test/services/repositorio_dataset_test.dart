@@ -1130,6 +1130,69 @@ void main() {
         expect(repo.obterDataAtualizacaoCroqui('pico_inexistente'), isNull);
       });
     });
+
+    group('Isolamento Modo Experimental vs Modo Oficial', () {
+      test(
+        'alternar entre Modo Oficial e Modo Experimental deve limpar gerenciadorSessaoOnline e tabela de hashes',
+        () async {
+          final croquiExperimental = Croqui(id: 'pico_exp_1', nome: 'Pico Experimental')
+            ..arquivosExternos.add(
+              ArquivoExterno(
+                caminho: 'imagens/exp.webp',
+                checksumSha256: 'sha_exp_111',
+              ),
+            );
+          editor.isExperimentalMode.value = true;
+          repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+            'pico_exp_1',
+            croquiExperimental,
+            etag: 'etag_exp',
+            checksumSha256: 'sha_croqui_exp',
+          );
+          repo.indexarMidiasDoCroqui('pico_exp_1', croquiExperimental);
+
+          expect(
+            repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_exp_1'),
+            isNotNull,
+          );
+          expect(
+            repo.obterSha256DaMidia('pico_exp_1', 'imagens/exp.webp'),
+            equals('sha_exp_111'),
+          );
+
+          // Alterna de volta para Modo Oficial
+          editor.isExperimentalMode.value = false;
+
+          expect(
+            repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_exp_1'),
+            isNull,
+          );
+          expect(
+            repo.obterSha256DaMidia('pico_exp_1', 'imagens/exp.webp'),
+            isNull,
+          );
+        },
+      );
+
+      test(
+        'nukeExperimentalData deve fechar o catalogo.db experimental aberto pelo DatasetRepository antes de apagar o diretorio experimental',
+        () async {
+          editor.isExperimentalMode.value = true;
+          final expDir = Directory('${tempDir.path}/editor/experimental')
+            ..createSync(recursive: true);
+          final arquivoCatalogoExp = File('${expDir.path}/catalogo.db')
+            ..writeAsBytesSync([1, 2, 3, 4]);
+
+          expect(editor.aoAntesDeLimparDadosExperimentais, isNotNull);
+
+          await editor.nukeExperimentalData();
+
+          expect(arquivoCatalogoExp.existsSync(), isFalse);
+          expect(expDir.existsSync(), isFalse);
+          expect(editor.isExperimentalMode.value, isFalse);
+        },
+      );
+    });
   });
 }
 

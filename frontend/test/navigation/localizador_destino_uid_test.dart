@@ -466,10 +466,196 @@ void main() {
       expect(destinoVia!.noNavegacao, isA<ViaNode>());
     });
 
+    test('carrega croqui sob demanda na sessao online quando o UID pertence a um croqui de metadadosDisponiveis ainda nao baixado', () async {
+      const String uidCroquiNaoBaixado = '4onIN9Ga05O9Kr';
+      const String idSlugNaoBaixado =
+          'br_mg_sabara_pedra_rachada_setor_horizonte';
+
+      final croquiRemoto = Croqui()
+        ..id = idSlugNaoBaixado
+        ..uid = uidCroquiNaoBaixado
+        ..picos.add(Pico()..nome = 'Pedra Rachada - Setor Horizonte');
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) {
+        request.response.statusCode = 200;
+        request.response.add(croquiRemoto.writeToBuffer());
+        request.response.close();
+      });
+
+      editorDeCroqui.isExperimentalMode.value = true;
+      editorDeCroqui.editorUrl.value =
+          'http://127.0.0.1:${server.port}/indice.binarypb';
+
+      final resumoNaoBaixado = ResumoCroqui()
+        ..id = idSlugNaoBaixado
+        ..croquiUid = uidCroquiNaoBaixado
+        ..nome = 'Pedra Rachada - Setor Horizonte'
+        ..caminhoRelativo = '$idSlugNaoBaixado/compilado.binarypb'
+        ..checksumSha256Croqui = 'hash_pedra_rachada';
+
+      datasetRepo.indiceData.value = Indice()..croquis.add(resumoNaoBaixado);
+      datasetRepo.activeDataset.value = TopoDataset(
+        picosBaixados: [],
+        picosDisponiveis: [resumoNaoBaixado.paraResumoPico()],
+        metadadosDisponiveis: [resumoNaoBaixado],
+      );
+
+      final destino = await localizador.localizar(uidCroquiNaoBaixado);
+
+      expect(destino, isNotNull);
+      expect(destino!.idCroqui, equals(idSlugNaoBaixado));
+      expect(destino.tipoDestino, equals('pico'));
+      expect(destino.noNavegacao, isA<PicoNode>());
+      expect(
+        datasetRepo.gerenciadorSessaoOnline.obterCroquiOnline(idSlugNaoBaixado),
+        isNotNull,
+      );
+    });
+
     test('retorna null para UID inexistente no acervo', () async {
       final destino = await localizador.localizar(uidInexistente);
       expect(destino, isNull);
     });
+
+    test(
+      'isola resolução de UID entre <docs>/catalogo.db oficial e <docs>/editor/experimental/catalogo.db no Modo Experimental',
+      () async {
+        final repoDinamico = RepositorioCatalogo(
+          provedorCaminhoBanco: () async =>
+              editorDeCroqui.catalogoPath(dirTemp.path),
+          fabricaBanco: databaseFactoryFfi,
+        );
+        final datasetDinamico = DatasetRepository(
+          editorDeCroqui: editorDeCroqui,
+          repositorioCatalogo: repoDinamico,
+        );
+        final localizadorDinamico = LocalizadorDestinoUid(
+          datasetRepo: datasetDinamico,
+        );
+
+        // 1. Popula o catalogo.db oficial
+        await repoDinamico.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_oficial',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'cUidOficialOnly',
+                  idSlug: 'pico_oficial_only',
+                  nome: 'Pico Oficial',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'vUidOficialOnly',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidOficialOnly',
+                  nome: 'Via Oficial',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        // 2. Entra no modo experimental e popula <docs>/editor/experimental/catalogo.db
+        final croquiExp = Croqui()
+          ..id = 'pico_exp_only'
+          ..uid = 'cUidExpOnly1234'
+          ..picos.add(
+            Pico()
+              ..nome = 'Pico Experimental'
+              ..setoresOuGrupos.add(
+                SetorOuGrupo()
+                  ..setor = (ArquivoSetor()
+                    ..conteudo = (Setor()
+                      ..uid = 'sUidExpOnly1234'
+                      ..nome = 'Setor Experimental'
+                      ..escaladas.add(
+                        Escalada()
+                          ..uid = 'vUidExpOnly1234'
+                          ..viaEsportiva = (ViaEsportiva()
+                            ..nome = 'Via Experimental'),
+                      ))),
+              ),
+          );
+
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => server.close(force: true));
+        server.listen((request) {
+          request.response.statusCode = 200;
+          request.response.add(croquiExp.writeToBuffer());
+          request.response.close();
+        });
+
+        editorDeCroqui.isExperimentalMode.value = true;
+        editorDeCroqui.editorUrl.value =
+            'http://127.0.0.1:${server.port}/indice.binarypb';
+
+        await repoDinamico.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_exp',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'cUidExpOnly1234',
+                  idSlug: 'pico_exp_only',
+                  nome: 'Pico Experimental',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'vUidExpOnly1234',
+                  tipo: 'escalada',
+                  croquiUid: 'cUidExpOnly1234',
+                  nome: 'Via Experimental',
+                  setorUid: 'sUidExpOnly1234',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final resumoExp = ResumoCroqui()
+          ..id = 'pico_exp_only'
+          ..croquiUid = 'cUidExpOnly1234'
+          ..nome = 'Pico Experimental'
+          ..caminhoRelativo = 'pico_exp_only/compilado.binarypb';
+        datasetDinamico.indiceData.value = Indice()..croquis.add(resumoExp);
+
+        // No Modo Experimental: resolve UID experimental e ignora UID exclusivo do catálogo oficial
+        expect(
+          File('${dirTemp.path}/editor/experimental/catalogo.db').existsSync(),
+          isTrue,
+        );
+        final destinoExp = await localizadorDinamico.localizar(
+          'vUidExpOnly1234',
+        );
+        expect(destinoExp, isNotNull);
+        expect(destinoExp!.idCroqui, equals('pico_exp_only'));
+        expect(destinoExp.nomeEntidade, equals('Via Experimental'));
+
+        final destinoOficialEmExp = await localizadorDinamico.localizar(
+          'vUidOficialOnly',
+        );
+        expect(destinoOficialEmExp, isNull);
+
+        // Ao executar nukeExperimentalData(), fecha e remove o catalogo.db experimental e restaura o oficial
+        await editorDeCroqui.nukeExperimentalData();
+        expect(
+          File('${dirTemp.path}/editor/experimental/catalogo.db').existsSync(),
+          isFalse,
+        );
+        expect(
+          await repoDinamico.obterIdSlugPorUid('vUidOficialOnly'),
+          equals('pico_oficial_only'),
+        );
+        await repoDinamico.fechar();
+      },
+    );
   });
 }
 

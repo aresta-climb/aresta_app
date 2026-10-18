@@ -173,6 +173,97 @@ void main() {
         expect(result, isFalse);
       },
     );
+
+    testWidgets(
+      'deve reutilizar SyncService.instance e baixar catalogo.db experimental na conexao inicial',
+      (WidgetTester tester) async {
+        final dirTemp = await tester.runAsync(
+          () => Directory.systemTemp.createTemp('conectar_editor_cat_'),
+        );
+        PathProviderPlatform.instance = FakePathProviderPlatform(dirTemp!.path);
+
+        final indiceExp = Indice(
+          versaoCatalogo: 'v_exp_01',
+          croquis: [
+            ResumoCroqui(id: 'pico_a', nome: 'Pico A'),
+            ResumoCroqui(id: 'pico_b', nome: 'Pico B'),
+          ],
+        );
+        final bytesCatalogoFake = <int>[83, 81, 76, 105, 116, 101];
+        var requisicoesCatalogo = 0;
+
+        final mockHttpClient = MockClient((request) async {
+          if (request.url.path.endsWith('/indice.binarypb')) {
+            return http.Response.bytes(indiceExp.writeToBuffer(), 200);
+          } else if (request.url.path.endsWith('/catalogo.db')) {
+            requisicoesCatalogo++;
+            return http.Response.bytes(bytesCatalogoFake, 200);
+          }
+          return http.Response('Not Found', 404);
+        });
+        final clienteHttp = ClienteHttpAresta.paraTestes(mockHttpClient);
+
+        final repoBancoMemoria = RepositorioCatalogo(
+          provedorCaminhoBanco: () async =>
+              configService.catalogoPath(dirTemp.path),
+        );
+        var substituicoesBanco = 0;
+        repoBancoMemoria.versaoNotificador.addListener(() {
+          substituicoesBanco++;
+        });
+        datasetRepo = DatasetRepository(
+          editorDeCroqui: configService,
+          repositorioCatalogo: repoBancoMemoria,
+        );
+
+        final syncSingleton = SyncService(
+          datasetRepository: datasetRepo,
+          client: clienteHttp,
+        );
+        expect(SyncService.instance, same(syncSingleton));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(builder: (context) => Container()),
+            ),
+          ),
+        );
+        final context = tester.element(find.byType(Container));
+
+        late bool sucesso;
+        late bool arquivoCatalogoExiste;
+        late List<int> bytesGravados;
+        await tester.runAsync(() async {
+          sucesso = await conectarEditor(
+            context,
+            datasetRepo,
+            configService,
+            'http://editor.local:8000',
+            client: clienteHttp,
+          );
+          final arquivoCatalogoExp = File(
+            '${dirTemp.path}/editor/experimental/catalogo.db',
+          );
+          arquivoCatalogoExiste = arquivoCatalogoExp.existsSync();
+          bytesGravados = arquivoCatalogoExiste
+              ? arquivoCatalogoExp.readAsBytesSync()
+              : <int>[];
+          await configService.nukeExperimentalData();
+          if (dirTemp.existsSync()) {
+            dirTemp.deleteSync(recursive: true);
+          }
+        });
+        await tester.pump(const Duration(seconds: 5));
+
+        expect(sucesso, isTrue);
+        expect(SyncService.instance, same(syncSingleton));
+        expect(requisicoesCatalogo, greaterThanOrEqualTo(1));
+        expect(substituicoesBanco, greaterThanOrEqualTo(1));
+        expect(arquivoCatalogoExiste, isTrue);
+        expect(bytesGravados, equals(bytesCatalogoFake));
+      },
+    );
   });
 
   group('buildEditorCard experimental mode tests', () {

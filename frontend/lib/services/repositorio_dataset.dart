@@ -86,12 +86,16 @@ class DatasetRepository {
               },
             ) {
     _instance = this;
+    editorDeCroqui.aoAntesDeLimparDadosExperimentais =
+        this.repositorioCatalogo.fechar;
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);
     editorDeCroqui.editorUrl.addListener(_handleModeChange);
   }
 
   void _handleModeChange() {
     AppLogger.instance.logInfo('[DatasetRepo] Modo alterado detectado. Recarregando índice...');
+    gerenciadorSessaoOnline.limparTudo();
+    _tabelaSha256PorPico.clear();
     repositorioCatalogo.fechar();
     init();
   }

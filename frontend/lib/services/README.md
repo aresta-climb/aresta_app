@@ -34,23 +34,23 @@ O Modo Experimental permite testar croquis e alterações em tempo real diretame
 
 O `EditorDeCroqui` gerencia dois contextos de armazenamento isolados:
 
-| Contexto | URL base | Diretório de índice | Diretório de downloads |
-|---|---|---|---|
-| **Oficial** | `https://aresta-climb.github.io/aresta_serving` | `<docs>/indice.binarypb` | `<docs>/downloads/` |
-| **Experimental** | URL de Prévia / Live Reload do Editor | `<docs>/editor/experimental/indice.binarypb` | `<docs>/editor/experimental/downloads/` |
+| Contexto | URL base | Diretório de índice | Catálogo SQLite | Diretório de downloads |
+|---|---|---|---|---|
+| **Oficial** | `https://aresta-climb.github.io/aresta_serving` | `<docs>/indice.binarypb` | `<docs>/catalogo.db` | `<docs>/downloads/` |
+| **Experimental** | URL de Prévia / Live Reload do Editor | `<docs>/editor/experimental/indice.binarypb` | `<docs>/editor/experimental/catalogo.db` | `<docs>/editor/experimental/downloads/` |
 
 ### Fluxo de Conexão com Editor Desktop
 
 1. O usuário digita o código de 8 caracteres ou escaneia o QR Code gerado no Editor Desktop.
 2. O app realiza a resolução híbrida (Smart LAN-First com fallback para Cloudflare Relay).
 3. Conexão WebSocket para escuta de eventos `live_reload` em tempo real.
-4. O `SyncService` sincroniza o índice e dados atualizados instantaneamente.
+4. O `SyncService` (reutilizando `SyncService.instance`) sincroniza o índice e baixa o `catalogo.db` experimental com `forceBypassCache: true`, habilitando Busca Global (`GlobalSearch`) e Deep Links (`LocalizadorDestinoUid`) imediatamente para o escopo da sessão experimental.
 
 ### Saída do Modo Experimental & Restauração de Produção
 
 Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperimental`, programaticamente ou automaticamente por expiração da sessão):
-1. **Limpeza e Desconexão Coordenada (`nukeExperimentalData`)**: Encerra o WebSocket de Live Reload, remove recursivamente os diretórios voláteis (`editor/experimental` e `edited`), grava a configuração atômica e redefine `isExperimentalMode.value = false` antes de zerar `editorUrl.value`. Isso previne que ouvintes de mudanças de estado tentem ler arquivos no caminho experimental já excluído.
-2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: O repositório recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
+1. **Limpeza e Desconexão Coordenada (`nukeExperimentalData`)**: Encerra o WebSocket de Live Reload, aguarda o fechamento serializado da conexão SQLite ativa (`await aoAntesDeLimparDadosExperimentais?.call()` -> `repositorioCatalogo.fechar()`), remove recursivamente os diretórios voláteis (`editor/experimental` e `edited`), grava a configuração atômica e redefine `isExperimentalMode.value = false` antes de zerar `editorUrl.value`. Isso previne `FileSystemException` por arquivo bloqueado no Windows e impede que ouvintes tentem ler arquivos no caminho experimental já excluído.
+2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: Ao alternar o modo (`_handleModeChange`), o repositório limpa a sessão online em memória (`gerenciadorSessaoOnline.limparTudo()`) e a tabela de hashes (`_tabelaSha256PorPico.clear()`), fecha a conexão SQLite anterior e recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
 3. **Encerramento Automático de Sessão Expirada (`HTTP 404`)**: Quando o Editor Desktop é fechado pelo autor ou o túnel Cloudflare Relay (`previa.arestaclimb.com`) expira e `SyncNetwork.fetchIndiceWithRetries` retorna `IndiceErroServidor(statusCode: 404)` com `isExperimentalMode.value == true`, o `SyncService` executa `nukeExperimentalData()`, restaura o índice oficial em memória (`datasetRepository.init()`), define `syncStatus.value = SyncStatus.updated` e aciona `notificarSessaoExperimentalExpirada()`. O widget raiz `MyApp` escuta `notificadorSessaoExpirada`, redireciona a navegação para a Home (`AppNav.home`) e apresenta o diálogo `ModalSessaoExperimentalEncerrada`.
 4. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
 

@@ -28,6 +28,12 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Desabilita o roteamento automático de deep links do Navigator do Flutter,
+                 pois o Aresta gerencia deep links via app_links + TreeNavigationController (igual ao iOS) -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

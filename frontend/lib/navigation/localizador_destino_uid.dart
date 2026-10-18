@@ -58,21 +58,7 @@ class LocalizadorDestinoUid {
   }) async {
     final active = datasetRepo.activeDataset.value;
 
-    // 1. Verifica se o UID corresponde a um Croqui no catálogo de metadados (quando não requer abrirMapa)
-    if (!abrirMapa && active != null) {
-      for (final meta in active.metadadosDisponiveis) {
-        if (meta.croquiUid == uid || meta.id == uid) {
-          return DestinoUidLocalizado(
-            noNavegacao: PicoNode(cragId: meta.id, parent: const HomeNode()),
-            idCroqui: meta.id,
-            tipoDestino: 'pico',
-            nomeEntidade: meta.nome,
-          );
-        }
-      }
-    }
-
-    // 2. Busca nos picos baixados no cache offline local
+    // 1. Busca nos picos baixados no cache offline local
     if (active != null) {
       for (final p in active.picosBaixados) {
         if (p.pico != null && p.croqui != null) {
@@ -88,7 +74,7 @@ class LocalizadorDestinoUid {
       }
     }
 
-    // 3. Busca nas sessões online ativas em memória
+    // 2. Busca nas sessões online ativas em memória
     final croquisOnline = datasetRepo.gerenciadorSessaoOnline.croquisEmMemoria;
     for (final entry in croquisOnline.entries) {
       final idCroqui = entry.key;
@@ -105,8 +91,19 @@ class LocalizadorDestinoUid {
       }
     }
 
-    // 4. Consulta o catálogo SQLite (catalogo.db) e carrega o croqui sob demanda
-    final idSlug = await datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
+    // 3. Descobre o idSlug no índice de metadados em memória ou no catálogo SQLite (catalogo.db)
+    //    e carrega o croqui sob demanda na sessão online antes de retornar o nó de navegação
+    String? idSlug;
+    if (active != null) {
+      for (final meta in active.metadadosDisponiveis) {
+        if (meta.croquiUid == uid || meta.id == uid) {
+          idSlug = meta.id;
+          break;
+        }
+      }
+    }
+    idSlug ??= await datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
+
     if (idSlug != null) {
       final croqui = await datasetRepo.getCroqui(idSlug);
       if (croqui != null) {
@@ -153,8 +150,8 @@ class LocalizadorDestinoUid {
     required String uid,
     required bool abrirMapa,
   }) {
-    // Verifica se o próprio croqui possui este UID
-    if (croqui.hasUid() && croqui.uid == uid) {
+    // Verifica se o próprio croqui possui este UID (ou idCroqui)
+    if ((croqui.hasUid() && croqui.uid == uid) || idCroqui == uid) {
       final picoNode = PicoNode(cragId: idCroqui, parent: const HomeNode());
       final itensMapa = (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo())
           ? pico.mapasGerais.conteudo.mapas

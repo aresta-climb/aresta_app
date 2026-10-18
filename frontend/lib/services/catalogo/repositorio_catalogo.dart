@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -96,12 +97,14 @@ class ItemCatalogoBusca {
 ///
 /// Fornece leitura da versão lógica em `catalogo_meta`, aplicação transacional de deltas
 /// (`apply_delta`), substituição atômica em `full_download`, resolução de `id_slug` por UID
-/// em $O(1)$ e consultas relacionais para a Busca Global.
+/// em $O(1)$ e consultas relacionais para a Busca Global, serializando todas as operações
+/// de acesso a disco e SQLite para evitar race conditions.
 class RepositorioCatalogo {
   final Future<String> Function() _provedorCaminhoBanco;
   final DatabaseFactory? _fabricaBanco;
   Database? _banco;
   String? _caminhoAberto;
+  Future<void>? _filaOperacoes;
 
   /// Notificador incrementado sempre que o banco de dados do catálogo é modificado.
   final ValueNotifier<int> versaoNotificador = ValueNotifier<int>(0);
@@ -118,13 +121,32 @@ class RepositorioCatalogo {
     return '${diretorio.path}/catalogo.db';
   }
 
+  /// Enfileira [operacao] para execução estritamente sequencial, impedindo que abertura,
+  /// substituição de arquivo, consultas e fechamento colidam concorrentemente.
+  Future<T> _executarSerializado<T>(Future<T> Function() operacao) async {
+    final anterior = _filaOperacoes;
+    final conclusao = Completer<void>();
+    _filaOperacoes = conclusao.future;
+    if (anterior != null) {
+      await anterior;
+    }
+    try {
+      return await operacao();
+    } finally {
+      if (identical(_filaOperacoes, conclusao.future)) {
+        _filaOperacoes = null;
+      }
+      conclusao.complete();
+    }
+  }
+
   /// Abre ou reutiliza a conexão ativa com o banco SQLite, garantindo o schema DDL.
   Future<Database> _obterBanco() async {
     final caminho = await _provedorCaminhoBanco();
     if (_banco != null && _bancoEstaAberto && _caminhoAberto == caminho) {
       return _banco!;
     }
-    await fechar();
+    await _fecharInterno();
 
     final arquivo = File(caminho);
     if (!arquivo.parent.existsSync()) {
@@ -143,6 +165,11 @@ class RepositorioCatalogo {
           if (nomesColunas.contains('uf') && !nomesColunas.contains('estado')) {
             await db.execute(
               'ALTER TABLE catalogo_croquis RENAME COLUMN uf TO estado',
+            );
+          }
+          if (nomesColunas.contains('atualizado_em')) {
+            await db.execute(
+              'ALTER TABLE catalogo_croquis DROP COLUMN atualizado_em',
             );
           }
           for (final ddl in comandosDdlCatalogo) {
@@ -167,197 +194,223 @@ class RepositorioCatalogo {
   /// Lê o hash `versao_catalogo` diretamente da tabela `catalogo_meta`.
   ///
   /// Retorna string vazia (`""`) caso o arquivo `catalogo.db` ainda não exista ou não possua versão.
-  Future<String> obterVersaoCatalogo() async {
-    if (!await _arquivoExiste()) {
-      return '';
-    }
-    final db = await _obterBanco();
-    final linhas = await db.query(
-      'catalogo_meta',
-      columns: ['valor'],
-      where: "chave = 'versao_catalogo'",
-      limit: 1,
-    );
-    if (linhas.isNotEmpty) {
-      final valor = linhas.first['valor'] as String?;
-      if (valor != null && valor.isNotEmpty) {
-        return valor;
+  Future<String> obterVersaoCatalogo() {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return '';
       }
-    }
-    return '';
+      final db = await _obterBanco();
+      final linhas = await db.query(
+        'catalogo_meta',
+        columns: ['valor'],
+        where: "chave = 'versao_catalogo'",
+        limit: 1,
+      );
+      if (linhas.isNotEmpty) {
+        final valor = linhas.first['valor'] as String?;
+        if (valor != null && valor.isNotEmpty) {
+          return valor;
+        }
+      }
+      return '';
+    });
   }
 
   /// Aplica transacionalmente um pacote de sincronização incremental ([RespostaSyncCatalogo])
   /// executando deleções, inserções/atualizações e a gravação da nova `versao_catalogo` em um único batch.
-  Future<void> aplicarDelta(RespostaSyncCatalogo delta) async {
-    final db = await _obterBanco();
-    await db.transaction((txn) async {
-      final batch = txn.batch();
+  Future<void> aplicarDelta(RespostaSyncCatalogo delta) {
+    return _executarSerializado(() async {
+      final db = await _obterBanco();
+      await db.transaction((txn) async {
+        final batch = txn.batch();
 
-      final entidadesRemover = delta.deletes?.entidades ?? const <String>[];
-      for (final uid in entidadesRemover) {
-        batch.delete('catalogo_aresta', where: 'uid = ?', whereArgs: [uid]);
-      }
+        final entidadesRemover = delta.deletes?.entidades ?? const <String>[];
+        for (final uid in entidadesRemover) {
+          batch.delete('catalogo_aresta', where: 'uid = ?', whereArgs: [uid]);
+        }
 
-      final croquisRemover = delta.deletes?.croquis ?? const <String>[];
-      for (final croquiUid in croquisRemover) {
-        batch.delete(
-          'catalogo_croquis',
-          where: 'croqui_uid = ?',
-          whereArgs: [croquiUid],
-        );
-        batch.delete(
-          'catalogo_aresta',
-          where: 'croqui_uid = ?',
-          whereArgs: [croquiUid],
-        );
-      }
+        final croquisRemover = delta.deletes?.croquis ?? const <String>[];
+        for (final croquiUid in croquisRemover) {
+          batch.delete(
+            'catalogo_croquis',
+            where: 'croqui_uid = ?',
+            whereArgs: [croquiUid],
+          );
+          batch.delete(
+            'catalogo_aresta',
+            where: 'croqui_uid = ?',
+            whereArgs: [croquiUid],
+          );
+        }
 
-      final croquisInserir =
-          delta.upserts?.croquis ?? const <CatalogoCroqui>[];
-      for (final c in croquisInserir) {
-        batch.insert(
-          'catalogo_croquis',
-          LinhaCatalogoCroquis(
-            croquiUid: c.croquiUid,
-            idSlug: c.idSlug,
-            nome: c.nome,
-            cidade: c.cidade,
-            estado: c.estado,
-            atualizadoEm: c.atualizadoEm ?? 0,
-          ).toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
+        final croquisInserir =
+            delta.upserts?.croquis ?? const <CatalogoCroqui>[];
+        for (final c in croquisInserir) {
+          batch.insert(
+            'catalogo_croquis',
+            LinhaCatalogoCroquis(
+              croquiUid: c.croquiUid,
+              idSlug: c.idSlug,
+              nome: c.nome,
+              cidade: c.cidade,
+              estado: c.estado,
+            ).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
 
-      final entidadesInserir =
-          delta.upserts?.entidades ?? const <CatalogoEntidade>[];
-      for (final e in entidadesInserir) {
-        batch.insert(
-          'catalogo_aresta',
-          LinhaCatalogoAresta(
-            uid: e.uid,
-            tipo: e.tipo,
-            croquiUid: e.croquiUid,
-            nome: e.nome,
-            escaladaGrau: e.escaladaGrau,
-            escaladaTipo: e.escaladaTipo,
-            setorUid: e.setorUid,
-            grupoUid: e.grupoUid,
-          ).toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
+        final entidadesInserir =
+            delta.upserts?.entidades ?? const <CatalogoEntidade>[];
+        for (final e in entidadesInserir) {
+          batch.insert(
+            'catalogo_aresta',
+            LinhaCatalogoAresta(
+              uid: e.uid,
+              tipo: e.tipo,
+              croquiUid: e.croquiUid,
+              nome: e.nome,
+              escaladaGrau: e.escaladaGrau,
+              escaladaTipo: e.escaladaTipo,
+              setorUid: e.setorUid,
+              grupoUid: e.grupoUid,
+            ).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
 
-      final versaoDestino = delta.versaoDestino ?? delta.versaoAtual;
-      if (versaoDestino != null && versaoDestino.isNotEmpty) {
-        batch.insert(
-          'catalogo_meta',
-          LinhaCatalogoMeta(
-            chave: 'versao_catalogo',
-            valor: versaoDestino,
-          ).toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
+        final versaoDestino = delta.versaoDestino ?? delta.versaoAtual;
+        if (versaoDestino != null && versaoDestino.isNotEmpty) {
+          batch.insert(
+            'catalogo_meta',
+            LinhaCatalogoMeta(
+              chave: 'versao_catalogo',
+              valor: versaoDestino,
+            ).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
 
-      await batch.commit(noResult: true);
+        await batch.commit(noResult: true);
+      });
+
+      versaoNotificador.value++;
     });
-
-    versaoNotificador.value++;
   }
 
-  /// Substitui atomicamente o arquivo `catalogo.db` local pelos [bytesNovoBanco] baixados em `full_download`.
-  Future<void> substituirBancoCompleto(Uint8List bytesNovoBanco) async {
-    await fechar();
-    final caminho = await _provedorCaminhoBanco();
-    final arquivoFinal = File(caminho);
-    if (!arquivoFinal.parent.existsSync()) {
-      arquivoFinal.parent.createSync(recursive: true);
-    }
-    final arquivoTemp = File('$caminho.tmp');
-    await arquivoTemp.writeAsBytes(bytesNovoBanco, flush: true);
-    await arquivoTemp.rename(caminho);
-    versaoNotificador.value++;
+  /// Substitui atomicamente o arquivo `catalogo.db` local pelos [bytesNovoBanco] baixados em `full_download`,
+  /// removendo resíduos auxiliares (`-wal`, `-shm`, `-journal`) para evitar corrupção de páginas SQLite.
+  Future<void> substituirBancoCompleto(Uint8List bytesNovoBanco) {
+    return _executarSerializado(() async {
+      await _fecharInterno();
+      final caminho = await _provedorCaminhoBanco();
+      final arquivoFinal = File(caminho);
+      if (!arquivoFinal.parent.existsSync()) {
+        arquivoFinal.parent.createSync(recursive: true);
+      }
+      for (final sufixo in const ['-wal', '-shm', '-journal']) {
+        final arquivoAuxiliar = File('$caminho$sufixo');
+        if (arquivoAuxiliar.existsSync()) {
+          arquivoAuxiliar.deleteSync();
+        }
+      }
+      final arquivoTemp = File('$caminho.tmp');
+      await arquivoTemp.writeAsBytes(bytesNovoBanco, flush: true);
+      await arquivoTemp.rename(caminho);
+      versaoNotificador.value++;
+    });
   }
 
   /// Resolve em $O(1)$ a qual `id_slug` de croqui um determinado [uid] (de croqui, grupo, setor, escalada ou botão) pertence.
-  Future<String?> obterIdSlugPorUid(String uid) async {
-    if (!await _arquivoExiste()) {
+  Future<String?> obterIdSlugPorUid(String uid) {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return null;
+      }
+      final db = await _obterBanco();
+      final linhas = await db.rawQuery(
+        '''
+        SELECT id_slug FROM catalogo_croquis WHERE croqui_uid = ? OR id_slug = ?
+        UNION ALL
+        SELECT c.id_slug
+        FROM catalogo_aresta a
+        JOIN catalogo_croquis c ON c.croqui_uid = a.croqui_uid
+        WHERE a.uid = ?
+        LIMIT 1
+        ''',
+        [uid, uid, uid],
+      );
+      if (linhas.isNotEmpty) {
+        return linhas.first['id_slug'] as String?;
+      }
       return null;
-    }
-    final db = await _obterBanco();
-    final linhas = await db.rawQuery(
-      '''
-      SELECT id_slug FROM catalogo_croquis WHERE croqui_uid = ? OR id_slug = ?
-      UNION ALL
-      SELECT c.id_slug
-      FROM catalogo_aresta a
-      JOIN catalogo_croquis c ON c.croqui_uid = a.croqui_uid
-      WHERE a.uid = ?
-      LIMIT 1
-      ''',
-      [uid, uid, uid],
-    );
-    if (linhas.isNotEmpty) {
-      return linhas.first['id_slug'] as String?;
-    }
-    return null;
+    });
   }
 
   /// Lista todos os croquis registrados em `catalogo_croquis` ordenados alfabeticamente por nome.
-  Future<List<LinhaCatalogoCroquis>> listarCroquis() async {
-    if (!await _arquivoExiste()) {
-      return const [];
-    }
-    final db = await _obterBanco();
-    final linhas = await db.query(
-      'catalogo_croquis',
-      orderBy: 'nome COLLATE NOCASE ASC',
-    );
-    return linhas.map(LinhaCatalogoCroquis.fromMap).toList();
+  Future<List<LinhaCatalogoCroquis>> listarCroquis() {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return const [];
+      }
+      final db = await _obterBanco();
+      final linhas = await db.query(
+        'catalogo_croquis',
+        orderBy: 'nome COLLATE NOCASE ASC',
+      );
+      return linhas.map(LinhaCatalogoCroquis.fromMap).toList();
+    });
   }
 
   /// Lista todas as entidades pesquisáveis (`escalada`, `setor` e `grupo`) enriquecidas
   /// via `LEFT JOIN` com os nomes do setor pai, grupo pai e metadados do pico.
-  Future<List<ItemCatalogoBusca>> listarEntidadesDetalhadas() async {
-    if (!await _arquivoExiste()) {
-      return const [];
-    }
-    final db = await _obterBanco();
-    final linhas = await db.rawQuery('''
-      SELECT
-        e.uid,
-        e.tipo,
-        e.croqui_uid,
-        c.id_slug,
-        e.nome,
-        e.escalada_grau,
-        e.escalada_tipo,
-        e.setor_uid,
-        s.nome AS setor_nome,
-        e.grupo_uid,
-        g.nome AS grupo_nome,
-        c.nome AS pico_nome,
-        c.cidade,
-        c.estado
-      FROM catalogo_aresta e
-      JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
-      LEFT JOIN catalogo_aresta s ON s.uid = e.setor_uid
-      LEFT JOIN catalogo_aresta g ON g.uid = e.grupo_uid
-      WHERE e.tipo IN ('escalada', 'setor', 'grupo')
-      ORDER BY e.nome COLLATE NOCASE ASC
-    ''');
-    return linhas.map(ItemCatalogoBusca.deMapa).toList();
+  Future<List<ItemCatalogoBusca>> listarEntidadesDetalhadas() {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return const [];
+      }
+      final db = await _obterBanco();
+      final linhas = await db.rawQuery('''
+        SELECT
+          e.uid,
+          e.tipo,
+          e.croqui_uid,
+          c.id_slug,
+          e.nome,
+          e.escalada_grau,
+          e.escalada_tipo,
+          e.setor_uid,
+          s.nome AS setor_nome,
+          e.grupo_uid,
+          g.nome AS grupo_nome,
+          c.nome AS pico_nome,
+          c.cidade,
+          c.estado
+        FROM catalogo_aresta e
+        JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
+        LEFT JOIN catalogo_aresta s ON s.uid = e.setor_uid
+        LEFT JOIN catalogo_aresta g ON g.uid = e.grupo_uid
+        WHERE e.tipo IN ('escalada', 'setor', 'grupo')
+        ORDER BY e.nome COLLATE NOCASE ASC
+      ''');
+      return linhas.map(ItemCatalogoBusca.deMapa).toList();
+    });
   }
 
-  /// Fecha a conexão ativa com o banco SQLite, se aberta.
-  Future<void> fechar() async {
+  /// Fecha a conexão ativa com o banco SQLite internamente (para uso dentro de bloco já serializado).
+  Future<void> _fecharInterno() async {
     final db = _banco;
     _banco = null;
     _caminhoAberto = null;
     if (db != null && db.isOpen) {
       await db.close();
     }
+  }
+
+  /// Fecha a conexão ativa com o banco SQLite de forma serializada.
+  Future<void> fechar() {
+    if (_banco == null && _filaOperacoes == null) {
+      return Future<void>.value();
+    }
+    return _executarSerializado(_fecharInterno);
   }
 }

@@ -103,4 +103,24 @@ void main() {
 
     expect(treeController.currentNode, isA<PicoNode>());
   });
+
+  test('ignora disparo duplicado imediato da mesma URI entre Cold Start e stream ou no Warm Start', () async {
+    final uri = Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L');
+    when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+
+    await gerenciador.inicializar();
+    expect(treeController.currentNode, isA<PicoNode>());
+
+    // Volta para a Home para observar se o disparo duplicado da mesma URI navegaria novamente
+    treeController.navigateTo(const HomeNode());
+    expect(treeController.currentNode, isA<HomeNode>());
+
+    // Emite a mesma URI imediatamente na stream (comportamento padrão do app_links no Android)
+    uriStreamController.add(uri);
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    // Deve ter ignorado a duplicata imediata, permanecendo na HomeNode
+    expect(treeController.currentNode, isA<HomeNode>());
+  });
 }
+

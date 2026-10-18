@@ -1,27 +1,77 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:workmanager/workmanager.dart';
 
-import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/constants/constantes_rede.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:frontend/services/http/sync_rede.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/inicializacao_app.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
+import '../mocks/mock_telemetria.dart';
 
-class MockDatasetRepository extends Mock implements DatasetRepository {}
+class _MockWorkmanager extends Mock implements Workmanager {}
 
-class MockSyncService extends Mock implements SyncService {}
+class _PathProviderInicializacaoFake extends Fake
+    with MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  final String caminho;
+  _PathProviderInicializacaoFake(this.caminho);
 
-class MockWorkmanager extends Mock implements Workmanager {}
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminho;
 
-class MockImageCache extends Mock implements ImageCache {}
+  @override
+  Future<String?> getTemporaryPath() async => '$caminho/temp';
+}
+
+class _ImageCacheRastreador extends ImageCache {
+  int limpezas = 0;
+
+  @override
+  void clear() {
+    limpezas++;
+    super.clear();
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
+  late Directory dirTemp;
+
+  setUp(() async {
+    HttpOverrides.global = null;
+    dirTemp = await Directory.systemTemp.createTemp('inicializacao_app_test_');
+    PathProviderPlatform.instance = _PathProviderInicializacaoFake(dirTemp.path);
+    TelemetryService.instance = MockTelemetryService();
+  });
+
+  tearDown(() async {
+    SyncService.baseUrlOverride = null;
+    if (dirTemp.existsSync()) {
+      try {
+        dirTemp.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
 
   group('Gestão de Memória e Vitals (configurarGestaoMemoria)', () {
     test('define teto LRU do imageCache para 100 MB por padrão', () {
@@ -81,98 +131,258 @@ void main() {
   });
 
   group('Serviços e Foreground Takeover (setupAppServices)', () {
-    late MockDatasetRepository mockRepo;
-    late MockSyncService mockSync;
-    late MockWorkmanager mockWorkmanager;
+    late _MockWorkmanager mockWorkmanager;
+    late EditorDeCroqui editor;
+    late DatasetRepository datasetRepo;
+    late SyncService syncService;
+    late HttpServer servidor;
+    int chamadasIndice = 0;
 
-    setUp(() {
-      mockRepo = MockDatasetRepository();
-      mockSync = MockSyncService();
-      mockWorkmanager = MockWorkmanager();
-
-      when(() => mockRepo.init()).thenAnswer((_) async {});
+    setUp(() async {
+      mockWorkmanager = _MockWorkmanager();
       when(() => mockWorkmanager.cancelByUniqueName(any())).thenAnswer((_) async {});
+
+      chamadasIndice = 0;
+      servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      servidor.listen((req) async {
+        if (req.uri.path.endsWith('/indice.binarypb')) {
+          chamadasIndice++;
+          req.response.statusCode = 200;
+          req.response.add(Indice().writeToBuffer());
+          await req.response.close();
+        } else {
+          req.response.statusCode = 404;
+          await req.response.close();
+        }
+      });
+
+      SyncService.baseUrlOverride = 'http://127.0.0.1:${servidor.port}';
+      editor = EditorDeCroqui();
+      File(editor.indicePath(dirTemp.path))
+        ..parent.createSync(recursive: true)
+        ..writeAsBytesSync(Indice().writeToBuffer());
+      File(editor.catalogoPath(dirTemp.path)).writeAsBytesSync([1, 2, 3, 4]);
+      datasetRepo = DatasetRepository(editorDeCroqui: editor);
+      final cliente = ClienteHttpAresta.paraTestes(http.Client());
+      syncService = SyncService(
+        datasetRepository: datasetRepo,
+        client: cliente,
+        network: SyncNetwork(cliente, Duration.zero),
+      );
+    });
+
+    tearDown(() async {
+      await datasetRepo.repositorioCatalogo.fechar();
+      await servidor.close(force: true);
     });
 
     test('cancela tarefa de segundo plano e sincroniza se não precisa de migração', () async {
-      when(() => mockSync.checkNeedsMigration()).thenAnswer((_) async => false);
-      when(() => mockSync.syncIndex()).thenAnswer((_) async => <String>[]);
+      SharedPreferences.setMockInitialValues({
+        'cached_data_version': NetworkConstants.kDataVersion,
+      });
 
       final result = await setupAppServices(
-        mockRepo,
-        mockSync,
+        datasetRepo,
+        syncService,
         workmanager: mockWorkmanager,
       );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
-      verify(() => mockRepo.init()).called(1);
-      verify(() => mockSync.checkNeedsMigration()).called(1);
-      verify(() => mockSync.syncIndex()).called(1);
       expect(result, isFalse);
+      expect(chamadasIndice, equals(1));
     });
 
     test('cancela tarefa de segundo plano e não sincroniza se precisa de migração', () async {
-      when(() => mockSync.checkNeedsMigration()).thenAnswer((_) async => true);
+      SharedPreferences.setMockInitialValues({
+        'cached_data_version': NetworkConstants.kDataVersion - 1,
+      });
 
       final result = await setupAppServices(
-        mockRepo,
-        mockSync,
+        datasetRepo,
+        syncService,
         workmanager: mockWorkmanager,
       );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
-      verify(() => mockRepo.init()).called(1);
-      verify(() => mockSync.checkNeedsMigration()).called(1);
-      verifyNever(() => mockSync.syncIndex());
       expect(result, isTrue);
+      expect(chamadasIndice, equals(0));
     });
   });
 
   group('Ouvintes LiveReload (registrarOuvintesLiveReload)', () {
-    test('sincroniza índice e purga cache inativo ao receber evento', () async {
-      final mockDataset = MockDatasetRepository();
-      final mockSyncSvc = MockSyncService();
-      final mockImageCache = MockImageCache();
-      final editorLocal = EditorDeCroqui();
+    test(
+      'sincroniza índice, atualiza catalogo.db experimental com forceBypassCache, recarrega croquis online e purga cache inativo ao receber evento',
+      () async {
+        final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => servidor.close(force: true));
+        final urlServidor = 'http://127.0.0.1:${servidor.port}';
 
-      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
-      when(() => mockDataset.init()).thenAnswer((_) async {});
-      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
+        // Cria um banco catalogo.db atualizado no servidor
+        final caminhoFonte = '${dirTemp.path}/catalogo_servidor_live.db';
+        final repoFonte = RepositorioCatalogo(
+          provedorCaminhoBanco: () async => caminhoFonte,
+          fabricaBanco: databaseFactoryFfi,
+        );
+        await repoFonte.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_live_1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'uid_croqui_live',
+                  idSlug: 'br_mg_ouro_preto',
+                  nome: 'Ouro Preto Experimental',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'uid_via_live',
+                  tipo: 'escalada',
+                  croquiUid: 'uid_croqui_live',
+                  nome: 'Via Nova do Live Reload',
+                ),
+              ],
+            ),
+          ),
+        );
+        await repoFonte.fechar();
+        final bytesCatalogoNovo = await File(caminhoFonte).readAsBytes();
 
-      registrarOuvintesLiveReload(
-        editorLocal,
-        mockDataset,
-        mockSyncSvc,
-        imageCache: mockImageCache,
-      );
+        final croquiAtualizado = Croqui(
+          id: 'br_mg_ouro_preto',
+          nome: 'Ouro Preto Atualizado via Live Reload',
+        );
+        final indiceLive = Indice(
+          versaoCatalogo: 'v_live_1',
+          croquis: [
+            ResumoCroqui(
+              id: 'br_mg_ouro_preto',
+              nome: 'Ouro Preto Experimental',
+              caminhoRelativo: 'br_mg_ouro_preto/compilado.binarypb',
+              checksumSha256Croqui: 'hash_live_1',
+            ),
+          ],
+        );
 
-      editorLocal.eventoLiveReload.value = LiveReloadEvent(
-        setorId: 'setor_1',
-        timestamp: DateTime.now(),
-      );
+        bool recebeuBypassCacheNoIndice = false;
+        servidor.listen((req) async {
+          if (req.uri.path.endsWith('/indice.binarypb')) {
+            if (req.uri.queryParameters.containsKey('t')) {
+              recebeuBypassCacheNoIndice = true;
+            }
+            req.response.statusCode = 200;
+            req.response.add(indiceLive.writeToBuffer());
+            await req.response.close();
+          } else if (req.uri.path.endsWith('/catalogo.db')) {
+            req.response.statusCode = 200;
+            req.response.add(bytesCatalogoNovo);
+            await req.response.close();
+          } else if (req.uri.path.endsWith('/compilado.binarypb')) {
+            req.response.statusCode = 200;
+            req.response.add(croquiAtualizado.writeToBuffer());
+            await req.response.close();
+          } else {
+            req.response.statusCode = 404;
+            await req.response.close();
+          }
+        });
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+        final editorLocal = EditorDeCroqui();
+        editorLocal.isExperimentalMode.value = true;
+        editorLocal.editorUrl.value = urlServidor;
 
-      verify(() => mockSyncSvc.syncIndex()).called(1);
-      verify(() => mockImageCache.clear()).called(1);
-      verifyNever(() => mockDataset.init());
-    });
+        final datasetRepo = DatasetRepository(editorDeCroqui: editorLocal);
+        addTearDown(() => datasetRepo.repositorioCatalogo.fechar());
+
+        // Registra um croqui aberto na sessão online para validar que o Live Reload o recarrega
+        datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(
+          'br_mg_ouro_preto',
+          Croqui(id: 'br_mg_ouro_preto', nome: 'Ouro Preto Antigo'),
+        );
+
+        final cliente = ClienteHttpAresta.paraTestes(http.Client());
+        final syncSvc = SyncService(
+          datasetRepository: datasetRepo,
+          client: cliente,
+          network: SyncNetwork(cliente, Duration.zero),
+        );
+        final servicoOnline = ServicoCroquiOnline(
+          client: cliente,
+          sessaoOnline: datasetRepo.gerenciadorSessaoOnline,
+        );
+        final imageCacheRastreador = _ImageCacheRastreador();
+
+        registrarOuvintesLiveReload(
+          editorLocal,
+          datasetRepo,
+          syncSvc,
+          servicoCroquiOnline: servicoOnline,
+          imageCache: imageCacheRastreador,
+          debounceDuration: const Duration(milliseconds: 20),
+        );
+
+        editorLocal.eventoLiveReload.value = LiveReloadEvent(
+          setorId: 'setor_1',
+          timestamp: DateTime.now(),
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+
+        expect(recebeuBypassCacheNoIndice, isTrue);
+        expect(imageCacheRastreador.limpezas, equals(1));
+        expect(
+          await datasetRepo.repositorioCatalogo.obterIdSlugPorUid('uid_via_live'),
+          equals('br_mg_ouro_preto'),
+        );
+        expect(
+          datasetRepo.gerenciadorSessaoOnline
+              .obterCroquiOnline('br_mg_ouro_preto')
+              ?.nome,
+          equals('Ouro Preto Atualizado via Live Reload'),
+        );
+      },
+    );
 
     test('coalesce múltiplos eventos push de LiveReload em rápida sucessão', () async {
-      final mockDataset = MockDatasetRepository();
-      final mockSyncSvc = MockSyncService();
-      final mockImageCache = MockImageCache();
-      final editorLocal = EditorDeCroqui();
+      final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => servidor.close(force: true));
+      int chamadasIndice = 0;
+      servidor.listen((req) async {
+        if (req.uri.path.endsWith('/indice.binarypb')) {
+          chamadasIndice++;
+          req.response.statusCode = 200;
+          req.response.add(Indice().writeToBuffer());
+          await req.response.close();
+        } else {
+          req.response.statusCode = 404;
+          await req.response.close();
+        }
+      });
 
-      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
-      when(() => mockDataset.init()).thenAnswer((_) async {});
-      when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
+      final editorLocal = EditorDeCroqui();
+      editorLocal.isExperimentalMode.value = true;
+      editorLocal.editorUrl.value = 'http://127.0.0.1:${servidor.port}';
+      final datasetRepo = DatasetRepository(editorDeCroqui: editorLocal);
+      addTearDown(() => datasetRepo.repositorioCatalogo.fechar());
+      datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(
+        'pico_ausente_no_indice',
+        Croqui(id: 'pico_ausente_no_indice', nome: 'Ausente'),
+      );
+
+      final cliente = ClienteHttpAresta.paraTestes(http.Client());
+      final syncSvc = SyncService(
+        datasetRepository: datasetRepo,
+        client: cliente,
+        network: SyncNetwork(cliente, Duration.zero),
+      );
 
       registrarOuvintesLiveReload(
         editorLocal,
-        mockDataset,
-        mockSyncSvc,
-        imageCache: mockImageCache,
+        datasetRepo,
+        syncSvc,
         debounceDuration: const Duration(milliseconds: 40),
       );
 
@@ -190,10 +400,10 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // Deve ter chamado syncIndex apenas 1 vez para o lote
-      verify(() => mockSyncSvc.syncIndex()).called(1);
+      expect(chamadasIndice, equals(1));
     });
   });
 }

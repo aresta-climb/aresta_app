@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -16,6 +16,8 @@ class GerenciadorDeepLinks {
   final AppLinks _appLinks;
   final DeepLinkNavigatorService _navigatorService;
   StreamSubscription<Uri>? _subscricaoLinks;
+  Uri? _ultimoLinkProcessado;
+  DateTime? _instanteUltimoLink;
 
   GerenciadorDeepLinks({
     AppLinks? appLinks,
@@ -23,12 +25,24 @@ class GerenciadorDeepLinks {
   })  : _appLinks = appLinks ?? AppLinks(),
         _navigatorService = navigatorService;
 
+  bool _ehDuplicataRecente(Uri uri) {
+    final agora = DateTime.now();
+    if (_ultimoLinkProcessado == uri &&
+        _instanteUltimoLink != null &&
+        agora.difference(_instanteUltimoLink!) < const Duration(seconds: 2)) {
+      return true;
+    }
+    _ultimoLinkProcessado = uri;
+    _instanteUltimoLink = agora;
+    return false;
+  }
+
   /// Inicializa a escuta de links externos, processando o link inicial e ouvindo o stream.
   Future<void> inicializar({BuildContext? context}) async {
     // 1. Trata Cold Start (link que inicializou a abertura do app)
     try {
       final initialUri = await _appLinks.getInitialLink();
-      if (initialUri != null) {
+      if (initialUri != null && !_ehDuplicataRecente(initialUri)) {
         AppLogger.instance.logInfo('[DeepLinks] Cold Start detectado: $initialUri');
         if (context != null && !context.mounted) {
           await _navigatorService.processarLink(initialUri, tipoStart: 'cold_start');
@@ -54,6 +68,7 @@ class GerenciadorDeepLinks {
     try {
       _subscricaoLinks = _appLinks.uriLinkStream.listen(
         (uri) async {
+          if (_ehDuplicataRecente(uri)) return;
           AppLogger.instance.logInfo('[DeepLinks] Warm Start recebido: $uri');
           if (context != null && !context.mounted) {
             await _navigatorService.processarLink(uri, tipoStart: 'warm_start');
