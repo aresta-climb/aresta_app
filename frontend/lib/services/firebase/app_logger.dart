@@ -9,8 +9,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../http/cliente_http_aresta.dart';
 
 /// Serviço para centralizar logs de erro silenciosos, falhas críticas e mensagens informativas do aplicativo.
-/// No modo de debug, as mensagens e erros são impressos no console local.
-/// No modo release:
+/// No modo de debug, as mensagens e erros são impressos no console local para facilidade de diagnóstico.
+/// Tanto em desenvolvimento quanto em produção (release):
 /// - Mensagens informativas e avisos são registrados como breadcrumbs via [FirebaseCrashlytics.instance.log].
 /// - Erros operacionais e falhas fatais são enviados ao Firebase Crashlytics com [StackTrace] obrigatório.
 class AppLogger {
@@ -38,45 +38,74 @@ class AppLogger {
   @visibleForTesting
   void Function(String)? crashlyticsLogOverride;
 
+  /// Indica se a execução atual está rodando sob o ambiente de testes do Flutter (`flutter test`).
+  static bool get estaEmAmbienteDeTestes =>
+      Platform.environment.containsKey('FLUTTER_TEST');
+
+  /// Verifica se o SDK do Firebase foi devidamente inicializado pela aplicação (`initFirebase`).
+  static bool get firebaseInicializado {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Determina se o envio para o Crashlytics pode ser realizado com segurança.
+  /// Nunca tenta acessar canais nativos do Crashlytics durante testes automatizados
+  /// sem override explícito ou quando o Firebase não tiver sido inicializado.
+  bool _podeAcessarCrashlytics({bool ehLog = false}) {
+    if (ehLog && crashlyticsLogOverride != null) return true;
+    if (!ehLog && crashlyticsOverride != null) return true;
+
+    // Em testes automatizados, previne chamadas a plugins nativos não inicializados
+    if (estaEmAmbienteDeTestes) return false;
+
+    // Em execução real de dev ou release, só acessa se o Firebase estiver inicializado
+    return firebaseInicializado;
+  }
+
   /// Registra uma mensagem informativa de ciclo de vida ou operação.
   /// No modo debug, imprime no console local com prefixo informativo.
-  /// No modo release, registra a mensagem como breadcrumb no Firebase Crashlytics via [FirebaseCrashlytics.instance.log].
+  /// Registra a mensagem como breadcrumb no Firebase Crashlytics via [FirebaseCrashlytics.instance.log] tanto em desenvolvimento quanto em produção.
   void logInfo(String mensagem) {
     final isDebug = debugModeOverride ?? kDebugMode;
     if (isDebug) {
       debugPrint('ℹ️ [AppLogger] $mensagem');
-    } else {
-      try {
-        if (crashlyticsLogOverride != null) {
-          crashlyticsLogOverride!(mensagem);
-        } else {
-          FirebaseCrashlytics.instance.log(mensagem);
-        }
-      } catch (e) {
-        debugPrint('⚠️ [AppLogger] Erro ao enviar log para Crashlytics: $e');
+    }
+    if (!_podeAcessarCrashlytics(ehLog: true)) return;
+
+    try {
+      if (crashlyticsLogOverride != null) {
+        crashlyticsLogOverride!(mensagem);
+      } else {
+        FirebaseCrashlytics.instance.log(mensagem);
       }
+    } catch (e) {
+      debugPrint('⚠️ [AppLogger] Erro ao enviar log para Crashlytics: $e');
     }
   }
 
   /// Registra uma mensagem de aviso operacional.
   /// No modo debug, imprime no console local com prefixo de aviso.
-  /// No modo release, registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics via [FirebaseCrashlytics.instance.log].
+  /// Registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics via [FirebaseCrashlytics.instance.log] tanto em desenvolvimento quanto em produção.
   /// Não abre issues/tickets no painel do Crashlytics, preservando a lista de issues para erros reais que exigem correção.
   void logAviso(String mensagem) {
     final isDebug = debugModeOverride ?? kDebugMode;
     if (isDebug) {
       debugPrint('⚠️ [AppLogger AVISO] $mensagem');
-    } else {
-      try {
-        final textoLog = '⚠️ AVISO: $mensagem';
-        if (crashlyticsLogOverride != null) {
-          crashlyticsLogOverride!(textoLog);
-        } else {
-          FirebaseCrashlytics.instance.log(textoLog);
-        }
-      } catch (e) {
-        debugPrint('⚠️ [AppLogger] Erro ao enviar aviso para Crashlytics: $e');
+    }
+    if (!_podeAcessarCrashlytics(ehLog: true)) return;
+
+    try {
+      final textoLog = '⚠️ AVISO: $mensagem';
+      if (crashlyticsLogOverride != null) {
+        crashlyticsLogOverride!(textoLog);
+      } else {
+        FirebaseCrashlytics.instance.log(textoLog);
       }
+    } catch (e) {
+      debugPrint('⚠️ [AppLogger] Erro ao enviar aviso para Crashlytics: $e');
     }
   }
 
@@ -170,38 +199,36 @@ class AppLogger {
     required StackTrace stackTrace,
     bool fatal = false,
   }) {
-    final isDebug = debugModeOverride ?? kDebugMode;
-
     // Sempre imprime no console apenas para debug local.
     final prefixo = fatal ? '💥 [AppLogger CRASH]' : '🛑 [AppLogger]';
     debugPrint('$prefixo $contextMessage');
     if (error != null) debugPrint('Exception: $error');
     debugPrint('Stack: $stackTrace');
 
-    if (!isDebug) {
-      // Envia o erro pro Crashlytics (Release/Profile mode)
-      try {
-        if (crashlyticsOverride != null) {
-          crashlyticsOverride!(
-            error ?? Exception(contextMessage),
-            stackTrace,
-            reason: contextMessage,
-            printDetails: false,
-            fatal: fatal,
-          );
-        } else {
-          FirebaseCrashlytics.instance.recordError(
-            error ?? Exception(contextMessage),
-            stackTrace,
-            reason: contextMessage,
-            printDetails: false,
-            fatal: fatal,
-          );
-        }
-      } catch (e) {
-        // Se falhar o envio para o Crashlytics (ex: Firebase não inicializado), loga localmente
-        debugPrint('⚠️ [AppLogger] Erro ao enviar log para Crashlytics: $e');
+    if (!_podeAcessarCrashlytics(ehLog: false)) return;
+
+    // Envia o erro pro Crashlytics tanto em desenvolvimento quanto em produção
+    try {
+      if (crashlyticsOverride != null) {
+        crashlyticsOverride!(
+          error ?? Exception(contextMessage),
+          stackTrace,
+          reason: contextMessage,
+          printDetails: false,
+          fatal: fatal,
+        );
+      } else {
+        FirebaseCrashlytics.instance.recordError(
+          error ?? Exception(contextMessage),
+          stackTrace,
+          reason: contextMessage,
+          printDetails: false,
+          fatal: fatal,
+        );
       }
+    } catch (e) {
+      // Se falhar o envio para o Crashlytics (ex: Firebase não inicializado), loga localmente
+      debugPrint('⚠️ [AppLogger] Erro ao enviar log para Crashlytics: $e');
     }
   }
 

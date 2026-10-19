@@ -37,12 +37,16 @@ class SetorPage extends StatefulWidget {
   /// Escalada alvo opcional para navegação direta com rolagem e realce.
   final Escalada? scrollToEscalada;
 
+  /// Provedor de imagem de capa futuro opcional para testes ou injeção em camadas.
+  final Future<ImageProvider?>? coverProviderFutureOverride;
+
   const SetorPage({
     super.key,
     required this.setor,
     this.grupoContext,
     required this.cragId,
     this.scrollToEscalada,
+    this.coverProviderFutureOverride,
   });
 
   @override
@@ -64,7 +68,8 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _coverProviderFuture = _resolveCoverImage();
+    _coverProviderFuture =
+        widget.coverProviderFutureOverride ?? _resolveCoverImage();
     _estadoFiltros =
         GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
     GerenciadorFiltrosCroqui.instance.addListener(_onFiltrosGlobaisAlterados);
@@ -158,8 +163,12 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(SetorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.setor != widget.setor || oldWidget.cragId != widget.cragId) {
-      _coverProviderFuture = _resolveCoverImage();
+    if (oldWidget.setor != widget.setor ||
+        oldWidget.cragId != widget.cragId ||
+        oldWidget.coverProviderFutureOverride !=
+            widget.coverProviderFutureOverride) {
+      _coverProviderFuture =
+          widget.coverProviderFutureOverride ?? _resolveCoverImage();
       _estadoFiltros =
           GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
       _inicializarDados();
@@ -397,7 +406,6 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
                                               begin: Alignment.bottomCenter,
                                               end: Alignment.topCenter,
                                               colors: [
-                                                Colors.black,
                                                 Colors.black.withValues(alpha: 0.9),
                                                 Colors.black.withValues(alpha: 0.6),
                                                 Colors.transparent,

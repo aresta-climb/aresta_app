@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/pages/grupo.dart';
@@ -298,6 +299,64 @@ void main() {
     expect(textoCompartilhado, contains('Grupo Sherpa'));
     expect(textoCompartilhado, contains('Pedra Grande'));
     expect(textoCompartilhado, contains('https://aresta.cc/s/uidGrupoShare55'));
+  });
+
+  testWidgets('GrupoPage renderiza imagem de capa e gradientes sem erro de argumentos LinearGradient', (tester) async {
+    final imagemProvider = MemoryImage(
+      Uint8List.fromList(const [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+        0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+        0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+        0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+      ]),
+    );
+
+    final grupo = Grupo()
+      ..nome = 'Grupo Com Capa e Gradiente'
+      ..caminhoImagemCapa = 'imagens/capa_grupo.webp';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: GrupoPage(
+          grupo: grupo,
+          cragId: 'crag_grupo_test',
+          coverProviderFutureOverride: Future.value(imagemProvider),
+        ),
+      ),
+    );
+
+    // Aguarda a resolução do Future da imagem e a renderização completa do layout
+    await tester.pumpAndSettle();
+
+    // Confirma que os containers de gradiente foram construídos na árvore dentro do FlexibleSpaceBar
+    final containersComGradiente = tester
+        .widgetList<Container>(
+          find.descendant(
+            of: find.byType(FlexibleSpaceBar),
+            matching: find.byType(Container),
+          ),
+        )
+        .where(
+          (c) =>
+              c.decoration is BoxDecoration &&
+              (c.decoration as BoxDecoration).gradient is LinearGradient,
+        )
+        .toList();
+
+    expect(containersComGradiente.length, greaterThanOrEqualTo(2));
+    for (final container in containersComGradiente) {
+      final gradiente =
+          (container.decoration as BoxDecoration).gradient as LinearGradient;
+      expect(
+        gradiente.colors.length,
+        equals(gradiente.stops?.length),
+        reason:
+            'LinearGradient exige que colors e stops tenham rigorosamente o mesmo tamanho para evitar crashes',
+      );
+    }
   });
 }
 

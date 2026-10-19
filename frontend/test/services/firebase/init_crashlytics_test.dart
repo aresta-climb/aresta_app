@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -36,31 +36,31 @@ class MockFirebaseCrashlytics implements FirebaseCrashlytics {
 void main() {
   group('initCrashlytics', () {
     test(
-      'should disable Crashlytics collection if isDebugMode is true',
+      'deve manter a coleta do Crashlytics ativada mesmo quando isDebugMode for true',
       () async {
         final mockCrashlytics = MockFirebaseCrashlytics();
+        mockCrashlytics.collectionEnabled = false;
 
         await initCrashlytics(
           isDebugMode: true,
           crashlyticsInstance: mockCrashlytics,
         );
 
-        expect(mockCrashlytics.collectionEnabled, false);
+        expect(mockCrashlytics.collectionEnabled, true);
       },
     );
 
     test(
-      'should not disable Crashlytics collection if isDebugMode is false',
+      'deve manter a coleta do Crashlytics ativada quando isDebugMode for false',
       () async {
         final mockCrashlytics = MockFirebaseCrashlytics();
-        mockCrashlytics.collectionEnabled = true;
+        mockCrashlytics.collectionEnabled = false;
 
         await initCrashlytics(
           isDebugMode: false,
           crashlyticsInstance: mockCrashlytics,
         );
 
-        // Verify that it remains true (since we don't explicitly call setCrashlyticsCollectionEnabled(true))
         expect(mockCrashlytics.collectionEnabled, true);
       },
     );

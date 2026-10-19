@@ -200,6 +200,134 @@ void main() {
       expect(errorReported, isFalse, reason: 'logAviso nunca deve acionar recordError no Crashlytics');
     });
 
+    test('Deve enviar erro para Crashlytics mesmo quando modo debug está ativado (debugModeOverride = true)', () async {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = true;
+
+      bool crashlyticsCalled = false;
+      dynamic capturedException;
+      String? capturedReason;
+      StackTrace? capturedStack;
+
+      final stack = StackTrace.fromString('stack trace de desenvolvimento');
+
+      AppLogger.instance.crashlyticsOverride = (
+        exception,
+        st, {
+        reason,
+        printDetails = false,
+        fatal = false,
+      }) async {
+        crashlyticsCalled = true;
+        capturedException = exception;
+        capturedReason = reason;
+        capturedStack = st;
+      };
+
+      AppLogger.instance.logError(
+        'Erro em modo desenvolvimento',
+        error: Exception('Falha dev'),
+        stackTrace: stack,
+      );
+
+      expect(crashlyticsCalled, isTrue);
+      expect(capturedReason, 'Erro em modo desenvolvimento');
+      expect(capturedException.toString(), contains('Falha dev'));
+      expect(capturedStack, stack);
+    });
+
+    test('logCrash deve enviar erro fatal para Crashlytics mesmo quando debugModeOverride = true', () async {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = true;
+
+      bool crashlyticsCalled = false;
+      bool? capturedFatal;
+      String? capturedReason;
+      StackTrace? capturedStack;
+
+      final stack = StackTrace.fromString('stack crash dev');
+
+      AppLogger.instance.crashlyticsOverride = (
+        exception,
+        st, {
+        reason,
+        printDetails = false,
+        fatal = false,
+      }) async {
+        crashlyticsCalled = true;
+        capturedReason = reason;
+        capturedFatal = fatal;
+        capturedStack = st;
+      };
+
+      AppLogger.instance.logCrash(
+        'Falha crítica em dev',
+        error: Exception('Erro grave'),
+        stackTrace: stack,
+      );
+
+      expect(crashlyticsCalled, isTrue);
+      expect(capturedReason, 'Falha crítica em dev');
+      expect(capturedFatal, isTrue);
+      expect(capturedStack, stack);
+    });
+
+    test('logInfo deve registrar breadcrumb no Crashlytics quando modo debug está ativado (debugModeOverride = true)', () {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = true;
+
+      String? loggedMessage;
+      AppLogger.instance.crashlyticsLogOverride = (msg) {
+        loggedMessage = msg;
+      };
+
+      AppLogger.instance.logInfo('Info em ambiente dev');
+
+      expect(loggedMessage, 'Info em ambiente dev');
+    });
+
+    test('logAviso deve registrar breadcrumb no Crashlytics quando modo debug está ativado (debugModeOverride = true)', () {
+      AppLogger.resetForTesting();
+      AppLogger.instance.debugModeOverride = true;
+
+      String? loggedMessage;
+      AppLogger.instance.crashlyticsLogOverride = (msg) {
+        loggedMessage = msg;
+      };
+
+      bool errorReported = false;
+      AppLogger.instance.crashlyticsOverride = (
+        exception,
+        st, {
+        reason,
+        printDetails = false,
+        fatal = false,
+      }) async {
+        errorReported = true;
+      };
+
+      AppLogger.instance.logAviso('Aviso em ambiente dev');
+
+      expect(loggedMessage, '⚠️ AVISO: Aviso em ambiente dev');
+      expect(errorReported, isFalse);
+    });
+
+    test('Não deve tentar acessar FirebaseCrashlytics.instance nativo em ambiente de teste quando overrides forem nulos', () {
+      AppLogger.resetForTesting();
+      expect(AppLogger.instance.crashlyticsOverride, isNull);
+      expect(AppLogger.instance.crashlyticsLogOverride, isNull);
+
+      expect(() => AppLogger.instance.logInfo('Info sem Firebase'), returnsNormally);
+      expect(() => AppLogger.instance.logAviso('Aviso sem Firebase'), returnsNormally);
+      expect(
+        () => AppLogger.instance.logError(
+          'Erro sem Firebase',
+          stackTrace: StackTrace.current,
+        ),
+        returnsNormally,
+      );
+    });
+
     test('isFalhaConexaoOuTimeout identifica corretamente exceções de rede e timeout', () {
       expect(AppLogger.isFalhaConexaoOuTimeout(const SocketException('Failed host lookup')), isTrue);
       expect(AppLogger.isFalhaConexaoOuTimeout(const HttpException('Connection closed')), isTrue);

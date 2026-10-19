@@ -35,12 +35,16 @@ class GrupoPage extends StatefulWidget {
   /// Callback opcional de toque em uma via (usado para navegação customizada ou testes).
   final void Function(ItemIndiceEscalada item)? onViaTap;
 
+  /// Provedor de imagem de capa futuro opcional para testes ou injeção em camadas.
+  final Future<ImageProvider?>? coverProviderFutureOverride;
+
   const GrupoPage({
     super.key,
     required this.grupo,
     required this.cragId,
     this.croqui,
     this.onViaTap,
+    this.coverProviderFutureOverride,
   });
 
   @override
@@ -63,7 +67,8 @@ class _GrupoPageState extends State<GrupoPage>
   @override
   void initState() {
     super.initState();
-    _coverProviderFuture = _resolveCoverImage();
+    _coverProviderFuture =
+        widget.coverProviderFutureOverride ?? _resolveCoverImage();
     _estadoFiltros =
         GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);
     GerenciadorFiltrosCroqui.instance.addListener(_onFiltrosGlobaisAlterados);
@@ -96,8 +101,12 @@ class _GrupoPageState extends State<GrupoPage>
   @override
   void didUpdateWidget(GrupoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.grupo != widget.grupo || oldWidget.cragId != widget.cragId) {
-      _coverProviderFuture = _resolveCoverImage();
+    if (oldWidget.grupo != widget.grupo ||
+        oldWidget.cragId != widget.cragId ||
+        oldWidget.coverProviderFutureOverride !=
+            widget.coverProviderFutureOverride) {
+      _coverProviderFuture =
+          widget.coverProviderFutureOverride ?? _resolveCoverImage();
       _tabController?.dispose();
       _estadoFiltros =
           GerenciadorFiltrosCroqui.instance.obterFiltros(widget.cragId);

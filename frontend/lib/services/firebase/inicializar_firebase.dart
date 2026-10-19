@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
@@ -33,13 +33,10 @@ Future<void> initCrashlytics({
   bool? isDebugMode,
   FirebaseCrashlytics? crashlyticsInstance,
 }) async {
-  final isDebug = isDebugMode ?? kDebugMode;
   final crashlytics = crashlyticsInstance ?? FirebaseCrashlytics.instance;
 
-  // Crashlytics global handlers
-  if (isDebug) {
-    await crashlytics.setCrashlyticsCollectionEnabled(false);
-  }
+  // Crashlytics global handlers - mantido sempre ativo tanto em desenvolvimento quanto em produção
+  await crashlytics.setCrashlyticsCollectionEnabled(true);
   FlutterError.onError = crashlytics.recordFlutterFatalError;
   PlatformDispatcher.instance.onError = (error, stack) {
     crashlytics.recordError(error, stack, fatal: true);
