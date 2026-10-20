@@ -346,9 +346,9 @@ Widget _buildSearchBar(BuildContext context, HomeViewModel viewModel) {
   );
 }
 
-/// Constrói o card explicativo do "Guia Rápido do Aresta" com 3 passos
-/// para orientar o escalador a encontrar picos, salvar offline e utilizar
-/// o croqui interativo.
+/// Constrói o card explicativo do "Guia Rápido do Aresta" com 4 passos
+/// para orientar o escalador a encontrar picos, salvar offline, utilizar
+/// o croqui interativo e compartilhar links diretos de vias e setores.
 Widget _buildGuiaRapido(BuildContext context) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
@@ -393,7 +393,7 @@ Widget _buildGuiaRapido(BuildContext context) {
           ),
           const SizedBox(height: 8),
           Text(
-            'Três passos pra você sair do app direto pro paredão.',
+            'Quatro passos pra você sair do app direto pro paredão.',
             style: TextStyle(
               color: context.colors.ashGrey,
               fontSize: 14,
@@ -427,6 +427,15 @@ Widget _buildGuiaRapido(BuildContext context) {
             desc:
                 'Toque nos pontos da imagem do paredão para consultar graus, altura e proteções.',
             iconColor: const Color(0xFFBCA646),
+          ),
+          _buildStepItem(
+            context,
+            num: '04',
+            icon: Icons.share_outlined,
+            title: 'COMPARTILHE',
+            desc:
+                'Envie links de vias, setores e picos para sua cordada abrir direto no app ou navegador.',
+            iconColor: const Color(0xFF5B81A7),
             isLast: true,
           ),
         ],
