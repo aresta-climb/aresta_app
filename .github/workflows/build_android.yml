@@ -1,4 +1,4 @@
-name: Android Release Sub-Workflow 
+﻿name: Android Release Sub-Workflow 
 
 on:
   workflow_call:
@@ -73,7 +73,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           STORE_FILE: upload-keystore.jks
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
+
+      - name: Validar e Fazer Upload de Símbolos para o Sentry (Fail-Fast)
+        working-directory: ./frontend
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::error::SENTRY_AUTH_TOKEN não configurado nos secrets do GitHub! O build de release não pode ser publicado sem símbolos de desofuscação no Sentry."
+            exit 1
+          fi
+          dart run sentry_dart_plugin
 
       - name: Package Native Debug Symbols
         working-directory: ./frontend

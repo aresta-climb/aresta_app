@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import '../../mocks/mock_app_logger.dart';
@@ -548,5 +549,187 @@ void main() {
         isFalse,
       );
     });
+
+    test(
+      'logInfo e logAviso devem enviar breadcrumbs simultaneamente para o Crashlytics e para o Sentry',
+      () {
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = false;
+
+        final logsCrashlytics = <String>[];
+        final breadcrumbsSentry = <Breadcrumb>[];
+
+        AppLogger.instance.crashlyticsLogOverride = logsCrashlytics.add;
+        AppLogger.instance.sentryBreadcrumbOverride = breadcrumbsSentry.add;
+
+        AppLogger.instance.logInfo('Catálogo sincronizado com sucesso');
+        AppLogger.instance.logAviso('Latência elevada na CDN');
+
+        expect(logsCrashlytics, [
+          'Catálogo sincronizado com sucesso',
+          '⚠️ AVISO: Latência elevada na CDN',
+        ]);
+        expect(breadcrumbsSentry.length, 2);
+        expect(breadcrumbsSentry[0].message, 'Catálogo sincronizado com sucesso');
+        expect(breadcrumbsSentry[0].level, SentryLevel.info);
+        expect(breadcrumbsSentry[1].message, '⚠️ AVISO: Latência elevada na CDN');
+        expect(breadcrumbsSentry[1].level, SentryLevel.warning);
+      },
+    );
+
+    test(
+      'logError e logCrash devem enviar exceções com StackTrace simultaneamente para o Crashlytics e para o Sentry',
+      () async {
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = false;
+
+        final errosCrashlytics = <Map<String, dynamic>>[];
+        final errosSentry = <Map<String, dynamic>>[];
+
+        AppLogger.instance.crashlyticsOverride =
+            (exception, st, {reason, printDetails = false, fatal = false}) async {
+          errosCrashlytics.add({
+            'exception': exception,
+            'stackTrace': st,
+            'reason': reason,
+            'fatal': fatal,
+          });
+        };
+
+        AppLogger.instance.sentryCaptureOverride =
+            (exception, {stackTrace, reason, fatal = false}) async {
+          errosSentry.add({
+            'exception': exception,
+            'stackTrace': stackTrace,
+            'reason': reason,
+            'fatal': fatal,
+          });
+        };
+
+        final stackNaoFatal = StackTrace.fromString('stack nao fatal');
+        final stackFatal = StackTrace.fromString('stack fatal');
+
+        AppLogger.instance.logError(
+          'Falha ao decodificar manifesto local',
+          error: const FormatException('Protobuf truncado'),
+          stackTrace: stackNaoFatal,
+        );
+
+        AppLogger.instance.logCrash(
+          'Corrupção detectada no arquivo de índice',
+          error: null,
+          stackTrace: stackFatal,
+        );
+
+        expect(errosCrashlytics.length, 2);
+        expect(errosSentry.length, 2);
+
+        expect(errosSentry[0]['reason'], 'Falha ao decodificar manifesto local');
+        expect(errosSentry[0]['stackTrace'], stackNaoFatal);
+        expect(errosSentry[0]['fatal'], isFalse);
+
+        expect(errosSentry[1]['reason'], 'Corrupção detectada no arquivo de índice');
+        expect(errosSentry[1]['stackTrace'], stackFatal);
+        expect(errosSentry[1]['fatal'], isTrue);
+        expect(
+          errosSentry[1]['exception'].toString(),
+          contains('Corrupção detectada no arquivo de índice'),
+        );
+      },
+    );
+
+    test(
+      'logFalhaSyncOuDownload não deve abrir issue no Sentry nem no Crashlytics quando for falha de conexão ou timeout',
+      () {
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = false;
+
+        final breadcrumbsSentry = <Breadcrumb>[];
+        var capturouExcecaoSentry = false;
+
+        AppLogger.instance.sentryBreadcrumbOverride = breadcrumbsSentry.add;
+        AppLogger.instance.sentryCaptureOverride =
+            (exception, {stackTrace, reason, fatal = false}) async {
+          capturouExcecaoSentry = true;
+        };
+
+        AppLogger.instance.logFalhaSyncOuDownload(
+          'Falha ao baixar imagem',
+          error: const SocketException('Sem rota para o host'),
+          stackTrace: StackTrace.fromString('stack socket'),
+        );
+
+        expect(capturouExcecaoSentry, isFalse);
+        expect(breadcrumbsSentry.length, 1);
+        expect(breadcrumbsSentry.first.level, SentryLevel.warning);
+        expect(breadcrumbsSentry.first.message, contains('Sem rota para o host'));
+      },
+    );
+
+    test(
+      'Executa caminhos nativos de fallback com segurança quando ignorarAmbienteDeTestesOverride está ativo',
+      () async {
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = false;
+        AppLogger.instance.ignorarAmbienteDeTestesOverride = false;
+
+        // Com ignorarAmbienteDeTestesOverride = false e sem SDK inicializado, consulta firebaseInicializado / Sentry.isEnabled
+        expect(() => AppLogger.instance.logInfo('Checagem estado inicializado'), returnsNormally);
+        expect(
+          () => AppLogger.instance.logError(
+            'Checagem erro estado inicializado',
+            stackTrace: StackTrace.fromString('stack'),
+          ),
+          returnsNormally,
+        );
+
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = true;
+        AppLogger.instance.ignorarAmbienteDeTestesOverride = true;
+
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        // Quando callbacks de override lançam erro ou SDK nativo não está inicializado,
+        // o AppLogger deve capturar internamente sem propagar exceção para a aplicação
+        AppLogger.instance.crashlyticsLogOverride = (_) => throw StateError('Falha simulada Crashlytics log');
+        AppLogger.instance.sentryBreadcrumbOverride = (_) => throw StateError('Falha simulada Sentry breadcrumb');
+        AppLogger.instance.crashlyticsOverride = (_, _, {reason, printDetails = false, fatal = false}) =>
+            throw StateError('Falha simulada Crashlytics recordError');
+        AppLogger.instance.sentryCaptureOverride = (_, {stackTrace, reason, fatal = false}) =>
+            throw StateError('Falha simulada Sentry capture');
+
+        expect(() => AppLogger.instance.logInfo('Teste resiliência info'), returnsNormally);
+        expect(() => AppLogger.instance.logAviso('Teste resiliência aviso'), returnsNormally);
+        expect(
+          () => AppLogger.instance.logError(
+            'Teste resiliência erro',
+            stackTrace: StackTrace.fromString('stack resiliencia'),
+          ),
+          returnsNormally,
+        );
+
+        // Exercita chamadas diretas ao SDK Sentry com Hub inicializado em memória
+        await Sentry.init((options) {
+          options.dsn = 'https://examplePublicKey@o0.ingest.sentry.io/0';
+        });
+        addTearDown(() async => await Sentry.close());
+
+        AppLogger.resetForTesting();
+        AppLogger.instance.debugModeOverride = false;
+        AppLogger.instance.ignorarAmbienteDeTestesOverride = true;
+
+        expect(() => AppLogger.instance.logInfo('Breadcrumb direto Sentry'), returnsNormally);
+        expect(() => AppLogger.instance.logAviso('Aviso direto Sentry'), returnsNormally);
+        expect(
+          () => AppLogger.instance.logError(
+            'Erro direto Sentry',
+            error: Exception('Exceção direta'),
+            stackTrace: StackTrace.fromString('stack direta'),
+            fatal: true,
+          ),
+          returnsNormally,
+        );
+      },
+    );
   });
 }

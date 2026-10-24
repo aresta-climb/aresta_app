@@ -50,6 +50,7 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 | [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação técnica unificada: NanoID 14c universal, PowerSync, contas e dados abertos ODbL |
 | [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos oficiais de design e arquitetura diagramados em PDF |
 | [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Especificação das regras e fluxos do sistema de acesso a croquis |
+| [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Guia completo de configuração: Sentry Open Source, GitHub Issues, WAHA em GCP `e2-micro` e fallback Resend |
 | [`AGENTS.md`](AGENTS.md) | Princípios de Engenharia Aresta App (Tudo em Português, 100% Test Coverage, TDD, Anti-Abstração) |
 
 ---

@@ -6,13 +6,15 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../http/cliente_http_aresta.dart';
 
 /// Serviço para centralizar logs de erro silenciosos, falhas críticas e mensagens informativas do aplicativo.
 /// No modo de debug, as mensagens e erros são impressos no console local para facilidade de diagnóstico.
 /// Tanto em desenvolvimento quanto em produção (release):
-/// - Mensagens informativas e avisos são registrados como breadcrumbs via [FirebaseCrashlytics.instance.log].
-/// - Erros operacionais e falhas fatais são enviados ao Firebase Crashlytics com [StackTrace] obrigatório.
+/// - Mensagens informativas e avisos são registrados como breadcrumbs via [FirebaseCrashlytics.instance.log]
+///   e [Sentry.addBreadcrumb].
+/// - Erros operacionais e falhas fatais são enviados ao Firebase Crashlytics e ao Sentry com [StackTrace] obrigatório.
 class AppLogger {
   AppLogger._privateConstructor();
   static AppLogger instance = AppLogger._privateConstructor();
@@ -24,6 +26,11 @@ class AppLogger {
 
   @visibleForTesting
   bool? debugModeOverride;
+
+  /// Permite exercitar em testes unitários os caminhos de verificação de inicialização
+  /// (`false`) ou de chamada direta aos SDKs nativos (`true`).
+  @visibleForTesting
+  bool? ignorarAmbienteDeTestesOverride;
 
   @visibleForTesting
   Future<void> Function(
@@ -37,6 +44,18 @@ class AppLogger {
 
   @visibleForTesting
   void Function(String)? crashlyticsLogOverride;
+
+  @visibleForTesting
+  void Function(Breadcrumb)? sentryBreadcrumbOverride;
+
+  @visibleForTesting
+  Future<void> Function(
+    dynamic, {
+    StackTrace? stackTrace,
+    String? reason,
+    bool fatal,
+  })?
+  sentryCaptureOverride;
 
   /// Indica se a execução atual está rodando sob o ambiente de testes do Flutter (`flutter test`).
   static bool get estaEmAmbienteDeTestes =>
@@ -57,22 +76,106 @@ class AppLogger {
   bool _podeAcessarCrashlytics({bool ehLog = false}) {
     if (ehLog && crashlyticsLogOverride != null) return true;
     if (!ehLog && crashlyticsOverride != null) return true;
+    if (ignorarAmbienteDeTestesOverride == true) return true;
 
     // Em testes automatizados, previne chamadas a plugins nativos não inicializados
-    if (estaEmAmbienteDeTestes) return false;
+    if (ignorarAmbienteDeTestesOverride == null && estaEmAmbienteDeTestes) {
+      return false;
+    }
 
     // Em execução real de dev ou release, só acessa se o Firebase estiver inicializado
     return firebaseInicializado;
   }
 
+  /// Determina se o envio para o Sentry pode ser realizado.
+  bool _podeAcessarSentry({bool ehBreadcrumb = false}) {
+    if (ehBreadcrumb && sentryBreadcrumbOverride != null) return true;
+    if (!ehBreadcrumb && sentryCaptureOverride != null) return true;
+    if (ignorarAmbienteDeTestesOverride == true) return true;
+    if (ignorarAmbienteDeTestesOverride == null && estaEmAmbienteDeTestes) {
+      return false;
+    }
+    return Sentry.isEnabled;
+  }
+
+  /// Registra um breadcrumb no Sentry (ou no override de teste configurado).
+  void _registrarBreadcrumbSentry(String mensagem, SentryLevel nivel) {
+    if (!_podeAcessarSentry(ehBreadcrumb: true)) return;
+
+    try {
+      final breadcrumb = Breadcrumb(
+        message: mensagem,
+        level: nivel,
+        timestamp: DateTime.now().toUtc(),
+      );
+      if (sentryBreadcrumbOverride != null) {
+        sentryBreadcrumbOverride!(breadcrumb);
+      } else {
+        Sentry.addBreadcrumb(breadcrumb);
+      }
+    } catch (e) {
+      debugPrint('⚠️ [AppLogger] Erro ao enviar breadcrumb para Sentry: $e');
+    }
+  }
+
+  /// Configura o escopo do evento Sentry com nível de severidade e contexto da falha.
+  @visibleForTesting
+  static void configurarEscopoSentry(
+    Scope scope,
+    String contextMessage, {
+    required bool fatal,
+  }) {
+    scope.level = fatal ? SentryLevel.fatal : SentryLevel.error;
+    scope.setContexts('contexto_erro', {
+      'mensagem': contextMessage,
+      'fatal': fatal,
+    });
+  }
+
+  /// Registra uma exceção no Sentry (ou no override de teste configurado).
+  void _registrarExcecaoSentry(
+    String contextMessage, {
+    required dynamic excecao,
+    required StackTrace stackTrace,
+    required bool fatal,
+  }) {
+    if (!_podeAcessarSentry(ehBreadcrumb: false)) return;
+
+    try {
+      if (sentryCaptureOverride != null) {
+        sentryCaptureOverride!(
+          excecao,
+          stackTrace: stackTrace,
+          reason: contextMessage,
+          fatal: fatal,
+        );
+      } else {
+        Sentry.captureException(
+          excecao,
+          stackTrace: stackTrace,
+          withScope: (scope) => configurarEscopoSentry(
+            scope,
+            contextMessage,
+            fatal: fatal,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ [AppLogger] Erro ao enviar exceção para Sentry: $e');
+    }
+  }
+
   /// Registra uma mensagem informativa de ciclo de vida ou operação.
   /// No modo debug, imprime no console local com prefixo informativo.
-  /// Registra a mensagem como breadcrumb no Firebase Crashlytics via [FirebaseCrashlytics.instance.log] tanto em desenvolvimento quanto em produção.
+  /// Registra a mensagem como breadcrumb no Firebase Crashlytics e no Sentry tanto em desenvolvimento quanto em produção.
   void logInfo(String mensagem) {
     final isDebug = debugModeOverride ?? kDebugMode;
     if (isDebug) {
       debugPrint('ℹ️ [AppLogger] $mensagem');
     }
+
+    _registrarBreadcrumbSentry(mensagem, SentryLevel.info);
+
     if (!_podeAcessarCrashlytics(ehLog: true)) return;
 
     try {
@@ -88,17 +191,20 @@ class AppLogger {
 
   /// Registra uma mensagem de aviso operacional.
   /// No modo debug, imprime no console local com prefixo de aviso.
-  /// Registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics via [FirebaseCrashlytics.instance.log] tanto em desenvolvimento quanto em produção.
-  /// Não abre issues/tickets no painel do Crashlytics, preservando a lista de issues para erros reais que exigem correção.
+  /// Registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics e no Sentry.
+  /// Não abre issues/tickets no painel do Crashlytics ou Sentry, preservando a lista de issues para erros reais.
   void logAviso(String mensagem) {
     final isDebug = debugModeOverride ?? kDebugMode;
     if (isDebug) {
       debugPrint('⚠️ [AppLogger AVISO] $mensagem');
     }
+
+    final textoLog = '⚠️ AVISO: $mensagem';
+    _registrarBreadcrumbSentry(textoLog, SentryLevel.warning);
+
     if (!_podeAcessarCrashlytics(ehLog: true)) return;
 
     try {
-      final textoLog = '⚠️ AVISO: $mensagem';
       if (crashlyticsLogOverride != null) {
         crashlyticsLogOverride!(textoLog);
       } else {
@@ -188,11 +294,11 @@ class AppLogger {
         msg.contains('sem conexao');
   }
 
-  /// Registra um erro de operação no Firebase Crashlytics.
+  /// Registra um erro de operação no Firebase Crashlytics e no Sentry.
   /// [contextMessage] deve explicar o que falhou (ex: "Falha ao baixar imagem").
   /// [error] é a exceção original capturada.
-  /// [stackTrace] é o rastreamento de pilha associado, estritamente obrigatório para diagnóstico no Crashlytics.
-  /// [fatal] indica se o erro deve ser tratado com nível de crash no Crashlytics (padrão: false).
+  /// [stackTrace] é o rastreamento de pilha associado, estritamente obrigatório para diagnóstico.
+  /// [fatal] indica se o erro deve ser tratado com nível de crash fatal (padrão: false).
   void logError(
     String contextMessage, {
     dynamic error,
@@ -205,13 +311,22 @@ class AppLogger {
     if (error != null) debugPrint('Exception: $error');
     debugPrint('Stack: $stackTrace');
 
+    final excecaoEfetiva = error ?? Exception(contextMessage);
+
+    _registrarExcecaoSentry(
+      contextMessage,
+      excecao: excecaoEfetiva,
+      stackTrace: stackTrace,
+      fatal: fatal,
+    );
+
     if (!_podeAcessarCrashlytics(ehLog: false)) return;
 
     // Envia o erro pro Crashlytics tanto em desenvolvimento quanto em produção
     try {
       if (crashlyticsOverride != null) {
         crashlyticsOverride!(
-          error ?? Exception(contextMessage),
+          excecaoEfetiva,
           stackTrace,
           reason: contextMessage,
           printDetails: false,
@@ -219,7 +334,7 @@ class AppLogger {
         );
       } else {
         FirebaseCrashlytics.instance.recordError(
-          error ?? Exception(contextMessage),
+          excecaoEfetiva,
           stackTrace,
           reason: contextMessage,
           printDetails: false,
@@ -232,7 +347,7 @@ class AppLogger {
     }
   }
 
-  /// Registra um erro crítico no nível de crash (`fatal: true`) no Firebase Crashlytics.
+  /// Registra um erro crítico no nível de crash (`fatal: true`) no Firebase Crashlytics e no Sentry.
   /// Deve ser usado para falhas severas de integridade, sincronização offline ou downloads corrompidos.
   void logCrash(
     String contextMessage, {
@@ -249,7 +364,7 @@ class AppLogger {
 
   /// Registra uma falha de sincronização ou download de croqui.
   /// Se a falha for decorrente de queda de conexão ou timeout (esperada em ambientes móveis),
-  /// o erro é registrado como aviso/breadcrumb contextual ([logAviso]) sem abrir issues no Crashlytics.
+  /// o erro é registrado como aviso/breadcrumb contextual ([logAviso]) sem abrir issues no Crashlytics ou Sentry.
   /// Para qualquer outro erro de integridade (ex: 404, 500, checksum divergente, corrupção),
   /// o erro é registrado como crash fatal (`fatal: true`).
   void logFalhaSyncOuDownload(

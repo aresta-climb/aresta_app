@@ -38,20 +38,22 @@ Responsável pela atestação de integridade de hardware e software da aplicaç�
 - **Degradação Offline em `getToken`**: Falhas de rede ou indisponibilidade ao renovar o token do App Check são reconhecidas via `AppLogger.isFalhaConexaoOuTimeout` e registradas como `logAviso` (breadcrumb), evitando falsos positivos de erro não-fatal no Crashlytics.
 
 ### 5. `app_logger.dart`
-Abstração centralizada de logging e relatórios de erro construída sobre o `firebase_crashlytics`.
+Abstração centralizada de logging e relatórios de erro com **envio dual** para o `firebase_crashlytics` e o `sentry_flutter` (quando inicializado via `--dart-define=SENTRY_DSN=...` em `main.dart`).
 O aplicativo adota a regra arquitetural estrita de que nenhum código em `lib/` (fora deste serviço) pode invocar `print` ou `debugPrint` diretamente.
+- **Fila Offline (`outbox`)**: Tanto o Crashlytics quanto o `sentry_flutter` armazenam envelopes e breadcrumbs em disco local quando o escalador está sem sinal na rocha, despachando automaticamente quando a conectividade é restabelecida.
 - **`logInfo(String mensagem)`**:
   - *Debug*: Imprime no console local com prefixo `ℹ️ [AppLogger]`.
+  - *Breadcrumbs*: Registra simultaneamente no Crashlytics (`FirebaseCrashlytics.instance.log`) e no Sentry (`Sentry.addBreadcrumb` com `SentryLevel.info`).
 - **`logAviso(String mensagem)`**:
   - *Debug*: Imprime no console com prefixo de aviso `⚠️ [AppLogger AVISO]`.
-  - *Release*: Registra exclusivamente como breadcrumb contextual via `FirebaseCrashlytics.instance.log`, sem abrir issues no Crashlytics.
+  - *Release*: Registra exclusivamente como breadcrumb contextual no Crashlytics e no Sentry (`SentryLevel.warning`), sem abrir issues.
 - **`logError(String contextMessage, {error, required StackTrace stackTrace, bool fatal = false})`**:
   - *Debug*: Imprime detalhes completos no console local.
-  - *Release*: Envia ao Crashlytics com o `stackTrace` de origem obrigatório para permitir agrupamento correto e diagnóstico preciso de falhas.
+  - *Release*: Envia simultaneamente ao Crashlytics (`recordError`) e ao Sentry (`Sentry.captureException`) com o `stackTrace` de origem obrigatório para permitir agrupamento correto, abertura automática de issue deduplicada no GitHub e alertas no WhatsApp.
 - **`logCrash(String contextMessage, {error, required StackTrace stackTrace})`**:
-  - Registra falhas severas com nível crítico (`fatal: true`).
+  - Registra falhas severas com nível crítico (`fatal: true` / `SentryLevel.fatal`), acionando alertas imediatos de emergência.
 - **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`** e **`isFalhaConexaoOuTimeout(dynamic error)`**:
-  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, HTTP 502/503/504/429 ou erros nativos de transporte de `FirebaseException` no Installations, Remote Config e App Check), registrando apenas como breadcrumb (`logAviso`), ou se é falha de integridade/corrupção de dados (`fatal: true`).
+  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, HTTP 502/503/504/429 ou erros nativos de transporte de `FirebaseException` no Installations, Remote Config e App Check), registrando apenas como breadcrumb (`logAviso`) em ambos os provedores, ou se é falha de integridade/corrupção de dados (`fatal: true`).
 
 ### 6. Desofuscação e Símbolos no Crashlytics (CI/CD)
 Para que os relatórios de crash no painel do Firebase Crashlytics exibam os nomes de funções, arquivos e linhas de código (ao invés de ponteiros hexadecimais *unsymbolicated*), a pipeline do GitHub Actions realiza o upload automático de dois tipos de símbolos a cada release:

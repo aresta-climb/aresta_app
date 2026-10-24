@@ -1,4 +1,4 @@
-name: iOS Release Sub-Workflow
+﻿name: iOS Release Sub-Workflow
 
 on:
   workflow_call:
@@ -123,9 +123,22 @@ jobs:
 
       - name: Build iOS IPA
         working-directory: frontend
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           # Compila o app e gera o arquivo .ipa usando as configurações locais de ExportOptions.plist
           flutter build ipa --release --obfuscate --split-debug-info=build/symbols --export-options-plist=ios/ExportOptions.plist
+
+      - name: Validar e Fazer Upload de Símbolos para o Sentry (Fail-Fast)
+        working-directory: frontend
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::error::SENTRY_AUTH_TOKEN não configurado nos secrets do GitHub! O build de release não pode ser publicado sem símbolos de desofuscação no Sentry."
+            exit 1
+          fi
+          dart run sentry_dart_plugin
 
       - name: Upload iOS Release Artifacts (IPA, dSYMs e Símbolos Dart)
         uses: actions/upload-artifact@v7

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:frontend/application_managers/segundo_plano/despachante_segundo_plano.dart';
@@ -38,6 +39,13 @@ export 'package:frontend/services/inicializacao_app.dart'
 export 'package:frontend/theme/temas.dart'
     show construirTemaClaro, construirTemaEscuro;
 
+/// DSN do projeto `aresta-app` no Sentry (pode ser sobrescrito via `--dart-define=SENTRY_DSN=...`).
+const String kSentryDsn = String.fromEnvironment(
+  'SENTRY_DSN',
+  defaultValue:
+      'https://a9b8f04560a98ff2186ca8cdb654d22a@o4511980548849664.ingest.us.sentry.io/4512313345966080',
+);
+
 void main() async {
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +59,7 @@ void main() async {
   // Inicializa o gerenciador de notificações nativas de download
   await GerenciadorNotificacaoDownload.instancia.inicializar();
 
-  // Inicialização do Firebase antes de avançar para garantir que telemetria/crashlytics estão prontos
+  // Inicialização do Firebase (Crashlytics, Analytics, App Check e Remote Config)
   await initFirebase();
 
   await ThemeController().loadTheme();
@@ -85,15 +93,30 @@ void main() async {
   // Sincronização inicial na inicialização
   final needsMigration = await setupAppServices(datasetRepo, syncService);
 
-  // Inicia o aplicativo Flutter
-  runApp(
-    MyApp(
-      datasetRepo: datasetRepo,
-      syncService: syncService,
-      needsMigration: needsMigration,
-      acceptedLegalVersion: acceptedLegalVersion ?? 0,
-    ),
-  );
+  void iniciarAplicativo() {
+    runApp(
+      MyApp(
+        datasetRepo: datasetRepo,
+        syncService: syncService,
+        needsMigration: needsMigration,
+        acceptedLegalVersion: acceptedLegalVersion ?? 0,
+      ),
+    );
+  }
+
+  // Inicializa o Sentry encadeando os handlers globais do Crashlytics e executando o appRunner
+  if (kSentryDsn.isNotEmpty) {
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = kSentryDsn;
+        options.sendDefaultPii = false;
+        options.maxBreadcrumbs = 100;
+      },
+      appRunner: iniciarAplicativo,
+    );
+  } else {
+    iniciarAplicativo();
+  }
 }
 
 // Global navigator key to allow overlays to push routes for back button interception
@@ -276,60 +299,60 @@ class _MyAppState extends State<MyApp> {
               ),
               localizationsDelegates: [GlobalFeedbackLocalizationsDelegate()],
               localeOverride: const Locale('pt', 'BR'),
-          child: MaterialApp(
-            navigatorKey: appNavigatorKey,
-            title: 'Aresta Climb',
-            debugShowCheckedModeBanner: false,
-            themeMode: ThemeMode.dark, // Temporário: fixado em dark mode
-            theme: construirTemaClaro(),
-            darkTheme: construirTemaEscuro(),
-            // Banner global para modo experimental/editor que persiste em todas as telas
-            builder: (context, child) {
-              Widget effectiveChild = child!;
+              child: MaterialApp(
+                navigatorKey: appNavigatorKey,
+                title: 'Aresta Climb',
+                debugShowCheckedModeBanner: false,
+                themeMode: ThemeMode.dark, // Temporário: fixado em dark mode
+                theme: construirTemaClaro(),
+                darkTheme: construirTemaEscuro(),
+                // Banner global para modo experimental/editor que persiste em todas as telas
+                builder: (context, child) {
+                  Widget effectiveChild = child!;
 
-              if (_needsMigration && _hasAcceptedTerms) {
-                effectiveChild = DatabaseMigrationScreen(
-                  syncService: widget.syncService,
-                  onMigrationComplete: () {
-                    setState(() {
-                      _needsMigration = false;
-                    });
-                  },
-                );
-              }
-
-              return AppVersionChecker(
-                remoteConfigService: widget.remoteConfigService,
-                child: Stack(
-                  children: [
-                    effectiveChild,
-                    BannerModoExperimental(
-                      editorDeCroqui: widget.datasetRepo.editorDeCroqui,
-                      onSairModoExperimental: () async {
-                        await widget.datasetRepo.editorDeCroqui.nukeExperimentalData();
-                        await widget.datasetRepo.init();
-                        final navContext = TreeNavigationWrapper.navKey.currentContext;
-                        if (navContext != null && navContext.mounted) {
-                          AppNav.home(navContext);
-                        }
+                  if (_needsMigration && _hasAcceptedTerms) {
+                    effectiveChild = DatabaseMigrationScreen(
+                      syncService: widget.syncService,
+                      onMigrationComplete: () {
+                        setState(() {
+                          _needsMigration = false;
+                        });
                       },
+                    );
+                  }
+
+                  return AppVersionChecker(
+                    remoteConfigService: widget.remoteConfigService,
+                    child: Stack(
+                      children: [
+                        effectiveChild,
+                        BannerModoExperimental(
+                          editorDeCroqui: widget.datasetRepo.editorDeCroqui,
+                          onSairModoExperimental: () async {
+                            await widget.datasetRepo.editorDeCroqui.nukeExperimentalData();
+                            await widget.datasetRepo.init();
+                            final navContext = TreeNavigationWrapper.navKey.currentContext;
+                            if (navContext != null && navContext.mounted) {
+                              AppNav.home(navContext);
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
-            home: _hasAcceptedTerms
-                ? TreeNavigationWrapper(
-                    datasetRepo: widget.datasetRepo,
-                    syncService: widget.syncService,
-                    key: TreeNavigationWrapper.navKey,
-                  )
-                : TermsOfUsePage(
-                    onAccepted: _onTermsAccepted,
-                    isUpdatingTerms: _isUpdatingTerms,
-                    assetBundle: widget.assetBundle,
-                  ),
-          ),
+                  );
+                },
+                home: _hasAcceptedTerms
+                    ? TreeNavigationWrapper(
+                        datasetRepo: widget.datasetRepo,
+                        syncService: widget.syncService,
+                        key: TreeNavigationWrapper.navKey,
+                      )
+                    : TermsOfUsePage(
+                        onAccepted: _onTermsAccepted,
+                        isUpdatingTerms: _isUpdatingTerms,
+                        assetBundle: widget.assetBundle,
+                      ),
+              ),
             );
           },
         );

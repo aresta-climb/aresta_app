@@ -38,6 +38,7 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 | **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
 | **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
 | **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para conexão com o editor |
+| **`sentry_flutter`** | `^8.14.2` | Observabilidade e rastreamento dual de erros/breadcrumbs com fila offline (em conjunto com Firebase Crashlytics) |
 | **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync |
 
 ---

@@ -1,0 +1,12 @@
+# Tasks
+
+## 1. Normalização de Metadados e Rótulos (TDD)
+
+- [x] 1.1 Escrever testes orientados a comportamento em `../aresta_backend/cloudflare/app-links/test/renderizador_pagina_link_test.ts` validando a capitalização de `escalada_tipo` (`Boulder`, `Esportiva`, `Tradicional`, `Multienfiada`, `Highline`), a etiqueta superior específica para `Boulder` e `Highline` (mantendo `Via de Escalada` para as demais) e a desduplicação dos prefixos redundantes `"Setor "` e `"Grupo "` (ex.: `"Setor Tramontina"` $\rightarrow$ `"Setor: Tramontina"` e `"Grupo Sherpa"` $\rightarrow$ `"Grupo: Sherpa"`) tanto no HTML quanto em `og:description`, confirmando a falha inicial (*Red*).
+- [x] 1.2 Implementar em `../aresta_backend/cloudflare/app-links/src/renderizador_pagina_link.ts` as funções puras de formatação de modalidade, resolução de etiqueta de tipo e remoção de prefixos redundantes de setor e grupo, fazendo os testes de normalização passarem (*Green*).
+
+## 2. Redesign da Página de Entidade e Página 404 (Design System, Mobile-First e 2 Colunas Desktop)
+
+- [x] 2.1 Escrever testes em `../aresta_backend/cloudflare/app-links/test/renderizador_pagina_link_test.ts` e `worker_test.ts` verificando a presença do Design System Light/Dark (`data-theme`, variáveis `--bg`/`--accent`/`--sage`, script de persistência `aresta-theme` e botão `#themeToggle`), cabeçalho com a logo oficial (`https://arestaclimb.com/assets/logo_app.png`), miniatura em proporção `1:1` sem corte, banner com os selos `.store-badge` contendo os ícones `<svg>` da Apple App Store e Google Play, meta tag `apple-itunes-app`, link discreto `"Já tem o Aresta instalado? Abrir no aplicativo"` oculto no desktop via `@media (min-width: 820px)` e página `404` estilizada com o mesmo tema, confirmando a falha inicial (*Red*).
+- [x] 2.2 Refatorar `renderizarPaginaEntidade` e `renderizarPaginaNaoEncontrada` em `../aresta_backend/cloudflare/app-links/src/renderizador_pagina_link.ts` com o layout Mobile-First inspirado na `PicoPage` do aplicativo (hero `1:1` com gradiente, subtítulo verde-musgo, banner de download estilo `BannerModoOnline` e cards estilo `PicoMenuCard`) e o layout Desktop em Card de 2 Colunas, fazendo todos os testes passarem (*Green*).
+- [x] 2.3 Atualizar `../aresta_backend/cloudflare/app-links/README.md` documentando o novo layout responsivo Mobile-First / 2 Colunas, o suporte a Light/Dark mode compartilhado com `arestaclimb.com` e as regras de normalização de metadados, e verificar com `deno test --coverage` que o módulo mantém 100% de cobertura de linhas e branches.

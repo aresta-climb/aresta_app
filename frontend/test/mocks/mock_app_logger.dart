@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 
-/// Implementação simulada para evitar chamadas reais do Crashlytics durante testes
+/// Implementação simulada para evitar chamadas reais do Crashlytics/Sentry durante testes
 class MockAppLogger implements AppLogger {
   final List<Map<String, dynamic>> recordedErrors = [];
   final List<String> recordedInfos = [];
@@ -12,6 +13,9 @@ class MockAppLogger implements AppLogger {
 
   @override
   bool? debugModeOverride;
+
+  @override
+  bool? ignorarAmbienteDeTestesOverride;
 
   @override
   Future<void> Function(
@@ -25,6 +29,18 @@ class MockAppLogger implements AppLogger {
 
   @override
   void Function(String)? crashlyticsLogOverride;
+
+  @override
+  void Function(Breadcrumb)? sentryBreadcrumbOverride;
+
+  @override
+  Future<void> Function(
+    dynamic, {
+    StackTrace? stackTrace,
+    String? reason,
+    bool fatal,
+  })?
+  sentryCaptureOverride;
 
   @override
   void logInfo(String mensagem) {
