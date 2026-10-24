@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
   protobuf: ^6.0.0
   http: ^1.2.0
   http_parser: ^4.0.2
@@ -24,11 +24,11 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_markdown_plus: ^1.0.7
   package_info_plus: ^10.1.0
-  firebase_core: ^4.10.0
-  firebase_analytics: ^12.4.2
-  firebase_crashlytics: ^5.2.3
-  firebase_remote_config: ^6.5.2
-  firebase_performance: ^0.11.4+2
+  firebase_core: ^5.1.0
+  firebase_analytics: ^13.0.1
+  firebase_crashlytics: ^6.0.1
+  firebase_remote_config: ^7.0.1
+  firebase_performance: ^0.12.1
   yaml: ^3.1.3
   google_maps_flutter: ^2.17.1
   feedback: ^3.2.0
@@ -38,9 +38,9 @@ dependencies:
   path_drawing: ^1.0.1
   device_info_plus: ^13.1.0
   connectivity_plus: ^7.1.1
-  google_fonts: ^8.1.0
+  google_fonts: ^9.0.0
   geolocator: ^14.0.3
-  firebase_app_check: ^0.4.6
+  firebase_app_check: ^0.5.1
   flutter_local_notifications: ^22.3.0
   fixnum: ^1.1.0
   flutter_svg: ^2.3.0
@@ -48,6 +48,7 @@ dependencies:
   flutter_image_compress: ^2.5.1
   sqflite: ^2.4.1
   share_plus: ^13.3.1
+  sentry_flutter: ^10.2.0
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +64,7 @@ dev_dependencies:
   flutter_native_splash: ^2.4.0
   fake_async: ^1.3.3
   mocktail: ^1.0.5
+  sentry_dart_plugin: ^3.4.0
 flutter:
   uses-material-design: true
   assets:
@@ -110,3 +112,10 @@ flutter_native_splash:
   android_12:
     image: "assets/logo_splash.png"
     icon_background_color: "#ffffff"
+
+
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  project: aresta-app
+  org: aresta-climb

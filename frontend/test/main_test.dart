@@ -854,7 +854,10 @@ void main() {
       final mockSyncSvc = MockSyncService();
       final editorLocal = EditorDeCroqui();
 
-      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockSyncSvc.syncIndex(
+            auto: any(named: 'auto'),
+            forceBypassCache: any(named: 'forceBypassCache'),
+          )).thenAnswer((_) async => <String>[]);
       when(() => mockDataset.init()).thenAnswer((_) async {});
       when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
 
@@ -868,7 +871,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockSyncSvc.syncIndex(auto: false, forceBypassCache: true)).called(1);
       verifyNever(() => mockDataset.init());
     });
 
@@ -893,7 +896,10 @@ void main() {
       when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(sessaoOnline);
       when(() => mockDataset.activeDataset).thenReturn(datasetNotifier);
       when(() => mockDataset.notificarAtualizacaoSessaoOnline('pico_online_1')).thenReturn(null);
-      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockSyncSvc.syncIndex(
+            auto: any(named: 'auto'),
+            forceBypassCache: any(named: 'forceBypassCache'),
+          )).thenAnswer((_) async => <String>[]);
       when(() => mockDataset.init()).thenAnswer((_) async {});
       when(() => mockServicoOnline.recarregarCroquiOnline(
             any(),
@@ -914,7 +920,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockSyncSvc.syncIndex(auto: false, forceBypassCache: true)).called(1);
       verifyNever(() => mockDataset.init());
       verify(() => mockServicoOnline.recarregarCroquiOnline(
             'https://servidor.com/croqui.binarypb',
@@ -929,7 +935,10 @@ void main() {
       final mockImageCache = MockImageCache();
       final editorLocal = EditorDeCroqui();
 
-      when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async => <String>[]);
+      when(() => mockSyncSvc.syncIndex(
+            auto: any(named: 'auto'),
+            forceBypassCache: any(named: 'forceBypassCache'),
+          )).thenAnswer((_) async => <String>[]);
       when(() => mockDataset.init()).thenAnswer((_) async {});
       when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
 
@@ -947,7 +956,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      verify(() => mockSyncSvc.syncIndex()).called(1);
+      verify(() => mockSyncSvc.syncIndex(auto: false, forceBypassCache: true)).called(1);
       verify(() => mockImageCache.clear()).called(1);
       verifyNever(() => mockImageCache.clearLiveImages());
     });
@@ -987,7 +996,10 @@ void main() {
         when(() => mockDataset.activeDataset).thenReturn(datasetNotifier);
         when(() => mockDataset.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
         when(() => mockDataset.init()).thenAnswer((_) async {});
-        when(() => mockSyncSvc.syncIndex()).thenAnswer((_) async {
+        when(() => mockSyncSvc.syncIndex(
+              auto: any(named: 'auto'),
+              forceBypassCache: any(named: 'forceBypassCache'),
+            )).thenAnswer((_) async {
           final setorAtualizado = Setor()
             ..nome = 'Setor Live'
             ..descricao = 'Nova descrição vinda do Live Reload'

@@ -16,8 +16,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() {
-    registerFallbackValue(AndroidProvider.debug);
-    registerFallbackValue(AppleProvider.debug);
+    registerFallbackValue(const AndroidDebugProvider());
+    registerFallbackValue(const AppleDebugProvider());
   });
 
   late MockFirebaseAppCheck mockFirebaseAppCheck;
@@ -36,20 +36,20 @@ void main() {
     test('activate deve chamar activate no FirebaseAppCheck subjacente', () async {
       when(
         () => mockFirebaseAppCheck.activate(
-          androidProvider: any(named: 'androidProvider'),
-          appleProvider: any(named: 'appleProvider'),
+          providerAndroid: any(named: 'providerAndroid'),
+          providerApple: any(named: 'providerApple'),
         ),
       ).thenAnswer((_) async {});
 
       await service.activate(
-        androidProvider: AndroidProvider.debug,
-        appleProvider: AppleProvider.debug,
+        providerAndroid: const AndroidDebugProvider(),
+        providerApple: const AppleDebugProvider(),
       );
 
       verify(
         () => mockFirebaseAppCheck.activate(
-          androidProvider: AndroidProvider.debug,
-          appleProvider: AppleProvider.debug,
+          providerAndroid: const AndroidDebugProvider(),
+          providerApple: const AppleDebugProvider(),
         ),
       ).called(1);
     });
@@ -57,8 +57,8 @@ void main() {
     test('activate captura erros graciosamente sem lançar exceções', () async {
       when(
         () => mockFirebaseAppCheck.activate(
-          androidProvider: any(named: 'androidProvider'),
-          appleProvider: any(named: 'appleProvider'),
+          providerAndroid: any(named: 'providerAndroid'),
+          providerApple: any(named: 'providerApple'),
         ),
       ).thenThrow(Exception('Falha de ativação simulada'));
 

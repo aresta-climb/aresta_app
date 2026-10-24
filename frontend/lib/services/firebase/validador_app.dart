@@ -22,18 +22,19 @@ class AppCheckService {
 
   /// Inicializa e ativa o Firebase App Check com os provedores adequados para release e debug.
   Future<void> activate({
-    AndroidProvider? androidProvider,
-    AppleProvider? appleProvider,
+    AndroidAppCheckProvider? providerAndroid,
+    AppleAppCheckProvider? providerApple,
   }) async {
     try {
-      // ignore: deprecated_member_use
       await _appCheck.activate(
-        // ignore: deprecated_member_use
-        androidProvider: androidProvider ??
-            (kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity),
-        // ignore: deprecated_member_use
-        appleProvider: appleProvider ??
-            (kDebugMode ? AppleProvider.debug : AppleProvider.appAttest),
+        providerAndroid: providerAndroid ??
+            (kDebugMode
+                ? const AndroidDebugProvider()
+                : const AndroidPlayIntegrityProvider()),
+        providerApple: providerApple ??
+            (kDebugMode
+                ? const AppleDebugProvider()
+                : const AppleAppAttestProvider()),
       );
       AppLogger.instance.logInfo('🛡️ [AppCheck] Firebase App Check ativado com sucesso.');
     } catch (e, stackTrace) {
