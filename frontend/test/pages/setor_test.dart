@@ -399,5 +399,51 @@ void main() {
       );
     }
   });
+
+  testWidgets('SetorPage exibe Aplicar (X resultados) reativo no modal de filtros e fecha mantendo filtros', (tester) async {
+    GerenciadorFiltrosCroqui.instance.redefinir();
+    final via1 = Escalada()
+      ..viaEsportiva = (ViaEsportiva()
+        ..nome = 'Via Clássica'
+        ..dificuldade = GrauVia_GrauVia.BR_6
+        ..destaque = true);
+    final via2 = Escalada()
+      ..viaEsportiva = (ViaEsportiva()
+        ..nome = 'Via Normal'
+        ..dificuldade = GrauVia_GrauVia.BR_7A
+        ..destaque = false);
+
+    final setor = Setor()
+      ..nome = 'Setor Principal'
+      ..escaladas.addAll([via1, via2]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(
+          setor: setor,
+          cragId: 'crag-setor-aplicar',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filtros e Ordenação'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aplicar (2 resultados)'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Apenas Clássicas (★)'));
+    await tester.tap(find.text('Apenas Clássicas (★)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
+
+    await tester.tap(find.text('Aplicar (1 resultado)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Via Clássica'), findsOneWidget);
+    expect(find.text('Via Normal'), findsNothing);
+  });
 }
 

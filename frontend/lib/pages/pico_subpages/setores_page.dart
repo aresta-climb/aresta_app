@@ -406,6 +406,14 @@ class _SetoresPageState extends State<SetoresPage>
                   conquistadoresDisponiveis: _obterConquistadoresDisponiveis(abaAtual),
                   temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
                   faixasGrauDisponiveis: _obterFaixasGrauDisponiveis(abaAtual),
+                  totalResultados: isAbaSetores
+                      ? _obterSetoresOuGruposOrdenados().length
+                      : _estadoFiltros
+                          .filtrarEscaladas(
+                            _todasEscaladas,
+                            modalidadeEspecifica: abaAtual,
+                          )
+                          .length,
                   onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
                 ),
               ],

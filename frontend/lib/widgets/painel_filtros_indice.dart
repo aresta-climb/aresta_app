@@ -54,6 +54,10 @@ class PainelFiltrosIndice extends StatefulWidget {
   /// indexado por categoria ('Via' e/ou 'Boulder'), permitindo adaptar a régua do slider.
   final Map<String, FaixaGrauDisponivel>? faixasGrauDisponiveis;
 
+  /// Quantidade total de resultados filtrados na aba ativa, exibida dinamicamente
+  /// no botão de confirmação ("Aplicar") no rodapé do modal.
+  final int? totalResultados;
+
   /// Callback legado emitido sempre que o usuário alterar qualquer critério de filtragem.
   final ValueChanged<EstadoFiltrosIndice>? onFiltrosChanged;
 
@@ -77,6 +81,7 @@ class PainelFiltrosIndice extends StatefulWidget {
     this.possuiConquistadores,
     this.temClassicasDisponiveis = true,
     this.faixasGrauDisponiveis,
+    this.totalResultados,
     this.onFiltrosChanged,
     this.onFiltrosUnificadosChanged,
     this.inicialmenteExpandido = false,
@@ -285,24 +290,17 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     _modalAberto = true;
     _logTelemetria('expandir_filtros');
 
-    TreeNavigationController? ctrl;
-    try {
-      ctrl = TreeNavigationWrapper.maybeOf(context)?.treeController ??
-          TreeNavigationWrapper.currentTreeController;
-    } catch (_) {
-      ctrl = TreeNavigationWrapper.currentTreeController;
-    }
+    final ctrl = TreeNavigationWrapper.maybeOf(context)?.treeController ??
+        TreeNavigationWrapper.currentTreeController;
     final bool Function()? interceptorAnterior = ctrl?.onBackInterceptor;
     if (ctrl != null) {
       ctrl.navigateTo(ControlesNode(cragId: widget.cragId, parent: ctrl.currentNode));
       ctrl.onBackInterceptor = () {
-        try {
-          final navigator = Navigator.of(context, rootNavigator: true);
-          if (navigator.canPop()) {
-            navigator.pop();
-            return true;
-          }
-        } catch (_) {}
+        final navigator = Navigator.of(context, rootNavigator: true);
+        if (navigator.canPop()) {
+          navigator.pop();
+          return true;
+        }
         return false;
       };
     }
@@ -560,10 +558,45 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                 ),
               ),
             ),
+            Divider(height: 1, color: colors.graniteEdge),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.rustIron,
+                    foregroundColor: colors.chalkWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    _obterTextoBotaoAplicar(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Formata o rótulo do botão de confirmação no rodapé do modal com base
+  /// na quantidade de resultados filtrados informada pela página hospedeira.
+  String _obterTextoBotaoAplicar() {
+    final total = widget.totalResultados;
+    if (total == null) {
+      return 'Aplicar';
+    }
+    return 'Aplicar ($total resultado${total == 1 ? '' : 's'})';
   }
 
   @override
@@ -664,9 +697,6 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
 
   List<String> _obterCategoriasParaSliders() {
-    if (!_isUnificado) {
-      return [EstadoFiltrosUnificado.obterCategoriaGrau(_abaEfetiva)];
-    }
     final u = widget.estadoUnificado!;
     final modalidadesBase = u.modalidadesAtivas.isNotEmpty
         ? widget.modalidadesDisponiveis.where((m) => u.modalidadesAtivas.contains(m)).toList()
@@ -1344,6 +1374,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               isExpanded: true,
+              menuMaxHeight: 280,
               value: null,
               hint: Text(
                 hintTexto,
@@ -1468,6 +1499,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               isExpanded: true,
+              menuMaxHeight: 280,
               value: null,
               hint: Text(
                 hintTexto,

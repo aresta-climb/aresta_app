@@ -553,6 +553,14 @@ class _GrupoPageState extends State<GrupoPage>
                         _obterConquistadoresDisponiveis(abaAtual),
                     temClassicasDisponiveis: _temClassicasDisponiveis(abaAtual),
                     faixasGrauDisponiveis: _obterFaixasGrauDisponiveis(abaAtual),
+                    totalResultados: isAbaSetores
+                        ? _obterSetoresFiltrados().length
+                        : _estadoFiltros
+                            .filtrarEscaladas(
+                              _todasEscaladas,
+                              modalidadeEspecifica: abaAtual,
+                            )
+                            .length,
                     onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
                   ),
                 ],

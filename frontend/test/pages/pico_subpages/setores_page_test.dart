@@ -680,5 +680,41 @@ void main() {
       final filtrosGlobais = GerenciadorFiltrosCroqui.instance.obterFiltros('pedra-bela');
       expect(filtrosGlobais.tipoOrdenacao, TipoOrdenacaoExploracao.grau);
     });
+
+    testWidgets('modal de filtros exibe botão Aplicar (X resultados) refletindo a aba ativa em tempo real e fecha mantendo filtros', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(pico: pico, cragId: 'pedra-bela', croqui: croqui),
+      );
+      await tester.pumpAndSettle();
+
+      // Na aba Setores (3 setores inicialmente), abre o modal de filtros
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (3 resultados)'), findsOneWidget);
+
+      // Ativa Apenas Clássicas (★), o que reduz para 2 setores com clássicas
+      await tester.ensureVisible(find.text('Apenas Clássicas (★)'));
+      await tester.tap(find.text('Apenas Clássicas (★)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (2 resultados)'), findsOneWidget);
+
+      // Toca em Aplicar (2 resultados) para fechar o modal
+      await tester.tap(find.text('Aplicar (2 resultados)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (2 resultados)'), findsNothing);
+      expect(find.text('Setores (2/3)'), findsOneWidget);
+
+      // Alterna para aba Esportivas (1/4) e abre novamente o modal
+      await tester.tap(find.text('Esportivas (1/4)'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
+    });
   });
 }

@@ -262,6 +262,43 @@ void main() {
       final filtrosGlobais = GerenciadorFiltrosCroqui.instance.obterFiltros('crag-serra');
       expect(filtrosGlobais.tipoOrdenacao, TipoOrdenacaoExploracao.grau);
     });
+
+    testWidgets('modal de filtros na GrupoPage exibe Aplicar (X resultados) reativo para setores e escaladas', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: GrupoPage(grupo: grupo, cragId: 'crag-serra'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Na aba Setores (2 setores), abre o modal
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (2 resultados)'), findsOneWidget);
+
+      // Ativa Apenas Clássicas (★), reduzindo para 1 setor
+      await tester.ensureVisible(find.text('Apenas Clássicas (★)'));
+      await tester.tap(find.text('Apenas Clássicas (★)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
+
+      // Fecha pelo botão Aplicar (1 resultado)
+      await tester.tap(find.text('Aplicar (1 resultado)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Setores (1/2)'), findsOneWidget);
+
+      // Muda para aba Esportivas (1/2) e reabre o modal
+      await tester.tap(find.text('Esportivas (1/2)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Filtros e Ordenação'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
+    });
   });
 
   testWidgets('GrupoPage exibe botão de compartilhamento quando grupo possui uid e dispara ServicoCompartilhamento', (tester) async {

@@ -533,6 +533,7 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
                         _temClassicasDisponiveis(abaAtual),
                     faixasGrauDisponiveis:
                         _obterFaixasGrauDisponiveis(abaAtual),
+                    totalResultados: _obterEscaladasFiltradas(abaAtual).length,
                     onFiltrosUnificadosChanged: _atualizarEstadoFiltros,
                   ),
                 ],
@@ -555,17 +556,22 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
     );
   }
 
-  /// Constrói o sliver com a lista de escaladas filtradas e ordenadas.
-  Widget _buildSliverEscaladas(BuildContext context, String modalidade) {
-    final colors = context.colors;
+  /// Obtém a lista de escaladas filtradas e ordenadas para a modalidade ativa.
+  List<ItemIndiceEscalada> _obterEscaladasFiltradas(String modalidade) {
     final List<ItemIndiceEscalada> viasBase = modalidade.isNotEmpty
         ? (_escaladasPorModalidade[modalidade] ?? [])
         : _todasEscaladas;
 
-    final viasFiltradas = _estadoFiltros.filtrarEscaladas(
+    return _estadoFiltros.filtrarEscaladas(
       viasBase,
       modalidadeEspecifica: modalidade.isNotEmpty ? modalidade : null,
     );
+  }
+
+  /// Constrói o sliver com a lista de escaladas filtradas e ordenadas.
+  Widget _buildSliverEscaladas(BuildContext context, String modalidade) {
+    final colors = context.colors;
+    final viasFiltradas = _obterEscaladasFiltradas(modalidade);
 
     if (viasFiltradas.isEmpty) {
       return SliverToBoxAdapter(

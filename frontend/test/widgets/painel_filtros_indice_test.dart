@@ -1809,6 +1809,130 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.currentNode, isA<PicoNode>());
     });
+
+    testWidgets('limita altura dos menus suspensos de localização e conquistadores a 280px permitindo fechar com toque externo sem selecionar item', (tester) async {
+      EstadoFiltrosUnificado estadoAtual = const EstadoFiltrosUnificado();
+      final muitosSetores = List.generate(30, (i) => 'Setor Extenso ${i + 1}');
+      final muitosConquistadores = List.generate(30, (i) => 'Conquistador ${i + 1}');
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                estadoUnificado: estadoAtual,
+                abaAtiva: 'Esportiva',
+                modalidadesDisponiveis: const ['Esportiva'],
+                setoresDisponiveis: muitosSetores,
+                conquistadoresDisponiveis: muitosConquistadores,
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() => estadoAtual = novo);
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final dropdowns = tester.widgetList<DropdownButton<String>>(
+        find.byType(DropdownButton<String>),
+      ).toList();
+      expect(dropdowns.length, 2);
+      expect(dropdowns[0].menuMaxHeight, 280);
+      expect(dropdowns[1].menuMaxHeight, 280);
+
+      // Abre o menu suspenso de conquistadores (com 30 itens)
+      await tester.ensureVisible(find.byType(DropdownButton<String>).last);
+      await tester.tap(find.byType(DropdownButton<String>).last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Conquistador 1'), findsWidgets);
+
+      // Toca no topo da tela (fora do menu suspenso limitado a 280px) para cancelar sem selecionar
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      // Nenhum conquistador foi selecionado e o modal permanece aberto
+      expect(estadoAtual.conquistadores, isEmpty);
+      expect(find.text('ORDENAÇÃO'), findsOneWidget);
+    });
+
+    testWidgets('exibe botão Aplicar no rodapé com contagem dinâmica de resultados e fecha o modal mantendo filtros aplicados', (tester) async {
+      EstadoFiltrosUnificado estadoAtual = const EstadoFiltrosUnificado();
+      int totalCalculado = 15;
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                estadoUnificado: estadoAtual,
+                abaAtiva: 'Esportiva',
+                modalidadesDisponiveis: const ['Esportiva'],
+                setoresDisponiveis: const ['Setor A', 'Setor B'],
+                conquistadoresDisponiveis: const ['Clebinho', 'Alex'],
+                temClassicasDisponiveis: true,
+                totalResultados: totalCalculado,
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() {
+                    estadoAtual = novo;
+                    totalCalculado = novo.apenasClassicas ? 1 : 15;
+                  });
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verifica rótulo plural inicial no rodapé
+      expect(find.text('Aplicar (15 resultados)'), findsOneWidget);
+
+      // Ativa filtro "Apenas Clássicas (★)" que reduz para 1 resultado
+      await tester.ensureVisible(find.text('Apenas Clássicas (★)'));
+      await tester.tap(find.text('Apenas Clássicas (★)'));
+      await tester.pumpAndSettle();
+
+      // Verifica atualização reativa para singular no botão do rodapé
+      expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
+      expect(estadoAtual.apenasClassicas, isTrue);
+
+      // Toca no botão "Aplicar (1 resultado)" para fechar o modal
+      await tester.tap(find.text('Aplicar (1 resultado)'));
+      await tester.pumpAndSettle();
+
+      // O modal fechou e o filtro permanece ativo no estado e visível nos chips externos
+      expect(find.text('Aplicar (1 resultado)'), findsNothing);
+      expect(estadoAtual.apenasClassicas, isTrue);
+      expect(find.text('Clássicas (★)'), findsOneWidget);
+    });
+
+    testWidgets('exibe botão Aplicar sem sufixo quando totalResultados não é fornecido', (tester) async {
+      await tester.pumpWidget(
+        criarAmbiente(
+          PainelFiltrosIndice(
+            estado: const EstadoFiltrosIndice(),
+            modalidade: 'Esportiva',
+            setoresDisponiveis: const ['Setor 1'],
+            conquistadoresDisponiveis: const [],
+            inicialmenteExpandido: true,
+            onFiltrosChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ElevatedButton, 'Aplicar'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Aplicar'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ElevatedButton, 'Aplicar'), findsNothing);
+    });
   });
 }
 
