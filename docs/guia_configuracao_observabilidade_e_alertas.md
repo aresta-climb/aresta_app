@@ -319,12 +319,15 @@ npx wrangler deploy
 
 ### 5.2 Configurar `SENTRY_DSN` nos Demais Serviços do Ecossistema
 
-1. **Cloudflare Workers (`catalogo`, `feedback`, `previa`, `app-links`):**
-   A DSN do projeto **`aresta-backend`** (`https://df8611ccbb9672027fc7f612c388ee91@o4511980548849664.ingest.us.sentry.io/4512313378013184`) já está configurada em `"vars"` nos arquivos `wrangler.jsonc` de cada Worker e em `DSN_SENTRY_ARESTA_BACKEND_PADRAO` no `relator_sentry.ts`. Basta publicar cada Worker com `npx wrangler deploy`.
-2. **Supabase Edge Functions (`git-proxy`, `create-pr`, `app-feedback`, `discord-feedback`):**
+1. **Cloudflare Workers (`alertas`, `catalogo`, `feedback`, `previa`, `app-links`):**
+   Defina o secret `SENTRY_DSN` em cada Worker com a DSN do projeto **`aresta-backend`**:
+   ```bash
+   npx wrangler secret put SENTRY_DSN
+   ```
+2. **Supabase Edge Functions (`git-proxy`, `create-pr`, `app-feedback`):**
    Na raiz de `aresta_backend`, defina o secret com a DSN do projeto **`aresta-backend`**:
    ```bash
-   supabase secrets set SENTRY_DSN="https://df8611ccbb9672027fc7f612c388ee91@o4511980548849664.ingest.us.sentry.io/4512313378013184"
+   supabase secrets set SENTRY_DSN="<SUA_SENTRY_DSN_ARESTA_BACKEND>"
    ```
 3. **Aplicativo Mobile (`aresta_app`):**
    - A DSN do projeto **`aresta-app`** (`https://a9b8f04560a98ff2186ca8cdb654d22a@o4511980548849664.ingest.us.sentry.io/4512313345966080`) está configurada por padrão em `kSentryDsn` no `frontend/lib/main.dart`.
