@@ -408,8 +408,8 @@ void main() {
       const bytesPng1 = <int>[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
         0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
-        0, 13, 73, 68, 65, 84, 120, 156, 99, 100, 248, 207, 80, 15, 0, 3,
-        134, 1, 128, 90, 52, 125, 107, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+        0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 240, 31, 0, 5,
+        0, 1, 255, 137, 153, 61, 29, 0, 0, 0, 0, 73, 69, 78, 68, 174,
         66, 96, 130
       ];
 
@@ -497,6 +497,58 @@ void main() {
         expect(imagemFrente.image, equals(imagemFundo.image));
       });
 
+      const bytesPng4x3 = <int>[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 4, 0, 0, 0, 3, 8, 6, 0, 0, 0, 180, 244, 174, 198, 0, 0,
+        0, 21, 73, 68, 65, 84, 120, 156, 99, 252, 207, 192, 240, 159, 1, 9,
+        48, 33, 115, 176, 10, 0, 0, 97, 107, 2, 4, 250, 99, 38, 203, 0, 0,
+        0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+      ];
+
+      testWidgets('com usarBordaInteligente: true notifica aoResolverProporcao e aplica desfoque horizontal com ClipRect', (WidgetTester tester) async {
+        final picoDir = Directory('${tempDir.path}/downloads/pico_proporcao')
+          ..createSync(recursive: true);
+        final imgFile = File('${picoDir.path}/capa.webp');
+        imgFile.writeAsBytesSync(bytesPng4x3);
+
+        double? proporcaoRecebida;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_proporcao',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_proporcao',
+                  larguraAlvo: 1200,
+                  usarBordaInteligente: true,
+                  aoResolverProporcao: (p) => proporcaoRecebida = p,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          while (proporcaoRecebida == null) {
+            await Future.delayed(const Duration(milliseconds: 10));
+          }
+        });
+        await tester.pump();
+
+        expect(proporcaoRecebida, closeTo(4.0 / 3.0, 0.001));
+        expect(find.byType(ClipRect), findsWidgets);
+        final imageFiltered = tester.widget<ImageFiltered>(find.byType(ImageFiltered));
+        expect(imageFiltered.imageFilter.toString(), contains('24'));
+        expect(imageFiltered.imageFilter.toString(), contains('0'));
+      });
+
       testWidgets('com usarBordaInteligente: true quando a imagem falha exibe apenas um ícone de erro', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
@@ -520,6 +572,39 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byIcon(Icons.broken_image), findsOneWidget);
+      });
+
+      testWidgets('didUpdateWidget re-inicializa provedor quando propriedades mudam', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: buildCragBackground('thumbnails/pico_a.webp', cragId: 'pico_a'),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: buildCragBackground('thumbnails/pico_b.webp', cragId: 'pico_b'),
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+
+      testWidgets('extrai cragId de thumbnailUrl via regex quando cragId for omitido', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: buildCragBackground('thumbnails/pico_auto.webp'),
+            ),
+          ),
+        );
+        await tester.pump();
       });
     });
   });

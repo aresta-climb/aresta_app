@@ -120,7 +120,7 @@ class ImagemArquivoAresta extends ImageProvider<ChaveImagemArquivoAresta> {
     ChaveImagemArquivoAresta key, {
     required ImageDecoderCallback decode,
   }) async {
-    final bytes = await arquivo.readAsBytes();
+    final bytes = arquivo.readAsBytesSync();
     if (bytes.isEmpty) {
       PaintingBinding.instance.imageCache.evict(key);
       throw StateError('O arquivo $arquivo está vazio e não pode ser decodificado.');

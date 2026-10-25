@@ -276,6 +276,7 @@ class _CragBackgroundWidget extends StatefulWidget {
   final String? checksumSha256;
   final int larguraAlvo;
   final bool usarBordaInteligente;
+  final void Function(double proporcao)? aoResolverProporcao;
 
   const _CragBackgroundWidget({
     required this.thumbnailUrl,
@@ -284,6 +285,7 @@ class _CragBackgroundWidget extends StatefulWidget {
     this.checksumSha256,
     this.larguraAlvo = 450,
     this.usarBordaInteligente = false,
+    this.aoResolverProporcao,
   });
 
   @override
@@ -292,6 +294,8 @@ class _CragBackgroundWidget extends StatefulWidget {
 
 class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   Future<ImageProvider?>? _provedorImagemFuture;
+  ImageStream? _imagemStream;
+  ImageStreamListener? _imagemStreamListener;
 
   @override
   void initState() {
@@ -312,7 +316,22 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     }
   }
 
+  @override
+  void dispose() {
+    _removerOuvinteImagem();
+    super.dispose();
+  }
+
+  void _removerOuvinteImagem() {
+    if (_imagemStream != null && _imagemStreamListener != null) {
+      _imagemStream!.removeListener(_imagemStreamListener!);
+      _imagemStream = null;
+      _imagemStreamListener = null;
+    }
+  }
+
   void _inicializarProvedor() {
+    _removerOuvinteImagem();
     _provedorImagemFuture = null;
     String? cragId = widget.cragId;
     if ((cragId == null || cragId.isEmpty) && widget.thumbnailUrl.isNotEmpty) {
@@ -335,12 +354,35 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
       return;
     }
 
-    _provedorImagemFuture = ProvedorImagemAresta.resolver(
+    final future = ProvedorImagemAresta.resolver(
       picoId: cragId ?? '',
       caminho: caminhoFinal,
       checksumSha256: widget.checksumSha256,
       larguraAlvo: widget.larguraAlvo,
     );
+
+    if (widget.aoResolverProporcao != null) {
+      future.then((provedor) {
+        if (provedor != null && mounted) {
+          _removerOuvinteImagem();
+          final stream = provedor.resolve(const ImageConfiguration());
+          _imagemStream = stream;
+          _imagemStreamListener = ImageStreamListener(
+            (ImageInfo info, bool synchronousCall) {
+              final w = info.image.width;
+              final h = info.image.height;
+              if (w > 0 && h > 0 && mounted) {
+                widget.aoResolverProporcao?.call(w / h);
+              }
+            },
+            onError: (dynamic _, StackTrace? stackTrace) {},
+          );
+          stream.addListener(_imagemStreamListener!);
+        }
+      });
+    }
+
+    _provedorImagemFuture = future;
   }
 
   /// Constrói a capa padrão com a logo do Aresta preenchendo 100% do espaço sobre fundo preto.
@@ -393,38 +435,40 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
             final imageProvider = snapshot.data!;
             if (widget.usarBordaInteligente) {
               return RepaintBoundary(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Camada de fundo com blur gerado das bordas da imagem original
-                    ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                        sigmaX: 24.0,
-                        sigmaY: 24.0,
-                        tileMode: TileMode.clamp,
+                child: ClipRect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Camada de fundo com blur horizontal puro gerado das bordas da imagem original
+                      ImageFiltered(
+                        imageFilter: ImageFilter.blur(
+                          sigmaX: 24.0,
+                          sigmaY: 0.0,
+                          tileMode: TileMode.clamp,
+                        ),
+                        child: Image(
+                          image: imageProvider,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
+                        ),
                       ),
-                      child: Image(
+                      // Leve escurecimento para contraste
+                      ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.25),
+                      ),
+                      // Camada principal com a arte integral contida na caixa (Opção A)
+                      Image(
                         image: imageProvider,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
                         errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox.shrink(),
+                            _construirImagemIndisponivel(),
                       ),
-                    ),
-                    // Leve escurecimento para contraste
-                    ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.25),
-                    ),
-                    // Camada principal com a arte integral contida na caixa (Opção A)
-                    Image(
-                      image: imageProvider,
-                      fit: BoxFit.contain,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _construirImagemIndisponivel(),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }
@@ -445,8 +489,9 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
 
 /// Constrói o fundo visual do card do pico com suporte a cache local e ProvedorImagemAresta.
 ///
-/// Permite configurar [larguraAlvo] (padrão de 450 para cards e 1200 para cabeçalho) e
-/// [usarBordaInteligente] para preencher áreas excedentes com desfoque Gaussiano da própria imagem (Opção A).
+/// Permite configurar [larguraAlvo] (padrão de 450 para cards e 1200 para cabeçalho),
+/// [usarBordaInteligente] para preencher áreas excedentes com desfoque Gaussiano da própria imagem (Opção A)
+/// e [aoResolverProporcao] para notificar a proporção de aspecto decodificada da imagem.
 Widget buildCragBackground(
   String thumbnailUrl, {
   String? cragId,
@@ -454,6 +499,7 @@ Widget buildCragBackground(
   String? checksumSha256,
   int larguraAlvo = 450,
   bool usarBordaInteligente = false,
+  void Function(double proporcao)? aoResolverProporcao,
 }) {
   return _CragBackgroundWidget(
     thumbnailUrl: thumbnailUrl,
@@ -462,5 +508,6 @@ Widget buildCragBackground(
     checksumSha256: checksumSha256,
     larguraAlvo: larguraAlvo,
     usarBordaInteligente: usarBordaInteligente,
+    aoResolverProporcao: aoResolverProporcao,
   );
 }
