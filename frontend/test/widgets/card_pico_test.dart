@@ -404,7 +404,7 @@ void main() {
       },
     );
 
-    group('Borda Inteligente e Resolução em buildCragBackground (Tasks 3.1 - 3.2)', () {
+    group('Resolução e Proporção em Camada Única BoxFit.cover em buildCragBackground (Tasks 1.1 - 1.2)', () {
       const bytesPng1 = <int>[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
         0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
@@ -413,7 +413,7 @@ void main() {
         66, 96, 130
       ];
 
-      testWidgets('com usarBordaInteligente: false mantém camada única BoxFit.cover e larguraAlvo padrão 450', (WidgetTester tester) async {
+      testWidgets('mantém camada única BoxFit.cover e larguraAlvo padrão 450', (WidgetTester tester) async {
         final picoDir = Directory('${tempDir.path}/downloads/pico_padrao')
           ..createSync(recursive: true);
         final imgFile = File('${picoDir.path}/capa.webp');
@@ -431,7 +431,6 @@ void main() {
                   cragId: 'pico_padrao',
                   capaPath: 'capa.webp',
                   checksumSha256: 'hash_padrao',
-                  usarBordaInteligente: false,
                 ),
               ),
             ),
@@ -450,53 +449,6 @@ void main() {
         expect(resize.width, equals(450));
       });
 
-      testWidgets('com usarBordaInteligente: true e larguraAlvo: 1200 renderiza fundo ImageFiltered com blur e BoxFit.cover e primeiro plano com BoxFit.contain', (WidgetTester tester) async {
-        final picoDir = Directory('${tempDir.path}/downloads/pico_borda')
-          ..createSync(recursive: true);
-        final imgFile = File('${picoDir.path}/capa.webp');
-        imgFile.writeAsBytesSync(bytesPng1);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: ThemeData(extensions: [AppColors.dark]),
-            home: Scaffold(
-              body: SizedBox(
-                width: 400,
-                height: 300,
-                child: buildCragBackground(
-                  'capa.webp',
-                  cragId: 'pico_borda',
-                  capaPath: 'capa.webp',
-                  checksumSha256: 'hash_borda',
-                  larguraAlvo: 1200,
-                  usarBordaInteligente: true,
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        await tester.pumpAndSettle();
-
-        expect(find.byType(ImageFiltered), findsOneWidget);
-        final imageFiltered = tester.widget<ImageFiltered>(find.byType(ImageFiltered));
-        expect(imageFiltered.imageFilter, isNotNull);
-
-        // Duas instâncias de Image compartilhando o mesmo ImageProvider
-        final imageFinders = find.byType(Image);
-        expect(imageFinders, findsNWidgets(2));
-
-        final imagemFundo = tester.widget<Image>(imageFinders.at(0));
-        expect(imagemFundo.fit, equals(BoxFit.cover));
-        expect(imagemFundo.image, isA<ResizeImage>());
-        final resizeFundo = imagemFundo.image as ResizeImage;
-        expect(resizeFundo.width, equals(1200));
-
-        final imagemFrente = tester.widget<Image>(imageFinders.at(1));
-        expect(imagemFrente.fit, equals(BoxFit.contain));
-        expect(imagemFrente.image, equals(imagemFundo.image));
-      });
-
       const bytesPng4x3 = <int>[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
         0, 0, 0, 4, 0, 0, 0, 3, 8, 6, 0, 0, 0, 180, 244, 174, 198, 0, 0,
@@ -505,7 +457,7 @@ void main() {
         0, 0, 73, 69, 78, 68, 174, 66, 96, 130
       ];
 
-      testWidgets('com usarBordaInteligente: true notifica aoResolverProporcao e aplica desfoque horizontal com ClipRect', (WidgetTester tester) async {
+      testWidgets('com larguraAlvo: 1200 e aoResolverProporcao renderiza camada única BoxFit.cover sem ImageFiltered e notifica proporção', (WidgetTester tester) async {
         final picoDir = Directory('${tempDir.path}/downloads/pico_proporcao')
           ..createSync(recursive: true);
         final imgFile = File('${picoDir.path}/capa.webp');
@@ -526,7 +478,28 @@ void main() {
                   capaPath: 'capa.webp',
                   checksumSha256: 'hash_proporcao',
                   larguraAlvo: 1200,
-                  usarBordaInteligente: true,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Atualiza adicionando aoResolverProporcao via didUpdateWidget
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_proporcao',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_proporcao',
+                  larguraAlvo: 1200,
                   aoResolverProporcao: (p) => proporcaoRecebida = p,
                 ),
               ),
@@ -536,20 +509,23 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
         await tester.runAsync(() async {
-          while (proporcaoRecebida == null) {
+          for (var i = 0; i < 20 && proporcaoRecebida == null; i++) {
             await Future.delayed(const Duration(milliseconds: 10));
           }
         });
         await tester.pump();
 
         expect(proporcaoRecebida, closeTo(4.0 / 3.0, 0.001));
-        expect(find.byType(ClipRect), findsWidgets);
-        final imageFiltered = tester.widget<ImageFiltered>(find.byType(ImageFiltered));
-        expect(imageFiltered.imageFilter.toString(), contains('24'));
-        expect(imageFiltered.imageFilter.toString(), contains('0'));
+        expect(find.byType(ImageFiltered), findsNothing);
+        final imageFinder = find.byType(Image);
+        expect(imageFinder, findsOneWidget);
+        final imageWidget = tester.widget<Image>(imageFinder);
+        expect(imageWidget.fit, equals(BoxFit.cover));
+        final resize = imageWidget.image as ResizeImage;
+        expect(resize.width, equals(1200));
       });
 
-      testWidgets('com usarBordaInteligente: true quando a imagem falha exibe apenas um ícone de erro', (WidgetTester tester) async {
+      testWidgets('quando a imagem falha exibe ícone de erro', (WidgetTester tester) async {
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData(extensions: [AppColors.dark]),
@@ -562,7 +538,6 @@ void main() {
                   cragId: 'pico_inexistente',
                   checksumSha256: 'hash_inexistente',
                   larguraAlvo: 1200,
-                  usarBordaInteligente: true,
                 ),
               ),
             ),

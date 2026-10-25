@@ -974,16 +974,16 @@ void main() {
   );
 
   testWidgets(
-    'PicoDetailsPage constrói cabeçalho com usarBordaInteligente e larguraAlvo 1200 quando possui caminhoThumbnail',
+    'PicoDetailsPage constrói cabeçalho com larguraAlvo 1200 e aoResolverProporcao quando possui caminhoThumbnail',
     (tester) async {
       final datasetRepo = _FakeDatasetRepository();
       final croqui = Croqui()
         ..caminhoThumbnail = 'imagens/capa_p0_i0.webp';
-      final pico = Pico()..nome = 'Pico Com Capa Borda';
+      final pico = Pico()..nome = 'Pico Com Capa';
       final vm = PicoViewModel(
         pico: pico,
         croqui: croqui,
-        cragId: 'pico_com_capa_borda',
+        cragId: 'pico_com_capa',
         datasetRepo: datasetRepo,
       );
 
@@ -1000,7 +1000,7 @@ void main() {
       final backgroundWidgetFinder = find.byWidgetPredicate(
         (w) =>
             w.runtimeType.toString() == '_CragBackgroundWidget' &&
-            (w as dynamic).usarBordaInteligente == true &&
+            (w as dynamic).aoResolverProporcao != null &&
             (w as dynamic).larguraAlvo == 1200,
       );
       expect(backgroundWidgetFinder, findsOneWidget);
@@ -1148,10 +1148,20 @@ void main() {
       },
     );
 
-    group('Altura Dinâmica da SliverAppBar e Borda Lateral em PicoDetailsPage (Tasks 2.1 - 2.2)', () {
+    group('Janela de Altura Dinâmica [220, 300] dp e Renderização sem Bordas em PicoDetailsPage (Tasks 2.1 - 2.2)', () {
       late Directory tempDir;
       late PathProviderPlatform plataformaAnterior;
 
+      // Proporção 5:3 (1.666) -> em tela de 400 dp de largura, altura natural = 240.0 dp (dentro de [220, 300])
+      const bytesPng5x3 = <int>[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 5, 0, 0, 0, 3, 8, 6, 0, 0, 0, 91, 54, 197, 248, 0, 0,
+        0, 21, 73, 68, 65, 84, 120, 156, 99, 252, 207, 192, 240, 159, 1, 13,
+        48, 161, 11, 224, 20, 4, 0, 121, 131, 2, 4, 159, 17, 221, 83, 0, 0,
+        0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+      ];
+
+      // Proporção 4:2 (2.0) -> em tela de 400 dp de largura, altura natural = 200.0 dp (< piso de 220.0 dp)
       const bytesPng4x2 = <int>[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
         0, 0, 0, 4, 0, 0, 0, 2, 8, 6, 0, 0, 0, 127, 168, 125, 99, 0, 0,
@@ -1160,6 +1170,7 @@ void main() {
         0, 0, 73, 69, 78, 68, 174, 66, 96, 130
       ];
 
+      // Proporção 2:4 (0.5) -> em tela de 400 dp de largura, altura natural = 800.0 dp (> teto de 300.0 dp)
       const bytesPng2x4 = <int>[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
         0, 0, 0, 2, 0, 0, 0, 4, 8, 6, 0, 0, 0, 164, 239, 238, 57, 0, 0,
@@ -1182,7 +1193,7 @@ void main() {
       });
 
       testWidgets(
-        'calcula expandedHeight proporcional para imagem horizontal sem sobras no topo e rodapé',
+        'calcula expandedHeight proporcional exato para imagem em paisagem padrão dentro da janela [220, 300] dp',
         (WidgetTester tester) async {
           tester.view.physicalSize = const Size(400, 800);
           tester.view.devicePixelRatio = 1.0;
@@ -1191,7 +1202,7 @@ void main() {
 
           final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha')
             ..createSync(recursive: true);
-          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng5x3);
 
           final datasetRepo = _FakeDatasetRepository();
           final pico = Pico()
@@ -1218,13 +1229,63 @@ void main() {
           await tester.pump();
 
           final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
-          // Largura da tela = 400. Proporção 4x2 = 2.0. Altura = 400 / 2.0 = 200.0 dp.
-          expect(sliverAppBar.expandedHeight, equals(200.0));
+          // Largura da tela = 400. Proporção 5x3 = 5/3. Altura = 400 / (5/3) = 240.0 dp.
+          expect(sliverAppBar.expandedHeight, closeTo(240.0, 0.01));
+          expect(find.byType(ImageFiltered), findsNothing);
         },
       );
 
       testWidgets(
-        'limita expandedHeight a 300 dp para imagem vertical com bordas inteligentes horizontais',
+        'trava expandedHeight no piso mínimo de 220 dp para imagem muito larga/panorâmica fazendo crop lateral com BoxFit.cover',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_vo_gusta')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()
+            ..nome = 'Pico da Vó Gusta'
+            ..estado = 'MG';
+          final croqui = Croqui()..caminhoThumbnail = 'capa.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_vo_gusta',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          // Largura da tela = 400. Proporção 4x2 = 2.0. Altura natural = 200.0 dp -> clamp no piso de 220.0 dp.
+          expect(sliverAppBar.expandedHeight, equals(220.0));
+          expect(find.byType(ImageFiltered), findsNothing);
+          final imageFinder = find.descendant(
+            of: find.byType(FlexibleSpaceBar),
+            matching: find.byType(Image),
+          );
+          expect(imageFinder, findsOneWidget);
+          expect(tester.widget<Image>(imageFinder).fit, equals(BoxFit.cover));
+        },
+      );
+
+      testWidgets(
+        'limita expandedHeight a 300 dp para imagem vertical em camada única com BoxFit.cover sem bordas borradas',
         (WidgetTester tester) async {
           tester.view.physicalSize = const Size(400, 800);
           tester.view.devicePixelRatio = 1.0;
@@ -1262,7 +1323,13 @@ void main() {
           final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
           // Largura da tela = 400. Proporção 2x4 = 0.5. Altura natural = 800.0 dp -> clamp para 300.0 dp.
           expect(sliverAppBar.expandedHeight, equals(300.0));
-          expect(find.byType(ClipRect), findsWidgets);
+          expect(find.byType(ImageFiltered), findsNothing);
+          final imageFinder = find.descendant(
+            of: find.byType(FlexibleSpaceBar),
+            matching: find.byType(Image),
+          );
+          expect(imageFinder, findsOneWidget);
+          expect(tester.widget<Image>(imageFinder).fit, equals(BoxFit.cover));
         },
       );
 
@@ -1276,7 +1343,7 @@ void main() {
 
           final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha')
             ..createSync(recursive: true);
-          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng5x3);
 
           final datasetRepo = _FakeDatasetRepository();
           final pico = Pico()
@@ -1303,9 +1370,9 @@ void main() {
           await tester.pump();
 
           final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
-          expect(sliverAppBar.expandedHeight, equals(200.0));
+          expect(sliverAppBar.expandedHeight, closeTo(240.0, 0.01));
 
-          // Com alturaExpandida = 200.0 e estado expandido (top = 200.0),
+          // Com alturaExpandida = 240.0 e estado expandido (top = 240.0),
           // o fator t deve ser 1.0 e o título deve exibir fontSize = 24.0 (18 + 6 * 1.0)
           final textFinder = find.text('PEDRA FILHA');
           expect(textFinder, findsOneWidget);
@@ -1347,7 +1414,7 @@ void main() {
           // Agora cria o arquivo e atualiza o widget
           final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha_v2')
             ..createSync(recursive: true);
-          File('${picoDir.path}/capa_dinamica.webp').writeAsBytesSync(bytesPng4x2);
+          File('${picoDir.path}/capa_dinamica.webp').writeAsBytesSync(bytesPng5x3);
 
           await tester.pumpWidget(
             MaterialApp(
@@ -1368,7 +1435,7 @@ void main() {
           await tester.pump();
 
           sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
-          expect(sliverAppBar.expandedHeight, equals(200.0));
+          expect(sliverAppBar.expandedHeight, closeTo(240.0, 0.01));
         },
       );
 
@@ -1382,7 +1449,7 @@ void main() {
 
           final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_grande')
             ..createSync(recursive: true);
-          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng5x3);
 
           final datasetRepo = _FakeDatasetRepository();
           final pico = Pico()
@@ -1417,14 +1484,14 @@ void main() {
           await tester.pump();
 
           final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
-          // Largura 400 / Proporção 2.0 = 200.0 dp totais na tela.
-          // Como topPadding = 32.0, expandedHeight deve ser 200.0 - 32.0 = 168.0
-          // para que maxExtent (topPadding + expandedHeight) seja exatamente 200.0 dp!
-          expect(sliverAppBar.expandedHeight, equals(168.0));
+          // Largura 400 / Proporção (5/3) = 240.0 dp totais na tela.
+          // Como topPadding = 32.0, expandedHeight deve ser 240.0 - 32.0 = 208.0
+          // para que maxExtent (topPadding + expandedHeight) seja exatamente 240.0 dp!
+          expect(sliverAppBar.expandedHeight, closeTo(208.0, 0.01));
 
           final flexibleSpaceSize = tester.getSize(find.byType(FlexibleSpaceBar));
           expect(flexibleSpaceSize.width, equals(400.0));
-          expect(flexibleSpaceSize.height, equals(200.0));
+          expect(flexibleSpaceSize.height, closeTo(240.0, 0.01));
 
           // Verifica a presença do gradiente com scrim superior (5 stops iniciando em 0.0 -> 0.22)
           final decoratedBoxes = tester.widgetList<DecoratedBox>(

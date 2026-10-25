@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../view/view_models/card_croqui_view_model.dart';
@@ -275,7 +274,6 @@ class _CragBackgroundWidget extends StatefulWidget {
   final String? capaPath;
   final String? checksumSha256;
   final int larguraAlvo;
-  final bool usarBordaInteligente;
   final void Function(double proporcao)? aoResolverProporcao;
 
   const _CragBackgroundWidget({
@@ -284,7 +282,6 @@ class _CragBackgroundWidget extends StatefulWidget {
     this.capaPath,
     this.checksumSha256,
     this.larguraAlvo = 450,
-    this.usarBordaInteligente = false,
     this.aoResolverProporcao,
   });
 
@@ -311,7 +308,8 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
         oldWidget.capaPath != widget.capaPath ||
         oldWidget.checksumSha256 != widget.checksumSha256 ||
         oldWidget.larguraAlvo != widget.larguraAlvo ||
-        oldWidget.usarBordaInteligente != widget.usarBordaInteligente) {
+        (oldWidget.aoResolverProporcao == null) !=
+            (widget.aoResolverProporcao == null)) {
       _inicializarProvedor();
     }
   }
@@ -433,45 +431,6 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
           }
           if (snapshot.hasData && snapshot.data != null) {
             final imageProvider = snapshot.data!;
-            if (widget.usarBordaInteligente) {
-              return RepaintBoundary(
-                child: ClipRect(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Camada de fundo com blur horizontal puro gerado das bordas da imagem original
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(
-                          sigmaX: 24.0,
-                          sigmaY: 0.0,
-                          tileMode: TileMode.clamp,
-                        ),
-                        child: Image(
-                          image: imageProvider,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox.shrink(),
-                        ),
-                      ),
-                      // Leve escurecimento para contraste
-                      ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.25),
-                      ),
-                      // Camada principal com a arte integral contida na caixa (Opção A)
-                      Image(
-                        image: imageProvider,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _construirImagemIndisponivel(),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
             return Image(
               image: imageProvider,
               fit: BoxFit.cover,
@@ -487,18 +446,17 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
   }
 }
 
-/// Constrói o fundo visual do card do pico com suporte a cache local e ProvedorImagemAresta.
+/// Constrói o fundo visual do card ou cabeçalho do pico com suporte a cache local e [ProvedorImagemAresta].
 ///
-/// Permite configurar [larguraAlvo] (padrão de 450 para cards e 1200 para cabeçalho),
-/// [usarBordaInteligente] para preencher áreas excedentes com desfoque Gaussiano da própria imagem (Opção A)
-/// e [aoResolverProporcao] para notificar a proporção de aspecto decodificada da imagem.
+/// Renderiza a imagem em camada única com [BoxFit.cover], permitindo configurar [larguraAlvo]
+/// (padrão de 450 para cards e 1200 para cabeçalho) e [aoResolverProporcao] para notificar
+/// a proporção de aspecto (`largura / altura`) decodificada da imagem.
 Widget buildCragBackground(
   String thumbnailUrl, {
   String? cragId,
   String? capaPath,
   String? checksumSha256,
   int larguraAlvo = 450,
-  bool usarBordaInteligente = false,
   void Function(double proporcao)? aoResolverProporcao,
 }) {
   return _CragBackgroundWidget(
@@ -507,7 +465,6 @@ Widget buildCragBackground(
     capaPath: capaPath,
     checksumSha256: checksumSha256,
     larguraAlvo: larguraAlvo,
-    usarBordaInteligente: usarBordaInteligente,
     aoResolverProporcao: aoResolverProporcao,
   );
 }

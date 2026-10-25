@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:math' as math;
 import 'package:frontend/main.dart';
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
@@ -117,18 +118,21 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   /// da barra de status para renderização *edge-to-edge*) baseada na proporção da capa.
   ///
   /// Garante que:
-  /// - Para imagens em modo paisagem, a altura total diminui proporcionalmente até caber
-  ///   exatamente desde o topo físico da tela (`y = 0`), eliminando faixas no topo e rodapé.
-  /// - Para imagens verticais ou quadradas, limita-se ao teto máximo de 300 dp.
-  /// - Nunca fica inferior à altura da barra colapsada ([collapsedHeight]).
+  /// - Para imagens panorâmicas muito largas (`alturaNatural < 220 dp`), trava no piso mínimo
+  ///   de 220 dp para não espremer os controles, permitindo *crop* lateral suave com [BoxFit.cover].
+  /// - Para imagens em paisagem padrão (`220 dp <= alturaNatural <= 300 dp`), adapta-se
+  ///   exatamente à altura natural da imagem, sem *crop* e sem bordas.
+  /// - Para imagens verticais ou quadradas (`alturaNatural > 300 dp`), limita-se ao teto máximo
+  ///   de 300 dp, preenchendo 100% da largura com *crop* superior/inferior suave via [BoxFit.cover].
   double _calcularAlturaExpandida(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final collapsedHeight =
         MediaQuery.of(context).padding.top + kToolbarHeight;
+    final minExpandedHeight = math.max(220.0, collapsedHeight);
     const maxExpandedHeight = 300.0;
     if (_proporcaoCapa != null && _proporcaoCapa! > 0) {
       final naturalHeight = screenWidth / _proporcaoCapa!;
-      return naturalHeight.clamp(collapsedHeight, maxExpandedHeight);
+      return naturalHeight.clamp(minExpandedHeight, maxExpandedHeight);
     }
     return maxExpandedHeight;
   }
@@ -328,7 +332,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                     widget.croqui.caminhoThumbnail,
                                   ),
                                   larguraAlvo: 1200,
-                                  usarBordaInteligente: true,
                                   aoResolverProporcao: (proporcao) {
                                     if (_proporcaoCapa != proporcao && mounted) {
                                       setState(() {
