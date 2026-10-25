@@ -48,6 +48,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   final GlobalKey _mapaKey = GlobalKey();
   late PicoViewModel _viewModel;
 
+  /// Proporção de aspecto (largura / altura) da imagem de capa resolvida.
+  /// Quando nula, a altura expandida adota o teto padrão de 300 dp.
+  double? _proporcaoCapa;
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +107,29 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       _viewModel.addListener(_aoAtualizarViewModel);
       _setupBackInterceptor();
     }
+    if (oldWidget.croqui.caminhoThumbnail != widget.croqui.caminhoThumbnail ||
+        oldWidget.cragId != widget.cragId) {
+      _proporcaoCapa = null;
+    }
+  }
+
+  /// Calcula a altura expandida da [SliverAppBar] baseada na proporção da capa.
+  ///
+  /// Garante que:
+  /// - Para imagens em modo paisagem, a altura diminui proporcionalmente até caber exatamente,
+  ///   eliminando faixas no topo e rodapé.
+  /// - Para imagens verticais ou quadradas, limita-se ao teto máximo de 300 dp.
+  /// - Nunca fica inferior à altura da barra colapsada ([collapsedHeight]).
+  double _calcularAlturaExpandida(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final collapsedHeight =
+        MediaQuery.of(context).padding.top + kToolbarHeight;
+    const maxExpandedHeight = 300.0;
+    if (_proporcaoCapa != null && _proporcaoCapa! > 0) {
+      final naturalHeight = screenWidth / _proporcaoCapa!;
+      return naturalHeight.clamp(collapsedHeight, maxExpandedHeight);
+    }
+    return maxExpandedHeight;
   }
 
   void _aoAtualizarViewModel() {
@@ -247,56 +274,68 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
           },
           child: Scaffold(
         backgroundColor: context.colors.deepBasalt,
-        body: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 300.0,
-              pinned: true,
-              backgroundColor: context.colors.deepBasalt,
-              iconTheme: IconThemeData(color: context.colors.chalkWhite),
-              leading: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black87,
-                    shape: BoxShape.circle,
-                  ),
-                  child: BackButton(
-                    color: Colors.white,
-                    onPressed: () {
-                      AppNav.back(context);
-                    },
-                  ),
-                ),
-              ),
-              flexibleSpace: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final top = constraints.biggest.height;
-                  final collapsedHeight =
-                      MediaQuery.of(context).padding.top + kToolbarHeight;
-                  final expandedHeight = 300.0;
-                  double t = (top - collapsedHeight) /
-                      (expandedHeight - collapsedHeight);
-                  t = t.clamp(0.0, 1.0);
+        body: Builder(
+          builder: (context) {
+            final alturaExpandida = _calcularAlturaExpandida(context);
 
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      FlexibleSpaceBar(
-                        background: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            buildCragBackground(
-                              widget.croqui.caminhoThumbnail,
-                              cragId: widget.cragId,
-                              checksumSha256: _viewModel.datasetRepo
-                                  .obterSha256DaMidia(
-                                widget.cragId,
-                                widget.croqui.caminhoThumbnail,
-                              ),
-                              larguraAlvo: 1200,
-                              usarBordaInteligente: true,
-                            ),
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: alturaExpandida,
+                  pinned: true,
+                  backgroundColor: context.colors.deepBasalt,
+                  iconTheme: IconThemeData(color: context.colors.chalkWhite),
+                  leading: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black87,
+                        shape: BoxShape.circle,
+                      ),
+                      child: BackButton(
+                        color: Colors.white,
+                        onPressed: () {
+                          AppNav.back(context);
+                        },
+                      ),
+                    ),
+                  ),
+                  flexibleSpace: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      final top = constraints.biggest.height;
+                      final collapsedHeight =
+                          MediaQuery.of(context).padding.top + kToolbarHeight;
+                      final range = alturaExpandida - collapsedHeight;
+                      double t = range > 0
+                          ? (top - collapsedHeight) / range
+                          : 0.0;
+                      t = t.clamp(0.0, 1.0);
+
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          FlexibleSpaceBar(
+                            background: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                buildCragBackground(
+                                  widget.croqui.caminhoThumbnail,
+                                  cragId: widget.cragId,
+                                  checksumSha256: _viewModel.datasetRepo
+                                      .obterSha256DaMidia(
+                                    widget.cragId,
+                                    widget.croqui.caminhoThumbnail,
+                                  ),
+                                  larguraAlvo: 1200,
+                                  usarBordaInteligente: true,
+                                  aoResolverProporcao: (proporcao) {
+                                    if (_proporcaoCapa != proporcao && mounted) {
+                                      setState(() {
+                                        _proporcaoCapa = proporcao;
+                                      });
+                                    }
+                                  },
+                                ),
                             DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -560,32 +599,33 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  PicoMenuCard(
-                    title: 'Explorar Local',
-                    subtitle:
-                        'Como chegar, mapas gerais do croqui, clima e informações úteis.',
-                    icon: Icons.explore,
-                    iconColor: context.colors.beastHide,
-                    backgroundColor: context.colors.caveShadow,
-                    titleColor: context.colors.chalkWhite,
-                    subtitleColor: context.colors.fishBone,
-                    onTap: () {
-                      TelemetryService.instance.logNavegacaoPicoHub(
-                        widget.cragId,
-                        'abrir_explorar_local',
-                      );
-                      TreeNavigationWrapper.of(
-                        context,
-                      ).treeController.navigateTo(
-                        ExplorarLocalNode(
-                          cragId: widget.cragId,
-                          parent: TreeNavigationWrapper.of(
-                            context,
-                          ).treeController.currentNode,
-                        ),
-                      );
-                    },
-                  ),
+                  if (_viewModel.temExplorarLocal)
+                    PicoMenuCard(
+                      title: 'Explorar Local',
+                      subtitle:
+                          'Como chegar, mapas gerais do croqui, clima e informações úteis.',
+                      icon: Icons.explore,
+                      iconColor: context.colors.beastHide,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.fishBone,
+                      onTap: () {
+                        TelemetryService.instance.logNavegacaoPicoHub(
+                          widget.cragId,
+                          'abrir_explorar_local',
+                        );
+                        TreeNavigationWrapper.of(
+                          context,
+                        ).treeController.navigateTo(
+                          ExplorarLocalNode(
+                            cragId: widget.cragId,
+                            parent: TreeNavigationWrapper.of(
+                              context,
+                            ).treeController.currentNode,
+                          ),
+                        );
+                      },
+                    ),
 
                   PicoMenuCard(
                     title: 'Regras e recomendações',
@@ -609,32 +649,33 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                     },
                   ),
 
-                  PicoMenuCard(
-                    title: 'Comunidade',
-                    subtitle:
-                        'Redes sociais, canal de Whatsapp, patrocinadores e comércio local.',
-                    icon: Icons.people_outline,
-                    iconColor: context.colors.rustIron,
-                    backgroundColor: context.colors.caveShadow,
-                    titleColor: context.colors.chalkWhite,
-                    subtitleColor: context.colors.fishBone,
-                    onTap: () {
-                      TelemetryService.instance.logNavegacaoPicoHub(
-                        widget.cragId,
-                        'abrir_comunidade',
-                      );
-                      TreeNavigationWrapper.of(
-                        context,
-                      ).treeController.navigateTo(
-                        ComunidadePicoNode(
-                          cragId: widget.cragId,
-                          parent: TreeNavigationWrapper.of(
-                            context,
-                          ).treeController.currentNode,
-                        ),
-                      );
-                    },
-                  ),
+                  if (_viewModel.temComunidade)
+                    PicoMenuCard(
+                      title: 'Comunidade',
+                      subtitle:
+                          'Redes sociais, canal de Whatsapp, patrocinadores e comércio local.',
+                      icon: Icons.people_outline,
+                      iconColor: context.colors.rustIron,
+                      backgroundColor: context.colors.caveShadow,
+                      titleColor: context.colors.chalkWhite,
+                      subtitleColor: context.colors.fishBone,
+                      onTap: () {
+                        TelemetryService.instance.logNavegacaoPicoHub(
+                          widget.cragId,
+                          'abrir_comunidade',
+                        );
+                        TreeNavigationWrapper.of(
+                          context,
+                        ).treeController.navigateTo(
+                          ComunidadePicoNode(
+                            cragId: widget.cragId,
+                            parent: TreeNavigationWrapper.of(
+                              context,
+                            ).treeController.currentNode,
+                          ),
+                        );
+                      },
+                    ),
 
                   /*
                   PicoMenuCard(
@@ -711,8 +752,10 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: widget.returnToSetor != null
+      );
+    },
+  ),
+  floatingActionButton: widget.returnToSetor != null
           ? FloatingActionButton.extended(
               onPressed: () {
                 TelemetryService.instance.logAcaoCroqui(

@@ -42,6 +42,6 @@ A `SetoresPage` é a tela central e única de exploração do catálogo de um pi
 
 | Subpágina | Responsabilidade |
 |---|---|
-| `explorar_local_page.dart` | Informações práticas de acesso, infraestrutura, melhor época para escalar e croquis gerais de aproximação. |
+| `explorar_local_page.dart` | Informações práticas de acesso, infraestrutura, melhor época para escalar e croquis gerais de aproximação. Inclui automaticamente o card de navegação externa "Abrir no Google Maps" posicionado logo abaixo das instruções de como chegar, priorizando `urlGoogleMaps` e utilizando as coordenadas `localizacao` (E7) como fallback. |
 | `comunidade_pico_page.dart` | Links e contatos da comunidade local, guias cadastrados, canais de comunicação e fóruns. |
 | `apoie_pico_page.dart` | Informações e dados PIX para contribuição financeira e manutenção das trilhas e vias do pico. |

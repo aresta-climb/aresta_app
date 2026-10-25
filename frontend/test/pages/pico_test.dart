@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
@@ -27,6 +29,17 @@ class _FakeDatasetRepository extends DatasetRepository {
   Future<bool> deleteCrag(String id) async {
     return true;
   }
+}
+
+class _MockPathProvider extends PathProviderPlatform {
+  final String path;
+  _MockPathProvider(this.path);
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => path;
+
+  @override
+  Future<String?> getTemporaryPath() async => path;
 }
 
 PicoDetailsPage _criarPicoDetailsPage({
@@ -681,11 +694,17 @@ void main() {
       );
 
       final croqui = Croqui()
-        ..botoes.add(
+        ..botoes.addAll([
+          Botao()
+            ..texto = 'Como chegar'
+            ..destino = (DestinoBotao()..secaoTextual = ArquivoMarkdown(conteudo: 'Texto acesso')),
+          Botao()
+            ..texto = 'Comunidade local'
+            ..destino = (DestinoBotao()..secaoTextual = ArquivoMarkdown(conteudo: 'Texto comunidade')),
           Botao()
             ..texto = 'Créditos e Autores'
             ..destino = (DestinoBotao()..secaoTextual = ArquivoMarkdown(conteudo: 'Texto autores')),
-        );
+        ]);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1028,8 +1047,330 @@ void main() {
       expect(textoCompartilhado, contains('https://aresta.cc/s/uidPicoShare77'));
     },
   );
+
+  group('PicoDetailsPage - Visibilidade condicional de subpáginas e regras', () {
+    testWidgets(
+      'oculta cards de Explorar Local e Comunidade quando não há conteúdo, mas mantém Regras e recomendações',
+      (tester) async {
+        final datasetRepo = _FakeDatasetRepository();
+        final pico = Pico()..nome = 'Pico Sem Detalhes'..estado = 'MG';
+        final croqui = Croqui();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construirTemaEscuro(),
+            home: _criarPicoDetailsPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: 'br_mg_pico_vazio',
+              datasetRepo: datasetRepo,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explorar Local'), findsNothing);
+        expect(find.text('Comunidade'), findsNothing);
+        expect(find.text('Regras e recomendações'), findsOneWidget);
+
+        await tester.tap(find.text('Regras e recomendações'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Nenhuma regra específica cadastrada para este local'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'exibe card Explorar Local quando pico possui apenas localização por coordenadas',
+      (tester) async {
+        final datasetRepo = _FakeDatasetRepository();
+        final pico = Pico()
+          ..nome = 'Pedra Filha'
+          ..estado = 'MG'
+          ..localizacao = (Coordenada()
+            ..latitude = -198960870
+            ..longitude = -436547850);
+        final croqui = Croqui();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construirTemaEscuro(),
+            home: _criarPicoDetailsPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: 'br_mg_pedra_filha',
+              datasetRepo: datasetRepo,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explorar Local'), findsOneWidget);
+        expect(find.text('Comunidade'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'exibe card Comunidade quando croqui possui botão de comunidade',
+      (tester) async {
+        final datasetRepo = _FakeDatasetRepository();
+        final pico = Pico()
+          ..nome = 'Pico com Comunidade'
+          ..estado = 'MG';
+        final croqui = Croqui()
+          ..botoes.add(
+            Botao(
+              texto: 'Comunidade Local',
+              destino: DestinoBotao(
+                secaoTextual: ArquivoMarkdown()..conteudo = 'Grupo WhatsApp',
+              ),
+            ),
+          );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construirTemaEscuro(),
+            home: _criarPicoDetailsPage(
+              pico: pico,
+              croqui: croqui,
+              cragId: 'br_mg_comunidade',
+              datasetRepo: datasetRepo,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Comunidade'), findsOneWidget);
+        expect(find.text('Explorar Local'), findsNothing);
+      },
+    );
+
+    group('Altura Dinâmica da SliverAppBar e Borda Lateral em PicoDetailsPage (Tasks 2.1 - 2.2)', () {
+      late Directory tempDir;
+      late PathProviderPlatform plataformaAnterior;
+
+      const bytesPng4x2 = <int>[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 4, 0, 0, 0, 2, 8, 6, 0, 0, 0, 127, 168, 125, 99, 0, 0,
+        0, 20, 73, 68, 65, 84, 120, 156, 99, 252, 207, 192, 240, 159, 1, 9,
+        48, 33, 115, 64, 108, 0, 63, 39, 2, 2, 177, 194, 199, 201, 0, 0,
+        0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+      ];
+
+      const bytesPng2x4 = <int>[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 2, 0, 0, 0, 4, 8, 6, 0, 0, 0, 164, 239, 238, 57, 0, 0,
+        0, 22, 73, 68, 65, 84, 120, 156, 99, 252, 207, 192, 240, 159, 129,
+        129, 129, 129, 9, 68, 96, 103, 0, 0, 67, 113, 2, 6, 180, 115, 101,
+        129, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+      ];
+
+      setUp(() async {
+        plataformaAnterior = PathProviderPlatform.instance;
+        tempDir = await Directory.systemTemp.createTemp('pico_page_test_');
+        PathProviderPlatform.instance = _MockPathProvider(tempDir.path);
+      });
+
+      tearDown(() async {
+        PathProviderPlatform.instance = plataformaAnterior;
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+
+      testWidgets(
+        'calcula expandedHeight proporcional para imagem horizontal sem sobras no topo e rodapé',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()
+            ..nome = 'Pedra Filha'
+            ..estado = 'MG';
+          final croqui = Croqui()..caminhoThumbnail = 'capa.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_pedra_filha',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          // Largura da tela = 400. Proporção 4x2 = 2.0. Altura = 400 / 2.0 = 200.0 dp.
+          expect(sliverAppBar.expandedHeight, equals(200.0));
+        },
+      );
+
+      testWidgets(
+        'limita expandedHeight a 300 dp para imagem vertical com bordas inteligentes horizontais',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_bocaina')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng2x4);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()
+            ..nome = 'Bocaina'
+            ..estado = 'MG';
+          final croqui = Croqui()..caminhoThumbnail = 'capa.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_bocaina',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          // Largura da tela = 400. Proporção 2x4 = 0.5. Altura natural = 800.0 dp -> clamp para 300.0 dp.
+          expect(sliverAppBar.expandedHeight, equals(300.0));
+          expect(find.byType(ClipRect), findsWidgets);
+        },
+      );
+
+      testWidgets(
+        'calcula fator de colapso t do LayoutBuilder acompanhando a alturaExpandida dinâmica',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()
+            ..nome = 'Pedra Filha'
+            ..estado = 'MG';
+          final croqui = Croqui()..caminhoThumbnail = 'capa.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_pedra_filha',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          expect(sliverAppBar.expandedHeight, equals(200.0));
+
+          // Com alturaExpandida = 200.0 e estado expandido (top = 200.0),
+          // o fator t deve ser 1.0 e o título deve exibir fontSize = 24.0 (18 + 6 * 1.0)
+          final textFinder = find.text('PEDRA FILHA');
+          expect(textFinder, findsOneWidget);
+          final textWidget = tester.widget<Text>(textFinder);
+          expect(textWidget.style?.fontSize, equals(24.0));
+        },
+      );
+
+      testWidgets(
+        'atualiza proporção quando aoResolverProporcao é invocado com nova proporção',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()..nome = 'Pedra Filha';
+          final croqui = Croqui()..caminhoThumbnail = 'capa_dinamica.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_pedra_filha',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          // Inicialmente sem arquivo local, proporção é nula e expandedHeight = 300
+          var sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          expect(sliverAppBar.expandedHeight, equals(300.0));
+
+          // Agora cria o arquivo e atualiza o widget
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_filha_v2')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa_dinamica.webp').writeAsBytesSync(bytesPng4x2);
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: Croqui()..caminhoThumbnail = 'capa_dinamica.webp',
+                cragId: 'br_mg_pedra_filha_v2',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          expect(sliverAppBar.expandedHeight, equals(200.0));
+        },
+      );
+    });
+  });
 }
-
-
-
-

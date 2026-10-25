@@ -75,6 +75,15 @@ class PicoViewModel extends ChangeNotifier {
   /// Categorias extraídas dos botões do croqui (regras, créditos, etc.).
   PicoCategorizedData get categorias => _categorias;
 
+  /// Indica se a subpágina "Explorar Local" possui conteúdo para ser exibido.
+  bool get temExplorarLocal => _categorias.temConteudoExplorarLocal(pico);
+
+  /// Indica se a subpágina "Comunidade" possui conteúdo para ser exibido.
+  bool get temComunidade => _categorias.temConteudoComunidade(pico);
+
+  /// Resolve a URL do Google Maps associada ao pico, priorizando link direto e usando coordenadas como fallback.
+  String? get urlGoogleMaps => resolverUrlGoogleMapsPico(pico);
+
   /// Lista de regras extraídas do croqui.
   List<Botao> get regras => _categorias.regras;
 

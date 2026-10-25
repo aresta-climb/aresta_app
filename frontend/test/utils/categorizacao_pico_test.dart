@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -95,6 +95,122 @@ void main() {
       expect(categorizedData.comunidadeInfo, isEmpty);
       expect(categorizedData.apoioProdutos, isEmpty);
       expect(categorizedData.outros, isEmpty);
+    });
+
+    test('categorizeBotao categoriza termos reais de comunidade como comunidade, parceria e contato', () {
+      final croqui = Croqui()
+        ..botoes.addAll([
+          Botao(texto: 'Comunidade', destino: DestinoBotao(secaoTextual: ArquivoMarkdown())),
+          Botao(texto: 'Parcerias e Contato', destino: DestinoBotao(secaoTextual: ArquivoMarkdown())),
+          Botao(texto: 'Apoio e Patrocinadores', destino: DestinoBotao(secaoTextual: ArquivoMarkdown())),
+        ]);
+
+      final categorizedData = PicoCategorizedData(croqui);
+      expect(categorizedData.comunidadeInfo.length, 1);
+      expect(categorizedData.comunidadeInfo.first.texto, 'Comunidade');
+      expect(categorizedData.comunidadeParceiros.length, 2);
+    });
+  });
+
+  group('resolverUrlGoogleMapsPico', () {
+    test('prioriza urlGoogleMaps quando preenchida mesmo se houver coordenadas', () {
+      final pico = Pico()
+        ..urlGoogleMaps = 'https://maps.app.goo.gl/exemplo123'
+        ..localizacao = (Coordenada()
+          ..latitude = -198960870
+          ..longitude = -436547850);
+
+      final url = resolverUrlGoogleMapsPico(pico);
+      expect(url, 'https://maps.app.goo.gl/exemplo123');
+    });
+
+    test('converte coordenadas E7 em URL universal do Google Maps como fallback', () {
+      final pico = Pico()
+        ..localizacao = (Coordenada()
+          ..latitude = -198960870
+          ..longitude = -436547850);
+
+      final url = resolverUrlGoogleMapsPico(pico);
+      expect(url, 'https://www.google.com/maps/search/?api=1&query=-19.896087,-43.654785');
+    });
+
+    test('retorna nulo quando urlGoogleMaps e coordenadas estao ausentes ou zeradas', () {
+      final picoVazio = Pico();
+      expect(resolverUrlGoogleMapsPico(picoVazio), isNull);
+
+      final picoZerado = Pico()
+        ..localizacao = (Coordenada()
+          ..latitude = 0
+          ..longitude = 0);
+      expect(resolverUrlGoogleMapsPico(picoZerado), isNull);
+
+      final picoUrlEspacos = Pico()..urlGoogleMaps = '   ';
+      expect(resolverUrlGoogleMapsPico(picoUrlEspacos), isNull);
+    });
+  });
+
+  group('PicoCategorizedData - temConteudoExplorarLocal e temConteudoComunidade', () {
+    test('temConteudoExplorarLocal retorna verdadeiro quando ha botoes de exploracao', () {
+      final croqui = Croqui()
+        ..botoes.add(
+          Botao(texto: 'Como chegar', destino: DestinoBotao(secaoTextual: ArquivoMarkdown())),
+        );
+      final dados = PicoCategorizedData(croqui);
+      expect(dados.temConteudoExplorarLocal(Pico()), isTrue);
+    });
+
+    test('temConteudoExplorarLocal retorna verdadeiro quando ha descricao do pico', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      final pico = Pico()..descricao = 'Historia do local de escalada';
+      expect(dados.temConteudoExplorarLocal(pico), isTrue);
+    });
+
+    test('temConteudoExplorarLocal retorna verdadeiro quando ha apenas coordenadas ou link maps', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      final pico = Pico()
+        ..localizacao = (Coordenada()
+          ..latitude = -198960870
+          ..longitude = -436547850);
+      expect(dados.temConteudoExplorarLocal(pico), isTrue);
+    });
+
+    test('temConteudoExplorarLocal retorna falso quando nao ha texto nem localizacao', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      expect(dados.temConteudoExplorarLocal(Pico()), isFalse);
+    });
+
+    test('temConteudoComunidade retorna verdadeiro quando ha botoes de comunidade', () {
+      final croqui = Croqui()
+        ..botoes.add(
+          Botao(texto: 'Patrocinadores', destino: DestinoBotao(secaoTextual: ArquivoMarkdown())),
+        );
+      final dados = PicoCategorizedData(croqui);
+      expect(dados.temConteudoComunidade(Pico()), isTrue);
+    });
+
+    test('temConteudoComunidade retorna verdadeiro quando ha associacao local com URL', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      final pico = Pico()
+        ..nomeAssociacao = 'AME'
+        ..urlFiliacaoAssociacao = 'https://ame.org.br/filiar';
+      expect(dados.temConteudoComunidade(pico), isTrue);
+    });
+
+    test('temConteudoComunidade retorna falso quando associacao nao tem URL ou nome', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      final pico = Pico()..nomeAssociacao = 'AME'; // sem urlFiliacaoAssociacao
+      expect(dados.temConteudoComunidade(pico), isFalse);
+    });
+
+    test('temConteudoComunidade retorna falso quando croqui e pico nao tem dados de comunidade', () {
+      final croqui = Croqui();
+      final dados = PicoCategorizedData(croqui);
+      expect(dados.temConteudoComunidade(Pico()), isFalse);
     });
   });
 }

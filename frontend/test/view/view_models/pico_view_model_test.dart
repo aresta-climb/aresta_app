@@ -306,4 +306,73 @@ void main() {
       },
     );
   });
+
+  group('PicoViewModel - Visibilidade de Subpáginas e URL Google Maps', () {
+    test('temExplorarLocal reflete conteúdo existente ou ausente', () {
+      final picoVazio = Pico();
+      final croquiVazio = Croqui();
+      final vmVazio = PicoViewModel(
+        pico: picoVazio,
+        croqui: croquiVazio,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+      expect(vmVazio.temExplorarLocal, isFalse);
+      vmVazio.dispose();
+
+      final picoComCoord = Pico()
+        ..localizacao = (Coordenada()
+          ..latitude = -198500000
+          ..longitude = -436000000);
+      final vmComCoord = PicoViewModel(
+        pico: picoComCoord,
+        croqui: croquiVazio,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+      expect(vmComCoord.temExplorarLocal, isTrue);
+      vmComCoord.dispose();
+    });
+
+    test('temComunidade reflete conteúdo existente ou ausente', () {
+      final picoVazio = Pico();
+      final croquiVazio = Croqui();
+      final vmVazio = PicoViewModel(
+        pico: picoVazio,
+        croqui: croquiVazio,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+      expect(vmVazio.temComunidade, isFalse);
+      vmVazio.dispose();
+
+      final croquiComComunidade = Croqui()
+        ..botoes.add(
+          Botao(
+            texto: 'Comunidade e Contato',
+            destino: DestinoBotao(secaoTextual: ArquivoMarkdown()),
+          ),
+        );
+      final vmComComunidade = PicoViewModel(
+        pico: picoVazio,
+        croqui: croquiComComunidade,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+      expect(vmComComunidade.temComunidade, isTrue);
+      vmComComunidade.dispose();
+    });
+
+    test('urlGoogleMaps delega para resolverUrlGoogleMapsPico', () {
+      final picoComUrl = Pico()..urlGoogleMaps = 'https://maps.app.goo.gl/teste';
+      final vm = PicoViewModel(
+        pico: picoComUrl,
+        croqui: croqui,
+        cragId: cragId,
+        datasetRepo: repositorio,
+      );
+      expect(vm.urlGoogleMaps, 'https://maps.app.goo.gl/teste');
+      vm.dispose();
+    });
+  });
 }

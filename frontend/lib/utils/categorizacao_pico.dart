@@ -3,6 +3,7 @@
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
 
+/// Categorias semânticas atribuídas aos botões e seções textuais de um croqui.
 enum TextCategory {
   capa,
   explorarSobre,
@@ -17,6 +18,7 @@ enum TextCategory {
   outros,
 }
 
+/// Categoriza um botão do croqui com base no texto do seu rótulo.
 TextCategory categorizeBotao(Botao b) {
   final text = b.texto.toLowerCase();
 
@@ -46,7 +48,11 @@ TextCategory categorizeBotao(Botao b) {
       text.contains('conduta')) {
     return TextCategory.regras;
   }
-  if (text.contains('parceiros') || text.contains('patrocinador')) {
+  if (text.contains('parceir') ||
+      text.contains('parceri') ||
+      text.contains('patrocinador') ||
+      text.contains('apoio') ||
+      text.contains('apoiador')) {
     return TextCategory.comunidadeParceiros;
   }
   if (text.contains('comércio') ||
@@ -57,7 +63,9 @@ TextCategory categorizeBotao(Botao b) {
   }
   if (text.contains('notícia') ||
       text.contains('noticia') ||
-      text.contains('associação')) {
+      text.contains('associação') ||
+      text.contains('comunidade') ||
+      text.contains('contato')) {
     return TextCategory.comunidadeInfo;
   }
   if (text.contains('produto') ||
@@ -75,6 +83,32 @@ TextCategory categorizeBotao(Botao b) {
   return TextCategory.outros;
 }
 
+/// Resolve o link de navegação para o Google Maps a partir do pico.
+///
+/// Prioriza [Pico.urlGoogleMaps] quando preenchido e não-vazio. Como fallback,
+/// caso o pico possua coordenadas geográficas válidas em [Pico.localizacao],
+/// converte os inteiros no formato E7 para graus decimais e constrói a URL universal
+/// da API de busca do Google Maps (`https://www.google.com/maps/search/?api=1&query=lat,lon`).
+/// Retorna `null` caso nenhum link ou coordenada válida esteja disponível.
+String? resolverUrlGoogleMapsPico(Pico pico) {
+  if (pico.urlGoogleMaps.trim().isNotEmpty) {
+    return pico.urlGoogleMaps.trim();
+  }
+
+  if (pico.hasLocalizacao()) {
+    final latE7 = pico.localizacao.latitude;
+    final lonE7 = pico.localizacao.longitude;
+    if (latE7 != 0 || lonE7 != 0) {
+      final lat = latE7 / 10000000.0;
+      final lon = lonE7 / 10000000.0;
+      return 'https://www.google.com/maps/search/?api=1&query=$lat,$lon';
+    }
+  }
+
+  return null;
+}
+
+/// Estrutura agregadora dos botões do croqui separados por categoria de apresentação.
 class PicoCategorizedData {
   final List<Botao> capa = [];
   final List<Botao> sobre = [];
@@ -131,5 +165,28 @@ class PicoCategorizedData {
           break;
       }
     }
+  }
+
+  /// Indica se a subpágina Explorar Local possui ao menos um elemento para exibição.
+  bool temConteudoExplorarLocal(Pico pico) {
+    return capa.isNotEmpty ||
+        introducao.isNotEmpty ||
+        sobre.isNotEmpty ||
+        pico.descricao.trim().isNotEmpty ||
+        comoChegar.isNotEmpty ||
+        resolverUrlGoogleMapsPico(pico) != null ||
+        outros.isNotEmpty;
+  }
+
+  /// Indica se a subpágina Comunidade possui ao menos um elemento para exibição.
+  bool temConteudoComunidade(Pico pico) {
+    final temAssociacao =
+        pico.nomeAssociacao.trim().isNotEmpty &&
+        pico.urlFiliacaoAssociacao.trim().isNotEmpty;
+
+    return comunidadeInfo.isNotEmpty ||
+        temAssociacao ||
+        comunidadeParceiros.isNotEmpty ||
+        comunidadeComercio.isNotEmpty;
   }
 }

@@ -450,6 +450,23 @@ void main() {
       expect(find.text('Nenhum setor encontrado com os filtros selecionados.'), findsOneWidget);
     });
 
+    testWidgets('exibe mensagem de backup específica quando o pico não possui nenhum setor cadastrado', (tester) async {
+      final picoSemSetores = Pico()..nome = 'Pico Novo Sem Setores';
+
+      await tester.pumpWidget(criarAmbiente(pico: picoSemSetores, cragId: 'pico_vazio'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nenhum setor ou escalada cadastrado para este local no momento.'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.landscape_outlined), findsOneWidget);
+      expect(
+        find.text('Nenhum setor encontrado com os filtros selecionados.'),
+        findsNothing,
+      );
+    });
+
     testWidgets('exibe mensagem de vazio na aba de modalidade quando nenhuma via atende aos filtros', (tester) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;

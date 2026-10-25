@@ -443,6 +443,7 @@ class _SetoresPageState extends State<SetoresPage>
     final setoresOuGruposOrdenados = _obterSetoresOuGruposOrdenados();
 
     if (setoresOuGruposOrdenados.isEmpty) {
+      final picoSemSetores = widget.pico.setoresOuGrupos.isEmpty;
       return SliverToBoxAdapter(
         child: Center(
           child: Padding(
@@ -451,13 +452,17 @@ class _SetoresPageState extends State<SetoresPage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.filter_alt_off,
+                  picoSemSetores
+                      ? Icons.landscape_outlined
+                      : Icons.filter_alt_off,
                   size: 48,
                   color: colors.ashGrey.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Nenhum setor encontrado com os filtros selecionados.',
+                  picoSemSetores
+                      ? 'Nenhum setor ou escalada cadastrado para este local no momento.'
+                      : 'Nenhum setor encontrado com os filtros selecionados.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: colors.ashGrey, fontSize: 14),
                 ),

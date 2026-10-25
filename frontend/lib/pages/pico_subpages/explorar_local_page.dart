@@ -1,26 +1,40 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import '../../main.dart';
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../../view/function_library/comunidade_functions.dart';
 import '../../view/function_library/markdown_offline.dart';
 import '../../utils/categorizacao_pico.dart';
 import '../../widgets/pico_menu_card.dart';
 import '../../theme/cores_app.dart';
 import '../../navigation/arvore_navegacao.dart';
 
+/// Subpágina dedicada a apresentar dados de acesso, contexto e exploração do pico.
+///
+/// Exibe seções de introdução, sobre o local, instruções de como chegar e atalho
+/// direto para abertura no Google Maps com rota predefinida.
 class ExplorarLocalPage extends StatelessWidget {
+  /// Dados gerais do pico.
   final Pico pico;
+
+  /// Identificador do croqui/crag.
   final String cragId;
+
+  /// Categorias semânticas extraídas dos botões e textos do croqui.
   final PicoCategorizedData categories;
+
+  /// Callback opcional para abertura de link externo, facilitando testes e injeção de dependência.
+  final Future<void> Function(String url, String nomeServico)? aoAbrirLinkExterno;
 
   const ExplorarLocalPage({
     super.key,
     required this.pico,
     required this.cragId,
     required this.categories,
+    this.aoAbrirLinkExterno,
   });
 
   void _pushTextNode(BuildContext context, String title, String content, {IconData? icon}) {
@@ -40,6 +54,8 @@ class ExplorarLocalPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final urlMaps = resolverUrlGoogleMapsPico(pico);
+
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       appBar: buildCommonAppBar(
@@ -171,6 +187,24 @@ class ExplorarLocalPage extends StatelessWidget {
                         ),
                       );
                     }
+                  }
+                },
+              ),
+
+            if (urlMaps != null)
+              PicoMenuCard(
+                title: 'Abrir no Google Maps',
+                subtitle: 'Ver localização e traçar rota até o pico.',
+                icon: Icons.map_outlined,
+                iconColor: context.colors.rustIron,
+                backgroundColor: context.colors.caveShadow,
+                titleColor: context.colors.chalkWhite,
+                subtitleColor: context.colors.fishBone,
+                onTap: () async {
+                  if (aoAbrirLinkExterno != null) {
+                    await aoAbrirLinkExterno!(urlMaps, 'Google Maps');
+                  } else {
+                    await abrirLinkExterno(urlMaps, 'Google Maps');
                   }
                 },
               ),
