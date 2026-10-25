@@ -712,4 +712,46 @@ void main() {
       expect(currentNode.cragId, equals('pico_consec_2'));
     },
   );
+
+  group('Cálculo geodésico e formatação compartilhada de distância', () {
+    test('calcularPicosMaisProximos com limite nulo retorna todos os picos ordenados por distância', () {
+      final picos = List.generate(
+        8,
+        (i) => MetadadosIndice(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          localizacao: Coordenada(
+            latitude: (-20.0 - i * 0.5 * 10000000).round() + (-200000000 - (-20)),
+            longitude: -440000000,
+          ),
+        ),
+      );
+
+      final comLimitePadrao = calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+      );
+      expect(comLimitePadrao.length, equals(6));
+
+      final semLimite = calcularPicosMaisProximos(
+        userLat: -20.0,
+        userLon: -44.0,
+        picosDisponiveis: picos,
+        limite: null,
+      );
+      expect(semLimite.length, equals(8));
+      expect(
+        semLimite.take(6).map((p) => p.id).toList(),
+        equals(comLimitePadrao.map((p) => p.id).toList()),
+      );
+    });
+
+    test('formatarDistanciaKm formata distâncias em metros (< 1km) e quilômetros (>= 1km)', () {
+      expect(formatarDistanciaKm(null), equals(''));
+      expect(formatarDistanciaKm(0.45), equals('450 m'));
+      expect(formatarDistanciaKm(1.0), equals('1.0 km'));
+      expect(formatarDistanciaKm(12.34), equals('12.3 km'));
+    });
+  });
 }

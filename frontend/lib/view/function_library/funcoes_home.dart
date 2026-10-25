@@ -19,13 +19,28 @@ import '../view_models/home_view_model.dart';
 import '../view_models/card_croqui_view_model.dart';
 import '../view_models/pico_proximo_view_model.dart';
 
+/// Formata uma distância em quilômetros para leitura humana (ex: `'450 m'` ou `'12.3 km'`).
+///
+/// Retorna string vazia quando [distanciaKm] é nulo.
+String formatarDistanciaKm(double? distanciaKm) {
+  if (distanciaKm == null) return '';
+  if (distanciaKm < 1.0) {
+    final metros = (distanciaKm * 1000).round();
+    return '$metros m';
+  }
+  return '${distanciaKm.toStringAsFixed(1)} km';
+}
+
 /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
-/// retornando os [limite] picos mais próximos ordenados por distância crescente.
+/// retornando os picos mais próximos ordenados por distância crescente.
+///
+/// Quando [limite] é informado (padrão `6`), retorna no máximo [limite] picos.
+/// Quando [limite] é `null`, retorna todos os picos com coordenadas válidas ordenados.
 List<PicoProximo> calcularPicosMaisProximos({
   required double userLat,
   required double userLon,
   required List<dynamic> picosDisponiveis,
-  int limite = 6,
+  int? limite = 6,
 }) {
   final List<PicoProximo> picosComDistancia = [];
 
@@ -69,10 +84,15 @@ List<PicoProximo> calcularPicosMaisProximos({
     }
   }
 
-  picosComDistancia.sort(
-    (a, b) => a.distanciaKm.compareTo(b.distanciaKm),
-  );
+  picosComDistancia.sort((a, b) {
+    final cmp = a.distanciaKm.compareTo(b.distanciaKm);
+    if (cmp != 0) return cmp;
+    return a.nome.compareTo(b.nome);
+  });
 
+  if (limite == null) {
+    return picosComDistancia;
+  }
   return picosComDistancia.take(limite).toList();
 }
 
@@ -229,6 +249,9 @@ Widget buildHomeBody(
           datasetRepo: repoOuViewModel as DatasetRepository,
           syncService: syncOuOnSwitchTab as SyncService,
         );
+  final Function(int)? switchTabCallback = repoOuViewModel is HomeViewModel
+      ? (syncOuOnSwitchTab is Function(int) ? syncOuOnSwitchTab : onSwitchTab)
+      : onSwitchTab;
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +267,12 @@ Widget buildHomeBody(
             children: [
               _buildHeroWelcome(context),
               _buildSearchBar(context, viewModel),
-              NearbyCragsCarousel(viewModel: viewModel),
+              NearbyCragsCarousel(
+                viewModel: viewModel,
+                onVerMais: switchTabCallback != null
+                    ? () => switchTabCallback(1)
+                    : null,
+              ),
               _buildGuiaRapido(context),
               _buildConservacao(context),
               const SizedBox(height: 30),

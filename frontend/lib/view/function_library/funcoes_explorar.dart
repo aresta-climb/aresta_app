@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -26,6 +26,8 @@ Widget buildBrowseBody(
   VoidCallback? onFilterPressed,
   VoidCallback? onSyncPressed,
   bool Function(String picoId)? isDownloadedChecker,
+  ScrollController? scrollController,
+  GlobalKey? chaveSetimoPico,
 }) {
   final List<CardCroquiViewModel> picos = _normalizarCards(availableCrags);
   final Set<String> baixadosImplicitos = {
@@ -54,6 +56,8 @@ Widget buildBrowseBody(
           onOpen: onOpen,
           onAddExperimental: onAddExperimental,
           isDownloadedChecker: verificarBaixado,
+          scrollController: scrollController,
+          chaveSetimoPico: chaveSetimoPico,
         ),
       ),
     ],
@@ -80,8 +84,11 @@ Widget _buildCragList(
   Function(dynamic)? onOpen,
   VoidCallback? onAddExperimental,
   bool Function(String picoId)? isDownloadedChecker,
+  ScrollController? scrollController,
+  GlobalKey? chaveSetimoPico,
 }) {
   return SingleChildScrollView(
+    controller: scrollController,
     physics: const BouncingScrollPhysics(),
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
     child: Column(
@@ -152,8 +159,10 @@ Widget _buildCragList(
             ),
           )
         else
-          ...availableCrags.map(
-            (crag) {
+          ...availableCrags.asMap().entries.map(
+            (entry) {
+              final index = entry.key;
+              final crag = entry.value;
               final baixado = isDownloadedChecker != null
                   ? isDownloadedChecker(crag.id)
                   : crag.salvoOffline;
@@ -161,6 +170,7 @@ Widget _buildCragList(
                   ? crag
                   : crag.comSalvoOffline(baixado);
               return Padding(
+                key: index == 6 ? chaveSetimoPico : null,
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: CragCard(
                   dados: dados,

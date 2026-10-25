@@ -8,6 +8,8 @@ Este diretório contém as telas e páginas principais de interação do usuári
 
 | Página | Arquivo | Responsabilidade |
 |---|---|---|
+| `HomePage` | `home.dart` | Tela inicial do aplicativo com destaque de croquis baixados, carrossel finito dos 6 picos mais próximos (`NearbyCragsCarousel`) com card de continuidade `"VER MAIS ->"` e últimas atualizações. |
+| `BrowsePage` | `explorar.dart` | Aba de exploração e busca de croquis com selos de distância (`km`/`m`), ordenação geodésica padrão ("Mais próximos"), alfabética e por volume de escaladas, além de rolagem automática direta ao 7º pico quando acionada pelo carrossel da Home. |
 | `PicoDetailsPage` | `pico.dart` | Hub principal de detalhes de um pico (guia), exibindo banner de status (online/offline), ações rápidas, visualização de setores e acesso ao catálogo. |
 | `SetoresPage` | `pico_subpages/setores_page.dart` | Tela unificada de exploração de setores e escaladas com abas por modalidade, filtros reativos e ordenações contextuais. |
 | `GrupoPage` | `grupo.dart` | Tela de exploração de um grupo agregado de setores com capa parallax, abas por modalidade, mapa e filtros sincronizados. |

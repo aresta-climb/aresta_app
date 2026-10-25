@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -17,8 +17,8 @@ import '../function_library/funcoes_configuracoes.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {
-  /// Ordem padrão recebida do catálogo.
-  padrao,
+  /// Ordem crescente pela distância geodésica até o usuário (padrão).
+  proximidade,
 
   /// Ordem alfabética pelo nome do pico (A-Z).
   alfabetico,
@@ -30,8 +30,8 @@ enum OrdemOrdenacaoPico {
 /// Modelo de apresentação e gerenciador de estado para a tela [BrowsePage] (MVVM).
 ///
 /// Encapsula a lógica de pesquisa difusa (fuzzy search), debounce de digitação,
-/// ordenação de picos e acionamento de downloads em segundo plano, mantendo
-/// a árvore de widgets passiva (Dumb UI).
+/// ordenação de picos (incluindo cálculo geodésico compartilhado com a Home) e acionamento
+/// de downloads em segundo plano, mantendo a árvore de widgets passiva (Dumb UI).
 class BrowseViewModel extends ChangeNotifier {
   /// Repositório de dados com catálogo e croquis locais.
   final DatasetRepository datasetRepo;
@@ -43,7 +43,10 @@ class BrowseViewModel extends ChangeNotifier {
   final TelemetryService? telemetria;
 
   String _termoBusca = '';
-  OrdemOrdenacaoPico _ordem = OrdemOrdenacaoPico.padrao;
+  OrdemOrdenacaoPico _ordem = OrdemOrdenacaoPico.proximidade;
+  double? _userLat;
+  double? _userLon;
+  final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
   Timer? _timerDebounce;
 
   BrowseViewModel({
@@ -61,6 +64,7 @@ class BrowseViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _timerDebounce?.cancel();
+    _solicitacaoScrollSetimoPico.dispose();
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.isExperimentalMode.removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.editorUrl.removeListener(_aoAtualizarDataset);
@@ -71,11 +75,37 @@ class BrowseViewModel extends ChangeNotifier {
   ValueListenable<Map<String, double>> get downloadingCrags =>
       syncService.downloadingCrags;
 
+  /// Notificador reativo incrementado quando a tela deve rolar até o 7º pico mais próximo.
+  ValueListenable<int> get solicitacaoScrollSetimoPico =>
+      _solicitacaoScrollSetimoPico;
+
+  /// Latitude atual do usuário, se já resolvida.
+  double? get latitudeUsuario => _userLat;
+
+  /// Longitude atual do usuário, se já resolvida.
+  double? get longitudeUsuario => _userLon;
+
   /// Termo de pesquisa atualmente ativo na barra de busca.
   String get termoBusca => _termoBusca;
 
   /// Critério de ordenação selecionado pelo usuário.
   OrdemOrdenacaoPico get ordem => _ordem;
+
+  /// Atualiza a coordenada geográfica do usuário para cálculo de distâncias e ordenação.
+  void atualizarLocalizacaoUsuario(double lat, double lon) {
+    _userLat = lat;
+    _userLon = lon;
+    notifyListeners();
+  }
+
+  /// Limpa filtros de busca, define ordenação por proximidade e solicita rolagem até o 7º pico.
+  void focarSetimoPicoProximo() {
+    _timerDebounce?.cancel();
+    _termoBusca = '';
+    _ordem = OrdemOrdenacaoPico.proximidade;
+    notifyListeners();
+    _solicitacaoScrollSetimoPico.value++;
+  }
 
   /// Indica se o catálogo ainda está carregando ou se o repositório é nulo.
   bool get carregando => datasetRepo.activeDataset.value == null;
@@ -128,13 +158,34 @@ class BrowseViewModel extends ChangeNotifier {
       resultado = fuse.search(queryNormalizada).map((r) => r.item).toList();
     }
 
-    if (_ordem == OrdemOrdenacaoPico.alfabetico) {
+    if (_ordem == OrdemOrdenacaoPico.proximidade) {
+      if (_userLat != null && _userLon != null) {
+        final picosComDistancia = calcularPicosMaisProximos(
+          userLat: _userLat!,
+          userLon: _userLon!,
+          picosDisponiveis: resultado,
+          limite: null,
+        );
+        final idsComDistancia = {for (final p in picosComDistancia) p.id};
+        final semCoordenadas = resultado
+            .where((m) => !idsComDistancia.contains(m.id))
+            .toList()
+          ..sort((a, b) => a.nome.compareTo(b.nome));
+        resultado = [
+          ...picosComDistancia.map((p) => p.pico as MetadadosIndice),
+          ...semCoordenadas,
+        ];
+      } else {
+        resultado.sort((a, b) => a.nome.compareTo(b.nome));
+      }
+    } else if (_ordem == OrdemOrdenacaoPico.alfabetico) {
       resultado.sort((a, b) => a.nome.compareTo(b.nome));
     } else if (_ordem == OrdemOrdenacaoPico.escaladas) {
       resultado.sort((a, b) {
         final viasA = a.precomputados.totalEscaladas;
         final viasB = b.precomputados.totalEscaladas;
-        return viasB.compareTo(viasA);
+        final cmp = viasB.compareTo(viasA);
+        return cmp != 0 ? cmp : a.nome.compareTo(b.nome);
       });
     }
 
@@ -143,10 +194,26 @@ class BrowseViewModel extends ChangeNotifier {
 
   /// Lista dos picos filtrados mapeados diretamente para [CardCroquiViewModel] (Dumb UI).
   List<CardCroquiViewModel> get picosCards {
-    return picosFiltrados.map((m) {
+    final filtrados = picosFiltrados;
+    final Map<String, double> distanciasPorId = {};
+    if (_userLat != null && _userLon != null && filtrados.isNotEmpty) {
+      final calculados = calcularPicosMaisProximos(
+        userLat: _userLat!,
+        userLon: _userLon!,
+        picosDisponiveis: filtrados,
+        limite: null,
+      );
+      for (final item in calculados) {
+        distanciasPorId[item.id] = item.distanciaKm;
+      }
+    }
+
+    return filtrados.map((m) {
+      final textoDist = formatarDistanciaKm(distanciasPorId[m.id]);
       return mapearMetadadosParaCard(
         m,
         salvoOffline: estaBaixado(m.id),
+        textoDistancia: textoDist.isNotEmpty ? textoDist : null,
       );
     }).toList();
   }

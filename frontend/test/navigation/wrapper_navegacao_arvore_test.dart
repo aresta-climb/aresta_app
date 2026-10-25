@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-
 import 'package:feedback/feedback.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
@@ -14,49 +17,50 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import '../mocks/mock_telemetria.dart';
+import '../mocks/mock_geolocator_platform.dart';
 
-class MockDatasetRepository extends Mock implements DatasetRepository {}
+class _FakePathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  _FakePathProviderPlatform(this.tempPath);
 
-class MockSyncService extends Mock implements SyncService {}
-
-class MockEditorDeCroqui extends Mock implements EditorDeCroqui {}
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('TreeNavigationWrapper Widget Tests', () {
-    late MockDatasetRepository mockRepo;
-    late MockSyncService mockSync;
-    late MockEditorDeCroqui mockEditor;
-    late ValueNotifier<SyncStatus> syncStatusNotifier;
-    late ValueNotifier<bool> lastSyncWasAutoNotifier;
-    late ValueNotifier<int> croquisAtualizadosNotifier;
-    late ValueNotifier<String?> croquiAtualizadoNotifier;
-    late ValueNotifier<int> homeResetNotifier;
+    late Directory tempDir;
+    late DatasetRepository repo;
+    late SyncService syncService;
+    late EditorDeCroqui editor;
+    late MockGeolocatorPlatform mockGeolocator;
 
-    setUp(() {
-      mockRepo = MockDatasetRepository();
-      mockSync = MockSyncService();
-      mockEditor = MockEditorDeCroqui();
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      tempDir = await Directory.systemTemp.createTemp('tree_nav_wrapper_test_');
+      PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      mockGeolocator = MockGeolocatorPlatform();
+      GeolocatorPlatform.instance = mockGeolocator;
 
-      syncStatusNotifier = ValueNotifier(SyncStatus.updated);
-      lastSyncWasAutoNotifier = ValueNotifier(false);
-      croquisAtualizadosNotifier = ValueNotifier(0);
-      croquiAtualizadoNotifier = ValueNotifier(null);
-      homeResetNotifier = ValueNotifier(0);
+      editor = EditorDeCroqui();
+      repo = DatasetRepository(editorDeCroqui: editor);
+      syncService = SyncService(datasetRepository: repo);
+      syncService.syncStatus.value = SyncStatus.updated;
+    });
 
-      when(() => mockSync.syncStatus).thenReturn(syncStatusNotifier);
-      when(() => mockSync.lastSyncWasAuto).thenReturn(lastSyncWasAutoNotifier);
-      when(() => mockSync.quantidadeCroquisBaixadosAtualizadosNoUltimoSync)
-          .thenReturn(croquisAtualizadosNotifier);
-      when(() => mockSync.picoAbertoId).thenReturn(ValueNotifier(null));
-
-      when(() => mockRepo.editorDeCroqui).thenReturn(mockEditor);
-      when(() => mockRepo.notificadorCroquiAtualizado).thenReturn(croquiAtualizadoNotifier);
-      when(() => mockRepo.homeResetTrigger).thenReturn(homeResetNotifier);
-      when(() => mockRepo.activeDataset).thenReturn(ValueNotifier(null));
-      when(() => mockRepo.gerenciadorSessaoOnline).thenReturn(GerenciadorSessaoOnline());
-
-      when(() => mockEditor.isExperimentalMode).thenReturn(ValueNotifier(false));
-      when(() => mockEditor.editorUrl).thenReturn(ValueNotifier(null));
+    tearDown(() {
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
     });
 
     testWidgets('renderiza com sucesso e provê acesso a of e maybeOf', (tester) async {
@@ -67,8 +71,8 @@ void main() {
         MaterialApp(
           home: TreeNavigationWrapper(
             key: TreeNavigationWrapper.navKey,
-            datasetRepo: mockRepo,
-            syncService: mockSync,
+            datasetRepo: repo,
+            syncService: syncService,
             child: Builder(
               builder: (context) {
                 stateOf = TreeNavigationWrapper.of(context);
@@ -93,8 +97,8 @@ void main() {
         MaterialApp(
           home: TreeNavigationWrapper(
             key: TreeNavigationWrapper.navKey,
-            datasetRepo: mockRepo,
-            syncService: mockSync,
+            datasetRepo: repo,
+            syncService: syncService,
             treeController: controller,
           ),
         ),
@@ -122,8 +126,8 @@ void main() {
         MaterialApp(
           home: TreeNavigationWrapper(
             key: TreeNavigationWrapper.navKey,
-            datasetRepo: mockRepo,
-            syncService: mockSync,
+            datasetRepo: repo,
+            syncService: syncService,
             treeController: controller,
           ),
         ),
@@ -147,8 +151,8 @@ void main() {
           home: BetterFeedback(
             child: TreeNavigationWrapper(
               key: TreeNavigationWrapper.navKey,
-              datasetRepo: mockRepo,
-              syncService: mockSync,
+              datasetRepo: repo,
+              syncService: syncService,
               child: Builder(
                 builder: (context) {
                   buildContext = context;
@@ -161,12 +165,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Abre o feedback
       BetterFeedback.of(buildContext).show((_) {});
       await tester.pumpAndSettle();
       expect(SubmitFeedbackUseCase.isFeedbackOpen.value, isTrue);
 
-      // Fecha o feedback sem enviar (descarte do usuário)
       BetterFeedback.of(buildContext).hide();
       await tester.pumpAndSettle();
 
@@ -188,8 +190,8 @@ void main() {
           home: BetterFeedback(
             child: TreeNavigationWrapper(
               key: TreeNavigationWrapper.navKey,
-              datasetRepo: mockRepo,
-              syncService: mockSync,
+              datasetRepo: repo,
+              syncService: syncService,
               child: Builder(
                 builder: (context) {
                   buildContext = context;
@@ -202,15 +204,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Abre o feedback
       BetterFeedback.of(buildContext).show((_) {});
       await tester.pumpAndSettle();
 
-      // Simula submissão bem-sucedida
       SubmitFeedbackUseCase.ultimoEnvioConcluido = true;
       mockTelemetry.clear();
 
-      // Fecha o feedback
       BetterFeedback.of(buildContext).hide();
       await tester.pumpAndSettle();
 
@@ -218,6 +217,72 @@ void main() {
 
       TelemetryService.resetForTesting();
     });
+
+    testWidgets(
+      'tocar em VER MAIS -> no carrossel da Home alterna para aba Explorar sincronizada por distância e rola até o 7º pico',
+      (tester) async {
+        final controller = TreeNavigationController();
+        final picos = List.generate(9, (i) {
+          return <String, dynamic>{
+            'id': 'pico_int_$i',
+            'nome': 'Pico Integrado $i',
+            'caminhoRelativo': 'picos/pico_int_$i/pico_int_$i.binarypb',
+            'latitude': -20.0 - (i * 0.1),
+            'longitude': -44.0,
+            'isDownloaded': false,
+            'thumbnailUrl': '',
+          };
+        });
+
+        repo.activeDataset.value = TopoDataset(
+          availablePicos: picos,
+          downloadedPicos: [],
+        );
+
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(controller.currentNode, isA<HomeNode>());
+
+        // Rola o carrossel horizontal na Home até o card VER MAIS ->
+        final listViewFinder = find.byType(ListView).first;
+        await tester.drag(listViewFinder, const Offset(-2500, 0));
+        await tester.pumpAndSettle();
+
+        expect(find.text('VER MAIS ->'), findsOneWidget);
+        await tester.tap(find.text('VER MAIS ->'));
+        await tester.pumpAndSettle();
+
+        // Deve ter mudado para a aba Explorar (BrowseNode)
+        expect(controller.currentNode, isA<BrowseNode>());
+
+        // O 7º pico (PICO INTEGRADO 6) está visível na tela após o auto-scroll e a rolagem vertical foi avançada
+        expect(find.text('PICO INTEGRADO 6'), findsOneWidget);
+        final scrollableState = tester.state<ScrollableState>(find.byType(Scrollable).last);
+        expect(scrollableState.position.pixels, greaterThan(1000.0));
+      },
+    );
   });
 }
-

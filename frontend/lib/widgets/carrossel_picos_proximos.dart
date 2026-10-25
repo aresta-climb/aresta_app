@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -85,9 +85,13 @@ class NearbyCragsCarousel extends StatefulWidget {
   /// ViewModel que fornece dados calculados e gerencia ações da Home.
   final HomeViewModel viewModel;
 
+  /// Callback opcional invocado quando o usuário toca no card "VER MAIS ->".
+  final VoidCallback? onVerMais;
+
   const NearbyCragsCarousel({
     super.key,
     required this.viewModel,
+    this.onVerMais,
   });
 
   /// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
@@ -96,7 +100,7 @@ class NearbyCragsCarousel extends StatefulWidget {
     required double userLat,
     required double userLon,
     required List<dynamic> picosDisponiveis,
-    int limite = kLimitePicosProximos,
+    int? limite = kLimitePicosProximos,
   }) {
     return home_functions.calcularPicosMaisProximos(
       userLat: userLat,
@@ -114,12 +118,6 @@ class NearbyCragsCarousel extends StatefulWidget {
       final double km = metros / 1000;
       return '${km.toStringAsFixed(1)}km';
     }
-  }
-
-  /// Calcula o índice circular para permitir rolagem contínua (loop infinito) no carrossel.
-  static int calcularIndiceCircular(int index, int totalItens) {
-    if (totalItens <= 0) return 0;
-    return index % totalItens;
   }
 
   @override
@@ -535,7 +533,8 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       );
     }
 
-    final int? totalItens = picos.length > 1 ? null : picos.length;
+    final bool exibirCardVerMais = widget.viewModel.temMaisPicosParaExplorar;
+    final int totalItens = picos.length + (exibirCardVerMais ? 1 : 0);
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
@@ -543,11 +542,17 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
       itemCount: totalItens,
       padding: const EdgeInsets.only(left: 24, right: 8),
       itemBuilder: (context, index) {
-        final int indiceReal = NearbyCragsCarousel.calcularIndiceCircular(
-          index,
-          picos.length,
-        );
-        final pico = picos[indiceReal];
+        if (exibirCardVerMais && index == picos.length) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: SizedBox(
+              width: 340,
+              child: _buildCardVerMais(context),
+            ),
+          );
+        }
+
+        final pico = picos[index];
 
         return Padding(
           padding: const EdgeInsets.only(right: 16.0),
@@ -562,6 +567,42 @@ class _NearbyCragsCarouselState extends State<NearbyCragsCarousel> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCardVerMais(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        widget.viewModel.acionarVerMaisProximos();
+        widget.onVerMais?.call();
+      },
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: context.colors.caveShadow,
+          border: Border.all(color: context.colors.graniteEdge),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            'VER MAIS ->',
+            style: TextStyle(
+              color: context.colors.chalkWhite,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

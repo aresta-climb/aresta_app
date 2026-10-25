@@ -3,6 +3,7 @@
 
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
+import '../function_library/funcoes_home.dart';
 import 'card_croqui_view_model.dart';
 
 /// ViewModel de item que representa um pico próximo ao usuário para carrosséis ou listas (Dumb UI).
@@ -53,16 +54,7 @@ abstract class PicoProximoViewModel {
   }) = _PicoProximoValores;
 
   /// Retorna a distância formatada para leitura humana (ex: '450 m' ou '12.3 km').
-  String get distanciaFormatada {
-    if (distanciaKm == null) return '';
-    final km = distanciaKm!;
-    if (km < 1.0) {
-      final metros = (km * 1000).round();
-      return '$metros m';
-    } else {
-      return '${km.toStringAsFixed(1)} km';
-    }
-  }
+  String get distanciaFormatada => formatarDistanciaKm(distanciaKm);
 
   /// Converte o [PicoProximoViewModel] para o [CardCroquiViewModel] para exibição no [CragCard].
   CardCroquiViewModel paraCardCroquiViewModel();

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
@@ -24,12 +24,20 @@ class HomeViewModel extends ChangeNotifier {
   /// Serviço de sincronização e download de arquivos binários.
   final SyncService syncService;
 
+  /// Callback opcional invocado sempre que a coordenada geográfica do usuário é atualizada.
+  final void Function(double lat, double lon)? aoAtualizarLocalizacao;
+
+  /// Callback opcional invocado quando o usuário aciona o card "VER MAIS ->" no carrossel.
+  final VoidCallback? aoVerMaisProximos;
+
   double? _userLat;
   double? _userLon;
 
   HomeViewModel({
     required this.datasetRepo,
     required this.syncService,
+    this.aoAtualizarLocalizacao,
+    this.aoVerMaisProximos,
   }) {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
     datasetRepo.homeResetTrigger.addListener(_aoAtualizarDataset);
@@ -47,6 +55,12 @@ class HomeViewModel extends ChangeNotifier {
   /// Indica se os dados do catálogo ainda estão sendo inicializados.
   bool get carregando => datasetRepo.activeDataset.value == null;
 
+  /// Latitude atual do usuário, se já resolvida.
+  double? get latitudeUsuario => _userLat;
+
+  /// Longitude atual do usuário, se já resolvida.
+  double? get longitudeUsuario => _userLon;
+
   /// Monitoramento reativo do progresso percentual dos picos atualmente em download.
   ValueListenable<Map<String, double>> get downloadingCrags =>
       syncService.downloadingCrags;
@@ -55,7 +69,13 @@ class HomeViewModel extends ChangeNotifier {
   void atualizarLocalizacaoUsuario(double lat, double lon) {
     _userLat = lat;
     _userLon = lon;
+    aoAtualizarLocalizacao?.call(lat, lon);
     notifyListeners();
+  }
+
+  /// Aciona o callback de transição para explorar mais picos próximos.
+  void acionarVerMaisProximos() {
+    aoVerMaisProximos?.call();
   }
 
   /// Verifica se um pico específico já foi baixado para o armazenamento local.
@@ -66,16 +86,24 @@ class HomeViewModel extends ChangeNotifier {
         dataset.picosBaixados.any((p) => p.id == picoId);
   }
 
-  /// Retorna os picos mais próximos ao usuário formatados como [PicoProximoViewModel].
-  List<PicoProximoViewModel> get picosProximos {
+  List<dynamic> get _picosDisponiveis {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return const [];
+    if (dataset.metadadosDisponiveis.isNotEmpty) {
+      return dataset.metadadosDisponiveis;
+    }
+    if (dataset.picosDisponiveis.isNotEmpty) {
+      return dataset.picosDisponiveis;
+    }
+    return dataset.availablePicos;
+  }
 
-    final availablePicos = dataset.metadadosDisponiveis.isNotEmpty
-        ? dataset.metadadosDisponiveis
-        : (dataset.picosDisponiveis.isNotEmpty
-            ? dataset.picosDisponiveis
-            : dataset.availablePicos);
+  /// Indica se o catálogo possui mais picos disponíveis além dos 6 exibidos no carrossel.
+  bool get temMaisPicosParaExplorar => _picosDisponiveis.length > 6;
+
+  /// Retorna os picos mais próximos ao usuário formatados como [PicoProximoViewModel].
+  List<PicoProximoViewModel> get picosProximos {
+    final availablePicos = _picosDisponiveis;
     if (availablePicos.isEmpty) return const [];
 
     if (_userLat == null || _userLon == null) {

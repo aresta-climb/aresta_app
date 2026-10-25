@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -107,6 +107,74 @@ void main() {
 
       expect(vm.estaBaixado('cipo'), isTrue);
       expect(vm.estaBaixado('outro'), isFalse);
+
+      vm.dispose();
+    });
+
+    test('temMaisPicosParaExplorar retorna verdadeiro apenas quando há mais de 6 picos disponíveis', () {
+      final vm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      expect(vm.temMaisPicosParaExplorar, isFalse);
+
+      final seisPicos = List.generate(
+        6,
+        (i) => ResumoCroqui(
+          id: 'pico_$i',
+          nome: 'Pico $i',
+          localizacao: Coordenada(
+            latitude: -220000000 - i * 1000000,
+            longitude: -450000000,
+          ),
+        ),
+      );
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: seisPicos,
+      );
+      vm.atualizarLocalizacaoUsuario(-22.0, -45.0);
+      expect(vm.temMaisPicosParaExplorar, isFalse);
+
+      final setePicos = [
+        ...seisPicos,
+        ResumoCroqui(
+          id: 'pico_6',
+          nome: 'Pico 6',
+          localizacao: Coordenada(
+            latitude: -230000000,
+            longitude: -450000000,
+          ),
+        ),
+      ];
+      repositorio.activeDataset.value = ConjuntoDadosCroqui(
+        metadadosDisponiveis: setePicos,
+      );
+      expect(vm.picosProximos.length, equals(6));
+      expect(vm.temMaisPicosParaExplorar, isTrue);
+
+      vm.dispose();
+    });
+
+    test('atualizarLocalizacaoUsuario propaga coordenadas para o callback aoAtualizarLocalizacao', () {
+      double? latRecebida;
+      double? lonRecebida;
+
+      final vm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+        aoAtualizarLocalizacao: (lat, lon) {
+          latRecebida = lat;
+          lonRecebida = lon;
+        },
+      );
+
+      vm.atualizarLocalizacaoUsuario(-22.5, -44.8);
+
+      expect(latRecebida, equals(-22.5));
+      expect(lonRecebida, equals(-44.8));
+      expect(vm.latitudeUsuario, equals(-22.5));
+      expect(vm.longitudeUsuario, equals(-44.8));
 
       vm.dispose();
     });

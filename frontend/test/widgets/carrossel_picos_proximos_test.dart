@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/widgets/carrossel_picos_proximos.dart';
-import 'package:frontend/widgets/card_pico.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
@@ -674,14 +673,14 @@ void main() {
     );
 
     testWidgets(
-      'Deve fazer loop contínuo do carrossel ao rolar horizontalmente além do último pico',
+      'Não deve repetir picos nem exibir card VER MAIS -> quando houver até 6 picos disponíveis',
       (WidgetTester tester) async {
         final datasetRepo = DatasetRepository.instance!;
         final picos = List.generate(6, (i) {
           return <String, dynamic>{
-            'id': 'pico_loop_$i',
-            'nome': 'Pico Loop $i',
-            'caminhoRelativo': 'picos/pico_loop_$i/pico_loop_$i.binarypb',
+            'id': 'pico_finito_$i',
+            'nome': 'Pico Finito $i',
+            'caminhoRelativo': 'picos/pico_finito_$i/pico_finito_$i.binarypb',
             'latitude': -20.0 + (i * 0.05),
             'longitude': -44.0 + (i * 0.05),
             'isDownloaded': false,
@@ -717,19 +716,86 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Inicialmente o Pico Loop 0 é visível
-        expect(find.text('PICO LOOP 0'), findsOneWidget);
+        expect(find.text('PICO FINITO 0'), findsOneWidget);
 
-        // Rola horizontalmente por uma distância correspondente a mais de 6 cards (6 * 356px)
         final listViewFinder = find.byType(ListView);
-        expect(listViewFinder, findsOneWidget);
+        final listView = tester.widget<ListView>(listViewFinder);
+        expect(listView.childrenDelegate.estimatedChildCount, equals(6));
 
-        // Rola para a direita ultrapassando os 6 itens
         await tester.drag(listViewFinder, const Offset(-2500, 0));
         await tester.pumpAndSettle();
 
-        // Após rolar além dos 6 itens, o carrossel reinicia o ciclo (looping) e exibe novamente os picos
-        expect(find.byType(CragCard), findsWidgets);
+        expect(find.text('PICO FINITO 5'), findsOneWidget);
+        expect(find.text('PICO FINITO 0'), findsNothing);
+        expect(find.text('VER MAIS ->'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Deve exibir os top 6 picos sem repetição seguidos pelo card VER MAIS -> na 7ª posição e acionar onVerMais ao tocar',
+      (WidgetTester tester) async {
+        final datasetRepo = DatasetRepository.instance!;
+        final picos = List.generate(8, (i) {
+          return <String, dynamic>{
+            'id': 'pico_mais_$i',
+            'nome': 'Pico Mais $i',
+            'caminhoRelativo': 'picos/pico_mais_$i/pico_mais_$i.binarypb',
+            'latitude': -20.0 + (i * 0.05),
+            'longitude': -44.0 + (i * 0.05),
+            'isDownloaded': false,
+            'thumbnailUrl': '',
+          };
+        });
+
+        datasetRepo.activeDataset.value = TopoDataset(
+          availablePicos: picos,
+          downloadedPicos: [],
+        );
+
+        mockGeolocator.currentPositionResult = Position(
+          latitude: -20.0,
+          longitude: -44.0,
+          timestamp: DateTime.now(),
+          accuracy: 5.0,
+          altitude: 1000.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+
+        bool verMaisAcionado = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NearbyCragsCarousel(
+                viewModel: viewModel,
+                onVerMais: () {
+                  verMaisAcionado = true;
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final listViewFinder = find.byType(ListView);
+        final listView = tester.widget<ListView>(listViewFinder);
+        expect(listView.childrenDelegate.estimatedChildCount, equals(7));
+
+        await tester.drag(listViewFinder, const Offset(-2500, 0));
+        await tester.pumpAndSettle();
+
+        expect(find.text('VER MAIS ->'), findsOneWidget);
+        expect(find.text('PICO MAIS 0'), findsNothing);
+
+        await tester.tap(find.text('VER MAIS ->'));
+        await tester.pumpAndSettle();
+
+        expect(verMaisAcionado, isTrue);
       },
     );
   });
@@ -745,16 +811,6 @@ void main() {
       expect(NearbyCragsCarousel.formatarDistancia(1000), equals('1.0km'));
       expect(NearbyCragsCarousel.formatarDistancia(2450), equals('2.5km'));
       expect(NearbyCragsCarousel.formatarDistancia(15432), equals('15.4km'));
-    });
-
-    test('calcularIndiceCircular deve retornar índice com wrap correto', () {
-      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 6), equals(0));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(5, 6), equals(5));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(6, 6), equals(0));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(7, 6), equals(1));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(13, 6), equals(1));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(0, 0), equals(0));
-      expect(NearbyCragsCarousel.calcularIndiceCircular(5, -1), equals(0));
     });
 
     test('calcularPicosMaisProximos deve filtrar picos sem coordenadas', () {

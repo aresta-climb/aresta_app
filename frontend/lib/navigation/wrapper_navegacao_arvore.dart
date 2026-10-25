@@ -91,13 +91,19 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   @override
   void initState() {
     super.initState();
-    _homeViewModel = HomeViewModel(
-      datasetRepo: widget.datasetRepo,
-      syncService: widget.syncService,
-    );
     _browseViewModel = BrowseViewModel(
       datasetRepo: widget.datasetRepo,
       syncService: widget.syncService,
+    );
+    _homeViewModel = HomeViewModel(
+      datasetRepo: widget.datasetRepo,
+      syncService: widget.syncService,
+      aoAtualizarLocalizacao: (lat, lon) {
+        _browseViewModel.atualizarLocalizacaoUsuario(lat, lon);
+      },
+      aoVerMaisProximos: () {
+        _browseViewModel.focarSetimoPicoProximo();
+      },
     );
     _meusCroquisViewModel = MeusCroquisViewModel(
       datasetRepo: widget.datasetRepo,

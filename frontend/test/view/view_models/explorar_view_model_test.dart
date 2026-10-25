@@ -1,14 +1,14 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/view/view_models/explorar_view_model.dart';
+import 'package:frontend/view/view_models/home_view_model.dart';
 import '../../mocks/mock_telemetria.dart';
 
 import 'dart:io';
@@ -66,22 +66,91 @@ void main() {
       expect(viewModel.picosFiltrados, isEmpty);
     });
 
-    test('picosFiltrados retorna lista padrão sem filtros', () {
-      final pico1 = MetadadosIndice(id: '1', nome: 'Pedra do Baú');
-      final pico2 = MetadadosIndice(id: '2', nome: 'Serra do Cipó');
-
+    test('picosFiltrados usa fallback alfabético (A-Z) quando sem localização na ordem proximidade padrão', () {
       repositorio.activeDataset.value = TopoDataset(
         availablePicos: [
-          {'id': '1', 'nome': 'Pedra do Baú'},
           {'id': '2', 'nome': 'Serra do Cipó'},
+          {'id': '1', 'nome': 'Pedra do Baú'},
         ],
         downloadedPicos: [],
       );
 
       expect(viewModel.carregando, isFalse);
+      expect(viewModel.ordem, equals(OrdemOrdenacaoPico.proximidade));
       expect(viewModel.picosFiltrados.length, equals(2));
-      expect(viewModel.picosFiltrados.first.nome, equals(pico1.nome));
-      expect(viewModel.picosFiltrados.last.nome, equals(pico2.nome));
+      expect(viewModel.picosFiltrados.first.nome, equals('Pedra do Baú'));
+      expect(viewModel.picosFiltrados.last.nome, equals('Serra do Cipó'));
+      expect(viewModel.picosCards.first.textoDistancia, isNull);
+    });
+
+    test('ordenação por proximidade produz exatamente a mesma ordem e distância da HomeViewModel e preserva badges em todas as ordenações', () {
+      final picos = List.generate(
+        8,
+        (i) => {
+          'id': 'pico_$i',
+          'nome': 'Pico ${8 - i}',
+          'latitude': -22.0 - (i * 0.2),
+          'longitude': -45.0,
+          'estatisticas': {'totalVias': (i + 1) * 10},
+        },
+      );
+
+      repositorio.activeDataset.value = TopoDataset(
+        availablePicos: picos.reversed.toList(),
+        downloadedPicos: [],
+      );
+
+      final homeVm = HomeViewModel(
+        datasetRepo: repositorio,
+        syncService: servicoSync,
+      );
+
+      homeVm.atualizarLocalizacaoUsuario(-22.0, -45.0);
+      viewModel.atualizarLocalizacaoUsuario(-22.0, -45.0);
+
+      expect(viewModel.latitudeUsuario, equals(-22.0));
+      expect(viewModel.longitudeUsuario, equals(-45.0));
+
+      // Os 6 primeiros picos de BrowseViewModel devem ser idênticos aos 6 de HomeViewModel
+      final idsHome = homeVm.picosProximos.map((p) => p.id).toList();
+      final idsExplorarTop6 = viewModel.picosFiltrados.take(6).map((p) => p.id).toList();
+      expect(idsExplorarTop6, equals(idsHome));
+      expect(viewModel.picosFiltrados.length, equals(8));
+      expect(viewModel.picosFiltrados[6].id, equals('pico_6'));
+
+      // As badges de distância nos 6 primeiros cards devem ser idênticas às da Home
+      final distHome = homeVm.picosProximos.map((p) => p.paraCardCroquiViewModel().textoDistancia).toList();
+      final distExplorarTop6 = viewModel.picosCards.take(6).map((c) => c.textoDistancia).toList();
+      expect(distExplorarTop6, equals(distHome));
+      expect(viewModel.picosCards.every((c) => c.textoDistancia != null), isTrue);
+
+      // Ao mudar para Alfabético ou Mais escaladas, todos os cards continuam exibindo textoDistancia
+      viewModel.alterarOrdem(OrdemOrdenacaoPico.alfabetico);
+      expect(viewModel.picosCards.every((c) => c.textoDistancia != null), isTrue);
+
+      viewModel.alterarOrdem(OrdemOrdenacaoPico.escaladas);
+      expect(viewModel.picosCards.every((c) => c.textoDistancia != null), isTrue);
+
+      homeVm.dispose();
+    });
+
+    test('focarSetimoPicoProximo limpa busca, restaura ordem proximidade e incrementa solicitacaoScrollSetimoPico', () {
+      repositorio.activeDataset.value = TopoDataset(
+        availablePicos: [
+          {'id': '1', 'nome': 'Pedra do Baú', 'latitude': -22.68, 'longitude': -45.66},
+        ],
+        downloadedPicos: [],
+      );
+
+      viewModel.alterarTermoBusca('Baú');
+      viewModel.alterarOrdem(OrdemOrdenacaoPico.escaladas);
+      expect(viewModel.solicitacaoScrollSetimoPico.value, equals(0));
+
+      viewModel.focarSetimoPicoProximo();
+
+      expect(viewModel.termoBusca, isEmpty);
+      expect(viewModel.ordem, equals(OrdemOrdenacaoPico.proximidade));
+      expect(viewModel.solicitacaoScrollSetimoPico.value, equals(1));
     });
 
     test('alterarTermoBusca filtra picos via busca fuzzy', () {

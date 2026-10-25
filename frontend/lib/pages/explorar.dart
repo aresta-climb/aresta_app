@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -12,8 +12,8 @@ typedef SortOrder = OrdemOrdenacaoPico;
 
 /// Uma página que permite aos usuários explorar e pesquisar picos disponíveis (Dumb UI).
 ///
-/// Renderiza visualmente o catálogo e delega buscas, filtros e ordenação ao [BrowseViewModel].
-class BrowsePage extends StatelessWidget {
+/// Renderiza visualmente o catálogo e delega buscas, filtros, ordenação e foco no 7º pico ao [BrowseViewModel].
+class BrowsePage extends StatefulWidget {
   /// ViewModel de apresentação e negócios da tela de catálogo.
   final BrowseViewModel viewModel;
 
@@ -57,6 +57,51 @@ class BrowsePage extends StatelessWidget {
     }
   }
 
+  @override
+  State<BrowsePage> createState() => _BrowsePageState();
+}
+
+class _BrowsePageState extends State<BrowsePage> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _chaveSetimoPico = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
+  }
+
+  @override
+  void didUpdateWidget(covariant BrowsePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewModel != widget.viewModel) {
+      oldWidget.viewModel.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
+      widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.viewModel.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _aoSolicitarScrollSetimoPico() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final contextoAlvo = _chaveSetimoPico.currentContext;
+      if (contextoAlvo != null) {
+        Scrollable.ensureVisible(
+          contextoAlvo,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0,
+        );
+      }
+    });
+  }
+
   void _mostrarFiltroOrdenacao(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -92,8 +137,8 @@ class BrowsePage extends StatelessWidget {
                 Divider(color: context.colors.graniteEdge),
                 _buildSortOption(
                   context,
-                  'Padrão',
-                  OrdemOrdenacaoPico.padrao,
+                  'Mais próximos',
+                  OrdemOrdenacaoPico.proximidade,
                 ),
                 _buildSortOption(
                   context,
@@ -102,7 +147,7 @@ class BrowsePage extends StatelessWidget {
                 ),
                 _buildSortOption(
                   context,
-                  'Por número de escaladas',
+                  'Mais escaladas',
                   OrdemOrdenacaoPico.escaladas,
                 ),
               ],
@@ -118,10 +163,10 @@ class BrowsePage extends StatelessWidget {
     String title,
     OrdemOrdenacaoPico order,
   ) {
-    final isSelected = viewModel.ordem == order;
+    final isSelected = widget.viewModel.ordem == order;
     return InkWell(
       onTap: () {
-        viewModel.alterarOrdem(order);
+        widget.viewModel.alterarOrdem(order);
         Navigator.pop(context);
       },
       child: Padding(
@@ -147,6 +192,7 @@ class BrowsePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = widget.viewModel;
     return Scaffold(
       backgroundColor: context.colors.deepBasalt,
       body: SafeArea(
@@ -174,7 +220,7 @@ class BrowsePage extends StatelessWidget {
               viewModel.downloadingCrags,
               isDownloadedChecker: viewModel.estaBaixado,
               onSearchChanged: viewModel.alterarTermoBusca,
-              onDownload: (crag) => handleDownload(context, crag),
+              onDownload: (crag) => widget.handleDownload(context, crag),
               onOpen: (crag) {
                 final String id = crag is CardCroquiViewModel
                     ? crag.id
@@ -184,6 +230,8 @@ class BrowsePage extends StatelessWidget {
               onAddExperimental: addCallback,
               onSyncPressed: () async => await viewModel.sincronizarServing(context),
               onFilterPressed: () => _mostrarFiltroOrdenacao(context),
+              scrollController: _scrollController,
+              chaveSetimoPico: _chaveSetimoPico,
             );
           },
         ),

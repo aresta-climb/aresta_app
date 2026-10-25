@@ -1,36 +1,86 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../mocks/mock_telemetria.dart';
+import '../mocks/mock_geolocator_platform.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import 'package:frontend/theme/cores_app.dart';
-
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
 
-class MockDatasetRepository extends Mock implements DatasetRepository {}
+class _FakePathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  final String tempPath;
+  _FakePathProviderPlatform(this.tempPath);
 
-class MockSyncService extends Mock implements SyncService {}
+  @override
+  Future<String?> getApplicationDocumentsPath() async => tempPath;
+  @override
+  Future<String?> getApplicationSupportPath() async => tempPath;
+  @override
+  Future<String?> getLibraryPath() async => tempPath;
+  @override
+  Future<String?> getTemporaryPath() async => tempPath;
+}
+
+class FakeSyncService extends SyncService {
+  FakeSyncService(DatasetRepository repo) : super(datasetRepository: repo);
+
+  int syncIndexCallCount = 0;
+  SyncStatus statusAoSincronizar = SyncStatus.noNewUpdates;
+
+  @override
+  Future<bool> isNetworkDisabled() async => false;
+
+  @override
+  Future<List<String>> syncIndex({
+    bool auto = true,
+    bool forceBypassCache = false,
+  }) async {
+    syncIndexCallCount++;
+    syncStatus.value = statusAoSincronizar;
+    return <String>[];
+  }
+}
 
 void main() {
-  setUpAll(() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory tempDir;
+  late DatasetRepository repo;
+  late FakeSyncService syncService;
+  late MockGeolocatorPlatform mockGeolocator;
+
+  setUp(() async {
     TelemetryService.instance = MockTelemetryService();
+    SharedPreferences.setMockInitialValues({});
+    tempDir = await Directory.systemTemp.createTemp('home_page_test_');
+    PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+    mockGeolocator = MockGeolocatorPlatform();
+    GeolocatorPlatform.instance = mockGeolocator;
+    repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+    syncService = FakeSyncService(repo);
   });
 
-  Widget createTestWidget(DatasetRepository repo, SyncService syncService) {
-    try {
-      when(() => repo.homeResetTrigger).thenReturn(ValueNotifier(0));
-      when(() => repo.editorDeCroqui).thenReturn(EditorDeCroqui());
-    } catch (_) {}
+  tearDown(() {
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
 
+  Widget createTestWidget({Function(int)? onSwitchTab}) {
     return MaterialApp(
       theme: ThemeData(
         extensions: const [AppColors.dark],
@@ -40,7 +90,7 @@ void main() {
           datasetRepo: repo,
           syncService: syncService,
         ),
-        onSwitchTab: (_) {},
+        onSwitchTab: onSwitchTab ?? (_) {},
       ),
     );
   }
@@ -48,97 +98,60 @@ void main() {
   testWidgets(
     'HomePage pull-to-refresh quando não há croquis baixados sincroniza o catálogo',
     (tester) async {
-      final mockRepo = MockDatasetRepository();
-      final mockSync = MockSyncService();
-      final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
-        TopoDataset(availablePicos: [], downloadedPicos: []),
+      repo.activeDataset.value = TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [],
       );
+      syncService.statusAoSincronizar = SyncStatus.noNewUpdates;
 
-      when(() => mockRepo.activeDataset).thenReturn(activeDataset);
-      when(() => mockRepo.homeResetTrigger).thenReturn(ValueNotifier(0));
-      when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
-      when(
-        () => mockSync.syncIndex(auto: false),
-      ).thenAnswer((_) async => <String>[]);
-      when(
-        () => mockSync.syncStatus,
-      ).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
-      when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
 
-      await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
-      await tester.pump(); // Render first frame
-
-      // Puxa para atualizar
       await tester.drag(
         find.byType(SingleChildScrollView),
         const Offset(0, 300),
       );
       await tester.pump();
-      await tester.pump(const Duration(seconds: 1)); // Wait for refresh logic
+      await tester.pump(const Duration(seconds: 1));
 
       expect(
         find.text('Catálogo já está atualizado.'),
         findsOneWidget,
       );
-      verify(() => mockSync.syncIndex(auto: false)).called(1);
+      expect(syncService.syncIndexCallCount, equals(1));
     },
   );
 
   testWidgets(
     'HomePage pull-to-refresh aciona sincronização se houver croquis baixados',
     (tester) async {
-      final mockRepo = MockDatasetRepository();
-      final mockSync = MockSyncService();
-      final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
-        TopoDataset(
-          availablePicos: [],
-          downloadedPicos: [
-            {'id': '1', 'nome': 'Pico 1'},
-          ],
-        ),
+      repo.activeDataset.value = TopoDataset(
+        availablePicos: [],
+        downloadedPicos: [
+          {'id': '1', 'nome': 'Pico 1'},
+        ],
       );
+      syncService.statusAoSincronizar = SyncStatus.justUpdated;
 
-      when(() => mockRepo.activeDataset).thenReturn(activeDataset);
-      when(() => mockRepo.homeResetTrigger).thenReturn(ValueNotifier(0));
-      when(() => mockSync.isNetworkDisabled()).thenAnswer((_) async => false);
-      when(
-        () => mockSync.syncIndex(auto: false),
-      ).thenAnswer((_) async => <String>[]);
-      when(
-        () => mockSync.syncStatus,
-      ).thenReturn(ValueNotifier(SyncStatus.justUpdated));
-      when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
 
-      await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
-      await tester.pump(); // Render first frame
-
-      // Puxa para atualizar
       await tester.drag(
         find.byType(SingleChildScrollView),
         const Offset(0, 300),
       );
-
-      // Aguarda animação do RefreshIndicator
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Croquis foram atualizados!'), findsOneWidget);
-      verify(() => mockSync.syncIndex(auto: false)).called(1);
+      expect(syncService.syncIndexCallCount, equals(1));
     },
   );
 
   testWidgets('HomePage exibe MicroBadgeBeta no cabeçalho e abre o modal ao tocar', (tester) async {
-    final mockRepo = MockDatasetRepository();
-    final mockSync = MockSyncService();
-    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
-      TopoDataset(availablePicos: [], downloadedPicos: []),
-    );
+    repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
 
-    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
-    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
-    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
-
-    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pumpWidget(createTestWidget());
     await tester.pump();
 
     final badgeFinder = find.byType(MicroBadgeBeta);
@@ -152,17 +165,9 @@ void main() {
   });
 
   testWidgets('HomePage exibe ARESTA CLIMB no cabeçalho e abre o modal ao tocar no texto da marca', (tester) async {
-    final mockRepo = MockDatasetRepository();
-    final mockSync = MockSyncService();
-    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
-      TopoDataset(availablePicos: [], downloadedPicos: []),
-    );
+    repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
 
-    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
-    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
-    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
-
-    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pumpWidget(createTestWidget());
     await tester.pump();
 
     final brandFinder = find.text('ARESTA CLIMB');
@@ -183,26 +188,68 @@ void main() {
   });
 
   testWidgets('HomePage mantém appbar visível após rolagem do conteúdo', (tester) async {
-    final mockRepo = MockDatasetRepository();
-    final mockSync = MockSyncService();
-    final ValueNotifier<TopoDataset?> activeDataset = ValueNotifier(
-      TopoDataset(availablePicos: [], downloadedPicos: []),
-    );
+    repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
 
-    when(() => mockRepo.activeDataset).thenReturn(activeDataset);
-    when(() => mockSync.syncStatus).thenReturn(ValueNotifier(SyncStatus.noNewUpdates));
-    when(() => mockSync.downloadingCrags).thenReturn(ValueNotifier({}));
-
-    await tester.pumpWidget(createTestWidget(mockRepo, mockSync));
+    await tester.pumpWidget(createTestWidget());
     await tester.pump();
 
-    // Rola para baixo
     await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -600));
     await tester.pump();
 
-    // Elementos da AppBar continuam visíveis
     expect(find.text('ARESTA CLIMB'), findsOneWidget);
     expect(find.byIcon(Icons.settings), findsOneWidget);
     expect(find.byIcon(Icons.sync), findsOneWidget);
+  });
+
+  testWidgets('HomePage aciona onSwitchTab(1) ao tocar no card VER MAIS -> do carrossel', (tester) async {
+    final picos = List.generate(8, (i) {
+      return <String, dynamic>{
+        'id': 'pico_$i',
+        'nome': 'Pico $i',
+        'caminhoRelativo': 'picos/pico_$i/pico_$i.binarypb',
+        'latitude': -20.0 + (i * 0.05),
+        'longitude': -44.0 + (i * 0.05),
+        'isDownloaded': false,
+        'thumbnailUrl': '',
+      };
+    });
+
+    repo.activeDataset.value = TopoDataset(
+      availablePicos: picos,
+      downloadedPicos: [],
+    );
+
+    mockGeolocator.currentPositionResult = Position(
+      latitude: -20.0,
+      longitude: -44.0,
+      timestamp: DateTime.now(),
+      accuracy: 5.0,
+      altitude: 1000.0,
+      heading: 0.0,
+      speed: 0.0,
+      speedAccuracy: 0.0,
+      altitudeAccuracy: 0.0,
+      headingAccuracy: 0.0,
+    );
+
+    int? abaSelecionada;
+    await tester.pumpWidget(
+      createTestWidget(
+        onSwitchTab: (index) {
+          abaSelecionada = index;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final listViewFinder = find.byType(ListView);
+    await tester.drag(listViewFinder, const Offset(-2500, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('VER MAIS ->'), findsOneWidget);
+    await tester.tap(find.text('VER MAIS ->'));
+    await tester.pumpAndSettle();
+
+    expect(abaSelecionada, equals(1));
   });
 }

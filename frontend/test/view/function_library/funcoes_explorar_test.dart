@@ -327,12 +327,12 @@ void main() {
       final thumbFile = File('${thumbDir.path}/crag_legado.webp');
       thumbFile.writeAsBytesSync(bytesPng1);
 
-      // Simula o caso real reportado: crag['thumbnailUrl'] recebido com URL legada remota
+      // Simula o caso real reportado: crag['thumbnailUrl'] recebido com URL remota de thumbnail do catálogo
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: buildCragBackground(
-              'https://serving.arestaclimb.com/v4/br_mg_caete_pedra_filha/imagens/thumbnail.webp',
+              'https://serving.arestaclimb.com/v4/thumbnails/crag_legado.webp',
               cragId: 'crag_legado',
             ),
           ),
@@ -350,5 +350,53 @@ void main() {
       expect(resize.imageProvider, isA<ImagemArquivoAresta>());
     });
   });
+
+  testWidgets(
+    'buildBrowseBody associa chaveSetimoPico ao 7º item (índice 6) e vincula scrollController',
+    (WidgetTester tester) async {
+      final chaveSetimo = GlobalKey();
+      final controller = ScrollController();
+      final picos = List.generate(
+        8,
+        (i) => {
+          'id': 'pico_$i',
+          'nome': 'Pico Item $i',
+          'local': 'MG',
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return buildBrowseBody(
+                  context,
+                  picos,
+                  ValueNotifier<Map<String, double>>({}),
+                  onSearchChanged: (_) {},
+                  onDownload: (_) {},
+                  scrollController: controller,
+                  chaveSetimoPico: chaveSetimo,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(chaveSetimo.currentContext, isNotNull);
+      expect(
+        find.descendant(
+          of: find.byKey(chaveSetimo),
+          matching: find.text('PICO ITEM 6'),
+        ),
+        findsOneWidget,
+      );
+
+      controller.dispose();
+    },
+  );
 }
 

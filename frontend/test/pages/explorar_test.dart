@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -240,23 +240,29 @@ void main() {
   );
 
   testWidgets(
-    'BrowsePage filters sort list by default, alphabetical, and by route count',
+    'BrowsePage ordena por Mais próximos (padrão), Alfabético (A-Z) e Mais escaladas exibindo badges de distância',
     (WidgetTester tester) async {
       mockRepo.activeDataset.value = TopoDataset(
         availablePicos: [
           {
             'id': 'pico_c',
             'nome': 'C Pico',
+            'latitude': -20.01,
+            'longitude': -44.01,
             'estatisticas': {'totalVias': 10},
           },
           {
             'id': 'pico_a',
             'nome': 'A Pico',
+            'latitude': -21.0,
+            'longitude': -45.0,
             'estatisticas': {'totalVias': 5},
           },
           {
             'id': 'pico_b',
             'nome': 'B Pico',
+            'latitude': -20.5,
+            'longitude': -44.5,
             'estatisticas': {'totalVias': 50},
           },
         ],
@@ -264,41 +270,46 @@ void main() {
       );
       mockRepo.indiceData.value = Indice();
 
+      final vm = BrowseViewModel(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        telemetria: mockTelemetry,
+      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: BrowsePage(
-            viewModel: BrowseViewModel(
-              datasetRepo: mockRepo,
-              syncService: mockSync,
-              telemetria: mockTelemetry,
-            ),
-          ),
+            body: BrowsePage(viewModel: vm),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Helper to get vertical position of an item
       double getPos(String text) => tester.getTopLeft(find.text(text)).dy;
 
-      // Default order should be the original list order: C, A, B
+      // Ordem padrão: Mais próximos -> C (mais perto), B (meio), A (mais longe)
       expect(
-        getPos('C PICO') < getPos('A PICO'),
+        getPos('C PICO') < getPos('B PICO'),
         true,
-        reason: 'Default order: C should be before A',
+        reason: 'Mais próximos: C deve vir antes de B',
       );
       expect(
-        getPos('A PICO') < getPos('B PICO'),
+        getPos('B PICO') < getPos('A PICO'),
         true,
-        reason: 'Default order: A should be before B',
+        reason: 'Mais próximos: B deve vir antes de A',
       );
+      // Badges de distância visíveis nos 3 cards
+      expect(find.byIcon(Icons.place), findsNWidgets(3));
 
-      // Open filter menu
+      // Abre modal de ordenação
       await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
 
-      // Select Alphabetical
+      expect(find.text('Mais próximos'), findsOneWidget);
+      expect(find.text('Alfabético (A-Z)'), findsOneWidget);
+      expect(find.text('Mais escaladas'), findsOneWidget);
+
+      // Seleciona Alfabético (A-Z)
       mockTelemetry.clear();
       await tester.tap(find.text('Alfabético (A-Z)'));
       await tester.pumpAndSettle();
@@ -307,42 +318,95 @@ void main() {
       expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
       expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'alfabetico');
 
-      // Alphabetical order: A, B, C
-      expect(
-        getPos('A PICO') < getPos('B PICO'),
-        true,
-        reason: 'Alpha order: A should be before B',
-      );
-      expect(
-        getPos('B PICO') < getPos('C PICO'),
-        true,
-        reason: 'Alpha order: B should be before C',
-      );
+      expect(getPos('A PICO') < getPos('B PICO'), true);
+      expect(getPos('B PICO') < getPos('C PICO'), true);
+      expect(find.byIcon(Icons.place), findsNWidgets(3));
 
-      // Open filter menu again
+      // Abre modal novamente e seleciona Mais escaladas
       await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
 
-      // Select Route Count
       mockTelemetry.clear();
-      await tester.tap(find.text('Por número de escaladas'));
+      await tester.tap(find.text('Mais escaladas'));
       await tester.pumpAndSettle();
 
       expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
       expect(mockTelemetry.recordedParams['alterar_ordenacao']!['origem'], 'browse');
       expect(mockTelemetry.recordedParams['alterar_ordenacao']!['detalhe'], 'escaladas');
 
-      // Route count order (descending): B (50), C (10), A (5)
-      expect(
-        getPos('B PICO') < getPos('C PICO'),
-        true,
-        reason: 'Routes order: B should be before C',
+      expect(getPos('B PICO') < getPos('C PICO'), true);
+      expect(getPos('C PICO') < getPos('A PICO'), true);
+      expect(find.byIcon(Icons.place), findsNWidgets(3));
+    },
+  );
+
+  testWidgets(
+    'BrowsePage rola automaticamente até o 7º pico ao acionar focarSetimoPicoProximo e mantém os 6 primeiros ao rolar para cima',
+    (WidgetTester tester) async {
+      final picos = List.generate(10, (i) {
+        return <String, dynamic>{
+          'id': 'pico_$i',
+          'nome': 'Pico Ordem $i',
+          'latitude': -20.0 - (i * 0.1),
+          'longitude': -44.0,
+          'estatisticas': {'totalVias': 10},
+        };
+      });
+
+      mockRepo.activeDataset.value = TopoDataset(
+        availablePicos: picos,
+        downloadedPicos: [],
       );
-      expect(
-        getPos('C PICO') < getPos('A PICO'),
-        true,
-        reason: 'Routes order: C should be before A',
+      mockRepo.indiceData.value = Indice();
+
+      final vm = BrowseViewModel(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        telemetria: mockTelemetry,
+      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowsePage(viewModel: vm),
+          ),
+        ),
       );
+      await tester.pumpAndSettle();
+
+      final scrollViewFinder = find.byType(SingleChildScrollView);
+      final scrollableState = tester.state<ScrollableState>(find.byType(Scrollable).last);
+      expect(scrollableState.position.pixels, equals(0.0));
+
+      vm.focarSetimoPicoProximo();
+      await tester.pumpAndSettle();
+
+      // Deve ter rolado para baixo posicionando o 7º pico (índice 6: PICO ORDEM 6) no topo
+      expect(scrollableState.position.pixels, greaterThan(1000.0));
+      expect(find.text('PICO ORDEM 6'), findsOneWidget);
+
+      // Ao rolar para cima de volta ao início, o 1º pico (PICO ORDEM 0) está presente
+      await tester.drag(scrollViewFinder, const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      expect(find.text('PICO ORDEM 0'), findsOneWidget);
+
+      // Ao atualizar a instância de BrowseViewModel (didUpdateWidget), o listener continua ativo na nova instância
+      final vm2 = BrowseViewModel(
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+        telemetria: mockTelemetry,
+      )..atualizarLocalizacaoUsuario(-20.0, -44.0);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BrowsePage(viewModel: vm2),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      vm2.focarSetimoPicoProximo();
+      await tester.pumpAndSettle();
+      expect(scrollableState.position.pixels, greaterThan(1000.0));
     },
   );
 
