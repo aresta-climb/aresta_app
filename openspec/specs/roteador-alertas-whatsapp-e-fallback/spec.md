@@ -63,26 +63,41 @@ Quando o envio da notificação para o canal primário configurado (Webhook do D
 - **THEN** o sistema NÃO DEVE invocar a API do Resend.
 
 ### Requirement: Documentação Passo a Passo de Provisionamento e Configuração
-O repositório SHALL conter um guia técnico detalhado em português brasileiro (`docs/guia_configuracao_observabilidade_e_alertas.md`) documentando passo a passo a configuração do Sentry Open Source, da integração com GitHub Issues e GitHub App (`Aresta Climb Bot`), da criação dos 2 Webhooks do Discord (`#🚨-emergencias` e `#🛠️-bugs-e-feedbacks`), da fila KV de retentativas, da manutenção em *standby* da VM gratuita `e2-micro` no Google Cloud Platform com Docker (`devlikeapro/waha:noweb`) e Cloudflare Tunnel, do Webhook Organizacional do GitHub e dos segredos do Resend e Cloudflare.
+O repositório SHALL conter um guia técnico detalhado em português brasileiro (`docs/guia_configuracao_observabilidade_e_alertas.md`) documentando passo a passo a configuração do Sentry Open Source, da integração com GitHub Issues e GitHub App (`Aresta Climb Bot`), da criação dos 2 Webhooks do Discord em canais somente-leitura (`#🚨-emergencias` e `#🛠️-bugs-e-feedbacks`), dos tópicos de push móvel no `ntfy` (`NTFY_TOPICO_EMERGENCIAS`, `NTFY_TOPICO_BUGS` e `NTFY_API_TOKEN`), da fila KV de retentativas, da manutenção em *standby* da VM gratuita `e2-micro` no Google Cloud Platform com Docker (`devlikeapro/waha:noweb`) e Cloudflare Tunnel, do Webhook Organizacional do GitHub e dos segredos do Resend e Cloudflare.
 
 #### Scenario: Consulta ao guia de configuração completa da infraestrutura
 - **WHEN** um desenvolvedor consultar `docs/guia_configuracao_observabilidade_e_alertas.md` para provisionar ou auditar o ambiente de produção
-- **THEN** o documento DEVE apresentar comandos reproduzíveis e instruções completas para Webhooks do Discord, credenciais do GitHub App `Aresta Climb Bot`, fila KV `FILA_RETENTATIVAS_ALERTAS`, GCP `e2-micro`, Docker Compose do WAHA (`devlikeapro/waha:noweb`) + `cloudflared` em standby, obtenção de IDs de grupos do WhatsApp, configuração de projetos e alertas no Sentry, webhook organizacional no GitHub e variáveis de ambiente do Cloudflare/Supabase.
+- **THEN** o documento DEVE apresentar comandos reproduzíveis e instruções completas para os canais somente-leitura do Discord, assinatura dos tópicos no aplicativo móvel `ntfy`, proteção por `NTFY_API_TOKEN`, credenciais do GitHub App `Aresta Climb Bot`, fila KV `FILA_RETENTATIVAS_ALERTAS`, GCP `e2-micro` em standby e variáveis de ambiente do Cloudflare/Supabase.
 
 ### Requirement: Despacho via Webhooks do Discord com Gist na Primeira Linha e Menção no Rodapé
-Quando as URLs de Webhook do Discord (`DISCORD_WEBHOOK_EMERGENCIAS_URL` para emergências ou `DISCORD_WEBHOOK_BUGS_URL` para bugs/feedbacks/PRs) estiverem configuradas no ambiente do Worker e o canal Discord estiver ativo (`CANAL_ALERTAS_ATIVO` igual a `"discord"` ou `"ambos"`), o sistema SHALL enviar a notificação ao respectivo Webhook do Discord iniciando com o resumo direto do problema (*gist*) na primeira linha e posicionando a menção `@everyone` no rodapé (final da mensagem) com `allowed_mentions: { parse: ["everyone"] }` para exibir o resumo na prévia da notificação móvel e acionar push sonoro e badge numérico.
+Quando as URLs de Webhook do Discord (`DISCORD_WEBHOOK_EMERGENCIAS_URL` para emergências ou `DISCORD_WEBHOOK_BUGS_URL` para bugs/feedbacks/PRs) estiverem configuradas no ambiente do Worker e o canal Discord estiver ativo (`CANAL_ALERTAS_ATIVO` igual a `"discord"` ou `"ambos"`), o sistema SHALL enviar a notificação ao respectivo Webhook do Discord iniciando com o resumo direto do problema (*gist*) na primeira linha e **sem menção `@everyone`** (`allowed_mentions: { parse: [] }`), operando os canais do Discord como mural de histórico somente-leitura enquanto as notificações push sonoras no celular são entregues pelo `ntfy`.
 
 #### Scenario: Envio de alerta de emergência via Webhook do Discord com gist no topo e @everyone no rodapé
 - **WHEN** um alerta classificado como emergência for processado e `DISCORD_WEBHOOK_EMERGENCIAS_URL` estiver configurada no ambiente
-- **THEN** o sistema DEVE realizar um `POST` para `DISCORD_WEBHOOK_EMERGENCIAS_URL` contendo o resumo (*gist*) na primeira linha, o link da GitHub Issue de emergência criada (quando disponível) e `@everyone` no final da mensagem, retornando status HTTP `200` com `entregueVia: "discord"`.
+- **THEN** o sistema DEVE realizar um `POST` para `DISCORD_WEBHOOK_EMERGENCIAS_URL` contendo o resumo (*gist*) na primeira linha e o link da GitHub Issue de emergência criada (quando disponível), sem incluir `@everyone` e com `allowed_mentions: { parse: [] }`, retornando status HTTP `200` com `entregueVia: "discord"`.
 
 #### Scenario: Envio de nova issue ou PR via Webhook do Discord de Bugs e Feedbacks
 - **WHEN** uma abertura ou reabertura de issue (sem a label `emergencia`) ou Pull Request for processada e `DISCORD_WEBHOOK_BUGS_URL` estiver configurada no ambiente
-- **THEN** o sistema DEVE realizar um `POST` para `DISCORD_WEBHOOK_BUGS_URL` contendo o resumo (*gist*) na primeira linha, os links da issue/PR e `@everyone` no final da mensagem, retornando status HTTP `200` com `entregueVia: "discord"`.
+- **THEN** o sistema DEVE realizar um `POST` para `DISCORD_WEBHOOK_BUGS_URL` contendo o resumo (*gist*) na primeira linha e os links da issue/PR sem incluir `@everyone`, retornando status HTTP `200` com `entregueVia: "discord"`.
 
 #### Scenario: Coexistência em standby com o gateway WAHA do WhatsApp
 - **WHEN** o ambiente estiver configurado com `CANAL_ALERTAS_ATIVO: "discord"` (ou sem credenciais do WAHA)
-- **THEN** o sistema DEVE entregar o alerta diretamente ao Discord sem falhar por ausência ou inatividade do WAHA, mantendo o código e o suporte ao WAHA prontos para ativação imediata via variáveis de ambiente.
+- **THEN** o sistema DEVE entregar o alerta ao Discord e ao `ntfy` (quando configurado) sem falhar por ausência ou inatividade do WAHA, mantendo o suporte ao WAHA pronto para ativação imediata via variáveis de ambiente.
+
+### Requirement: Notificações Push Móveis Dedicadas via ntfy com Prioridade e Ações Diretas
+Quando os tópicos do `ntfy` (`NTFY_TOPICO_EMERGENCIAS` para emergências ou `NTFY_TOPICO_BUGS` para bugs/feedbacks/PRs) estiverem configurados no ambiente do Worker, o sistema SHALL enviar uma notificação push estruturada via HTTP (`POST ${NTFY_BASE_URL}` com JSON) contendo o título resumido (*gist*), nível de prioridade diferenciado (`priority: 5` para emergências e `priority: 3` para bugs), ícone WebP customizado por categoria (`icon`), link de clique principal (`click`) e até 3 botões de ação (`actions`: `"Discord"`, `"GitHub"`, `"Sentry"`) apontando diretamente para a mensagem publicada no mural do Discord, a Issue/PR no GitHub e o evento no Sentry/Logs, autenticando com `Authorization: Bearer ${NTFY_API_TOKEN}` quando `NTFY_API_TOKEN` estiver definido.
+
+#### Scenario: Disparo de alerta de emergência via ntfy com prioridade máxima e botões de ação
+- **WHEN** um alerta classificado como emergência for processado e `NTFY_TOPICO_EMERGENCIAS` estiver configurado no ambiente
+- **THEN** o sistema DEVE enviar a notificação ao tópico de emergências no `ntfy` com `priority: 5`, ícone `emergencia.webp`, tags de alerta crítico e botões de ação clicáveis (`"Discord"`, `"GitHub"`, `"Sentry"`) apontando para o mural do Discord, a GitHub Issue de emergência criada e o painel do Sentry/Actions.
+
+#### Scenario: Disparo de novo bug ou PR via ntfy com prioridade padrão e link para o GitHub
+- **WHEN** uma abertura ou reabertura de issue normal ou Pull Request for processada e `NTFY_TOPICO_BUGS` estiver configurado no ambiente
+- **THEN** o sistema DEVE enviar a notificação ao tópico de bugs no `ntfy` com `priority: 3`, ícone `feedback_bugs.webp` e botões de ação apontando diretamente para a mensagem no Discord e para a Issue ou Pull Request no GitHub (e para o Sentry quando houver link).
+
+#### Scenario: Autenticação com token secreto no ntfy quando configurado
+- **WHEN** a variável `NTFY_API_TOKEN` estiver definida no ambiente do Worker
+- **THEN** o sistema DEVE incluir o cabeçalho `Authorization: Bearer <NTFY_API_TOKEN>` em todas as requisições enviadas ao servidor `ntfy`.
 
 ### Requirement: Criação Automática de GitHub Issues de Emergência via GitHub App e Deduplicação por Label
 Quando o Worker receber um evento de emergência que ainda não possua uma GitHub Issue associada (Crash Fatal, Spike de `metric_alert` ou Queda de Uptime no Sentry, ou falha de `workflow_run` no GitHub Actions na branch `main` ou tags `v*`), o sistema SHALL autenticar utilizando o GitHub App `Aresta Climb Bot` (`ARESTA_CLIMB_BOT_GITHUB_APP_CLIENT_ID`, `ARESTA_CLIMB_BOT_GITHUB_APP_PRIVATE_KEY`, `ARESTA_CLIMB_BOT_GITHUB_APP_INSTALLATION_ID`), criar automaticamente uma nova Issue com a label `emergencia` no repositório correspondente da organização `aresta-climb` e incluir o link da Issue recém-criada na notificação enviada ao canal `#🚨-emergencias`. Adicionalmente, ao receber eventos `issues` do GitHub, o sistema SHALL filtrar pela label `emergencia` para impedir duplicações no canal de bugs.
@@ -100,15 +115,15 @@ Quando o Worker receber um evento de emergência que ainda não possua uma GitHu
 - **THEN** o sistema DEVE enviar a notificação de reabertura para `#🛠️-bugs-e-feedbacks` caso não possua a label `emergencia`, ou para `#🚨-emergencias` caso possua a label `emergencia`.
 
 ### Requirement: Fila de Retentativas Assíncronas para Falhas do GitHub e do Discord
-Quando a criação automática da Issue de emergência no GitHub falhar (ex: outage ou erro `5xx`/`429` na API do GitHub) ou quando o envio da notificação ao Discord falhar, o sistema SHALL registrar a operação pendente na fila persistente (`FILA_RETENTATIVAS_ALERTAS` via Cloudflare KV) para reprocessamento automático no próximo ciclo agendado (`scheduled` Cron Trigger).
+Quando a criação automática da Issue de emergência no GitHub falhar (ex: outage ou erro `5xx`/`429` na API do GitHub) ou quando o envio da notificação ao Discord ou ao `ntfy` falhar, o sistema SHALL registrar a operação pendente na fila persistente (`FILA_RETENTATIVAS_ALERTAS` via Cloudflare KV) para reprocessamento automático no próximo ciclo agendado (`scheduled` Cron Trigger).
 
 #### Scenario: Falha ao criar Issue de emergência no GitHub notifica imediatamente no Discord e agenda retentativa
 - **WHEN** o Worker tentar criar uma Issue de emergência via GitHub App e a API do GitHub retornar erro ou timeout
-- **THEN** o sistema DEVE enviar imediatamente o alerta de emergência para `#🚨-emergencias` no Discord informando a indisponibilidade temporária do GitHub e enfileirar a criação da Issue em `FILA_RETENTATIVAS_ALERTAS` para nova tentativa no próximo ciclo do Cron Trigger.
+- **THEN** o sistema DEVE enviar imediatamente o alerta de emergência para `#🚨-emergencias` no Discord e no `ntfy` informando a indisponibilidade temporária do GitHub e enfileirar a criação da Issue em `FILA_RETENTATIVAS_ALERTAS` para nova tentativa no próximo ciclo do Cron Trigger.
 
 #### Scenario: Reprocessamento agendado conclui criação de Issue ou entrega pendente ao Discord
 - **WHEN** o Cron Trigger (`scheduled`) do Worker for executado e houver itens pendentes em `FILA_RETENTATIVAS_ALERTAS`
-- **THEN** o sistema DEVE reexecutar a criação da Issue no GitHub (enviando o link resultante ao `#🚨-emergencias`) e/ou reenviar a notificação pendente ao Discord, removendo o item da fila em caso de sucesso.
+- **THEN** o sistema DEVE reexecutar a criação da Issue no GitHub, o envio pendente ao Discord e/ou o envio pendente ao `ntfy`, removendo o item da fila em caso de sucesso.
 
 ### Requirement: Sincronização Bidirecional de Status de Issues entre Sentry e GitHub
 O sistema SHALL sincronizar bidirecionalmente o estado de resolução/fechamento e reabertura de issues entre o Sentry e o GitHub utilizando `SENTRY_API_TOKEN` e o GitHub App `Aresta Climb Bot`, prevenindo loops infinitos quando a própria automação realizar a alteração de status.

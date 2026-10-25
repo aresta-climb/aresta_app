@@ -1,6 +1,6 @@
-# Guia Completo de Configuração: Observabilidade Centralizada (Sentry) e Roteamento de Alertas (Discord + WhatsApp WAHA Standby + Fallback Resend)
+# Guia Completo de Configuração: Observabilidade Centralizada (Sentry) e Roteamento de Alertas (Push Móvel `ntfy` + Mural Discord + WhatsApp WAHA Standby + Fallback Resend)
 
-Este documento descreve o passo a passo completo e reproduzível para configurar toda a infraestrutura de observabilidade, deduplicação automática de bugs no GitHub e notificações operacionais em tempo real no Discord (com menção `@everyone` para alerta sonoro e badge numérico no celular), integração do WhatsApp WAHA em *standby* e contingência automática por e-mail via Resend do ecossistema **Aresta Climb**.
+Este documento descreve o passo a passo completo e reproduzível para configurar toda a infraestrutura de observabilidade, deduplicação e sincronização bidirecional automática de issues no GitHub (`Sentry <-> GitHub`), notificações push móveis imediatas via **`ntfy`** (com ícones WebP customizados por categoria, prioridade máxima e botões de ação), mural visual somente-leitura no **Discord**, integração do WhatsApp WAHA em *standby* e contingência automática por e-mail via Resend + fila de retentativas no Cloudflare KV do ecossistema **Aresta Climb**.
 
 ---
 
@@ -17,14 +17,17 @@ Este documento descreve o passo a passo completo e reproduzível para configurar
                                                                   └──► 2. Emergência (Crash Fatal / Spike / Uptime)
                                                                           │
   [GitHub Org: aresta-climb]                                              ▼
-  ├── Issues abertas (Sentry, App Feedback, Comunidade) ────► [Cloudflare Worker: alertas.arestaclimb.com]
-  ├── Pull Requests abertos (Sugestões de Croqui / Código) ─►  ├── Valida assinatura HMAC-SHA256
-  └── Falhas de GitHub Actions em main/tags (ex: aresta_db) ─► ├── Classifica severidade:
+  ├── Issues abertas/reabertas (Sentry, App Feedback) ──────► [Cloudflare Worker: alertas.arestaclimb.com]
+  ├── Pull Requests abertos/reabertos (Croquis / Código) ───►  ├── Valida assinatura HMAC-SHA256
+  ├── Falhas de GitHub Actions em main/tags (ex: aresta_db) ─► ├── Cria GitHub Issue p/ emergências (Aresta Climb Bot)
+  └── Sincronização bidirecional (Sentry <-> GitHub) ────────► ├── Classifica severidade:
                                                                │    • 🚨 Grupo 1 (Emergências)
                                                                │    • 🛠️ Grupo 2 (Bugs & Feedbacks)
-                                                               ├── 1. Dispara Webhook Discord (com @everyone)
-                                                               ├── 2. (Opcional) Envia via WAHA (GCP e2-micro)
-                                                               └── Se os canais primários falharem:
+                                                               ├── 1. Envia Push Móvel ntfy (prioridade 5/3 + ícone WebP)
+                                                               ├── 2. Publica no Mural Discord (somente-leitura, sem @everyone)
+                                                               ├── 3. (Opcional) Envia via WAHA (GCP e2-micro)
+                                                               └── Se os canais falharem:
+                                                                    ├──► Enfileira no Cloudflare KV (Cron */5 * * * *)
                                                                     └──► [Fallback Resend API] ──► contato@arestaclimb.com
 ```
 
@@ -220,23 +223,37 @@ Anote os dois identificadores:
 
 ---
 
-## Etapa 4: Configurar os Webhooks do Discord (Canal Primário Ativo) e Fallback Resend
+## Etapa 4: Configurar o Pager Móvel (`ntfy`), o Mural do Discord e o Fallback Resend
 
-### 4.1 Criar os Webhooks nos Canais do Discord
-1. No Discord, crie o servidor privado da equipe técnica (ex: `Aresta Climb Ops`).
-2. Crie dois canais de texto:
+### 4.1 Configurar os Tópicos de Push Móvel no `ntfy` (Alertas Imediatos no Celular)
+Como o Discord Desktop suprime notificações push para o celular sempre que há atividade de mouse/teclado no computador, utilizamos o **`ntfy`** (`https://ntfy.sh`) como pager móvel dedicado:
+
+1. Instale o aplicativo gratuito **ntfy** no celular ([Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy) / [iOS](https://apps.apple.com/us/app/ntfy/id1625396347)).
+2. Defina dois nomes de tópicos secretos com sufixo aleatório longo (ex.: `aresta-emergencias-<hash>` e `aresta-bugs-<hash>`) e inscreva-se neles no aplicativo móvel.
+3. O `aresta-alertas-worker` envia notificações push ricas contendo:
+   - **Cabeçalho:** `"Aresta Climb • <resumo>"`
+   - **Ícones WebP `256x256` customizados por categoria** (servidos diretamente pelo Worker):
+     - Emergências (`priority: 5`): `https://alertas.arestaclimb.com/icones/emergencia.webp`
+     - Bugs e Feedbacks (`priority: 3`): `https://alertas.arestaclimb.com/icones/feedback_bugs.webp`
+   - **Ações clicáveis (até 3 botões):** Botões **`Discord`**, **`GitHub`** e **`Sentry`** levando diretamente à mensagem publicada no mural do Discord, à Issue/PR no GitHub e ao erro no Sentry.
+
+### 4.2 Configurar os Canais do Discord como Mural Somente-Leitura
+1. No servidor privado da equipe técnica no Discord, crie dois canais de texto:
    - `#🚨-emergencias`
    - `#🛠️-bugs-e-feedbacks`
-3. Em cada canal, acesse as configurações (*Editar Canal* $\rightarrow$ *Integrações* $\rightarrow$ *Webhooks* $\rightarrow$ *Novo Webhook*), defina o nome como `Aresta Alertas` e copie as URLs:
-   - `DISCORD_WEBHOOK_EMERGENCIAS_URL` (ex.: `https://discord.com/api/webhooks/...`)
-   - `DISCORD_WEBHOOK_BUGS_URL` (ex.: `https://discord.com/api/webhooks/...`)
+2. Em cada canal (*Editar Canal* $\rightarrow$ *Permissões*):
+   - Desative **Enviar mensagens** e **Criar tópicos** para `@everyone` (mantendo o canal bloqueado para conversa humana, de modo que toda discussão técnica ocorra exclusivamente nas Issues/PRs do GitHub).
+   - Silencie as notificações dos dois canais no Discord para evitar alertas duplicados com o `ntfy`.
+3. Em *Integrações* $\rightarrow$ *Webhooks* de cada canal, crie o webhook `Aresta Alertas` e copie as URLs:
+   - `DISCORD_WEBHOOK_EMERGENCIAS_URL`
+   - `DISCORD_WEBHOOK_BUGS_URL`
 
 > [!TIP]
-> O `aresta-alertas-worker` posiciona o resumo direto do problema (*gist*) na primeira linha da mensagem (para visualização imediata na barra de notificação do celular/relógio) e inclui `@everyone` no **rodapé** com `allowed_mentions: { parse: ["everyone"] }`. Além disso, toda emergência do Sentry ou falha de `workflow_run` abre automaticamente uma GitHub Issue com a label `emergencia` usando o GitHub App `Aresta Climb Bot` (ignorando o evento `issues.opened` subsequente com label `emergencia` para não duplicar no canal de bugs), e o fechamento/reabertura de issues é sincronizado bidirecionalmente entre Sentry e GitHub.
+> O `aresta-alertas-worker` publica nos canais do Discord de forma silenciosa (`allowed_mentions: { parse: [] }`, sem `@everyone`) com `avatar_url` específico para emergências ou bugs. Além disso, toda emergência do Sentry ou falha de `workflow_run` abre automaticamente uma GitHub Issue com a label `emergencia` usando o GitHub App `Aresta Climb Bot` (ignorando o evento `issues.opened` subsequente com label `emergencia` para não duplicar no canal de bugs), e o fechamento/reabertura de issues é sincronizado bidirecionalmente entre Sentry e GitHub.
 
-### 4.2 Configurar o Fallback de E-mail no Resend (`contato@arestaclimb.com`)
+### 4.3 Configurar o Fallback de E-mail no Resend (`contato@arestaclimb.com`)
 
-Para garantir que nenhum alerta seja perdido caso os webhooks primários falhem:
+Para garantir que nenhum alerta seja perdido caso os canais primários falhem:
 
 1. Acesse o painel do [Resend](https://resend.com/api-keys) onde o domínio `login.arestaclimb.com` já está verificado.
 2. Clique em **Create API Key**:
@@ -255,7 +272,17 @@ No diretório `aresta_backend/cloudflare/alertas`:
 ```bash
 cd aresta_backend/cloudflare/alertas
 
-# 1. Cadastrar secrets dos Webhooks do Discord (Canal Primário Ativo)
+# 1. Cadastrar secrets dos tópicos do ntfy (Push Móvel Dedicado)
+npx wrangler secret put NTFY_TOPICO_EMERGENCIAS
+# Informe o nome secreto do tópico de emergências (ex: aresta-emergencias-<hash>)
+
+npx wrangler secret put NTFY_TOPICO_BUGS
+# Informe o nome secreto do tópico de bugs e feedbacks (ex: aresta-bugs-<hash>)
+
+# (Opcional) Caso utilize conta autenticada no ntfy.sh ou instância própria:
+# npx wrangler secret put NTFY_API_TOKEN
+
+# 2. Cadastrar secrets dos Webhooks do Discord (Mural Visual Somente-Leitura)
 npx wrangler secret put DISCORD_WEBHOOK_EMERGENCIAS_URL
 # Cole a URL do Webhook do canal #🚨-emergencias
 
@@ -320,7 +347,9 @@ npx wrangler deploy
    - **Which events would you like to trigger this webhook?** Selecione *Let me select individual events* e marque apenas:
      - `[x] Issues` (notifica abertura de bugs do Sentry *First Seen*, feedbacks do app e issues comunitárias no Grupo 2)
      - `[x] Pull requests` (notifica novos PRs de croquis ou código no Grupo 2)
-     - `[x] Workflow runs` (notifica falhas de CI/deploy na branch `main` ou tags `v*`, incluindo falhas de compilação/publicação do `aresta_db`, no Grupo 1)
+     - `[x] Workflow runs` (notifica falhas de CI/deploy do GitHub Actions nas branches `main`, `master` ou tags `v*`, incluindo `aresta_db` e `umami`, no Grupo 1)
+     - `[x] Check runs` (notifica falhas de deploy do Cloudflare Pages em `arestaclimb.com` e Cloudflare Workers Builds em `aresta_backend` no Grupo 1)
+     - `[x] Statuses` (notifica falhas de deploy da Vercel em `umami` no Grupo 1)
 3. Clique em **Add webhook**.
 
 ### 6.2 Comandos `curl` para Verificação Ponta a Ponta
