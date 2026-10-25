@@ -125,27 +125,6 @@ class ProvedorImagemAresta {
         }
       }
 
-      // Priorização da miniatura de catálogo local para capas de croquis online:
-      // Se a imagem solicitada é uma capa (ex: imagens/thumbnail.webp) e não existe no
-      // diretório local permanente do pico (modo online), mas a miniatura do catálogo existe em
-      // $downloadsRoot/thumbnails/<picoId>.webp, aproveitamos a miniatura pré-baixada existente
-      // (resolução otimizada de 450px) para evitar downloads redundantes da CDN e latência de rede.
-      if (provedorBase == null &&
-          picoId.isNotEmpty &&
-          (cleanPath == 'imagens/thumbnail.webp' ||
-              cleanPath.endsWith('/thumbnail.webp') ||
-              cleanPath == 'thumbnail.webp')) {
-        final thumbDownloads = File('$downloadsRoot/thumbnails/$picoId.webp');
-        if (thumbDownloads.existsSync()) {
-          final repo = datasetRepository ?? DatasetRepository.instance;
-          final hashThumb =
-              repo?.obterSha256DaMidia(picoId, 'thumbnails/$picoId.webp');
-          provedorBase = ImagemArquivoAresta(
-            thumbDownloads,
-            checksumSha256: hashThumb ?? hashEfetivo,
-          );
-        }
-      }
 
       // 2. Cache Temporário Volátil (/temp_cache)
       String cacheRoot = caminhoCacheVolatil ?? '';

@@ -148,7 +148,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late int _acceptedLegalVersion;
   late bool _needsMigration;
   NetworkFeedbackTrigger? _networkFeedbackTrigger;
@@ -156,6 +156,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _acceptedLegalVersion = widget.acceptedLegalVersion;
     _needsMigration = widget.needsMigration;
 
@@ -193,11 +194,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada.removeListener(
       _aoExpirarSessaoExperimental,
     );
     _networkFeedbackTrigger?.dispose();
     super.dispose();
+  }
+
+  /// Intercepta notificações de rota enviadas pelo canal nativo do Flutter (`SystemChannels.navigation`)
+  /// antes que alcancem o `_WidgetsAppState` do [MaterialApp].
+  ///
+  /// O Aresta Climb gerencia todos os deep links exclusivamente via `GerenciadorDeepLinks` (`app_links`)
+  /// e `TreeNavigationController` no `Navigator` aninhado do [TreeNavigationWrapper].
+  /// Retornar `true` aqui encerra o despacho no [WidgetsBinding] e impede que o [MaterialApp]
+  /// tente empilhar rotas nomeadas inexistentes (como `/s/<uid>`) e lance [FlutterError] em `_onUnknownRoute`.
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation routeInformation) async {
+    return true;
   }
 
   /// Redireciona o usuário para a Home do catálogo oficial e apresenta o diálogo
@@ -228,6 +242,20 @@ class _MyAppState extends State<MyApp> {
   bool get _hasAcceptedTerms => _acceptedLegalVersion >= kLegalVersion;
   bool get _isUpdatingTerms =>
       _acceptedLegalVersion > 0 && _acceptedLegalVersion < kLegalVersion;
+
+  Widget _construirTelaRaiz(BuildContext context) {
+    return _hasAcceptedTerms
+        ? TreeNavigationWrapper(
+            datasetRepo: widget.datasetRepo,
+            syncService: widget.syncService,
+            key: TreeNavigationWrapper.navKey,
+          )
+        : TermsOfUsePage(
+            onAccepted: _onTermsAccepted,
+            isUpdatingTerms: _isUpdatingTerms,
+            assetBundle: widget.assetBundle,
+          );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +334,17 @@ class _MyAppState extends State<MyApp> {
                 themeMode: ThemeMode.dark, // Temporário: fixado em dark mode
                 theme: construirTemaClaro(),
                 darkTheme: construirTemaEscuro(),
+                // Força o Navigator raiz a inicializar sempre apenas a rota '/' (home),
+                // mesmo que a engine informe um defaultRouteName externo em Cold Start.
+                routes: <String, WidgetBuilder>{
+                  Navigator.defaultRouteName: _construirTelaRaiz,
+                },
+                onGenerateInitialRoutes: (String initialRouteName) {
+                  return Navigator.defaultGenerateInitialRoutes(
+                    appNavigatorKey.currentState!,
+                    Navigator.defaultRouteName,
+                  );
+                },
                 // Banner global para modo experimental/editor que persiste em todas as telas
                 builder: (context, child) {
                   Widget effectiveChild = child!;
@@ -341,17 +380,6 @@ class _MyAppState extends State<MyApp> {
                     ),
                   );
                 },
-                home: _hasAcceptedTerms
-                    ? TreeNavigationWrapper(
-                        datasetRepo: widget.datasetRepo,
-                        syncService: widget.syncService,
-                        key: TreeNavigationWrapper.navKey,
-                      )
-                    : TermsOfUsePage(
-                        onAccepted: _onTermsAccepted,
-                        isUpdatingTerms: _isUpdatingTerms,
-                        assetBundle: widget.assetBundle,
-                      ),
               ),
             );
           },

@@ -955,6 +955,40 @@ void main() {
   );
 
   testWidgets(
+    'PicoDetailsPage constrói cabeçalho com usarBordaInteligente e larguraAlvo 1200 quando possui caminhoThumbnail',
+    (tester) async {
+      final datasetRepo = _FakeDatasetRepository();
+      final croqui = Croqui()
+        ..caminhoThumbnail = 'imagens/capa_p0_i0.webp';
+      final pico = Pico()..nome = 'Pico Com Capa Borda';
+      final vm = PicoViewModel(
+        pico: pico,
+        croqui: croqui,
+        cragId: 'pico_com_capa_borda',
+        datasetRepo: datasetRepo,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: Scaffold(
+            body: PicoDetailsPage(viewModel: vm),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final backgroundWidgetFinder = find.byWidgetPredicate(
+        (w) =>
+            w.runtimeType.toString() == '_CragBackgroundWidget' &&
+            (w as dynamic).usarBordaInteligente == true &&
+            (w as dynamic).larguraAlvo == 1200,
+      );
+      expect(backgroundWidgetFinder, findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'PicoDetailsPage exibe botão de compartilhamento quando croqui possui uid e dispara ServicoCompartilhamento',
     (tester) async {
       String? textoCompartilhado;

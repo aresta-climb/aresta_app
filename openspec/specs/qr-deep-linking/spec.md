@@ -5,15 +5,15 @@ Permite que escaladores abram diretamente setores, grupos, vias ou picos especí
 ## Requirements
 
 ### Requirement: Interceptação e Normalização de Deep Links
-O sistema DEVE (MUST) interceptar e normalizar URLs recebidas do domínio canônico `aresta.cc` (e as 8 URLs de placas físicas legadas em `app.arestaclimb.com`) tanto na inicialização a frio (*Cold Start*) quanto com o aplicativo já em execução em segundo plano (*Warm Start*).
+O sistema DEVE (MUST) interceptar e normalizar URLs recebidas do domínio canônico `aresta.cc` (e as 8 URLs de placas físicas legadas em `app.arestaclimb.com`) tanto na inicialização a frio (*Cold Start*) quanto com o aplicativo já em execução em segundo plano (*Warm Start*), blindando o `MaterialApp` raiz (`didPushRouteInformation` e `onGenerateInitialRoutes`) para que notificações de rota do canal nativo do Flutter nunca disparem `FlutterError` em `_onUnknownRoute`.
 
 #### Scenario: Abertura a frio a partir de um deep link externo
 - **WHEN** o usuário toca em um link `https://aresta.cc/s/hv7YWgTBQGyWOX` com o aplicativo totalmente fechado
-- **THEN** o aplicativo inicializa e despacha a rota por UID preservando a origem de compartilhamento e eventuais parâmetros UTM.
+- **THEN** o aplicativo inicializa a rota raiz `'/'` sem erros no `MaterialApp` e despacha a rota por UID via `GerenciadorDeepLinks` preservando a origem de compartilhamento e eventuais parâmetros UTM.
 
 #### Scenario: Abertura em segundo plano a partir de link externo
 - **WHEN** o usuário clica em um link do domínio `aresta.cc` enquanto o aplicativo já está rodando em segundo plano
-- **THEN** o aplicativo vem para o primeiro plano e transiciona suavemente para o recurso identificado pelo UID.
+- **THEN** o `MyApp` intercepta eventuais notificações de rota do canal nativo sem acionar `_onUnknownRoute`, o aplicativo vem para o primeiro plano e transiciona suavemente para o recurso identificado pelo UID.
 
 ### Requirement: Suporte aos Prefixos Compactos de `aresta.cc` (QR Code Version 3-H) e Modo Mapa
 O analisador de rotas (`DeepLinkRouteParser`) e o serviço de navegação (`DeepLinkNavigatorService`) DEVEM (MUST) suportar as rotas compactas de até 35 caracteres no domínio `aresta.cc`:

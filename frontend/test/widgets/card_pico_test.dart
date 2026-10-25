@@ -403,6 +403,125 @@ void main() {
         );
       },
     );
+
+    group('Borda Inteligente e Resolução em buildCragBackground (Tasks 3.1 - 3.2)', () {
+      const bytesPng1 = <int>[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
+        0, 13, 73, 68, 65, 84, 120, 156, 99, 100, 248, 207, 80, 15, 0, 3,
+        134, 1, 128, 90, 52, 125, 107, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+        66, 96, 130
+      ];
+
+      testWidgets('com usarBordaInteligente: false mantém camada única BoxFit.cover e larguraAlvo padrão 450', (WidgetTester tester) async {
+        final picoDir = Directory('${tempDir.path}/downloads/pico_padrao')
+          ..createSync(recursive: true);
+        final imgFile = File('${picoDir.path}/capa.webp');
+        imgFile.writeAsBytesSync(bytesPng1);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_padrao',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_padrao',
+                  usarBordaInteligente: false,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ImageFiltered), findsNothing);
+        final imageFinder = find.byType(Image);
+        expect(imageFinder, findsOneWidget);
+        final imageWidget = tester.widget<Image>(imageFinder);
+        expect(imageWidget.fit, equals(BoxFit.cover));
+        expect(imageWidget.image, isA<ResizeImage>());
+        final resize = imageWidget.image as ResizeImage;
+        expect(resize.width, equals(450));
+      });
+
+      testWidgets('com usarBordaInteligente: true e larguraAlvo: 1200 renderiza fundo ImageFiltered com blur e BoxFit.cover e primeiro plano com BoxFit.contain', (WidgetTester tester) async {
+        final picoDir = Directory('${tempDir.path}/downloads/pico_borda')
+          ..createSync(recursive: true);
+        final imgFile = File('${picoDir.path}/capa.webp');
+        imgFile.writeAsBytesSync(bytesPng1);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'capa.webp',
+                  cragId: 'pico_borda',
+                  capaPath: 'capa.webp',
+                  checksumSha256: 'hash_borda',
+                  larguraAlvo: 1200,
+                  usarBordaInteligente: true,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ImageFiltered), findsOneWidget);
+        final imageFiltered = tester.widget<ImageFiltered>(find.byType(ImageFiltered));
+        expect(imageFiltered.imageFilter, isNotNull);
+
+        // Duas instâncias de Image compartilhando o mesmo ImageProvider
+        final imageFinders = find.byType(Image);
+        expect(imageFinders, findsNWidgets(2));
+
+        final imagemFundo = tester.widget<Image>(imageFinders.at(0));
+        expect(imagemFundo.fit, equals(BoxFit.cover));
+        expect(imagemFundo.image, isA<ResizeImage>());
+        final resizeFundo = imagemFundo.image as ResizeImage;
+        expect(resizeFundo.width, equals(1200));
+
+        final imagemFrente = tester.widget<Image>(imageFinders.at(1));
+        expect(imagemFrente.fit, equals(BoxFit.contain));
+        expect(imagemFrente.image, equals(imagemFundo.image));
+      });
+
+      testWidgets('com usarBordaInteligente: true quando a imagem falha exibe apenas um ícone de erro', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: [AppColors.dark]),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: buildCragBackground(
+                  'thumbnails/pico_inexistente.webp',
+                  cragId: 'pico_inexistente',
+                  checksumSha256: 'hash_inexistente',
+                  larguraAlvo: 1200,
+                  usarBordaInteligente: true,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.broken_image), findsOneWidget);
+      });
+    });
   });
 }
 

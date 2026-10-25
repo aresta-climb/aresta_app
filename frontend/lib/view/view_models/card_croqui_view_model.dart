@@ -237,12 +237,13 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
   @override
   String get descricao => _croqui.descricao;
 
+  /// Caminho da miniatura utilizada para exibição nos cartões de catálogo.
+  ///
+  /// Prioriza a miniatura leve pré-gerada do catálogo (`thumbnails/<id>.webp`)
+  /// quando indexada no [DatasetRepository], utilizando [Croqui.caminhoThumbnail]
+  /// como alternativa de fallback.
   @override
   String get caminhoMiniatura {
-    if (_croqui.hasCaminhoThumbnail() &&
-        _croqui.caminhoThumbnail.trim().isNotEmpty) {
-      return _croqui.caminhoThumbnail.trim();
-    }
     final repo = DatasetRepository.instance;
     final hashIndice = repo?.obterSha256DaMidia(
       _croqui.id,
@@ -250,6 +251,10 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
     );
     if (hashIndice != null && hashIndice.isNotEmpty) {
       return 'thumbnails/${_croqui.id}.webp';
+    }
+    if (_croqui.hasCaminhoThumbnail() &&
+        _croqui.caminhoThumbnail.trim().isNotEmpty) {
+      return _croqui.caminhoThumbnail.trim();
     }
     return '';
   }
@@ -260,8 +265,26 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
   @override
   String? get caminhoCapa => null;
 
+  /// Checksum SHA-256 da miniatura ou capa, resolvido a partir do [DatasetRepository].
   @override
-  String? get checksumSha256 => null;
+  String? get checksumSha256 {
+    final repo = DatasetRepository.instance;
+    final hashIndice = repo?.obterSha256DaMidia(
+      _croqui.id,
+      'thumbnails/${_croqui.id}.webp',
+    );
+    if (hashIndice != null && hashIndice.isNotEmpty) {
+      return hashIndice;
+    }
+    if (_croqui.hasCaminhoThumbnail() &&
+        _croqui.caminhoThumbnail.trim().isNotEmpty) {
+      return repo?.obterSha256DaMidia(
+        _croqui.id,
+        _croqui.caminhoThumbnail.trim(),
+      );
+    }
+    return null;
+  }
 
   @override
   String get textoEstatisticas {

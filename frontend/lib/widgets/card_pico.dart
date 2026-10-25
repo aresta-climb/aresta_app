@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../view/view_models/card_croqui_view_model.dart';
@@ -273,12 +274,16 @@ class _CragBackgroundWidget extends StatefulWidget {
   final String? cragId;
   final String? capaPath;
   final String? checksumSha256;
+  final int larguraAlvo;
+  final bool usarBordaInteligente;
 
   const _CragBackgroundWidget({
     required this.thumbnailUrl,
     this.cragId,
     this.capaPath,
     this.checksumSha256,
+    this.larguraAlvo = 450,
+    this.usarBordaInteligente = false,
   });
 
   @override
@@ -300,7 +305,9 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
     if (oldWidget.thumbnailUrl != widget.thumbnailUrl ||
         oldWidget.cragId != widget.cragId ||
         oldWidget.capaPath != widget.capaPath ||
-        oldWidget.checksumSha256 != widget.checksumSha256) {
+        oldWidget.checksumSha256 != widget.checksumSha256 ||
+        oldWidget.larguraAlvo != widget.larguraAlvo ||
+        oldWidget.usarBordaInteligente != widget.usarBordaInteligente) {
       _inicializarProvedor();
     }
   }
@@ -332,7 +339,7 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
       picoId: cragId ?? '',
       caminho: caminhoFinal,
       checksumSha256: widget.checksumSha256,
-      larguraAlvo: 450,
+      larguraAlvo: widget.larguraAlvo,
     );
   }
 
@@ -383,8 +390,46 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
             );
           }
           if (snapshot.hasData && snapshot.data != null) {
+            final imageProvider = snapshot.data!;
+            if (widget.usarBordaInteligente) {
+              return RepaintBoundary(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Camada de fundo com blur gerado das bordas da imagem original
+                    ImageFiltered(
+                      imageFilter: ImageFilter.blur(
+                        sigmaX: 24.0,
+                        sigmaY: 24.0,
+                        tileMode: TileMode.clamp,
+                      ),
+                      child: Image(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
+                    // Leve escurecimento para contraste
+                    ColoredBox(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                    // Camada principal com a arte integral contida na caixa (Opção A)
+                    Image(
+                      image: imageProvider,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _construirImagemIndisponivel(),
+                    ),
+                  ],
+                ),
+              );
+            }
             return Image(
-              image: snapshot.data!,
+              image: imageProvider,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   _construirImagemIndisponivel(),
@@ -399,16 +444,23 @@ class _CragBackgroundWidgetState extends State<_CragBackgroundWidget> {
 }
 
 /// Constrói o fundo visual do card do pico com suporte a cache local e ProvedorImagemAresta.
+///
+/// Permite configurar [larguraAlvo] (padrão de 450 para cards e 1200 para cabeçalho) e
+/// [usarBordaInteligente] para preencher áreas excedentes com desfoque Gaussiano da própria imagem (Opção A).
 Widget buildCragBackground(
   String thumbnailUrl, {
   String? cragId,
   String? capaPath,
   String? checksumSha256,
+  int larguraAlvo = 450,
+  bool usarBordaInteligente = false,
 }) {
   return _CragBackgroundWidget(
     thumbnailUrl: thumbnailUrl,
     cragId: cragId,
     capaPath: capaPath,
     checksumSha256: checksumSha256,
+    larguraAlvo: larguraAlvo,
+    usarBordaInteligente: usarBordaInteligente,
   );
 }

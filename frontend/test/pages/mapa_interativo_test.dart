@@ -4033,6 +4033,89 @@ void main() {
         expect(find.text('Maciço Central'), findsOneWidget);
         expect(find.text('Ir para Grupo'), findsOneWidget);
       });
+
+      testWidgets(
+        'deve limitar a altura e ativar rolagem interna sem lancar RenderFlex overflow quando marcador com multiplas referencias excede metade da altura da tela',
+        (tester) async {
+          tester.view.physicalSize = const Size(400, 420);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(() => tester.view.resetPhysicalSize());
+          addTearDown(() => tester.view.resetDevicePixelRatio());
+
+          final ponto = Mapa_PontoDeInteresse(
+            uid: 'poi-fugitivos-ii',
+            rotulo: '1',
+            circulo: BoundingCirculo(x: 200, y: 200, raio: 15),
+          );
+
+          final setorFugitivos = Setor(
+            uid: 'set-fugitivos-ii',
+            nome: 'Bloco Fugitivos II',
+            escaladas: [
+              Escalada(
+                uid: 'esc-fugitivos',
+                boulder: Boulder(
+                  nome: 'Fugitivos',
+                  dificuldade: GrauBoulder_GrauBoulder.V7,
+                  descricao:
+                      'Saída sentado em regletes pequenos seguindo pelo teto até a virada clássica do bloco.',
+                ),
+              ),
+              Escalada(
+                uid: 'esc-olha-a-jaca',
+                boulder: Boulder(
+                  nome: 'Olha a Jaca',
+                  dificuldade: GrauBoulder_GrauBoulder.V7,
+                  descricao:
+                      'Linha direta pela face principal do Bloco Fugitivos II.',
+                ),
+              ),
+            ],
+          );
+
+          final mapa = Mapa(
+            caminhoImagemMapa: 'mapas/fugitivos_ii.webp',
+            larguraMapa: 800,
+            alturaMapa: 600,
+            pontosDeInteresse: [ponto],
+            referencias: [
+              Mapa_Referencia(
+                alvoUid: 'esc-fugitivos',
+                pontosUids: ['poi-fugitivos-ii'],
+              ),
+              Mapa_Referencia(
+                alvoUid: 'esc-olha-a-jaca',
+                pontosUids: ['poi-fugitivos-ii'],
+              ),
+            ],
+          );
+
+          final pico = Pico(
+            nome: 'Pedra Grande',
+            setoresOuGrupos: [
+              SetorOuGrupo(setor: ArquivoSetor(conteudo: setorFugitivos)),
+            ],
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MapaInterativoPage(
+                mapa: mapa,
+                pico: pico,
+                cragId: 'br_mg_igarape_pedra_grande',
+                setorContext: setorFugitivos,
+                imageProviderOverride: MemoryImage(Uint8List(0)),
+                initialSelectedId: 'poi-fugitivos-ii',
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Fugitivos'), findsOneWidget);
+          expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+        },
+      );
     });
   });
 }

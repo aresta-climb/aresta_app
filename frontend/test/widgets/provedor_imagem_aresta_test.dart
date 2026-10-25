@@ -1013,9 +1013,9 @@ void main() {
       });
     });
 
-    group('Priorização da Thumbnail de Catálogo Local (Task 1.1)', () {
+    group('Resolução Uniforme de Capa e Mídias de Croqui sem Redirecionamento', () {
       test(
-        'ao resolver imagens/thumbnail.webp quando o arquivo local do pico não existe mas a miniatura de catálogo existe, retorna a miniatura local sem disparar requisição HTTP',
+        'ao resolver imagens/thumbnail.webp quando o arquivo local do pico não existe mesmo que a miniatura de catálogo exista, não redireciona para a miniatura e busca imagens/thumbnail.webp via cache volátil / CDN',
         () async {
           final thumbsDir = Directory('${tempDownloadsDir.path}/thumbnails');
           await thumbsDir.create(recursive: true);
@@ -1035,12 +1035,13 @@ void main() {
 
           expect(provedor, isA<ImagemArquivoAresta>());
           final imgAresta = provedor as ImagemArquivoAresta;
-          expect(imgAresta.arquivo.path, equals(thumbFile.path));
+          expect(imgAresta.arquivo.path, isNot(equals(thumbFile.path)));
+          expect(imgAresta.arquivo.path, startsWith(tempCacheDir.path));
           expect(
             clienteEspiao.chamadas,
-            equals(0),
+            equals(1),
             reason:
-                'Não deve disparar requisição HTTP se a thumbnail de catálogo já existe localmente',
+                'Deve buscar a capa real imagens/thumbnail.webp via CDN/cache volátil sem redirecionar para a miniatura de catálogo',
           );
         },
       );

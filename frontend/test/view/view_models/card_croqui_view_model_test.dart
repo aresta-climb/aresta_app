@@ -4,6 +4,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 
@@ -131,6 +133,50 @@ void main() {
       final vm = mapearCroquiParaCard(croqui);
 
       expect(vm.caminhoMiniatura, isEmpty);
+    });
+
+    test('prioriza thumbnails/<id>.webp quando seu hash está indexado no repositório', () {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      repo.indiceData.value = Indice()
+        ..croquis.add(
+          ResumoCroqui(
+            id: 'croqui_com_thumb_catalogo',
+            checksumSha256Thumbnail: 'hash_catalogo_999',
+          ),
+        );
+
+      final croqui = Croqui(
+        id: 'croqui_com_thumb_catalogo',
+        nome: 'Pico Com Miniatura',
+        caminhoThumbnail: 'imagens/capa_alta_resolucao.webp',
+      );
+
+      final vm = mapearCroquiParaCard(croqui);
+
+      expect(vm.caminhoMiniatura, equals('thumbnails/croqui_com_thumb_catalogo.webp'));
+      expect(vm.checksumSha256, equals('hash_catalogo_999'));
+    });
+
+    test('faz fallback para croqui.caminhoThumbnail quando a miniatura de catálogo não possui hash indexado', () {
+      final repo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      repo.indiceData.value = Indice();
+
+      final croqui = Croqui(
+        id: 'croqui_sem_thumb_catalogo',
+        nome: 'Pico Sem Miniatura Catálogo',
+        caminhoThumbnail: 'imagens/capa_alta_resolucao.webp',
+      )..arquivosExternos.add(
+          ArquivoExterno(
+            caminho: 'imagens/capa_alta_resolucao.webp',
+            checksumSha256: 'hash_capa_hd_456',
+          ),
+        );
+      repo.indexarMidiasDoCroqui('croqui_sem_thumb_catalogo', croqui);
+
+      final vm = mapearCroquiParaCard(croqui);
+
+      expect(vm.caminhoMiniatura, equals('imagens/capa_alta_resolucao.webp'));
+      expect(vm.checksumSha256, equals('hash_capa_hd_456'));
     });
 
     test('usa nome do primeiro pico e fallback de localização quando nome for vazio', () {

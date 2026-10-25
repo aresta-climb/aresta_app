@@ -1,6 +1,6 @@
-# Guia Completo de Configuração: Observabilidade Centralizada (Sentry) e Roteamento de Alertas (WhatsApp WAHA + Fallback Resend)
+# Guia Completo de Configuração: Observabilidade Centralizada (Sentry) e Roteamento de Alertas (Discord + WhatsApp WAHA Standby + Fallback Resend)
 
-Este documento descreve o passo a passo completo e reproduzível para configurar toda a infraestrutura de observabilidade, deduplicação automática de bugs no GitHub e notificações operacionais em tempo real no WhatsApp (com contingência automática por e-mail via Resend) do ecossistema **Aresta Climb**.
+Este documento descreve o passo a passo completo e reproduzível para configurar toda a infraestrutura de observabilidade, deduplicação automática de bugs no GitHub e notificações operacionais em tempo real no Discord (com menção `@everyone` para alerta sonoro e badge numérico no celular), integração do WhatsApp WAHA em *standby* e contingência automática por e-mail via Resend do ecossistema **Aresta Climb**.
 
 ---
 
@@ -22,8 +22,9 @@ Este documento descreve o passo a passo completo e reproduzível para configurar
   └── Falhas de GitHub Actions em main/tags (ex: aresta_db) ─► ├── Classifica severidade:
                                                                │    • 🚨 Grupo 1 (Emergências)
                                                                │    • 🛠️ Grupo 2 (Bugs & Feedbacks)
-                                                               ├── Envia via Cloudflare Tunnel ──► [VM GCP e2-micro: WAHA (NOWEB)]
-                                                               └── Se o WAHA falhar (timeout/5xx):
+                                                               ├── 1. Dispara Webhook Discord (com @everyone)
+                                                               ├── 2. (Opcional) Envia via WAHA (GCP e2-micro)
+                                                               └── Se os canais primários falharem:
                                                                     └──► [Fallback Resend API] ──► contato@arestaclimb.com
 ```
 
@@ -162,12 +163,12 @@ WAHA_DASHBOARD_PASSWORD=coloque_aqui_uma_senha_forte_dashboard
 CLOUDFLARE_TUNNEL_TOKEN=coloque_aqui_o_token_do_cloudflare_tunnel
 ```
 
-Crie o arquivo `/opt/waha/docker-compose.yml`:
+Crie o arquivo `/opt/waha/docker-compose.yml` utilizando a imagem oficial leve `devlikeapro/waha:noweb` (sem o navegador Chromium, economizando ~300 MB de download e centenas de MB de RAM):
 
 ```yaml
 services:
   waha:
-    image: devlikeapro/waha:latest
+    image: devlikeapro/waha:noweb
     container_name: waha
     restart: always
     environment:
@@ -197,7 +198,10 @@ Suba os containers em background:
 docker compose up -d
 ```
 
-### 3.5 Parear o WhatsApp via QR Code e Obter os IDs dos 2 Grupos (`@g.us`)
+### 3.5 (Opcional - Standby) Parear o WhatsApp via QR Code e Obter os IDs dos 2 Grupos (`@g.us`)
+> [!NOTE]
+> A infraestrutura do WAHA na VM `e2-micro` permanece provisionada e pronta em *standby*. O canal primário de produção ativo são os **Webhooks do Discord** (Etapa 4), dispensando a contratação imediata de chip/eSIM dedicado. Quando desejar ativar o WhatsApp, execute os passos abaixo e cadastre os segredos no Cloudflare.
+
 1. No WhatsApp, dentro da Comunidade Aresta Climb, crie os dois grupos restritos à equipe técnica e adicione o número de telefone que será pareado no WAHA:
    - **`🚨 Aresta — Emergências`** (Grupo 1)
    - **`🛠️ Aresta — Bugs & Feedbacks`** (Grupo 2)
@@ -216,16 +220,30 @@ Anote os dois identificadores:
 
 ---
 
-## Etapa 4: Configurar o Fallback de E-mail no Resend (`contato@arestaclimb.com`)
+## Etapa 4: Configurar os Webhooks do Discord (Canal Primário Ativo) e Fallback Resend
 
-Para garantir que nenhum alerta seja perdido caso a VM `e2-micro` reinicie ou a sessão do WhatsApp desconecte:
+### 4.1 Criar os Webhooks nos Canais do Discord
+1. No Discord, crie o servidor privado da equipe técnica (ex: `Aresta Climb Ops`).
+2. Crie dois canais de texto:
+   - `#🚨-emergencias`
+   - `#🛠️-bugs-e-feedbacks`
+3. Em cada canal, acesse as configurações (*Editar Canal* $\rightarrow$ *Integrações* $\rightarrow$ *Webhooks* $\rightarrow$ *Novo Webhook*), defina o nome como `Aresta Alertas` e copie as URLs:
+   - `DISCORD_WEBHOOK_EMERGENCIAS_URL` (ex.: `https://discord.com/api/webhooks/...`)
+   - `DISCORD_WEBHOOK_BUGS_URL` (ex.: `https://discord.com/api/webhooks/...`)
+
+> [!TIP]
+> O `aresta-alertas-worker` posiciona o resumo direto do problema (*gist*) na primeira linha da mensagem (para visualização imediata na barra de notificação do celular/relógio) e inclui `@everyone` no **rodapé** com `allowed_mentions: { parse: ["everyone"] }`. Além disso, toda emergência do Sentry ou falha de `workflow_run` abre automaticamente uma GitHub Issue com a label `emergencia` usando o GitHub App `Aresta Climb Bot` (ignorando o evento `issues.opened` subsequente com label `emergencia` para não duplicar no canal de bugs), e o fechamento/reabertura de issues é sincronizado bidirecionalmente entre Sentry e GitHub.
+
+### 4.2 Configurar o Fallback de E-mail no Resend (`contato@arestaclimb.com`)
+
+Para garantir que nenhum alerta seja perdido caso os webhooks primários falhem:
 
 1. Acesse o painel do [Resend](https://resend.com/api-keys) onde o domínio `login.arestaclimb.com` já está verificado.
 2. Clique em **Create API Key**:
    - **Name:** `aresta-alertas-worker-fallback`
    - **Permission:** `Sending access`
    - **Domain:** `login.arestaclimb.com`
-3. Copie a chave gerada (`re_...`). O Worker enviará e-mails de contingência de `alerta@login.arestaclimb.com` para `contato@arestaclimb.com` **exclusivamente** quando o WAHA falhar.
+3. Copie a chave gerada (`re_...`). O Worker enviará e-mails de contingência de `alerta@login.arestaclimb.com` para `contato@arestaclimb.com` **exclusivamente** quando os canais primários falharem, além de enfileirar no Cloudflare KV (`FILA_RETENTATIVAS_ALERTAS`) para reprocessamento automático a cada 5 minutos (`*/5 * * * *`).
 
 ---
 
@@ -237,29 +255,38 @@ No diretório `aresta_backend/cloudflare/alertas`:
 ```bash
 cd aresta_backend/cloudflare/alertas
 
-# 1. Cadastrar secrets obrigatórios do roteador de alertas
-npx wrangler secret put WAHA_BASE_URL
-# Informe: https://waha.arestaclimb.com
+# 1. Cadastrar secrets dos Webhooks do Discord (Canal Primário Ativo)
+npx wrangler secret put DISCORD_WEBHOOK_EMERGENCIAS_URL
+# Cole a URL do Webhook do canal #🚨-emergencias
 
-npx wrangler secret put WAHA_API_KEY
-# Informe a mesma chave definida no .env da VM
+npx wrangler secret put DISCORD_WEBHOOK_BUGS_URL
+# Cole a URL do Webhook do canal #🛠️-bugs-e-feedbacks
 
-npx wrangler secret put WHATSAPP_GRUPO_EMERGENCIAS_ID
-# Informe o ID @g.us do Grupo 1 (Emergências)
-
-npx wrangler secret put WHATSAPP_GRUPO_BUGS_ID
-# Informe o ID @g.us do Grupo 2 (Bugs & Feedbacks)
-
+# 2. Cadastrar secrets de autenticação HMAC, Token de API do Sentry e Fallback Resend
 npx wrangler secret put SENTRY_WEBHOOK_SECRET
 # Informe o Client Secret da Internal Integration do Sentry (Etapa 2.2)
+
+npx wrangler secret put SENTRY_API_TOKEN
+# Informe o Token gerado na Internal Integration do Sentry (Permissão Issue & Event: Read & Write)
 
 npx wrangler secret put GITHUB_WEBHOOK_SECRET
 # Gere um segredo forte (ex: openssl rand -hex 32) que também será usado na Etapa 6
 
 npx wrangler secret put RESEND_API_KEY
-# Informe a chave re_... do Resend (Etapa 4)
+# Informe a chave re_... do Resend (Etapa 4.2)
 
-# 2. Publicar o Worker em alertas.arestaclimb.com
+# 3. Cadastrar secrets do GitHub App (Aresta Climb Bot) para criação e sincronização de Issues
+npx wrangler secret put ARESTA_CLIMB_BOT_GITHUB_APP_CLIENT_ID
+npx wrangler secret put ARESTA_CLIMB_BOT_GITHUB_APP_PRIVATE_KEY
+npx wrangler secret put ARESTA_CLIMB_BOT_GITHUB_APP_INSTALLATION_ID
+
+# 4. (Opcional - Standby) Cadastrar secrets do WAHA caso deseje ativar o WhatsApp
+# npx wrangler secret put WAHA_BASE_URL
+# npx wrangler secret put WAHA_API_KEY
+# npx wrangler secret put WHATSAPP_GRUPO_EMERGENCIAS_ID
+# npx wrangler secret put WHATSAPP_GRUPO_BUGS_ID
+
+# 5. Publicar o Worker em alertas.arestaclimb.com
 npx wrangler deploy
 ```
 
@@ -315,7 +342,4 @@ npx wrangler deploy
      -d "$PAYLOAD"
    ```
 3. **Testar o Fallback Automático de E-mail via Resend (`contato@arestaclimb.com`):**
-   - Na VM `waha-alertas-aresta`, pause temporariamente o container do WAHA (`docker compose stop waha`).
-   - Execute novamente o comando `curl` acima.
-   - Verifique que o Worker responde `{"ok":true,"entregueVia":"resend_fallback",...}` e que a caixa de entrada `contato@arestaclimb.com` recebe imediatamente o e-mail com prefixo `[CONTINGÊNCIA WHATSAPP]`.
-   - Religar o container do WAHA (`docker compose start waha`).
+   - Caso os canais primários configurados (Discord ou WAHA) estejam inacessíveis ou falhem, o Worker responde `{"ok":true,"entregueVia":"resend_fallback",...}` e a caixa de entrada `contato@arestaclimb.com` recebe imediatamente o e-mail com prefixo `[CONTINGÊNCIA ALERTA]`.

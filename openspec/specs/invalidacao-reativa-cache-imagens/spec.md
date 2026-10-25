@@ -23,7 +23,7 @@ O `DatasetRepository` MUST manter uma tabela de dispersão indexada $O(1)$ mapea
 - **THEN** o sistema DEVE indexar imediatamente os `arquivosExternos` do croqui online em memória e retornar o hash correspondente
 
 ### Requirement: Provedor de Imagem Aresta com Cache-Busting Unificado
-O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas chaves incorporem o `checksumSha256` da mídia para diferenciar instantaneamente versões antigas e novas, tanto para arquivos armazenados no disco quanto para transmissões da CDN. O provedor DEVE identificar como miniatura global do catálogo (`ehThumbnail`) exclusivamente caminhos que apontem para a pasta `thumbnails/` (`thumbnails/<picoId>.webp`) ou para `<picoId>.webp`, tratando `imagens/thumbnail.webp` como mídia interna normal do croqui (`croqui.arquivosExternos`). As miniaturas permanentes DEVEM ser lidas exclusivamente de `$downloadsRoot/thumbnails/<picoId>.webp` (onde `downloadsRoot` corresponde a `editorDeCroqui.downloadsPath(docsPath)`). Ao transmitir imagens remotas da CDN para croquis em modo online ou miniaturas globais, o provedor DEVE (MUST) persistir os bytes recebidos no cache volátil do sistema operacional (`temp_cache`) utilizando a convenção `<caminho>.<checksumSha256>`, exceto para miniaturas globais que DEVEM ser salvas como `temp_cache/thumbnails/<picoId>.webp.<checksumSha256>`. Ao resolver a capa de um croqui (`imagens/thumbnail.webp` ou equivalente), caso o arquivo local do croqui não exista e a miniatura de catálogo local `$downloadsRoot/thumbnails/<picoId>.webp` exista, o sistema DEVE preferir servir a miniatura local existente evitando requisição de rede desnecessária. A existência de um `checksumSha256` válido é estritamente obrigatória para gravação em disco; caso o hash seja nulo ou vazio ao resolver uma mídia remota, o sistema DEVE verificar se o croqui está baixado offline (`isPicoDownloaded(picoId)`): se estiver baixado offline, DEVE registrar erro na telemetria via `AppLogger.instance.logError`; caso contrário (exploração online), DEVE registrar apenas aviso via `AppLogger.instance.logAviso`, realizando em ambos os casos fallback direto para `NetworkImage` sem salvar no `temp_cache`. Caso o download da mídia remota falhe (seja por queda de conexão, socket fechado, timeout ou status HTTP diferente de 200), o provedor DEVE retornar `null` (em vez de recorrer a `NetworkImage`). Falhas operacionais de conectividade ou timeout DEVEM ser registradas via `AppLogger.instance.logAviso` sem emissão de `logError` para o Crashlytics. Após salvar uma nova versão de mídia com hash atualizado, o sistema DEVE expurgar versões anteriores com hashes divergentes do mesmo arquivo na mesma pasta.
+O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas chaves incorporem o `checksumSha256` da mídia para diferenciar instantaneamente versões antigas e novas, tanto para arquivos armazenados no disco quanto para transmissões da CDN. O provedor DEVE identificar como miniatura global do catálogo (`ehThumbnail`) exclusivamente caminhos que apontem para a pasta `thumbnails/` (`thumbnails/<picoId>.webp`) ou para `<picoId>.webp`, tratando qualquer caminho definido em `croqui.caminhoThumbnail` (incluindo `imagens/thumbnail.webp`) uniformemente como mídia interna normal do croqui (`croqui.arquivosExternos`), sem redirecionamento especial para `$downloadsRoot/thumbnails/<picoId>.webp`. As miniaturas permanentes DEVEM ser lidas exclusivamente de `$downloadsRoot/thumbnails/<picoId>.webp` (onde `downloadsRoot` corresponde a `editorDeCroqui.downloadsPath(docsPath)`). Ao transmitir imagens remotas da CDN para croquis em modo online ou miniaturas globais, o provedor DEVE (MUST) persistir os bytes recebidos no cache volátil do sistema operacional (`temp_cache`) utilizando a convenção `<caminho>.<checksumSha256>`, exceto para miniaturas globais que DEVEM ser salvas como `temp_cache/thumbnails/<picoId>.webp.<checksumSha256>`. A existência de um `checksumSha256` válido é estritamente obrigatória para gravação em disco; caso o hash seja nulo ou vazio ao resolver uma mídia remota, o sistema DEVE verificar se o croqui está baixado offline (`isPicoDownloaded(picoId)`): se estiver baixado offline, DEVE registrar erro na telemetria via `AppLogger.instance.logError`; caso contrário (exploração online), DEVE registrar apenas aviso via `AppLogger.instance.logAviso`, realizando em ambos os casos fallback direto para `NetworkImage` sem salvar no `temp_cache`. Caso o download da mídia remota falhe (seja por queda de conexão, socket fechado, timeout ou status HTTP diferente de 200), o provedor DEVE retornar `null` (em vez de recorrer a `NetworkImage`). Falhas operacionais de conectividade ou timeout DEVEM ser registradas via `AppLogger.instance.logAviso` sem emissão de `logError` para o Crashlytics. Após salvar uma nova versão de mídia com hash atualizado, o sistema DEVE expurgar versões anteriores com hashes divergentes do mesmo arquivo na mesma pasta.
 
 #### Scenario: Resolução de imagem remota com query parameter de versão e persistência atômica em cache volátil
 - **WHEN** uma imagem não baixada permanentemente for resolvida para streaming remoto
@@ -55,19 +55,18 @@ O `ProvedorImagemAresta` MUST gerar instâncias de provedores de imagem cujas ch
 - **AND** DEVE resolver o arquivo a partir de `$downloadsRoot/<picoId>/imagens/thumbnail.webp` usando o hash de `croqui.arquivosExternos`.
 
 #### Scenario: Priorização da thumbnail de catálogo local para capa de croqui online
-- **WHEN** uma capa de croqui (`caminho == 'imagens/thumbnail.webp'` ou correspondente a `croqui.caminhoThumbnail`) for resolvida
-- **AND** o arquivo local permanente `$downloadsRoot/<picoId>/imagens/thumbnail.webp` não existir no disco
+- **WHEN** uma capa de croqui (`caminho == 'imagens/thumbnail.webp'` ou qualquer `croqui.caminhoThumbnail`) for resolvida para um croqui online não baixado
 - **AND** o arquivo de miniatura do catálogo `$downloadsRoot/thumbnails/<picoId>.webp` existir localmente
-- **THEN** o sistema DEVE retornar `ImagemArquivoAresta` para a miniatura local `thumbnails/<picoId>.webp`
-- **AND** NÃO DEVE disparar download de rede HTTP para `imagens/thumbnail.webp`.
+- **THEN** o `ProvedorImagemAresta` NÃO DEVE redirecionar o caminho da capa para `thumbnails/<picoId>.webp`
+- **AND** a priorização de `thumbnails/<picoId>.webp` DEVE ocorrer exclusivamente nos ViewModels de cartões de listagem (`CardCroquiViewModel`).
 
 #### Scenario: Fallback para download de capa interna quando miniatura local não existir
-- **WHEN** a capa do croqui for solicitada e nem `$downloadsRoot/<picoId>/imagens/thumbnail.webp` nem `$downloadsRoot/thumbnails/<picoId>.webp` existirem
-- **THEN** o sistema DEVE proceder com o download remoto da mídia `imagens/thumbnail.webp` para o cache volátil conforme as regras padrão da CDN.
+- **WHEN** a capa do croqui (`croqui.caminhoThumbnail`) for solicitada na página de detalhes do croqui e o arquivo local `$downloadsRoot/<picoId>/<caminho>` não existir
+- **THEN** o sistema DEVE proceder com o download remoto da mídia de `croqui.caminhoThumbnail` para o cache volátil conforme as regras padrão da CDN, independentemente da existência de `$downloadsRoot/thumbnails/<picoId>.webp`.
 
 #### Scenario: Resolução alvo de 450px para cabeçalho do pico
-- **WHEN** o componente `buildCragBackground` em `card_pico.dart` for construído para exibir o plano de fundo do pico
-- **THEN** a `larguraAlvo` configurada para o `ProvedorImagemAresta.resolver` DEVE ser 450px
+- **WHEN** o componente `buildCragBackground` em `card_pico.dart` for construído com parâmetros padrão nos cartões de catálogo (`CragCard`)
+- **THEN** a `larguraAlvo` padrão configurada para o `ProvedorImagemAresta.resolver` DEVE ser 450px (enquanto na `PicoDetailsPage` DEVE ser 1200px com borda inteligente)
 - **AND** as dimensões visuais na árvore de widgets DEVEM ser mantidas inalteradas.
 
 #### Scenario: Auto-resolução do checksum pelo caminho da mídia
@@ -170,3 +169,21 @@ Quando um croqui não possuir miniatura de catálogo (`checksumSha256Thumbnail` 
 - **AND** o `ProvedorImagemAresta.resolver` retornar `null` (ex: sem conexão e fora do cache) ou o `Image.errorBuilder` for acionado
 - **THEN** o componente NÃO DEVE exibir `assets/logo_in_app.jpg`
 - **AND** DEVE exibir o ícone `Icons.broken_image` com `color: Colors.grey` centralizado sobre o fundo escuro do componente.
+
+### Requirement: Borda Inteligente no Cabeçalho do Croqui e Separação de Miniatura de Catálogo
+O cabeçalho da página de detalhes do croqui (`PicoDetailsPage`, `expandedHeight: 300.0`) MUST exibir `croqui.caminhoThumbnail` em alta resolução (`larguraAlvo: 1200`) sem cortes usando borda inteligente: fundo `BoxFit.cover` desfocado (`ImageFilter.blur` com `TileMode.clamp`) e primeiro plano `BoxFit.contain` ocupando 100% da área disponível. Já os cartões de listagem (`CragCard` e `OfflineCragCard`) MUST priorizar `thumbnails/<picoId>.webp` com fallback para `croqui.caminhoThumbnail`.
+
+#### Scenario: Renderização da capa sem cortes com borda inteligente na página de detalhes do croqui
+- **WHEN** a página de detalhes do croqui (`PicoDetailsPage`) construir o plano de fundo da `SliverAppBar` (`expandedHeight: 300.0`) para um croqui com `caminhoThumbnail` definido
+- **THEN** o sistema DEVE resolver `croqui.caminhoThumbnail` com `larguraAlvo: 1200`
+- **AND** DEVE renderizar uma camada de fundo com `BoxFit.cover` e filtro de desfoque Gaussiano (`TileMode.clamp`) preenchendo toda a área do cabeçalho
+- **AND** DEVE renderizar sobre ela a mesma imagem com `BoxFit.contain` ocupando 100% da altura/largura disponível sem cortar nenhuma borda da arte.
+
+#### Scenario: Priorização de miniatura de catálogo em cartões de listagem a partir de Croqui
+- **WHEN** um `CardCroquiViewModel` for instanciado a partir de um objeto `Croqui` (`CardCroquiViewModel.deCroqui`) e existir hash indexado para `thumbnails/<picoId>.webp`
+- **THEN** `caminhoMiniatura` DEVE retornar `'thumbnails/<picoId>.webp'`
+- **AND** caso não exista hash indexado para `thumbnails/<picoId>.webp`, `caminhoMiniatura` DEVE retornar `croqui.caminhoThumbnail` (ou `null` se ambos estiverem ausentes).
+
+#### Scenario: Renderização padrão com preenchimento em cartões de catálogo
+- **WHEN** `buildCragBackground` for utilizado nos cartões de catálogo (`CragCard`) sem borda inteligente ativada
+- **THEN** a `larguraAlvo` padrão DEVE permanecer `450` e a imagem DEVE ser exibida em camada única com `BoxFit.cover`.

@@ -294,6 +294,8 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                 widget.cragId,
                                 widget.croqui.caminhoThumbnail,
                               ),
+                              larguraAlvo: 1200,
+                              usarBordaInteligente: true,
                             ),
                             DecoratedBox(
                               decoration: BoxDecoration(

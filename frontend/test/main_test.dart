@@ -1116,5 +1116,53 @@ void main() {
       expect(find.text('Sessão de Prévia Encerrada'), findsNothing);
     },
   );
+
+  testWidgets(
+    'MyApp intercepta notificacoes de rota do canal nativo em Warm Start sem lancar FlutterError em _onUnknownRoute',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final tratado = await tester.binding.handlePushRoute('/s/4onIN9Ga05O9Kr');
+      await tester.pump();
+
+      expect(tratado, isTrue);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MyApp ignora defaultRouteName externo em Cold Start e renderiza a rota raiz sem reportar FlutterError',
+    (WidgetTester tester) async {
+      tester.platformDispatcher.defaultRouteNameTestValue = '/s/4onIN9Ga05O9Kr';
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    },
+  );
 }
+
 

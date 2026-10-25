@@ -1241,13 +1241,15 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                 ],
               ),
             ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: KeyedSubtree(
-                key: ValueKey(_focusedItemIndex),
-                child: _buildCardContentForResolved(
-                  refs[_focusedItemIndex],
-                  _refToResolved[refs[_focusedItemIndex]]!,
+            Flexible(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: KeyedSubtree(
+                  key: ValueKey(_focusedItemIndex),
+                  child: _buildCardContentForResolved(
+                    refs[_focusedItemIndex],
+                    _refToResolved[refs[_focusedItemIndex]]!,
+                  ),
                 ),
               ),
             ),
