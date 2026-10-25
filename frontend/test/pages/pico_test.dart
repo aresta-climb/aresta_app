@@ -1371,6 +1371,82 @@ void main() {
           expect(sliverAppBar.expandedHeight, equals(200.0));
         },
       );
+
+      testWidgets(
+        'desconta topPadding da barra de status no expandedHeight para manter altura visual exata edge-to-edge e aplica scrim superior',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          final picoDir = Directory('${tempDir.path}/downloads/br_mg_pedra_grande')
+            ..createSync(recursive: true);
+          File('${picoDir.path}/capa.webp').writeAsBytesSync(bytesPng4x2);
+
+          final datasetRepo = _FakeDatasetRepository();
+          final pico = Pico()
+            ..nome = 'Complexo Pedra Grande'
+            ..estado = 'MG';
+          final croqui = Croqui()..caminhoThumbnail = 'capa.webp';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: construirTemaEscuro(),
+              builder: (context, child) {
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    padding: const EdgeInsets.only(top: 32.0),
+                  ),
+                  child: child!,
+                );
+              },
+              home: _criarPicoDetailsPage(
+                pico: pico,
+                croqui: croqui,
+                cragId: 'br_mg_pedra_grande',
+                datasetRepo: datasetRepo,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpAndSettle();
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50));
+          });
+          await tester.pump();
+
+          final sliverAppBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
+          // Largura 400 / Proporção 2.0 = 200.0 dp totais na tela.
+          // Como topPadding = 32.0, expandedHeight deve ser 200.0 - 32.0 = 168.0
+          // para que maxExtent (topPadding + expandedHeight) seja exatamente 200.0 dp!
+          expect(sliverAppBar.expandedHeight, equals(168.0));
+
+          final flexibleSpaceSize = tester.getSize(find.byType(FlexibleSpaceBar));
+          expect(flexibleSpaceSize.width, equals(400.0));
+          expect(flexibleSpaceSize.height, equals(200.0));
+
+          // Verifica a presença do gradiente com scrim superior (5 stops iniciando em 0.0 -> 0.22)
+          final decoratedBoxes = tester.widgetList<DecoratedBox>(
+            find.descendant(
+              of: find.byType(FlexibleSpaceBar),
+              matching: find.byType(DecoratedBox),
+            ),
+          );
+          final temGradienteComScrimTopo = decoratedBoxes.any((d) {
+            final dec = d.decoration;
+            if (dec is BoxDecoration && dec.gradient is LinearGradient) {
+              final grad = dec.gradient as LinearGradient;
+              return grad.stops != null &&
+                  grad.stops!.length == 5 &&
+                  grad.stops![0] == 0.0 &&
+                  grad.stops![1] == 0.22;
+            }
+            return false;
+          });
+          expect(temGradienteComScrimTopo, isTrue);
+        },
+      );
     });
   });
 }

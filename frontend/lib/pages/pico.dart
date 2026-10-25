@@ -113,11 +113,12 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     }
   }
 
-  /// Calcula a altura expandida da [SliverAppBar] baseada na proporção da capa.
+  /// Calcula a altura visual total expandida da [SliverAppBar] (incluindo o [topPadding]
+  /// da barra de status para renderização *edge-to-edge*) baseada na proporção da capa.
   ///
   /// Garante que:
-  /// - Para imagens em modo paisagem, a altura diminui proporcionalmente até caber exatamente,
-  ///   eliminando faixas no topo e rodapé.
+  /// - Para imagens em modo paisagem, a altura total diminui proporcionalmente até caber
+  ///   exatamente desde o topo físico da tela (`y = 0`), eliminando faixas no topo e rodapé.
   /// - Para imagens verticais ou quadradas, limita-se ao teto máximo de 300 dp.
   /// - Nunca fica inferior à altura da barra colapsada ([collapsedHeight]).
   double _calcularAlturaExpandida(BuildContext context) {
@@ -276,12 +277,13 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         backgroundColor: context.colors.deepBasalt,
         body: Builder(
           builder: (context) {
+            final topPadding = MediaQuery.of(context).padding.top;
             final alturaExpandida = _calcularAlturaExpandida(context);
 
             return CustomScrollView(
               slivers: [
                 SliverAppBar(
-                  expandedHeight: alturaExpandida,
+                  expandedHeight: alturaExpandida - topPadding,
                   pinned: true,
                   backgroundColor: context.colors.deepBasalt,
                   iconTheme: IconThemeData(color: context.colors.chalkWhite),
@@ -303,8 +305,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                   flexibleSpace: LayoutBuilder(
                     builder: (BuildContext context, BoxConstraints constraints) {
                       final top = constraints.biggest.height;
-                      final collapsedHeight =
-                          MediaQuery.of(context).padding.top + kToolbarHeight;
+                      final collapsedHeight = topPadding + kToolbarHeight;
                       final range = alturaExpandida - collapsedHeight;
                       double t = range > 0
                           ? (top - collapsedHeight) / range
@@ -342,13 +343,15 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
+                                    Colors.black.withValues(alpha: 0.45),
+                                    Colors.transparent,
                                     Colors.transparent,
                                     context.colors.deepBasalt.withValues(
                                       alpha: 0.8,
                                     ),
                                     context.colors.deepBasalt,
                                   ],
-                                  stops: const [0.5, 0.8, 1.0],
+                                  stops: const [0.0, 0.22, 0.5, 0.8, 1.0],
                                 ),
                               ),
                             ),
