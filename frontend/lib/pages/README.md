@@ -20,7 +20,9 @@ Este diretório contém as telas e páginas principais de interação do usuári
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
 | `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |
 | `TermosDeUsoPage` | `termos_de_uso.dart` | Apresentação e aceite formal dos termos legais de uso do aplicativo. |
-| `PerfilPage` | `perfil.dart` | Painel do atleta escalador com resumo esportivo, pirâmide de graus de vias/boulders, histórico cronológico e gestão do ID público. |
+| `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Hub principal de identidade esportiva do atleta, exibindo avatar, nome, métricas rápidas (cadenas, tentativas, picos, vias) e menu de navegação modular (caderneta, configurações, dados/privacidade e saída). |
+| `CadernetaPage` | `caderneta.dart` | Visão detalhada da caderneta esportiva pessoal com gráfico da pirâmide de graduação (vias/boulders), histórico de ascensões e exclusão de registros. |
+| `PerfilPage` | `perfil.dart` | Exportação e alias canônico de compatibilidade para `HubPerfilCadernetaPage`. |
 | `DatabaseMigrationScreen` | `tela_migracao_banco.dart` | Tela de bloqueio e progresso exibida durante migrações estruturais do banco de dados local. |
 
 ---
