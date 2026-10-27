@@ -492,3 +492,45 @@ Future<void> exibirModalDadosPrivacidade(
 }
 
 /// Exibe diálogo de confirmação de saída do aplicativo / logout.
+Future<bool?> exibirDialogoConfirmarSaida(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      final cores = dialogContext.colors;
+
+      return AlertDialog(
+        backgroundColor: cores.deepBasalt,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: cores.graniteEdge),
+        ),
+        title: Text(
+          'Deseja realmente sair?',
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Sua caderneta pessoal e histórico permanecem preservados com segurança no dispositivo.',
+          style: TextStyle(color: cores.ashGrey, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirmar_saida'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: cores.chalkWhite,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Sair'),
+          ),
+        ],
+      );
+    },
+  );
+}
