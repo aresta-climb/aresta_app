@@ -77,5 +77,38 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      await tester.pumpWidget(
+        wrapWithTheme(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: buildBarraMetricasHub(
+              totalCadenas: 3,
+              totalTentativas: 1,
+              totalPicos: 18,
+              totalVias: 64,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final boxCadenas = tester.getRect(find.byKey(const Key('card_metrica_cadenas')));
+      final boxTentativas = tester.getRect(find.byKey(const Key('card_metrica_tentativas')));
+      final boxPicos = tester.getRect(find.byKey(const Key('card_metrica_picos')));
+      final boxVias = tester.getRect(find.byKey(const Key('card_metrica_vias')));
+
+      // Todos os 4 cartões devem manter estritamente a mesma altura
+      expect(boxTentativas.height, equals(boxCadenas.height));
+      expect(boxPicos.height, equals(boxCadenas.height));
+      expect(boxVias.height, equals(boxCadenas.height));
+
+      // Todos os 4 cartões devem ter larguras proporcionais / homogêneas
+      expect((boxTentativas.width - boxCadenas.width).abs(), lessThanOrEqualTo(1.0));
+      expect((boxPicos.width - boxCadenas.width).abs(), lessThanOrEqualTo(1.0));
+      expect((boxVias.width - boxCadenas.width).abs(), lessThanOrEqualTo(1.0));
+
+      expect(tester.takeException(), isNull);
+    });
+
   });
 }
