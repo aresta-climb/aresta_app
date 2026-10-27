@@ -446,3 +446,49 @@ Future<void> exibirModalDadosPrivacidade(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ID DE AUTOR PÚBLICO (NANOID)',
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          autorIdPublico,
+                          style: TextStyle(
+                            color: cores.chalkWhite,
+                            fontFamily: 'monospace',
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      key: const Key('btn_copiar_id_privacidade'),
+                      icon: const Icon(Icons.copy_rounded, color: Color(0xFFE05A47)),
+                      tooltip: 'Copiar ID público',
+                      onPressed: () {
+                        onCopiarId();
+                        Navigator.of(modalContext).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Exibe diálogo de confirmação de saída do aplicativo / logout.
