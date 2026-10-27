@@ -195,3 +195,51 @@ class _SecaoHistoricoCadenas extends StatelessWidget {
     );
   }
 }
+
+/// Card de exibição individual de uma ascensão esportiva no histórico.
+class _ItemHistoricoCadena extends StatelessWidget {
+  final Cadena cadena;
+  final String nomeVia;
+  final String? grauVia;
+  final String dataFormatada;
+  final VoidCallback onExcluir;
+
+  const _ItemHistoricoCadena({
+    required this.cadena,
+    required this.nomeVia,
+    this.grauVia,
+    required this.dataFormatada,
+    required this.onExcluir,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: cadena.isCadena
+                  ? cores.fernGreen.withValues(alpha: 0.2)
+                  : cores.rustIron.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              cadena.tipoAscensao.rotulo,
+              style: TextStyle(
+                color: cadena.isCadena ? cores.fernGreen : cores.rustIron,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
