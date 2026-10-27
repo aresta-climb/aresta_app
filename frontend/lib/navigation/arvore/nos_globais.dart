@@ -152,3 +152,41 @@ class MeusCroquisNode extends NavNode {
   @override
   String toString() => 'MeusCroquisNode';
 }
+
+/// Nó que representa o Hub de Perfil do atleta e caderneta esportiva (HubPerfilCadernetaPage).
+class PerfilNode extends NavNode {
+  const PerfilNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant PerfilNode matchingAncestor) {
+    return PerfilNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String get rotuloAmigavel => 'Perfil';
+
+  @override
+  String obterCaminhoCurto() => 'Início -> Perfil';
+
+  @override
+  String toString() => 'PerfilNode';
+}
+
+/// Nó que representa a tela de Caderneta Esportiva com pirâmide de graduação e histórico (CadernetaPage).
+class CadernetaNode extends NavNode {
+  const CadernetaNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant CadernetaNode matchingAncestor) {
+    return CadernetaNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String get rotuloAmigavel => 'Minha Caderneta';
+
+  @override
+  String obterCaminhoCurto() => 'Início -> Perfil -> Minha Caderneta';
+
+  @override
+  String toString() => 'CadernetaNode';
+}
