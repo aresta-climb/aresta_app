@@ -18,6 +18,8 @@ import 'package:frontend/pages/pico_subpages/explorar_local_page.dart';
 import 'package:frontend/pages/pico_subpages/setores_page.dart';
 import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/configuracoes.dart';
+import 'package:frontend/pages/hub_perfil_caderneta.dart';
+import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -224,6 +226,14 @@ Widget construirPaginaParaNo({
 
   if (node is SobreTimeNode) {
     return const SobreTimePage();
+  }
+
+  if (node is PerfilNode) {
+    return const HubPerfilCadernetaPage();
+  }
+
+  if (node is CadernetaNode) {
+    return const CadernetaPage();
   }
 
   if (node is ControlesNode) {
