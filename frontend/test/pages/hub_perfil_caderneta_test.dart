@@ -96,5 +96,50 @@ void main() {
       expect(find.text('Sair'), findsOneWidget);
     });
 
+    testWidgets('ao tocar em Minha caderneta, navega para a CadernetaPage', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(criarHubWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CadernetaPage), findsOneWidget);
+      expect(find.text('MINHA CADERNETA'), findsOneWidget);
+    });
+
+    testWidgets('ao tocar em Editar perfil, abre diálogo e permite alterar o nome', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(criarHubWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_editar_perfil_hub')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Editar Perfil'), findsOneWidget);
+
+      final campoNome = find.byKey(const Key('campo_editar_perfil_nome'));
+      await tester.enterText(campoNome, 'Fernanda Rocha');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_salvar_editar_perfil')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fernanda Rocha'), findsOneWidget);
+      expect(repositorio.obterPerfil().autorNomePublico, 'Fernanda Rocha');
+    });
+
   });
 }
