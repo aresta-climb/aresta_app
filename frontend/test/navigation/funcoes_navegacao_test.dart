@@ -445,6 +445,52 @@ void main() {
         expect(controller.currentNode, isA<SettingsNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());
       },
+    );
 
+    testWidgets(
+      'Fluxo de retorno desempilha CadernetaNode para PerfilNode e PerfilNode para HomeNode sem sair do app',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        // 1. Home -> Perfil
+        AppNav.toPerfil(context);
+        await tester.pump();
+        expect(controller.currentNode, isA<PerfilNode>());
+
+        // 2. Perfil -> Caderneta
+        AppNav.toCaderneta(context);
+        await tester.pump();
+        expect(controller.currentNode, isA<CadernetaNode>());
+        expect(controller.currentNode.parent, isA<PerfilNode>());
+
+        // 3. Voltar da Caderneta para o Perfil
+        controller.goBack();
+        await tester.pump();
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+
+        // 4. Voltar do Perfil para a Home
+        controller.goBack();
+        await tester.pump();
+        expect(controller.currentNode, isA<HomeNode>());
+        expect(controller.currentNode.parent, isNull);
+      },
+    );
   });
 }
+
