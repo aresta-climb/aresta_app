@@ -366,6 +366,60 @@ void main() {
         expect(find.text('Voltar Sub-rota'), findsNothing);
         expect(find.text('Abrir Rota'), findsOneWidget);
       },
+    );
+
+    testWidgets(
+      'AppNav.toPerfil empilha PerfilNode no TreeNavigationController quando presente',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+        expect(controller.currentNode, isA<HomeNode>());
+
+        AppNav.toPerfil(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
+    );
+
+    testWidgets(
+      'AppNav.toCaderneta empilha CadernetaNode no TreeNavigationController',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        AppNav.toCaderneta(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<CadernetaNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
 
   });
 }
