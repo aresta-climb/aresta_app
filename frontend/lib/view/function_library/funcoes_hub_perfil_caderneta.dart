@@ -50,3 +50,44 @@ Widget buildCabecalhoHubPerfil({
               fontSize: 22,
             ),
           ),
+          const SizedBox(height: 4),
+          // Subtítulo / Função esportiva
+          Text(
+            funcao,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Botão pílula "Editar perfil"
+          InkWell(
+            key: const Key('btn_editar_perfil_hub'),
+            onTap: onEditarPerfil,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              decoration: BoxDecoration(
+                color: cores.caveShadow,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF3F4248)),
+              ),
+              child: Text(
+                'Editar perfil',
+                style: TextStyle(
+                  color: cores.chalkWhite,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// Constrói a barra horizontal contendo os 4 cartões de métricas rápidas.
