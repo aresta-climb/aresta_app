@@ -66,5 +66,65 @@ void main() {
       expect(mescladoCrags.toString(), 'MapaGlobalNode(3 picos)');
     });
 
+    test('SettingsNode possui caminho, rótulo e cópia de ancestral corretos', () {
+      const home = HomeNode();
+      final settings = SettingsNode(home);
+
+      expect(settings.parent, same(home));
+      expect(settings.rotuloAmigavel, 'Configurações');
+      expect(settings.obterCaminhoCurto(), 'Início -> Configurações');
+      expect(settings.toString(), 'SettingsNode');
+
+      const outroPai = HomeNode();
+      final copiado = settings.copyWithMergedAncestor(const SettingsNode(outroPai));
+      expect(copiado, isA<SettingsNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
+    test('ComunidadeNode possui metadados e comportamento de cópia de ancestral', () {
+      const home = HomeNode();
+      final comunidade = ComunidadeNode(home);
+
+      expect(comunidade.parent, same(home));
+      expect(comunidade.rotuloAmigavel, 'Comunidade');
+      expect(comunidade.obterCaminhoCurto(), 'Início -> Comunidade');
+      expect(comunidade.toString(), 'ComunidadeNode');
+
+      const outroPai = HomeNode();
+      final copiado = comunidade.copyWithMergedAncestor(const ComunidadeNode(outroPai));
+      expect(copiado, isA<ComunidadeNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
+    test('SobreTimeNode possui metadados e comportamento de cópia de ancestral', () {
+      const home = HomeNode();
+      final sobreTime = SobreTimeNode(home);
+
+      expect(sobreTime.parent, same(home));
+      expect(sobreTime.rotuloAmigavel, 'Sobre o Time');
+      expect(sobreTime.obterCaminhoCurto(), 'Início -> Sobre o Time');
+      expect(sobreTime.toString(), 'SobreTimeNode');
+
+      const outroPai = HomeNode();
+      final copiado = sobreTime.copyWithMergedAncestor(const SobreTimeNode(outroPai));
+      expect(copiado, isA<SobreTimeNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
+    test('MeusCroquisNode possui metadados e comportamento de cópia de ancestral', () {
+      const home = HomeNode();
+      final meusCroquis = MeusCroquisNode(home);
+
+      expect(meusCroquis.parent, same(home));
+      expect(meusCroquis.rotuloAmigavel, 'Meus Croquis');
+      expect(meusCroquis.obterCaminhoCurto(), 'Início -> Meus Croquis');
+      expect(meusCroquis.toString(), 'MeusCroquisNode');
+
+      const outroPai = HomeNode();
+      final copiado = meusCroquis.copyWithMergedAncestor(const MeusCroquisNode(outroPai));
+      expect(copiado, isA<MeusCroquisNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
   });
 }
