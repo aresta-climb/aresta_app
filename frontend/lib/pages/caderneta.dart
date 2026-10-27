@@ -148,3 +148,50 @@ class _SecaoHistoricoCadenas extends StatelessWidget {
                     color: cores.deepBasalt,
                   ),
                   child: Icon(
+                    Icons.menu_book_outlined,
+                    color: cores.ashGrey,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Nenhuma ascensão registrada ainda',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: cores.chalkWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Suas cadenas salvas nas páginas das vias aparecerão aqui.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: cores.ashGrey, fontSize: 12, height: 1.4),
+                ),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: historico.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final cadena = historico[index];
+              return _ItemHistoricoCadena(
+                cadena: cadena,
+                nomeVia: viewModel.obterNomeEscalada(cadena.escaladaUid),
+                grauVia: viewModel.obterGrauEscalada(cadena.escaladaUid),
+                dataFormatada: viewModel.formatarDataAscensao(
+                  cadena.dataAscensao,
+                ),
+                onExcluir: () => onExcluirCadena(cadena),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
