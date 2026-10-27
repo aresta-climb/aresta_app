@@ -148,13 +148,52 @@ Widget buildItemHistoricoCadena(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
+                    child: Text(
+                      nomeVia,
+                      style: TextStyle(
+                        color: cores.chalkWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (grauVia != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cores.deepBasalt,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        grauVia,
+                        style: TextStyle(
+                          color: cores.rustIron,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$dataFormatada • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? 'tentativa' : 'tentativas'}',
+                style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (cadena.notasPrivadas.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '“${cadena.notasPrivadas}”',
+                  style: TextStyle(
+                    color: cores.ashGrey,
 
-          ],
-        ),
-      ),
-      IconButton(key: Key('btn_excluir_cadena_${cadena.id}'), icon: const Icon(Icons.delete_outline), onPressed: onExcluir),
-    ],
-  ),
-);
-}
 Future<bool?> exibirDialogoConfirmarExclusao(BuildContext context) async => false;
