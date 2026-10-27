@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
@@ -27,19 +27,19 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   final int Function()? _obterTotalVias;
 
   /// Callback para navegação até a página detalhada da caderneta.
-  final void Function(BuildContext context)? aoAbrirCaderneta;
+  final VoidCallback? aoAbrirCaderneta;
 
   /// Callback para navegação até as configurações do aplicativo.
-  final void Function(BuildContext context)? aoAbrirConfiguracoes;
+  final VoidCallback? aoAbrirConfiguracoes;
 
   /// Callback para abertura do diálogo de dados e privacidade.
-  final void Function(BuildContext context)? aoAbrirDadosPrivacidade;
+  final VoidCallback? aoAbrirDadosPrivacidade;
 
   /// Callback para confirmação de encerramento de sessão / logout.
-  final void Function(BuildContext context)? aoConfirmarSaida;
+  final VoidCallback? aoConfirmarSaida;
 
   /// Callback para edição do perfil do escalador.
-  final void Function(BuildContext context)? aoEditarPerfil;
+  final VoidCallback? aoEditarPerfil;
 
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
@@ -69,19 +69,19 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Instância atual do perfil do atleta.
+  /// Retorna os metadados do perfil do escalador.
   PerfilEscalador get perfil => repositorio.obterPerfil();
 
-  /// Nome de exibição esportivo do atleta.
+  /// Nome público esportivo do atleta.
   String get nomeAtleta => perfil.autorNomePublico;
 
-  /// Identificador estável permanente NanoID 14c do atleta.
+  /// Identificador público único do autor (NanoID 14 caracteres).
   String get autorIdPublico => perfil.autorIdPublico;
 
-  /// Lista imutável de todas as ascensões registradas.
+  /// Lista imutável de ascensões esportivas registradas.
   List<Cadena> get cadenas => repositorio.cadenasNotifier.value;
 
-  /// Total de cadenas completadas com sucesso (À Vista, Flash ou Trabalhado).
+  /// Total de ascensões bem-sucedidas (cadenas confirmadas).
   int get totalCadenas => cadenas.where((c) => c.isCadena).length;
 
   /// Total de tentativas / pegas registradas sem cadeia.
@@ -91,26 +91,25 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Total de picos distintos com registros ou valor provido pelo resolver.
   int get totalPicos {
     if (_obterTotalPicos != null) {
-      return _obterTotalPicos();
+      return _obterTotalPicos!();
     }
-    // Como padrão, contabiliza a quantidade de vias distintas como aproximação
-    // quando não há resolução direta de croqui/pico injetada.
     return totalVias > 0 ? 1 : 0;
   }
 
   /// Total de vias distintas com registros ou valor provido pelo resolver.
   int get totalVias {
     if (_obterTotalVias != null) {
-      return _obterTotalVias();
+      return _obterTotalVias!();
     }
     return cadenas.map((c) => c.escaladaUid).toSet().length;
   }
 
-  /// Atualiza o nome esportivo do atleta no perfil persistido.
+  /// Atualiza o nome público esportivo do atleta de forma persistente.
   Future<void> atualizarNome(String novoNome) async {
     final nomeTratado = novoNome.trim();
-    if (nomeTratado.isEmpty) return;
-
+    if (nomeTratado.isEmpty || nomeTratado == nomeAtleta) {
+      return;
+    }
     final perfilAtualizado = perfil.copyWith(autorNomePublico: nomeTratado);
     await repositorio.salvarPerfil(perfilAtualizado);
   }
@@ -121,27 +120,27 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   }
 
   /// Aciona a abertura da tela detalhada de Caderneta.
-  void abrirCaderneta(BuildContext context) {
-    aoAbrirCaderneta?.call(context);
+  void abrirCaderneta() {
+    aoAbrirCaderneta?.call();
   }
 
   /// Aciona a abertura da tela de configurações.
-  void abrirConfiguracoes(BuildContext context) {
-    aoAbrirConfiguracoes?.call(context);
+  void abrirConfiguracoes() {
+    aoAbrirConfiguracoes?.call();
   }
 
   /// Aciona a visualização dos dados e privacidade.
-  void abrirDadosPrivacidade(BuildContext context) {
-    aoAbrirDadosPrivacidade?.call(context);
+  void abrirDadosPrivacidade() {
+    aoAbrirDadosPrivacidade?.call();
   }
 
   /// Aciona o fluxo de saída / logout.
-  void confirmarSaida(BuildContext context) {
-    aoConfirmarSaida?.call(context);
+  void confirmarSaida() {
+    aoConfirmarSaida?.call();
   }
 
   /// Aciona a edição dos dados do perfil.
-  void editarPerfil(BuildContext context) {
-    aoEditarPerfil?.call(context);
+  void editarPerfil() {
+    aoEditarPerfil?.call();
   }
 }

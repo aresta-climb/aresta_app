@@ -51,7 +51,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
 
   void _onAbrirCaderneta(BuildContext context) {
     if (_viewModel.aoAbrirCaderneta != null) {
-      _viewModel.abrirCaderneta(context);
+      _viewModel.abrirCaderneta();
     } else {
       AppNav.toCaderneta(context);
     }
@@ -59,7 +59,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
 
   void _onAbrirConfiguracoes(BuildContext context) {
     if (_viewModel.aoAbrirConfiguracoes != null) {
-      _viewModel.abrirConfiguracoes(context);
+      _viewModel.abrirConfiguracoes();
     } else {
       AppNav.toSettings(context);
     }
@@ -67,7 +67,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
 
   Future<void> _onAbrirDadosPrivacidade(BuildContext context) async {
     if (_viewModel.aoAbrirDadosPrivacidade != null) {
-      _viewModel.abrirDadosPrivacidade(context);
+      _viewModel.abrirDadosPrivacidade();
     } else {
       var copiou = false;
       await exibirModalDadosPrivacidade(
@@ -91,7 +91,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
 
   Future<void> _onConfirmarSaida(BuildContext context) async {
     if (_viewModel.aoConfirmarSaida != null) {
-      _viewModel.confirmarSaida(context);
+      _viewModel.confirmarSaida();
     } else {
       final confirmou = await exibirDialogoConfirmarSaida(context);
       if (confirmou == true && context.mounted) {
@@ -102,7 +102,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
 
   Future<void> _onEditarPerfil(BuildContext context) async {
     if (_viewModel.aoEditarPerfil != null) {
-      _viewModel.editarPerfil(context);
+      _viewModel.editarPerfil();
     } else {
       final novoNome = await exibirDialogoEditarPerfil(
         context,
