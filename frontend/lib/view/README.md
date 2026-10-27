@@ -20,6 +20,8 @@ lib/view/
 │   ├── comunidade_functions.dart - Links e ações do hub comunitário
 │   ├── grupo_functions.dart      - Resumo e listagem de subsetores
 │   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
+│   ├── funcoes_caderneta.dart    - Seção de histórico, cards de ascensão e diálogo de exclusão
+│   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho, métricas em cards e menu do Hub de Perfil
 │   ├── funcoes_configuracoes.dart   - Conexão com Editor Desktop, QR Code e temas
 │   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
 │   ├── markdown_offline.dart     - Renderização de Markdown com imagens em disco
@@ -30,6 +32,8 @@ lib/view/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
+    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil e métricas
+    ├── perfil_view_model.dart        - Estado reativo de estatísticas e histórico da caderneta
     ├── explorar_view_model.dart    - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
     ├── comunidade_view_model.dart- Estado de links e mídias sociais comunitárias

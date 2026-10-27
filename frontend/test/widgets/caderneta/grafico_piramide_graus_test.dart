@@ -72,4 +72,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(modoAlternado, isTrue);
   });
+
+  testWidgets(
+      'GraficoPiramideGraus não causa overflow de renderização em larguras compactas (320px)',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: const Scaffold(
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: GraficoPiramideGraus(
+              piramide: {'5º': 2, '6a': 5, '7a': 8, '8a': 3},
+              modoVias: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Pirâmide de Graduação'), findsOneWidget);
+    expect(find.text('Vias'), findsOneWidget);
+    expect(find.text('Boulders'), findsOneWidget);
+  });
 }
+

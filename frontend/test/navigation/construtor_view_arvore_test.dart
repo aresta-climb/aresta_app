@@ -11,6 +11,8 @@ import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/gps.dart';
 import 'package:frontend/pages/mapa_global.dart';
 import 'package:frontend/pages/configuracoes.dart';
+import 'package:frontend/pages/hub_perfil_caderneta.dart';
+import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -75,6 +77,26 @@ void main() {
       );
 
       expect(widget, isA<SobreTimePage>());
+    });
+
+    testWidgets('resolve PerfilNode para HubPerfilCadernetaPage', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const PerfilNode(HomeNode()),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      expect(widget, isA<HubPerfilCadernetaPage>());
+    });
+
+    testWidgets('resolve CadernetaNode para CadernetaPage', (tester) async {
+      final widget = construirPaginaParaNo(
+        node: const CadernetaNode(PerfilNode(HomeNode())),
+        datasetRepo: mockRepo,
+        syncService: mockSync,
+      );
+
+      expect(widget, isA<CadernetaPage>());
     });
 
     testWidgets('resolve MapaGlobalNode para MapaGlobalPage', (tester) async {

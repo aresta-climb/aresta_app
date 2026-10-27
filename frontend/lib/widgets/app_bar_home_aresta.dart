@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
-import '../navigation/wrapper_navegacao_arvore.dart';
-import '../navigation/arvore/nos_globais.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../services/configuracao_recursos.dart';
@@ -61,9 +59,7 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     if (onSettings != null) {
       onSettings!();
     } else {
-      TreeNavigationWrapper.of(
-        context,
-      ).treeController.navigateTo(SettingsNode(const HomeNode()));
+      AppNav.toSettings(context);
     }
   }
 

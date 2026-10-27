@@ -101,6 +101,8 @@ class FakeEditorDeCroqui extends Fake implements EditorDeCroqui {
   final ValueNotifier<bool> isExperimentalMode = ValueNotifier<bool>(false);
   @override
   final ValueNotifier<bool> isDevModeEnabled = ValueNotifier<bool>(false);
+  @override
+  Future<bool> hasExperimentalData() async => false;
 }
 
 void main() {
@@ -323,5 +325,172 @@ void main() {
         expect(find.byType(PerfilPage), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'AppNav.back desempilha rota sobreposta do Navigator com prioridade',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (subContext) => Scaffold(
+                          body: ElevatedButton(
+                            onPressed: () => AppNav.back(subContext),
+                            child: const Text('Voltar Sub-rota'),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Abrir Rota'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Abre a sub-rota modal
+        await tester.tap(find.text('Abrir Rota'));
+        await tester.pumpAndSettle();
+        expect(find.text('Voltar Sub-rota'), findsOneWidget);
+
+        // Dispara AppNav.back e confirma que desempilhou
+        await tester.tap(find.text('Voltar Sub-rota'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Voltar Sub-rota'), findsNothing);
+        expect(find.text('Abrir Rota'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'AppNav.toPerfil empilha PerfilNode no TreeNavigationController quando presente',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+        expect(controller.currentNode, isA<HomeNode>());
+
+        AppNav.toPerfil(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
+    );
+
+    testWidgets(
+      'AppNav.toCaderneta empilha CadernetaNode no TreeNavigationController',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        AppNav.toCaderneta(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<CadernetaNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
+    );
+
+    testWidgets(
+      'AppNav.toSettings empilha SettingsNode no TreeNavigationController',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        AppNav.toSettings(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
+    );
+
+    testWidgets(
+      'Fluxo de retorno desempilha CadernetaNode para PerfilNode e PerfilNode para HomeNode sem sair do app',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        // 1. Home -> Perfil
+        AppNav.toPerfil(context);
+        await tester.pump();
+        expect(controller.currentNode, isA<PerfilNode>());
+
+        // 2. Perfil -> Caderneta
+        AppNav.toCaderneta(context);
+        await tester.pump();
+        expect(controller.currentNode, isA<CadernetaNode>());
+        expect(controller.currentNode.parent, isA<PerfilNode>());
+
+        // 3. Voltar da Caderneta para o Perfil
+        controller.goBack();
+        await tester.pump();
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+
+        // 4. Voltar do Perfil para a Home
+        controller.goBack();
+        await tester.pump();
+        expect(controller.currentNode, isA<HomeNode>());
+        expect(controller.currentNode.parent, isNull);
+      },
+    );
   });
 }
+
