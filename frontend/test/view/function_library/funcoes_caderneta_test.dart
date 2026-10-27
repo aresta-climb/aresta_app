@@ -45,6 +45,42 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Histórico de Ascensões (0)'), findsOneWidget);
+      expect(find.text('Nenhuma ascensão registrada ainda'), findsOneWidget);
+      expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
+    });
+
+    testWidgets('buildSecaoHistoricoCadenas renderiza lista de ascensões esportivas com detalhes', (tester) async {
+      Cadena? cadenaExcluida;
+
+      await tester.pumpWidget(
+        montarComTema(
+          Builder(
+            builder: (context) => buildSecaoHistoricoCadenas(
+              context,
+              historico: [cadeiaExemplo],
+              obterNomeVia: (_) => 'Fenda do Crepúsculo',
+              obterGrauVia: (_) => '7b',
+              formatarData: (_) => '24/10/2026',
+              onExcluirCadena: (c) => cadenaExcluida = c,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Histórico de Ascensões (1)'), findsOneWidget);
+      expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
+      expect(find.text('7b'), findsOneWidget);
+      expect(find.text('À Vista'), findsOneWidget);
+      expect(find.textContaining('24/10/2026 • Guiado • 1 tentativa'), findsOneWidget);
+      expect(find.text('“Aderência perfeita no entardecer”'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_excluir_cadena_cadena-123')));
+      await tester.pump();
+      expect(cadenaExcluida, equals(cadeiaExemplo));
 
   });
 }
