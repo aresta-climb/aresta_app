@@ -188,5 +188,39 @@ void main() {
       expect(resultado, 'Roberta Rocha');
     });
 
+    testWidgets('exibirModalDadosPrivacidade exibe autorIdPublico e aciona cópia', (tester) async {
+      var copiou = false;
+
+      await tester.pumpWidget(
+        wrapWithTheme(
+          Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  exibirModalDadosPrivacidade(
+                    context,
+                    autorIdPublico: 'abc123xyz78901',
+                    onCopiarId: () => copiou = true,
+                  );
+                },
+                child: const Text('Abrir'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dados e Privacidade'), findsOneWidget);
+      expect(find.textContaining('abc123xyz78901'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_copiar_id_privacidade')));
+      await tester.pumpAndSettle();
+
+      expect(copiou, isTrue);
+    });
+
   });
 }
