@@ -289,24 +289,51 @@ class AppNav {
     ctrl.navigateTo(BrowseNode(ctrl.currentNode));
   }
 
+  /// Navega para a página de Configurações do aplicativo (SettingsNode).
+  static void toSettings(BuildContext context) {
+    final ctrl = _ctrl(context);
+    if (ctrl != null) {
+      ctrl.navigateTo(SettingsNode(ctrl.currentNode));
+    }
+  }
+
   /// Navega para a página de Perfil e Caderneta Esportiva do Escalador,
   /// caso o recurso esteja habilitado nas configurações de ambiente.
   static void toPerfil(BuildContext context) {
     if (!ConfiguracaoRecursos.perfilHabilitado) {
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PerfilPage()),
-    );
+    final ctrl = _ctrl(context);
+    if (ctrl != null) {
+      ctrl.navigateTo(PerfilNode(ctrl.currentNode));
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PerfilPage()),
+      );
+    }
   }
 
-  /// Volta um nível na árvore de navegação.
+  /// Navega para a página de Caderneta Esportiva pessoal do atleta.
+  static void toCaderneta(BuildContext context) {
+    final ctrl = _ctrl(context);
+    if (ctrl != null) {
+      ctrl.navigateTo(CadernetaNode(ctrl.currentNode));
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const CadernetaPage()),
+      );
+    }
+  }
+
+  /// Volta um nível na árvore de navegação ou desempilha rotas sobrepostas do Navigator.
   static void back(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       ctrl.goBack();
-    } else {
-      Navigator.of(context).maybePop();
     }
   }
 
