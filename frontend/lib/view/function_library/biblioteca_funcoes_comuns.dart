@@ -187,31 +187,42 @@ PreferredSizeWidget buildCommonAppBar(
       ? [...actions, feedbackButton]
       : [feedbackButton];
 
-  Widget titleWidget = Text(
-    title,
-    style: TextStyle(
-      color: fgColor,
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-      letterSpacing: 1.2,
+  Widget titleWidget = FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Text(
+      title,
+      maxLines: 1,
+      style: TextStyle(
+        color: fgColor,
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+      ),
     ),
   );
 
   if (subtitle != null) {
     titleWidget = Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: fgColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            title,
+            maxLines: 1,
+            style: TextStyle(
+              color: fgColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
           ),
         ),
         Text(
           subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color:
                 context.colors.dryMoss, // A nice subtle color for the subtitle
