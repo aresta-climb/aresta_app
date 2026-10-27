@@ -23,3 +23,43 @@ class HubPerfilCadernetaPage extends StatefulWidget {
   @override
   State<HubPerfilCadernetaPage> createState() => _HubPerfilCadernetaPageState();
 }
+
+class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
+  late final HubPerfilCadernetaViewModel _viewModel;
+  bool _criouViewModelInterno = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+    } else {
+      _viewModel = HubPerfilCadernetaViewModel(
+        repositorio: RepositorioCadernetaLocal.instancia,
+      );
+      _criouViewModelInterno = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_criouViewModelInterno) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onAbrirCaderneta(BuildContext context) {
+    if (_viewModel.aoAbrirCaderneta != null) {
+      _viewModel.abrirCaderneta(context);
+    } else {
+      AppNav.toCaderneta(context);
+    }
+  }
+
+  void _onAbrirConfiguracoes(BuildContext context) {
+    if (_viewModel.aoAbrirConfiguracoes != null) {
+      _viewModel.abrirConfiguracoes(context);
+    } else {
+      AppNav.toSettings(context);
+    }
