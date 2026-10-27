@@ -196,3 +196,40 @@ Widget buildCardMetricaHub({
               ),
               child: Icon(icone, color: corIcone, size: 18),
             ),
+            const SizedBox(height: 10),
+            // Valor numérico
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                valor,
+                maxLines: 1,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: cores.chalkWhite,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Rótulo da métrica
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                rotulo,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// Constrói o menu de navegação e opções em lista modular vertical.
