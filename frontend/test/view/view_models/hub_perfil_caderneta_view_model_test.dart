@@ -123,6 +123,44 @@ void main() {
           }
           return null;
         },
+      );
+
+      await vm.copiarIdPublico();
+
+      expect(textoCopiado, vm.autorIdPublico);
+      expect(textoCopiado?.length, 14);
+
+      vm.dispose();
+    });
+
+    testWidgets('executa callbacks de navegação injetados', (tester) async {
+      var cadernetaAberta = false;
+      var configuracoesAberta = false;
+      var dadosPrivacidadeAberto = false;
+      var saidaConfirmada = false;
+      var editarPerfilAberto = false;
+
+      final vm = HubPerfilCadernetaViewModel(
+        repositorio: repositorio,
+        aoAbrirCaderneta: (_) => cadernetaAberta = true,
+        aoAbrirConfiguracoes: (_) => configuracoesAberta = true,
+        aoAbrirDadosPrivacidade: (_) => dadosPrivacidadeAberto = true,
+        aoConfirmarSaida: (_) => saidaConfirmada = true,
+        aoEditarPerfil: (_) => editarPerfilAberto = true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  vm.abrirCaderneta(context);
+                  vm.abrirConfiguracoes(context);
+                  vm.abrirDadosPrivacidade(context);
+                  vm.confirmarSaida(context);
+                  vm.editarPerfil(context);
+                },
 
   });
 }
