@@ -222,5 +222,33 @@ void main() {
       expect(copiou, isTrue);
     });
 
+    testWidgets('exibirDialogoConfirmarSaida retorna true ao confirmar saída', (tester) async {
+      bool? confirmou;
+
+      await tester.pumpWidget(
+        wrapWithTheme(
+          Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  confirmou = await exibirDialogoConfirmarSaida(context);
+                },
+                child: const Text('Abrir'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Deseja realmente sair?'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_confirmar_saida')));
+      await tester.pumpAndSettle();
+
+      expect(confirmou, isTrue);
+    });
   });
 }
