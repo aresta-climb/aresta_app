@@ -110,5 +110,45 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+
+    testWidgets('buildMenuOpcoesHub renderiza itens e aciona callbacks de navegação', (tester) async {
+      var abriuCaderneta = false;
+      var abriuConfiguracoes = false;
+      var abriuDados = false;
+      var confirmouSaida = false;
+
+      await tester.pumpWidget(
+        wrapWithTheme(
+          buildMenuOpcoesHub(
+            onAbrirCaderneta: () => abriuCaderneta = true,
+            onAbrirConfiguracoes: () => abriuConfiguracoes = true,
+            onAbrirDadosPrivacidade: () => abriuDados = true,
+            onConfirmarSaida: () => confirmouSaida = true,
+          ),
+        ),
+      );
+
+      expect(find.text('Minha caderneta'), findsOneWidget);
+      expect(find.text('Configurações'), findsOneWidget);
+      expect(find.text('Dados e privacidade'), findsOneWidget);
+      expect(find.text('Sair'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
+      await tester.pump();
+      expect(abriuCaderneta, isTrue);
+
+      await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
+      await tester.pump();
+      expect(abriuConfiguracoes, isTrue);
+
+      await tester.tap(find.byKey(const Key('item_menu_dados_privacidade')));
+      await tester.pump();
+      expect(abriuDados, isTrue);
+
+      await tester.tap(find.byKey(const Key('item_menu_sair')));
+      await tester.pump();
+      expect(confirmouSaida, isTrue);
+    });
+
   });
 }
