@@ -126,5 +126,36 @@ void main() {
       expect(copiado.parent, same(outroPai));
     });
 
+    test('PerfilNode possui metadados, caminho e cópia de ancestral adequados', () {
+      const home = HomeNode();
+      final perfil = PerfilNode(home);
+
+      expect(perfil.parent, same(home));
+      expect(perfil.rotuloAmigavel, 'Perfil');
+      expect(perfil.obterCaminhoCurto(), 'Início -> Perfil');
+      expect(perfil.toString(), 'PerfilNode');
+
+      const outroPai = HomeNode();
+      final copiado = perfil.copyWithMergedAncestor(const PerfilNode(outroPai));
+      expect(copiado, isA<PerfilNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
+    test('CadernetaNode possui metadados, caminho e cópia de ancestral adequados', () {
+      const home = HomeNode();
+      final perfil = PerfilNode(home);
+      final caderneta = CadernetaNode(perfil);
+
+      expect(caderneta.parent, same(perfil));
+      expect(caderneta.rotuloAmigavel, 'Minha Caderneta');
+      expect(caderneta.obterCaminhoCurto(), 'Início -> Perfil -> Minha Caderneta');
+      expect(caderneta.toString(), 'CadernetaNode');
+
+      final outroPai = PerfilNode(const HomeNode());
+      final copiado = caderneta.copyWithMergedAncestor(CadernetaNode(outroPai));
+      expect(copiado, isA<CadernetaNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
   });
 }
