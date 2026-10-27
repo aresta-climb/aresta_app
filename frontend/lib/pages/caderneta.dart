@@ -99,3 +99,52 @@ class _CadernetaPageState extends State<CadernetaPage> {
     );
   }
 }
+
+/// Seção com o histórico de ascensões cronológicas ou estado informativo vazio.
+class _SecaoHistoricoCadenas extends StatelessWidget {
+  final List<Cadena> historico;
+  final PerfilViewModel viewModel;
+  final ValueChanged<Cadena> onExcluirCadena;
+
+  const _SecaoHistoricoCadenas({
+    required this.historico,
+    required this.viewModel,
+    required this.onExcluirCadena,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Histórico de Ascensões (${historico.length})',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (historico.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cores.deepBasalt,
+                  ),
+                  child: Icon(
