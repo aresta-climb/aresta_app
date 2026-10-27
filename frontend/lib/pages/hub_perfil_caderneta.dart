@@ -116,3 +116,63 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
   }
 
   @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final cores = context.colors;
+
+        return Scaffold(
+          backgroundColor: cores.deepBasalt,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        key: const Key('btn_voltar_hub_perfil'),
+                        icon: Icon(Icons.arrow_back, color: cores.chalkWhite),
+                        tooltip: 'Voltar',
+                        onPressed: () => AppNav.back(context),
+                      ),
+                      buildFeedbackButton(context, color: cores.chalkWhite),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  buildCabecalhoHubPerfil(
+                    nome: _viewModel.nomeAtleta,
+                    funcao: _viewModel.funcaoAtleta,
+                    onEditarPerfil: () => _onEditarPerfil(context),
+                  ),
+                  const SizedBox(height: 24),
+                  buildBarraMetricasHub(
+                    totalCadenas: _viewModel.totalCadenas,
+                    totalTentativas: _viewModel.totalTentativas,
+                    totalPicos: _viewModel.totalPicos,
+                    totalVias: _viewModel.totalVias,
+                  ),
+                  const SizedBox(height: 28),
+                  buildMenuOpcoesHub(
+                    onAbrirCaderneta: () => _onAbrirCaderneta(context),
+                    onAbrirConfiguracoes: () => _onAbrirConfiguracoes(context),
+                    onAbrirDadosPrivacidade: () =>
+                        _onAbrirDadosPrivacidade(context),
+                    onConfirmarSaida: () => _onConfirmarSaida(context),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Sinônimo em português para [HubPerfilCadernetaPage].
+typedef PaginaHubPerfilCaderneta = HubPerfilCadernetaPage;
