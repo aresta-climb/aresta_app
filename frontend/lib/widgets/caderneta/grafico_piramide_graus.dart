@@ -32,7 +32,7 @@ class GraficoPiramideGraus extends StatelessWidget {
     final maxQuantidade = piramide.values.fold<int>(0, math.max);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: cores.caveShadow,
         borderRadius: BorderRadius.circular(20),
@@ -45,13 +45,20 @@ class GraficoPiramideGraus extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Pirâmide de Graduação',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: cores.chalkWhite,
-                      fontWeight: FontWeight.bold,
-                    ),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Pirâmide de Graduação',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: cores.chalkWhite,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 decoration: BoxDecoration(
                   color: cores.deepBasalt,
@@ -84,12 +91,26 @@ class GraficoPiramideGraus extends StatelessWidget {
           // Conteúdo: lista de barras ou estado vazio
           if (piramide.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
               child: Center(
-                child: Text(
-                  'Nenhuma ascensão registrada nesta modalidade.',
-                  style: TextStyle(color: cores.ashGrey, fontSize: 13),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      modoVias
+                          ? Icons.alt_route_rounded
+                          : Icons.terrain_rounded,
+                      color: cores.ashGrey.withValues(alpha: 0.5),
+                      size: 36,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Nenhuma ascensão registrada nesta modalidade.',
+                      style: TextStyle(color: cores.ashGrey, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             )
@@ -105,9 +126,10 @@ class GraficoPiramideGraus extends StatelessWidget {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 44,
+                        width: 40,
                         child: Text(
                           entrada.key,
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             color: cores.chalkWhite,
                             fontWeight: FontWeight.bold,
@@ -125,7 +147,7 @@ class GraficoPiramideGraus extends StatelessWidget {
                             );
 
                             return Stack(
-                              alignment: Alignment.centerLeft,
+                              alignment: Alignment.center,
                               children: [
                                 // Fundo da trilha
                                 Container(
@@ -135,15 +157,15 @@ class GraficoPiramideGraus extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
-                                // Barra de progresso do grau
+                                // Barra de progresso do grau centralizada simetricamente
                                 Container(
                                   width: larguraBarra,
                                   height: 20,
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
+                                    gradient: const LinearGradient(
                                       colors: [
-                                        cores.rustIron,
-                                        cores.rustIron.withValues(alpha: 0.85),
+                                        Color(0xFFE05A47),
+                                        Color(0xFFC04F34),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(6),
@@ -154,12 +176,12 @@ class GraficoPiramideGraus extends StatelessWidget {
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       SizedBox(
-                        width: 24,
+                        width: 40,
                         child: Text(
                           '${entrada.value}',
-                          textAlign: TextAlign.end,
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             color: cores.chalkWhite,
                             fontWeight: FontWeight.w600,
