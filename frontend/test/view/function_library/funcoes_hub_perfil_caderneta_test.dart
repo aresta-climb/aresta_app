@@ -44,5 +44,38 @@ void main() {
       expect(editou, isTrue);
     });
 
+    testWidgets('buildBarraMetricasHub renderiza 4 cartões com valores e rótulos corretos', (tester) async {
+      await tester.pumpWidget(
+        wrapWithTheme(
+          buildBarraMetricasHub(
+            totalCadenas: 3,
+            totalTentativas: 1,
+            totalPicos: 18,
+            totalVias: 64,
+          ),
+        ),
+      );
+
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('CADENAS'), findsOneWidget);
+
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('TENTATIVAS'), findsOneWidget);
+
+      expect(find.text('18'), findsOneWidget);
+      expect(find.text('PICOS'), findsOneWidget);
+
+      expect(find.text('64'), findsOneWidget);
+      expect(find.text('VIAS'), findsOneWidget);
+    });
+
+    testWidgets('buildBarraMetricasHub mantém os 4 cartões com a mesma altura e escala em telas estreitas', (tester) async {
+      tester.view.physicalSize = const Size(360, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
   });
 }
