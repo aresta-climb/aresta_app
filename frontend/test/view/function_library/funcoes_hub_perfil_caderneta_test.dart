@@ -150,5 +150,43 @@ void main() {
       expect(confirmouSaida, isTrue);
     });
 
+    testWidgets('exibirDialogoEditarPerfil permite preencher e salvar novo nome', (tester) async {
+      String? resultado;
+
+      await tester.pumpWidget(
+        wrapWithTheme(
+          Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  resultado = await exibirDialogoEditarPerfil(
+                    context,
+                    nomeAtual: 'Fernanda Rocha',
+                  );
+                },
+                child: const Text('Abrir'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Editar Perfil'), findsOneWidget);
+
+      final campoFinder = find.byKey(const Key('campo_editar_perfil_nome'));
+      expect(campoFinder, findsOneWidget);
+
+      await tester.enterText(campoFinder, 'Roberta Rocha');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_salvar_editar_perfil')));
+      await tester.pumpAndSettle();
+
+      expect(resultado, 'Roberta Rocha');
+    });
+
   });
 }
