@@ -98,6 +98,63 @@ Widget buildEstadoVazioHistorico(BuildContext context) {
         ),
       ],
     ),
+  );
+}
 
-Widget buildItemHistoricoCadena(BuildContext context, {required Cadena cadena, required String nomeVia, String? grauVia, required String dataFormatada, required VoidCallback onExcluir}) => const SizedBox();
+/// Constrói o card individual de exibição de uma ascensão esportiva no histórico.
+Widget buildItemHistoricoCadena(
+  BuildContext context, {
+  required Cadena cadena,
+  required String nomeVia,
+  String? grauVia,
+  required String dataFormatada,
+  required VoidCallback onExcluir,
+}) {
+  final cores = context.colors;
+
+  return Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: cores.caveShadow,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: cores.graniteEdge),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: cadena.isCadena
+                ? cores.fernGreen.withValues(alpha: 0.2)
+                : cores.rustIron.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            cadena.tipoAscensao.rotulo,
+            style: TextStyle(
+              color: cadena.isCadena ? cores.fernGreen : cores.rustIron,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+
+          ],
+        ),
+      ),
+      IconButton(key: Key('btn_excluir_cadena_${cadena.id}'), icon: const Icon(Icons.delete_outline), onPressed: onExcluir),
+    ],
+  ),
+);
+}
 Future<bool?> exibirDialogoConfirmarExclusao(BuildContext context) async => false;
