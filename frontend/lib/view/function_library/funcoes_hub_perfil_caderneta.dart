@@ -336,3 +336,37 @@ Widget buildItemMenuHub({
 }
 
 /// Exibe o diálogo de edição do nome esportivo do atleta.
+Future<String?> exibirDialogoEditarPerfil(
+  BuildContext context, {
+  required String nomeAtual,
+}) {
+  final controller = TextEditingController(text: nomeAtual);
+
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) {
+      final cores = dialogContext.colors;
+
+      return AlertDialog(
+        backgroundColor: cores.deepBasalt,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: cores.graniteEdge),
+        ),
+        title: Text(
+          'Editar Perfil',
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          key: const Key('campo_editar_perfil_nome'),
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: cores.chalkWhite),
+          decoration: InputDecoration(
+            labelText: 'Nome do atleta',
+            labelStyle: TextStyle(color: cores.ashGrey),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: cores.graniteEdge),
