@@ -23,3 +23,79 @@ class CadernetaPage extends StatefulWidget {
   @override
   State<CadernetaPage> createState() => _CadernetaPageState();
 }
+
+class _CadernetaPageState extends State<CadernetaPage> {
+  late final PerfilViewModel _viewModel;
+  bool _criouViewModelInterno = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+    } else {
+      _viewModel = PerfilViewModel(
+        repositorio: RepositorioCadernetaLocal.instancia,
+      );
+      _criouViewModelInterno = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_criouViewModelInterno) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _confirmarExclusaoCadena(Cadena cadena) async {
+    final confirmado = await _DialogoConfirmarExclusao.exibir(context);
+
+    if (confirmado == true) {
+      await _viewModel.excluirCadena(cadena.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final historico = _viewModel.historicoCadenas;
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: buildCommonAppBar(
+            context,
+            'MINHA CADERNETA',
+            onBack: () => AppNav.back(context),
+          ),
+          body: SafeArea(
+            bottom: true,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GraficoPiramideGraus(
+                    piramide: _viewModel.piramideAtiva,
+                    modoVias: _viewModel.modoVias,
+                    onAlternarModo: _viewModel.alternarModoModalidade,
+                  ),
+                  const SizedBox(height: 24),
+                  _SecaoHistoricoCadenas(
+                    historico: historico,
+                    viewModel: _viewModel,
+                    onExcluirCadena: _confirmarExclusaoCadena,
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
