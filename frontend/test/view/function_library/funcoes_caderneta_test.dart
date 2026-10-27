@@ -81,6 +81,60 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_excluir_cadena_cadena-123')));
       await tester.pump();
       expect(cadenaExcluida, equals(cadeiaExemplo));
+    });
 
+    testWidgets('exibirDialogoConfirmarExclusao retorna false ao clicar em Cancelar', (tester) async {
+      bool? resultado;
+
+      await tester.pumpWidget(
+        montarComTema(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                resultado = await exibirDialogoConfirmarExclusao(context);
+              },
+              child: const Text('Abrir Diálogo'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrir Diálogo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Excluir Ascensão?'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(resultado, isFalse);
+    });
+
+    testWidgets('exibirDialogoConfirmarExclusao retorna true ao clicar em Excluir', (tester) async {
+      bool? resultado;
+
+      await tester.pumpWidget(
+        montarComTema(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                resultado = await exibirDialogoConfirmarExclusao(context);
+              },
+              child: const Text('Abrir Diálogo'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrir Diálogo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Excluir Ascensão?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('btn_confirmar_exclusao')));
+      await tester.pumpAndSettle();
+
+      expect(resultado, isTrue);
+    });
   });
 }
