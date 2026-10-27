@@ -317,3 +317,51 @@ class _ItemHistoricoCadena extends StatelessWidget {
     );
   }
 }
+
+/// Diálogo de confirmação de exclusão permanente de cadena.
+class _DialogoConfirmarExclusao extends StatelessWidget {
+  const _DialogoConfirmarExclusao();
+
+  static Future<bool?> exibir(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => const _DialogoConfirmarExclusao(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: cores.graniteEdge),
+      ),
+      title: Text(
+        'Excluir Ascensão?',
+        style: TextStyle(color: cores.chalkWhite, fontWeight: FontWeight.bold),
+      ),
+      content: Text(
+        'Esta ação removerá este registro esportivo permanentemente da sua caderneta.',
+        style: TextStyle(color: cores.ashGrey, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text('Cancelar', style: TextStyle(color: cores.ashGrey)),
+        ),
+        ElevatedButton(
+          key: const Key('btn_confirmar_exclusao'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: cores.rustIron,
+            foregroundColor: cores.chalkWhite,
+          ),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Excluir'),
+        ),
+      ],
+    );
+  }
+}
