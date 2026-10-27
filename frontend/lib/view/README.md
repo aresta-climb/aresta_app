@@ -20,6 +20,7 @@ lib/view/
 │   ├── comunidade_functions.dart - Links e ações do hub comunitário
 │   ├── grupo_functions.dart      - Resumo e listagem de subsetores
 │   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
+│   ├── funcoes_caderneta.dart    - Seção de histórico, cards de ascensão e diálogo de exclusão
 │   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho, métricas em cards e menu do Hub de Perfil
 │   ├── funcoes_configuracoes.dart   - Conexão com Editor Desktop, QR Code e temas
 │   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
