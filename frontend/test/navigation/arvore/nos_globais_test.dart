@@ -157,5 +157,29 @@ void main() {
       expect(copiado.parent, same(outroPai));
     });
 
+    test('isSameNode diferencia nós globais de tipos distintos e unifica nós iguais', () {
+      const home = HomeNode();
+      final perfil1 = PerfilNode(home);
+      final perfil2 = PerfilNode(const HomeNode());
+      final caderneta = CadernetaNode(perfil1);
+      final settings = SettingsNode(home);
+
+      expect(perfil1.isSameNode(perfil2), isTrue);
+      expect(perfil1.isSameNode(caderneta), isFalse);
+      expect(caderneta.isSameNode(settings), isFalse);
+      expect(perfil1.isSameNode(home), isFalse);
+    });
+
+    test('caminho hierárquico encadeia a rota completa de Home a Caderneta', () {
+      const home = HomeNode();
+      final perfil = PerfilNode(home);
+      final caderneta = CadernetaNode(perfil);
+
+      final caminho = caderneta.caminho;
+      expect(caminho.length, 3);
+      expect(caminho[0], isA<HomeNode>());
+      expect(caminho[1], isA<PerfilNode>());
+      expect(caminho[2], isA<CadernetaNode>());
+    });
   });
 }
