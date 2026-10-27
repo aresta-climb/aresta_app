@@ -51,7 +51,53 @@ Widget buildSecaoHistoricoCadenas(
   );
 }
 
-}
-Widget buildEstadoVazioHistorico(BuildContext context) => const SizedBox();
+/// Constrói o card informativo exibido quando não há ascensões registradas.
+Widget buildEstadoVazioHistorico(BuildContext context) {
+  final cores = context.colors;
+
+  return Container(
+    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+    decoration: BoxDecoration(
+      color: cores.caveShadow,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: cores.graniteEdge),
+    ),
+    alignment: Alignment.center,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: cores.deepBasalt,
+          ),
+          child: Icon(
+            Icons.menu_book_outlined,
+            color: cores.ashGrey,
+            size: 22,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Nenhuma ascensão registrada ainda',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Suas cadenas salvas nas páginas das vias aparecerão aqui.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: cores.ashGrey, fontSize: 12, height: 1.4),
+        ),
+      ],
+    ),
+
 Widget buildItemHistoricoCadena(BuildContext context, {required Cadena cadena, required String nomeVia, String? grauVia, required String dataFormatada, required VoidCallback onExcluir}) => const SizedBox();
 Future<bool?> exibirDialogoConfirmarExclusao(BuildContext context) async => false;
