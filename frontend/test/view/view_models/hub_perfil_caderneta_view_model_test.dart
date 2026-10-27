@@ -133,7 +133,7 @@ void main() {
       vm.dispose();
     });
 
-    testWidgets('executa callbacks de navegação injetados', (tester) async {
+    test('executa callbacks de navegação injetados', () {
       var cadernetaAberta = false;
       var configuracoesAberta = false;
       var dadosPrivacidadeAberto = false;
@@ -142,34 +142,18 @@ void main() {
 
       final vm = HubPerfilCadernetaViewModel(
         repositorio: repositorio,
-        aoAbrirCaderneta: (_) => cadernetaAberta = true,
-        aoAbrirConfiguracoes: (_) => configuracoesAberta = true,
-        aoAbrirDadosPrivacidade: (_) => dadosPrivacidadeAberto = true,
-        aoConfirmarSaida: (_) => saidaConfirmada = true,
-        aoEditarPerfil: (_) => editarPerfilAberto = true,
+        aoAbrirCaderneta: () => cadernetaAberta = true,
+        aoAbrirConfiguracoes: () => configuracoesAberta = true,
+        aoAbrirDadosPrivacidade: () => dadosPrivacidadeAberto = true,
+        aoConfirmarSaida: () => saidaConfirmada = true,
+        aoEditarPerfil: () => editarPerfilAberto = true,
       );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  vm.abrirCaderneta(context);
-                  vm.abrirConfiguracoes(context);
-                  vm.abrirDadosPrivacidade(context);
-                  vm.confirmarSaida(context);
-                  vm.editarPerfil(context);
-                },
-                child: const Text('Disparar'),
-              );
-            },
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Disparar'));
-      await tester.pump();
+      vm.abrirCaderneta();
+      vm.abrirConfiguracoes();
+      vm.abrirDadosPrivacidade();
+      vm.confirmarSaida();
+      vm.editarPerfil();
 
       expect(cadernetaAberta, isTrue);
       expect(configuracoesAberta, isTrue);
