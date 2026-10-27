@@ -123,3 +123,40 @@ Widget buildBarraMetricasHub({
             Expanded(
               child: buildCardMetricaHub(
                 key: const Key('card_metrica_tentativas'),
+                icone: Icons.refresh_rounded,
+                corIcone: corTentativas,
+                corBorda: corTentativas.withValues(alpha: 0.28),
+                valor: '$totalTentativas',
+                rotulo: 'TENTATIVAS',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: buildCardMetricaHub(
+                key: const Key('card_metrica_picos'),
+                icone: Icons.terrain_rounded,
+                corIcone: corPicos,
+                corBorda: corPicos.withValues(alpha: 0.22),
+                valor: '$totalPicos',
+                rotulo: 'PICOS',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: buildCardMetricaHub(
+                key: const Key('card_metrica_vias'),
+                icone: Icons.alt_route_rounded,
+                corIcone: corVias,
+                corBorda: corVias.withValues(alpha: 0.28),
+                valor: '$totalVias',
+                rotulo: 'VIAS',
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// Constrói um cartão individual de métrica rápida esportiva com cantos arredondados.
