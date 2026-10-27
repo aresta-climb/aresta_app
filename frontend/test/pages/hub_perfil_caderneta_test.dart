@@ -141,5 +141,57 @@ void main() {
       expect(repositorio.obterPerfil().autorNomePublico, 'Fernanda Rocha');
     });
 
+    testWidgets('ao tocar em Dados e privacidade, abre modal exibindo o NanoID 14c e permite copiar', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall methodCall) async {
+          return null;
+        },
+      );
+
+      await tester.pumpWidget(criarHubWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('item_menu_dados_privacidade')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dados e Privacidade'), findsOneWidget);
+      expect(find.text(repositorio.obterPerfil().autorIdPublico), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_copiar_id_privacidade')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ID público copiado!'), findsOneWidget);
+    });
+
+    testWidgets('ao tocar em Sair, exibe diálogo de confirmação', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(criarHubWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('item_menu_sair')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Deseja realmente sair?'), findsOneWidget);
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Deseja realmente sair?'), findsNothing);
+    });
+
   });
 }
