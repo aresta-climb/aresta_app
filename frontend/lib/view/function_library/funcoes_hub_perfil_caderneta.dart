@@ -160,3 +160,39 @@ Widget buildBarraMetricasHub({
 }
 
 /// Constrói um cartão individual de métrica rápida esportiva com cantos arredondados.
+Widget buildCardMetricaHub({
+  Key? key,
+  required IconData icone,
+  required Color corIcone,
+  required String valor,
+  required String rotulo,
+  Color? corBorda,
+}) {
+  return Builder(
+    builder: (context) {
+      final cores = context.colors;
+      final bordaEfetiva = corBorda ?? corIcone.withValues(alpha: 0.25);
+
+      return Container(
+        key: key,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 3),
+        decoration: BoxDecoration(
+          color: cores.caveShadow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: bordaEfetiva, width: 1.2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Selo circular com ícone temático
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: corIcone.withValues(alpha: 0.18),
+              ),
+              child: Icon(icone, color: corIcone, size: 18),
+            ),
