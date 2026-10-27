@@ -63,3 +63,56 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
     } else {
       AppNav.toSettings(context);
     }
+  }
+
+  Future<void> _onAbrirDadosPrivacidade(BuildContext context) async {
+    if (_viewModel.aoAbrirDadosPrivacidade != null) {
+      _viewModel.abrirDadosPrivacidade(context);
+    } else {
+      var copiou = false;
+      await exibirModalDadosPrivacidade(
+        context,
+        autorIdPublico: _viewModel.autorIdPublico,
+        onCopiarId: () async {
+          await _viewModel.copiarIdPublico();
+          copiou = true;
+        },
+      );
+      if (copiou && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ID público copiado!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onConfirmarSaida(BuildContext context) async {
+    if (_viewModel.aoConfirmarSaida != null) {
+      _viewModel.confirmarSaida(context);
+    } else {
+      final confirmou = await exibirDialogoConfirmarSaida(context);
+      if (confirmou == true && context.mounted) {
+        AppNav.back(context);
+      }
+    }
+  }
+
+  Future<void> _onEditarPerfil(BuildContext context) async {
+    if (_viewModel.aoEditarPerfil != null) {
+      _viewModel.editarPerfil(context);
+    } else {
+      final novoNome = await exibirDialogoEditarPerfil(
+        context,
+        nomeAtual: _viewModel.nomeAtleta,
+      );
+
+      if (novoNome != null && novoNome.isNotEmpty) {
+        await _viewModel.atualizarNome(novoNome);
+      }
+    }
+  }
+
+  @override
