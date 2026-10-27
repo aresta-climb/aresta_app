@@ -93,5 +93,36 @@ void main() {
       vm.dispose();
     });
 
+    test('atualiza o nome do atleta e notifica os ouvintes', () async {
+      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+
+      var notificou = false;
+      vm.addListener(() => notificou = true);
+
+      await vm.atualizarNome('Fernanda Rocha');
+
+      expect(notificou, isTrue);
+      expect(vm.nomeAtleta, 'Fernanda Rocha');
+      expect(repositorio.obterPerfil().autorNomePublico, 'Fernanda Rocha');
+
+      vm.dispose();
+    });
+
+    test('copia o autorIdPublico para a área de transferência', () async {
+      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+
+      String? textoCopiado;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'Clipboard.setData') {
+            final args = methodCall.arguments as Map<dynamic, dynamic>?;
+            textoCopiado = args?['text'] as String?;
+            return null;
+          }
+          return null;
+        },
+
   });
 }
