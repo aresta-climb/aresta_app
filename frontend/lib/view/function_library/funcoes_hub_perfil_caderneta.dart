@@ -400,3 +400,49 @@ Future<String?> exibirDialogoEditarPerfil(
 }
 
 /// Exibe modal com detalhes de dados, identificador NanoID 14c e privacidade.
+Future<void> exibirModalDadosPrivacidade(
+  BuildContext context, {
+  required String autorIdPublico,
+  required VoidCallback onCopiarId,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: context.colors.deepBasalt,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (modalContext) {
+      final cores = modalContext.colors;
+
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Dados e Privacidade',
+                style: Theme.of(modalContext).textTheme.titleLarge?.copyWith(
+                  color: cores.chalkWhite,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'O Aresta Climb respeita a soberania e a privacidade dos seus dados. '
+                'Sua caderneta é estritamente privada. Contribuições públicas de graduação '
+                'e alertas utilizam exclusivamente seu ID de Autor público, sem expor dados pessoais.',
+                style: TextStyle(color: cores.ashGrey, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cores.caveShadow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cores.graniteEdge),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
