@@ -91,3 +91,35 @@ Widget buildCabecalhoHubPerfil({
 }
 
 /// Constrói a barra horizontal contendo os 4 cartões de métricas rápidas.
+Widget buildBarraMetricasHub({
+  required int totalCadenas,
+  required int totalTentativas,
+  required int totalPicos,
+  required int totalVias,
+}) {
+  return Builder(
+    builder: (context) {
+      // Cores vibrantes em harmonia com o design oficial
+      const corCadenas = Color(0xFF22C55E); // Verde esmeralda vivo
+      const corTentativas = Color(0xFFE05A47); // Coral/ferrugem vivo
+      const corPicos = Color(0xFF94A3B8); // Slate/cinza límpido
+      const corVias = Color(0xFFE05A47); // Coral/laranja vivo
+
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: buildCardMetricaHub(
+                key: const Key('card_metrica_cadenas'),
+                icone: Icons.check_rounded,
+                corIcone: corCadenas,
+                corBorda: corCadenas.withValues(alpha: 0.28),
+                valor: '$totalCadenas',
+                rotulo: 'CADENAS',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: buildCardMetricaHub(
+                key: const Key('card_metrica_tentativas'),
