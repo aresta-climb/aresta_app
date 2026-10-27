@@ -104,5 +104,50 @@ void main() {
       expect(repositorio.cadenasNotifier.value.length, 1);
     });
 
+    testWidgets('CadernetaPage instancia e descarta viewModel interno quando não injetado', (tester) async {
+      RepositorioCadernetaLocal.instancia = repositorio;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(
+            extensions: const [AppColors.dark],
+          ),
+          home: const CadernetaPage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('MINHA CADERNETA'), findsOneWidget);
+
+      // Desmonta a página para exercitar o dispose
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('não causa overflow em tela compacta (360x800) com cadeias e dados completos', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final c1 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 20),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+        tentativas: 1,
+        notasPrivadas: 'Super suave no crux de reglete',
+      );
+      await repositorio.salvarCadena(c1);
+
+      await tester.pumpWidget(criarCadernetaWidget());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('MINHA CADERNETA'), findsOneWidget);
+      expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
+    });
+
   });
 }
