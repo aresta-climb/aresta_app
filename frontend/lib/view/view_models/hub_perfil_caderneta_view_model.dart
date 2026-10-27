@@ -43,5 +43,44 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
 
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
+    required this.repositorio,
+    this.funcaoAtleta = 'Escalador',
+    int Function()? obterTotalPicos,
+    int Function()? obterTotalVias,
+    this.aoAbrirCaderneta,
+    this.aoAbrirConfiguracoes,
+    this.aoAbrirDadosPrivacidade,
+    this.aoConfirmarSaida,
+    this.aoEditarPerfil,
+  })  : _obterTotalPicos = obterTotalPicos,
+        _obterTotalVias = obterTotalVias {
+    repositorio.cadenasNotifier.addListener(_notificarMudanca);
+    repositorio.perfilNotifier.addListener(_notificarMudanca);
+  }
+
+  void _notificarMudanca() {
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    repositorio.cadenasNotifier.removeListener(_notificarMudanca);
+    repositorio.perfilNotifier.removeListener(_notificarMudanca);
+    super.dispose();
+  }
+
+  /// Instância atual do perfil do atleta.
+  PerfilEscalador get perfil => repositorio.obterPerfil();
+
+  /// Nome de exibição esportivo do atleta.
+  String get nomeAtleta => perfil.autorNomePublico;
+
+  /// Identificador estável permanente NanoID 14c do atleta.
+  String get autorIdPublico => perfil.autorIdPublico;
+
+  /// Lista imutável de todas as ascensões registradas.
+  List<Cadena> get cadenas => repositorio.cadenasNotifier.value;
+
+  /// Total de cadenas completadas com sucesso (À Vista, Flash ou Trabalhado).
 
 }
