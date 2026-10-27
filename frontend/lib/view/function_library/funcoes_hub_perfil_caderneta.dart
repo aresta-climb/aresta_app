@@ -370,3 +370,33 @@ Future<String?> exibirDialogoEditarPerfil(
             labelStyle: TextStyle(color: cores.ashGrey),
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: cores.graniteEdge),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFE05A47)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            key: const Key('btn_salvar_editar_perfil'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE05A47),
+              foregroundColor: cores.chalkWhite,
+            ),
+            onPressed: () {
+              final texto = controller.text.trim();
+              Navigator.of(dialogContext).pop(texto.isNotEmpty ? texto : null);
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// Exibe modal com detalhes de dados, identificador NanoID 14c e privacidade.
