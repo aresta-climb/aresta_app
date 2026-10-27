@@ -283,3 +283,37 @@ class _ItemHistoricoCadena extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$dataFormatada • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} ${cadena.tentativas == 1 ? 'tentativa' : 'tentativas'}',
+                  style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (cadena.notasPrivadas.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '“${cadena.notasPrivadas}”',
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            key: Key('btn_excluir_cadena_${cadena.id}'),
+            icon: Icon(Icons.delete_outline, size: 18, color: cores.ashGrey),
+            onPressed: onExcluir,
+          ),
+        ],
+      ),
+    );
+  }
+}
