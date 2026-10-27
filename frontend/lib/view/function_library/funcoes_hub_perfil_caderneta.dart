@@ -306,3 +306,33 @@ Widget buildItemMenuHub({
                 width: 1.2,
               ),
             ),
+            child: Row(
+              children: [
+                Icon(icone, color: corDestaque, size: 22),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    titulo,
+                    style: TextStyle(
+                      color: corDestaque,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (!isPerigo)
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Exibe o diálogo de edição do nome esportivo do atleta.
