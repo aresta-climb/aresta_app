@@ -34,5 +34,37 @@ void main() {
       expect(copiado.parent, same(outroPai));
     });
 
+    test('MapaGlobalNode gerencia picoIds, crags legados e mesclagem de ancestrais', () {
+      const home = HomeNode();
+      const mapaVazio = MapaGlobalNode(parent: home);
+
+      expect(mapaVazio.picoIds, isEmpty);
+      expect(mapaVazio.crags, isEmpty);
+      expect(mapaVazio.rotuloAmigavel, 'Mapa Global');
+      expect(mapaVazio.obterCaminhoCurto(), 'Início -> Mapa Global');
+      expect(mapaVazio.toString(), 'MapaGlobalNode(0 picos)');
+
+      const mapaComPicos = MapaGlobalNode(
+        picoIds: ['bau', 'cipo'],
+        parent: home,
+      );
+      expect(mapaComPicos.toString(), 'MapaGlobalNode(2 picos)');
+
+      // Mescla com ancestral que contém IDs
+      final mesclado = mapaVazio.copyWithMergedAncestor(mapaComPicos);
+      expect(mesclado, isA<MapaGlobalNode>());
+      final mapaMesclado = mesclado as MapaGlobalNode;
+      expect(mapaMesclado.picoIds, equals(['bau', 'cipo']));
+
+      // Mescla com lista de crags legada
+      const mapaComCrags = MapaGlobalNode(
+        crags: ['crag1', 'crag2', 'crag3'],
+        parent: home,
+      );
+      final mescladoCrags = mapaVazio.copyWithMergedAncestor(mapaComCrags);
+      expect((mescladoCrags as MapaGlobalNode).crags.length, 3);
+      expect(mescladoCrags.toString(), 'MapaGlobalNode(3 picos)');
+    });
+
   });
 }
