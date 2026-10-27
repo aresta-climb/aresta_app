@@ -193,5 +193,50 @@ void main() {
       expect(find.text('Deseja realmente sair?'), findsNothing);
     });
 
+    testWidgets('ao tocar em Sair e confirmar, fecha a tela se houver rota anterior', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => HubPerfilCadernetaPage(viewModel: vm),
+                    ),
+                  );
+                },
+                child: const Text('Abrir Hub'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir Hub'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubPerfilCadernetaPage), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('item_menu_sair')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_confirmar_saida')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubPerfilCadernetaPage), findsNothing);
+      expect(find.text('Abrir Hub'), findsOneWidget);
+    });
+
   });
 }
