@@ -238,5 +238,57 @@ void main() {
       expect(find.text('Abrir Hub'), findsOneWidget);
     });
 
+    testWidgets('HubPerfilCadernetaPage instancia e descarta viewModel interno quando não injetado', (tester) async {
+      RepositorioCadernetaLocal.instancia = repositorio;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(
+            extensions: const [AppColors.dark],
+          ),
+          home: const HubPerfilCadernetaPage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Editar perfil'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('ao tocar no botão voltar do topo, desempilha a HubPerfilCadernetaPage', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => HubPerfilCadernetaPage(
+                        viewModel: HubPerfilCadernetaViewModel(repositorio: repositorio),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Abrir Hub'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Abrir Hub'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubPerfilCadernetaPage), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_voltar_hub_perfil')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubPerfilCadernetaPage), findsNothing);
+      expect(find.text('Abrir Hub'), findsOneWidget);
+    });
   });
 }
