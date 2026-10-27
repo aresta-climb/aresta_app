@@ -161,6 +161,23 @@ void main() {
                   vm.confirmarSaida(context);
                   vm.editarPerfil(context);
                 },
+                child: const Text('Disparar'),
+              );
+            },
+          ),
+        ),
+      );
 
+      await tester.tap(find.text('Disparar'));
+      await tester.pump();
+
+      expect(cadernetaAberta, isTrue);
+      expect(configuracoesAberta, isTrue);
+      expect(dadosPrivacidadeAberto, isTrue);
+      expect(saidaConfirmada, isTrue);
+      expect(editarPerfilAberto, isTrue);
+
+      vm.dispose();
+    });
   });
 }
