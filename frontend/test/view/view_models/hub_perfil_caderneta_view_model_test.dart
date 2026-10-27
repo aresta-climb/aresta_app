@@ -38,5 +38,60 @@ void main() {
       vm.dispose();
     });
 
+    test('permite customizar a função do atleta e os resolvedores de picos e vias', () {
+      final vm = HubPerfilCadernetaViewModel(
+        repositorio: repositorio,
+        funcaoAtleta: 'Escaladora',
+        obterTotalPicos: () => 18,
+        obterTotalVias: () => 64,
+      );
+
+      expect(vm.funcaoAtleta, 'Escaladora');
+      expect(vm.totalPicos, 18);
+      expect(vm.totalVias, 64);
+
+      vm.dispose();
+    });
+
+    test('calcula métricas reativamente ao salvar e atualizar cadenas no repositório', () async {
+      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+
+      var notificou = false;
+      vm.addListener(() => notificou = true);
+
+      // Adiciona 1 cadena flash e 1 cadena trabalhada na via-1
+      final c1 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 20),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+      );
+      final c2 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 21),
+        tipoAscensao: TipoAscensao.trabalhado,
+        tipoEscalada: TipoEscalada.guiado,
+      );
+      // Adiciona 1 tentativa na via-2
+      final c3 = Cadena.criar(
+        escaladaUid: 'via-2',
+        dataAscensao: DateTime(2026, 9, 22),
+        tipoAscensao: TipoAscensao.tentativa,
+        tipoEscalada: TipoEscalada.boulder,
+      );
+
+      await repositorio.salvarCadena(c1);
+      await repositorio.salvarCadena(c2);
+      await repositorio.salvarCadena(c3);
+
+      expect(notificou, isTrue);
+      expect(vm.totalCadenas, 2);
+      expect(vm.totalTentativas, 1);
+      // Vias únicas registradas (via-1 e via-2)
+      expect(vm.totalVias, 2);
+
+      vm.dispose();
+    });
+
   });
 }
