@@ -195,5 +195,59 @@ Widget buildItemHistoricoCadena(
                   '“${cadena.notasPrivadas}”',
                   style: TextStyle(
                     color: cores.ashGrey,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        IconButton(
+          key: Key('btn_excluir_cadena_${cadena.id}'),
+          icon: Icon(Icons.delete_outline, size: 18, color: cores.ashGrey),
+          onPressed: onExcluir,
+        ),
+      ],
+    ),
+  );
+}
 
-Future<bool?> exibirDialogoConfirmarExclusao(BuildContext context) async => false;
+/// Exibe o diálogo de confirmação para exclusão permanente de uma ascensão esportiva.
+Future<bool?> exibirDialogoConfirmarExclusao(BuildContext context) {
+  final cores = context.colors;
+
+  return showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      backgroundColor: cores.deepBasalt,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: cores.graniteEdge),
+      ),
+      title: Text(
+        'Excluir Ascensão?',
+        style: TextStyle(color: cores.chalkWhite, fontWeight: FontWeight.bold),
+      ),
+      content: Text(
+        'Esta ação removerá este registro esportivo permanentemente da sua caderneta.',
+        style: TextStyle(color: cores.ashGrey, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text('Cancelar', style: TextStyle(color: cores.ashGrey)),
+        ),
+        ElevatedButton(
+          key: const Key('btn_confirmar_exclusao'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: cores.rustIron,
+            foregroundColor: cores.chalkWhite,
+          ),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Excluir'),
+        ),
+      ],
+    ),
+  );
+}
