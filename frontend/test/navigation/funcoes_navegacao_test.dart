@@ -101,6 +101,8 @@ class FakeEditorDeCroqui extends Fake implements EditorDeCroqui {
   final ValueNotifier<bool> isExperimentalMode = ValueNotifier<bool>(false);
   @override
   final ValueNotifier<bool> isDevModeEnabled = ValueNotifier<bool>(false);
+  @override
+  Future<bool> hasExperimentalData() async => false;
 }
 
 void main() {
@@ -323,5 +325,47 @@ void main() {
         expect(find.byType(PerfilPage), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'AppNav.back desempilha rota sobreposta do Navigator com prioridade',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (subContext) => Scaffold(
+                          body: ElevatedButton(
+                            onPressed: () => AppNav.back(subContext),
+                            child: const Text('Voltar Sub-rota'),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Abrir Rota'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Abre a sub-rota modal
+        await tester.tap(find.text('Abrir Rota'));
+        await tester.pumpAndSettle();
+        expect(find.text('Voltar Sub-rota'), findsOneWidget);
+
+        // Dispara AppNav.back e confirma que desempilhou
+        await tester.tap(find.text('Voltar Sub-rota'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Voltar Sub-rota'), findsNothing);
+        expect(find.text('Abrir Rota'), findsOneWidget);
+      },
+
   });
 }
