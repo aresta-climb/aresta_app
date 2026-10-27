@@ -57,5 +57,52 @@ void main() {
       );
     });
 
+    testWidgets('renderiza histórico com cadenas e permite cancelar ou confirmar exclusão', (tester) async {
+      final c1 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 20),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+        notasPrivadas: 'Super suave',
+      );
+      final c2 = Cadena.criar(
+        escaladaUid: 'via-2',
+        dataAscensao: DateTime(2026, 9, 15),
+        tipoAscensao: TipoAscensao.tentativa,
+        tipoEscalada: TipoEscalada.boulder,
+      );
+
+      await repositorio.salvarCadena(c1);
+      await repositorio.salvarCadena(c2);
+
+      await tester.pumpWidget(criarCadernetaWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
+      expect(find.text('Flash'), findsOneWidget);
+      expect(find.text('Tentativa'), findsOneWidget);
+      expect(find.text('“Super suave”'), findsOneWidget);
+
+      final btnExcluir = find.byKey(Key('btn_excluir_cadena_${c1.id}'));
+
+      // Toca para excluir e cancela
+      await tester.tap(btnExcluir);
+      await tester.pumpAndSettle();
+      expect(find.text('Excluir Ascensão?'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Excluir Ascensão?'), findsNothing);
+      expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
+
+      // Toca novamente e confirma
+      await tester.tap(btnExcluir);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_confirmar_exclusao')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fenda do Crepúsculo'), findsNothing);
+      expect(repositorio.cadenasNotifier.value.length, 1);
+    });
+
   });
 }
