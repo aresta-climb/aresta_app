@@ -233,3 +233,45 @@ Widget buildCardMetricaHub({
 }
 
 /// Constrói o menu de navegação e opções em lista modular vertical.
+Widget buildMenuOpcoesHub({
+  required VoidCallback onAbrirCaderneta,
+  required VoidCallback onAbrirConfiguracoes,
+  required VoidCallback onAbrirDadosPrivacidade,
+  required VoidCallback onConfirmarSaida,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      buildItemMenuHub(
+        key: const Key('item_menu_minha_caderneta'),
+        icone: Icons.menu_book_outlined,
+        titulo: 'Minha caderneta',
+        onTap: onAbrirCaderneta,
+      ),
+      const SizedBox(height: 10),
+      buildItemMenuHub(
+        key: const Key('item_menu_configuracoes'),
+        icone: Icons.settings_outlined,
+        titulo: 'Configurações',
+        onTap: onAbrirConfiguracoes,
+      ),
+      const SizedBox(height: 10),
+      buildItemMenuHub(
+        key: const Key('item_menu_dados_privacidade'),
+        icone: Icons.lock_outline_rounded,
+        titulo: 'Dados e privacidade',
+        onTap: onAbrirDadosPrivacidade,
+      ),
+      const SizedBox(height: 10),
+      buildItemMenuHub(
+        key: const Key('item_menu_sair'),
+        icone: Icons.logout_rounded,
+        titulo: 'Sair',
+        onTap: onConfirmarSaida,
+        isPerigo: true,
+      ),
+    ],
+  );
+}
+
+/// Constrói um item de menu individual em estilo de cartão arredondado com chevron.
