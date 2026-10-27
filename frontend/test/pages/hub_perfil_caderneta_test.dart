@@ -44,5 +44,57 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      final c1 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 20),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+      );
+      final c2 = Cadena.criar(
+        escaladaUid: 'via-2',
+        dataAscensao: DateTime(2026, 9, 21),
+        tipoAscensao: TipoAscensao.tentativa,
+        tipoEscalada: TipoEscalada.boulder,
+      );
+      await repositorio.salvarCadena(c1);
+      await repositorio.salvarCadena(c2);
+
+      await tester.pumpWidget(criarHubWidget());
+      await tester.pumpAndSettle();
+
+      // Cabeçalho
+      expect(find.text('Escalador Aresta'), findsOneWidget);
+      expect(find.text('Escalador'), findsOneWidget);
+      expect(find.text('Editar perfil'), findsOneWidget);
+
+      // 4 métricas específicas
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('card_metrica_cadenas')),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('CADENAS'), findsOneWidget);
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('card_metrica_tentativas')),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('TENTATIVAS'), findsOneWidget);
+
+      expect(find.text('PICOS'), findsOneWidget);
+      expect(find.text('VIAS'), findsOneWidget);
+
+      // Itens de menu
+      expect(find.text('Minha caderneta'), findsOneWidget);
+      expect(find.text('Configurações'), findsOneWidget);
+      expect(find.text('Dados e privacidade'), findsOneWidget);
+      expect(find.text('Sair'), findsOneWidget);
+    });
+
   });
 }
