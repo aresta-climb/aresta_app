@@ -54,6 +54,7 @@ void main() {
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    AppLogger.resetForTesting();
     SharedPreferences.setMockInitialValues({});
     RegistroPrimeiraVisita.resetForTesting();
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
@@ -67,6 +68,7 @@ void main() {
   });
 
   tearDown(() {
+    AppLogger.resetForTesting();
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
