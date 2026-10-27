@@ -249,7 +249,10 @@ Como o Discord Desktop suprime notificações push para o celular sempre que há
    - `DISCORD_WEBHOOK_BUGS_URL`
 
 > [!TIP]
-> O `aresta-alertas-worker` publica nos canais do Discord de forma silenciosa (`allowed_mentions: { parse: [] }`, sem `@everyone`) com `avatar_url` específico para emergências ou bugs. Além disso, toda emergência do Sentry ou falha de `workflow_run` abre automaticamente uma GitHub Issue com a label `emergencia` usando o GitHub App `Aresta Climb Bot` (ignorando o evento `issues.opened` subsequente com label `emergencia` para não duplicar no canal de bugs), e o fechamento/reabertura de issues é sincronizado bidirecionalmente entre Sentry e GitHub.
+> O `aresta-alertas-worker` publica nos canais do Discord de forma silenciosa (`allowed_mentions: { parse: [] }`, sem `@everyone`) com `avatar_url` específico para emergências ou bugs:
+> - **🚨 Emergências (`#🚨-emergencias` + `NTFY_TOPICO_EMERGENCIAS` prioridade 5 + Issue `emergencia`)**: Crashes fatais (`level: fatal`) e Spikes (`metric_alert`) do Sentry, falhas no `deploy.yml` (`Deploy para Cloudflare R2 e D1`) do `aresta_db` e falhas inesperadas de infraestrutura ou script (`exit code >= 2` / step `Erro Interno no Script de Validação`) nos workflows `pr-*.yml` do `aresta_db` (recusas legítimas de validação de PR com `exit code 1` são ignoradas).
+> - **🛠️ Bugs & Feedbacks (`#🛠️-bugs-e-feedbacks` + `NTFY_TOPICO_BUGS` prioridade 3 + Issue `bug`)**: Erros não-fatais inéditos do Sentry (com fallback automático na `FILA_RETENTATIVAS_ALERTAS` do Cloudflare KV caso o GitHub esteja em *outage*), falhas gerais de workflows do GitHub Actions em `main`/`master`/`v*`, falhas de deploy externo na Cloudflare Pages/Workers (`check_run`) e Vercel (`status`), além de novas Issues e Pull Requests da comunidade.
+> - O fechamento e a reabertura de issues são sincronizados bidirecionalmente entre Sentry e GitHub.
 
 ### 4.3 Configurar o Fallback de E-mail no Resend (`contato@arestaclimb.com`)
 

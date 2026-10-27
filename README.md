@@ -77,6 +77,14 @@ Os dados de escalada, croquis, betas, imagens e traçados de vias distribuídos 
 
 ---
 
+## 💜 Apoio Open Source — Sentry
+
+[![Monitorado com Sentry](https://img.shields.io/badge/Monitorado_com-Sentry-362D59?style=for-the-badge&logo=sentry&logoColor=white)](https://sentry.io/?utm_source=github&utm_medium=referral)
+
+O ecossistema **Aresta Climb** conta com o apoio oficial do **[Sentry](https://sentry.io/?utm_source=github&utm_medium=referral)** através do seu programa de incentivo a projetos Open Source (**Sponsored Business Plan**), garantindo monitoramento de erros, rastreamento de releases e estabilidade em tempo real no aplicativo móvel, no Editor Desktop e nos serviços de borda.
+
+---
+
 ## Contribuindo
 
 Contribuições da comunidade são muito bem-vindas!
