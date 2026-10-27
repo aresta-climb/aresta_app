@@ -116,5 +116,32 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   }
 
   /// Copia o [autorIdPublico] do atleta para a área de transferência do dispositivo.
+  Future<void> copiarIdPublico() async {
+    await Clipboard.setData(ClipboardData(text: autorIdPublico));
+  }
 
+  /// Aciona a abertura da tela detalhada de Caderneta.
+  void abrirCaderneta(BuildContext context) {
+    aoAbrirCaderneta?.call(context);
+  }
+
+  /// Aciona a abertura da tela de configurações.
+  void abrirConfiguracoes(BuildContext context) {
+    aoAbrirConfiguracoes?.call(context);
+  }
+
+  /// Aciona a visualização dos dados e privacidade.
+  void abrirDadosPrivacidade(BuildContext context) {
+    aoAbrirDadosPrivacidade?.call(context);
+  }
+
+  /// Aciona o fluxo de saída / logout.
+  void confirmarSaida(BuildContext context) {
+    aoConfirmarSaida?.call(context);
+  }
+
+  /// Aciona a edição dos dados do perfil.
+  void editarPerfil(BuildContext context) {
+    aoEditarPerfil?.call(context);
+  }
 }
