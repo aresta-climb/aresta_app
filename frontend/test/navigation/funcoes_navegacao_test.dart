@@ -420,6 +420,31 @@ void main() {
         expect(controller.currentNode, isA<CadernetaNode>());
         expect(controller.currentNode.parent, isA<HomeNode>());
       },
+    );
+
+    testWidgets(
+      'AppNav.toSettings empilha SettingsNode no TreeNavigationController',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        final controller = TreeNavigationWrapper.currentTreeController!;
+
+        AppNav.toSettings(context);
+        await tester.pump();
+
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+      },
 
   });
 }
