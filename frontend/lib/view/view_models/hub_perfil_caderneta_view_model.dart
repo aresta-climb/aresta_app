@@ -82,5 +82,39 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   List<Cadena> get cadenas => repositorio.cadenasNotifier.value;
 
   /// Total de cadenas completadas com sucesso (À Vista, Flash ou Trabalhado).
+  int get totalCadenas => cadenas.where((c) => c.isCadena).length;
+
+  /// Total de tentativas / pegas registradas sem cadeia.
+  int get totalTentativas =>
+      cadenas.where((c) => c.tipoAscensao == TipoAscensao.tentativa).length;
+
+  /// Total de picos distintos com registros ou valor provido pelo resolver.
+  int get totalPicos {
+    if (_obterTotalPicos != null) {
+      return _obterTotalPicos();
+    }
+    // Como padrão, contabiliza a quantidade de vias distintas como aproximação
+    // quando não há resolução direta de croqui/pico injetada.
+    return totalVias > 0 ? 1 : 0;
+  }
+
+  /// Total de vias distintas com registros ou valor provido pelo resolver.
+  int get totalVias {
+    if (_obterTotalVias != null) {
+      return _obterTotalVias();
+    }
+    return cadenas.map((c) => c.escaladaUid).toSet().length;
+  }
+
+  /// Atualiza o nome esportivo do atleta no perfil persistido.
+  Future<void> atualizarNome(String novoNome) async {
+    final nomeTratado = novoNome.trim();
+    if (nomeTratado.isEmpty) return;
+
+    final perfilAtualizado = perfil.copyWith(autorNomePublico: nomeTratado);
+    await repositorio.salvarPerfil(perfilAtualizado);
+  }
+
+  /// Copia o [autorIdPublico] do atleta para a área de transferência do dispositivo.
 
 }
