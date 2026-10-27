@@ -149,5 +149,41 @@ void main() {
       expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
     });
 
+    testWidgets('botão de voltar desempilha a CadernetaPage com sucesso', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CadernetaPage(
+                      viewModel: PerfilViewModel(repositorio: repositorio),
+                    ),
+                  ),
+                ),
+                child: const Text('Abrir Caderneta'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrir Caderneta'));
+      await tester.pumpAndSettle();
+      expect(find.text('MINHA CADERNETA'), findsOneWidget);
+
+      // Toca na seta de voltar
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      // Confirma que CadernetaPage foi desempilhada
+      expect(find.text('MINHA CADERNETA'), findsNothing);
+      expect(find.text('Abrir Caderneta'), findsOneWidget);
+    });
   });
 }
+
+
