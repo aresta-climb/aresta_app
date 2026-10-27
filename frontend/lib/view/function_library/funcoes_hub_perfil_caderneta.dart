@@ -275,3 +275,34 @@ Widget buildMenuOpcoesHub({
 }
 
 /// Constrói um item de menu individual em estilo de cartão arredondado com chevron.
+Widget buildItemMenuHub({
+  Key? key,
+  required IconData icone,
+  required String titulo,
+  required VoidCallback onTap,
+  bool isPerigo = false,
+}) {
+  return Builder(
+    builder: (context) {
+      final cores = context.colors;
+      const corPerigoVibrante = Color(0xFFEF4444);
+      final corDestaque = isPerigo ? corPerigoVibrante : cores.chalkWhite;
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: key,
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isPerigo
+                    ? corPerigoVibrante.withValues(alpha: 0.25)
+                    : cores.graniteEdge,
+                width: 1.2,
+              ),
+            ),
