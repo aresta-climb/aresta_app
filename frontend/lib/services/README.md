@@ -68,9 +68,9 @@ Para evitar exaustão de requisições e consumo excessivo de cotas em túneis d
 
 ### `DatasetRepository`
 - Singleton acessível via `DatasetRepository.instance`
-- Notificadores reativos: `activeDataset`, `syncStatus`, `downloadingCrags`, `homeResetTrigger`
-- Converte Protobuf em `Map<String, dynamic>` para consumo pela UI
-- Gerencia `recent_picos.yaml` para ordenação por prioridade
+- Notificadores reativos: `activeDataset`, `indiceData`, `notificadorCroquiAtualizado`, `homeResetTrigger`
+- Converte os resumos do `Indice` Protobuf em instâncias fortemente tipadas de `ResumoPico` via `ExtensaoMetadadosIndice.paraResumoPico` e vincula entidades `Croqui`/`Pico` via `ExtratorMetadadosCroqui` (sem pré-carregar imagens de capa em disco durante a carga de metadados, delegando a resolução de mídias sob demanda ao `ProvedorImagemAresta`)
+- **Reordenação em Memória e Reaproveitamento de Instâncias**: Em `updatePriorityAfterNavigation()`, persiste a ordem de acesso em `recent_picos.yaml` e reordena diretamente em memória as listas `picosBaixados` e `croquisBaixados` sem reconsultar o disco. Em `loadIndiceToMemory()` e `_refreshActiveDataset()`, paraleliza verificações de armazenamento local (`Future.wait`) e reaproveita instâncias de `Croqui` já desserializadas em memória para picos inalterados.
 - **Tabela de Dispersão $O(1)$ de Mídias**: Mantém tabela de dispersão `_tabelaSha256PorPico` populada em `loadIndiceToMemory` e `getCroqui`, indexando hashes SHA-256 de miniaturas (`Indice.checksumSha256Thumbnail`) e mídias de croqui (`Croqui.arquivosExternos`). Expõe `obterSha256DaMidia(picoId, caminho)` e `indexarMidiasDoCroqui(picoId, croqui)` para invalidação reativa de cache de imagens sem varreduras lineares.
 - **Hierarquia Estrita de Resolução de Croquis em 4 Etapas**: Em `getCroqui()`, resolve o binário sem recalcular hashes em tempo de execução para poupar CPU e bateria:
   1. *RAM*: Consulta o `GerenciadorSessaoOnline`.

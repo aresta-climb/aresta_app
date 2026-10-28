@@ -1291,6 +1291,184 @@ void main() {
         },
       );
     });
+
+    group('updatePriorityAfterNavigation (Reordenação em Memória)', () {
+      test(
+        'reordena picosBaixados e croquisBaixados em memória preservando instâncias já carregadas sem reler disco',
+        () async {
+          final croquiA = Croqui(
+            id: 'pico_a',
+            nome: 'Pico A',
+            picos: [Pico(nome: 'Pico A')],
+          );
+          final croquiB = Croqui(
+            id: 'pico_b',
+            nome: 'Pico B',
+            picos: [Pico(nome: 'Pico B')],
+          );
+
+          final resumoA = ResumoPico(
+            id: 'pico_a',
+            nome: 'Pico A',
+            local: 'MG',
+            isDownloaded: true,
+            croqui: croquiA,
+            pico: croquiA.picos.first,
+          );
+          final resumoB = ResumoPico(
+            id: 'pico_b',
+            nome: 'Pico B',
+            local: 'MG',
+            isDownloaded: true,
+            croqui: croquiB,
+            pico: croquiB.picos.first,
+          );
+
+          repo.activeDataset.value = ConjuntoDadosCroqui(
+            picosDisponiveis: [
+              const ResumoPico(id: 'pico_a', nome: 'Pico A', local: 'MG'),
+              const ResumoPico(id: 'pico_b', nome: 'Pico B', local: 'MG'),
+            ],
+            picosBaixados: [resumoA, resumoB],
+            croquisBaixados: [croquiA, croquiB],
+          );
+
+          await repo.updatePriorityAfterNavigation('pico_b');
+
+          final picosBaixados = repo.activeDataset.value!.picosBaixados;
+          final croquisBaixados = repo.activeDataset.value!.croquisBaixados;
+
+          expect(picosBaixados.map((p) => p.id).toList(), equals(['pico_b', 'pico_a']));
+          expect(croquisBaixados.map((c) => c.id).toList(), equals(['pico_b', 'pico_a']));
+          expect(identical(picosBaixados[0].croqui, croquiB), isTrue);
+          expect(identical(picosBaixados[1].croqui, croquiA), isTrue);
+
+          final prioridades =
+              await repo.gerenciadorPrioridade.obterListaPrioridade(tempDir.path);
+          expect(prioridades.first, equals('pico_b'));
+        },
+      );
+
+      test(
+        'não reconstrói picosBaixados nem emite notificação redundante ao abrir croqui online ou já no topo',
+        () async {
+          final croquiA = Croqui(
+            id: 'pico_a',
+            nome: 'Pico A',
+            picos: [Pico(nome: 'Pico A')],
+          );
+          final resumoA = ResumoPico(
+            id: 'pico_a',
+            nome: 'Pico A',
+            local: 'MG',
+            isDownloaded: true,
+            croqui: croquiA,
+            pico: croquiA.picos.first,
+          );
+
+          repo.activeDataset.value = ConjuntoDadosCroqui(
+            picosDisponiveis: [
+              const ResumoPico(id: 'pico_a', nome: 'Pico A', local: 'MG'),
+              const ResumoPico(id: 'pico_online', nome: 'Pico Online', local: 'SP'),
+            ],
+            picosBaixados: [resumoA],
+            croquisBaixados: [croquiA],
+          );
+
+          int notificacoes = 0;
+          repo.activeDataset.addListener(() => notificacoes++);
+
+          await repo.updatePriorityAfterNavigation('pico_online');
+          expect(notificacoes, equals(0));
+          expect(repo.activeDataset.value!.picosBaixados.length, equals(1));
+          expect(identical(repo.activeDataset.value!.picosBaixados.first.croqui, croquiA), isTrue);
+
+          await repo.updatePriorityAfterNavigation('pico_a');
+          expect(notificacoes, equals(0));
+        },
+      );
+
+      test(
+        'loadIndiceToMemory, updateDatasetAfterDownload e deleteCrag reaproveitam instâncias de Croqui já em memória para picos inalterados',
+        () async {
+          final downloadsPath = editor.downloadsPath(tempDir.path);
+          final dirPico1 = Directory('$downloadsPath/pico_1')..createSync(recursive: true);
+          final dirPico2 = Directory('$downloadsPath/pico_2')..createSync(recursive: true);
+
+          final croqui1Disco = Croqui(
+            id: 'pico_1',
+            nome: 'Pico 1',
+            picos: [Pico(nome: 'Pico 1')],
+          );
+          final croqui2Disco = Croqui(
+            id: 'pico_2',
+            nome: 'Pico 2',
+            picos: [Pico(nome: 'Pico 2')],
+          );
+          File('${dirPico1.path}/compilado.binarypb')
+              .writeAsBytesSync(croqui1Disco.writeToBuffer());
+
+          final indice = Indice(
+            croquis: [
+              ResumoCroqui(
+                id: 'pico_1',
+                nome: 'Pico 1',
+                caminhoRelativo: 'picos/pico_1/compilado.binarypb',
+                checksumSha256Croqui: 'sha_pico_1_v1',
+              ),
+              ResumoCroqui(
+                id: 'pico_2',
+                nome: 'Pico 2',
+                caminhoRelativo: 'picos/pico_2/compilado.binarypb',
+                checksumSha256Croqui: 'sha_pico_2_v1',
+              ),
+            ],
+          );
+
+          await repo.loadIndiceToMemory(indice);
+          final croqui1EmMemoria = repo.activeDataset.value!.picosBaixados
+              .firstWhere((p) => p.id == 'pico_1')
+              .croqui;
+          expect(croqui1EmMemoria, isNotNull);
+
+          // 1. Recarregar o mesmo índice com mesmo checksum deve reaproveitar a instância em memória
+          await repo.loadIndiceToMemory(indice);
+          final croqui1AposReloadIndice = repo.activeDataset.value!.picosBaixados
+              .firstWhere((p) => p.id == 'pico_1')
+              .croqui;
+          expect(
+            identical(croqui1AposReloadIndice, croqui1EmMemoria),
+            isTrue,
+            reason: 'loadIndiceToMemory deve reaproveitar Croqui em memória quando o checksum não mudou',
+          );
+
+          // 2. Concluir download de pico_2 deve reaproveitar a instância de pico_1 em memória
+          File('${dirPico2.path}/compilado.binarypb')
+              .writeAsBytesSync(croqui2Disco.writeToBuffer());
+          await repo.updateDatasetAfterDownload('pico_2');
+
+          final croqui1AposDownloadPico2 = repo.activeDataset.value!.picosBaixados
+              .firstWhere((p) => p.id == 'pico_1')
+              .croqui;
+          expect(
+            identical(croqui1AposDownloadPico2, croqui1EmMemoria),
+            isTrue,
+            reason: 'updateDatasetAfterDownload deve reaproveitar Croqui de outros picos já em memória',
+          );
+
+          // 3. Excluir pico_2 deve reaproveitar a instância de pico_1 em memória
+          await repo.deleteCrag('pico_2');
+          final croqui1AposExclusaoPico2 = repo.activeDataset.value!.picosBaixados
+              .firstWhere((p) => p.id == 'pico_1')
+              .croqui;
+          expect(
+            identical(croqui1AposExclusaoPico2, croqui1EmMemoria),
+            isTrue,
+            reason: 'deleteCrag deve reaproveitar Croqui dos demais picos já em memória',
+          );
+        },
+      );
+    });
   });
 }
 

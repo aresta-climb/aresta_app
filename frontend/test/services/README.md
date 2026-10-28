@@ -22,6 +22,7 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 | `feedback/tarefa_feedback_test.dart` | `TarefaFeedback` | Testa modelo de tarefas da fila de persistência atômica em disco |
 | `dataset/gerenciador_arquivos_locais_test.dart` | `GerenciadorArquivosLocais` | Testa operações diretas de arquivos e diretórios de croquis no disco local |
 | `dataset/gerenciador_sessao_online_test.dart` | `GerenciadorSessaoOnline` | Testa gestão de croquis em memória RAM e cache volátil sob demanda |
+| `dataset/metadados/extrator_metadados_croqui_test.dart` | `ExtratorMetadadosCroqui` | Testa vinculação de entidades `Croqui`/`Pico` ao `ResumoPico` sem I/O antecipado de capas e extração de caminhos de capa em Markdown |
 
 ## Como executar
 

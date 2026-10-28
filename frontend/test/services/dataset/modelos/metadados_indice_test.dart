@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 
 void main() {
   group('MetadadosIndice', () {
@@ -48,6 +49,8 @@ void main() {
         descricao: 'Pico incrível',
         caminhoRelativo: 'pedra_bela/compilado.binarypb',
         checksumSha256Croqui: 'hash_croqui_123',
+        checksumSha256Thumbnail: 'hash_thumb_123',
+        timestampUpdate: Timestamp.fromDateTime(DateTime.utc(2026, 5, 10)),
         localizacao: Coordenada(
           latitude: -227000000,
           longitude: -465000000,
@@ -78,8 +81,29 @@ void main() {
       expect(resumo.isDownloaded, isTrue);
       expect(resumo.url, contains('hash_croqui_123'));
       expect(resumo.thumbnailUrl, equals('https://cdn.aresta.app/thumbnails/pedra_bela.webp'));
+      expect(resumo.dataUpdate, equals('2026-05-10T00:00:00.000Z'));
       expect(resumo.latitude, closeTo(-22.7, 0.0001));
       expect(resumo.estatisticas?.totalVias, equals(50));
+
+      final resumoRelativo = metadados.paraResumoPico();
+      expect(resumoRelativo.thumbnailUrl, equals('thumbnails/pedra_bela.webp'));
+    });
+
+    test('paraResumoPico define thumbnailUrl vazia quando checksumSha256Thumbnail não está preenchido', () {
+      final metadadosSemThumb = MetadadosIndice(
+        id: 'pico_sem_thumb',
+        nome: 'Pico Sem Thumb',
+        caminhoRelativo: 'picos/pico_sem_thumb/compilado.binarypb',
+        checksumSha256Croqui: 'hash_croqui_abc',
+      );
+
+      final resumoComBase = metadadosSemThumb.paraResumoPico(
+        baseUrl: 'https://cdn.aresta.app',
+      );
+      expect(resumoComBase.thumbnailUrl, isEmpty);
+
+      final resumoSemBase = metadadosSemThumb.paraResumoPico();
+      expect(resumoSemBase.thumbnailUrl, isEmpty);
     });
 
     test('extensao em Croqui converte para ResumoPico com segurança', () {
@@ -92,6 +116,12 @@ void main() {
             nome: 'Itacolomi Principal',
             estado: 'Minas Gerais',
             localizacao: Coordenada(latitude: -204000000, longitude: -435000000),
+            precomputados: PrecomputadosPico(
+              totalEscaladas: 15,
+              totalSetores: 3,
+              totalEsportivas: 10,
+              totalMoveis: 5,
+            ),
           ),
         ],
       );
@@ -105,7 +135,8 @@ void main() {
       expect(resumo.croqui, equals(croqui));
       expect(resumo.pico?.nome, equals('Itacolomi Principal'));
       expect(resumo.latitude, closeTo(-20.4, 0.0001));
+      expect(resumo.estatisticas?.totalVias, equals(15));
+      expect(resumo.estatisticas?.totalSetores, equals(3));
     });
   });
 }
-

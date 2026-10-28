@@ -63,8 +63,12 @@ extension ExtensaoMetadadosIndice on MetadadosIndice {
       urlCalculada = caminhoRelativo;
     }
 
+    final bool temThumbnail =
+        hasChecksumSha256Thumbnail() && checksumSha256Thumbnail.isNotEmpty;
     final String thumbnailCalculada;
-    if (baseUrl.isNotEmpty) {
+    if (!temThumbnail) {
+      thumbnailCalculada = '';
+    } else if (baseUrl.isNotEmpty) {
       thumbnailCalculada = '$baseUrl/thumbnails/$id.webp';
     } else {
       thumbnailCalculada = 'thumbnails/$id.webp';

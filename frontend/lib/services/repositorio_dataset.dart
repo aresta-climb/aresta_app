@@ -9,12 +9,11 @@ import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'firebase/app_logger.dart';
-import '../utils/formatador_tamanho.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 
 import 'dataset/modelos/conjunto_dados_croqui.dart';
+import 'dataset/modelos/metadados_indice.dart';
 import 'dataset/modelos/resumo_pico.dart';
-import 'dataset/modelos/estatisticas_pico.dart';
 import 'dataset/armazenamento/gerenciador_prioridade_picos.dart';
 import 'dataset/armazenamento/gerenciador_arquivos_locais.dart';
 import 'dataset/armazenamento/extrator_assets_preload.dart';
@@ -341,90 +340,34 @@ class DatasetRepository {
       final List<String> priorityList =
           await gerenciadorPrioridade.obterListaPrioridade(docsPath);
 
+      final mapaBaixadosAtuais = <String, ResumoPico>{
+        for (final p in activeDataset.value?.picosBaixados ?? const <ResumoPico>[])
+          if (p.croqui != null) p.id: p,
+      };
+
+      final baseUrl = editorDeCroqui.activeBaseUrl;
+      final resultadosBaixados = await Future.wait(
+        indice.croquis.map(
+          (resumo) => gerenciadorArquivosLocais.verificarPicoBaixado(
+            downloadsPath,
+            resumo.id,
+          ),
+        ),
+      );
+
       final List<ResumoPico> parsedPicos = [];
       final List<ResumoPico> downloaded = [];
 
-      for (var resumo in indice.croquis) {
-        try {
-          String locationText = 'Local Desconhecido';
-          final List<String> urlParts = resumo.caminhoRelativo.split('/');
-          if (urlParts.length >= 2) {
-            String folderName = urlParts[urlParts.length - 2];
-            locationText = folderName
-                .replaceAll('_', ' ')
-                .split(' ')
-                .map((word) {
-                  if (word.isEmpty) return word;
-                  return word[0].toUpperCase() +
-                      word.substring(1).toLowerCase();
-                })
-                .join(' ');
-          }
-
-          final String picoId = resumo.id;
-          final baseUrl = editorDeCroqui.activeBaseUrl;
-          final bool temThumbnail = resumo.hasChecksumSha256Thumbnail() &&
-              resumo.checksumSha256Thumbnail.isNotEmpty;
-          final String thumbnailUrl =
-              temThumbnail ? '$baseUrl/thumbnails/$picoId.webp' : '';
-
-          final bool isStored = await gerenciadorArquivosLocais
-              .verificarPicoBaixado(downloadsPath, picoId);
-
-          int? tamanhoBytes;
-          if (resumo.hasPrecomputados() &&
-              resumo.precomputados.hasTamanhoDownloadBytes()) {
-            tamanhoBytes = resumo.precomputados.tamanhoDownloadBytes.toInt();
-          }
-
-          EstatisticasPico? estatisticas;
-          if (resumo.hasPrecomputados()) {
-            estatisticas = EstatisticasPico(
-              totalVias: resumo.precomputados.totalEscaladas,
-              totalSetores: resumo.precomputados.totalSetores,
-              totalEsportivas: resumo.precomputados.totalEsportivas,
-              totalMoveis: resumo.precomputados.totalMoveis,
-              totalBoulders: resumo.precomputados.totalBoulders,
-              totalMultiplasEnfiadas:
-                  resumo.precomputados.totalMultiplasEnfiadas,
-              totalHighlines: resumo.precomputados.totalHighlines,
-              tamanhoDownloadBytes: tamanhoBytes,
-            );
-          }
-
-          final picoItem = ResumoPico(
-            id: picoId,
-            nome: resumo.nome,
-            local: locationText,
-            descricao: resumo.descricao,
-            url: '${editorDeCroqui.activeBaseUrl}/${resumo.caminhoRelativo}?v=${resumo.checksumSha256Croqui}',
-            checksum: resumo.checksumSha256Croqui,
-            thumbnailUrl: thumbnailUrl,
-            isDownloaded: isStored,
-            tamanhoBytes: tamanhoBytes,
-            tamanhoFormatado: FormatadorTamanho.formatarBytes(tamanhoBytes),
-            dataUpdate: resumo.hasTimestampUpdate()
-                ? resumo.timestampUpdate.toDateTime().toIso8601String()
-                : null,
-            latitude: resumo.hasLocalizacao()
-                ? resumo.localizacao.latitude / 10000000.0
-                : null,
-            longitude: resumo.hasLocalizacao()
-                ? resumo.localizacao.longitude / 10000000.0
-                : null,
-            estatisticas: estatisticas,
-          );
-
-          parsedPicos.add(picoItem);
-          if (isStored) {
-            downloaded.add(picoItem);
-          }
-        } catch (itemEx, stackTrace) {
-          AppLogger.instance.logError(
-            'Erro ao processar pico individual ${resumo.id}',
-            error: itemEx,
-            stackTrace: stackTrace,
-          );
+      for (int i = 0; i < indice.croquis.length; i++) {
+        final resumo = indice.croquis[i];
+        final isStored = resultadosBaixados[i];
+        final picoItem = resumo.paraResumoPico(
+          baseUrl: baseUrl,
+          isDownloaded: isStored,
+        );
+        parsedPicos.add(picoItem);
+        if (isStored) {
+          downloaded.add(picoItem);
         }
       }
 
@@ -433,10 +376,17 @@ class DatasetRepository {
 
       final List<ResumoPico> ordenadosCarregados = await Future.wait(
         ordenados.map((picoItem) async {
+          final existente = mapaBaixadosAtuais[picoItem.id];
+          final Croqui? croquiReaproveitado = (existente != null &&
+                  existente.checksum.isNotEmpty &&
+                  existente.checksum == picoItem.checksum)
+              ? existente.croqui
+              : null;
           return await extratorMetadados.carregarMetadadosLocais(
             pico: picoItem,
             downloadsPath: downloadsPath,
-            baseUrl: editorDeCroqui.activeBaseUrl,
+            baseUrl: baseUrl,
+            parsedCroqui: croquiReaproveitado,
           );
         }),
       );
@@ -490,7 +440,11 @@ class DatasetRepository {
       gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiBaixado);
       indexarMidiasDoCroqui(id, croquiBaixado);
     }
-    await _refreshActiveDataset();
+    await _refreshActiveDataset(
+      croquisRecemCarregados: {
+        id: ?croquiBaixado,
+      },
+    );
   }
 
   /// Invalida caches em memória de traçados gráficos e expurga croquis da sessão online
@@ -591,46 +545,37 @@ class DatasetRepository {
   // SECTION: Prioridade e Navegação
   // ===========================================================================
 
-  /// Atualiza a prioridade do [id] após a navegação do usuário.
+  /// Atualiza a prioridade do [id] após a navegação do usuário, reordenando em memória
+  /// as coleções de croquis baixados caso a posição do pico tenha sido alterada.
   Future<void> updatePriorityAfterNavigation(String id) async {
     final directory = await getApplicationDocumentsDirectory();
     await gerenciadorPrioridade.atualizarPrioridade(directory.path, id);
 
-    if (activeDataset.value != null) {
-      final docsPath = directory.path;
-      final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
-      final List<String> priorityList =
-          await gerenciadorPrioridade.obterListaPrioridade(docsPath);
+    final atual = activeDataset.value;
+    if (atual == null) return;
 
-      final List<ResumoPico> baixados = [];
-      for (var pico in activeDataset.value!.picosDisponiveis) {
-        if (await gerenciadorArquivosLocais.verificarPicoBaixado(
-            downloadsPath, pico.id)) {
-          baixados.add(pico.copyWith(isDownloaded: true));
-        }
-      }
-
-      final ordenados =
-          gerenciadorPrioridade.ordenarPorPrioridade(baixados, priorityList);
-
-      final ordenadosCarregados = await Future.wait(
-        ordenados.map((p) => extratorMetadados.carregarMetadadosLocais(
-              pico: p,
-              downloadsPath: downloadsPath,
-              baseUrl: editorDeCroqui.activeBaseUrl,
-            )),
-      );
-
-      activeDataset.value = ConjuntoDadosCroqui(
-        metadadosDisponiveis: activeDataset.value?.metadadosDisponiveis ?? const [],
-        croquisBaixados: ordenadosCarregados
-            .where((p) => p.croqui != null)
-            .map((p) => p.croqui!)
-            .toList(),
-        picosDisponiveis: activeDataset.value!.picosDisponiveis,
-        picosBaixados: ordenadosCarregados,
-      );
+    final picosBaixadosAtuais = atual.picosBaixados;
+    final indiceAtual = picosBaixadosAtuais.indexWhere((p) => p.id == id);
+    if (indiceAtual <= 0) {
+      return;
     }
+
+    final priorityList =
+        await gerenciadorPrioridade.obterListaPrioridade(directory.path);
+    final ordenados = gerenciadorPrioridade.ordenarPorPrioridade(
+      picosBaixadosAtuais,
+      priorityList,
+    );
+
+    activeDataset.value = ConjuntoDadosCroqui(
+      metadadosDisponiveis: atual.metadadosDisponiveis,
+      croquisBaixados: ordenados
+          .where((p) => p.croqui != null)
+          .map((p) => p.croqui!)
+          .toList(),
+      picosDisponiveis: atual.picosDisponiveis,
+      picosBaixados: ordenados,
+    );
   }
 
   // ===========================================================================
@@ -772,7 +717,11 @@ class DatasetRepository {
 
     // Se o croqui existia localmente, preserva em memória na sessão online
     // para permitir transição suave caso o usuário esteja navegando nele.
-    final localCroqui =
+    final existenteEmMemoria = activeDataset.value?.picosBaixados
+        .where((p) => p.id == id && p.croqui != null)
+        .firstOrNull
+        ?.croqui;
+    final localCroqui = existenteEmMemoria ??
         await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
     if (localCroqui != null) {
       gerenciadorSessaoOnline.registrarCroquiOnline(id, localCroqui);
@@ -786,20 +735,39 @@ class DatasetRepository {
     return sucesso;
   }
 
-  /// Reavalia o estado de download dos picos e emite novo estado para a UI.
-  Future<void> _refreshActiveDataset() async {
-    if (activeDataset.value == null) return;
+  /// Reavalia o estado de download dos picos e emite novo estado para a UI,
+  /// preservando instâncias de [Croqui] já carregadas em memória.
+  Future<void> _refreshActiveDataset({
+    Map<String, Croqui>? croquisRecemCarregados,
+  }) async {
+    final atual = activeDataset.value;
+    if (atual == null) return;
 
-    final currentAvailable = activeDataset.value!.picosDisponiveis;
+    final currentAvailable = atual.picosDisponiveis;
     final directory = await getApplicationDocumentsDirectory();
     final docsPath = directory.path;
     final downloadsPath = editorDeCroqui.downloadsPath(docsPath);
 
+    final mapaCroquisEmMemoria = <String, Croqui>{
+      for (final p in atual.picosBaixados)
+        if (p.croqui != null) p.id: p.croqui!,
+      ...?croquisRecemCarregados,
+    };
+
+    final resultadosBaixados = await Future.wait(
+      currentAvailable.map(
+        (pico) => gerenciadorArquivosLocais.verificarPicoBaixado(
+          downloadsPath,
+          pico.id,
+        ),
+      ),
+    );
+
     final List<ResumoPico> updatedAvailable = [];
     final List<ResumoPico> updatedDownloaded = [];
-    for (var pico in currentAvailable) {
-      final bool isStored = await gerenciadorArquivosLocais
-          .verificarPicoBaixado(downloadsPath, pico.id);
+    for (int i = 0; i < currentAvailable.length; i++) {
+      final pico = currentAvailable[i];
+      final bool isStored = resultadosBaixados[i];
 
       final atualizado = pico.copyWith(isDownloaded: isStored);
       updatedAvailable.add(atualizado);
@@ -818,11 +786,12 @@ class DatasetRepository {
             pico: p,
             downloadsPath: downloadsPath,
             baseUrl: editorDeCroqui.activeBaseUrl,
+            parsedCroqui: mapaCroquisEmMemoria[p.id],
           )),
     );
 
     activeDataset.value = ConjuntoDadosCroqui(
-      metadadosDisponiveis: activeDataset.value?.metadadosDisponiveis ?? const [],
+      metadadosDisponiveis: atual.metadadosDisponiveis,
       croquisBaixados: ordenadosCarregados
           .where((p) => p.croqui != null)
           .map((p) => p.croqui!)
