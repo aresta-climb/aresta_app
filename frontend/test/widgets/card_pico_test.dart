@@ -581,6 +581,39 @@ void main() {
         );
         await tester.pump();
       });
+
+      testWidgets('CragCard renderiza LinearGradient com colors e stops com tamanhos idênticos sem disparar ArgumentError', (
+        WidgetTester tester,
+      ) async {
+        final metadados = MetadadosIndice(
+          id: 'pico_gradiente_test',
+          nome: 'Pico Gradiente',
+        );
+
+        await tester.pumpWidget(buildTestCard(crag: metadados));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+
+        final containers = tester.widgetList<Container>(find.byType(Container));
+        final gradientes = containers
+            .map((c) => c.decoration)
+            .whereType<BoxDecoration>()
+            .map((d) => d.gradient)
+            .whereType<LinearGradient>()
+            .toList();
+
+        expect(gradientes, isNotEmpty);
+        for (final gradiente in gradientes) {
+          if (gradiente.stops != null) {
+            expect(
+              gradiente.colors.length,
+              equals(gradiente.stops!.length),
+              reason: 'LinearGradient exige que colors e stops tenham tamanho idêntico',
+            );
+          }
+        }
+      });
     });
   });
 }
