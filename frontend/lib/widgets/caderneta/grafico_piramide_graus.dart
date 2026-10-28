@@ -59,29 +59,35 @@ class GraficoPiramideGraus extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: cores.deepBasalt,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: cores.graniteEdge),
-                ),
-                padding: const EdgeInsets.all(2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildBotaoModalidade(
-                      context,
-                      rotulo: 'Vias',
-                      ativo: modoVias,
-                      onTap: () => onAlternarModo?.call(true),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cores.deepBasalt,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: cores.graniteEdge),
                     ),
-                    _buildBotaoModalidade(
-                      context,
-                      rotulo: 'Boulders',
-                      ativo: !modoVias,
-                      onTap: () => onAlternarModo?.call(false),
+                    padding: const EdgeInsets.all(2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildBotaoModalidade(
+                          context,
+                          rotulo: 'Vias',
+                          ativo: modoVias,
+                          onTap: () => onAlternarModo?.call(true),
+                        ),
+                        _buildBotaoModalidade(
+                          context,
+                          rotulo: 'Boulders',
+                          ativo: !modoVias,
+                          onTap: () => onAlternarModo?.call(false),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],

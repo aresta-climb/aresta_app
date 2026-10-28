@@ -268,5 +268,53 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'não causa overflow em tela ultracompacta (320x568) com escala de fonte aumentada (1.5x)',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        String? overflowDetails;
+        final originalOnError = FlutterError.onError;
+        FlutterError.onError = (details) {
+          overflowDetails = details.toString();
+          originalOnError?.call(details);
+        };
+        addTearDown(() => FlutterError.onError = originalOnError);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(
+              extensions: const [AppColors.dark],
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(1.5),
+              ),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: ModalRegistroCadena(
+                escaladaUid: 'via-compacta-overflow',
+                nomeEscalada: 'Fissura Extrema do Crepúsculo dos Deuses',
+                repositorio: repositorio,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Registrar Ascensão'), findsOneWidget);
+        expect(find.text('Tentativas / Pegas'), findsOneWidget);
+        expect(find.text('Data da Ascensão'), findsOneWidget);
+        expect(find.text('Notas Privadas (Crux / Métodos)'), findsOneWidget);
+      },
+    );
   });
 }

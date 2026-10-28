@@ -104,5 +104,81 @@ void main() {
     expect(find.text('Vias'), findsOneWidget);
     expect(find.text('Boulders'), findsOneWidget);
   });
+
+  testWidgets(
+      'GraficoPiramideGraus não causa overflow sob escala de fonte 1.8x em tela ultracompacta (320px)',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.8),
+          ),
+          child: child!,
+        ),
+        home: const Scaffold(
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: GraficoPiramideGraus(
+              piramide: {'5º': 2, '6a': 5, '7a': 8, '8a': 3},
+              modoVias: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Pirâmide de Graduação'), findsOneWidget);
+    expect(find.text('Vias'), findsOneWidget);
+    expect(find.text('Boulders'), findsOneWidget);
+  });
+
+  testWidgets(
+      'GraficoPiramideGraus renderiza barra com LinearGradient válido sem disparar ArgumentError',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        home: const Scaffold(
+          body: GraficoPiramideGraus(
+            piramide: {'7a': 4},
+            modoVias: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    final containers = tester.widgetList<Container>(find.byType(Container));
+    final gradientes = containers
+        .map((c) => c.decoration)
+        .whereType<BoxDecoration>()
+        .map((d) => d.gradient)
+        .whereType<LinearGradient>()
+        .toList();
+
+    expect(gradientes, isNotEmpty);
+    for (final gradiente in gradientes) {
+      if (gradiente.stops != null) {
+        expect(
+          gradiente.colors.length,
+          equals(gradiente.stops!.length),
+          reason: 'LinearGradient exige que colors e stops tenham tamanho idêntico',
+        );
+      }
+    }
+  });
 }
 

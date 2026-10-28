@@ -339,13 +339,16 @@ class _ContadorTentativas extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Tentativas / Pegas',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: cores.chalkWhite,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            'Tentativas / Pegas',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: cores.chalkWhite,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         Container(
           decoration: BoxDecoration(
             color: cores.caveShadow,
@@ -398,13 +401,16 @@ class _SeletorDataAscensao extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Data da Ascensão',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: cores.chalkWhite,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            'Data da Ascensão',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: cores.chalkWhite,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         InkWell(
           key: const Key('btn_selecionar_data'),
           onTap: onTap,
@@ -456,13 +462,18 @@ class _CampoNotasPrivadas extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Notas Privadas (Crux / Métodos)',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: cores.chalkWhite,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                'Notas Privadas (Crux / Métodos)',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: cores.chalkWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               contadorTexto,
               style: TextStyle(

@@ -149,6 +149,65 @@ void main() {
       expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
     });
 
+    testWidgets('não causa overflow em tela ultracompacta (320x568) com escala de fonte 1.5x e pirâmide preenchida', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      String? overflowDetails;
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        overflowDetails = details.toString();
+        originalOnError?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalOnError);
+
+      final c1 = Cadena.criar(
+        escaladaUid: 'via-1',
+        dataAscensao: DateTime(2026, 9, 20),
+        tipoAscensao: TipoAscensao.flash,
+        tipoEscalada: TipoEscalada.guiado,
+        tentativas: 1,
+      );
+      final c2 = Cadena.criar(
+        escaladaUid: 'via-2',
+        dataAscensao: DateTime(2026, 9, 21),
+        tipoAscensao: TipoAscensao.aVista,
+        tipoEscalada: TipoEscalada.guiado,
+        tentativas: 1,
+      );
+      await repositorio.salvarCadena(c1);
+      await repositorio.salvarCadena(c2);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.5),
+            ),
+            child: child!,
+          ),
+          home: CadernetaPage(
+            viewModel: PerfilViewModel(
+              repositorio: repositorio,
+              obterGrauDaVia: (uid) => uid == 'via-1' ? '7a' : '8a',
+              obterNomeDaVia: (uid) => uid == 'via-1' ? 'Fenda do Crepúsculo' : 'Via Lunar',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('MINHA CADERNETA'), findsOneWidget);
+      expect(find.text('Pirâmide de Graduação'), findsOneWidget);
+      expect(find.text('Fenda do Crepúsculo'), findsOneWidget);
+    });
+
     testWidgets('botão de voltar desempilha a CadernetaPage com sucesso', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
