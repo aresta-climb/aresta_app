@@ -122,5 +122,24 @@ void main() {
     // Deve ter ignorado a duplicata imediata, permanecendo na HomeNode
     expect(treeController.currentNode, isA<HomeNode>());
   });
+
+  test(
+    'registrarLinkInicialJaProcessado evita reprocessar o mesmo link inicial no inicializar() e na stream',
+    () async {
+      final uri = Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L');
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+
+      gerenciador.registrarLinkInicialJaProcessado(uri);
+      await gerenciador.inicializar();
+
+      // Permanece em HomeNode porque o link inicial já havia sido processado durante o Cold Start
+      expect(treeController.currentNode, isA<HomeNode>());
+
+      // Se a stream emitir o mesmo link logo em seguida, também deve ser ignorado
+      uriStreamController.add(uri);
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(treeController.currentNode, isA<HomeNode>());
+    },
+  );
 }
 

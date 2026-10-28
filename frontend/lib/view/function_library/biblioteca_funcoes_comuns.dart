@@ -600,7 +600,9 @@ Future<void> handleManualSync(
   final dataset = datasetRepo.activeDataset.value;
   final hasDownloaded = dataset != null && dataset.downloadedPicos.isNotEmpty;
 
-  final failed = await syncService.syncIndex(auto: false);
+  await syncService.syncIndex(auto: false);
+  final failed = await (syncService.tarefaMidiasEmSegundoPlano ??
+      Future.value(<String>[]));
 
   if (estavaEmModoExperimental &&
       !datasetRepo.editorDeCroqui.isExperimentalMode.value) {
@@ -674,10 +676,12 @@ Future<void> handleSyncServing(
   final estavaEmModoExperimental =
       datasetRepo.editorDeCroqui.isExperimentalMode.value;
 
-  final failed = await syncService.syncIndex(
+  await syncService.syncIndex(
     auto: false,
     forceBypassCache: true,
   );
+  final failed = await (syncService.tarefaMidiasEmSegundoPlano ??
+      Future.value(<String>[]));
 
   if (estavaEmModoExperimental &&
       !datasetRepo.editorDeCroqui.isExperimentalMode.value) {

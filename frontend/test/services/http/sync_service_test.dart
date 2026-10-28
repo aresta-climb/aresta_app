@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -95,6 +96,7 @@ void main() {
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    HttpOverrides.global = null;
     SharedPreferences.setMockInitialValues({});
     TelemetryService.instance = MockTelemetryService();
 
@@ -113,6 +115,9 @@ void main() {
   });
 
   tearDown(() async {
+    await syncService.tarefaMidiasEmSegundoPlano;
+    await SyncService.instance?.tarefaMidiasEmSegundoPlano;
+    await datasetRepository.repositorioCatalogo.fechar();
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -241,6 +246,7 @@ void main() {
         };
 
         await testSyncService.syncIndex(auto: true);
+        await testSyncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           logs.any(
@@ -709,6 +715,191 @@ void main() {
         expect(
           await datasetRepository.repositorioCatalogo.obterVersaoCatalogo(),
           equals('v_304_alvo'),
+        );
+      },
+    );
+  });
+
+  group('syncIndex rápido com atualização de mídias e sessão online em segundo plano', () {
+    setUpAll(() {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
+
+    setUp(() {
+      HttpOverrides.global = null;
+    });
+
+    tearDown(() async {
+      SyncService.baseUrlOverride = null;
+      SyncService.catalogoUrlOverride = null;
+      await datasetRepository.repositorioCatalogo.fechar();
+    });
+
+    test(
+      'syncIndex deve retornar imediatamente após sincronizar indice.binarypb e catalogo.db, enquanto o download de mídias prossegue em segundo plano',
+      () async {
+        final editor = EditorDeCroqui();
+        const picoId = 'pico_bg';
+
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(
+          (Indice()
+                ..croquis.add(
+                  ResumoCroqui()
+                    ..id = picoId
+                    ..checksumSha256Croqui = 'hash_antigo_bg',
+                ))
+              .writeToBuffer(),
+        );
+
+        final picoDir = Directory('${editor.downloadsPath(tempDir.path)}/$picoId');
+        await picoDir.create(recursive: true);
+        final oldPicoFile = File('${picoDir.path}/$picoId.binarypb');
+        await oldPicoFile.writeAsBytes(Croqui().writeToBuffer());
+
+        final completerIsolateIniciado = Completer<void>();
+        final completerIsolate = Completer<void>();
+        var isolateIniciado = false;
+        var isolateConcluido = false;
+
+        final indiceNovo = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Background'
+              ..caminhoRelativo = 'croquis/$picoId/compilado.binarypb'
+              ..checksumSha256Croqui = 'hash_novo_bg',
+          );
+
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepository,
+          storage: storage,
+          client: ClienteHttpAresta.paraTestes(_SyncTestFakeClient(indiceNovo)),
+        );
+
+        testSyncService.mockIsolateSpawn = (mainFunc, args) async {
+          isolateIniciado = true;
+          if (!completerIsolateIniciado.isCompleted) {
+            completerIsolateIniciado.complete();
+          }
+          await completerIsolate.future;
+          isolateConcluido = true;
+          args.sendPort.send(
+            DownloadIsolateResult(
+              filesToDelete: [],
+              filesToRename: {},
+            ),
+          );
+        };
+
+        await testSyncService.syncIndex(auto: true);
+
+        // No momento em que syncIndex retorna:
+        // 1. O índice em memória já foi atualizado com os metadados novos
+        expect(
+          datasetRepository.indiceData.value?.croquis.first.checksumSha256Croqui,
+          'hash_novo_bg',
+        );
+        // 2. O isolate de mídias ainda não terminou, mas syncIndex já liberou o chamador!
+        expect(isolateConcluido, isFalse);
+        expect(testSyncService.tarefaMidiasEmSegundoPlano, isNotNull);
+
+        await completerIsolateIniciado.future;
+        expect(isolateIniciado, isTrue);
+        expect(isolateConcluido, isFalse);
+
+        // Conclui o isolate em segundo plano e aguarda a tarefa finalizar
+        completerIsolate.complete();
+        await testSyncService.tarefaMidiasEmSegundoPlano;
+        expect(isolateConcluido, isTrue);
+      },
+    );
+
+    test(
+      'fase em segundo plano do syncIndex deve recarregar o croqui da sessão online ativa quando seu checksum mudar no índice',
+      () async {
+        const picoId = 'pico_online_ativo';
+
+        final croquiAntigo = Croqui(
+          id: picoId,
+          nome: 'Pico Online Antigo',
+        );
+        final croquiAtualizado = Croqui(
+          id: picoId,
+          nome: 'Pico Online Atualizado V2',
+        );
+
+        final servidorLocal = await HttpServer.bind(
+          InternetAddress.loopbackIPv4,
+          0,
+        );
+        addTearDown(() async => await servidorLocal.close(force: true));
+
+        final indiceV2 = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Online Atualizado V2'
+              ..caminhoRelativo = 'croquis/$picoId/compilado_v2.binarypb'
+              ..checksumSha256Croqui = 'checksum_v2',
+          );
+
+        servidorLocal.listen((HttpRequest req) async {
+          if (req.uri.path.endsWith('indice.binarypb')) {
+            req.response.statusCode = 200;
+            req.response.headers.set('etag', 'ETAG_V2');
+            req.response.add(indiceV2.writeToBuffer());
+          } else if (req.uri.path.endsWith('compilado_v2.binarypb')) {
+            req.response.statusCode = 200;
+            req.response.headers.set('etag', 'ETAG_CROQUI_V2');
+            req.response.add(croquiAtualizado.writeToBuffer());
+          } else {
+            req.response.statusCode = 404;
+          }
+          await req.response.close();
+        });
+
+        final urlBase = 'http://127.0.0.1:${servidorLocal.port}';
+        SyncService.baseUrlOverride = urlBase;
+
+        final clienteLocal = ClienteHttpAresta.paraTestes(http.Client());
+        syncService = SyncService(
+          datasetRepository: datasetRepository,
+          storage: storage,
+          client: clienteLocal,
+          network: SyncNetwork(clienteLocal, Duration.zero),
+        );
+
+        // Registra croqui antigo na sessão online com checksum antigo e marca como aberto na UI
+        datasetRepository.gerenciadorSessaoOnline.registrarCroquiOnline(
+          picoId,
+          croquiAntigo,
+          checksumSha256: 'checksum_v1',
+        );
+        syncService.picoAbertoId.value = picoId;
+
+        var notificouUiOnline = false;
+        datasetRepository.notificadorCroquiAtualizado.addListener(() {
+          if (datasetRepository.notificadorCroquiAtualizado.value != null) {
+            notificouUiOnline = true;
+          }
+        });
+
+        await syncService.syncIndex(auto: true);
+        await syncService.tarefaMidiasEmSegundoPlano;
+
+        expect(notificouUiOnline, isTrue);
+        expect(
+          datasetRepository.gerenciadorSessaoOnline
+              .obterCroquiOnline(picoId)
+              ?.nome,
+          equals('Pico Online Atualizado V2'),
+        );
+        expect(
+          datasetRepository.gerenciadorSessaoOnline.obterChecksum(picoId),
+          equals('checksum_v2'),
         );
       },
     );

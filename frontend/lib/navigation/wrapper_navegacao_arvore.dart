@@ -34,6 +34,8 @@ class TreeNavigationWrapper extends StatefulWidget {
   final SyncService syncService;
   final TreeNavigationController? treeController;
   final GerenciadorDeepLinks? gerenciadorDeepLinks;
+  final Uri? linkInicialProcessado;
+  final String? mensagemAvisoInicial;
   final Widget? child; // Utilizado puramente para injeção em testes
 
   const TreeNavigationWrapper({
@@ -42,6 +44,8 @@ class TreeNavigationWrapper extends StatefulWidget {
     required this.syncService,
     this.treeController,
     this.gerenciadorDeepLinks,
+    this.linkInicialProcessado,
+    this.mensagemAvisoInicial,
     this.child,
   });
 
@@ -111,6 +115,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     );
 
     treeController = widget.treeController ?? TreeNavigationController();
+    _sincronizarPicoAbertoId();
     treeController.addListener(_onNodeChanged);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.addListener(_onCroquiOnlineAtualizado);
@@ -121,7 +126,27 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     );
     gerenciadorDeepLinks = widget.gerenciadorDeepLinks ??
         GerenciadorDeepLinks(navigatorService: deepLinkNavigator);
+    if (widget.linkInicialProcessado != null) {
+      gerenciadorDeepLinks.registrarLinkInicialJaProcessado(
+        widget.linkInicialProcessado!,
+      );
+    }
     gerenciadorDeepLinks.inicializar();
+
+    if (widget.mensagemAvisoInicial != null &&
+        widget.mensagemAvisoInicial!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(widget.mensagemAvisoInicial!),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -231,7 +256,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
   }
 
-  void _onNodeChanged() {
+  void _sincronizarPicoAbertoId() {
     final path = treeController.currentNode.path;
     String? currentCragId;
 
@@ -260,7 +285,10 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     }
 
     widget.syncService.picoAbertoId.value = currentCragId;
+  }
 
+  void _onNodeChanged() {
+    _sincronizarPicoAbertoId();
     setState(() {});
   }
 

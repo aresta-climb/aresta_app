@@ -37,6 +37,13 @@ class GerenciadorDeepLinks {
     return false;
   }
 
+  /// Registra um link inicial que já foi resolvido durante o bootstrap de *Cold Start*,
+  /// evitando que [inicializar] ou a [AppLinks.uriLinkStream] o processem novamente.
+  void registrarLinkInicialJaProcessado(Uri uri) {
+    _ultimoLinkProcessado = uri;
+    _instanteUltimoLink = DateTime.now();
+  }
+
   /// Inicializa a escuta de links externos, processando o link inicial e ouvindo o stream.
   Future<void> inicializar({BuildContext? context}) async {
     // 1. Trata Cold Start (link que inicializou a abertura do app)

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
@@ -15,6 +16,7 @@ import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/pages/setor.dart';
+import 'package:frontend/pages/tela_splash_inicial.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:frontend/pages/tela_migracao_banco.dart';
@@ -1161,6 +1163,78 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MyApp exibe TelaSplashInicial enquanto resolucaoInicialColdStart está pendente e abre direto no nó resolvido sem piscar a HomePage',
+    (WidgetTester tester) async {
+      final pico = Pico()
+        ..nome = 'Pedra Grande Cold Start'
+        ..setoresOuGrupos.add(
+          SetorOuGrupo()
+            ..setor = (ArquivoSetor()
+              ..conteudo = (Setor()
+                ..uid = 'sColdStart1234'
+                ..nome = 'Setor Direto Cold Start')),
+        );
+      final croqui = Croqui()
+        ..id = 'br_mg_igarape_pedra_grande'
+        ..uid = 'pQ9mRt2Kx1Vw8L'
+        ..picos.add(pico);
+      mockRepo.activeDataset.value = TopoDataset(
+        picosBaixados: [
+          {
+            'id': 'br_mg_igarape_pedra_grande',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+        picosDisponiveis: [],
+      );
+
+      final completerColdStart = Completer<ResultadoResolucaoColdStart>();
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+          resolucaoInicialColdStart: completerColdStart.future,
+        ),
+      );
+      await tester.pump();
+
+      // Enquanto a resolução do Cold Start está em andamento, exibe TelaSplashInicial e NÃO monta TreeNavigationWrapper
+      expect(find.byType(TelaSplashInicial), findsOneWidget);
+      expect(find.byType(TreeNavigationWrapper), findsNothing);
+
+      // Conclui a resolução apontando direto para o SetorNode
+      final controllerColdStart = TreeNavigationController();
+      controllerColdStart.navigateTo(
+        const SetorNode(
+          setorNome: 'Setor Direto Cold Start',
+          cragId: 'br_mg_igarape_pedra_grande',
+          parent: PicoNode(
+            cragId: 'br_mg_igarape_pedra_grande',
+            parent: HomeNode(),
+          ),
+        ),
+      );
+      completerColdStart.complete(
+        ResultadoResolucaoColdStart(
+          treeController: controllerColdStart,
+          linkInicialProcessado: Uri.parse('https://aresta.cc/sColdStart1234'),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(TelaSplashInicial), findsNothing);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+      expect(find.byType(SetorPage), findsOneWidget);
     },
   );
 }

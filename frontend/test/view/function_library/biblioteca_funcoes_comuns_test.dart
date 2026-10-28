@@ -54,6 +54,10 @@ class MockSyncService implements SyncService {
   }
 
   @override
+  Future<List<String>>? get tarefaMidiasEmSegundoPlano =>
+      Future.value(mockFailed);
+
+  @override
   ValueNotifier<SyncStatus> get syncStatus => _status;
 
   @override

@@ -27,6 +27,29 @@ import 'package:frontend/constants/constantes_rede.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:http/http.dart' as http;
+
+class _FakeIndiceHttpClient extends http.BaseClient {
+  final Indice indiceRemoto;
+  int chamadasIndice = 0;
+
+  _FakeIndiceHttpClient(this.indiceRemoto);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('indice.binarypb')) {
+      chamadasIndice++;
+      return http.StreamedResponse(
+        Stream.value(indiceRemoto.writeToBuffer()),
+        200,
+        headers: {'etag': '"etag-getcroqui"'},
+      );
+    }
+    return http.StreamedResponse(const Stream.empty(), 404);
+  }
+}
 
 class MockAssetBundle extends Mock implements AssetBundle {}
 class MockServicoCroquiOnline extends Mock implements ServicoCroquiOnline {}
@@ -624,6 +647,81 @@ void main() {
 
       expect(resultado, isNull);
     });
+
+    test(
+      'Etapa 4 sincroniza o índice via SyncService antes de baixar da CDN e usa o checksum atualizado, omitindo syncIndex quando indiceJaSincronizado=true',
+      () async {
+        const picoId = 'pico_sync_antes_cdn';
+        const checksumAntigo = 'sha256_antigo_local';
+        const checksumNovo = 'sha256_novo_remoto';
+
+        // Índice local em memória está com checksum antigo
+        repoHierarquico.indiceData.value = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoId,
+              nome: 'Pico Sync CDN',
+              caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+              checksumSha256Croqui: checksumAntigo,
+            ),
+          ],
+        );
+
+        // Servidor remoto retorna índice atualizado com checksumNovo
+        final indiceRemoto = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoId,
+              nome: 'Pico Sync CDN Atualizado',
+              caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+              checksumSha256Croqui: checksumNovo,
+            ),
+          ],
+        );
+        final fakeHttpClient = _FakeIndiceHttpClient(indiceRemoto);
+        final syncServiceAtivo = SyncService(
+          datasetRepository: repoHierarquico,
+          client: ClienteHttpAresta.paraTestes(fakeHttpClient),
+        );
+        addTearDown(() async {
+          await syncServiceAtivo.tarefaMidiasEmSegundoPlano;
+        });
+
+        final croquiRede = Croqui(id: picoId, nome: 'Croqui Fresco da CDN');
+        final expectedUrlNovo =
+            '${editor.activeBaseUrl}/picos/$picoId/compilado.binarypb?v=$checksumNovo';
+
+        when(
+          () => mockServicoOnline.carregarCroquiRemoto(
+            expectedUrlNovo,
+            picoId: picoId,
+            checksumSha256: checksumNovo,
+          ),
+        ).thenAnswer((_) async => croquiRede);
+
+        // 1. Chamada padrão (indiceJaSincronizado: false) deve sincronizar o índice antes do download
+        final resultado = await repoHierarquico.getCroqui(picoId);
+        expect(resultado?.nome, equals('Croqui Fresco da CDN'));
+        expect(fakeHttpClient.chamadasIndice, equals(1));
+        expect(
+          repoHierarquico.gerenciadorSessaoOnline.obterChecksum(picoId),
+          equals(checksumNovo),
+        );
+
+        // Limpa sessão online para forçar Etapa 4 novamente com indiceJaSincronizado: true
+        repoHierarquico.gerenciadorSessaoOnline.removerSessao(picoId);
+        final resultadoSemReSync = await repoHierarquico.getCroqui(
+          picoId,
+          indiceJaSincronizado: true,
+        );
+        expect(resultadoSemReSync?.nome, equals('Croqui Fresco da CDN'));
+        expect(
+          fakeHttpClient.chamadasIndice,
+          equals(1),
+          reason: 'Não deve chamar syncIndex novamente quando indiceJaSincronizado=true',
+        );
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

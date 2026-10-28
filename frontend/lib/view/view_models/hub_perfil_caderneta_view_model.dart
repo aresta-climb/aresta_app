@@ -91,7 +91,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Total de picos distintos com registros ou valor provido pelo resolver.
   int get totalPicos {
     if (_obterTotalPicos != null) {
-      return _obterTotalPicos!();
+      return _obterTotalPicos();
     }
     return totalVias > 0 ? 1 : 0;
   }
@@ -99,7 +99,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Total de vias distintas com registros ou valor provido pelo resolver.
   int get totalVias {
     if (_obterTotalVias != null) {
-      return _obterTotalVias!();
+      return _obterTotalVias();
     }
     return cadenas.map((c) => c.escaladaUid).toSet().length;
   }

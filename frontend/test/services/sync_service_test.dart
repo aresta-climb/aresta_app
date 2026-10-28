@@ -243,6 +243,7 @@ void main() {
     });
 
     tearDown(() async {
+      await SyncService.instance?.tarefaMidiasEmSegundoPlano;
       try {
         if (tempDir.existsSync()) {
           tempDir.deleteSync(recursive: true);
@@ -279,6 +280,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       expect(requestedPaths.any((url) => url.contains('picos/')), isFalse);
     });
@@ -307,6 +309,7 @@ void main() {
         };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(syncService.downloadingCrags.value.containsKey(picoId), isFalse);
       },
@@ -368,6 +371,7 @@ void main() {
         syncService.picoAbertoId.value = picoId;
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // A atualização atômica é aplicada imediatamente sem reter pendência bloqueante
         expect(
@@ -427,6 +431,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       expect(
         requestedPaths,
@@ -490,6 +495,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       expect(requestedPaths.any((url) => url.contains('imagem.webp')), isTrue);
       expect(await fileToUpdate.readAsBytes(), equals([2]));
@@ -544,6 +550,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       expect(fileToDelete.existsSync(), isFalse);
     });
@@ -597,6 +604,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // Cache-Busting Verification
         final expectedHash = sha256
@@ -695,6 +703,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       expect(fileToKeep.existsSync(), isTrue);
       expect(fileToDelete.existsSync(), isFalse);
@@ -770,6 +779,8 @@ void main() {
               };
 
         await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
         // Arquivo órfão não está na nova estrutura e o oldPicoData não foi lido, então a rotina nova deve ter feito o scan.
         expect(
@@ -846,6 +857,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // Verifica que a URL da thumbnail foi requisitada com ?v=
         final expectedHash = sha256.convert([10]).toString();
@@ -900,6 +912,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         final expThumbFile = File(
           '${editor.downloadsPath(tempDir.path)}/thumbnails/pico_exp.webp',
@@ -954,6 +967,7 @@ void main() {
             };
 
       await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
       // Nenhuma thumbnail deveria ser requisitada
       expect(requestedPaths.any((url) => url.contains('.webp')), isFalse);
@@ -1002,6 +1016,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // Thumbnail removida deve ter sido apagada do disco
         expect(
@@ -1061,6 +1076,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           thumbRemovida.existsSync(),
@@ -1148,6 +1164,7 @@ void main() {
 
         // 4. Run sync
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // 5. Verifica se o FakeClient foi acionado para tentar baixar o `pico_orfao.binarypb`
         // Isso prova que mesmo com o Indice antigo sendo ilegível, ele forçou a atualização do pico local!
@@ -1204,6 +1221,7 @@ void main() {
 
         // 3. Run sync
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // 4. Verify that local indice is STILL the old one because the download failed
         final finalBytes = indiceFile.readAsBytesSync();
@@ -1230,6 +1248,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.syncStatus.value,
@@ -1308,7 +1327,11 @@ void main() {
         editor.isExperimentalMode.value = false;
 
         // 3. Run sync
-        final failed = await syncServiceFake.syncIndex();
+        await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        final failed = await (syncServiceFake.tarefaMidiasEmSegundoPlano ??
+            Future.value(<String>[]));
 
         // 4. Verify that failedPicos is ultimately empty because the bypass succeeded!
         expect(
@@ -1364,6 +1387,7 @@ void main() {
             };
 
       await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
       final etagFile = File('${editor.indicePath(tempDir.path)}.etag');
       expect(etagFile.existsSync(), isTrue);
@@ -1390,6 +1414,8 @@ void main() {
         etagFile.writeAsStringSync('mock_etag_123');
 
         await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
         expect(fakeClient.receivedHeaders['If-None-Match'], 'mock_etag_123');
 
@@ -1441,6 +1467,8 @@ void main() {
         final resetCountBefore = repo.homeResetTrigger.value;
 
         await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
         expect(
           repo.homeResetTrigger.value,
@@ -1479,6 +1507,8 @@ void main() {
         expect(repo.activeDataset.value!.availablePicos, isEmpty);
 
         await syncServiceFake.syncIndex();
+      await syncServiceFake.tarefaMidiasEmSegundoPlano;
+        await syncServiceFake.tarefaMidiasEmSegundoPlano;
 
         expect(
           repo.activeDataset.value!.availablePicos,
@@ -2167,6 +2197,7 @@ void main() {
         );
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
@@ -2204,6 +2235,7 @@ void main() {
         editor.isExperimentalMode.value = false;
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
@@ -2229,6 +2261,7 @@ void main() {
         syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 5;
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
@@ -2292,6 +2325,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
@@ -2384,6 +2418,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value,
@@ -2432,6 +2467,7 @@ void main() {
               };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // Pasta oficial de thumbnails não deve ter sido poluída em modo experimental
         expect(
@@ -2508,6 +2544,7 @@ void main() {
         syncService.picoAbertoId.value = picoId;
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // No modo experimental (Hot Reload), NÃO deve haver recarga pendente
         expect(syncService.recargaPendentePicoId.value, isNull);
@@ -2598,6 +2635,7 @@ void main() {
         syncService.picoAbertoId.value = null;
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         // 1. O cache de caminhos em ConstrutorCaminhoTrajeto DEVE ter sido limpo
         final pathNovo = ConstrutorCaminhoTrajeto.obterCaminho(
@@ -2634,6 +2672,7 @@ void main() {
         final future3 = syncService.syncIndex();
 
         final results = await Future.wait([future1, future2, future3]);
+        await syncService.tarefaMidiasEmSegundoPlano;
 
         // Todas as 3 chamadas devem resolver com sucesso
         expect(results[0], equals(results[1]));
@@ -2665,6 +2704,7 @@ void main() {
             };
 
         await syncService.syncIndex();
+      await syncService.tarefaMidiasEmSegundoPlano;
 
         expect(
           syncService.syncStatus.value,
@@ -2711,6 +2751,7 @@ void main() {
         expect(editor.notificadorSessaoExpirada.value, 0);
 
         await syncService.syncIndex(auto: false);
+        await syncService.tarefaMidiasEmSegundoPlano;
 
         // 3. Verifica que o modo experimental foi encerrado e limpo
         expect(editor.isExperimentalMode.value, isFalse);

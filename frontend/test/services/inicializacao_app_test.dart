@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +17,7 @@ import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
@@ -26,6 +28,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import '../mocks/mock_telemetria.dart';
 
 class _MockWorkmanager extends Mock implements Workmanager {}
+class _MockAppLinks extends Mock implements AppLinks {}
 
 class _PathProviderInicializacaoFake extends Fake
     with MockPlatformInterfaceMixin
@@ -404,6 +407,96 @@ void main() {
 
       // Deve ter chamado syncIndex apenas 1 vez para o lote
       expect(chamadasIndice, equals(1));
+    });
+  });
+
+  group('Resolução de Destino Inicial no Cold Start (resolverDestinoInicialColdStart)', () {
+    test('retorna HomeNode quando getInitialLink retorna null', () async {
+      final mockAppLinks = _MockAppLinks();
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => null);
+
+      final editor = EditorDeCroqui();
+      final repo = DatasetRepository(editorDeCroqui: editor);
+      addTearDown(() => repo.repositorioCatalogo.fechar());
+
+      final resultado = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+      );
+
+      expect(resultado.treeController.currentNode, isA<HomeNode>());
+      expect(resultado.linkInicialProcessado, isNull);
+      expect(resultado.mensagemAvisoInicial, isNull);
+    });
+
+    test('resolve link inicial de Cold Start posicionando o controlador diretamente no nó alvo', () async {
+      final mockAppLinks = _MockAppLinks();
+      final uri = Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L');
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+
+      final editor = EditorDeCroqui();
+      final repo = DatasetRepository(editorDeCroqui: editor);
+      addTearDown(() => repo.repositorioCatalogo.fechar());
+
+      final pico = Pico()..nome = 'Pedra Grande';
+      final croqui = Croqui()
+        ..id = 'br_mg_igarape_pedra_grande'
+        ..uid = 'pQ9mRt2Kx1Vw8L'
+        ..picos.add(pico);
+      repo.activeDataset.value = TopoDataset(
+        picosBaixados: [
+          {
+            'id': 'br_mg_igarape_pedra_grande',
+            'data': {'pico': pico, 'croqui': croqui},
+          },
+        ],
+        picosDisponiveis: [],
+      );
+
+      final resultado = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+      );
+
+      expect(resultado.treeController.currentNode, isA<PicoNode>());
+      expect(
+        (resultado.treeController.currentNode as PicoNode).cragId,
+        equals('br_mg_igarape_pedra_grande'),
+      );
+      expect(resultado.linkInicialProcessado, equals(uri));
+      expect(resultado.mensagemAvisoInicial, isNull);
+    });
+
+    test('captura mensagemAvisoInicial quando o UID do link inicial não for encontrado e trata exceção de getInitialLink graciosamente', () async {
+      final mockAppLinks = _MockAppLinks();
+      final uri = Uri.parse('https://aresta.cc/z9zzZzZzZzZzZz');
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+
+      final editor = EditorDeCroqui();
+      final repo = DatasetRepository(editorDeCroqui: editor);
+      addTearDown(() => repo.repositorioCatalogo.fechar());
+      repo.activeDataset.value = TopoDataset(
+        picosBaixados: [],
+        picosDisponiveis: [],
+      );
+
+      final resultado = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+      );
+
+      expect(resultado.treeController.currentNode, isA<HomeNode>());
+      expect(resultado.linkInicialProcessado, equals(uri));
+      expect(resultado.mensagemAvisoInicial, contains('z9zzZzZzZzZzZz'));
+
+      // Também trata exceção de getInitialLink retornando HomeNode sem falhar
+      when(() => mockAppLinks.getInitialLink()).thenThrow(Exception('Falha canal nativo'));
+      final resultadoErro = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+      );
+      expect(resultadoErro.treeController.currentNode, isA<HomeNode>());
+      expect(resultadoErro.linkInicialProcessado, isNull);
     });
   });
 }

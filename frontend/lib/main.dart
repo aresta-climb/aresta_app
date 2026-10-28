@@ -14,6 +14,7 @@ import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/tela_migracao_banco.dart';
+import 'package:frontend/pages/tela_splash_inicial.dart';
 import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -35,7 +36,12 @@ import 'package:frontend/widgets/feedback/construtor_feedback_usuario.dart';
 export 'package:frontend/navigation/wrapper_navegacao_arvore.dart'
     show TreeNavigationWrapper, TreeNavigationWrapperState;
 export 'package:frontend/services/inicializacao_app.dart'
-    show configurarGestaoMemoria, registrarOuvintesLiveReload, setupAppServices;
+    show
+        ResultadoResolucaoColdStart,
+        configurarGestaoMemoria,
+        registrarOuvintesLiveReload,
+        resolverDestinoInicialColdStart,
+        setupAppServices;
 export 'package:frontend/theme/temas.dart'
     show construirTemaClaro, construirTemaEscuro;
 
@@ -56,20 +62,19 @@ void main() async {
   // Inicializa o Workmanager para processamento de feedback em background
   Workmanager().initialize(callbackDispatcher);
 
-  // Inicializa o gerenciador de notificações nativas de download
-  await GerenciadorNotificacaoDownload.instancia.inicializar();
-
-  // Inicialização do Firebase (Crashlytics, Analytics, App Check e Remote Config)
-  await initFirebase();
-
-  await ThemeController().loadTheme();
-
-  final prefs = await SharedPreferences.getInstance();
-  final acceptedLegalVersion = await migrarTermosLegais(prefs);
-
-  // Instancia e carrega o EditorDeCroqui
   final editorDeCroqui = EditorDeCroqui();
-  await editorDeCroqui.loadFromDisk();
+  int? acceptedLegalVersion;
+
+  // Executa tarefas independentes de inicialização em paralelo para acelerar o Cold Start
+  await Future.wait([
+    GerenciadorNotificacaoDownload.instancia.inicializar(),
+    initFirebase(),
+    ThemeController().loadTheme(),
+    SharedPreferences.getInstance().then((prefs) async {
+      acceptedLegalVersion = await migrarTermosLegais(prefs);
+    }),
+    editorDeCroqui.loadFromDisk(),
+  ]);
 
   // Instancia e inicializa o repositório
   final datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
@@ -92,6 +97,12 @@ void main() async {
 
   // Sincronização inicial na inicialização
   final needsMigration = await setupAppServices(datasetRepo, syncService);
+  final resolucaoColdStart = needsMigration
+      ? null
+      : resolverDestinoInicialColdStart(
+          datasetRepo,
+          syncService: syncService,
+        );
 
   void iniciarAplicativo() {
     runApp(
@@ -100,6 +111,7 @@ void main() async {
         syncService: syncService,
         needsMigration: needsMigration,
         acceptedLegalVersion: acceptedLegalVersion ?? 0,
+        resolucaoInicialColdStart: resolucaoColdStart,
       ),
     );
   }
@@ -133,6 +145,7 @@ class MyApp extends StatefulWidget {
   final int acceptedLegalVersion;
   final AssetBundle? assetBundle;
   final RemoteConfigService? remoteConfigService;
+  final Future<ResultadoResolucaoColdStart>? resolucaoInicialColdStart;
 
   const MyApp({
     super.key,
@@ -142,6 +155,7 @@ class MyApp extends StatefulWidget {
     required this.acceptedLegalVersion,
     this.assetBundle,
     this.remoteConfigService,
+    this.resolucaoInicialColdStart,
   });
 
   @override
@@ -151,6 +165,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late int _acceptedLegalVersion;
   late bool _needsMigration;
+  late bool _aguardandoColdStart;
+  ResultadoResolucaoColdStart? _resultadoColdStart;
   NetworkFeedbackTrigger? _networkFeedbackTrigger;
 
   @override
@@ -159,6 +175,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _acceptedLegalVersion = widget.acceptedLegalVersion;
     _needsMigration = widget.needsMigration;
+    _aguardandoColdStart = widget.resolucaoInicialColdStart != null;
+    if (widget.resolucaoInicialColdStart != null) {
+      widget.resolucaoInicialColdStart!.then((resultado) {
+        if (mounted) {
+          setState(() {
+            _resultadoColdStart = resultado;
+            _aguardandoColdStart = false;
+          });
+        }
+      });
+    }
 
     widget.datasetRepo.editorDeCroqui.notificadorSessaoExpirada.addListener(
       _aoExpirarSessaoExperimental,
@@ -244,17 +271,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _acceptedLegalVersion > 0 && _acceptedLegalVersion < kLegalVersion;
 
   Widget _construirTelaRaiz(BuildContext context) {
-    return _hasAcceptedTerms
-        ? TreeNavigationWrapper(
-            datasetRepo: widget.datasetRepo,
-            syncService: widget.syncService,
-            key: TreeNavigationWrapper.navKey,
-          )
-        : TermsOfUsePage(
-            onAccepted: _onTermsAccepted,
-            isUpdatingTerms: _isUpdatingTerms,
-            assetBundle: widget.assetBundle,
-          );
+    if (!_hasAcceptedTerms) {
+      return TermsOfUsePage(
+        onAccepted: _onTermsAccepted,
+        isUpdatingTerms: _isUpdatingTerms,
+        assetBundle: widget.assetBundle,
+      );
+    }
+    if (_aguardandoColdStart && !_needsMigration) {
+      return const TelaSplashInicial(exibirIndicadorCarregamento: true);
+    }
+    return TreeNavigationWrapper(
+      datasetRepo: widget.datasetRepo,
+      syncService: widget.syncService,
+      treeController: _resultadoColdStart?.treeController,
+      linkInicialProcessado: _resultadoColdStart?.linkInicialProcessado,
+      mensagemAvisoInicial: _resultadoColdStart?.mensagemAvisoInicial,
+      key: TreeNavigationWrapper.navKey,
+    );
   }
 
   @override

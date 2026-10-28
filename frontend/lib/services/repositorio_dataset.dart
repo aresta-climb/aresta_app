@@ -23,6 +23,7 @@ import 'dataset/sessao_online/gerenciador_sessao_online.dart';
 import 'catalogo/repositorio_catalogo.dart';
 import 'dataset/normalizador_croqui.dart';
 import 'http/servico_croqui_online.dart';
+import 'http/sync_service.dart';
 
 export 'catalogo/repositorio_catalogo.dart';
 export 'dataset/modelos/conjunto_dados_croqui.dart';
@@ -636,12 +637,49 @@ class DatasetRepository {
   // SECTION: Consulta de Croqui (Hierarquia Estrita de 4 Etapas)
   // ===========================================================================
 
+  /// Localiza o caminho relativo e o checksum SHA-256 de [id] no índice em memória
+  /// ou nos metadados disponíveis do dataset ativo.
+  (String?, String?) _obterCaminhoEChecksumDoIndice(String id) {
+    String? caminhoRelativo;
+    String? checksum;
+
+    final indice = indiceData.value;
+    if (indice != null) {
+      for (final r in indice.croquis) {
+        if (r.id == id) {
+          caminhoRelativo = r.caminhoRelativo;
+          checksum = r.checksumSha256Croqui;
+          break;
+        }
+      }
+    }
+
+    if (caminhoRelativo == null || caminhoRelativo.isEmpty) {
+      try {
+        final meta = activeDataset.value?.metadadosDisponiveis
+            .firstWhere((m) => m.id == id);
+        if (meta != null) {
+          caminhoRelativo = meta.caminhoRelativo;
+          checksum = meta.checksumSha256Croqui.isNotEmpty
+              ? meta.checksumSha256Croqui
+              : checksum;
+        }
+      } catch (_) {}
+    }
+
+    return (caminhoRelativo, checksum);
+  }
+
   /// Recupera o [Croqui] completo de um pico seguindo a hierarquia estrita de quatro etapas:
   /// 1. Memória RAM (Sessão Online ativa)
   /// 2. Armazenamento permanente (`/downloads/<picoId>/compilado.binarypb`)
   /// 3. Cache volátil (`/temp_cache/<picoId>/compilado.binarypb.<sha256>`)
-  /// 4. Rede remota (Download via CDN com `?v=<sha256>`)
-  Future<Croqui?> getCroqui(String id) async {
+  /// 4. Rede remota (Sincroniza o índice via [SyncService.syncIndex] se [indiceJaSincronizado]
+  ///    for `false` e baixa da CDN com `?v=<sha256>`)
+  Future<Croqui?> getCroqui(
+    String id, {
+    bool indiceJaSincronizado = false,
+  }) async {
     // 1. Memória RAM (Sessão Online ativa)
     final emMemoria = gerenciadorSessaoOnline.obterCroquiOnline(id);
     if (emMemoria != null) {
@@ -661,30 +699,7 @@ class DatasetRepository {
     }
 
     // Localiza o resumo correspondente no índice para obter o checksum cadastrado
-    String? caminhoRelativo;
-    String? checksum;
-
-    final indice = indiceData.value;
-    if (indice != null) {
-      for (final r in indice.croquis) {
-        if (r.id == id) {
-          caminhoRelativo = r.caminhoRelativo;
-          checksum = r.checksumSha256Croqui;
-          break;
-        }
-      }
-    }
-
-    // Salvaguarda: se não estiver no indiceData, busca em activeDataset.value?.metadadosDisponiveis
-    if (caminhoRelativo == null || caminhoRelativo.isEmpty) {
-      try {
-        final meta = activeDataset.value?.metadadosDisponiveis.firstWhere((m) => m.id == id);
-        if (meta != null) {
-          caminhoRelativo = meta.caminhoRelativo;
-          checksum = meta.checksumSha256Croqui.isNotEmpty ? meta.checksumSha256Croqui : checksum;
-        }
-      } catch (_) {}
-    }
+    var (caminhoRelativo, checksum) = _obterCaminhoEChecksumDoIndice(id);
 
     // 3. Cache volátil (/temp_cache/<picoId>/compilado.binarypb.<sha256>)
     if (checksum != null && checksum.isNotEmpty) {
@@ -695,7 +710,11 @@ class DatasetRepository {
         try {
           final bytes = await arquivoCache.readAsBytes();
           final croquiCache = NormalizadorCroqui.deBuffer(bytes);
-          gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiCache);
+          gerenciadorSessaoOnline.registrarCroquiOnline(
+            id,
+            croquiCache,
+            checksumSha256: checksum,
+          );
           indexarMidiasDoCroqui(id, croquiCache);
           return croquiCache;
         } catch (e, stackTrace) {
@@ -710,15 +729,33 @@ class DatasetRepository {
 
     // 4. Rede remota (CDN com ?v=<sha256>)
     if (caminhoRelativo != null && caminhoRelativo.isNotEmpty) {
-      final queryParam = (checksum != null && checksum.isNotEmpty) ? '?v=$checksum' : '';
-      final url = '${editorDeCroqui.activeBaseUrl}/$caminhoRelativo$queryParam';
+      final syncAtivo = SyncService.instance;
+      if (!indiceJaSincronizado &&
+          syncAtivo != null &&
+          identical(syncAtivo.datasetRepository, this)) {
+        await syncAtivo.syncIndex();
+        final atualizado = _obterCaminhoEChecksumDoIndice(id);
+        caminhoRelativo = atualizado.$1 ?? caminhoRelativo;
+        checksum = atualizado.$2 ?? checksum;
+      }
+
+      final queryParam =
+          (checksum != null && checksum.isNotEmpty) ? '?v=$checksum' : '';
+      final baseUrl =
+          SyncService.baseUrlOverride ?? editorDeCroqui.activeBaseUrl;
+      final url = '$baseUrl/$caminhoRelativo$queryParam';
       final croquiRemoto = await servicoCroquiOnline.carregarCroquiRemoto(
         url,
         picoId: id,
         checksumSha256: checksum,
       );
       if (croquiRemoto != null) {
-        gerenciadorSessaoOnline.registrarCroquiOnline(id, croquiRemoto);
+        gerenciadorSessaoOnline.registrarCroquiOnline(
+          id,
+          croquiRemoto,
+          etag: gerenciadorSessaoOnline.obterEtag(id),
+          checksumSha256: checksum,
+        );
         indexarMidiasDoCroqui(id, croquiRemoto);
         return croquiRemoto;
       }

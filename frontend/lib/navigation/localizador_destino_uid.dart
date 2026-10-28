@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pb.dart';
+import '../services/http/sync_service.dart';
 import '../services/repositorio_dataset.dart';
 import '../utils/consulta_dataset.dart';
 import 'arvore_navegacao.dart';
@@ -44,8 +45,24 @@ class DestinoUidLocalizado {
 /// 4. Verificação no banco SQLite local (`catalogo.db`) com carregamento sob demanda do croqui.
 class LocalizadorDestinoUid {
   final DatasetRepository datasetRepo;
+  final SyncService? syncService;
 
-  LocalizadorDestinoUid({required this.datasetRepo});
+  LocalizadorDestinoUid({
+    required this.datasetRepo,
+    this.syncService,
+  });
+
+  Future<String?> _obterIdSlugLocal(String uid) async {
+    final active = datasetRepo.activeDataset.value;
+    if (active != null) {
+      for (final meta in active.metadadosDisponiveis) {
+        if (meta.croquiUid == uid || meta.id == uid) {
+          return meta.id;
+        }
+      }
+    }
+    return datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
+  }
 
   /// Localiza o destino de um [uid] universal, retornando [DestinoUidLocalizado] ou `null` se não encontrado.
   ///
@@ -93,19 +110,24 @@ class LocalizadorDestinoUid {
 
     // 3. Descobre o idSlug no índice de metadados em memória ou no catálogo SQLite (catalogo.db)
     //    e carrega o croqui sob demanda na sessão online antes de retornar o nó de navegação
-    String? idSlug;
-    if (active != null) {
-      for (final meta in active.metadadosDisponiveis) {
-        if (meta.croquiUid == uid || meta.id == uid) {
-          idSlug = meta.id;
-          break;
-        }
+    var idSlug = await _obterIdSlugLocal(uid);
+    var indiceJaSincronizado = false;
+
+    if (idSlug == null) {
+      final sync = syncService ?? SyncService.instance;
+      if (sync != null &&
+          (syncService != null || identical(sync.datasetRepository, datasetRepo))) {
+        await sync.syncIndex();
+        indiceJaSincronizado = true;
+        idSlug = await _obterIdSlugLocal(uid);
       }
     }
-    idSlug ??= await datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
 
     if (idSlug != null) {
-      final croqui = await datasetRepo.getCroqui(idSlug);
+      final croqui = await datasetRepo.getCroqui(
+        idSlug,
+        indiceJaSincronizado: indiceJaSincronizado,
+      );
       if (croqui != null) {
         for (final pico in croqui.picos) {
           final destino = _localizarEmPicoECroqui(

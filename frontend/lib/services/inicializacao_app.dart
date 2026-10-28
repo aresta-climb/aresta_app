@@ -2,11 +2,16 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'package:frontend/application_managers/migracao/migracao_background_orchestrator.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/localizador_destino_uid.dart';
+import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
@@ -124,4 +129,70 @@ void registrarOuvintesLiveReload(
       });
     }
   });
+}
+
+/// Resultado da resolução antecipada de Deep Link durante o *Cold Start* do aplicativo.
+class ResultadoResolucaoColdStart {
+  /// Controlador de navegação já posicionado no nó de destino (ou na [HomeNode] padrão).
+  final TreeNavigationController treeController;
+
+  /// URI inicial processada durante o *Cold Start*, para deduplicação em `GerenciadorDeepLinks`.
+  final Uri? linkInicialProcessado;
+
+  /// Mensagem de aviso gerada caso o link inicial aponte para um UID não encontrado.
+  final String? mensagemAvisoInicial;
+
+  const ResultadoResolucaoColdStart({
+    required this.treeController,
+    this.linkInicialProcessado,
+    this.mensagemAvisoInicial,
+  });
+}
+
+/// Resolve antecipadamente o link inicial de *Cold Start* enquanto a splash screen está visível,
+/// retornando o [TreeNavigationController] já posicionado no nó de destino para evitar
+/// piscar a `HomePage` antes de navegar para o link.
+Future<ResultadoResolucaoColdStart> resolverDestinoInicialColdStart(
+  DatasetRepository datasetRepo, {
+  AppLinks? appLinks,
+  SyncService? syncService,
+  TreeNavigationController? treeController,
+}) async {
+  final controller = treeController ?? TreeNavigationController();
+  Uri? initialUri;
+
+  try {
+    initialUri = await (appLinks ?? AppLinks()).getInitialLink();
+  } catch (e, st) {
+    if (e is! MissingPluginException) {
+      AppLogger.instance.logError(
+        '[InicializacaoApp] Falha ao consultar getInitialLink no Cold Start',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  if (initialUri == null) {
+    return ResultadoResolucaoColdStart(treeController: controller);
+  }
+
+  String? mensagemAviso;
+  final navigator = DeepLinkNavigatorService(
+    datasetRepo: datasetRepo,
+    treeController: controller,
+    localizadorUid: LocalizadorDestinoUid(
+      datasetRepo: datasetRepo,
+      syncService: syncService,
+    ),
+    onMensagemAviso: (msg) => mensagemAviso = msg,
+  );
+
+  await navigator.processarLink(initialUri, tipoStart: 'cold_start');
+
+  return ResultadoResolucaoColdStart(
+    treeController: controller,
+    linkInicialProcessado: initialUri,
+    mensagemAvisoInicial: mensagemAviso,
+  );
 }

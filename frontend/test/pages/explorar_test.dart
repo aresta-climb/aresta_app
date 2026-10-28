@@ -19,7 +19,10 @@ class FakeDatasetRepository extends DatasetRepository {
   FakeDatasetRepository(EditorDeCroqui editor) : super(editorDeCroqui: editor);
 
   @override
-  Future<Croqui?> getCroqui(String id) async {
+  Future<Croqui?> getCroqui(
+    String id, {
+    bool indiceJaSincronizado = false,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 100));
     return null;
   }

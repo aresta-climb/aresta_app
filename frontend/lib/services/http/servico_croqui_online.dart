@@ -76,7 +76,11 @@ class ServicoCroquiOnline {
           try {
             final bytes = await arquivoCache.readAsBytes();
             final croqui = NormalizadorCroqui.deBuffer(bytes);
-            _sessaoOnline.registrarCroquiOnline(picoId, croqui);
+            _sessaoOnline.registrarCroquiOnline(
+              picoId,
+              croqui,
+              checksumSha256: hashEfetivo,
+            );
             return croqui;
           } catch (e) {
             AppLogger.instance.logAviso(
@@ -103,7 +107,12 @@ class ServicoCroquiOnline {
         final croqui = NormalizadorCroqui.deBuffer(bytes);
         await _salvarEmCacheVolatil(picoId, bytes, checksumSha256: hashEfetivo);
 
-        _sessaoOnline.registrarCroquiOnline(picoId, croqui, etag: etag);
+        _sessaoOnline.registrarCroquiOnline(
+          picoId,
+          croqui,
+          etag: etag,
+          checksumSha256: hashEfetivo,
+        );
         return croqui;
       } else {
         AppLogger.instance.logFalhaSyncOuDownload(

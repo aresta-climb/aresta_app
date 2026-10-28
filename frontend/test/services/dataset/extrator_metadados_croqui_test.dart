@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -25,7 +25,10 @@ class FakeDatasetRepository extends Fake implements DatasetRepository {
   int chamadasGetCroqui = 0;
 
   @override
-  Future<Croqui?> getCroqui(String id) async {
+  Future<Croqui?> getCroqui(
+    String id, {
+    bool indiceJaSincronizado = false,
+  }) async {
     chamadasGetCroqui++;
     return croquis[id];
   }

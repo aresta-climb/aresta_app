@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
@@ -10,7 +11,11 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/localizador_destino_uid.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:frontend/services/http/sync_rede.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 
@@ -53,6 +58,7 @@ void main() {
   const String uidInexistente = 'z9zzZzZzZzZzZz';
 
   setUp(() async {
+    HttpOverrides.global = null;
     dirTemp = await Directory.systemTemp.createTemp('localizador_uid_test_');
     PathProviderPlatform.instance = _FakePathProvider(dirTemp.path);
 
@@ -654,6 +660,220 @@ void main() {
           equals('pico_oficial_only'),
         );
         await repoDinamico.fechar();
+      },
+    );
+
+    test(
+      'resolve UID a partir do cache volátil (/temp_cache) sem chamadas de rede',
+      () async {
+        const idSlugCache = 'br_mg_pico_temp_cache';
+        const uidViaCache = 'vUidTempCache1';
+        const checksumCache = 'sha256_temp_cache_123';
+
+        await repositorioCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_cache_1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'cUidTempCache1',
+                  idSlug: idSlugCache,
+                  nome: 'Pico Temp Cache',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: uidViaCache,
+                  tipo: 'escalada',
+                  croquiUid: 'cUidTempCache1',
+                  nome: 'Via em Cache Volátil',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final resumoCache = ResumoCroqui()
+          ..id = idSlugCache
+          ..croquiUid = 'cUidTempCache1'
+          ..nome = 'Pico Temp Cache'
+          ..caminhoRelativo = 'picos/$idSlugCache/compilado.binarypb'
+          ..checksumSha256Croqui = checksumCache;
+        datasetRepo.indiceData.value = Indice(croquis: [resumoCache]);
+        datasetRepo.activeDataset.value = TopoDataset(
+          picosBaixados: [],
+          picosDisponiveis: [resumoCache.paraResumoPico()],
+          metadadosDisponiveis: [resumoCache],
+        );
+
+        final croquiEmCache = Croqui()
+          ..id = idSlugCache
+          ..uid = 'cUidTempCache1'
+          ..picos.add(
+            Pico()
+              ..nome = 'Pico Temp Cache'
+              ..setoresOuGrupos.add(
+                SetorOuGrupo()
+                  ..setor = (ArquivoSetor()
+                    ..conteudo = (Setor()
+                      ..uid = 'sUidTempCache1'
+                      ..nome = 'Setor Cache'
+                      ..escaladas.add(
+                        Escalada()
+                          ..uid = uidViaCache
+                          ..viaEsportiva = (ViaEsportiva()
+                            ..nome = 'Via em Cache Volátil'),
+                      ))),
+              ),
+          );
+
+        final dirCache = await datasetRepo.servicoCroquiOnline.obterDiretorioCache();
+        final arqCache = File('$dirCache/$idSlugCache/compilado.binarypb.$checksumCache');
+        await arqCache.parent.create(recursive: true);
+        await arqCache.writeAsBytes(croquiEmCache.writeToBuffer());
+
+        final destino = await localizador.localizar(uidViaCache);
+        expect(destino, isNotNull);
+        expect(destino!.idCroqui, equals(idSlugCache));
+        expect(destino.tipoDestino, equals('via'));
+        expect(destino.nomeEntidade, equals('Via em Cache Volátil'));
+      },
+    );
+
+    test(
+      'quando UID não existe no catalogo.db local, aciona syncService.syncIndex() como fallback e localiza a via recém-publicada sem duplicar syncIndex',
+      () async {
+        HttpOverrides.global = null;
+        const idSlugNovo = 'br_mg_pico_recem_publicado';
+        const uidCroquiNovo = 'cUidRecemPub12';
+        const uidViaNova = 'vUidRecemPub12';
+        const checksumNovo = 'sha256_recem_pub';
+
+        // Catálogo local começa na versão v1 sem o novo croqui
+        await repositorioCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v1',
+          ),
+        );
+        datasetRepo.activeDataset.value = TopoDataset(
+          picosBaixados: [],
+          picosDisponiveis: [],
+          metadadosDisponiveis: [],
+        );
+
+        final croquiRemotoNovo = Croqui()
+          ..id = idSlugNovo
+          ..uid = uidCroquiNovo
+          ..picos.add(
+            Pico()
+              ..nome = 'Pico Recém Publicado'
+              ..setoresOuGrupos.add(
+                SetorOuGrupo()
+                  ..setor = (ArquivoSetor()
+                    ..conteudo = (Setor()
+                      ..uid = 'sUidRecemPub12'
+                      ..nome = 'Setor Novo'
+                      ..escaladas.add(
+                        Escalada()
+                          ..uid = uidViaNova
+                          ..viaEsportiva = (ViaEsportiva()
+                            ..nome = 'Via Recém Publicada'),
+                      ))),
+              ),
+          );
+
+        final indiceRemotoV2 = Indice(versaoCatalogo: 'v2')
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = idSlugNovo
+              ..croquiUid = uidCroquiNovo
+              ..nome = 'Pico Recém Publicado'
+              ..caminhoRelativo = 'picos/$idSlugNovo/compilado.binarypb'
+              ..checksumSha256Croqui = checksumNovo,
+          );
+
+        int chamadasIndice = 0;
+        final servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => servidor.close(force: true));
+
+        servidor.listen((req) async {
+          if (req.uri.path.endsWith('/indice.binarypb')) {
+            chamadasIndice++;
+            req.response.statusCode = 200;
+            req.response.headers.set('etag', '"etag-v2-novo"');
+            req.response.add(indiceRemotoV2.writeToBuffer());
+          } else if (req.uri.path == '/sync') {
+            req.response.statusCode = 200;
+            req.response.headers.contentType = ContentType.json;
+            req.response.write(
+              jsonEncode({
+                'acao': 'apply_delta',
+                'versao_destino': 'v2',
+                'upserts': {
+                  'croquis': [
+                    {
+                      'croqui_uid': uidCroquiNovo,
+                      'id_slug': idSlugNovo,
+                      'nome': 'Pico Recém Publicado',
+                    },
+                  ],
+                  'entidades': [
+                    {
+                      'uid': uidViaNova,
+                      'tipo': 'escalada',
+                      'croqui_uid': uidCroquiNovo,
+                      'nome': 'Via Recém Publicada',
+                    },
+                  ],
+                },
+              }),
+            );
+          } else if (req.uri.path.endsWith('/compilado.binarypb')) {
+            req.response.statusCode = 200;
+            req.response.add(croquiRemotoNovo.writeToBuffer());
+          } else {
+            req.response.statusCode = 404;
+          }
+          await req.response.close();
+        });
+
+        final urlServidor = 'http://127.0.0.1:${servidor.port}';
+        editorDeCroqui.editorUrl.value = '$urlServidor/indice.binarypb';
+        SyncService.baseUrlOverride = urlServidor;
+        SyncService.catalogoUrlOverride = urlServidor;
+        addTearDown(() {
+          SyncService.baseUrlOverride = null;
+          SyncService.catalogoUrlOverride = null;
+        });
+
+        final clienteLocal = ClienteHttpAresta.paraTestes(http.Client());
+        final syncService = SyncService(
+          datasetRepository: datasetRepo,
+          client: clienteLocal,
+          network: SyncNetwork(clienteLocal, Duration.zero),
+        );
+        addTearDown(() async {
+          await syncService.tarefaMidiasEmSegundoPlano;
+        });
+
+        final localizadorComSync = LocalizadorDestinoUid(
+          datasetRepo: datasetRepo,
+          syncService: syncService,
+        );
+
+        final destino = await localizadorComSync.localizar(uidViaNova);
+
+        expect(destino, isNotNull);
+        expect(destino!.idCroqui, equals(idSlugNovo));
+        expect(destino.tipoDestino, equals('via'));
+        expect(destino.nomeEntidade, equals('Via Recém Publicada'));
+        expect(
+          chamadasIndice,
+          equals(1),
+          reason: 'Deve sincronizar o índice exatamente 1 vez (no fallback do localizador, sem repetir no getCroqui)',
+        );
       },
     );
   });

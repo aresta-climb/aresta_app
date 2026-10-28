@@ -216,7 +216,9 @@ class SyncService {
   /// Retorna [true] se a migração for concluída com sucesso, ou [false] em caso de falha de rede/erros.
   Future<bool> executarMigracao({bool rebaixarCroquisSalvos = true}) async {
     try {
-      final falhas = await syncIndex(auto: false);
+      await syncIndex(auto: false);
+      final falhas = await (_tarefaMidiasEmSegundoPlano ??
+          Future.value(<String>[]));
       if (falhas.isNotEmpty ||
           syncStatus.value == SyncStatus.error ||
           syncStatus.value == SyncStatus.offline) {
@@ -357,13 +359,18 @@ class SyncService {
   }
 
   Future<List<String>>? _activeSyncFuture;
+  Future<List<String>>? _tarefaMidiasEmSegundoPlano;
+
+  /// Retorna a tarefa assíncrona em segundo plano de sincronização de thumbnails,
+  /// croquis baixados e sessão online iniciada pela última chamada de [syncIndex].
+  Future<List<String>>? get tarefaMidiasEmSegundoPlano =>
+      _tarefaMidiasEmSegundoPlano;
 
   /// Sincroniza o índice mestre com o servidor remoto.
   ///
-  /// Se um novo índice estiver disponível, ele atualiza o cache local e aciona
-  /// uma verificação de atualização em segundo plano para todos os picos baixados. Se o servidor estiver
-  /// inacessível, ele reverte para o índice em cache local.
-  /// Retorna uma lista com os nomes dos croquis que falharam na atualização atômica.
+  /// Aguarda apenas a Fase 1 rápida (`indice.binarypb` via ETag + sincronização delta
+  /// de `catalogo.db`) e dispara automaticamente em segundo plano ([tarefaMidiasEmSegundoPlano])
+  /// a Fase 2 pesada (thumbnails, croquis offline desatualizados e recarga da sessão online ativa).
   /// Chamadas concorrentes são coalescidas para evitar requisições de rede duplicadas.
   Future<List<String>> syncIndex({
     bool auto = true,
@@ -399,6 +406,7 @@ class SyncService {
         ),
       );
       syncStatus.value = SyncStatus.outdated;
+      _tarefaMidiasEmSegundoPlano = Future.value(<String>[]);
       return [];
     }
 
@@ -425,6 +433,7 @@ class SyncService {
         );
         await _loadLocalIndiceAndNotify(localIndicePath);
         setUpdatedStatus();
+        _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
         return failedPicos;
       }
 
@@ -447,6 +456,7 @@ class SyncService {
           await _loadLocalIndiceAndNotify(localIndicePath);
           syncStatus.value = SyncStatus.offline;
           TelemetryService.instance.logResultadoSincronizacao('erro');
+          _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
           return failedPicos;
         case IndiceErroServidor(:final statusCode):
           if (statusCode == 404 && editorDeCroqui.isExperimentalMode.value) {
@@ -457,11 +467,13 @@ class SyncService {
             await datasetRepository.init();
             syncStatus.value = SyncStatus.updated;
             editorDeCroqui.notificarSessaoExperimentalExpirada();
+            _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
             return failedPicos;
           }
           await _loadLocalIndiceAndNotify(localIndicePath);
           syncStatus.value = SyncStatus.error;
           TelemetryService.instance.logResultadoSincronizacao('erro');
+          _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
           return failedPicos;
         case IndiceUpdated():
           final responseBytes = result.rawBytes;
@@ -470,108 +482,25 @@ class SyncService {
 
           await datasetRepository.loadIndiceToMemory(newIndice);
 
-          // Inicia a sincronização do catalogo.db de forma assíncrona e não-bloqueante
-          // na event loop enquanto thumbnails e croquis são atualizados em paralelo.
-          final futureCatalogo = sincronizarCatalogoSeNecessario(
+          await sincronizarCatalogoSeNecessario(
             newIndice,
             baseUrl,
             forcarDownloadExperimental: forceBypassCache,
           );
 
-          final globalUpdates = _SyncUpdates();
-
-          final thumbUpdates = await _syncThumbnails(
-            oldIndice,
-            newIndice,
-            baseUrl,
+          final tarefa = _executarAtualizacaoMidiasEmSegundoPlano(
+            oldIndice: oldIndice,
+            newIndice: newIndice,
+            baseUrl: baseUrl,
+            localIndicePath: localIndicePath,
+            localEtagPath: localEtagPath,
+            responseBytes: responseBytes,
+            newEtag: result.newEtag,
+            auto: auto,
+            forceBypassCache: forceBypassCache,
           );
-          globalUpdates.merge(thumbUpdates);
-
-          final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
-          globalUpdates.merge(croquiUpdates);
-
-          if (globalUpdates.failedPicos.isNotEmpty) {
-            failedPicos.addAll(globalUpdates.failedPicos);
-          }
-
-          if (failedPicos.isEmpty && !globalUpdates.hasErrors) {
-            // Sucesso total. Efetivar todas as alterações pendentes de uma vez só (Atomic Global Updates).
-            // Isso previne que o aplicativo fique com dados e arquivos em estados inconsistentes caso
-            // o índice mestre falhe ao ser baixado ou processado.
-            if (globalUpdates.filesToRename.isNotEmpty) {
-              AppLogger.instance.logInfo(
-                '🔄 [SyncService] Arquivos atualizados/renomeados no syncIndex (${globalUpdates.filesToRename.length}):',
-              );
-              for (final entrada in globalUpdates.filesToRename.entries) {
-                AppLogger.instance.logInfo('   • ${entrada.key} -> ${entrada.value}');
-              }
-            }
-            if (globalUpdates.filesToDelete.isNotEmpty) {
-              AppLogger.instance.logInfo(
-                '🗑️ [SyncService] Arquivos removidos no syncIndex (${globalUpdates.filesToDelete.length}):',
-              );
-              for (final arquivo in globalUpdates.filesToDelete) {
-                AppLogger.instance.logInfo('   • $arquivo');
-              }
-            }
-
-            if (globalUpdates.filesToDelete.isNotEmpty ||
-                globalUpdates.filesToRename.isNotEmpty) {
-              await _storage.applyAtomicFileUpdates(
-                filesToDelete: globalUpdates.filesToDelete,
-                filesToRename: globalUpdates.filesToRename,
-              );
-            }
-
-            // Atualiza os metadados do aplicativo na RAM de forma segura após as operações de disco.
-            for (final entry in globalUpdates.metadataToUpdate.entries) {
-              await _updatePicoMetadata(entry.key, entry.value);
-            }
-
-            await _persistNewIndice(
-              localIndicePath,
-              localEtagPath,
-              responseBytes,
-              result.newEtag,
-            );
-
-            // Invalida caches estáticos de trajetos e expurga croquis obsoletos da sessão online
-            datasetRepository.invalidarCroquisObsoletos(
-              oldIndice: oldIndice,
-              novoIndice: newIndice,
-              picosAtualizados: globalUpdates.picosAtualizadosComSucesso,
-              picoAbertoId: picoAbertoId.value,
-            );
-
-            quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value =
-                globalUpdates.picosAtualizadosComSucesso.length;
-            setUpdatedStatus();
-          } else {
-            AppLogger.instance.logError(
-              '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
-              stackTrace: StackTrace.current,
-            );
-            if (!forceBypassCache) {
-              AppLogger.instance.logAviso(
-                '[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...',
-              );
-              final fallbackFailedPicos = await syncIndex(
-                auto: auto,
-                forceBypassCache: true,
-              );
-              failedPicos.clear();
-              failedPicos.addAll(fallbackFailedPicos);
-            } else {
-              AppLogger.instance.logError(
-                '[SyncService] Falha definitiva na sincronização após tentativa de bypass de cache.',
-                stackTrace: StackTrace.current,
-              );
-              syncStatus.value = SyncStatus.error;
-              TelemetryService.instance.logResultadoSincronizacao('erro');
-            }
-          }
-
-          await futureCatalogo;
+          _tarefaMidiasEmSegundoPlano = tarefa;
+          return failedPicos;
         case IndiceUnchanged():
           AppLogger.instance.logInfo(
             '[SyncService] Índice 304 Not Modified - Nenhuma atualização necessária.',
@@ -592,6 +521,7 @@ class SyncService {
           }
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
+          _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
       }
     } catch (e, stack) {
       AppLogger.instance.logFalhaSyncOuDownload(
@@ -605,8 +535,168 @@ class SyncService {
       );
       syncStatus.value = SyncStatus.error;
       TelemetryService.instance.logResultadoSincronizacao('erro');
+      _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
     }
     return failedPicos;
+  }
+
+  Future<List<String>> _executarAtualizacaoMidiasEmSegundoPlano({
+    required Indice? oldIndice,
+    required Indice newIndice,
+    required String baseUrl,
+    required String localIndicePath,
+    required String localEtagPath,
+    required Uint8List responseBytes,
+    required String? newEtag,
+    required bool auto,
+    required bool forceBypassCache,
+  }) async {
+    final List<String> failedPicos = [];
+    final globalUpdates = _SyncUpdates();
+
+    final thumbUpdates = await _syncThumbnails(
+      oldIndice,
+      newIndice,
+      baseUrl,
+    );
+    globalUpdates.merge(thumbUpdates);
+
+    final croquiUpdates = await _checkForUpdates(oldIndice, newIndice);
+    globalUpdates.merge(croquiUpdates);
+
+    if (globalUpdates.failedPicos.isNotEmpty) {
+      failedPicos.addAll(globalUpdates.failedPicos);
+    }
+
+    if (failedPicos.isEmpty && !globalUpdates.hasErrors) {
+      if (globalUpdates.filesToRename.isNotEmpty) {
+        AppLogger.instance.logInfo(
+          '🔄 [SyncService] Arquivos atualizados/renomeados no syncIndex (${globalUpdates.filesToRename.length}):',
+        );
+        for (final entrada in globalUpdates.filesToRename.entries) {
+          AppLogger.instance.logInfo(
+            '   • ${entrada.key} -> ${entrada.value}',
+          );
+        }
+      }
+      if (globalUpdates.filesToDelete.isNotEmpty) {
+        AppLogger.instance.logInfo(
+          '🗑️ [SyncService] Arquivos removidos no syncIndex (${globalUpdates.filesToDelete.length}):',
+        );
+        for (final arquivo in globalUpdates.filesToDelete) {
+          AppLogger.instance.logInfo('   • $arquivo');
+        }
+      }
+
+      if (globalUpdates.filesToDelete.isNotEmpty ||
+          globalUpdates.filesToRename.isNotEmpty) {
+        await _storage.applyAtomicFileUpdates(
+          filesToDelete: globalUpdates.filesToDelete,
+          filesToRename: globalUpdates.filesToRename,
+        );
+      }
+
+      for (final entry in globalUpdates.metadataToUpdate.entries) {
+        await _updatePicoMetadata(entry.key, entry.value);
+      }
+
+      await _persistNewIndice(
+        localIndicePath,
+        localEtagPath,
+        responseBytes,
+        newEtag,
+      );
+
+      datasetRepository.invalidarCroquisObsoletos(
+        oldIndice: oldIndice,
+        novoIndice: newIndice,
+        picosAtualizados: globalUpdates.picosAtualizadosComSucesso,
+        picoAbertoId: picoAbertoId.value,
+      );
+
+      await _atualizarCroquiSessaoOnlineAtivaSeNecessario(
+        newIndice: newIndice,
+        baseUrl: baseUrl,
+        picosOfflineAtualizados: globalUpdates.picosAtualizadosComSucesso,
+      );
+
+      quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value =
+          globalUpdates.picosAtualizadosComSucesso.length;
+      setUpdatedStatus();
+    } else {
+      AppLogger.instance.logError(
+        '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
+        stackTrace: StackTrace.current,
+      );
+      if (!forceBypassCache) {
+        AppLogger.instance.logAviso(
+          '[SyncService] Falha na atualização de picos possivelmente devido a cache stale. Tentando novamente forçando bypass de cache...',
+        );
+        await syncIndex(
+          auto: auto,
+          forceBypassCache: true,
+        );
+        final fallbackFailedPicos = await _tarefaMidiasEmSegundoPlano!;
+        failedPicos.clear();
+        failedPicos.addAll(fallbackFailedPicos);
+      } else {
+        AppLogger.instance.logError(
+          '[SyncService] Falha definitiva na sincronização após tentativa de bypass de cache.',
+          stackTrace: StackTrace.current,
+        );
+        syncStatus.value = SyncStatus.error;
+        TelemetryService.instance.logResultadoSincronizacao('erro');
+      }
+    }
+    return failedPicos;
+  }
+
+  /// Verifica se o croqui atualmente aberto em sessão online ([picoAbertoId]) sofreu
+  /// alteração de checksum no [newIndice] e, caso positivo, baixa o novo `.binarypb`
+  /// em segundo plano e notifica a UI para atualização reativa sem ejetar o usuário.
+  Future<void> _atualizarCroquiSessaoOnlineAtivaSeNecessario({
+    required Indice newIndice,
+    required String baseUrl,
+    required List<String> picosOfflineAtualizados,
+  }) async {
+    final abertoId = picoAbertoId.value;
+    if (abertoId == null || abertoId.isEmpty) return;
+    if (picosOfflineAtualizados.contains(abertoId) ||
+        datasetRepository.isPicoDownloaded(abertoId)) {
+      return;
+    }
+
+    final croquiOnlineAtual =
+        datasetRepository.gerenciadorSessaoOnline.obterCroquiOnline(abertoId);
+    if (croquiOnlineAtual == null) return;
+
+    final novoResumo =
+        newIndice.croquis.where((r) => r.id == abertoId).firstOrNull;
+    if (novoResumo == null || novoResumo.caminhoRelativo.isEmpty) return;
+
+    final novoChecksum = novoResumo.checksumSha256Croqui;
+    final checksumMemoria =
+        datasetRepository.gerenciadorSessaoOnline.obterChecksum(abertoId);
+    if (checksumMemoria == null ||
+        checksumMemoria.isEmpty ||
+        checksumMemoria == novoChecksum) {
+      return;
+    }
+
+    final queryParam = novoChecksum.isNotEmpty ? '?v=$novoChecksum' : '';
+    final url = '$baseUrl/${novoResumo.caminhoRelativo}$queryParam';
+    final croquiAtualizado =
+        await datasetRepository.servicoCroquiOnline.carregarCroquiRemoto(
+      url,
+      picoId: abertoId,
+      checksumSha256: novoChecksum,
+    );
+    if (croquiAtualizado != null) {
+      datasetRepository.notificarAtualizacaoSessaoOnline(abertoId);
+      datasetRepository.notificarCroquiOnlineAtualizadoNaUI(
+        croquiAtualizado.nome.isNotEmpty ? croquiAtualizado.nome : abertoId,
+      );
+    }
   }
 
   /// Verifica se a versão do banco local `catalogo.db` coincide com [indiceAlvo.versaoCatalogo].

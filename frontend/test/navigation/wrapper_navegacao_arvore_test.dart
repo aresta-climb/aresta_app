@@ -284,5 +284,33 @@ void main() {
         expect(scrollableState.position.pixels, greaterThan(1000.0));
       },
     );
+
+    testWidgets(
+      'sincroniza picoAbertoId imediatamente ao montar já posicionado em um PicoNode e exibe SnackBar quando mensagemAvisoInicial for fornecida',
+      (tester) async {
+        final controller = TreeNavigationController();
+        controller.navigateTo(
+          const PicoNode(cragId: 'pico_cold_start', parent: HomeNode()),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+              linkInicialProcessado: Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L'),
+              mensagemAvisoInicial: 'Aviso de teste do Cold Start',
+              child: const Scaffold(body: Text('Tela Inicial Direta')),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(syncService.picoAbertoId.value, equals('pico_cold_start'));
+        expect(find.text('Aviso de teste do Cold Start'), findsOneWidget);
+      },
+    );
   });
 }
