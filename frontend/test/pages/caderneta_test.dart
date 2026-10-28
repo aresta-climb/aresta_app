@@ -157,14 +157,6 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      String? overflowDetails;
-      final originalOnError = FlutterError.onError;
-      FlutterError.onError = (details) {
-        overflowDetails = details.toString();
-        originalOnError?.call(details);
-      };
-      addTearDown(() => FlutterError.onError = originalOnError);
-
       final c1 = Cadena.criar(
         escaladaUid: 'via-1',
         dataAscensao: DateTime(2026, 9, 20),
@@ -244,5 +236,3 @@ void main() {
     });
   });
 }
-
-

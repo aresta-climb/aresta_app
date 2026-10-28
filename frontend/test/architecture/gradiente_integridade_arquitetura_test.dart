@@ -116,7 +116,7 @@ int _contarElementosEmLista(String content) {
         count++;
         temConteudoNoItem = false;
       }
-    } else if (!char.trim().isEmpty) {
+    } else if (char.trim().isNotEmpty) {
       temConteudoNoItem = true;
     }
   }

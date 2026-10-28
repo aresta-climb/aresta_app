@@ -279,14 +279,6 @@ void main() {
           tester.view.resetDevicePixelRatio();
         });
 
-        String? overflowDetails;
-        final originalOnError = FlutterError.onError;
-        FlutterError.onError = (details) {
-          overflowDetails = details.toString();
-          originalOnError?.call(details);
-        };
-        addTearDown(() => FlutterError.onError = originalOnError);
-
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData.dark().copyWith(
