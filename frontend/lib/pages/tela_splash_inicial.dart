@@ -23,26 +23,27 @@ class TelaSplashInicial extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
             Image.asset(
               'assets/logo_splash.png',
-              width: 160,
-              height: 160,
+              width: 288,
+              height: 288,
               fit: BoxFit.contain,
             ),
-            if (exibirIndicadorCarregamento) ...[
-              const SizedBox(height: 24),
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.brandColor,
+            if (exibirIndicadorCarregamento)
+              const Padding(
+                padding: EdgeInsets.only(top: 192),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.brandColor,
+                  ),
                 ),
               ),
-            ],
           ],
         ),
       ),

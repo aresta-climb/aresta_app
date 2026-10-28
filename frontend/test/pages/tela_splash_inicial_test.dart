@@ -21,6 +21,8 @@ void main() {
 
         final image = tester.widget<Image>(find.byType(Image));
         expect(image.image, isA<AssetImage>());
+        expect(image.width, equals(288));
+        expect(image.height, equals(288));
         final assetImage = image.image as AssetImage;
         expect(assetImage.assetName, equals('assets/logo_splash.png'));
         expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -28,15 +30,28 @@ void main() {
     );
 
     testWidgets(
-      'exibe CircularProgressIndicator discreto quando exibirIndicadorCarregamento é true',
+      'exibe CircularProgressIndicator abaixo da logo sem deslocar o centro vertical da imagem quando exibirIndicadorCarregamento é true',
       (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: TelaSplashInicial(exibirIndicadorCarregamento: false),
+          ),
+        );
+        final centroSemIndicador = tester.getCenter(find.byType(Image));
+
         await tester.pumpWidget(
           const MaterialApp(
             home: TelaSplashInicial(exibirIndicadorCarregamento: true),
           ),
         );
+        final centroComIndicador = tester.getCenter(find.byType(Image));
+        final centroSpinner = tester.getCenter(
+          find.byType(CircularProgressIndicator),
+        );
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(centroComIndicador, equals(centroSemIndicador));
+        expect(centroSpinner.dy, greaterThan(centroComIndicador.dy));
       },
     );
   });
