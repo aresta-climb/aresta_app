@@ -290,5 +290,37 @@ void main() {
       expect(find.byType(HubPerfilCadernetaPage), findsNothing);
       expect(find.text('Abrir Hub'), findsOneWidget);
     });
+
+    testWidgets('não causa overflow em tela ultracompacta (320x568) com escala de fonte aumentada (1.5x)', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.5),
+            ),
+            child: child!,
+          ),
+          home: HubPerfilCadernetaPage(
+            viewModel: HubPerfilCadernetaViewModel(repositorio: repositorio),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('CADENAS'), findsOneWidget);
+      expect(find.text('TENTATIVAS'), findsOneWidget);
+      expect(find.text('PICOS'), findsOneWidget);
+      expect(find.text('VIAS'), findsOneWidget);
+      expect(find.text('Minha caderneta'), findsOneWidget);
+    });
   });
 }
