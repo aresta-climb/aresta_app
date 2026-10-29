@@ -9,7 +9,9 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import '../../mocks/mock_app_logger.dart';
 import '../../mocks/mock_telemetria.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 
 class MockHttpClient extends Mock implements http.Client {}
 
@@ -403,6 +405,82 @@ void main() {
       expect(params['dispatcher'], 'connectivity_plus');
       expect(params['tipo_feedback'], 'app');
       expect(params['erro'], contains('HTTP Status 500'));
+    });
+
+    test(
+      'processarFilaSemPropagarErro captura Software caused connection abort sem propagar exceção e registra apenas logAviso',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        when(() => mockClient.send(any())).thenThrow(
+          http.ClientException('Software caused connection abort'),
+        );
+
+        final pngFile = File('${queueDir.path}/uuid-abort.png');
+        pngFile.writeAsBytesSync([1, 2, 3]);
+        final jsonFile = File('${queueDir.path}/uuid-abort.json');
+        jsonFile.writeAsStringSync(
+          jsonEncode({
+            'id': 'uuid-abort',
+            'description': 'teste abort',
+            'metadata': {'os': 'android', 'feedbackId': 'uuid-abort'},
+            'timestamp': DateTime.now().toIso8601String(),
+          }),
+        );
+
+        final resultado = await FeedbackOrchestrator.processarFilaSemPropagarErro(
+          client: ClienteHttpAresta.paraTestes(mockClient),
+          getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'token-valido',
+          dispatcher: 'app_startup',
+          isDebugModeOverride: false,
+        );
+
+        expect(resultado, isFalse);
+        expect(mockLogger.recordedWarnings, hasLength(1));
+        expect(
+          mockLogger.recordedWarnings.first,
+          contains('Software caused connection abort'),
+        );
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(jsonFile.existsSync(), isTrue);
+      },
+    );
+
+    test(
+      'processarFilaSemPropagarErro captura erro não relacionado a rede registrando logError sem propagar exceção',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        when(
+          () => mockClient.send(any()),
+        ).thenAnswer((_) async => http.StreamedResponse(Stream.empty(), 500));
+
+        final pngFile = File('${queueDir.path}/uuid-erro500.png');
+        pngFile.writeAsBytesSync([1, 2, 3]);
+        final jsonFile = File('${queueDir.path}/uuid-erro500.json');
+        jsonFile.writeAsStringSync(
+          jsonEncode({
+            'id': 'uuid-erro500',
+            'description': 'teste 500',
+            'metadata': {'os': 'android', 'feedbackId': 'uuid-erro500'},
+            'timestamp': DateTime.now().toIso8601String(),
+          }),
+        );
+
+        final resultado = await FeedbackOrchestrator.processarFilaSemPropagarErro(
+          client: ClienteHttpAresta.paraTestes(mockClient),
+          getSupportDirectoryOverride: () async => tempDir,
+          getAppCheckTokenOverride: () async => 'token-valido',
+          dispatcher: 'app_startup',
+          isDebugModeOverride: false,
+        );
+
+        expect(resultado, isFalse);
+        expect(mockLogger.recordedErrors, hasLength(1));
+        expect(mockLogger.recordedWarnings, isEmpty);
     });
   });
 }

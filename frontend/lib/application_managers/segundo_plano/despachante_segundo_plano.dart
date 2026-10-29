@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 /// Despachante global e centralizado de tarefas em segundo plano (WorkManager).
@@ -100,11 +100,17 @@ abstract class BackgroundDispatcher {
 
       return true;
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        '[BackgroundDispatcher] Falha ao executar tarefa ($task)',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          '[BackgroundDispatcher] Falha transitória de rede ao executar tarefa ($task): $e',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '[BackgroundDispatcher] Falha ao executar tarefa ($task)',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       // Lançar exceção faz o WorkManager acionar a política de Backoff / reagendamento
       throw Exception('Falha ao executar tarefa de background ($task): $e');
     }

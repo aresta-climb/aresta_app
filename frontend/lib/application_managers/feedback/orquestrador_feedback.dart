@@ -36,12 +36,50 @@ class FeedbackOrchestrator {
     return true;
   }
 
+  /// Dispara o processamento da fila de feedbacks capturando falhas transitórias de rede
+  /// (como `Software caused connection abort` ou timeouts) como aviso/breadcrumb (`logAviso`),
+  /// evitando exceções assíncronas não tratadas quando acionado no `initState` do app ou por listeners de conectividade.
+  static Future<bool> processarFilaSemPropagarErro({
+    ClienteHttpAresta? client,
+    Future<Directory> Function()? getSupportDirectoryOverride,
+    Future<Directory> Function()? getDocumentsDirectoryOverride,
+    Future<String?> Function()? getAppCheckTokenOverride,
+    String dispatcher = 'app_startup',
+    bool? isDebugModeOverride,
+    TelemetryService? telemetryService,
+  }) async {
+    try {
+      return await processFeedbackQueue(
+        client: client,
+        getSupportDirectoryOverride: getSupportDirectoryOverride,
+        getDocumentsDirectoryOverride: getDocumentsDirectoryOverride,
+        getAppCheckTokenOverride: getAppCheckTokenOverride,
+        dispatcher: dispatcher,
+        isDebugModeOverride: isDebugModeOverride,
+        telemetryService: telemetryService,
+      );
+    } catch (e, st) {
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso(
+          '[FeedbackOrchestrator] Falha transitória de rede ao processar fila ($dispatcher): $e',
+        );
+      } else {
+        AppLogger.instance.logError(
+          '[FeedbackOrchestrator] Erro ao processar fila de feedback ($dispatcher)',
+          error: e,
+          stackTrace: st,
+        );
+      }
+      return false;
+    }
+  }
+
   /// Processa a fila de feedbacks utilizando Clean Architecture.
   ///
   /// **1. Cleanup & Crash Recovery:** Remove arquivos antigos e destrava itens zumbis via [FeedbackLocalRepository].
   /// **2. Lock Atômico:** Busca e trava as tarefas pendentes através de renomeação atômica no sistema de arquivos.
   /// **3. Atestação de Integridade:** Obtém o token JWT dinâmico do [AppCheckService].
-  /// **4. Mock Gracioso em Debug:** Se estiver em modo de desenvolvimento (`kDebugMode`) e não houver token cadastrado,
+  /// **4. Mock Gracioso em Debug:** Se estiver em modo de desenvolvimento (`!kReleaseMode`) e não houver token cadastrado,
   ///    imprime os dados amigavelmente no console e finaliza a tarefa sem travar o aplicativo.
   /// **5. Despacho de Rede:** Envia o payload via [FeedbackNetworkService] para a Edge Function `app-feedback`,
   ///    anexando os arquivos binários locais `indice.binarypb` e `compilado.binarypb` quando disponíveis.
@@ -141,7 +179,7 @@ class FeedbackOrchestrator {
             }
           }
 
-          // Em modo de depuração sem token do App Check registrado no Firebase Console,
+          // Em modo de depuração/profile sem token do App Check registrado no Firebase Console,
           // realizamos um mock gracioso para não impedir contribuidores externos de testar o app.
           if (isDebug && (appCheckToken == null || appCheckToken.isEmpty)) {
             AppLogger.instance.logInfo(

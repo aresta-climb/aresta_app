@@ -210,15 +210,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _aoExpirarSessaoExperimental,
     );
 
-    // Tenta esvaziar a fila assim que o app abre (caso já tenha internet)
-    FeedbackOrchestrator.processFeedbackQueue(dispatcher: 'app_startup');
+    // Tenta esvaziar a fila assim que o app abre (caso já tenha internet) sem propagar erro assíncrono não tratado
+    FeedbackOrchestrator.processarFilaSemPropagarErro(dispatcher: 'app_startup');
 
     // Escuta transições de rede (ex: tirar do modo avião) para enviar feedbacks presos na fila,
     // sem depender da lentidão do agendamento do SO para o Workmanager.
     _networkFeedbackTrigger = NetworkFeedbackTrigger(
       connectivityStream: Connectivity().onConnectivityChanged,
       onNetworkRestored: () async {
-        await FeedbackOrchestrator.processFeedbackQueue(
+        await FeedbackOrchestrator.processarFilaSemPropagarErro(
           dispatcher: 'connectivity_plus',
         );
       },

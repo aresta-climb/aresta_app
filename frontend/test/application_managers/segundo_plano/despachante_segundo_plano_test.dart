@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -190,7 +190,27 @@ void main() {
       expect(migracaoResult, isTrue);
     });
 
-    test('executarTarefa com migração padrão com falha de rede deve propagar erro', () async {
+    test('executarTarefa com migração padrão com falha de rede deve propagar erro e registrar apenas logAviso para falha de rede', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+
+      await expectLater(
+        BackgroundDispatcher.executarTarefa(
+          'send_feedback_task',
+          feedbackRunner: () async {
+            throw const SocketException('Software caused connection abort');
+          },
+        ),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(mockLogger.recordedWarnings, hasLength(1));
+      expect(
+        mockLogger.recordedWarnings.first,
+        contains('Software caused connection abort'),
+      );
+      expect(mockLogger.recordedErrors, isEmpty);
+      AppLogger.resetForTesting();
       SharedPreferences.setMockInitialValues({'cached_data_version': 0});
       expect(
         () async => await BackgroundDispatcher.executarTarefa(
