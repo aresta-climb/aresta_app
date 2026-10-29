@@ -134,7 +134,7 @@ O sistema SHALL sincronizar bidirecionalmente o estado de resolução/fechamento
 
 #### Scenario: Resolução, arquivamento ou reabertura de Issue no Sentry atualiza a Issue vinculada no GitHub
 - **WHEN** o Worker receber um webhook do Sentry com `sentry-hook-resource: issue` e `action` igual a `"resolved"`, `"archived"`, `"ignored"` ou `"unresolved"`
-- **THEN** o sistema DEVE buscar a Issue correspondente na organização `aresta-climb` via GitHub App e atualizar seu estado para `"closed"` (quando resolvida/arquivada/ignorada) ou `"open"` (quando marcada como `"unresolved"`).
+- **THEN** o sistema DEVE buscar a Issue correspondente na organização `aresta-climb` via GitHub App (`in:body "issues/<ID>"`) e atualizar seu estado para `"closed"` (quando resolvida/arquivada/ignorada) ou `"open"` (quando marcada como `"unresolved"`), criando automaticamente uma nova Issue (`emergencia` se `fatal`, ou `bug` se não-fatal) caso a ação seja `"unresolved"` e nenhuma Issue correspondente exista no GitHub.
 
 #### Scenario: Prevenção de loop infinito quando o próprio bot altera o estado no GitHub
 - **WHEN** o Worker receber um webhook do GitHub `issues` (`closed` ou `reopened`) cujo `sender.type === "Bot"` ou `sender.login` pertença ao `aresta-climb-bot`
