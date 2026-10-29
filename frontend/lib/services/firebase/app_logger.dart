@@ -169,7 +169,7 @@ class AppLogger {
   /// No modo debug, imprime no console local com prefixo informativo.
   /// Registra a mensagem como breadcrumb no Firebase Crashlytics e no Sentry tanto em desenvolvimento quanto em produção.
   void logInfo(String mensagem) {
-    final isDebug = debugModeOverride ?? kDebugMode;
+    final isDebug = debugModeOverride ?? !kReleaseMode;
     if (isDebug) {
       debugPrint('ℹ️ [AppLogger] $mensagem');
     }
@@ -194,7 +194,7 @@ class AppLogger {
   /// Registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics e no Sentry.
   /// Não abre issues/tickets no painel do Crashlytics ou Sentry, preservando a lista de issues para erros reais.
   void logAviso(String mensagem) {
-    final isDebug = debugModeOverride ?? kDebugMode;
+    final isDebug = debugModeOverride ?? !kReleaseMode;
     if (isDebug) {
       debugPrint('⚠️ [AppLogger AVISO] $mensagem');
     }
