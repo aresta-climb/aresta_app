@@ -15,17 +15,31 @@ import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/classificador_dispositivo.dart';
 import 'package:frontend/services/http/sync_service.dart';
 
 /// Configura os parâmetros de gestão de memória e teto LRU do Flutter para
 /// garantir conformidade com os novos requisitos técnicos do Google Play (Android Vitals).
 ///
-/// Define o tamanho máximo de bytes em memória RAM para o [PaintingBinding.instance.imageCache]
-/// como [tamanhoMaximoBytes] (por padrão 100 MB). Isso preserva os últimos 5-6 croquis em alta
-/// resolução para consulta instantânea na rocha, mantendo o consumo em segundo plano bem
-/// abaixo do limite de 200 MB da Google Play.
-void configurarGestaoMemoria({int tamanhoMaximoBytes = 100 * 1024 * 1024}) {
-  PaintingBinding.instance.imageCache.maximumSizeBytes = tamanhoMaximoBytes;
+/// Quando [tamanhoMaximoBytes] não é informado explicitamente, classifica o porte de memória RAM
+/// do aparelho via [ClassificadorDispositivo] e define o teto adaptativo do
+/// [PaintingBinding.instance.imageCache] (50 MB para tier `'baixo'`, 100 MB para `'medio'`/fallback
+/// e 150 MB para `'alto'`).
+void configurarGestaoMemoria({
+  int? tamanhoMaximoBytes,
+  int? ramTotalMb,
+  String? caminhoMeminfo,
+}) {
+  if (tamanhoMaximoBytes != null) {
+    PaintingBinding.instance.imageCache.maximumSizeBytes = tamanhoMaximoBytes;
+    return;
+  }
+  final perfil = ClassificadorDispositivo.instancia.classificar(
+    ramTotalMb: ramTotalMb,
+    caminhoMeminfo: caminhoMeminfo,
+  );
+  PaintingBinding.instance.imageCache.maximumSizeBytes =
+      perfil.limiteCacheImagensBytes;
 }
 
 /// Realiza a migração silenciosa das versões antigas dos termos legais aceitos pelo usuário.

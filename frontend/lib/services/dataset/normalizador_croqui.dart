@@ -14,6 +14,14 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 ///
 /// Botões legados não recebem UID sintético pois não são alvos de referências em croquis antigos.
 abstract final class NormalizadorCroqui {
+  /// Rastreia via referências fracas quais instâncias já foram normalizadas in-place,
+  /// garantindo idempotência em O(1) sem impedir a coleta de lixo (GC).
+  static final Expando<bool> _instanciasNormalizadas =
+      Expando<bool>('NormalizadorCroqui');
+
+  /// Retorna `true` se a [instancia] (`Croqui`, `Pico` ou `Mapa`) já foi normalizada em memória.
+  static bool estaNormalizado(Object instancia) =>
+      _instanciasNormalizadas[instancia] == true;
 
   /// Desserializa um [Croqui] a partir de bytes e aplica a normalização v5 in-place.
   static Croqui deBuffer(List<int> bytes) {
@@ -22,15 +30,18 @@ abstract final class NormalizadorCroqui {
     return croqui;
   }
 
-  /// Normaliza um [Croqui] completo in-place.
+  /// Normaliza um [Croqui] completo in-place de forma idempotente.
   static void normalizarCroqui(Croqui croqui) {
+    if (_instanciasNormalizadas[croqui] == true) return;
     for (final pico in croqui.picos) {
       normalizarPico(pico);
     }
+    _instanciasNormalizadas[croqui] = true;
   }
 
-  /// Normaliza um [Pico] e toda a sua árvore de setores, grupos, escaladas e mapas.
+  /// Normaliza um [Pico] e toda a sua árvore de setores, grupos, escaladas e mapas de forma idempotente.
   static void normalizarPico(Pico pico) {
+    if (_instanciasNormalizadas[pico] == true) return;
     // 1. Mapas Gerais do Pico
     if (pico.hasMapasGerais() && pico.mapasGerais.hasConteudo()) {
       normalizarMapas(
@@ -107,6 +118,7 @@ abstract final class NormalizadorCroqui {
         }
       }
     }
+    _instanciasNormalizadas[pico] = true;
   }
 
   /// Normaliza um único [mapa] in-place.
@@ -115,6 +127,7 @@ abstract final class NormalizadorCroqui {
     String? grupoNomeContexto,
     String? setorNomeContexto,
   }) {
+    if (_instanciasNormalizadas[mapa] == true) return;
     normalizarMapas(
       [mapa],
       grupoNomeContexto: grupoNomeContexto,
@@ -129,6 +142,7 @@ abstract final class NormalizadorCroqui {
     required String? setorNomeContexto,
   }) {
     for (final mapa in mapas) {
+      if (_instanciasNormalizadas[mapa] == true) continue;
       // Normaliza pontos de interesse
       for (final ponto in mapa.pontosDeInteresse) {
         if (ponto.uid.isEmpty && ponto.id.isNotEmpty) {
@@ -158,6 +172,7 @@ abstract final class NormalizadorCroqui {
           }
         }
       }
+      _instanciasNormalizadas[mapa] = true;
     }
   }
 

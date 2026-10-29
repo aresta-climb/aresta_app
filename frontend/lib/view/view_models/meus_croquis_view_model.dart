@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -45,7 +45,8 @@ class MeusCroquisViewModel extends ChangeNotifier {
   List<CardCroquiViewModel> get croquisSalvos {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return const [];
-    if (dataset.croquisBaixados.isNotEmpty) {
+    if (dataset.croquisBaixados.isNotEmpty &&
+        dataset.croquisBaixados.length >= dataset.picosBaixados.length) {
       return dataset.croquisBaixados.map(mapearCroquiParaCard).toList();
     }
     return dataset.picosBaixados.map((pico) {

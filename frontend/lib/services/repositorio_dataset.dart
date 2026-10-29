@@ -374,22 +374,23 @@ class DatasetRepository {
       final ordenados =
           gerenciadorPrioridade.ordenarPorPrioridade(downloaded, priorityList);
 
-      final List<ResumoPico> ordenadosCarregados = await Future.wait(
-        ordenados.map((picoItem) async {
-          final existente = mapaBaixadosAtuais[picoItem.id];
-          final Croqui? croquiReaproveitado = (existente != null &&
-                  existente.checksum.isNotEmpty &&
-                  existente.checksum == picoItem.checksum)
-              ? existente.croqui
-              : null;
-          return await extratorMetadados.carregarMetadadosLocais(
-            pico: picoItem,
-            downloadsPath: downloadsPath,
-            baseUrl: baseUrl,
-            parsedCroqui: croquiReaproveitado,
-          );
-        }),
-      );
+      final List<ResumoPico> ordenadosCarregados = ordenados.map((picoItem) {
+        final existente = mapaBaixadosAtuais[picoItem.id];
+        final Croqui? croquiReaproveitado = (existente != null &&
+                existente.checksum.isNotEmpty &&
+                existente.checksum == picoItem.checksum)
+            ? existente.croqui
+            : null;
+        if (croquiReaproveitado == null) {
+          return picoItem;
+        }
+        return picoItem.copyWith(
+          croqui: croquiReaproveitado,
+          pico: croquiReaproveitado.picos.isNotEmpty
+              ? croquiReaproveitado.picos.first
+              : null,
+        );
+      }).toList();
 
       for (final picoItem in ordenadosCarregados) {
         if (picoItem.croqui != null) {
@@ -633,12 +634,22 @@ class DatasetRepository {
     String id, {
     bool indiceJaSincronizado = false,
   }) async {
-    // 1. Memória RAM (Sessão Online ativa)
+    // 1. Memória RAM (Sessão Online ativa ou já carregado em picosBaixados)
     final emMemoria = gerenciadorSessaoOnline.obterCroquiOnline(id);
     if (emMemoria != null) {
       _ultimaOrigemResolucaoPorPico[id] = 'memoria';
       indexarMidiasDoCroqui(id, emMemoria);
       return emMemoria;
+    }
+
+    final baixadoEmMemoria = activeDataset.value?.picosBaixados
+        .where((p) => p.id == id && p.croqui != null)
+        .firstOrNull
+        ?.croqui;
+    if (baixadoEmMemoria != null) {
+      _ultimaOrigemResolucaoPorPico[id] = 'offline';
+      indexarMidiasDoCroqui(id, baixadoEmMemoria);
+      return baixadoEmMemoria;
     }
 
     final directory = await getApplicationDocumentsDirectory();
@@ -650,6 +661,7 @@ class DatasetRepository {
     if (localCroqui != null) {
       _ultimaOrigemResolucaoPorPico[id] = 'offline';
       indexarMidiasDoCroqui(id, localCroqui);
+      _vincularCroquiBaixadoEmMemoria(id, localCroqui);
       return localCroqui;
     }
 
@@ -793,14 +805,16 @@ class DatasetRepository {
     final ordenados = gerenciadorPrioridade.ordenarPorPrioridade(
         updatedDownloaded, priorityList);
 
-    final ordenadosCarregados = await Future.wait(
-      ordenados.map((p) => extratorMetadados.carregarMetadadosLocais(
-            pico: p,
-            downloadsPath: downloadsPath,
-            baseUrl: editorDeCroqui.activeBaseUrl,
-            parsedCroqui: mapaCroquisEmMemoria[p.id],
-          )),
-    );
+    final List<ResumoPico> ordenadosCarregados = ordenados.map((p) {
+      final croquiMemoria = mapaCroquisEmMemoria[p.id];
+      if (croquiMemoria == null) {
+        return p;
+      }
+      return p.copyWith(
+        croqui: croquiMemoria,
+        pico: croquiMemoria.picos.isNotEmpty ? croquiMemoria.picos.first : null,
+      );
+    }).toList();
 
     activeDataset.value = ConjuntoDadosCroqui(
       metadadosDisponiveis: atual.metadadosDisponiveis,
@@ -810,6 +824,36 @@ class DatasetRepository {
           .toList(),
       picosDisponiveis: updatedAvailable,
       picosBaixados: ordenadosCarregados,
+    );
+  }
+
+  /// Vincula em memória o [croqui] recém-carregado sob demanda ao [ResumoPico]
+  /// correspondente em [activeDataset], evitando releituras de disco subsequentes.
+  void _vincularCroquiBaixadoEmMemoria(String id, Croqui croqui) {
+    final atual = activeDataset.value;
+    if (atual == null) return;
+    if (!atual.picosBaixados.any((p) => p.id == id)) return;
+
+    final picoExtraido =
+        croqui.picos.isNotEmpty ? croqui.picos.first : null;
+    final novosBaixados = atual.picosBaixados.map((p) {
+      if (p.id != id) return p;
+      return p.copyWith(croqui: croqui, pico: picoExtraido);
+    }).toList();
+    final novosDisponiveis = atual.picosDisponiveis.map((p) {
+      if (p.id != id) return p;
+      return p.copyWith(croqui: croqui, pico: picoExtraido);
+    }).toList();
+    final novosCroquisBaixados = novosBaixados
+        .where((p) => p.croqui != null)
+        .map((p) => p.croqui!)
+        .toList();
+
+    activeDataset.value = ConjuntoDadosCroqui(
+      metadadosDisponiveis: atual.metadadosDisponiveis,
+      croquisBaixados: novosCroquisBaixados,
+      picosDisponiveis: novosDisponiveis,
+      picosBaixados: novosBaixados,
     );
   }
 

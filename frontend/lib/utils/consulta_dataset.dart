@@ -211,14 +211,48 @@ extension EscaladaExtension on Escalada {
 /// [Setor] e [Escalada]) em uma única passada durante a inicialização, associando
 /// diretamente as ocorrências visuais de mapas em cada [ResolvedDataset].
 class DatasetResolver {
-  final Map<String, ResolvedDataset> _entidadesPorUid;
+  /// Cache de referências fracas que associa cada instância de [Pico] em memória
+  /// à sua instância já indexada de [DatasetResolver], evitando reindexações O(N)
+  /// repetidas entre transições de página e referências de mapas.
+  static final Expando<DatasetResolver> _cachePorPico =
+      Expando<DatasetResolver>('DatasetResolverPorPico');
 
-  /// Cria e indexa o catálogo em O(N) a partir de um [pico] e opcionalmente seu [croqui] pai ou [botoes].
-  DatasetResolver({
+  final Map<String, ResolvedDataset> _entidadesPorUid;
+  final bool _possuiBotoesIndexados;
+
+  /// Retorna uma instância indexada em O(N) (ou reutilizada em O(1) via cache de [Expando])
+  /// a partir de um [pico] e opcionalmente seu [croqui] pai ou [botoes].
+  factory DatasetResolver({
     required Pico pico,
     Croqui? croqui,
     List<Botao>? botoes,
-  }) : _entidadesPorUid = _indexarComNormalizacao(pico, croqui: croqui, botoes: botoes);
+  }) {
+    final listaBotoes = botoes ?? croqui?.botoes ?? const <Botao>[];
+    final temNovosBotoes = listaBotoes.isNotEmpty;
+    final existente = _cachePorPico[pico];
+    if (existente != null &&
+        (!temNovosBotoes || existente._possuiBotoesIndexados)) {
+      return existente;
+    }
+
+    final novo = DatasetResolver._interno(
+      pico: pico,
+      croqui: croqui,
+      botoes: botoes,
+      possuiBotoesIndexados: temNovosBotoes,
+    );
+    _cachePorPico[pico] = novo;
+    return novo;
+  }
+
+  DatasetResolver._interno({
+    required Pico pico,
+    Croqui? croqui,
+    List<Botao>? botoes,
+    required bool possuiBotoesIndexados,
+  })  : _entidadesPorUid =
+            _indexarComNormalizacao(pico, croqui: croqui, botoes: botoes),
+        _possuiBotoesIndexados = possuiBotoesIndexados;
 
   static Map<String, ResolvedDataset> _indexarComNormalizacao(
     Pico pico, {

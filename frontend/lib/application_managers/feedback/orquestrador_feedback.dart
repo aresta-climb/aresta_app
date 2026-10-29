@@ -62,7 +62,7 @@ class FeedbackOrchestrator {
       getSupportDirectoryOverride: getSupportDirectoryOverride,
     );
 
-    final isDebug = isDebugModeOverride ?? kDebugMode;
+    final isDebug = isDebugModeOverride ?? !kReleaseMode;
     final edgeFunctionUrl =
         RemoteConfigService.instance.feedbackEdgeFunctionUrl;
 

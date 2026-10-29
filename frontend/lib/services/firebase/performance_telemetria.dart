@@ -4,9 +4,18 @@
 import 'dart:async';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'app_logger.dart';
+import 'classificador_dispositivo.dart';
 import 'telemetria.dart';
+
+class _SessaoFluidez {
+  final Stopwatch cronometro = Stopwatch()..start();
+  final List<int> temposUiMs = [];
+  final List<int> temposRasterMs = [];
+  int framesJank = 0;
+}
 
 /// Representa uma trace de performance registrada durante a sessão para diagnóstico e testes.
 class RegistroTracePerformance {
@@ -49,13 +58,18 @@ class ServicoPerformance {
   /// Reseta o estado do serviço para isolamento entre testes.
   @visibleForTesting
   static void resetarParaTestes() {
+    if (instancia._callbackTimingsRegistrado) {
+      SchedulerBinding.instance.removeTimingsCallback(
+        instancia.registrarAmostrasFrameTiming,
+      );
+    }
     instancia = ServicoPerformance._construtorPrivado();
   }
 
   @visibleForTesting
   FirebasePerformance? debugPerformance;
 
-  bool _coletaAtiva = !kDebugMode;
+  bool _coletaAtiva = kReleaseMode;
 
   /// Indica se o envio de traces para o Firebase Performance está ativo (sempre `false` em modo debug).
   bool get coletaAtiva => _coletaAtiva;
@@ -65,17 +79,19 @@ class ServicoPerformance {
 
   Stopwatch? _cronometroColdStart;
   bool _coldStartConcluido = false;
+  final Map<String, _SessaoFluidez> _sessoesFluidezAtivas = {};
+  bool _callbackTimingsRegistrado = false;
 
   FirebasePerformance _obterPerformance([FirebasePerformance? override]) {
     return override ?? debugPerformance ?? FirebasePerformance.instance;
   }
 
-  /// Inicializa e configura a coleta do Firebase Performance respeitando o bloqueio em modo debug.
+  /// Inicializa e configura a coleta do Firebase Performance respeitando o bloqueio fora de release (`!kReleaseMode`).
   Future<void> inicializar({
     bool? emModoDebug,
     FirebasePerformance? performanceInstance,
   }) async {
-    final modoDebug = emModoDebug ?? kDebugMode;
+    final modoDebug = emModoDebug ?? !kReleaseMode;
     _coletaAtiva = !modoDebug;
     if (performanceInstance != null) {
       debugPerformance = performanceInstance;
@@ -143,7 +159,10 @@ class ServicoPerformance {
     Map<String, int>? metricas,
   }) async {
     final nomeNormalizado = nome.length > 32 ? nome.substring(0, 32) : nome;
-    final atributosNormalizados = <String, String>{};
+    final atributosNormalizados = <String, String>{
+      'tier_dispositivo': ClassificadorDispositivo.instancia.tierDispositivo,
+      'ram_gb': ClassificadorDispositivo.instancia.ramGb,
+    };
     if (atributos != null) {
       for (final entry in atributos.entries) {
         final chave =
@@ -433,5 +452,89 @@ class ServicoPerformance {
         duracaoMs: duracaoMs,
       );
     }
+  }
+
+  /// Inicia o monitoramento de fluidez de quadros (`FrameTiming`) para a sessão da [tela].
+  void iniciarMonitoramentoFluidez(String tela) {
+    _sessoesFluidezAtivas[tela] = _SessaoFluidez();
+    if (!_callbackTimingsRegistrado) {
+      _callbackTimingsRegistrado = true;
+      SchedulerBinding.instance.addTimingsCallback(
+        registrarAmostrasFrameTiming,
+      );
+    }
+  }
+
+  /// Callback receptor de [FrameTiming] do [SchedulerBinding], registrando tempos de UI e Raster
+  /// nas sessões de tela ativas.
+  void registrarAmostrasFrameTiming(List<FrameTiming> timings) {
+    for (final timing in timings) {
+      final int uiMs = timing.buildDuration.inMilliseconds;
+      final int rasterMs = timing.rasterDuration.inMilliseconds;
+      final bool teveJank = uiMs > 16 || rasterMs > 16;
+      for (final sessao in _sessoesFluidezAtivas.values) {
+        sessao.temposUiMs.add(uiMs);
+        sessao.temposRasterMs.add(rasterMs);
+        if (teveJank) {
+          sessao.framesJank++;
+        }
+      }
+    }
+  }
+
+  /// Encerra o monitoramento de fluidez da [tela] e emite a trace e o evento `fluidez_sessao_tela`
+  /// caso pelo menos um quadro tenha sido renderizado durante a sessão.
+  Future<void> encerrarMonitoramentoFluidez(
+    String tela, {
+    String? idCroqui,
+  }) async {
+    final sessao = _sessoesFluidezAtivas.remove(tela);
+    if (_sessoesFluidezAtivas.isEmpty && _callbackTimingsRegistrado) {
+      _callbackTimingsRegistrado = false;
+      SchedulerBinding.instance.removeTimingsCallback(
+        registrarAmostrasFrameTiming,
+      );
+    }
+    if (sessao == null || sessao.temposUiMs.isEmpty) {
+      return;
+    }
+
+    sessao.cronometro.stop();
+    final int totalFrames = sessao.temposUiMs.length;
+    final int framesJank = sessao.framesJank;
+    final int taxaJankPct = ((framesJank * 100) / totalFrames).round();
+    sessao.temposUiMs.sort();
+    sessao.temposRasterMs.sort();
+    final int indiceP95 =
+        ((totalFrames * 0.95).ceil() - 1).clamp(0, totalFrames - 1);
+    final int p95UiMs = sessao.temposUiMs[indiceP95];
+    final int p95RasterMs = sessao.temposRasterMs[indiceP95];
+    final int duracaoSessaoMs = sessao.cronometro.elapsedMilliseconds;
+
+    await registrarTrace(
+      'fluidez_sessao_tela',
+      duracaoMs: duracaoSessaoMs,
+      atributos: {
+        'tela': tela,
+        'id_croqui': ?idCroqui,
+      },
+      metricas: {
+        'total_frames': totalFrames,
+        'frames_jank': framesJank,
+        'taxa_jank_pct': taxaJankPct,
+        'p95_ui_ms': p95UiMs,
+        'p95_raster_ms': p95RasterMs,
+      },
+    );
+    await TelemetryService.instance.logFluidezSessaoTela(
+      tela: tela,
+      idCroqui: idCroqui,
+      duracaoMs: duracaoSessaoMs,
+      totalFrames: totalFrames,
+      framesJank: framesJank,
+      taxaJankPct: taxaJankPct,
+      p95UiMs: p95UiMs,
+      p95RasterMs: p95RasterMs,
+    );
   }
 }

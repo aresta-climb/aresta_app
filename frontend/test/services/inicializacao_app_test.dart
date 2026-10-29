@@ -77,15 +77,32 @@ void main() {
   });
 
   group('Gestão de Memória e Vitals (configurarGestaoMemoria)', () {
-    test('define teto LRU do imageCache para 100 MB por padrão', () {
-      configurarGestaoMemoria();
+    test('define teto LRU do imageCache para 100 MB por padrão ou em tier medio', () {
+      configurarGestaoMemoria(ramTotalMb: 4096);
       expect(
         PaintingBinding.instance.imageCache.maximumSizeBytes,
         equals(100 * 1024 * 1024),
       );
     });
 
-    test('permite tamanho customizado', () {
+    test('ajusta teto LRU do imageCache para 50 MB em dispositivos de baixa memória (<= 3 GB RAM)', () {
+      configurarGestaoMemoria(ramTotalMb: 3072);
+      expect(
+        PaintingBinding.instance.imageCache.maximumSizeBytes,
+        equals(50 * 1024 * 1024),
+      );
+    });
+
+    test('ajusta teto LRU do imageCache para 150 MB em dispositivos de alta memória (>= 8 GB RAM)', () {
+      configurarGestaoMemoria(ramTotalMb: 8192);
+      expect(
+        PaintingBinding.instance.imageCache.maximumSizeBytes,
+        equals(150 * 1024 * 1024),
+      );
+      configurarGestaoMemoria();
+    });
+
+    test('permite tamanho customizado explícito', () {
       configurarGestaoMemoria(tamanhoMaximoBytes: 50 * 1024 * 1024);
       expect(
         PaintingBinding.instance.imageCache.maximumSizeBytes,

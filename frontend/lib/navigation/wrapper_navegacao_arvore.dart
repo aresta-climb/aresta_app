@@ -87,6 +87,8 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final MeusCroquisViewModel _meusCroquisViewModel;
   FeedbackController? _feedbackController;
   bool _ultimoFeedbackAberto = false;
+  final Set<int> _abasVisitadas = {};
+  final Map<String, Page> _paginasDaPilhaCache = {};
 
   /// Expõe o SyncService para páginas filhas acessarem via TreeNavigationWrapper.of(context).
   // ignore: unreachable_from_main
@@ -322,22 +324,31 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     if (node is BrowseNode) tabIndex = 1;
     if (node is MeusCroquisNode) tabIndex = 2;
     if (node is ComunidadeNode) tabIndex = 3;
+    _abasVisitadas.add(tabIndex);
 
     return Scaffold(
       body: IndexedStack(
         index: tabIndex,
         children: [
-          _HomePageWrapper(
-            viewModel: _homeViewModel,
-            onSwitchTab: _onItemTapped,
-          ),
-          BrowsePage(
-            viewModel: _browseViewModel,
-          ),
-          MeusCroquisPage(
-            viewModel: _meusCroquisViewModel,
-          ),
-          const ComunidadePage(),
+          _abasVisitadas.contains(0)
+              ? _HomePageWrapper(
+                  viewModel: _homeViewModel,
+                  onSwitchTab: _onItemTapped,
+                )
+              : const SizedBox.shrink(),
+          _abasVisitadas.contains(1)
+              ? BrowsePage(
+                  viewModel: _browseViewModel,
+                )
+              : const SizedBox.shrink(),
+          _abasVisitadas.contains(2)
+              ? MeusCroquisPage(
+                  viewModel: _meusCroquisViewModel,
+                )
+              : const SizedBox.shrink(),
+          _abasVisitadas.contains(3)
+              ? const ComunidadePage()
+              : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: buildPrimaryBottomNav(
@@ -393,27 +404,36 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         )
         .toList();
 
-    // 4. ... e empilhados por cima da aba base de forma declarativa!
-    final pages = <Page>[
-      MaterialPage(
-        key: const ValueKey('TabsPage'),
-        child: _buildTabsWidget(baseNode),
-      ),
-      ...pushedNodes.map((node) {
+    // 4. ... e empilhados por cima da aba base de forma declarativa,
+    // preservando as instâncias de Page enquanto os nós permanecerem na pilha!
+    final chavesAtivas = <String>{};
+    final paginasEmpilhadas = pushedNodes.map((node) {
+      final chave = node.toString();
+      chavesAtivas.add(chave);
+      return _paginasDaPilhaCache.putIfAbsent(chave, () {
         final modalPage = construirPaginaModalParaNo(node);
         if (modalPage != null) {
           return modalPage;
         }
 
         return MaterialPage(
-          key: ValueKey(node.toString()),
+          key: ValueKey(chave),
           child: construirPaginaParaNo(
             node: node,
             datasetRepo: widget.datasetRepo,
             syncService: widget.syncService,
           ),
         );
-      }),
+      });
+    }).toList();
+    _paginasDaPilhaCache.removeWhere((k, _) => !chavesAtivas.contains(k));
+
+    final pages = <Page>[
+      MaterialPage(
+        key: const ValueKey('TabsPage'),
+        child: _buildTabsWidget(baseNode),
+      ),
+      ...paginasEmpilhadas,
     ];
 
     final navigator = Navigator(

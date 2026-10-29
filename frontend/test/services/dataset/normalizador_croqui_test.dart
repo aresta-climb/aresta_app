@@ -241,5 +241,56 @@ void main() {
       expect(mapa.referencias.first.alvoUid, equals('sintetico:escalada::Setor Solo:Via Solo'));
       expect(mapa.referencias.first.pontosUids, equals(['poi_1']));
     });
+
+    test('garante idempotência O(1) sem reprocessar instâncias de Croqui, Pico e Mapa já normalizadas', () {
+      final mapa = Mapa()
+        ..pontosDeInteresse.add(Mapa_PontoDeInteresse(id: 'poi_1', label: '1'));
+      final setor = Setor()
+        ..nome = 'Setor Idempotente'
+        ..mapas.add(mapa);
+      final pico = Pico()
+        ..setoresOuGrupos.add(
+          SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+        );
+      final croqui = Croqui()..picos.add(pico);
+
+      expect(NormalizadorCroqui.estaNormalizado(croqui), isFalse);
+      expect(NormalizadorCroqui.estaNormalizado(pico), isFalse);
+      expect(NormalizadorCroqui.estaNormalizado(mapa), isFalse);
+
+      NormalizadorCroqui.normalizarCroqui(croqui);
+
+      expect(NormalizadorCroqui.estaNormalizado(croqui), isTrue);
+      expect(NormalizadorCroqui.estaNormalizado(pico), isTrue);
+      expect(NormalizadorCroqui.estaNormalizado(mapa), isTrue);
+      expect(setor.uid, equals('sintetico:setor::Setor Idempotente'));
+      expect(mapa.pontosDeInteresse.first.uid, equals('poi_1'));
+
+      // Se limpamos o uid na mesma instância já normalizada, chamadas subsequentes
+      // devem retornar imediatamente em O(1) sem revarrer a árvore.
+      setor.uid = '';
+      mapa.pontosDeInteresse.first.uid = '';
+      NormalizadorCroqui.normalizarCroqui(croqui);
+      NormalizadorCroqui.normalizarPico(pico);
+      NormalizadorCroqui.normalizarMapa(mapa);
+
+      expect(setor.uid, isEmpty);
+      expect(mapa.pontosDeInteresse.first.uid, isEmpty);
+
+      // Uma nova instância de Pico não está marcada e deve ser normalizada normalmente
+      final novoPico = Pico()
+        ..setoresOuGrupos.add(
+          SetorOuGrupo(
+            setor: ArquivoSetor(conteudo: Setor()..nome = 'Novo Setor'),
+          ),
+        );
+      expect(NormalizadorCroqui.estaNormalizado(novoPico), isFalse);
+      NormalizadorCroqui.normalizarPico(novoPico);
+      expect(NormalizadorCroqui.estaNormalizado(novoPico), isTrue);
+      expect(
+        novoPico.setoresOuGrupos.first.setor.conteudo.uid,
+        equals('sintetico:setor::Novo Setor'),
+      );
+    });
   });
 }

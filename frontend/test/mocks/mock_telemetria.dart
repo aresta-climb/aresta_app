@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:frontend/services/firebase/classificador_dispositivo.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 
 class MockTelemetryService implements TelemetryService {
@@ -503,6 +504,36 @@ class MockTelemetryService implements TelemetryService {
       'abrir_mapa': abrirMapa ? 'true' : 'false',
       'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
     };
+  }
+
+  @override
+  Future<void> logFluidezSessaoTela({
+    required String tela,
+    String? idCroqui,
+    required int duracaoMs,
+    required int totalFrames,
+    required int framesJank,
+    required int taxaJankPct,
+    required int p95UiMs,
+    required int p95RasterMs,
+  }) async {
+    recordedEvents.add('fluidez_sessao_tela');
+    final params = <String, dynamic>{
+      'tela': tela,
+      'acao': tela,
+      'duracao_ms': duracaoMs,
+      'total_frames': totalFrames,
+      'frames_jank': framesJank,
+      'taxa_jank_pct': taxaJankPct,
+      'p95_ui_ms': p95UiMs,
+      'p95_raster_ms': p95RasterMs,
+      'tier_dispositivo': ClassificadorDispositivo.instancia.tierDispositivo,
+      'ram_gb': ClassificadorDispositivo.instancia.ramGb,
+    };
+    if (idCroqui != null) {
+      params['id_croqui'] = idCroqui;
+    }
+    recordedParams['fluidez_sessao_tela'] = params;
   }
 
   @override

@@ -12,6 +12,7 @@ import '../../widgets/linha_localizacao_setor.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../../utils/consulta_dataset.dart';
+import '../../navigation/construtor_reativo_pagina.dart';
 import '../../navigation/arvore_navegacao.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
@@ -1578,7 +1579,8 @@ Widget _buildInteractiveMapButton(
 ) {
   ResolvedDataset? resolved;
   if (pico != null) {
-    final resolver = DatasetResolver(pico: pico);
+    final resolver =
+        PageListenableBuilder.resolverOf(context) ?? DatasetResolver(pico: pico);
     resolved = escalada.uid.isNotEmpty
         ? resolver.obterPorUid(escalada.uid)
         : resolver.buscarPorNome(

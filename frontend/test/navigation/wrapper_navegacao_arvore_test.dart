@@ -12,6 +12,12 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/pages/comunidade.dart';
+import 'package:frontend/pages/explorar.dart';
+import 'package:frontend/pages/home.dart';
+import 'package:frontend/pages/meus_croquis.dart';
+import 'package:frontend/pages/pico.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -310,6 +316,156 @@ void main() {
 
         expect(syncService.picoAbertoId.value, equals('pico_cold_start'));
         expect(find.text('Aviso de teste do Cold Start'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Task 2.2: no Cold Start apenas a aba inicial (HomePage) é construída no IndexedStack, montando abas secundárias sob demanda e preservando-as após visitadas',
+      (tester) async {
+        final controller = TreeNavigationController();
+        repo.loadEmpty();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+        expect(find.byType(BrowsePage, skipOffstage: false), findsNothing);
+        expect(find.byType(MeusCroquisPage, skipOffstage: false), findsNothing);
+        expect(find.byType(ComunidadePage, skipOffstage: false), findsNothing);
+
+        // Visita a aba Explorar (índice 1)
+        TreeNavigationWrapper.switchTab(1);
+        await tester.pump();
+
+        expect(find.byType(BrowsePage, skipOffstage: false), findsOneWidget);
+        expect(find.byType(MeusCroquisPage, skipOffstage: false), findsNothing);
+        expect(find.byType(ComunidadePage, skipOffstage: false), findsNothing);
+
+        // Retorna para Home (índice 0): BrowsePage permanece montada
+        TreeNavigationWrapper.switchTab(0);
+        await tester.pump();
+
+        expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+        expect(find.byType(BrowsePage, skipOffstage: false), findsOneWidget);
+        expect(find.byType(MeusCroquisPage, skipOffstage: false), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Task 3.1: empilhar e desempilhar rotas filhas preserva a instância de Page e PicoViewModel das rotas subjacentes na pilha',
+      (tester) async {
+        final controller = TreeNavigationController();
+        final setor = Setor(
+          uid: 'setor_pilha',
+          nome: 'Setor Pilha',
+          escaladas: [
+            Escalada(
+              uid: 'via_pilha',
+              viaEsportiva: ViaEsportiva(nome: 'Via Pilha'),
+            ),
+          ],
+        );
+        final pico = Pico(
+          nome: 'Pico Pilha',
+          setoresOuGrupos: [
+            SetorOuGrupo(setor: ArquivoSetor(conteudo: setor)),
+          ],
+        );
+        final croqui = Croqui(
+          id: 'pico_pilha',
+          nome: 'Pico Pilha',
+          picos: [pico],
+        );
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosDisponiveis: [
+            ResumoPico(
+              id: 'pico_pilha',
+              nome: 'Pico Pilha',
+              local: 'MG',
+              isDownloaded: true,
+              pico: pico,
+              croqui: croqui,
+            ),
+          ],
+          picosBaixados: [
+            ResumoPico(
+              id: 'pico_pilha',
+              nome: 'Pico Pilha',
+              local: 'MG',
+              isDownloaded: true,
+              pico: pico,
+              croqui: croqui,
+            ),
+          ],
+          croquisBaixados: [croqui],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final picoNode = const PicoNode(cragId: 'pico_pilha', parent: HomeNode());
+        controller.navigateTo(picoNode);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final navAntes = tester.widget<Navigator>(find.byType(Navigator).last);
+        final pagePicoAntes = navAntes.pages[1];
+        final picoPageAntes = tester.widget<PicoDetailsPage>(
+          find.byType(PicoDetailsPage, skipOffstage: false),
+        );
+        final viewModelAntes = picoPageAntes.viewModel;
+
+        // Empilha SetorNode por cima de PicoNode
+        final setorNode = SetorNode(
+          cragId: 'pico_pilha',
+          setorNome: 'Setor Pilha',
+          parent: picoNode,
+        );
+        controller.navigateTo(setorNode);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final navDurante = tester.widget<Navigator>(find.byType(Navigator).last);
+        expect(navDurante.pages.length, equals(3));
+        expect(identical(navDurante.pages[1], pagePicoAntes), isTrue);
+
+        final picoPageDurante = tester.widget<PicoDetailsPage>(
+          find.byType(PicoDetailsPage, skipOffstage: false),
+        );
+        expect(identical(picoPageDurante.viewModel, viewModelAntes), isTrue);
+
+        // Desempilha SetorNode de volta para PicoNode
+        controller.goBack();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final navDepois = tester.widget<Navigator>(find.byType(Navigator).last);
+        expect(navDepois.pages.length, equals(2));
+        expect(identical(navDepois.pages[1], pagePicoAntes), isTrue);
+
+        final picoPageDepois = tester.widget<PicoDetailsPage>(
+          find.byType(PicoDetailsPage, skipOffstage: false),
+        );
+        expect(identical(picoPageDepois.viewModel, viewModelAntes), isTrue);
       },
     );
   });

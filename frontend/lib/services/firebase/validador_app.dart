@@ -20,21 +20,27 @@ class AppCheckService {
 
   FirebaseAppCheck get _appCheck => debugAppCheck ?? FirebaseAppCheck.instance;
 
-  /// Inicializa e ativa o Firebase App Check com os provedores adequados para release e debug.
+  /// Inicializa e ativa o Firebase App Check com os provedores adequados para release e debug/profile.
+  ///
+  /// Fora de builds de release (`!kReleaseMode`, o que inclui `--debug` e `--profile`), utiliza
+  /// o provedor de depuração para evitar falhas de atestação `403` no Play Integrity causadas
+  /// pela assinatura com `debug.keystore` durante sessões locais do Flutter DevTools.
   Future<void> activate({
     AndroidAppCheckProvider? providerAndroid,
     AppleAppCheckProvider? providerApple,
+    bool? emModoRelease,
   }) async {
+    final isRelease = emModoRelease ?? kReleaseMode;
     try {
       await _appCheck.activate(
         providerAndroid: providerAndroid ??
-            (kDebugMode
-                ? const AndroidDebugProvider()
-                : const AndroidPlayIntegrityProvider()),
+            (isRelease
+                ? const AndroidPlayIntegrityProvider()
+                : const AndroidDebugProvider()),
         providerApple: providerApple ??
-            (kDebugMode
-                ? const AppleDebugProvider()
-                : const AppleAppAttestProvider()),
+            (isRelease
+                ? const AppleAppAttestProvider()
+                : const AppleDebugProvider()),
       );
       AppLogger.instance.logInfo('🛡️ [AppCheck] Firebase App Check ativado com sucesso.');
     } catch (e, stackTrace) {

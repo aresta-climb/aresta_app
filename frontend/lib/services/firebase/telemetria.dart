@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../feedback/gravador_breadcrumbs.dart';
 import 'app_logger.dart';
+import 'classificador_dispositivo.dart';
 
 /// Serviço responsável por disparar eventos de telemetria para o Firebase Analytics.
 ///
@@ -36,14 +37,14 @@ class TelemetryService {
 
   /// Inicializa e configura a coleta do Firebase Analytics.
   ///
-  /// Em modo de desenvolvimento/debug (`kDebugMode`), a coleta analítica do Firebase
-  /// é desativada (`setAnalyticsCollectionEnabled(false)`) para não registrar tráfego
-  /// falso de teste nem poluir os relatórios do Looker Studio/GA4.
+  /// Fora do modo de produção (`!kReleaseMode`, incluindo `--debug` e `--profile`),
+  /// a coleta analítica do Firebase é desativada (`setAnalyticsCollectionEnabled(false)`)
+  /// para não registrar tráfego falso de teste/profiling nem poluir os relatórios do Looker Studio/GA4.
   Future<void> initialize({
     bool? isDebugMode,
     FirebaseAnalytics? analyticsInstance,
   }) async {
-    final isDebug = isDebugMode ?? kDebugMode;
+    final isDebug = isDebugMode ?? !kReleaseMode;
     final analytics = analyticsInstance ?? _analytics;
 
     if (isDebug) {
@@ -64,15 +65,27 @@ class TelemetryService {
 
   /// Método interno de utilidade para printar no console local e despachar ao Firebase.
   Future<void> _logEvent(String name, [Map<String, Object>? parameters]) async {
+    final Map<String, Object>? parametrosEnriquecidos;
+    if (parameters != null && parameters.containsKey('duracao_ms')) {
+      parametrosEnriquecidos = <String, Object>{
+        'tier_dispositivo': ClassificadorDispositivo.instancia.tierDispositivo,
+        'ram_gb': ClassificadorDispositivo.instancia.ramGb,
+        ...parameters,
+      };
+    } else {
+      parametrosEnriquecidos = parameters;
+    }
     GravadorBreadcrumbs.instance.registrar(
       evento: name,
-      parametros: parameters,
+      parametros: parametrosEnriquecidos,
     );
-    AppLogger.instance.logInfo('📈 [Telemetry] Evento disparado: $name | Parâmetros: $parameters');
+    AppLogger.instance.logInfo(
+      '📈 [Telemetry] Evento disparado: $name | Parâmetros: $parametrosEnriquecidos',
+    );
     try {
       await _analytics.logEvent(
         name: name,
-        parameters: parameters,
+        parameters: parametrosEnriquecidos,
       );
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
@@ -582,6 +595,33 @@ class TelemetryService {
       'abrir_mapa': abrirMapa ? 'true' : 'false',
       'origem': abrirMapa ? 'mapa_interativo' : 'pagina_detalhe',
     });
+  }
+
+  /// Registra a fluidez de quadros (UI e Raster P95 e taxa de jank) de uma sessão interativa.
+  Future<void> logFluidezSessaoTela({
+    required String tela,
+    String? idCroqui,
+    required int duracaoMs,
+    required int totalFrames,
+    required int framesJank,
+    required int taxaJankPct,
+    required int p95UiMs,
+    required int p95RasterMs,
+  }) {
+    final params = <String, Object>{
+      'tela': tela,
+      'acao': tela,
+      'duracao_ms': duracaoMs,
+      'total_frames': totalFrames,
+      'frames_jank': framesJank,
+      'taxa_jank_pct': taxaJankPct,
+      'p95_ui_ms': p95UiMs,
+      'p95_raster_ms': p95RasterMs,
+    };
+    if (idCroqui != null) {
+      params['id_croqui'] = idCroqui;
+    }
+    return _logEvent('fluidez_sessao_tela', params);
   }
 
   /// Dispara um evento de telemetria genérico com parâmetros customizados.

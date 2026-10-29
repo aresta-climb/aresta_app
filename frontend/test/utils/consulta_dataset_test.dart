@@ -461,5 +461,47 @@ void main() {
       expect(resolver.buscarPorNome(grupoNome: 'Grupo Inexistente'), isNull);
       expect(resolver.buscarPorNome(), isNull);
     });
+
+    test('deve reutilizar a mesma instância cacheada de DatasetResolver para o mesmo Pico e atualizar se botões forem fornecidos depois', () {
+      final picoSemCroqui = Pico(
+        nome: 'Pico Cacheado',
+        setoresOuGrupos: [
+          SetorOuGrupo(
+            setor: ArquivoSetor(
+              conteudo: Setor(uid: 'set-cache-1', nome: 'Setor Cache'),
+            ),
+          ),
+        ],
+      );
+
+      final r1 = DatasetResolver(pico: picoSemCroqui);
+      final r2 = DatasetResolver(pico: picoSemCroqui);
+      expect(identical(r1, r2), isTrue);
+      expect(r1.obterPorUid('btn-capa'), isNull);
+
+      // Se agora chamarmos passando o croqui com botões para o mesmo Pico, deve enriquecer/atualizar o cache
+      final rComBotoes = DatasetResolver(pico: picoSemCroqui, croqui: croqui);
+      expect(rComBotoes.obterPorUid('btn-capa')?.botao, equals(botaoCapa));
+
+      // Chamadas subsequentes (mesmo sem passar croqui novamente) preservam a instância completa cacheada
+      final r3 = DatasetResolver(pico: picoSemCroqui);
+      expect(identical(rComBotoes, r3), isTrue);
+      expect(r3.obterPorUid('btn-capa')?.botao, equals(botaoCapa));
+
+      // Uma nova instância de Pico (ex: após Live Reload) deve produzir um novo DatasetResolver independente
+      final novoPico = Pico(
+        nome: 'Pico Cacheado Reload',
+        setoresOuGrupos: [
+          SetorOuGrupo(
+            setor: ArquivoSetor(
+              conteudo: Setor(uid: 'set-cache-2', nome: 'Setor Novo'),
+            ),
+          ),
+        ],
+      );
+      final rNovo = DatasetResolver(pico: novoPico);
+      expect(identical(r3, rNovo), isFalse);
+      expect(rNovo.obterPorUid('set-cache-2'), isNotNull);
+    });
   });
 }
