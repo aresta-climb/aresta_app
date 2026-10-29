@@ -30,6 +30,7 @@ class PicoViewModel extends ChangeNotifier {
   final ServicoCroquiOnline _servicoCroquiOnline;
   final PicoCategorizedData _categorias;
   bool _isInitiallyDownloaded;
+  bool _disposed = false;
 
   PicoViewModel({
     required this.pico,
@@ -61,9 +62,21 @@ class PicoViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     datasetRepo.activeDataset.removeListener(_verificarStatusDownload);
     _servicoCroquiOnline.cancelarPolling(cragId);
     super.dispose();
+  }
+
+  /// Notifica os ouvintes somente se esta instância ainda não tiver sido descartada.
+  ///
+  /// Protege operações assíncronas ([baixarPico] e [excluirPico]) caso o `PageListenableBuilder`
+  /// reconstrua a página com uma nova instância de [PicoViewModel] após a atualização reativa do
+  /// [DatasetRepository.activeDataset] ou caso o usuário saia da tela durante o download em segundo plano.
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
   }
 
   /// Indica se o pico está atualmente salvo no armazenamento offline.

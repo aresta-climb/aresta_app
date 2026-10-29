@@ -1,9 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/navigation/construtor_view_arvore.dart';
 import 'package:frontend/pages/pico.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
@@ -11,6 +18,10 @@ import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:frontend/services/http/sync_rede.dart';
+import 'package:frontend/services/notificacoes/gerenciador_notificacao_download.dart';
+import 'package:frontend/widgets/banner_modo_online.dart';
 import 'package:frontend/widgets/linha_credito_autor.dart';
 import 'package:frontend/widgets/modal_confirmacao_saida.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -21,6 +32,36 @@ import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 import '../mocks/mock_telemetria.dart';
 import 'package:flutter/material.dart';
+
+class _NotificadorDownloadComLatencia extends GerenciadorNotificacaoDownload {
+  final Completer<void> chegouNaNotificacao = Completer<void>.sync();
+  final Completer<void> liberarNotificacao = Completer<void>.sync();
+
+  @override
+  Future<bool> solicitarPermissoes() async => true;
+
+  @override
+  Future<void> atualizarProgresso(
+    String picoId,
+    String nomePico,
+    double progresso,
+  ) async {}
+
+  @override
+  Future<void> notificarConclusao(String picoId, String nomePico) async {
+    if (!chegouNaNotificacao.isCompleted) {
+      chegouNaNotificacao.complete();
+    }
+    await liberarNotificacao.future;
+  }
+
+  @override
+  Future<void> notificarFalha(
+    String picoId,
+    String nomePico, [
+    String? mensagemErro,
+  ]) async {}
+}
 
 class _FakeDatasetRepository extends DatasetRepository {
   _FakeDatasetRepository() : super(editorDeCroqui: EditorDeCroqui());
@@ -1515,5 +1556,342 @@ void main() {
         },
       );
     });
+
+    group(
+      'PicoDetailsPage - Ciclo de vida reativo com PageListenableBuilder e SyncService real',
+      () {
+        late Directory tempDirSync;
+        late PathProviderPlatform originalPathProvider;
+        late DatasetRepository datasetRepoReal;
+
+        setUp(() {
+          HttpOverrides.global = null;
+          TelemetryService.instance = MockTelemetryService();
+          SharedPreferences.setMockInitialValues({
+            'cached_data_version': NetworkConstants.kDataVersion,
+          });
+          PackageInfo.setMockInitialValues(
+            appName: 'Aresta',
+            packageName: 'com.aresta.climb',
+            version: '1.0.0',
+            buildNumber: '100',
+            buildSignature: '',
+          );
+          ModalConfirmacaoSaida.resetarSessaoParaTestes();
+
+          originalPathProvider = PathProviderPlatform.instance;
+          tempDirSync = Directory.systemTemp.createTempSync(
+            'pico_page_sync_real_',
+          );
+          PathProviderPlatform.instance = _MockPathProvider(tempDirSync.path);
+          datasetRepoReal = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+        });
+
+        tearDown(() {
+          SyncService.baseUrlOverride = null;
+          SyncService.catalogoUrlOverride = null;
+          GerenciadorNotificacaoDownload.instancia = null;
+          PathProviderPlatform.instance = originalPathProvider;
+          if (tempDirSync.existsSync()) {
+            try {
+              tempDirSync.deleteSync(recursive: true);
+            } catch (_) {}
+          }
+        });
+
+        testWidgets(
+          'não lança FlutterError quando download pelo BannerModoOnline atualiza activeDataset (com dados novos) e reconstrói PicoDetailsPage via PageListenableBuilder antes de concluir notificação',
+          (WidgetTester tester) async {
+            tester.view.physicalSize = const Size(800, 2400);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            const cragId = 'br_mg_ouro_preto_andorinhas';
+            final croquiOnlineInicial = Croqui()
+              ..id = cragId
+              ..nome = 'Andorinhas Online V1'
+              ..picos.add(
+                Pico()
+                  ..nome = 'Andorinhas Online V1'
+                  ..estado = 'MG',
+              );
+
+            // O binário servido no download traz inclusive dados atualizados (ex: novo setor e nome atualizado),
+            // exercitando o hot-reload / recarga reativa do PageListenableBuilder.
+            final croquiRemotoAtualizado = Croqui()
+              ..id = cragId
+              ..nome = 'Andorinhas Offline V2'
+              ..picos.add(
+                Pico()
+                  ..nome = 'Andorinhas Offline V2'
+                  ..estado = 'MG'
+                  ..setoresOuGrupos.add(
+                    SetorOuGrupo(
+                      setor: ArquivoSetor(
+                        conteudo: Setor(
+                          nome: 'Setor Cachoeira',
+                          escaladas: [
+                            Escalada(boulder: Boulder(nome: 'V4 Clássico')),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              );
+
+            final croquiBytes = croquiRemotoAtualizado.writeToBuffer();
+            final hashCroqui = sha256.convert(croquiBytes).toString();
+            const caminhoRelativo = '$cragId/compilado.binarypb';
+
+            final indice = Indice()
+              ..croquis.add(
+                ResumoCroqui()
+                  ..id = cragId
+                  ..nome = 'Andorinhas Offline V2'
+                  ..caminhoRelativo = caminhoRelativo
+                  ..checksumSha256Croqui = hashCroqui
+                  ..timestampUpdate = Timestamp.fromDateTime(
+                    DateTime.utc(2026, 10, 18, 22, 25),
+                  ),
+              );
+            final indiceBytes = indice.writeToBuffer();
+
+            late HttpServer servidor;
+            await tester.runAsync(() async {
+              servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+              servidor.listen((HttpRequest req) async {
+                if (req.uri.path.endsWith('/indice.binarypb')) {
+                  req.response.statusCode = 200;
+                  req.response.headers.set('etag', '"etag-andorinhas-1"');
+                  req.response.add(indiceBytes);
+                } else if (req.uri.path.endsWith('/$caminhoRelativo')) {
+                  req.response.statusCode = 200;
+                  req.response.headers.set('etag', '"etag-croqui-andorinhas"');
+                  req.response.add(croquiBytes);
+                } else {
+                  req.response.statusCode = 404;
+                }
+                await req.response.close();
+              });
+
+              SyncService.baseUrlOverride = 'http://127.0.0.1:${servidor.port}';
+              await datasetRepoReal.loadIndiceToMemory(indice);
+              datasetRepoReal.gerenciadorSessaoOnline.registrarCroquiOnline(
+                cragId,
+                croquiOnlineInicial,
+              );
+            });
+
+            final notificador = _NotificadorDownloadComLatencia();
+            GerenciadorNotificacaoDownload.instancia = notificador;
+
+            final clienteLocal = ClienteHttpAresta.paraTestes(http.Client());
+            final syncService = SyncService(
+              datasetRepository: datasetRepoReal,
+              client: clienteLocal,
+              network: SyncNetwork(clienteLocal, Duration.zero),
+            );
+
+            final noPico = PicoNode(cragId: cragId, parent: const HomeNode());
+            final tree = TreeNavigationController(
+              estadoInicial: ArvoreNavegacao(noAtual: noPico),
+            );
+
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: construirTemaEscuro(),
+                home: TreeNavigationWrapper(
+                  key: TreeNavigationWrapper.navKey,
+                  datasetRepo: datasetRepoReal,
+                  syncService: syncService,
+                  treeController: tree,
+                  child: construirPaginaParaNo(
+                    node: noPico,
+                    datasetRepo: datasetRepoReal,
+                    syncService: syncService,
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            expect(find.text('ANDORINHAS ONLINE V1'), findsOneWidget);
+            expect(find.text('Salvar Offline'), findsOneWidget);
+
+            // Aciona o callback real de Salvar Offline do BannerModoOnline dentro de runAsync
+            // para permitir I/O real de disco, HttpServer e Isolate.spawn no ambiente de WidgetTest,
+            // pausando exatamente em notificarConclusao() após updateDatasetAfterDownload().
+            await tester.runAsync(() async {
+              tester
+                  .widget<BannerModoOnline>(find.byType(BannerModoOnline))
+                  .onSalvarOffline();
+              await notificador.chegouNaNotificacao.future;
+            });
+
+            // Processa o rebuild do PageListenableBuilder disparado por updateDatasetAfterDownload(),
+            // que instancia um NOVO PicoViewModel e chama dispose() no antigo via didUpdateWidget!
+            await tester.pump();
+
+            expect(find.text('ANDORINHAS OFFLINE V2'), findsOneWidget);
+            expect(
+              find.text('MG • 1 SETORES • 1 escaladas (1 boulders)'),
+              findsOneWidget,
+            );
+
+            // Agora conclui a notificação nativa para retomar o await em PicoViewModel.baixarPico()
+            await tester.runAsync(() async {
+              notificador.liberarNotificacao.complete();
+              await Future<void>.delayed(const Duration(milliseconds: 50));
+              await servidor.close(force: true);
+            });
+            await tester.pump();
+
+            // Não deve ter lançado FlutterError (A PicoViewModel was used after being disposed)
+            expect(tester.takeException(), isNull);
+            expect(
+              find.textContaining('salvo offline!'),
+              findsOneWidget,
+            );
+          },
+        );
+
+        testWidgets(
+          'não lança FlutterError quando usuário escolhe Salvar Offline no Guardião de Saída desmontando a página enquanto o download conclui',
+          (WidgetTester tester) async {
+            tester.view.physicalSize = const Size(800, 2400);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            const cragId = 'br_mg_santuario_guardiao';
+            final croquiOnline = Croqui()
+              ..id = cragId
+              ..nome = 'Santuário'
+              ..picos.add(
+                Pico()
+                  ..nome = 'Santuário'
+                  ..estado = 'MG',
+              );
+
+            final croquiBytes = croquiOnline.writeToBuffer();
+            final hashCroqui = sha256.convert(croquiBytes).toString();
+            const caminhoRelativo = '$cragId/compilado.binarypb';
+
+            final indice = Indice()
+              ..croquis.add(
+                ResumoCroqui()
+                  ..id = cragId
+                  ..nome = 'Santuário'
+                  ..caminhoRelativo = caminhoRelativo
+                  ..checksumSha256Croqui = hashCroqui
+                  ..timestampUpdate = Timestamp.fromDateTime(
+                    DateTime.utc(2026, 10, 18, 22, 25),
+                  ),
+              );
+            final indiceBytes = indice.writeToBuffer();
+
+            late HttpServer servidor;
+            await tester.runAsync(() async {
+              servidor = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+              servidor.listen((HttpRequest req) async {
+                if (req.uri.path.endsWith('/indice.binarypb')) {
+                  req.response.statusCode = 200;
+                  req.response.headers.set('etag', '"etag-santuario-1"');
+                  req.response.add(indiceBytes);
+                } else if (req.uri.path.endsWith('/$caminhoRelativo')) {
+                  req.response.statusCode = 200;
+                  req.response.headers.set('etag', '"etag-croqui-santuario"');
+                  req.response.add(croquiBytes);
+                } else {
+                  req.response.statusCode = 404;
+                }
+                await req.response.close();
+              });
+
+              SyncService.baseUrlOverride = 'http://127.0.0.1:${servidor.port}';
+              await datasetRepoReal.loadIndiceToMemory(indice);
+              datasetRepoReal.gerenciadorSessaoOnline.registrarCroquiOnline(
+                cragId,
+                croquiOnline,
+              );
+            });
+
+            final notificador = _NotificadorDownloadComLatencia();
+            GerenciadorNotificacaoDownload.instancia = notificador;
+
+            final clienteLocal = ClienteHttpAresta.paraTestes(http.Client());
+            final syncService = SyncService(
+              datasetRepository: datasetRepoReal,
+              client: clienteLocal,
+              network: SyncNetwork(clienteLocal, Duration.zero),
+            );
+
+            final noPico = PicoNode(cragId: cragId, parent: const HomeNode());
+            final tree = TreeNavigationController(
+              estadoInicial: ArvoreNavegacao(noAtual: noPico),
+            );
+
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: construirTemaEscuro(),
+                home: TreeNavigationWrapper(
+                  key: TreeNavigationWrapper.navKey,
+                  datasetRepo: datasetRepoReal,
+                  syncService: syncService,
+                  treeController: tree,
+                  child: ListenableBuilder(
+                    listenable: tree,
+                    builder: (context, _) {
+                      final currentNode = tree.currentNode;
+                      if (currentNode is HomeNode) {
+                        return const Scaffold(body: Text('TELA INICIAL'));
+                      }
+                      return construirPaginaParaNo(
+                        node: currentNode,
+                        datasetRepo: datasetRepoReal,
+                        syncService: syncService,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            // Toca no botão voltar para acionar o Guardião de Saída
+            await tester.tap(find.byType(BackButton));
+            await tester.pumpAndSettle();
+
+            expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
+
+            // Aciona onSalvar do ModalConfirmacaoSaida dentro de runAsync para iniciar o I/O real em background
+            await tester.runAsync(() async {
+              tester
+                  .widget<ModalConfirmacaoSaida>(
+                    find.byType(ModalConfirmacaoSaida),
+                  )
+                  .onSalvar();
+            });
+            await tester.pumpAndSettle();
+
+            // A página voltou imediatamente para a HomeNode, dando dispose() na PicoDetailsPage e no PicoViewModel!
+            expect(find.text('TELA INICIAL'), findsOneWidget);
+
+            // Agora o download em segundo plano termina
+            await tester.runAsync(() async {
+              await notificador.chegouNaNotificacao.future;
+              notificador.liberarNotificacao.complete();
+              await Future<void>.delayed(const Duration(milliseconds: 50));
+              await servidor.close(force: true);
+            });
+            await tester.pump();
+
+            expect(tester.takeException(), isNull);
+            expect(datasetRepoReal.isPicoDownloaded(cragId), isTrue);
+          },
+        );
+      },
+    );
   });
 }
