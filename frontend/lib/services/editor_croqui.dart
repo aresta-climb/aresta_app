@@ -123,22 +123,40 @@ class EditorDeCroqui {
 
   bool get isEditorActive => isExperimentalMode.value;
 
-  /// Normaliza códigos de 8 caracteres alfanuméricos em Base36.
+  /// Normaliza códigos alfanuméricos em Base36 (>= 8 caracteres).
   static String normalizarCodigo(String codigo) {
     return codigo.replaceAll(RegExp(r'[\s\-]+'), '').toLowerCase();
   }
 
-  /// Formata um código de 8 caracteres adicionando um hífen no meio para facilitar a leitura (ex: k9x2-p83a).
+  /// Formata um código de 8 ou mais caracteres adicionando um hífen após o quarto caractere (ex: k9x2-p83a, pr12-34567).
   static String formatarCodigo(String codigo) {
     final norm = normalizarCodigo(codigo);
-    if (norm.length == 8) {
+    if (norm.length >= 8) {
       return '${norm.substring(0, 4)}-${norm.substring(4)}';
     }
     return norm;
   }
 
-  /// Extrai o código de 8 caracteres de uma URL canônica previa.arestaclimb.com ou de uma string digitada.
-  /// Suporta tanto o formato contínuo ("abcdefgh") quanto o formato com hífen ("abcd-efgh").
+  static bool _ehSegmentoCodigoValido(String bruto) {
+    final limpo = bruto.trim().toLowerCase();
+    if (!RegExp(r'^[0-9a-z]{4}[\s\-]?[0-9a-z]{4,}$').hasMatch(limpo)) {
+      return false;
+    }
+    final norm = normalizarCodigo(limpo);
+    if (norm.startsWith('pr')) {
+      return RegExp(r'^pr0*[1-9]\d*$').hasMatch(norm);
+    }
+    return norm.length == 8 && RegExp(r'^[0-9a-z]{8}$').hasMatch(norm);
+  }
+
+  /// Verifica se o código ou URL pertence a uma instância estática de Pull Request (`pr*`).
+  static bool ehCodigoPullRequest(String codigoOuUrl) {
+    final codigo = extrairCodigoPrevia(codigoOuUrl) ?? normalizarCodigo(codigoOuUrl);
+    return codigo.length >= 8 && RegExp(r'^pr0*[1-9]\d*$').hasMatch(codigo);
+  }
+
+  /// Extrai o código de sessão de prévia (>= 8 caracteres) de uma URL canônica previa.arestaclimb.com ou de uma string digitada.
+  /// Suporta tanto o formato contínuo ("abcdefgh") quanto o formato com hífen ("abcd-efgh") e códigos de PR ("pr00-0042", "pr12-34567").
   static String? extrairCodigoPrevia(String input) {
     final limpo = input.trim();
     if (limpo.isEmpty) return null;
@@ -148,20 +166,47 @@ class EditorDeCroqui {
       if (uri.host.toLowerCase() == dominioPrevia) {
         final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
         if (segments.isNotEmpty) {
-          final code = normalizarCodigo(segments.first);
-          if (code.length == 8 && RegExp(r'^[0-9a-z]{8}$').hasMatch(code)) {
-            return code;
+          if (segments.first.toLowerCase() == 'resumo') {
+            return null;
+          }
+          if (_ehSegmentoCodigoValido(segments.first)) {
+            return normalizarCodigo(segments.first);
           }
         }
       }
     }
 
     // Se for apenas o código digitado
-    final direto = normalizarCodigo(limpo);
-    if (direto.length == 8 && RegExp(r'^[0-9a-z]{8}$').hasMatch(direto)) {
-      return direto;
+    if (_ehSegmentoCodigoValido(limpo)) {
+      return normalizarCodigo(limpo);
     }
 
+    return null;
+  }
+
+  /// Extrai o código de sessão de prévia a partir de um Deep Link (`https://previa.arestaclimb.com/<codigo>` ou `aresta://previa/<codigo>`).
+  static String? extrairCodigoPreviaDeLink(dynamic entrada) {
+    if (entrada == null) return null;
+    final uri = entrada is Uri
+        ? entrada
+        : Uri.tryParse(entrada.toString().trim());
+    if (uri == null) return null;
+
+    final scheme = uri.scheme.toLowerCase();
+    final host = uri.host.toLowerCase();
+    final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+
+    if ((scheme == 'https' || scheme == 'http') && host == dominioPrevia) {
+      if (segments.isNotEmpty && segments.first.toLowerCase() != 'resumo') {
+        if (_ehSegmentoCodigoValido(segments.first)) {
+          return normalizarCodigo(segments.first);
+        }
+      }
+    } else if (scheme == 'aresta' && host == 'previa') {
+      if (segments.isNotEmpty && _ehSegmentoCodigoValido(segments.first)) {
+        return normalizarCodigo(segments.first);
+      }
+    }
     return null;
   }
 
@@ -218,7 +263,7 @@ class EditorDeCroqui {
   /// Constrói a URL canônica de prévia a partir de um código (com hífen por padrão para legibilidade: https://previa.arestaclimb.com/abcd-efgh).
   static String urlPreviaParaCodigo(String codigo, {bool comHifen = true}) {
     final norm = normalizarCodigo(codigo);
-    final codExibicao = (comHifen && norm.length == 8)
+    final codExibicao = (comHifen && norm.length >= 8)
         ? '${norm.substring(0, 4)}-${norm.substring(4)}'
         : norm;
     return 'https://$dominioPrevia/$codExibicao';
@@ -282,8 +327,13 @@ class EditorDeCroqui {
   Timer? _reconnectLiveReloadTimer;
 
   /// Inicia a escuta de eventos WebSocket para Live Reload.
+  /// Sessões estáticas de Pull Request (`pr*`) não utilizam WebSocket de Live Reload.
   void iniciarEscutaLiveReload(String urlBase) {
     encerrarEscutaLiveReload();
+
+    if (ehCodigoPullRequest(urlBase)) {
+      return;
+    }
 
     Uri? wsUri;
     final codigo = extrairCodigoPrevia(urlBase);

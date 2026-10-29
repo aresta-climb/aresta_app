@@ -154,6 +154,30 @@ void main() {
         EditorDeCroqui.urlPreviaParaCodigo('abcdefgh', comHifen: false),
         'https://previa.arestaclimb.com/abcdefgh',
       );
+      // Códigos de Pull Request >= 8 caracteres (unbounded)
+      expect(EditorDeCroqui.formatarCodigo('pr000042'), 'pr00-0042');
+      expect(EditorDeCroqui.formatarCodigo('pr1234567'), 'pr12-34567');
+      expect(EditorDeCroqui.extrairCodigoPrevia('pr00-0042'), 'pr000042');
+      expect(EditorDeCroqui.extrairCodigoPrevia('pr12-34567'), 'pr1234567');
+      expect(
+        EditorDeCroqui.extrairCodigoPrevia('https://previa.arestaclimb.com/pr12-34567'),
+        'pr1234567',
+      );
+      expect(
+        EditorDeCroqui.extrairCodigoPrevia('https://previa.arestaclimb.com/resumo/pr00-0042'),
+        isNull,
+      );
+      expect(EditorDeCroqui.ehCodigoPullRequest('pr00-0042'), isTrue);
+      expect(EditorDeCroqui.ehCodigoPullRequest('https://previa.arestaclimb.com/pr12-34567'), isTrue);
+      expect(EditorDeCroqui.ehCodigoPullRequest('k9x2-p83a'), isFalse);
+      expect(
+        EditorDeCroqui.extrairCodigoPreviaDeLink('aresta://previa/pr00-0042'),
+        'pr000042',
+      );
+      expect(
+        EditorDeCroqui.extrairCodigoPreviaDeLink('https://previa.arestaclimb.com/k9x2-p83a'),
+        'k9x2p83a',
+      );
     });
   });
 
@@ -375,6 +399,8 @@ void main() {
     test('iniciarEscutaLiveReload e encerrarEscutaLiveReload devem lidar com URLs invalidas e fechar conexao sem excecao', () {
       expect(() => editor.iniciarEscutaLiveReload('https://url-invalida-sem-codigo.com'), returnsNormally);
       expect(() => editor.iniciarEscutaLiveReload('https://previa.arestaclimb.com/k9x2-p83a'), returnsNormally);
+      expect(() => editor.iniciarEscutaLiveReload('https://previa.arestaclimb.com/pr00-0042'), returnsNormally);
+      expect(editor.isLiveReloadConectado, isFalse);
       expect(() => editor.encerrarEscutaLiveReload(), returnsNormally);
     });
 
