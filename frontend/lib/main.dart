@@ -20,6 +20,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/feedback/gatilho_feedback_rede.dart';
 import 'package:frontend/services/firebase/inicializar_firebase.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/inicializacao_app.dart';
@@ -53,6 +54,8 @@ const String kSentryDsn = String.fromEnvironment(
 );
 
 void main() async {
+  ServicoPerformance.instancia.iniciarCronometroColdStart();
+
   // Garante que o Flutter esteja pronto antes de fazer I/O de arquivo
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -172,6 +175,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    ServicoPerformance.instancia.garantirCronometroColdStartAtivo();
     WidgetsBinding.instance.addObserver(this);
     _acceptedLegalVersion = widget.acceptedLegalVersion;
     _needsMigration = widget.needsMigration;
@@ -183,6 +187,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             _resultadoColdStart = resultado;
             _aguardandoColdStart = false;
           });
+          if (resultado.linkInicialProcessado == null &&
+              _hasAcceptedTerms &&
+              !_needsMigration) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ServicoPerformance.instancia.registrarColdStartHome();
+              }
+            });
+          }
+        }
+      });
+    } else if (_hasAcceptedTerms && !_needsMigration) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _resultadoColdStart?.linkInicialProcessado == null) {
+          ServicoPerformance.instancia.registrarColdStartHome();
         }
       });
     }
@@ -278,16 +297,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         assetBundle: widget.assetBundle,
       );
     }
-    if (_aguardandoColdStart && !_needsMigration) {
-      return const TelaSplashInicial(exibirIndicadorCarregamento: true);
-    }
-    return TreeNavigationWrapper(
-      datasetRepo: widget.datasetRepo,
-      syncService: widget.syncService,
-      treeController: _resultadoColdStart?.treeController,
-      linkInicialProcessado: _resultadoColdStart?.linkInicialProcessado,
-      mensagemAvisoInicial: _resultadoColdStart?.mensagemAvisoInicial,
-      key: TreeNavigationWrapper.navKey,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: (_aguardandoColdStart && !_needsMigration)
+          ? const TelaSplashInicial(
+              key: ValueKey('tela_splash_inicial'),
+              exibirIndicadorCarregamento: true,
+            )
+          : TreeNavigationWrapper(
+              datasetRepo: widget.datasetRepo,
+              syncService: widget.syncService,
+              treeController: _resultadoColdStart?.treeController,
+              linkInicialProcessado: _resultadoColdStart?.linkInicialProcessado,
+              mensagemAvisoInicial: _resultadoColdStart?.mensagemAvisoInicial,
+              key: TreeNavigationWrapper.navKey,
+            ),
     );
   }
 

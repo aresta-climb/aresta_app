@@ -4,8 +4,10 @@
 import 'dart:math' as math;
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:flutter/material.dart';
+import '../services/firebase/performance_telemetria.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/firebase/app_logger.dart';
+import '../services/repositorio_dataset.dart';
 import '../services/feedback/feedback_metadata_collector.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -119,10 +121,14 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
   double _escalaNoInicioDoGesto = 1.0;
   DateTime? _ultimoToqueTimestamp;
   Offset? _ultimaPosicaoToque;
+  late Stopwatch _cronometroAberturaMapa;
+  bool _medicaoMapaConcluida = false;
 
   @override
   void initState() {
     super.initState();
+    _cronometroAberturaMapa = Stopwatch()..start();
+    _medicaoMapaConcluida = false;
     _autoZoomEnabled = widget.autoZoomEnabled;
     _transformationController = TransformationController();
     _animationController = AnimationController(
@@ -193,6 +199,8 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         widget.imageProviderFutureOverride != oldWidget.imageProviderFutureOverride;
 
     if (imageChanged) {
+      _cronometroAberturaMapa = Stopwatch()..start();
+      _medicaoMapaConcluida = false;
       _imageProviderFuture = widget.imageProviderFutureOverride ??
           (widget.imageProviderOverride != null
               ? Future.value(widget.imageProviderOverride)
@@ -1409,6 +1417,51 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                     fit: BoxFit.contain,
                                     width: constraints.maxWidth,
                                     height: constraints.maxHeight,
+                                    frameBuilder: (
+                                      context,
+                                      child,
+                                      frame,
+                                      wasSynchronouslyLoaded,
+                                    ) {
+                                      if (!_medicaoMapaConcluida &&
+                                          (frame != null ||
+                                              wasSynchronouslyLoaded)) {
+                                        _medicaoMapaConcluida = true;
+                                        _cronometroAberturaMapa.stop();
+                                        final isBaixado = DatasetRepository
+                                                .instance
+                                                ?.isPicoDownloaded(
+                                                  widget.cragId,
+                                                ) ??
+                                            false;
+                                        final modoAcesso =
+                                            isBaixado ? 'offline' : 'online';
+                                        final origemImagem =
+                                            ProvedorImagemAresta
+                                                    .obterUltimaOrigemImagem(
+                                                  widget
+                                                      .mapa.caminhoImagemMapa,
+                                                  picoId: widget.cragId,
+                                                ) ??
+                                                (isBaixado
+                                                    ? 'downloads'
+                                                    : 'cdn_remoto');
+                                        final nomeContexto =
+                                            widget.setorContext?.nome ??
+                                                widget.grupoContext?.nome ??
+                                                'Geral';
+                                        ServicoPerformance.instancia
+                                            .registrarAbrirMapaInterativo(
+                                          idCroqui: widget.cragId,
+                                          nomeSetor: nomeContexto,
+                                          modoAcesso: modoAcesso,
+                                          origemImagem: origemImagem,
+                                          duracaoMs: _cronometroAberturaMapa
+                                              .elapsedMilliseconds,
+                                        );
+                                      }
+                                      return child;
+                                    },
                                     errorBuilder: (context, error, stackTrace) =>
                                         const Center(
                                           child: Icon(

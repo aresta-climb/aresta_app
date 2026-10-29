@@ -4,18 +4,31 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 
-class MockAppLinks extends Mock implements AppLinks {}
+/// Fake determinístico de [AppLinks] para testes de fronteira sem mocks.
+class FakeAppLinks extends Fake implements AppLinks {
+  Uri? linkInicial;
+  final Stream<Uri> _fluxoLinks;
+
+  FakeAppLinks(this._fluxoLinks);
+
+  @override
+  Future<Uri?> getInitialLink() async => linkInicial;
+
+  @override
+  Stream<Uri> get uriLinkStream => _fluxoLinks;
+}
 
 void main() {
-  late MockAppLinks mockAppLinks;
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late FakeAppLinks fakeAppLinks;
   late StreamController<Uri> uriStreamController;
   late EditorDeCroqui editorDeCroqui;
   late DatasetRepository datasetRepo;
@@ -24,10 +37,9 @@ void main() {
   late GerenciadorDeepLinks gerenciador;
 
   setUp(() {
-    mockAppLinks = MockAppLinks();
+    ServicoPerformance.resetarParaTestes();
     uriStreamController = StreamController<Uri>.broadcast();
-    when(() => mockAppLinks.uriLinkStream)
-        .thenAnswer((_) => uriStreamController.stream);
+    fakeAppLinks = FakeAppLinks(uriStreamController.stream);
 
     editorDeCroqui = EditorDeCroqui();
     datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
@@ -54,7 +66,7 @@ void main() {
     );
 
     gerenciador = GerenciadorDeepLinks(
-      appLinks: mockAppLinks,
+      appLinks: fakeAppLinks,
       navigatorService: navigatorService,
     );
   });
@@ -62,32 +74,37 @@ void main() {
   tearDown(() {
     gerenciador.dispose();
     uriStreamController.close();
+    ServicoPerformance.resetarParaTestes();
   });
 
-  test('processa link inicial no Cold Start quando disponivel', () async {
+  test('processa link inicial no Cold Start quando disponivel e registra cold_start_deep_link', () async {
     final initialUri = Uri.parse(
       'https://aresta.cc/pQ9mRt2Kx1Vw8L',
     );
-    when(() => mockAppLinks.getInitialLink())
-        .thenAnswer((_) async => initialUri);
+    fakeAppLinks.linkInicial = initialUri;
 
     await gerenciador.inicializar();
 
     expect(treeController.currentNode, isA<PicoNode>());
     final picoNode = treeController.currentNode as PicoNode;
     expect(picoNode.cragId, equals('br_mg_igarape_pedra_grande'));
+    expect(
+      ServicoPerformance.instancia.tracesRegistradas
+          .any((t) => t.nome == 'cold_start_deep_link'),
+      isTrue,
+    );
   });
 
   test('ignora Cold Start quando initialLink for nulo', () async {
-    when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => null);
+    fakeAppLinks.linkInicial = null;
 
     await gerenciador.inicializar();
 
     expect(treeController.currentNode, isA<HomeNode>());
   });
 
-  test('processa links recebidos no Warm Start via stream', () async {
-    when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => null);
+  test('processa links recebidos no Warm Start via stream e registra warm_start_deep_link', () async {
+    fakeAppLinks.linkInicial = null;
 
     await gerenciador.inicializar();
     expect(treeController.currentNode, isA<HomeNode>());
@@ -102,11 +119,16 @@ void main() {
     await Future.delayed(const Duration(milliseconds: 50));
 
     expect(treeController.currentNode, isA<PicoNode>());
+    expect(
+      ServicoPerformance.instancia.tracesRegistradas
+          .any((t) => t.nome == 'warm_start_deep_link'),
+      isTrue,
+    );
   });
 
   test('ignora disparo duplicado imediato da mesma URI entre Cold Start e stream ou no Warm Start', () async {
     final uri = Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L');
-    when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+    fakeAppLinks.linkInicial = uri;
 
     await gerenciador.inicializar();
     expect(treeController.currentNode, isA<PicoNode>());
@@ -127,7 +149,7 @@ void main() {
     'registrarLinkInicialJaProcessado evita reprocessar o mesmo link inicial no inicializar() e na stream',
     () async {
       final uri = Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L');
-      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+      fakeAppLinks.linkInicial = uri;
 
       gerenciador.registrarLinkInicialJaProcessado(uri);
       await gerenciador.inicializar();

@@ -10,6 +10,7 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../dataset/normalizador_croqui.dart';
 import '../repositorio_dataset.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/constants/constantes_rede.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -417,6 +418,12 @@ class SyncService {
     );
     syncStatus.value = SyncStatus.updating;
     final List<String> failedPicos = [];
+    final cronometroFase1 = Stopwatch()..start();
+    final String origemSync = auto ? 'auto' : 'manual';
+    final String modoSync =
+        datasetRepository.editorDeCroqui.isExperimentalMode.value
+            ? 'experimental'
+            : 'oficial';
 
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -433,6 +440,13 @@ class SyncService {
         );
         await _loadLocalIndiceAndNotify(localIndicePath);
         setUpdatedStatus();
+        cronometroFase1.stop();
+        await ServicoPerformance.instancia.registrarSyncIndexFase1(
+          duracaoMs: cronometroFase1.elapsedMilliseconds,
+          statusHttp: 'erro',
+          origem: origemSync,
+          modo: modoSync,
+        );
         _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
         return failedPicos;
       }
@@ -456,6 +470,13 @@ class SyncService {
           await _loadLocalIndiceAndNotify(localIndicePath);
           syncStatus.value = SyncStatus.offline;
           TelemetryService.instance.logResultadoSincronizacao('erro');
+          cronometroFase1.stop();
+          await ServicoPerformance.instancia.registrarSyncIndexFase1(
+            duracaoMs: cronometroFase1.elapsedMilliseconds,
+            statusHttp: 'offline',
+            origem: origemSync,
+            modo: modoSync,
+          );
           _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
           return failedPicos;
         case IndiceErroServidor(:final statusCode):
@@ -467,12 +488,26 @@ class SyncService {
             await datasetRepository.init();
             syncStatus.value = SyncStatus.updated;
             editorDeCroqui.notificarSessaoExperimentalExpirada();
+            cronometroFase1.stop();
+            await ServicoPerformance.instancia.registrarSyncIndexFase1(
+              duracaoMs: cronometroFase1.elapsedMilliseconds,
+              statusHttp: 'erro',
+              origem: origemSync,
+              modo: modoSync,
+            );
             _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
             return failedPicos;
           }
           await _loadLocalIndiceAndNotify(localIndicePath);
           syncStatus.value = SyncStatus.error;
           TelemetryService.instance.logResultadoSincronizacao('erro');
+          cronometroFase1.stop();
+          await ServicoPerformance.instancia.registrarSyncIndexFase1(
+            duracaoMs: cronometroFase1.elapsedMilliseconds,
+            statusHttp: 'erro',
+            origem: origemSync,
+            modo: modoSync,
+          );
           _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
           return failedPicos;
         case IndiceUpdated():
@@ -486,6 +521,14 @@ class SyncService {
             newIndice,
             baseUrl,
             forcarDownloadExperimental: forceBypassCache,
+          );
+
+          cronometroFase1.stop();
+          await ServicoPerformance.instancia.registrarSyncIndexFase1(
+            duracaoMs: cronometroFase1.elapsedMilliseconds,
+            statusHttp: '200',
+            origem: origemSync,
+            modo: modoSync,
           );
 
           final tarefa = _executarAtualizacaoMidiasEmSegundoPlano(
@@ -521,6 +564,13 @@ class SyncService {
           }
           quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 0;
           setUpdatedStatus(noNewUpdates: true);
+          cronometroFase1.stop();
+          await ServicoPerformance.instancia.registrarSyncIndexFase1(
+            duracaoMs: cronometroFase1.elapsedMilliseconds,
+            statusHttp: '304',
+            origem: origemSync,
+            modo: modoSync,
+          );
           _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
       }
     } catch (e, stack) {
@@ -535,6 +585,13 @@ class SyncService {
       );
       syncStatus.value = SyncStatus.error;
       TelemetryService.instance.logResultadoSincronizacao('erro');
+      cronometroFase1.stop();
+      await ServicoPerformance.instancia.registrarSyncIndexFase1(
+        duracaoMs: cronometroFase1.elapsedMilliseconds,
+        statusHttp: 'erro',
+        origem: origemSync,
+        modo: modoSync,
+      );
       _tarefaMidiasEmSegundoPlano = Future.value(failedPicos);
     }
     return failedPicos;
@@ -551,6 +608,7 @@ class SyncService {
     required bool auto,
     required bool forceBypassCache,
   }) async {
+    final cronometroFase2 = Stopwatch()..start();
     final List<String> failedPicos = [];
     final globalUpdates = _SyncUpdates();
 
@@ -623,6 +681,19 @@ class SyncService {
       quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value =
           globalUpdates.picosAtualizadosComSucesso.length;
       setUpdatedStatus();
+
+      cronometroFase2.stop();
+      final int qtdThumbs = thumbUpdates.filesToRename.length;
+      final int qtdPicos = globalUpdates.picosAtualizadosComSucesso.length;
+      final bool teveAtualizacao = qtdThumbs > 0 ||
+          qtdPicos > 0 ||
+          globalUpdates.filesToDelete.isNotEmpty;
+      await ServicoPerformance.instancia.registrarSyncIndexFase2(
+        duracaoMs: cronometroFase2.elapsedMilliseconds,
+        teveAtualizacao: teveAtualizacao,
+        qtdPicosAtualizados: qtdPicos,
+        qtdThumbs: qtdThumbs,
+      );
     } else {
       AppLogger.instance.logError(
         '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
@@ -646,6 +717,13 @@ class SyncService {
         );
         syncStatus.value = SyncStatus.error;
         TelemetryService.instance.logResultadoSincronizacao('erro');
+        cronometroFase2.stop();
+        await ServicoPerformance.instancia.registrarSyncIndexFase2(
+          duracaoMs: cronometroFase2.elapsedMilliseconds,
+          teveAtualizacao: false,
+          qtdPicosAtualizados: 0,
+          qtdThumbs: 0,
+        );
       }
     }
     return failedPicos;

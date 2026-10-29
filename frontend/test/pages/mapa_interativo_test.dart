@@ -7,14 +7,16 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/mapa_interativo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
-import 'dart:typed_data';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../mocks/mock_telemetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/widgets/badges_modalidades.dart';
+import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
 
 final Uint8List kTransparentImage = Uint8List.fromList([
@@ -4116,8 +4118,94 @@ void main() {
           expect(find.byIcon(Icons.chevron_right), findsOneWidget);
         },
       );
+
+      testWidgets(
+        'registra trace abrir_mapa_interativo e evento abrir_mapa com modo_acesso e origem_imagem após decodificar o primeiro frame da imagem',
+        (tester) async {
+          ServicoPerformance.resetarParaTestes();
+          final mockTelemetry = MockTelemetryService();
+          TelemetryService.instance = mockTelemetry;
+
+          final tempDir = Directory.systemTemp.createTempSync('mapa_perf_');
+          addTearDown(() {
+            if (tempDir.existsSync()) {
+              tempDir.deleteSync(recursive: true);
+            }
+          });
+          final picoDir = Directory('${tempDir.path}/pico_mapa_perf')
+            ..createSync(recursive: true);
+          final mapFile = File('${picoDir.path}/mapa_setor.webp')
+            ..writeAsBytesSync(kTransparentImage);
+          expect(mapFile.existsSync(), isTrue);
+
+          late _ProvedorImagemTesteSincrono provedorSincrono;
+          await tester.runAsync(() async {
+            final provedor = await ProvedorImagemAresta.resolver(
+              picoId: 'pico_mapa_perf',
+              caminho: 'mapa_setor.webp',
+              checksumSha256: 'sha_mapa_perf',
+              caminhoDownloads: tempDir.path,
+              caminhoCacheVolatil: tempDir.path,
+            );
+            expect(provedor, isNotNull);
+            final imagemTeste = await createTestImage(width: 100, height: 100);
+            provedorSincrono = _ProvedorImagemTesteSincrono(
+              ImageInfo(image: imagemTeste),
+            );
+          });
+
+          final mapa = Mapa()
+            ..caminhoImagemMapa = 'mapa_setor.webp'
+            ..larguraMapa = 100
+            ..alturaMapa = 100;
+          final setor = Setor()..nome = 'Setor Mapa Perf';
+          final pico = Pico()..nome = 'Pico Mapa Perf';
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MapaInterativoPage(
+                mapa: mapa,
+                pico: pico,
+                cragId: 'pico_mapa_perf',
+                setorContext: setor,
+                imageProviderOverride: provedorSincrono,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+
+          final traceMapa = ServicoPerformance.instancia.tracesRegistradas
+              .where((t) => t.nome == 'abrir_mapa_interativo')
+              .last;
+          expect(traceMapa.atributos['id_croqui'], equals('pico_mapa_perf'));
+          expect(traceMapa.atributos['origem_imagem'], equals('downloads'));
+          expect(mockTelemetry.recordedParams['abrir_mapa']!['origem_imagem'], equals('downloads'));
+          expect(mockTelemetry.recordedParams['abrir_mapa']!['duracao_ms'], isA<int>());
+        },
+      );
     });
   });
+}
+
+class _ProvedorImagemTesteSincrono extends ImageProvider<_ProvedorImagemTesteSincrono> {
+  final ImageInfo info;
+  const _ProvedorImagemTesteSincrono(this.info);
+
+  @override
+  Future<_ProvedorImagemTesteSincrono> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<_ProvedorImagemTesteSincrono>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    _ProvedorImagemTesteSincrono key,
+    ImageDecoderCallback decode,
+  ) {
+    return OneFrameImageStreamCompleter(
+      SynchronousFuture<ImageInfo>(info.clone()),
+    );
+  }
 }
 
 

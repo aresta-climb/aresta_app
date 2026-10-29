@@ -8,6 +8,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -320,6 +321,85 @@ void main() {
       expect(sucesso, isFalse);
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('z9zzZzZzZzZzZz'), findsOneWidget);
+    });
+  });
+
+  group('DeepLinkNavigatorService - Links de Prévia e Pull Request (previa.arestaclimb.com)', () {
+    test('intercepta https://previa.arestaclimb.com/pr00-0042 e aresta://previa/pr12-34567 conectando à prévia', () async {
+      final codigosConectados = <String>[];
+      final servicoPrevia = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        conectorSessaoPrevia: (codigo) async {
+          codigosConectados.add(codigo);
+          return 'br_mg_igarape_pedra_grande';
+        },
+      );
+
+      final okHttps = await servicoPrevia.processarLink(
+        'https://previa.arestaclimb.com/pr00-0042',
+      );
+      expect(okHttps, isTrue);
+      expect(codigosConectados, contains('pr000042'));
+      expect(treeController.currentNode, isA<PicoNode>());
+
+      final okScheme = await servicoPrevia.processarLink(
+        'aresta://previa/pr12-34567',
+      );
+      expect(okScheme, isTrue);
+      expect(codigosConectados, contains('pr1234567'));
+    });
+
+    test('desvia https://previa.arestaclimb.com/resumo/pr00-0042 para navegador externo sem tratar como rota interna', () async {
+      Uri? urlExternaAberta;
+      final servicoPrevia = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        abridorUrlExterna: (uri) async {
+          urlExternaAberta = uri;
+          return true;
+        },
+      );
+
+      final resultado = await servicoPrevia.processarLink(
+        'https://previa.arestaclimb.com/resumo/pr00-0042',
+      );
+      expect(resultado, isFalse);
+      expect(
+        urlExternaAberta?.toString(),
+        equals('https://previa.arestaclimb.com/resumo/pr00-0042'),
+      );
+    });
+
+    test('registra traces de performance cold_start_deep_link e warm_start_deep_link com modo_acesso e duracao_ms', () async {
+      ServicoPerformance.resetarParaTestes();
+      ServicoPerformance.instancia.iniciarCronometroColdStart();
+
+      final okCold = await service.processarLink(
+        'https://aresta.cc/$uidSetorDireto',
+        tipoStart: 'cold_start',
+      );
+      expect(okCold, isTrue);
+
+      final traceCold = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'cold_start_deep_link')
+          .last;
+      expect(traceCold.atributos['destino'], equals('setor'));
+      expect(traceCold.atributos['modo_acesso'], equals('offline'));
+      expect(mockTelemetry.recordedParams['deep_link_aberto']!['modo_acesso'], equals('offline'));
+      expect(mockTelemetry.recordedParams['deep_link_aberto']!['duracao_ms'], isA<int>());
+
+      final okWarm = await service.processarLink(
+        'https://aresta.cc/$uidViaNoSetor',
+        tipoStart: 'warm_start',
+      );
+      expect(okWarm, isTrue);
+
+      final traceWarm = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'warm_start_deep_link')
+          .last;
+      expect(traceWarm.atributos['destino'], equals('via'));
+      expect(traceWarm.atributos['modo_acesso'], equals('offline'));
     });
   });
 }

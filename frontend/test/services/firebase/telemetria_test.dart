@@ -410,6 +410,52 @@ void main() {
         expect(breadcrumbs.last['parametros'], {'acao': 'explorar'});
       },
     );
+
+    test(
+      'logPerformanceAberturaApp, logPerformanceSyncIndex e parâmetros opcionais duracaoMs/modoAcesso/origemImagem são registrados nos breadcrumbs',
+      () async {
+        TelemetryService.resetForTesting();
+        GravadorBreadcrumbs.resetForTesting();
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        await TelemetryService.instance.logPerformanceAberturaApp(
+          tipoStart: 'cold_start',
+          destino: 'home',
+          duracaoMs: 390,
+        );
+        expect(
+          GravadorBreadcrumbs.instance.obterBreadcrumbs().last['parametros'],
+          containsPair('duracao_ms', 390),
+        );
+
+        await TelemetryService.instance.logPerformanceSyncIndex(
+          fase: 'fase1_indice_catalogo',
+          duracaoMs: 115,
+          statusHttp: '304',
+          origem: 'auto',
+          modo: 'oficial',
+        );
+        expect(
+          GravadorBreadcrumbs.instance.obterBreadcrumbs().last['parametros'],
+          containsPair('status_http', '304'),
+        );
+
+        await TelemetryService.instance.logAbrirMapa(
+          'pico_1',
+          'Setor 1',
+          modoAcesso: 'offline',
+          origemImagem: 'downloads',
+          duracaoMs: 55,
+        );
+        final paramsMapa =
+            GravadorBreadcrumbs.instance.obterBreadcrumbs().last['parametros']
+                as Map<String, dynamic>;
+        expect(paramsMapa['modo_acesso'], 'offline');
+        expect(paramsMapa['origem_imagem'], 'downloads');
+        expect(paramsMapa['duracao_ms'], 55);
+      },
+    );
   });
 }
 

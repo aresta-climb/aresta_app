@@ -1468,6 +1468,75 @@ void main() {
           );
         },
       );
+      test(
+        'obterUltimaOrigemResolucao registra corretamente memoria, offline, temp_cache e cdn_online em getCroqui',
+        () async {
+          final croquiBase = Croqui(
+            id: 'pico_origem',
+            nome: 'Pico Origem',
+            picos: [Pico(nome: 'Pico Origem')],
+          );
+
+          // 1. Resolução via memória RAM
+          repo.gerenciadorSessaoOnline.registrarCroquiOnline('pico_mem', croquiBase);
+          await repo.getCroqui('pico_mem');
+          expect(repo.obterUltimaOrigemResolucao('pico_mem'), equals('memoria'));
+
+          // 2. Resolução via armazenamento permanente (/downloads)
+          final downloadsPath = editor.downloadsPath(tempDir.path);
+          final dirOffline = Directory('$downloadsPath/pico_off')..createSync(recursive: true);
+          File('${dirOffline.path}/compilado.binarypb')
+              .writeAsBytesSync(croquiBase.writeToBuffer());
+          await repo.getCroqui('pico_off');
+          expect(repo.obterUltimaOrigemResolucao('pico_off'), equals('offline'));
+
+          // 3. Resolução via cache volátil (/temp_cache)
+          repo.indiceData.value = Indice(
+            croquis: [
+              ResumoCroqui(
+                id: 'pico_cache',
+                nome: 'Pico Cache',
+                caminhoRelativo: 'picos/pico_cache/compilado.binarypb',
+                checksumSha256Croqui: 'hash_cache_1',
+              ),
+              ResumoCroqui(
+                id: 'pico_cdn',
+                nome: 'Pico CDN',
+                caminhoRelativo: 'picos/pico_cdn/compilado.binarypb',
+                checksumSha256Croqui: 'hash_cdn_1',
+              ),
+            ],
+          );
+          final cacheRoot = await repo.servicoCroquiOnline.obterDiretorioCache();
+          final dirCache = Directory('$cacheRoot/pico_cache')..createSync(recursive: true);
+          File('${dirCache.path}/compilado.binarypb.hash_cache_1')
+              .writeAsBytesSync(croquiBase.writeToBuffer());
+          await repo.getCroqui('pico_cache');
+          expect(repo.obterUltimaOrigemResolucao('pico_cache'), equals('temp_cache'));
+
+          // 4. Resolução via CDN online
+          final mockServicoOnline = MockServicoCroquiOnline();
+          when(
+            () => mockServicoOnline.carregarCroquiRemoto(
+              any(),
+              picoId: 'pico_cdn',
+              checksumSha256: 'hash_cdn_1',
+            ),
+          ).thenAnswer((_) async => croquiBase);
+          when(() => mockServicoOnline.obterDiretorioCache())
+              .thenAnswer((_) async => cacheRoot);
+          final repoComMockOnline = DatasetRepository(
+            editorDeCroqui: editor,
+            servicoCroquiOnline: mockServicoOnline,
+          );
+          repoComMockOnline.indiceData.value = repo.indiceData.value;
+          await repoComMockOnline.getCroqui('pico_cdn', indiceJaSincronizado: true);
+          expect(
+            repoComMockOnline.obterUltimaOrigemResolucao('pico_cdn'),
+            equals('cdn_online'),
+          );
+        },
+      );
     });
   });
 }

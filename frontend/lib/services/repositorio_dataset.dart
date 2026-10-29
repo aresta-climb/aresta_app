@@ -582,6 +582,14 @@ class DatasetRepository {
   // SECTION: Consulta de Croqui (Hierarquia Estrita de 4 Etapas)
   // ===========================================================================
 
+  /// Registro da camada da hierarquia que atendeu a última chamada a [getCroqui] por pico
+  /// (`'memoria'`, `'offline'`, `'temp_cache'` ou `'cdn_online'`).
+  final Map<String, String> _ultimaOrigemResolucaoPorPico = {};
+
+  /// Retorna a camada que serviu o croqui na última chamada a [getCroqui] para [id].
+  String? obterUltimaOrigemResolucao(String id) =>
+      _ultimaOrigemResolucaoPorPico[id];
+
   /// Localiza o caminho relativo e o checksum SHA-256 de [id] no índice em memória
   /// ou nos metadados disponíveis do dataset ativo.
   (String?, String?) _obterCaminhoEChecksumDoIndice(String id) {
@@ -628,6 +636,7 @@ class DatasetRepository {
     // 1. Memória RAM (Sessão Online ativa)
     final emMemoria = gerenciadorSessaoOnline.obterCroquiOnline(id);
     if (emMemoria != null) {
+      _ultimaOrigemResolucaoPorPico[id] = 'memoria';
       indexarMidiasDoCroqui(id, emMemoria);
       return emMemoria;
     }
@@ -639,6 +648,7 @@ class DatasetRepository {
     final localCroqui =
         await gerenciadorArquivosLocais.carregarCroqui(downloadsPath, id);
     if (localCroqui != null) {
+      _ultimaOrigemResolucaoPorPico[id] = 'offline';
       indexarMidiasDoCroqui(id, localCroqui);
       return localCroqui;
     }
@@ -655,6 +665,7 @@ class DatasetRepository {
         try {
           final bytes = await arquivoCache.readAsBytes();
           final croquiCache = NormalizadorCroqui.deBuffer(bytes);
+          _ultimaOrigemResolucaoPorPico[id] = 'temp_cache';
           gerenciadorSessaoOnline.registrarCroquiOnline(
             id,
             croquiCache,
@@ -695,6 +706,7 @@ class DatasetRepository {
         checksumSha256: checksum,
       );
       if (croquiRemoto != null) {
+        _ultimaOrigemResolucaoPorPico[id] = 'cdn_online';
         gerenciadorSessaoOnline.registrarCroquiOnline(
           id,
           croquiRemoto,

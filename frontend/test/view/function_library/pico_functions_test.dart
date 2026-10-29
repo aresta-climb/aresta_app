@@ -1,9 +1,12 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/view/function_library/pico_functions.dart';
+import 'package:frontend/view/function_library/setor_functions.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import '../../mocks/mock_telemetria.dart';
@@ -108,5 +111,66 @@ void main() {
       );
     });
   });
+
+  testWidgets(
+    'buildSectorTile, buildGrupoTile e buildSetorBody registram trace navegacao_interna_croqui ao tocar em setor, grupo e via',
+    (tester) async {
+      ServicoPerformance.resetarParaTestes();
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final via = Escalada()
+        ..viaEsportiva = (ViaEsportiva()..nome = 'Via Perf 1');
+      final setor = Setor()
+        ..nome = 'Setor Perf'
+        ..escaladas.add(via);
+      final grupo = Grupo()..nome = 'Grupo Perf';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => SingleChildScrollView(
+                child: Column(
+                  children: [
+                    buildSectorTile(context, setor, 'crag_perf'),
+                    buildGrupoTile(context, grupo, 'crag_perf'),
+                    buildSetorBody(context, setor, 'crag_perf', [via]),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Setor Perf').first);
+      await tester.pump();
+
+      final traceSetor = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'navegacao_interna_croqui')
+          .last;
+      expect(traceSetor.atributos['destino'], equals('setor'));
+      expect(mockTelemetry.recordedParams['abrir_setor']!['duracao_ms'], isA<int>());
+
+      await tester.tap(find.text('Grupo Perf').first);
+      await tester.pump();
+
+      final traceGrupo = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'navegacao_interna_croqui')
+          .last;
+      expect(traceGrupo.atributos['destino'], equals('grupo'));
+      expect(mockTelemetry.recordedParams['abrir_grupo']!['duracao_ms'], isA<int>());
+
+      await tester.tap(find.text('Via Perf 1').first);
+      await tester.pump();
+
+      final traceVia = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'navegacao_interna_croqui')
+          .last;
+      expect(traceVia.atributos['destino'], equals('via'));
+      expect(mockTelemetry.recordedParams['acao_escalada']!['duracao_ms'], isA<int>());
+    },
+  );
 }
 

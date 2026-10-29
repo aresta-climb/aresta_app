@@ -3,7 +3,7 @@
 Este diretório (`lib/services/firebase/`) consolida **absolutamente todos** os contatos da aplicação com os SDKs do Firebase. Essa arquitetura de isolamento foi construída para evitar acoplamento forte da UI com provedores analíticos de terceiros, garantindo que o resto do sistema desconheça a existência do Firebase.
 
 ## Testes de Arquitetura (Linter)
-Existe um teste unitário (`test/architecture/firebase_isolation_test.dart`) desenhado especificamente para analisar todos os arquivos `.dart` de `lib/`. Ele garantirá que o build/CI falhe caso um desenvolvedor importe qualquer pacote do firebase (ex: `firebase_core`, `firebase_crashlytics`) em um arquivo fora deste diretório.
+Existe um teste unitário (`test/architecture/firebase_isolation_test.dart`) desenhado especificamente para analisar todos os arquivos `.dart` de `lib/`. Ele garantirá que o build/CI falhe caso um desenvolvedor importe qualquer pacote do firebase (ex: `firebase_core`, `firebase_crashlytics`, `firebase_performance`) em um arquivo fora deste diretório.
 
 ## Componentes
 
@@ -13,14 +13,16 @@ O que ele faz:
 - Chama `Firebase.initializeApp()` injetando as opções de plataforma (geradas pelo flutterfire).
 - Captura exceções não-fatais do SDK do Flutter mapeando-as para `recordFlutterFatalError`.
 - Captura _Unhandled Exceptions_ em processamento Assíncrono do Dart via `PlatformDispatcher.instance.onError` e as envia como falhas fatais.
-- Desativa a coleta do Firebase Analytics em modo debug (`initAnalytics`).
+- Desativa a coleta do Firebase Analytics (`initAnalytics`) e do Firebase Performance (`initPerformance`) em modo debug.
 - Dá o "Start" no serviço de _Remote Config_.
 
-### 2. `telemetria.dart`
-Abstração construída em cima do pacote `firebase_analytics`.
-Nenhuma tela ou componente no Aresta Climb deve chamar o Firebase Analytics diretamente. Qualquer tela que desejar disparar um evento (ex: "Croqui aberto" ou "Mapa carregado") chamará as funções de contrato bem-definidas do `TelemetryService.instance`.
-- **Modo Debug**: Se o app estiver rodando localmente, os eventos serão impressos amigavelmente no Console em vez de inundar o Analytics real.
-- **Mocking**: Para testes unitários de funções de tela, usamos um `MockTelemetryService` que substitui essa instância para evitar _crashes_ de inicialização do SDK nativo e validar quais eventos foram requisitados.
+### 2. `telemetria.dart` e `performance_telemetria.dart`
+Abstrações construídas em cima dos pacotes `firebase_analytics` e `firebase_performance`.
+Nenhuma tela ou componente no Aresta Climb deve chamar o Firebase Analytics ou o Firebase Performance diretamente.
+- **`TelemetryService` (`telemetria.dart`)**: Centraliza todos os eventos do GA4 (incluindo dimensões de fatiamento e `duracao_ms` para painéis no Looker Studio).
+- **`ServicoPerformance` (`performance_telemetria.dart`)**: Centraliza a coleta de performance ponta a ponta até a interatividade real da página (`addPostFrameCallback` / primeiro frame decodificado em `MapaInterativoPage`), realizando **dupla emissão** (Custom `Trace` no Firebase Performance para percentis P50/P90/P99 + evento GA4 com `duracao_ms` via `TelemetryService`).
+- **Bloqueio Estrito em Modo Debug**: Quando `kDebugMode` é `true`, `setAnalyticsCollectionEnabled(false)` e `setPerformanceCollectionEnabled(false)` são acionados e nenhuma trace é transmitida ao Firebase Performance, mantendo apenas logs locais no `AppLogger`.
+- **Mocking**: Para testes unitários de funções de tela, usamos `MockTelemetryService` e `FakeFirebasePerformance` que substituem essas instâncias para evitar _crashes_ de inicialização do SDK nativo e validar quais eventos e traces foram requisitados.
 
 ### 3. `remote_config.dart`
 Abstração do `firebase_remote_config`. 

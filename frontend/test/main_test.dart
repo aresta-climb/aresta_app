@@ -24,6 +24,7 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/constants/legal_version.g.dart';
 import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1232,9 +1233,67 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      // Durante a transição de fade (250ms) do AnimatedSwitcher, ambos os widgets coexistem no cross-fade
+      final animatedSwitcher = tester.widget<AnimatedSwitcher>(
+        find.ancestor(
+          of: find.byType(TreeNavigationWrapper),
+          matching: find.byType(AnimatedSwitcher),
+        ),
+      );
+      expect(animatedSwitcher.duration, const Duration(milliseconds: 250));
+      expect(animatedSwitcher.switchInCurve, Curves.easeOut);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+      expect(find.byType(SetorPage), findsOneWidget);
+
+      // Após completar os 250ms da transição suave, a TelaSplashInicial é desmontada
+      await tester.pump(const Duration(milliseconds: 200));
       expect(find.byType(TelaSplashInicial), findsNothing);
       expect(find.byType(TreeNavigationWrapper), findsOneWidget);
       expect(find.byType(SetorPage), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MyApp registra cold_start_home após o post-frame callback quando inicia na HomePage sem deep link',
+    (WidgetTester tester) async {
+      ServicoPerformance.resetarParaTestes();
+      final completerColdStart = Completer<ResultadoResolucaoColdStart>();
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+          resolucaoInicialColdStart: completerColdStart.future,
+        ),
+      );
+      await tester.pump();
+
+      // Enquanto aguarda na splash, cold_start_home ainda não foi registrado
+      expect(
+        ServicoPerformance.instancia.tracesRegistradas
+            .where((t) => t.nome == 'cold_start_home'),
+        isEmpty,
+      );
+
+      // Conclui a resolução sem link inicial (vai para HomeNode)
+      completerColdStart.complete(
+        ResultadoResolucaoColdStart(
+          treeController: TreeNavigationController(),
+          linkInicialProcessado: null,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      final traceHome = ServicoPerformance.instancia.tracesRegistradas
+          .where((t) => t.nome == 'cold_start_home')
+          .last;
+      expect(traceHome.atributos['tipo_start'], equals('cold_start'));
+      expect(traceHome.atributos['destino'], equals('home'));
     },
   );
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/repositorio_dataset.dart';
 import '../../navigation/funcoes_navegacao.dart';
+import '../../services/firebase/performance_telemetria.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../services/firebase/registro_primeira_visita.dart';
 import '../../services/firebase/app_logger.dart';
@@ -137,6 +138,7 @@ Future<void> handlePicoSelection(
   }
   if (id.isEmpty) return;
 
+  final cronometro = Stopwatch()..start();
   final registro = registroPrimeiraVisita ?? RegistroPrimeiraVisita.instancia;
   final primeiraVisita = await registro.registrarEVerificarPrimeiraVisita(id);
   final isBaixado = datasetRepo.isPicoDownloaded(id);
@@ -175,6 +177,19 @@ Future<void> handlePicoSelection(
       pico: croqui.picos.first,
       croqui: croqui,
       cragId: id,
+    );
+
+    final String camadaResolucao =
+        datasetRepo.obterUltimaOrigemResolucao(id) ?? modoAcesso;
+    ServicoPerformance.instancia.concluirMedicaoPosFrame(
+      cronometro,
+      (duracaoMs) => ServicoPerformance.instancia.registrarAbrirCroqui(
+        idCroqui: id,
+        origem: source,
+        modoAcesso: camadaResolucao,
+        primeiraVisita: primeiraVisita,
+        duracaoMs: duracaoMs,
+      ),
     );
 
     Future.delayed(const Duration(milliseconds: 300), () {

@@ -121,14 +121,16 @@ class TelemetryService {
   /// - [idCroqui]: Identificador único do croqui.
   /// - [acao]: Ação realizada (ex: `'abrir_croqui'`, `'buscar'`).
   /// - [origem]: Origem de navegação (ex: `'home'`, `'explorar'`, `'meus_croquis'`).
-  /// - [modoAcesso]: Modo de acesso do croqui: `'offline'` (armazenamento local) ou `'online'` (sob demanda).
+  /// - [modoAcesso]: Modo de acesso do croqui (`'offline'`, `'online'`, `'memoria'`, `'temp_cache'` ou `'cdn_online'`).
   /// - [primeiraVisita]: Indica se é a primeira vez que o usuário abre este croqui específico no dispositivo.
+  /// - [duracaoMs]: Duração em milissegundos até a interatividade da página.
   Future<void> logAcaoCroqui(
     String idCroqui,
     String acao, {
     String? origem,
     String? modoAcesso,
     bool? primeiraVisita,
+    int? duracaoMs,
   }) {
     final params = <String, Object>{'id_croqui': idCroqui, 'acao': acao};
     if (origem != null) {
@@ -140,31 +142,74 @@ class TelemetryService {
     if (primeiraVisita != null) {
       params['primeira_visita'] = primeiraVisita ? 'true' : 'false';
     }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
     return _logEvent('acao_croqui', params);
   }
 
   /// Registra quando um setor específico de um pico é aberto.
-  Future<void> logAbrirSetor(String idCroqui, String nomeSetor) {
-    return _logEvent('abrir_setor', {
+  Future<void> logAbrirSetor(
+    String idCroqui,
+    String nomeSetor, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) {
+    final params = <String, Object>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
-    });
+    };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    return _logEvent('abrir_setor', params);
   }
 
   /// Registra quando um grupo (sub-setores) específico é aberto.
-  Future<void> logAbrirGrupo(String idCroqui, String nomeGrupo) {
-    return _logEvent('abrir_grupo', {
+  Future<void> logAbrirGrupo(
+    String idCroqui,
+    String nomeGrupo, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) {
+    final params = <String, Object>{
       'id_croqui': idCroqui,
       'nome_grupo': nomeGrupo,
-    });
+    };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    return _logEvent('abrir_grupo', params);
   }
 
   /// Registra quando o mapa de um setor ou de um grupo é maximizado/visualizado.
-  Future<void> logAbrirMapa(String idCroqui, String nomeSetor) {
-    return _logEvent('abrir_mapa', {
+  Future<void> logAbrirMapa(
+    String idCroqui,
+    String nomeSetor, {
+    String? modoAcesso,
+    String? origemImagem,
+    int? duracaoMs,
+  }) {
+    final params = <String, Object>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
-    });
+    };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (origemImagem != null) {
+      params['origem_imagem'] = origemImagem;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    return _logEvent('abrir_mapa', params);
   }
 
   /// Registra ações relacionadas a uma escalada/via (e.g., ver no mapa, abrir detalhes).
@@ -173,15 +218,24 @@ class TelemetryService {
     String nomeSetor,
     String nomeEscalada,
     String acao,
-    String origem,
-  ) {
-    return _logEvent('acao_escalada', {
+    String origem, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) {
+    final params = <String, Object>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
       'nome_escalada': nomeEscalada,
       'acao': acao,
       'origem': origem,
-    });
+    };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    return _logEvent('acao_escalada', params);
   }
 
   /// Registra cliques na navegação principal inferior do app.
@@ -271,6 +325,8 @@ class TelemetryService {
   /// - [sucesso]: Se a resolução e abertura foi bem-sucedida.
   /// - [tipoStart]: `'cold_start'` (app aberto do zero) ou `'warm_start'` (app já em memória).
   /// - [motivoErro]: Caso tenha falhado (ex: `'sem_conexao'`, `'pico_nao_encontrado'`).
+  /// - [modoAcesso]: Camada de resolução (`'memoria'`, `'offline'`, `'temp_cache'`, `'cdn_online'`).
+  /// - [duracaoMs]: Duração em milissegundos até a interatividade da página.
   /// - [parametrosUtm]: Parâmetros UTM extraídos da URL (`utm_source`, `utm_medium`, `utm_campaign`, etc.).
   Future<void> logDeepLinkAberto({
     required String idCroqui,
@@ -280,6 +336,8 @@ class TelemetryService {
     String? origemLink,
     bool? abrirMapa,
     String? motivoErro,
+    String? modoAcesso,
+    int? duracaoMs,
     Map<String, String>? parametrosUtm,
   }) {
     final params = <String, Object>{
@@ -301,10 +359,68 @@ class TelemetryService {
     if (motivoErro != null) {
       params['motivo_erro'] = motivoErro;
     }
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
     if (parametrosUtm != null) {
       params.addAll(parametrosUtm);
     }
     return _logEvent('deep_link_aberto', params);
+  }
+
+  /// Registra a performance de inicialização do aplicativo até a interatividade real (`HomePage`).
+  Future<void> logPerformanceAberturaApp({
+    required String tipoStart,
+    required String destino,
+    required int duracaoMs,
+  }) {
+    return _logEvent('performance_abertura_app', {
+      'tipo_start': tipoStart,
+      'destino': destino,
+      'acao': destino,
+      'origem': tipoStart,
+      'duracao_ms': duracaoMs,
+    });
+  }
+
+  /// Registra a performance de cada uma das fases da sincronização de catálogo e mídias (`syncIndex`).
+  Future<void> logPerformanceSyncIndex({
+    required String fase,
+    required int duracaoMs,
+    String? statusHttp,
+    String? origem,
+    String? modo,
+    bool? teveAtualizacao,
+    int? qtdPicosAtualizados,
+    int? qtdThumbs,
+  }) {
+    final params = <String, Object>{
+      'fase': fase,
+      'acao': fase,
+      'duracao_ms': duracaoMs,
+    };
+    if (statusHttp != null) {
+      params['status_http'] = statusHttp;
+    }
+    if (origem != null) {
+      params['origem'] = origem;
+    }
+    if (modo != null) {
+      params['modo'] = modo;
+    }
+    if (teveAtualizacao != null) {
+      params['teve_atualizacao'] = teveAtualizacao ? 'true' : 'false';
+    }
+    if (qtdPicosAtualizados != null) {
+      params['qtd_picos_atualizados'] = qtdPicosAtualizados;
+    }
+    if (qtdThumbs != null) {
+      params['qtd_thumbs'] = qtdThumbs;
+    }
+    return _logEvent('performance_sync_index', params);
   }
 
   /// Registra interações no modal informativo de Beta Aberto.

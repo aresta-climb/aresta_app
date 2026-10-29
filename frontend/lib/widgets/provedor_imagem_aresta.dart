@@ -27,6 +27,46 @@ class ProvedorImagemAresta {
   /// Registro em memória de downloads ativos para evitar requisições redundantes simultâneas.
   static final Map<String, Future<ImageProvider?>> _downloadsEmAndamento = {};
 
+  /// Registro da última camada de resolução de cada mídia (`'downloads'`, `'temp_cache'`, `'cdn_remoto'`).
+  static final Map<String, String> _ultimaOrigemPorMidia = {};
+
+  /// Retorna a camada que resolveu a imagem na última chamada de [resolver]:
+  /// `'downloads'`, `'temp_cache'` ou `'cdn_remoto'`.
+  static String? obterUltimaOrigemImagem(String caminho, {String? picoId}) {
+    final norm = caminho.trim().replaceAll(r'\', '/');
+    String clean = norm;
+    while (clean.startsWith('./')) {
+      clean = clean.substring(2);
+    }
+    while (clean.startsWith('/')) {
+      clean = clean.substring(1);
+    }
+    if (picoId != null && picoId.trim().isNotEmpty) {
+      final p = picoId.trim();
+      return _ultimaOrigemPorMidia['$p|$norm'] ??
+          _ultimaOrigemPorMidia['$p|$clean'] ??
+          _ultimaOrigemPorMidia[norm] ??
+          _ultimaOrigemPorMidia[clean];
+    }
+    return _ultimaOrigemPorMidia[norm] ?? _ultimaOrigemPorMidia[clean];
+  }
+
+  static void _registrarOrigemResolucao(
+    String picoId,
+    String caminhoOriginal,
+    String cleanPath,
+    String origem,
+  ) {
+    final norm = caminhoOriginal.trim().replaceAll(r'\', '/');
+    _ultimaOrigemPorMidia[norm] = origem;
+    _ultimaOrigemPorMidia[cleanPath] = origem;
+    if (picoId.trim().isNotEmpty) {
+      final p = picoId.trim();
+      _ultimaOrigemPorMidia['$p|$norm'] = origem;
+      _ultimaOrigemPorMidia['$p|$cleanPath'] = origem;
+    }
+  }
+
   /// Resolve e entrega a instância de [ImageProvider] apropriada para a mídia indicada.
   ///
   /// O [checksumSha256] é opcional; quando omitido ou nulo, o provedor tenta
@@ -103,6 +143,7 @@ class ProvedorImagemAresta {
       }
 
       // 1. Armazenamento Local Permanente ($downloadsRoot/<picoId>/... ou $downloadsRoot/thumbnails/...)
+      String? origemResolucao;
       String downloadsRoot = caminhoDownloads ?? '';
       if (downloadsRoot.isEmpty) {
         final docsDir = await getApplicationDocumentsDirectory();
@@ -114,6 +155,7 @@ class ProvedorImagemAresta {
         final thumbDownloads = File('$downloadsRoot/thumbnails/$picoId.webp');
         if (thumbDownloads.existsSync()) {
           provedorBase = ImagemArquivoAresta(thumbDownloads, checksumSha256: hashEfetivo);
+          origemResolucao = 'downloads';
         }
       }
 
@@ -122,6 +164,7 @@ class ProvedorImagemAresta {
         File? localFile = _buscarArquivoNoDiretorio(downloadsPicoPath, caminho);
         if (localFile != null && localFile.existsSync()) {
           provedorBase = ImagemArquivoAresta(localFile, checksumSha256: hashEfetivo);
+          origemResolucao = 'downloads';
         }
       }
 
@@ -153,6 +196,7 @@ class ProvedorImagemAresta {
           final arquivoCacheHash = File(caminhoDestinoCache);
           if (arquivoCacheHash.existsSync()) {
             provedorBase = ImagemArquivoAresta(arquivoCacheHash, checksumSha256: hashEfetivo);
+            origemResolucao = 'temp_cache';
           }
         }
 
@@ -161,6 +205,7 @@ class ProvedorImagemAresta {
           File? cacheFile = _buscarArquivoNoDiretorio(cachePicoPath, caminho);
           if (cacheFile != null && cacheFile.existsSync()) {
             provedorBase = ImagemArquivoAresta(cacheFile, checksumSha256: hashEfetivo);
+            origemResolucao = 'temp_cache';
           }
         }
       }
@@ -222,6 +267,7 @@ class ProvedorImagemAresta {
             AppLogger.instance.logAviso(mensagem);
           }
           provedorBase = NetworkImage(urlFinal);
+          origemResolucao = 'cdn_remoto';
         } else {
           final uri = Uri.parse(urlFinal);
           final queryParams = Map<String, String>.from(uri.queryParameters);
@@ -231,6 +277,9 @@ class ProvedorImagemAresta {
           final chaveDownload = caminhoDestinoCache;
           if (_downloadsEmAndamento.containsKey(chaveDownload)) {
             provedorBase = await _downloadsEmAndamento[chaveDownload];
+            if (provedorBase != null) {
+              origemResolucao = 'cdn_remoto';
+            }
           } else {
             final futureDownload = _baixarESalvarNoCache(
               urlFinal: urlFinal,
@@ -241,11 +290,18 @@ class ProvedorImagemAresta {
             _downloadsEmAndamento[chaveDownload] = futureDownload;
             try {
               provedorBase = await futureDownload;
+              if (provedorBase != null) {
+                origemResolucao = 'cdn_remoto';
+              }
             } finally {
               _downloadsEmAndamento.remove(chaveDownload);
             }
           }
         }
+      }
+
+      if (provedorBase != null && origemResolucao != null) {
+        _registrarOrigemResolucao(picoId, caminho, cleanPath, origemResolucao);
       }
 
       if (provedorBase != null && (larguraAlvo != null || alturaAlvo != null)) {

@@ -9,7 +9,9 @@ import 'via_functions.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';
 import '../../navigation/funcoes_navegacao.dart';
+import '../../services/firebase/performance_telemetria.dart';
 import '../../services/firebase/telemetria.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../utils/resolvedor_rotulos_referencia.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
@@ -365,14 +367,35 @@ Widget _buildRouteTile(
             ),
             trailing: Icon(Icons.chevron_right, color: beastHide),
             onTap: () {
+              final cronometro = Stopwatch()..start();
+              final modoAcesso = (DatasetRepository.instance
+                          ?.isPicoDownloaded(cragId) ??
+                      false)
+                  ? 'offline'
+                  : 'online';
               TelemetryService.instance.logAcaoEscalada(
                 cragId,
                 setor.nome,
                 nome,
                 'abrir_detalhes',
                 'lista_setor',
+                modoAcesso: modoAcesso,
               );
               AppNav.toVia(context, escalada: escalada, setor: setor);
+              ServicoPerformance.instancia.concluirMedicaoPosFrame(
+                cronometro,
+                (duracaoMs) => ServicoPerformance.instancia
+                    .registrarNavegacaoInternaCroqui(
+                      idCroqui: cragId,
+                      destino: 'via',
+                      modoAcesso: modoAcesso,
+                      duracaoMs: duracaoMs,
+                      nomeSetor: setor.nome,
+                      nomeEscalada: nome,
+                      acaoEscalada: 'abrir_detalhes',
+                      origemEscalada: 'lista_setor',
+                    ),
+              );
             },
           ),
         ),

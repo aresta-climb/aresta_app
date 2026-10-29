@@ -54,6 +54,7 @@ class MockTelemetryService implements TelemetryService {
     String? origem,
     String? modoAcesso,
     bool? primeiraVisita,
+    int? duracaoMs,
   }) async {
     recordedEvents.add('acao_croqui');
     final params = <String, dynamic>{'id_croqui': idCroqui, 'acao': acao};
@@ -66,34 +67,77 @@ class MockTelemetryService implements TelemetryService {
     if (primeiraVisita != null) {
       params['primeira_visita'] = primeiraVisita ? 'true' : 'false';
     }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
     recordedParams['acao_croqui'] = params;
   }
 
   @override
-  Future<void> logAbrirSetor(String idCroqui, String nomeSetor) async {
+  Future<void> logAbrirSetor(
+    String idCroqui,
+    String nomeSetor, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) async {
     recordedEvents.add('abrir_setor');
-    recordedParams['abrir_setor'] = {
+    final params = <String, dynamic>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
     };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    recordedParams['abrir_setor'] = params;
   }
 
   @override
-  Future<void> logAbrirGrupo(String idCroqui, String nomeGrupo) async {
+  Future<void> logAbrirGrupo(
+    String idCroqui,
+    String nomeGrupo, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) async {
     recordedEvents.add('abrir_grupo');
-    recordedParams['abrir_grupo'] = {
+    final params = <String, dynamic>{
       'id_croqui': idCroqui,
       'nome_grupo': nomeGrupo,
     };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    recordedParams['abrir_grupo'] = params;
   }
 
   @override
-  Future<void> logAbrirMapa(String idCroqui, String nomeSetor) async {
+  Future<void> logAbrirMapa(
+    String idCroqui,
+    String nomeSetor, {
+    String? modoAcesso,
+    String? origemImagem,
+    int? duracaoMs,
+  }) async {
     recordedEvents.add('abrir_mapa');
-    recordedParams['abrir_mapa'] = {
+    final params = <String, dynamic>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
     };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (origemImagem != null) {
+      params['origem_imagem'] = origemImagem;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    recordedParams['abrir_mapa'] = params;
   }
 
   @override
@@ -102,16 +146,25 @@ class MockTelemetryService implements TelemetryService {
     String nomeSetor,
     String nomeEscalada,
     String acao,
-    String origem,
-  ) async {
+    String origem, {
+    String? modoAcesso,
+    int? duracaoMs,
+  }) async {
     recordedEvents.add('acao_escalada');
-    recordedParams['acao_escalada'] = {
+    final params = <String, dynamic>{
       'id_croqui': idCroqui,
       'nome_setor': nomeSetor,
       'nome_escalada': nomeEscalada,
       'acao': acao,
       'origem': origem,
     };
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
+    recordedParams['acao_escalada'] = params;
   }
 
   @override
@@ -206,6 +259,8 @@ class MockTelemetryService implements TelemetryService {
     String? origemLink,
     bool? abrirMapa,
     String? motivoErro,
+    String? modoAcesso,
+    int? duracaoMs,
     Map<String, String>? parametrosUtm,
   }) async {
     recordedEvents.add('deep_link_aberto');
@@ -228,10 +283,70 @@ class MockTelemetryService implements TelemetryService {
     if (motivoErro != null) {
       params['motivo_erro'] = motivoErro;
     }
+    if (modoAcesso != null) {
+      params['modo_acesso'] = modoAcesso;
+    }
+    if (duracaoMs != null) {
+      params['duracao_ms'] = duracaoMs;
+    }
     if (parametrosUtm != null) {
       params.addAll(parametrosUtm);
     }
     recordedParams['deep_link_aberto'] = params;
+  }
+
+  @override
+  Future<void> logPerformanceAberturaApp({
+    required String tipoStart,
+    required String destino,
+    required int duracaoMs,
+  }) async {
+    recordedEvents.add('performance_abertura_app');
+    recordedParams['performance_abertura_app'] = {
+      'tipo_start': tipoStart,
+      'destino': destino,
+      'acao': destino,
+      'origem': tipoStart,
+      'duracao_ms': duracaoMs,
+    };
+  }
+
+  @override
+  Future<void> logPerformanceSyncIndex({
+    required String fase,
+    required int duracaoMs,
+    String? statusHttp,
+    String? origem,
+    String? modo,
+    bool? teveAtualizacao,
+    int? qtdPicosAtualizados,
+    int? qtdThumbs,
+  }) async {
+    recordedEvents.add('performance_sync_index');
+    final params = <String, dynamic>{
+      'fase': fase,
+      'acao': fase,
+      'duracao_ms': duracaoMs,
+    };
+    if (statusHttp != null) {
+      params['status_http'] = statusHttp;
+    }
+    if (origem != null) {
+      params['origem'] = origem;
+    }
+    if (modo != null) {
+      params['modo'] = modo;
+    }
+    if (teveAtualizacao != null) {
+      params['teve_atualizacao'] = teveAtualizacao ? 'true' : 'false';
+    }
+    if (qtdPicosAtualizados != null) {
+      params['qtd_picos_atualizados'] = qtdPicosAtualizados;
+    }
+    if (qtdThumbs != null) {
+      params['qtd_thumbs'] = qtdThumbs;
+    }
+    recordedParams['performance_sync_index'] = params;
   }
 
   @override
@@ -401,4 +516,3 @@ class MockTelemetryService implements TelemetryService {
 
 /// Alias em português para [MockTelemetryService].
 typedef MockTelemetria = MockTelemetryService;
-

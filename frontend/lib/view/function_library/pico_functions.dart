@@ -10,7 +10,9 @@ import 'markdown_offline.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'via_functions.dart';
 import '../../navigation/funcoes_navegacao.dart';
+import '../../services/firebase/performance_telemetria.dart';
 import '../../services/firebase/telemetria.dart';
+import '../../services/repositorio_dataset.dart';
 import '../../widgets/mapa_thumbnail.dart';
 import '../../theme/cores_app.dart';
 import '../../widgets/badges_modalidades.dart';
@@ -210,8 +212,28 @@ Widget buildSectorTile(
             : null,
         trailing: Icon(Icons.chevron_right, color: beastHide),
         onTap: () {
-          TelemetryService.instance.logAbrirSetor(cragId, setor.nome);
+          final cronometro = Stopwatch()..start();
+          final modoAcesso =
+              (DatasetRepository.instance?.isPicoDownloaded(cragId) ?? false)
+                  ? 'offline'
+                  : 'online';
+          TelemetryService.instance.logAbrirSetor(
+            cragId,
+            setor.nome,
+            modoAcesso: modoAcesso,
+          );
           AppNav.toSetor(context, setor: setor, grupoContext: grupoContext);
+          ServicoPerformance.instancia.concluirMedicaoPosFrame(
+            cronometro,
+            (duracaoMs) =>
+                ServicoPerformance.instancia.registrarNavegacaoInternaCroqui(
+                  idCroqui: cragId,
+                  destino: 'setor',
+                  modoAcesso: modoAcesso,
+                  duracaoMs: duracaoMs,
+                  nomeSetor: setor.nome,
+                ),
+          );
         },
       ),
     ),
@@ -291,8 +313,28 @@ Widget buildGrupoTile(
         ),
         trailing: Icon(Icons.format_list_bulleted, color: beastHide),
         onTap: () {
-          TelemetryService.instance.logAbrirGrupo(cragId, grupo.nome);
+          final cronometro = Stopwatch()..start();
+          final modoAcesso =
+              (DatasetRepository.instance?.isPicoDownloaded(cragId) ?? false)
+                  ? 'offline'
+                  : 'online';
+          TelemetryService.instance.logAbrirGrupo(
+            cragId,
+            grupo.nome,
+            modoAcesso: modoAcesso,
+          );
           AppNav.toGrupo(context, grupo: grupo);
+          ServicoPerformance.instancia.concluirMedicaoPosFrame(
+            cronometro,
+            (duracaoMs) =>
+                ServicoPerformance.instancia.registrarNavegacaoInternaCroqui(
+                  idCroqui: cragId,
+                  destino: 'grupo',
+                  modoAcesso: modoAcesso,
+                  duracaoMs: duracaoMs,
+                  nomeGrupo: grupo.nome,
+                ),
+          );
         },
       ),
     ),

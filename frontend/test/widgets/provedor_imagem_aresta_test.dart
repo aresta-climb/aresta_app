@@ -1099,6 +1099,59 @@ void main() {
         },
       );
     });
+
+    group('Rastreamento da origem de resolução da imagem (obterUltimaOrigemImagem)', () {
+      test('registra downloads, temp_cache e cdn_remoto conforme a camada que resolveu a imagem', () async {
+        // 1. Camada downloads
+        final picoDownloads = Directory('${tempDownloadsDir.path}/pico_origem');
+        await picoDownloads.create(recursive: true);
+        final arquivoDownloads = File('${picoDownloads.path}/mapa_local.webp');
+        await arquivoDownloads.writeAsBytes([1, 2, 3]);
+
+        await ProvedorImagemAresta.resolver(
+          picoId: 'pico_origem',
+          caminho: 'mapa_local.webp',
+          checksumSha256: 'sha_dl',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+        );
+        expect(
+          ProvedorImagemAresta.obterUltimaOrigemImagem('mapa_local.webp', picoId: 'pico_origem'),
+          equals('downloads'),
+        );
+
+        // 2. Camada cdn_remoto (primeira busca remota que grava no temp_cache)
+        final cliente = _ClienteHttpEspiao();
+        await ProvedorImagemAresta.resolver(
+          picoId: 'pico_origem',
+          caminho: 'setor/mapa_remoto.webp',
+          checksumSha256: 'sha_cdn_123',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
+        );
+        expect(
+          ProvedorImagemAresta.obterUltimaOrigemImagem('setor/mapa_remoto.webp', picoId: 'pico_origem'),
+          equals('cdn_remoto'),
+        );
+
+        // 3. Camada temp_cache (segunda busca da mesma imagem já persistida no cache volátil)
+        await ProvedorImagemAresta.resolver(
+          picoId: 'pico_origem',
+          caminho: 'setor/mapa_remoto.webp',
+          checksumSha256: 'sha_cdn_123',
+          baseUrl: 'https://cdn.arestaclimb.com',
+          caminhoDownloads: tempDownloadsDir.path,
+          caminhoCacheVolatil: tempCacheDir.path,
+          clienteHttp: ClienteHttpAresta.paraTestes(cliente),
+        );
+        expect(
+          ProvedorImagemAresta.obterUltimaOrigemImagem('setor/mapa_remoto.webp', picoId: 'pico_origem'),
+          equals('temp_cache'),
+        );
+      });
+    });
   });
 }
 

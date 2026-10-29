@@ -22,6 +22,7 @@ import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import '../mocks/mock_telemetria.dart';
@@ -2767,6 +2768,75 @@ void main() {
           ),
           isTrue,
         );
+      },
+    );
+
+    test(
+      'registra telemetria de performance sync_index_fase1 (200, 304, offline, erro) e sync_index_fase2 com métricas de volume',
+      () async {
+        ServicoPerformance.resetarParaTestes();
+        editor.isExperimentalMode.value = false;
+
+        final thumbBytes = [10, 20, 30, 40];
+        final thumbHash = sha256.convert(thumbBytes).toString();
+        final newIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = 'pico_perf'
+              ..nome = 'Pico Performance'
+              ..checksumSha256Thumbnail = thumbHash,
+          );
+
+        final fakeClient = FakeClient(
+          newIndice,
+          {'pico_perf.webp': thumbBytes},
+          '"etag-perf-1"',
+        );
+        final sync = SyncService(
+          datasetRepository: repo,
+          client: ClienteHttpAresta.paraTestes(fakeClient),
+        )..mockIsolateSpawn = (mainFunc, args) async {
+            await downloadIsolateMain(args);
+          };
+
+        // 1. Sync 200 OK com 1 thumbnail na Fase 2
+        await sync.syncIndex(auto: true);
+        await sync.tarefaMidiasEmSegundoPlano;
+
+        final traceFase1_200 = ServicoPerformance.instancia.tracesRegistradas
+            .where((t) => t.nome == 'sync_index_fase1')
+            .last;
+        expect(traceFase1_200.atributos['status_http'], equals('200'));
+        expect(traceFase1_200.atributos['origem'], equals('auto'));
+        expect(traceFase1_200.atributos['modo'], equals('oficial'));
+
+        final traceFase2 = ServicoPerformance.instancia.tracesRegistradas
+            .where((t) => t.nome == 'sync_index_fase2')
+            .last;
+        expect(traceFase2.atributos['teve_atualizacao'], equals('true'));
+        expect(traceFase2.metricas['qtd_thumbs'], equals(1));
+        expect(traceFase2.metricas['qtd_picos_atualizados'], equals(0));
+
+        // 2. Sync 304 Not Modified (manual)
+        await sync.syncIndex(auto: false);
+        await sync.tarefaMidiasEmSegundoPlano;
+
+        final traceFase1_304 = ServicoPerformance.instancia.tracesRegistradas
+            .where((t) => t.nome == 'sync_index_fase1')
+            .last;
+        expect(traceFase1_304.atributos['status_http'], equals('304'));
+        expect(traceFase1_304.atributos['origem'], equals('manual'));
+
+        // 3. Sync Offline
+        final syncOffline = SyncService(
+          datasetRepository: repo,
+          client: ClienteHttpAresta.paraTestes(_ErrorClient()),
+        );
+        await syncOffline.syncIndex(auto: true);
+        final traceFase1Offline = ServicoPerformance.instancia.tracesRegistradas
+            .where((t) => t.nome == 'sync_index_fase1')
+            .last;
+        expect(traceFase1Offline.atributos['status_http'], equals('offline'));
       },
     );
   });
