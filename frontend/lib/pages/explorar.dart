@@ -69,6 +69,9 @@ class _BrowsePageState extends State<BrowsePage> {
   void initState() {
     super.initState();
     widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
+    if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
+      _aoSolicitarScrollSetimoPico();
+    }
   }
 
   @override
@@ -77,6 +80,9 @@ class _BrowsePageState extends State<BrowsePage> {
     if (oldWidget.viewModel != widget.viewModel) {
       oldWidget.viewModel.solicitacaoScrollSetimoPico.removeListener(_aoSolicitarScrollSetimoPico);
       widget.viewModel.solicitacaoScrollSetimoPico.addListener(_aoSolicitarScrollSetimoPico);
+    if (widget.viewModel.solicitacaoScrollSetimoPico.value > 0) {
+      _aoSolicitarScrollSetimoPico();
+    }
     }
   }
 

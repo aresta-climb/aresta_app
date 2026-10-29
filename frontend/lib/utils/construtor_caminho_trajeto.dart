@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:path_drawing/path_drawing.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
@@ -17,8 +16,8 @@ import '../services/firebase/app_logger.dart';
 /// Principais responsabilidades:
 /// - Conversão de strings de comandos SVG em instâncias nativas de [Path] do Flutter.
 /// - Aplicação de estilos de traçado da FEMEMG (sólido, tracejado para escalada livre, pontilhado).
-/// - Cache em memória dos caminhos processados para evitar alocações excessivas de objetos durante
-///   operações de pan e zoom a 60/120 FPS.
+/// - Cache em memória dos caminhos processados e de layouts de texto ([TextPainter]) para evitar
+///   alocações excessivas de objetos durante operações de pan e zoom a 60/120 FPS.
 /// - Conversão resiliente de cores hexadecimais com suporte a fallback de alto contraste.
 /// - Amostragem geométrica de segmentos para suporte a detecção ergonômica de toques (hit-testing).
 class ConstrutorCaminhoTrajeto {
@@ -28,12 +27,43 @@ class ConstrutorCaminhoTrajeto {
   /// Cache de instâncias de [Path] decompostas no espaço de tela do viewport.
   static final Map<String, Path> _cacheCaminhosViewport = {};
 
-  /// Limpa o cache de caminhos em memória.
+  /// Cache de instâncias de [TextPainter] já medidas para rótulos de marcadores do mapa.
+  static final Map<String, TextPainter> _cacheTextPainters = {};
+
+  /// Limpa o cache de caminhos e layouts de texto em memória.
   ///
   /// Deve ser acionado em eventos de invalidação de dados, migração de croquis ou recarga do mapa.
   static void limparCache() {
     _cacheCaminhos.clear();
     _cacheCaminhosViewport.clear();
+    _cacheTextPainters.clear();
+  }
+
+  /// Obtém ou cria e calcula o layout de um [TextPainter] para o [rotulo] e [tamanhoFonte]
+  /// de um marcador de mapa, reutilizando instâncias já calculadas em memória.
+  static TextPainter obterTextPainterMarcador({
+    required String rotulo,
+    required double tamanhoFonte,
+    Color cor = Colors.white,
+  }) {
+    final chave = '$rotulo|${tamanhoFonte.toStringAsFixed(2)}|${cor.toARGB32()}';
+    final existente = _cacheTextPainters[chave];
+    if (existente != null) {
+      return existente;
+    }
+    final tp = TextPainter(
+      text: TextSpan(
+        text: rotulo,
+        style: TextStyle(
+          color: cor,
+          fontSize: tamanhoFonte,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _cacheTextPainters[chave] = tp;
+    return tp;
   }
 
   /// Converte a string SVG compilada em um [Path] nativo, aplicando o estilo configurado.

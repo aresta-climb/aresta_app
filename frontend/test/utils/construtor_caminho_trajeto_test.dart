@@ -315,5 +315,32 @@ void main() {
       );
       expect(identical(c1, c2), isTrue);
     });
+
+    test('obterTextPainterMarcador reutiliza instância cacheada para mesmo rótulo e tamanho e invalida em limparCache', () {
+      final tp1 = ConstrutorCaminhoTrajeto.obterTextPainterMarcador(
+        rotulo: '12',
+        tamanhoFonte: 14.0,
+      );
+      final tp2 = ConstrutorCaminhoTrajeto.obterTextPainterMarcador(
+        rotulo: '12',
+        tamanhoFonte: 14.0,
+      );
+      final tpOutro = ConstrutorCaminhoTrajeto.obterTextPainterMarcador(
+        rotulo: '13',
+        tamanhoFonte: 14.0,
+      );
+
+      expect(tp1.width, greaterThan(0));
+      expect(identical(tp1, tp2), isTrue);
+      expect(identical(tp1, tpOutro), isFalse);
+
+      ConstrutorCaminhoTrajeto.limparCache();
+
+      final tpAposLimpeza = ConstrutorCaminhoTrajeto.obterTextPainterMarcador(
+        rotulo: '12',
+        tamanhoFonte: 14.0,
+      );
+      expect(identical(tp1, tpAposLimpeza), isFalse);
+    });
   });
 }

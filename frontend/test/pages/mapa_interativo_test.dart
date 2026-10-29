@@ -15,6 +15,8 @@ import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../mocks/mock_telemetria.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/utils/consulta_dataset.dart';
+import 'package:frontend/services/dataset/normalizador_croqui.dart';
 import 'package:frontend/widgets/badges_modalidades.dart';
 import 'package:frontend/widgets/provedor_imagem_aresta.dart';
 import 'package:frontend/services/feedback/feedback_metadata_collector.dart';
@@ -4182,6 +4184,165 @@ void main() {
           expect(traceMapa.atributos['origem_imagem'], equals('downloads'));
           expect(mockTelemetry.recordedParams['abrir_mapa']!['origem_imagem'], equals('downloads'));
           expect(mockTelemetry.recordedParams['abrir_mapa']!['duracao_ms'], isA<int>());
+        },
+      );
+
+      testWidgets(
+        'MapaInterativoPage reutiliza o DatasetResolver compartilhado do Pico ao resolver multiplas referencias',
+        (WidgetTester tester) async {
+          final via1 = Escalada()
+            ..uid = 'via_1'
+            ..viaEsportiva = (ViaEsportiva()..nome = 'Via 1');
+          final via2 = Escalada()
+            ..uid = 'via_2'
+            ..viaEsportiva = (ViaEsportiva()..nome = 'Via 2');
+          final setor = Setor()
+            ..uid = 'setor_1'
+            ..nome = 'Setor Principal'
+            ..escaladas.addAll([via1, via2]);
+          final pico = Pico()
+            ..nome = 'Pico Reuso Resolver'
+            ..setoresOuGrupos.add(
+              SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+            );
+          final croqui = Croqui()
+            ..id = 'pico_reuso'
+            ..botoes.add(
+              Botao()
+                ..uid = 'btn_1'
+                ..texto = 'Botao 1',
+            );
+
+          final resolverPreexistente = DatasetResolver(pico: pico, croqui: croqui);
+          expect(NormalizadorCroqui.estaNormalizado(pico), isTrue);
+
+          final mapa = Mapa()
+            ..caminhoImagemMapa = 'mapas/teste_reuso.png'
+            ..larguraMapa = 500
+            ..alturaMapa = 500
+            ..pontosDeInteresse.addAll([
+              Mapa_PontoDeInteresse()
+                ..uid = 'poi_1'
+                ..id = '1'
+                ..circulo = (BoundingCirculo()
+                  ..x = 100
+                  ..y = 100
+                  ..raio = 20),
+              Mapa_PontoDeInteresse()
+                ..uid = 'poi_2'
+                ..id = '2'
+                ..circulo = (BoundingCirculo()
+                  ..x = 200
+                  ..y = 200
+                  ..raio = 20),
+            ])
+            ..referencias.addAll([
+              Mapa_Referencia()
+                ..alvoUid = 'via_1'
+                ..pontosUids.add('poi_1'),
+              Mapa_Referencia()
+                ..alvoUid = 'via_2'
+                ..pontosUids.add('poi_2'),
+            ]);
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MapaInterativoPage(
+                pico: pico,
+                mapa: mapa,
+                cragId: 'pico_reuso',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final resolverAposMapa = DatasetResolver(pico: pico);
+          expect(identical(resolverPreexistente, resolverAposMapa), isTrue);
+          expect(resolverAposMapa.obterPorUid('btn_1')?.botao?.texto, equals('Botao 1'));
+        },
+      );
+
+      testWidgets(
+        'Task 3.2: animacao de pulso repinta MarkerPainter via Listenable sem rebuildar a arvore de widgets da pagina e isola mapa em RepaintBoundary',
+        (WidgetTester tester) async {
+          final via = Escalada()
+            ..uid = 'via_pulso'
+            ..viaEsportiva = (ViaEsportiva()..nome = 'Via Pulso');
+          final setor = Setor()
+            ..uid = 'setor_pulso'
+            ..nome = 'Setor Pulso'
+            ..escaladas.add(via);
+          final pico = Pico()
+            ..nome = 'Pico Pulso'
+            ..setoresOuGrupos.add(
+              SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+            );
+          final mapa = Mapa()
+            ..caminhoImagemMapa = 'mapas/pulso.png'
+            ..larguraMapa = 500
+            ..alturaMapa = 500
+            ..pontosDeInteresse.add(
+              Mapa_PontoDeInteresse()
+                ..uid = 'poi_pulso'
+                ..id = '1'
+                ..circulo = (BoundingCirculo()
+                  ..x = 400
+                  ..y = 400
+                  ..raio = 20),
+            )
+            ..referencias.add(
+              Mapa_Referencia()
+                ..alvoUid = 'via_pulso'
+                ..pontosUids.add('poi_pulso'),
+            );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: MapaInterativoPage(
+                pico: pico,
+                mapa: mapa,
+                cragId: 'pico_pulso',
+                imageProviderOverride: MemoryImage(kTransparentImage),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // Verifica que existe RepaintBoundary dentro do InteractiveViewer e que MarkerPainter tem highlightAnimation
+          expect(
+            find.descendant(
+              of: find.byType(InteractiveViewer),
+              matching: find.byType(RepaintBoundary),
+            ),
+            findsWidgets,
+          );
+
+          final customPaintAntes = tester.widget<CustomPaint>(
+            find.descendant(
+              of: find.byKey(const Key('marker_poi_pulso')),
+              matching: find.byType(CustomPaint),
+            ),
+          );
+          final painterAntes = customPaintAntes.painter as MarkerPainter;
+          expect(painterAntes.highlightAnimation, isNotNull);
+
+          // Toca em área vazia (canto superior esquerdo longe do marcador em 400,400) para disparar o pulso
+          await tester.tapAt(const Offset(20, 100));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          // Durante os frames da animação de pulso, a instância de CustomPaint não deve ter sido recriada por setState na página
+          final customPaintDurante = tester.widget<CustomPaint>(
+            find.descendant(
+              of: find.byKey(const Key('marker_poi_pulso')),
+              matching: find.byType(CustomPaint),
+            ),
+          );
+          expect(identical(customPaintAntes, customPaintDurante), isTrue);
+          expect(painterAntes.highlightAnimation!.value, greaterThan(0.0));
+
+          await tester.pumpAndSettle();
         },
       );
     });

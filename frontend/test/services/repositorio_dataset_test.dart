@@ -382,7 +382,7 @@ void main() {
     );
 
     test(
-      'loadIndiceToMemory deve preencher a chave [data] na inicializacao se o pico ja estiver baixado',
+      'loadIndiceToMemory marca pico baixado com isDownloaded=true sem ler compilado.binarypb na inicializacao, carregando sob demanda em getCroqui',
       () async {
         // Simula um pico já baixado no disco antes de carregar o índice
         final picoDir = Directory(
@@ -392,14 +392,16 @@ void main() {
         final picoFile = File('${picoDir.path}/pico_boot.binarypb');
 
         final dummyPico = Pico()..nome = 'Pico de Boot Teste';
-        final dummyCroqui = Croqui()..picos.add(dummyPico);
+        final dummyCroqui = Croqui()
+          ..id = 'pico_boot'
+          ..picos.add(dummyPico);
         await picoFile.writeAsBytes(dummyCroqui.writeToBuffer());
 
         final indice = Indice(
           croquis: [
             ResumoCroqui(
               id: 'pico_boot',
-              nome: 'Nome',
+              nome: 'Nome do Indice',
               caminhoRelativo: 'pico_boot.zip',
             ),
           ],
@@ -409,10 +411,23 @@ void main() {
 
         final downloaded = repo.activeDataset.value!.downloadedPicos;
         expect(downloaded.length, 1);
-        expect(downloaded.first['isDownloaded'], isTrue);
-        expect(downloaded.first['data'], isNotNull);
-        expect((downloaded.first['data'] as Map)['pico'], isA<Pico>());
-        expect((downloaded.first['data'] as Map)['croqui'], isA<Croqui>());
+        expect(downloaded.first.isDownloaded, isTrue);
+        expect(downloaded.first.nome, equals('Nome do Indice'));
+        expect(
+          downloaded.first.croqui,
+          isNull,
+          reason: 'Não deve ler nem desserializar compilado.binarypb no cold start',
+        );
+        expect(downloaded.first.pico, isNull);
+
+        // Carrega sob demanda quando o usuário abre o croqui
+        final croquiSobDemanda = await repo.getCroqui('pico_boot');
+        expect(croquiSobDemanda, isNotNull);
+        expect(croquiSobDemanda!.picos.first.nome, equals('Pico de Boot Teste'));
+
+        final downloadedAposGet = repo.activeDataset.value!.downloadedPicos;
+        expect(downloadedAposGet.first.croqui, isNotNull);
+        expect(downloadedAposGet.first.pico?.nome, equals('Pico de Boot Teste'));
       },
     );
   });
@@ -1426,10 +1441,26 @@ void main() {
           );
 
           await repo.loadIndiceToMemory(indice);
-          final croqui1EmMemoria = repo.activeDataset.value!.picosBaixados
-              .firstWhere((p) => p.id == 'pico_1')
-              .croqui;
+          expect(
+            repo.activeDataset.value!.picosBaixados
+                .firstWhere((p) => p.id == 'pico_1')
+                .croqui,
+            isNull,
+            reason: 'No cold start, pico_1 não deve ser desserializado antecipadamente',
+          );
+
+          // Abre pico_1 sob demanda para carregá-lo em memória
+          final croqui1EmMemoria = await repo.getCroqui('pico_1');
           expect(croqui1EmMemoria, isNotNull);
+          expect(
+            identical(
+              repo.activeDataset.value!.picosBaixados
+                  .firstWhere((p) => p.id == 'pico_1')
+                  .croqui,
+              croqui1EmMemoria,
+            ),
+            isTrue,
+          );
 
           // 1. Recarregar o mesmo índice com mesmo checksum deve reaproveitar a instância em memória
           await repo.loadIndiceToMemory(indice);

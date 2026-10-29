@@ -129,6 +129,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
     super.initState();
     _cronometroAberturaMapa = Stopwatch()..start();
     _medicaoMapaConcluida = false;
+    ServicoPerformance.instancia.iniciarMonitoramentoFluidez('mapa_interativo');
     _autoZoomEnabled = widget.autoZoomEnabled;
     _transformationController = TransformationController();
     _animationController = AnimationController(
@@ -151,9 +152,6 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
         curve: Curves.elasticOut,
       ),
     );
-    _highlightController.addListener(() {
-      setState(() {});
-    });
 
     _buildReferenceMaps();
 
@@ -264,7 +262,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
 
   void _buildReferenceMaps() {
-    NormalizadorCroqui.normalizarPico(widget.pico);
+    final resolvedor = DatasetResolver(pico: widget.pico);
     NormalizadorCroqui.normalizarMapa(
       widget.mapa,
       grupoNomeContexto: widget.grupoContext?.nome,
@@ -278,12 +276,16 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
     for (var ref in widget.mapa.referencias) {
       try {
-        final resolved = DatasetResolver.resolveReferencia(
-          pico: widget.pico,
-          referencia: ref,
-          defaultGrupoNome: defaultGrupoNome,
-          defaultSetorNome: defaultSetorNome,
-        );
+        final resolved =
+            (ref.alvoUid.isNotEmpty
+                ? resolvedor.obterPorUid(ref.alvoUid)
+                : null) ??
+            DatasetResolver.resolveReferencia(
+              pico: widget.pico,
+              referencia: ref,
+              defaultGrupoNome: defaultGrupoNome,
+              defaultSetorNome: defaultSetorNome,
+            );
 
         _refToResolved[ref] = resolved;
 
@@ -326,6 +328,10 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
   @override
   void dispose() {
+    ServicoPerformance.instancia.encerrarMonitoramentoFluidez(
+      'mapa_interativo',
+      idCroqui: widget.cragId,
+    );
     FeedbackMetadataCollector.globalActiveNodeOverride = null;
     _animationController.dispose();
     _highlightController.dispose();
@@ -690,6 +696,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
               constraints: constraints,
               isSelected: isSelected,
               highlightIntensity: _highlightAnimation.value,
+              highlightAnimation: _highlightAnimation,
               padding: hitBoxPadding,
               isLinha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha,
               linha: ponto.whichTipoArea() == Mapa_PontoDeInteresse_TipoArea.linha ? ponto.linha : null,
@@ -1410,69 +1417,71 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
                                   });
                                 }
                               }
-                              return Stack(
-                                children: [
-                                  Image(
-                                    image: snapshot.data!,
-                                    fit: BoxFit.contain,
-                                    width: constraints.maxWidth,
-                                    height: constraints.maxHeight,
-                                    frameBuilder: (
-                                      context,
-                                      child,
-                                      frame,
-                                      wasSynchronouslyLoaded,
-                                    ) {
-                                      if (!_medicaoMapaConcluida &&
-                                          (frame != null ||
-                                              wasSynchronouslyLoaded)) {
-                                        _medicaoMapaConcluida = true;
-                                        _cronometroAberturaMapa.stop();
-                                        final isBaixado = DatasetRepository
-                                                .instance
-                                                ?.isPicoDownloaded(
-                                                  widget.cragId,
-                                                ) ??
-                                            false;
-                                        final modoAcesso =
-                                            isBaixado ? 'offline' : 'online';
-                                        final origemImagem =
-                                            ProvedorImagemAresta
-                                                    .obterUltimaOrigemImagem(
-                                                  widget
-                                                      .mapa.caminhoImagemMapa,
-                                                  picoId: widget.cragId,
-                                                ) ??
-                                                (isBaixado
-                                                    ? 'downloads'
-                                                    : 'cdn_remoto');
-                                        final nomeContexto =
-                                            widget.setorContext?.nome ??
-                                                widget.grupoContext?.nome ??
-                                                'Geral';
-                                        ServicoPerformance.instancia
-                                            .registrarAbrirMapaInterativo(
-                                          idCroqui: widget.cragId,
-                                          nomeSetor: nomeContexto,
-                                          modoAcesso: modoAcesso,
-                                          origemImagem: origemImagem,
-                                          duracaoMs: _cronometroAberturaMapa
-                                              .elapsedMilliseconds,
-                                        );
-                                      }
-                                      return child;
-                                    },
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        const Center(
-                                          child: Icon(
-                                            Icons.broken_image,
-                                            color: Colors.grey,
-                                            size: 50,
+                              return RepaintBoundary(
+                                child: Stack(
+                                  children: [
+                                    Image(
+                                      image: snapshot.data!,
+                                      fit: BoxFit.contain,
+                                      width: constraints.maxWidth,
+                                      height: constraints.maxHeight,
+                                      frameBuilder: (
+                                        context,
+                                        child,
+                                        frame,
+                                        wasSynchronouslyLoaded,
+                                      ) {
+                                        if (!_medicaoMapaConcluida &&
+                                            (frame != null ||
+                                                wasSynchronouslyLoaded)) {
+                                          _medicaoMapaConcluida = true;
+                                          _cronometroAberturaMapa.stop();
+                                          final isBaixado = DatasetRepository
+                                                  .instance
+                                                  ?.isPicoDownloaded(
+                                                    widget.cragId,
+                                                  ) ??
+                                              false;
+                                          final modoAcesso =
+                                              isBaixado ? 'offline' : 'online';
+                                          final origemImagem =
+                                              ProvedorImagemAresta
+                                                      .obterUltimaOrigemImagem(
+                                                    widget
+                                                        .mapa.caminhoImagemMapa,
+                                                    picoId: widget.cragId,
+                                                  ) ??
+                                                  (isBaixado
+                                                      ? 'downloads'
+                                                      : 'cdn_remoto');
+                                          final nomeContexto =
+                                              widget.setorContext?.nome ??
+                                                  widget.grupoContext?.nome ??
+                                                  'Geral';
+                                          ServicoPerformance.instancia
+                                              .registrarAbrirMapaInterativo(
+                                            idCroqui: widget.cragId,
+                                            nomeSetor: nomeContexto,
+                                            modoAcesso: modoAcesso,
+                                            origemImagem: origemImagem,
+                                            duracaoMs: _cronometroAberturaMapa
+                                                .elapsedMilliseconds,
+                                          );
+                                        }
+                                        return child;
+                                      },
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Center(
+                                            child: Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey,
+                                              size: 50,
+                                            ),
                                           ),
-                                        ),
-                                  ),
-                                  ..._buildMarkers(constraints, viewportSize),
-                                ],
+                                    ),
+                                    ..._buildMarkers(constraints, viewportSize),
+                                  ],
+                                ),
                               );
                             },
                           ),
@@ -1989,7 +1998,8 @@ class MarkerPainter extends CustomPainter {
   final double mapHeight;
   final BoxConstraints constraints;
   final bool isSelected;
-  final double highlightIntensity;
+  final double _highlightIntensityFixo;
+  final Animation<double>? highlightAnimation;
   final double padding;
   final bool isLinha;
   final LinhaTrajeto? linha;
@@ -2006,7 +2016,8 @@ class MarkerPainter extends CustomPainter {
     required this.mapHeight,
     required this.constraints,
     required this.isSelected,
-    this.highlightIntensity = 0.0,
+    double highlightIntensity = 0.0,
+    this.highlightAnimation,
     required this.padding,
     this.isLinha = false,
     this.linha,
@@ -2014,7 +2025,25 @@ class MarkerPainter extends CustomPainter {
     this.chaveCache,
     this.zoomAtual = 1.0,
     this.transformationController,
-  });
+  }) : _highlightIntensityFixo = highlightIntensity,
+       super(
+         repaint:
+             (highlightAnimation != null && transformationController != null)
+                 ? Listenable.merge([
+                     highlightAnimation,
+                     transformationController,
+                   ])
+                 : (highlightAnimation ?? transformationController),
+       );
+
+  /// Intensidade atual do pulso de destaque (0.0 a 1.0).
+  ///
+  /// Prioriza o valor dinâmico de [highlightAnimation] quando vinculado ao controlador,
+  /// caindo para o valor estático informado no construtor em testes isolados.
+  double get highlightIntensity =>
+      highlightAnimation?.value ?? _highlightIntensityFixo;
+
+  double get _intensidadePulsoEfetiva => highlightIntensity;
 
   /// Fator de zoom efetivo da visualização atual.
   ///
@@ -2122,11 +2151,12 @@ class MarkerPainter extends CustomPainter {
     }
 
     // Camada 2: Halo de Pulso (ao tocar fora de área clicável)
-    if (!isSelected && highlightIntensity > 0.0) {
+    final double pulso = _intensidadePulsoEfetiva;
+    if (!isSelected && pulso > 0.0) {
       final pulsePaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.8 * highlightIntensity)
+        ..color = Colors.white.withValues(alpha: 0.8 * pulso)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = espessuraVisual + (4.0 * highlightIntensity)
+        ..strokeWidth = espessuraVisual + (4.0 * pulso)
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
@@ -2200,9 +2230,10 @@ class MarkerPainter extends CustomPainter {
             canvas.drawCircle(center, r, borderCirclePaint);
 
             // Pulso de highlight branco ao tocar fora de qualquer área do mapa
-            if (highlightIntensity > 0.0) {
+            final double pulso = _intensidadePulsoEfetiva;
+            if (pulso > 0.0) {
               final pulseBorder = PincelDestaqueMapa.obterPincelBordaPulso(
-                highlightIntensity,
+                pulso,
                 espessuraBase: math.max(2.0, 2.5 * scaleX),
               );
               canvas.drawCircle(center, r, pulseBorder);
@@ -2220,18 +2251,10 @@ class MarkerPainter extends CustomPainter {
                 : math.max(9.0, fallbackFonte);
             final double fontSize = baseFonte * scaleX;
 
-            final textSpan = TextSpan(
-              text: m.rotulo,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: fontSize,
-                fontWeight: FontWeight.bold,
-              ),
+            final tp = ConstrutorCaminhoTrajeto.obterTextPainterMarcador(
+              rotulo: m.rotulo,
+              tamanhoFonte: fontSize,
             );
-            final tp = TextPainter(
-              text: textSpan,
-              textDirection: TextDirection.ltr,
-            )..layout();
             tp.paint(canvas, Offset(lx - tp.width / 2.0, ly - tp.height / 2.0));
           }
           break;
@@ -2268,9 +2291,10 @@ class MarkerPainter extends CustomPainter {
           canvas.drawPath(setaPath, strokeSeta);
 
           // Pulso de highlight branco ao tocar fora de qualquer área do mapa
-          if (!isSelected && highlightIntensity > 0.0) {
+          final double pulsoSeta = _intensidadePulsoEfetiva;
+          if (!isSelected && pulsoSeta > 0.0) {
             final pulseSeta = PincelDestaqueMapa.obterPincelBordaPulso(
-              highlightIntensity,
+              pulsoSeta,
               espessuraBase: math.max(1.5, 2.0 * factor),
             );
             canvas.drawPath(setaPath, pulseSeta);
@@ -2356,11 +2380,12 @@ class MarkerPainter extends CustomPainter {
       canvas.drawPath(path, borderPaint);
     } else {
       // Base faint glow for clickable areas (or highlighted glow if intensity > 0)
-      final glowPaint = PincelDestaqueMapa.obterPincelPreenchimentoPulso(highlightIntensity);
+      final double pulso = _intensidadePulsoEfetiva;
+      final glowPaint = PincelDestaqueMapa.obterPincelPreenchimentoPulso(pulso);
       canvas.drawPath(path, glowPaint);
       
-      if (highlightIntensity > 0.0) {
-        final highlightBorderPaint = PincelDestaqueMapa.obterPincelBordaPulso(highlightIntensity);
+      if (pulso > 0.0) {
+        final highlightBorderPaint = PincelDestaqueMapa.obterPincelBordaPulso(pulso);
         canvas.drawPath(path, highlightBorderPaint);
       }
     }
@@ -2500,6 +2525,7 @@ class MarkerPainter extends CustomPainter {
   bool shouldRepaint(covariant MarkerPainter oldDelegate) {
     return oldDelegate.isSelected != isSelected ||
         oldDelegate.highlightIntensity != highlightIntensity ||
+        oldDelegate.highlightAnimation != highlightAnimation ||
         oldDelegate.constraints != constraints ||
         oldDelegate.corHex != corHex ||
         oldDelegate.isLinha != isLinha ||

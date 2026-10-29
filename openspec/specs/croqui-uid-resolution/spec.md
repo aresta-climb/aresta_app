@@ -7,7 +7,7 @@ Fornece normalização in-place de croquis legados no carregamento e um catálog
 ## Requirements
 
 ### Requirement: Normalização In-Place de Croquis no Carregamento
-O sistema MUST normalizar qualquer instância de `Croqui` ou `Pico` na entrada de dados (carregamento local ou download), convertendo dados legados in-place para que o restante da aplicação consuma unicamente os campos v5.
+O sistema MUST normalizar qualquer instância de `Croqui` ou `Pico` uma única vez na entrada de dados (carregamento local ou download), convertendo dados legados in-place de forma idempotente para que o restante da aplicação consuma unicamente os campos v5 sem repetir varreduras de normalização em transições de tela.
 
 #### Scenario: Normalização de entidades estruturais legadas
 - **WHEN** um `Pico` legado é carregado onde `Grupo`, `Setor` ou `Escalada` não possuem `uid` preenchido
@@ -17,6 +17,10 @@ O sistema MUST normalizar qualquer instância de `Croqui` ou `Pico` na entrada d
 #### Scenario: Normalização de referências e pontos de interesse legados
 - **WHEN** um mapa possui pontos de interesse com `label` ou referências com `ids`/`escalada`/`setor`/`grupo`
 - **THEN** o normalizador preenche `ponto.rotulo` com o valor de `label`, `ponto.uid` com `id`, `ref.pontosUids` com `ref.ids` e `ref.alvoUid` com o UID correspondente da entidade alvo
+
+#### Scenario: Idempotência em chamadas subsequentes de normalização na mesma instância
+- **WHEN** `NormalizadorCroqui.normalizarCroqui` ou `NormalizadorCroqui.normalizarPico` for invocado para uma instância de `Croqui` ou `Pico` que já foi normalizada em memória
+- **THEN** o sistema reconhece que a instância já está normalizada e retorna em tempo constante O(1) sem percorrer novamente a árvore de grupos, setores, escaladas e mapas
 
 ### Requirement: Indexação e Resolução O(1) por UID de Entidades Estruturais
 O sistema MUST indexar em uma única passada O(N) durante o carregamento do `Pico` todas as entidades estruturais portadoras de identificadores únicos (`Botao`, `Grupo`, `Setor` e `Escalada`), disponibilizando consultas em tempo constante O(1) por UID através do `DatasetResolver`.
@@ -43,3 +47,11 @@ O `DatasetResolver` MUST associar a cada `ResolvedDataset` uma lista de referên
 #### Scenario: Escalada desenhada em mapas de setor
 - **WHEN** uma `Escalada` possui referências visuais em um ou mais mapas de setor
 - **THEN** o `ResolvedDataset` da escalada contém a lista exata de pares de mapa e referência correspondentes em sua propriedade `referencias`
+
+### Requirement: Reutilização e Propagação de DatasetResolver por Instância de Croqui
+O sistema DEVE (MUST) manter e reutilizar uma única instância indexada de `DatasetResolver` associada ao ciclo de vida de cada `Croqui`/`Pico` em memória, propagando-a para todas as páginas da hierarquia do croqui sem reindexar a árvore de entidades a cada transição de página ou consulta de referência.
+
+#### Scenario: Reutilização do resolvedor entre páginas do mesmo croqui e referências de mapa
+- **WHEN** o usuário navega entre páginas de um mesmo croqui (ex: `Pico`, `Setor`, `Via` e `MapaInterativo`) ou resolve múltiplas referências de um mapa
+- **THEN** o sistema reutiliza a mesma instância de `DatasetResolver` já indexada para aquele `Pico`/`Croqui` sem executar nova indexação O(N)
+- **AND** se o croqui receber uma nova instância por atualização ou Live Reload, um novo `DatasetResolver` é construído para a nova instância

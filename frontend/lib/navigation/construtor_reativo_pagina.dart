@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -7,6 +7,21 @@ import '../services/repositorio_dataset.dart';
 import '../utils/consulta_dataset.dart';
 import '../services/firebase/app_logger.dart';
 import 'funcoes_navegacao.dart';
+
+/// Provedor em árvore de widgets que compartilha a instância indexada de
+/// [DatasetResolver] para todas as páginas e sub-componentes de um mesmo croqui.
+class _ProvedorResolverCroqui extends InheritedWidget {
+  final DatasetResolver resolvedor;
+
+  const _ProvedorResolverCroqui({
+    required this.resolvedor,
+    required super.child,
+  });
+
+  @override
+  bool updateShouldNotify(_ProvedorResolverCroqui oldWidget) =>
+      !identical(resolvedor, oldWidget.resolvedor);
+}
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
 /// redesenha a página atual com os dados mais recentes do croqui.
@@ -37,6 +52,14 @@ class PageListenableBuilder extends StatelessWidget {
     required this.builder,
   });
 
+  /// Recupera a instância compartilhada de [DatasetResolver] associada à
+  /// hierarquia de página do croqui atual, se disponível no [context].
+  static DatasetResolver? resolverOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_ProvedorResolverCroqui>()
+        ?.resolvedor;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<TopoDataset?>(
@@ -52,10 +75,12 @@ class PageListenableBuilder extends StatelessWidget {
         // 1. Tenta encontrar o pico nos picos baixados
         Pico? pico;
         Croqui? croqui;
+        bool estaMarcadoBaixado = false;
         try {
           final crag = topoDataset.downloadedPicos.firstWhere(
             (p) => p.id == cragId,
           );
+          estaMarcadoBaixado = true;
           pico = crag.pico;
           croqui = crag.croqui;
         } catch (_) {}
@@ -83,6 +108,25 @@ class PageListenableBuilder extends StatelessWidget {
           }
         }
 
+        // 2.1 Se o pico consta como baixado mas ainda não foi carregado em memória (lazy loading),
+        // dispara o carregamento sob demanda via getCroqui.
+        if ((pico == null || croqui == null) && estaMarcadoBaixado) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            final carregado = await datasetRepo.getCroqui(
+              cragId,
+              indiceJaSincronizado: true,
+            );
+            if ((carregado == null || carregado.picos.isEmpty) &&
+                context.mounted &&
+                AppNav.canGoBack(context)) {
+              AppNav.back(context);
+            }
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         if (pico == null || croqui == null) {
           // O pico foi apagado do dataset
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,23 +138,32 @@ class PageListenableBuilder extends StatelessWidget {
         }
 
         try {
+          final picoResolvido = pico;
+          final croquiResolvido = croqui;
+          final resolvedor = DatasetResolver(
+            pico: picoResolvido,
+            croqui: croquiResolvido,
+          );
           final res = DatasetResolver.resolve(
-            pico: pico,
+            pico: picoResolvido,
             grupoNome: grupoNome,
             setorNome: setorNome,
             escaladaNome: escaladaNome,
           );
 
-          final pageContent = builder(
-            context,
-            pico,
-            croqui,
-            res.setor,
-            res.grupo,
-            res.escalada,
+          return _ProvedorResolverCroqui(
+            resolvedor: resolvedor,
+            child: Builder(
+              builder: (innerContext) => builder(
+                innerContext,
+                picoResolvido,
+                croquiResolvido,
+                res.setor,
+                res.grupo,
+                res.escalada,
+              ),
+            ),
           );
-
-          return pageContent;
         } catch (e, st) {
           AppLogger.instance.logError(
             'Exception while resolving node in PageListenableBuilder',

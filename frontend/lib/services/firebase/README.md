@@ -16,11 +16,12 @@ O que ele faz:
 - Desativa a coleta do Firebase Analytics (`initAnalytics`) e do Firebase Performance (`initPerformance`) em modo debug.
 - Dá o "Start" no serviço de _Remote Config_.
 
-### 2. `telemetria.dart` e `performance_telemetria.dart`
+### 2. `telemetria.dart`, `performance_telemetria.dart` e `classificador_dispositivo.dart`
 Abstrações construídas em cima dos pacotes `firebase_analytics` e `firebase_performance`.
 Nenhuma tela ou componente no Aresta Climb deve chamar o Firebase Analytics ou o Firebase Performance diretamente.
-- **`TelemetryService` (`telemetria.dart`)**: Centraliza todos os eventos do GA4 (incluindo dimensões de fatiamento e `duracao_ms` para painéis no Looker Studio).
-- **`ServicoPerformance` (`performance_telemetria.dart`)**: Centraliza a coleta de performance ponta a ponta até a interatividade real da página (`addPostFrameCallback` / primeiro frame decodificado em `MapaInterativoPage`), realizando **dupla emissão** (Custom `Trace` no Firebase Performance para percentis P50/P90/P99 + evento GA4 com `duracao_ms` via `TelemetryService`).
+- **`ClassificadorDispositivo` (`classificador_dispositivo.dart`)**: Classifica o porte de memória RAM do aparelho (`'baixo'` ≤ 3 GB, `'medio'` 4–6 GB, `'alto'` ≥ 8 GB ou `'desconhecido'`) a partir de `/proc/meminfo` (com injeção limpa para testes determinísticos), calculando o teto adaptativo de `imageCache` (50 MB / 100 MB / 150 MB) e fornecendo `tier_dispositivo` e `ram_gb`.
+- **`TelemetryService` (`telemetria.dart`)**: Centraliza todos os eventos do GA4 (incluindo dimensões de fatiamento, `duracao_ms`, `tier_dispositivo` e `ram_gb` para painéis no Looker Studio).
+- **`ServicoPerformance` (`performance_telemetria.dart`)**: Centraliza a coleta de performance ponta a ponta até a interatividade real da página (`addPostFrameCallback` / primeiro frame decodificado em `MapaInterativoPage`) e o monitoramento de fluidez de quadros via `SchedulerBinding.addTimingsCallback` (`iniciarMonitoramentoFluidez` / `encerrarMonitoramentoFluidez` emitindo `fluidez_sessao_tela` com `total_frames`, `frames_jank`, `taxa_jank_pct`, `p95_ui_ms` e `p95_raster_ms`), realizando **dupla emissão** (Custom `Trace` no Firebase Performance + evento GA4 via `TelemetryService`).
 - **Bloqueio Estrito em Modo Debug**: Quando `kDebugMode` é `true`, `setAnalyticsCollectionEnabled(false)` e `setPerformanceCollectionEnabled(false)` são acionados e nenhuma trace é transmitida ao Firebase Performance, mantendo apenas logs locais no `AppLogger`.
 - **Mocking**: Para testes unitários de funções de tela, usamos `MockTelemetryService` e `FakeFirebasePerformance` que substituem essas instâncias para evitar _crashes_ de inicialização do SDK nativo e validar quais eventos e traces foram requisitados.
 

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
+import 'package:frontend/utils/consulta_dataset.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/main.dart';
@@ -421,6 +422,110 @@ void main() {
         await tester.pump();
 
         expect(find.text('Pico de Croquis Baixados'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Deve fornecer DatasetResolver compartilhado do Pico e Croqui via PageListenableBuilder.resolverOf',
+      (WidgetTester tester) async {
+        final botao = Botao()
+          ..uid = 'btn_apoie_1'
+          ..texto = 'Apoie';
+        final croqui = Croqui()
+          ..id = 'pico_compartilhado'
+          ..botoes.add(botao);
+        final pico = Pico()..nome = 'Pico Compartilhado';
+        croqui.picos.add(pico);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            {
+              'id': 'pico_compartilhado',
+              'data': {'pico': pico, 'croqui': croqui},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        DatasetResolver? resolverDoContexto;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PageListenableBuilder(
+              datasetRepo: repo,
+              cragId: 'pico_compartilhado',
+              builder: (context, p, c, setor, grupo, escalada) {
+                resolverDoContexto = PageListenableBuilder.resolverOf(context);
+                return Text(p.nome);
+              },
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        expect(resolverDoContexto, isNotNull);
+        expect(identical(resolverDoContexto, DatasetResolver(pico: pico)), isTrue);
+        expect(resolverDoContexto!.obterPorUid('btn_apoie_1')?.botao?.texto, equals('Apoie'));
+      },
+    );
+
+    testWidgets(
+      'Deve carregar croqui sob demanda do disco quando o pico consta como baixado sem Croqui em memória',
+      (WidgetTester tester) async {
+        final mockObserver = MockNavigatorObserver();
+        const picoId = 'pico_lazy_offline';
+
+        final downloadsPath = editor.downloadsPath(tempDir.path);
+        final picoDir = Directory('$downloadsPath/$picoId')
+          ..createSync(recursive: true);
+        final croquiDisco = Croqui(
+          id: picoId,
+          nome: 'Croqui Lazy Disco',
+          picos: [Pico(nome: 'Pico Lazy Carregado')],
+        );
+        File('${picoDir.path}/compilado.binarypb')
+            .writeAsBytesSync(croquiDisco.writeToBuffer());
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosDisponiveis: [
+            const ResumoPico(
+              id: picoId,
+              nome: 'Pico Lazy Resumo',
+              local: 'MG',
+              isDownloaded: true,
+            ),
+          ],
+          picosBaixados: [
+            const ResumoPico(
+              id: picoId,
+              nome: 'Pico Lazy Resumo',
+              local: 'MG',
+              isDownloaded: true,
+            ),
+          ],
+          croquisBaixados: const [],
+        );
+
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            MaterialApp(
+              navigatorObservers: [mockObserver],
+              home: PageListenableBuilder(
+                datasetRepo: repo,
+                cragId: picoId,
+                builder: (context, pico, croqui, setor, grupo, escalada) {
+                  return Scaffold(body: Text(pico.nome));
+                },
+              ),
+            ),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pump();
+
+        expect(mockObserver.hasPopped, isFalse);
+        expect(find.text('Pico Lazy Carregado'), findsOneWidget);
       },
     );
 

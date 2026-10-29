@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/classificador_dispositivo.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/feedback/gravador_breadcrumbs.dart';
 import '../../mocks/mock_app_logger.dart';
@@ -454,6 +455,42 @@ void main() {
         expect(paramsMapa['modo_acesso'], 'offline');
         expect(paramsMapa['origem_imagem'], 'downloads');
         expect(paramsMapa['duracao_ms'], 55);
+      },
+    );
+
+    test(
+      'logFluidezSessaoTela e eventos de performance incluem tier_dispositivo e ram_gb automaticamente',
+      () async {
+        TelemetryService.resetForTesting();
+        GravadorBreadcrumbs.resetForTesting();
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+        ClassificadorDispositivo.instancia.classificar(ramTotalMb: 12288);
+
+        await TelemetryService.instance.logFluidezSessaoTela(
+          tela: 'mapa_interativo',
+          idCroqui: 'pico_1',
+          duracaoMs: 1200,
+          totalFrames: 60,
+          framesJank: 2,
+          taxaJankPct: 3,
+          p95UiMs: 10,
+          p95RasterMs: 12,
+        );
+
+        final ultimo = GravadorBreadcrumbs.instance.obterBreadcrumbs().last;
+        expect(ultimo['evento'], 'fluidez_sessao_tela');
+        final params = ultimo['parametros'] as Map<String, dynamic>;
+        expect(params['tela'], 'mapa_interativo');
+        expect(params['id_croqui'], 'pico_1');
+        expect(params['duracao_ms'], 1200);
+        expect(params['total_frames'], 60);
+        expect(params['frames_jank'], 2);
+        expect(params['taxa_jank_pct'], 3);
+        expect(params['p95_ui_ms'], 10);
+        expect(params['p95_raster_ms'], 12);
+        expect(params['tier_dispositivo'], 'alto');
+        expect(params['ram_gb'], '12');
       },
     );
   });

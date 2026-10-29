@@ -3,114 +3,142 @@
 
 // ignore_for_file: deprecated_member_use
 
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/validador_app.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:mocktail/mocktail.dart';
 import '../../mocks/mock_app_logger.dart';
 
-class MockFirebaseAppCheck extends Mock implements FirebaseAppCheck {}
+class FakeFirebaseAppCheck extends Fake implements FirebaseAppCheck {
+  AndroidAppCheckProvider? ultimoProviderAndroid;
+  AppleAppCheckProvider? ultimoProviderApple;
+  bool? ultimoForceRefresh;
+  String? tokenParaRetornar = 'fake-jwt-app-check-token';
+  Object? erroNoActivate;
+  Object? erroNoGetToken;
+
+  @override
+  Future<void> activate({
+    ReCaptchaV3Provider? webProvider,
+    AndroidProvider? androidProvider,
+    AppleProvider? appleProvider,
+    AndroidAppCheckProvider? providerAndroid,
+    AppleAppCheckProvider? providerApple,
+    dynamic providerWeb,
+    dynamic providerWindows,
+  }) async {
+    if (erroNoActivate != null) {
+      throw erroNoActivate!;
+    }
+    ultimoProviderAndroid = providerAndroid;
+    ultimoProviderApple = providerApple;
+  }
+
+  @override
+  Future<String?> getToken([bool? forceRefresh]) async {
+    ultimoForceRefresh = forceRefresh;
+    if (erroNoGetToken != null) {
+      throw erroNoGetToken!;
+    }
+    return tokenParaRetornar;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
-    registerFallbackValue(const AndroidDebugProvider());
-    registerFallbackValue(const AppleDebugProvider());
-  });
-
-  late MockFirebaseAppCheck mockFirebaseAppCheck;
+  late FakeFirebaseAppCheck fakeFirebaseAppCheck;
   late AppCheckService service;
   late MockAppLogger mockLogger;
 
   setUp(() {
-    mockFirebaseAppCheck = MockFirebaseAppCheck();
+    fakeFirebaseAppCheck = FakeFirebaseAppCheck();
     service = AppCheckService.instance;
-    service.debugAppCheck = mockFirebaseAppCheck;
+    service.debugAppCheck = fakeFirebaseAppCheck;
     mockLogger = MockAppLogger();
     AppLogger.instance = mockLogger;
   });
 
   group('AppCheckService', () {
-    test('activate deve chamar activate no FirebaseAppCheck subjacente', () async {
-      when(
-        () => mockFirebaseAppCheck.activate(
-          providerAndroid: any(named: 'providerAndroid'),
-          providerApple: any(named: 'providerApple'),
-        ),
-      ).thenAnswer((_) async {});
+    test(
+      'activate usa DebugProvider fora do modo release (debug e profile) e PlayIntegrity/AppAttest em release',
+      () async {
+        await service.activate(emModoRelease: false);
+        expect(
+          fakeFirebaseAppCheck.ultimoProviderAndroid,
+          isA<AndroidDebugProvider>(),
+        );
+        expect(
+          fakeFirebaseAppCheck.ultimoProviderApple,
+          isA<AppleDebugProvider>(),
+        );
 
-      await service.activate(
-        providerAndroid: const AndroidDebugProvider(),
-        providerApple: const AppleDebugProvider(),
-      );
-
-      verify(
-        () => mockFirebaseAppCheck.activate(
-          providerAndroid: const AndroidDebugProvider(),
-          providerApple: const AppleDebugProvider(),
-        ),
-      ).called(1);
-    });
+        await service.activate(emModoRelease: true);
+        expect(
+          fakeFirebaseAppCheck.ultimoProviderAndroid,
+          isA<AndroidPlayIntegrityProvider>(),
+        );
+        expect(
+          fakeFirebaseAppCheck.ultimoProviderApple,
+          isA<AppleAppAttestProvider>(),
+        );
+      },
+    );
 
     test('activate captura erros graciosamente sem lançar exceções', () async {
-      when(
-        () => mockFirebaseAppCheck.activate(
-          providerAndroid: any(named: 'providerAndroid'),
-          providerApple: any(named: 'providerApple'),
-        ),
-      ).thenThrow(Exception('Falha de ativação simulada'));
+      fakeFirebaseAppCheck.erroNoActivate = Exception(
+        'Falha de ativação simulada',
+      );
 
       await expectLater(service.activate(), completes);
+      expect(mockLogger.recordedErrors, hasLength(1));
     });
 
     test('getToken retorna o token com sucesso quando disponível', () async {
-      when(() => mockFirebaseAppCheck.getToken(any()))
-          .thenAnswer((_) async => 'fake-jwt-app-check-token');
-
       final token = await service.getToken();
 
       expect(token, 'fake-jwt-app-check-token');
-      verify(() => mockFirebaseAppCheck.getToken(false)).called(1);
+      expect(fakeFirebaseAppCheck.ultimoForceRefresh, isFalse);
     });
 
     test('getToken com forceRefresh passa true para o SDK', () async {
-      when(() => mockFirebaseAppCheck.getToken(any()))
-          .thenAnswer((_) async => 'refreshed-jwt-token');
+      fakeFirebaseAppCheck.tokenParaRetornar = 'refreshed-jwt-token';
 
       final token = await service.getToken(true);
 
       expect(token, 'refreshed-jwt-token');
-      verify(() => mockFirebaseAppCheck.getToken(true)).called(1);
+      expect(fakeFirebaseAppCheck.ultimoForceRefresh, isTrue);
     });
 
-    test('getToken retorna null e registra logError quando o SDK lança exceção não relacionada a rede', () async {
-      when(() => mockFirebaseAppCheck.getToken(any()))
-          .thenThrow(Exception('Token fetch error'));
+    test(
+      'getToken retorna null e registra logError quando o SDK lança exceção não relacionada a rede',
+      () async {
+        fakeFirebaseAppCheck.erroNoGetToken = Exception('Token fetch error');
 
-      final token = await service.getToken();
+        final token = await service.getToken();
 
-      expect(token, isNull);
-      expect(mockLogger.recordedErrors, hasLength(1));
-      expect(mockLogger.recordedWarnings, isEmpty);
-    });
+        expect(token, isNull);
+        expect(mockLogger.recordedErrors, hasLength(1));
+        expect(mockLogger.recordedWarnings, isEmpty);
+      },
+    );
 
-    test('getToken retorna null e registra logAviso (sem logError) quando a falha for de rede ou indisponibilidade', () async {
-      when(() => mockFirebaseAppCheck.getToken(any())).thenThrow(
-        FirebaseException(
+    test(
+      'getToken retorna null e registra logAviso (sem logError) quando a falha for de rede ou indisponibilidade',
+      () async {
+        fakeFirebaseAppCheck.erroNoGetToken = FirebaseException(
           plugin: 'firebase_app_check',
           code: 'unavailable',
           message: 'Unable to connect to the server.',
-        ),
-      );
+        );
 
-      final token = await service.getToken();
+        final token = await service.getToken();
 
-      expect(token, isNull);
-      expect(mockLogger.recordedWarnings, hasLength(1));
-      expect(mockLogger.recordedWarnings.first, contains('AppCheck'));
-      expect(mockLogger.recordedErrors, isEmpty);
-    });
+        expect(token, isNull);
+        expect(mockLogger.recordedWarnings, hasLength(1));
+        expect(mockLogger.recordedWarnings.first, contains('AppCheck'));
+        expect(mockLogger.recordedErrors, isEmpty);
+      },
+    );
   });
 }

@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:ui';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
+import 'package:frontend/services/firebase/classificador_dispositivo.dart';
 import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../../mocks/mock_app_logger.dart';
@@ -220,9 +222,8 @@ void main() {
 
       final trace = fakePerformance.tracesCriadas.single;
       expect(trace.nome.length, equals(32));
-      final entry = trace.atributos.entries.single;
-      expect(entry.key.length, equals(40));
-      expect(entry.value.length, equals(100));
+      final chaveTruncada = 'chave_muito_longa_acima_de_quarenta_caracteres_limite'.substring(0, 40);
+      expect(trace.atributos[chaveTruncada]?.length, equals(100));
     });
 
     test('registrarColdStartHome é idempotente na sessão de abertura', () async {
@@ -382,5 +383,98 @@ void main() {
       await tester.pump();
       expect(concluido, isTrue);
     });
+
+    test(
+      'anexa automaticamente tier_dispositivo e ram_gb do ClassificadorDispositivo em todas as traces',
+      () async {
+        ClassificadorDispositivo.instancia.classificar(ramTotalMb: 3072);
+
+        await ServicoPerformance.instancia.registrarColdStartHome(
+          duracaoMsOverride: 380,
+        );
+
+        final trace = fakePerformance.tracesCriadas.last;
+        expect(trace.atributos['tier_dispositivo'], equals('baixo'));
+        expect(trace.atributos['ram_gb'], equals('3'));
+      },
+    );
+
+    test(
+      'monitora FrameTiming na sessão da tela e emite fluidez_sessao_tela com P95 e taxa de jank',
+      () async {
+        ClassificadorDispositivo.instancia.classificar(ramTotalMb: 3072);
+
+        ServicoPerformance.instancia.iniciarMonitoramentoFluidez(
+          'mapa_interativo',
+        );
+
+        // Gera 4 quadros: 3 rápidos (UI 5ms, Raster 6ms) e 1 com jank (UI 24ms, Raster 20ms)
+        FrameTiming criarFrame({required int uiMs, required int rasterMs}) {
+          return FrameTiming(
+            vsyncStart: 0,
+            buildStart: 0,
+            buildFinish: uiMs * 1000,
+            rasterStart: uiMs * 1000,
+            rasterFinish: (uiMs + rasterMs) * 1000,
+            rasterFinishWallTime: (uiMs + rasterMs) * 1000,
+          );
+        }
+
+        ServicoPerformance.instancia.registrarAmostrasFrameTiming([
+          criarFrame(uiMs: 5, rasterMs: 6),
+          criarFrame(uiMs: 6, rasterMs: 7),
+          criarFrame(uiMs: 8, rasterMs: 9),
+          criarFrame(uiMs: 24, rasterMs: 20),
+        ]);
+
+        await ServicoPerformance.instancia.encerrarMonitoramentoFluidez(
+          'mapa_interativo',
+          idCroqui: 'pico_jank',
+        );
+
+        final trace = fakePerformance.tracesCriadas.last;
+        expect(trace.nome, equals('fluidez_sessao_tela'));
+        expect(trace.atributos['tela'], equals('mapa_interativo'));
+        expect(trace.atributos['id_croqui'], equals('pico_jank'));
+        expect(trace.atributos['tier_dispositivo'], equals('baixo'));
+        expect(trace.atributos['ram_gb'], equals('3'));
+        expect(trace.metricas['total_frames'], equals(4));
+        expect(trace.metricas['frames_jank'], equals(1));
+        expect(trace.metricas['taxa_jank_pct'], equals(25));
+        expect(trace.metricas['p95_ui_ms'], equals(24));
+        expect(trace.metricas['p95_raster_ms'], equals(20));
+
+        expect(
+          mockTelemetry.recordedEvents,
+          contains('fluidez_sessao_tela'),
+        );
+        final params = mockTelemetry.recordedParams['fluidez_sessao_tela']!;
+        expect(params['tela'], equals('mapa_interativo'));
+        expect(params['id_croqui'], equals('pico_jank'));
+        expect(params['total_frames'], equals(4));
+        expect(params['frames_jank'], equals(1));
+        expect(params['taxa_jank_pct'], equals(25));
+        expect(params['p95_ui_ms'], equals(24));
+        expect(params['p95_raster_ms'], equals(20));
+      },
+    );
+
+    test(
+      'encerrarMonitoramentoFluidez não emite trace nem evento quando nenhum quadro foi renderizado na sessão',
+      () async {
+        ServicoPerformance.instancia.iniciarMonitoramentoFluidez(
+          'mapa_interativo',
+        );
+        await ServicoPerformance.instancia.encerrarMonitoramentoFluidez(
+          'mapa_interativo',
+        );
+
+        expect(fakePerformance.tracesCriadas, isEmpty);
+        expect(
+          mockTelemetry.recordedEvents,
+          isNot(contains('fluidez_sessao_tela')),
+        );
+      },
+    );
   });
 }

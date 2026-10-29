@@ -83,19 +83,13 @@ Widget construirPaginaParaNo({
       grupoNome: grupoNome,
       escaladaNome: escaladaNome,
       builder: (context, pico, croqui, setor, grupo, escalada) {
+        final resolvedor = PageListenableBuilder.resolverOf(context);
         if (node is PicoNode) {
           Setor? returnToSetor;
           if (node.returnToSetorNome != null) {
-            try {
-              returnToSetor = pico.setoresOuGrupos
-                  .where(
-                    (sg) =>
-                        sg.whichTipo() == SetorOuGrupo_Tipo.setor &&
-                        sg.setor.hasConteudo(),
-                  )
-                  .map((sg) => sg.setor.conteudo)
-                  .firstWhere((s) => s.nome == node.returnToSetorNome);
-            } catch (_) {}
+            returnToSetor = resolvedor
+                ?.buscarPorNome(setorNome: node.returnToSetorNome)
+                ?.setor;
           }
           return PicoDetailsPage(
             viewModel: PicoViewModel(
@@ -151,27 +145,13 @@ Widget construirPaginaParaNo({
         } else if (node is SetorNode) {
           Escalada? scrollToEscalada;
           if (node.scrollToEscaladaNome != null && setor != null) {
-            try {
-              scrollToEscalada = setor.escaladas.firstWhere((e) {
-                if (e.hasViaEsportiva()) {
-                  return e.viaEsportiva.nome == node.scrollToEscaladaNome;
-                }
-                if (e.hasViaMovel()) {
-                  return e.viaMovel.nome == node.scrollToEscaladaNome;
-                }
-                if (e.hasBoulder()) {
-                  return e.boulder.nome == node.scrollToEscaladaNome;
-                }
-                if (e.hasViaMultiplasEnfiadas()) {
-                  return e.viaMultiplasEnfiadas.nome ==
-                      node.scrollToEscaladaNome;
-                }
-                if (e.hasHighline()) {
-                  return e.highline.nome == node.scrollToEscaladaNome;
-                }
-                return false;
-              });
-            } catch (_) {}
+            scrollToEscalada = resolvedor
+                ?.buscarPorNome(
+                  grupoNome: grupo?.nome,
+                  setorNome: setor.nome,
+                  escaladaNome: node.scrollToEscaladaNome,
+                )
+                ?.escalada;
           }
           if (setor != null) {
             return SetorPage(
