@@ -1296,6 +1296,69 @@ void main() {
       expect(traceHome.atributos['destino'], equals('home'));
     },
   );
+
+  testWidgets(
+    'MyApp libera TelaSplashInicial e abre a HomeNode quando resolucaoInicialColdStart falha com erro inesperado',
+    (WidgetTester tester) async {
+      final completerColdStart = Completer<ResultadoResolucaoColdStart>();
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+          resolucaoInicialColdStart: completerColdStart.future,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(TelaSplashInicial), findsOneWidget);
+      expect(find.byType(TreeNavigationWrapper), findsNothing);
+
+      // Rejeita a Future de Cold Start com erro
+      completerColdStart.completeError(Exception('Erro inesperado no Cold Start'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(TelaSplashInicial), findsNothing);
+      expect(find.byType(TreeNavigationWrapper), findsOneWidget);
+      expect(
+        TreeNavigationWrapper.currentTreeController?.currentNode,
+        isA<HomeNode>(),
+      );
+    },
+  );
+
+  testWidgets(
+    'MyApp preserva o bloqueio da DatabaseMigrationScreen mesmo quando resolucaoInicialColdStart conclui ou falha',
+    (WidgetTester tester) async {
+      final completerColdStart = Completer<ResultadoResolucaoColdStart>();
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: true,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+          resolucaoInicialColdStart: completerColdStart.future,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(DatabaseMigrationScreen), findsOneWidget);
+      expect(find.byType(TelaSplashInicial), findsNothing);
+
+      completerColdStart.completeError(TimeoutException('Timeout na splash'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // O bloqueio da DatabaseMigrationScreen permanece intacto
+      expect(find.byType(DatabaseMigrationScreen), findsOneWidget);
+    },
+  );
 }
 
 

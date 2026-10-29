@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../main.dart';
 import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
@@ -21,8 +22,31 @@ import '../pages/perfil.dart';
 ///   AppNav.toSetor(context, setor: meuSetor);
 ///   AppNav.toVia(context, escalada: minhaEscalada);
 ///   AppNav.back(context);
-class AppNav {
-  AppNav._(); // Não instanciável
+abstract final class AppNav {
+  /// Canal nativo do Android responsável por operações não-destrutivas de ciclo de vida da tarefa.
+  static const MethodChannel canalCicloVida = MethodChannel(
+    'app.escalada.croquis/ciclo_vida',
+  );
+
+  /// Move a tarefa do aplicativo para segundo plano preservando a `MainActivity`
+  /// e a `FlutterEngine` vivas em memória (`moveTaskToBack`), evitando destruir a
+  /// atividade e forçar um novo *Cold Start* na reabertura subsequente.
+  ///
+  /// Caso o canal nativo não esteja disponível ou retorne `false`, realiza fallback
+  /// seguro para [SystemNavigator.pop].
+  static Future<void> minimizarAplicativo() async {
+    try {
+      final movidoParaSegundoPlano = await canalCicloVida.invokeMethod<bool>(
+        'minimizarTarefa',
+      );
+      if (movidoParaSegundoPlano == true) {
+        return;
+      }
+    } catch (_) {
+      // Fallback seguro para SystemNavigator.pop() abaixo
+    }
+    await SystemNavigator.pop();
+  }
 
   static TreeNavigationController? _ctrl(BuildContext context) {
     try {
@@ -345,13 +369,9 @@ class AppNav {
 
   /// Indica se o nó atual possui um pai (ou seja, se voltar é possível).
   static bool canGoBack(BuildContext context) {
-    try {
-      final ctrl = _ctrl(context);
-      if (ctrl == null) return Navigator.of(context).canPop();
-      return ctrl.currentNode.parent != null;
-    } catch (e) {
-      return Navigator.of(context).canPop();
-    }
+    final ctrl = _ctrl(context);
+    if (ctrl == null) return Navigator.of(context).canPop();
+    return ctrl.currentNode.parent != null;
   }
 
   static String _getNomeEscalada(Escalada e) {

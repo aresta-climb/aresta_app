@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/painting.dart';
@@ -19,12 +20,14 @@ import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/constants/constantes_rede.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/http/sync_rede.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/inicializacao_app.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import '../mocks/mock_app_logger.dart';
 import '../mocks/mock_telemetria.dart';
 
 class _MockWorkmanager extends Mock implements Workmanager {}
@@ -514,6 +517,63 @@ void main() {
       );
       expect(resultadoErro.treeController.currentNode, isA<HomeNode>());
       expect(resultadoErro.linkInicialProcessado, isNull);
+    });
+
+    test('retorna HomeNode e registra aviso quando a resolução do link inicial exceder o timeoutResolucao', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      addTearDown(AppLogger.resetForTesting);
+
+      final mockAppLinks = _MockAppLinks();
+      final completerInfinito = Completer<Uri?>();
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) => completerInfinito.future);
+
+      final editor = EditorDeCroqui();
+      final repo = DatasetRepository(editorDeCroqui: editor);
+      addTearDown(() => repo.repositorioCatalogo.fechar());
+
+      final resultado = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+        timeoutResolucao: const Duration(milliseconds: 40),
+      );
+
+      expect(resultado.treeController.currentNode, isA<HomeNode>());
+      expect(resultado.linkInicialProcessado, isNull);
+      expect(
+        mockLogger.recordedWarnings.any(
+          (w) => w.contains('Tempo limite excedido ao resolver destino inicial no Cold Start'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('executarEtapaPreBootComTimeout conclui normalmente no sucesso e degrada com aviso em timeout ou erro sem propagar exceção', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      addTearDown(AppLogger.resetForTesting);
+
+      bool executou = false;
+      await executarEtapaPreBootComTimeout(
+        'etapa_rapida',
+        () async {
+          executou = true;
+        },
+      );
+      expect(executou, isTrue);
+      expect(mockLogger.recordedWarnings, isEmpty);
+
+      // Caso de timeout em canal nativo pendurado
+      final completerInfinito = Completer<void>();
+      await executarEtapaPreBootComTimeout(
+        'canal_pendurado',
+        () => completerInfinito.future,
+        timeout: const Duration(milliseconds: 30),
+      );
+      expect(
+        mockLogger.recordedWarnings.any((w) => w.contains('canal_pendurado')),
+        isTrue,
+      );
     });
   });
 }

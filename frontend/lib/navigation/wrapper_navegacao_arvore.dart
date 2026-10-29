@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -12,6 +11,7 @@ import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_view_arvore.dart';
+import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/home.dart';
@@ -361,87 +361,76 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget conteudoNavegacao;
     if (widget.child != null) {
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
-          if (SubmitFeedbackUseCase.isFeedbackOpen.value) {
-            BetterFeedback.of(context).hide();
-            return;
+      conteudoNavegacao = widget.child!;
+    } else {
+      // 1. Extraímos o caminho completo da raiz até o nó atual
+      final fullPath = treeController.currentNode.path;
+
+      // 2. A página base é estritamente a nossa aba (Home, Settings, Browse).
+      // Como ela contém um IndexedStack, evitamos desmontá-la para preservar scrolls infinitos e abas de usuário.
+      final baseNode = fullPath.lastWhere(
+        (n) =>
+            n is HomeNode ||
+            n is MeusCroquisNode ||
+            n is BrowseNode ||
+            n is ComunidadeNode,
+      );
+
+      // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
+      // Nós que representam overlays locais (como ControlesNode, gerenciado pelo modal bottom sheet de PainelFiltrosIndice)
+      // não devem gerar uma rota de página isolada no Navigator declarativo.
+      final pushedNodes = fullPath
+          .where(
+            (n) =>
+                !(n is HomeNode ||
+                    n is MeusCroquisNode ||
+                    n is BrowseNode ||
+                    n is ComunidadeNode ||
+                    n is ControlesNode),
+          )
+          .toList();
+
+      // 4. ... e empilhados por cima da aba base de forma declarativa,
+      // preservando as instâncias de Page enquanto os nós permanecerem na pilha!
+      final chavesAtivas = <String>{};
+      final paginasEmpilhadas = pushedNodes.map((node) {
+        final chave = node.toString();
+        chavesAtivas.add(chave);
+        return _paginasDaPilhaCache.putIfAbsent(chave, () {
+          final modalPage = construirPaginaModalParaNo(node);
+          if (modalPage != null) {
+            return modalPage;
           }
+
+          return MaterialPage(
+            key: ValueKey(chave),
+            child: construirPaginaParaNo(
+              node: node,
+              datasetRepo: widget.datasetRepo,
+              syncService: widget.syncService,
+            ),
+          );
+        });
+      }).toList();
+      _paginasDaPilhaCache.removeWhere((k, _) => !chavesAtivas.contains(k));
+
+      final pages = <Page>[
+        MaterialPage(
+          key: const ValueKey('TabsPage'),
+          child: _buildTabsWidget(baseNode),
+        ),
+        ...paginasEmpilhadas,
+      ];
+
+      conteudoNavegacao = Navigator(
+        pages: pages,
+        onDidRemovePage: (page) {
           treeController.goBack();
         },
-        child: widget.child!,
       );
     }
-
-    // 1. Extraímos o caminho completo da raiz até o nó atual
-    final fullPath = treeController.currentNode.path;
-
-    // 2. A página base é estritamente a nossa aba (Home, Settings, Browse).
-    // Como ela contém um IndexedStack, evitamos desmontá-la para preservar scrolls infinitos e abas de usuário.
-    final baseNode = fullPath.lastWhere(
-      (n) =>
-          n is HomeNode ||
-          n is MeusCroquisNode ||
-          n is BrowseNode ||
-          n is ComunidadeNode,
-      orElse: () => const HomeNode(),
-    );
-
-    // 3. Todo o resto dos nós (croquis, setores, mapas, modais) que vêm após a aba principal são separados...
-    // Nós que representam overlays locais (como ControlesNode, gerenciado pelo modal bottom sheet de PainelFiltrosIndice)
-    // não devem gerar uma rota de página isolada no Navigator declarativo.
-    final pushedNodes = fullPath
-        .where(
-          (n) =>
-              !(n is HomeNode ||
-                  n is MeusCroquisNode ||
-                  n is BrowseNode ||
-                  n is ComunidadeNode ||
-                  n is ControlesNode),
-        )
-        .toList();
-
-    // 4. ... e empilhados por cima da aba base de forma declarativa,
-    // preservando as instâncias de Page enquanto os nós permanecerem na pilha!
-    final chavesAtivas = <String>{};
-    final paginasEmpilhadas = pushedNodes.map((node) {
-      final chave = node.toString();
-      chavesAtivas.add(chave);
-      return _paginasDaPilhaCache.putIfAbsent(chave, () {
-        final modalPage = construirPaginaModalParaNo(node);
-        if (modalPage != null) {
-          return modalPage;
-        }
-
-        return MaterialPage(
-          key: ValueKey(chave),
-          child: construirPaginaParaNo(
-            node: node,
-            datasetRepo: widget.datasetRepo,
-            syncService: widget.syncService,
-          ),
-        );
-      });
-    }).toList();
-    _paginasDaPilhaCache.removeWhere((k, _) => !chavesAtivas.contains(k));
-
-    final pages = <Page>[
-      MaterialPage(
-        key: const ValueKey('TabsPage'),
-        child: _buildTabsWidget(baseNode),
-      ),
-      ...paginasEmpilhadas,
-    ];
-
-    final navigator = Navigator(
-      pages: pages,
-      onDidRemovePage: (page) {
-        treeController.goBack();
-      },
-    );
 
     return PopScope(
       canPop: false,
@@ -454,19 +443,13 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
           return;
         }
 
-        bool canGoBack = treeController.goBack();
+        final canGoBack = treeController.goBack();
         if (!canGoBack) {
-          // Se estiver na raiz de uma aba secundária, volte para a aba Home
-          if (treeController.currentNode is! HomeNode) {
-            TreeNavigationWrapper.switchTab(0);
-            return;
-          }
-
-          // Caso já esteja na raiz da Home, permite o encerramento do app pelo SO
-          SystemNavigator.pop();
+          // Caso já esteja na raiz da Home, move a tarefa para segundo plano preservando a Engine
+          AppNav.minimizarAplicativo();
         }
       },
-      child: navigator,
+      child: conteudoNavegacao,
     );
   }
 }

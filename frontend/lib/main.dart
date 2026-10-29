@@ -19,6 +19,7 @@ import 'package:frontend/pages/termos_de_uso.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/feedback/gatilho_feedback_rede.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/inicializar_firebase.dart';
 import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
@@ -40,6 +41,7 @@ export 'package:frontend/services/inicializacao_app.dart'
     show
         ResultadoResolucaoColdStart,
         configurarGestaoMemoria,
+        executarEtapaPreBootComTimeout,
         registrarOuvintesLiveReload,
         resolverDestinoInicialColdStart,
         setupAppServices;
@@ -68,10 +70,16 @@ void main() async {
   final editorDeCroqui = EditorDeCroqui();
   int? acceptedLegalVersion;
 
-  // Executa tarefas independentes de inicialização em paralelo para acelerar o Cold Start
+  // Executa tarefas independentes de inicialização em paralelo com timeouts defensivos para acelerar e blindar o Cold Start
   await Future.wait([
-    GerenciadorNotificacaoDownload.instancia.inicializar(),
-    initFirebase(),
+    executarEtapaPreBootComTimeout(
+      'notificacoes_download',
+      () => GerenciadorNotificacaoDownload.instancia.inicializar(),
+    ),
+    executarEtapaPreBootComTimeout(
+      'firebase',
+      () => initFirebase(),
+    ),
     ThemeController().loadTheme(),
     SharedPreferences.getInstance().then((prefs) async {
       acceptedLegalVersion = await migrarTermosLegais(prefs);
@@ -181,23 +189,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _needsMigration = widget.needsMigration;
     _aguardandoColdStart = widget.resolucaoInicialColdStart != null;
     if (widget.resolucaoInicialColdStart != null) {
-      widget.resolucaoInicialColdStart!.then((resultado) {
-        if (mounted) {
-          setState(() {
-            _resultadoColdStart = resultado;
-            _aguardandoColdStart = false;
-          });
-          if (resultado.linkInicialProcessado == null &&
-              _hasAcceptedTerms &&
-              !_needsMigration) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ServicoPerformance.instancia.registrarColdStartHome();
+      widget.resolucaoInicialColdStart!
+          .then((resultado) {
+            if (mounted) {
+              setState(() {
+                _resultadoColdStart = resultado;
+                _aguardandoColdStart = false;
+              });
+              if (resultado.linkInicialProcessado == null &&
+                  _hasAcceptedTerms &&
+                  !_needsMigration) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ServicoPerformance.instancia.registrarColdStartHome();
+                  }
+                });
               }
-            });
-          }
-        }
-      });
+            }
+          })
+          .catchError((Object erro, StackTrace stackTrace) {
+            AppLogger.instance.logError(
+              '[MyApp] Falha inesperada na resolução inicial do Cold Start. Liberando TelaSplashInicial para a Home.',
+              error: erro,
+              stackTrace: stackTrace,
+            );
+            if (mounted) {
+              setState(() {
+                _aguardandoColdStart = false;
+              });
+            }
+          });
     } else if (_hasAcceptedTerms && !_needsMigration) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _resultadoColdStart?.linkInicialProcessado == null) {

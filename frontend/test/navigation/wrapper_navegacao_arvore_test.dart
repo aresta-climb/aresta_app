@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:feedback/feedback.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,6 +12,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/pages/comunidade.dart';
@@ -22,6 +24,7 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/theme/cores_app.dart';
 import '../mocks/mock_telemetria.dart';
 import '../mocks/mock_geolocator_platform.dart';
 
@@ -453,8 +456,8 @@ void main() {
         );
         expect(identical(picoPageDurante.viewModel, viewModelAntes), isTrue);
 
-        // Desempilha SetorNode de volta para PicoNode
-        controller.goBack();
+        // Desempilha SetorNode de volta para PicoNode via Navigator.pop (exercitando onDidRemovePage)
+        tester.state<NavigatorState>(find.byType(Navigator).last).pop();
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
 
@@ -466,6 +469,174 @@ void main() {
           find.byType(PicoDetailsPage, skipOffstage: false),
         );
         expect(identical(picoPageDepois.viewModel, viewModelAntes), isTrue);
+      },
+    );
+
+    testWidgets(
+      'acionar botão Voltar do sistema na raiz da HomeNode minimiza a tarefa via canal de ciclo de vida sem destruir a Engine',
+      (tester) async {
+        final chamadasCicloVida = <String>[];
+        final chamadasPlataforma = <String>[];
+
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          AppNav.canalCicloVida,
+          (MethodCall call) async {
+            chamadasCicloVida.add(call.method);
+            return true;
+          },
+        );
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (MethodCall call) async {
+            chamadasPlataforma.add(call.method);
+            return null;
+          },
+        );
+        addTearDown(() {
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            AppNav.canalCicloVida,
+            null,
+          );
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          );
+        });
+
+        final controller = TreeNavigationController();
+        repo.loadEmpty();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Em uma aba secundária (Explorar), o primeiro Voltar retorna para a HomeNode
+        TreeNavigationWrapper.switchTab(1);
+        await tester.pump();
+        expect(controller.currentNode, isA<BrowseNode>());
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        expect(controller.currentNode, isA<HomeNode>());
+        expect(chamadasCicloVida, isEmpty);
+
+        // Na raiz da HomeNode, o Voltar invoca minimizarTarefa sem chamar SystemNavigator.pop
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+
+        expect(chamadasCicloVida, equals(['minimizarTarefa']));
+        expect(chamadasPlataforma, isNot(contains('SystemNavigator.pop')));
+      },
+    );
+
+    testWidgets(
+      'cobre sincronização de picoAbertoId para modais textuais/mapas, reset da Home, SnackBars de sincronização e fechamento de feedback via Voltar',
+      (tester) async {
+        final controller = TreeNavigationController();
+        repo.loadEmpty();
+
+        late BuildContext ctxInterno;
+        await tester.pumpWidget(
+          BetterFeedback(
+            child: MaterialApp(
+              theme: ThemeData(extensions: const [AppColors.dark]),
+              home: TreeNavigationWrapper(
+                key: TreeNavigationWrapper.navKey,
+                datasetRepo: repo,
+                syncService: syncService,
+                treeController: controller,
+                child: Builder(
+                  builder: (context) {
+                    ctxInterno = context;
+                    return const Scaffold(body: Text('Host'));
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // 1. switchTab(0) já estando em HomeNode aciona triggerHomeReset
+        final resetAntes = repo.homeResetTrigger.value;
+        TreeNavigationWrapper.switchTab(0);
+        await tester.pump();
+        expect(repo.homeResetTrigger.value, equals(resetAntes + 1));
+
+        // 2. _sincronizarPicoAbertoId para TextNode, TextCarouselNode e MapasCarrosselNode
+        controller.navigateTo(
+          const TextNode(
+            title: 'Aviso',
+            content: 'Texto',
+            cragId: 'pico_txt',
+            parent: HomeNode(),
+          ),
+        );
+        await tester.pump();
+        expect(syncService.picoAbertoId.value, equals('pico_txt'));
+
+        controller.navigateTo(
+          const TextCarouselNode(
+            cragId: 'pico_carrossel_txt',
+            texts: [TextCarouselData(title: 'T1', content: 'C1')],
+            parent: HomeNode(),
+          ),
+        );
+        await tester.pump();
+        expect(syncService.picoAbertoId.value, equals('pico_carrossel_txt'));
+
+        controller.navigateTo(
+          const MapasCarrosselNode(
+            cragId: 'pico_mapa_carrossel',
+            initialIndex: 0,
+            mapas: [],
+            parent: HomeNode(),
+          ),
+        );
+        await tester.pump();
+        expect(syncService.picoAbertoId.value, equals('pico_mapa_carrossel'));
+        controller.goHome();
+        await tester.pump();
+
+        // 3. SnackBars de atualização de croqui online e status de sincronização
+        repo.editorDeCroqui.isExperimentalMode.value = false;
+        repo.notificarCroquiOnlineAtualizadoNaUI('Serra do Cipó');
+        await tester.pump();
+        expect(find.text('O guia de Serra do Cipó foi atualizado!'), findsOneWidget);
+        ScaffoldMessenger.of(ctxInterno).clearSnackBars();
+        await tester.pump();
+
+        syncService.lastSyncWasAuto.value = true;
+        syncService.syncStatus.value = SyncStatus.error;
+        await tester.pump();
+        expect(
+          find.text('Erro ao sincronizar os dados. Tente novamente mais tarde.'),
+          findsOneWidget,
+        );
+        ScaffoldMessenger.of(ctxInterno).clearSnackBars();
+        await tester.pump();
+
+        syncService.quantidadeCroquisBaixadosAtualizadosNoUltimoSync.value = 1;
+        syncService.syncStatus.value = SyncStatus.justUpdated;
+        await tester.pump();
+        expect(
+          find.text('Seus croquis baixados foram atualizados!'),
+          findsOneWidget,
+        );
+
+        // 4. Com SubmitFeedbackUseCase.isFeedbackOpen ativo, acionar Voltar no PopScope esconde o feedback
+        SubmitFeedbackUseCase.isFeedbackOpen.value = true;
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(SubmitFeedbackUseCase.isFeedbackOpen.value, isFalse);
       },
     );
   });

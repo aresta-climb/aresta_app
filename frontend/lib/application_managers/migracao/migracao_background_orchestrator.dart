@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:workmanager/workmanager.dart';
@@ -29,29 +29,20 @@ class MigracaoBackgroundOrchestrator {
     SyncService? syncService,
     EditorDeCroqui? editorDeCroqui,
   }) async {
-    try {
-      AppLogger.instance.logInfo('[MigracaoBackground] Iniciando verificação de migração pós-atualização...');
+    AppLogger.instance.logInfo('[MigracaoBackground] Iniciando verificação de migração pós-atualização...');
 
-      final editor = editorDeCroqui ?? EditorDeCroqui();
-      final repo = datasetRepo ?? DatasetRepository(editorDeCroqui: editor);
-      final sync = syncService ?? SyncService(datasetRepository: repo);
+    final editor = editorDeCroqui ?? EditorDeCroqui();
+    final repo = datasetRepo ?? DatasetRepository(editorDeCroqui: editor);
+    final sync = syncService ?? SyncService(datasetRepository: repo);
 
-      final precisaMigrar = await sync.checkNeedsMigration();
-      if (!precisaMigrar) {
-        AppLogger.instance.logInfo('[MigracaoBackground] Nenhuma migração pendente detectada.');
-        return true;
-      }
-
-      AppLogger.instance.logInfo('[MigracaoBackground] Migração necessária. Executando migração...');
-      return await sync.executarMigracao();
-    } catch (e, stackTrace) {
-      AppLogger.instance.logError(
-        '[MigracaoBackground] Erro inesperado ao executar migração em segundo plano',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return false;
+    final precisaMigrar = await sync.checkNeedsMigration();
+    if (!precisaMigrar) {
+      AppLogger.instance.logInfo('[MigracaoBackground] Nenhuma migração pendente detectada.');
+      return true;
     }
+
+    AppLogger.instance.logInfo('[MigracaoBackground] Migração necessária. Executando migração...');
+    return await sync.executarMigracao();
   }
 
   /// Agenda a execução única da tarefa de migração no WorkManager com restrição de rede conectada.
@@ -71,12 +62,18 @@ class MigracaoBackgroundOrchestrator {
 
   /// Cancela qualquer tarefa de migração ativa em segundo plano para que a interface
   /// de primeiro plano assuma o controle com segurança (Estratégia Foreground Takeover).
+  ///
+  /// Aplica um limite de tempo defensivo ([timeoutCancelamento]) para impedir que um
+  /// eventual bloqueio no banco SQLite do `WorkManager` retenha a inicialização do app.
   static Future<void> cancelarMigracaoSegundoPlano({
     Workmanager? workmanager,
+    Duration timeoutCancelamento = const Duration(seconds: 2),
   }) async {
     try {
       final wm = workmanager ?? Workmanager();
-      await wm.cancelByUniqueName(kNomeUnicoMigracao);
+      await wm
+          .cancelByUniqueName(kNomeUnicoMigracao)
+          .timeout(timeoutCancelamento);
       AppLogger.instance.logInfo('[MigracaoBackground] Tarefa em segundo plano cancelada para prioridade do primeiro plano.');
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
