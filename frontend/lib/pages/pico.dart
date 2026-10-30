@@ -13,7 +13,6 @@ import '../navigation/funcoes_navegacao.dart';
 import '../navigation/arvore_navegacao.dart';
 import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../services/firebase/telemetria.dart';
-import '../services/firebase/app_logger.dart';
 import '../theme/cores_app.dart';
 
 // New imports for sub-pages
@@ -46,8 +45,9 @@ class PicoDetailsPage extends StatefulWidget {
 }
 
 class _PicoDetailsPageState extends State<PicoDetailsPage> {
-  final GlobalKey _mapaKey = GlobalKey();
   late PicoViewModel _viewModel;
+  TreeNavigationController? _treeControllerRegistrado;
+  bool Function()? _backInterceptor;
 
   /// Proporção de aspecto (largura / altura) da imagem de capa resolvida.
   /// Quando nula, a altura expandida adota o teto padrão de 300 dp.
@@ -64,37 +64,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
       if (!mounted) return;
       _setupBackInterceptor();
     });
-
-    if (widget.scrollToMapaGeral) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          final targetContext = _mapaKey.currentContext;
-          if (targetContext != null) {
-            final renderObject = targetContext.findRenderObject();
-            if (renderObject is RenderBox &&
-                renderObject.attached &&
-                renderObject.hasSize) {
-              try {
-                Scrollable.ensureVisible(
-                  targetContext,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeInOut,
-                  alignment: 0.1,
-                );
-              } catch (e, stackTrace) {
-                AppLogger.instance.logError(
-                  '[PicoDetailsPage] Falha ao rolar para mapa geral',
-                  error: e,
-                  stackTrace: stackTrace,
-                );
-              }
-            }
-          }
-        });
-      });
-    }
   }
 
   @override
@@ -140,11 +109,12 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   void _aoAtualizarViewModel() {
     if (!mounted) return;
     if (_viewModel.isDownloaded) {
-      final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
-          TreeNavigationWrapper.currentTreeController;
-      if (tree != null && tree.onBackInterceptor != null) {
+      final tree = _treeControllerRegistrado;
+      if (tree != null && tree.onBackInterceptor == _backInterceptor) {
         tree.onBackInterceptor = null;
       }
+    } else {
+      _setupBackInterceptor();
     }
   }
 
@@ -155,17 +125,24 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   }
 
   void _setupBackInterceptor() {
+    if (!mounted) return;
     final tree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
         TreeNavigationWrapper.currentTreeController;
     if (tree == null) return;
+    _treeControllerRegistrado = tree;
 
-    tree.onBackInterceptor = () {
+    bool interceptor() {
       final parentNode = tree.currentNode.parent;
       final staysInSameCroqui =
           parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
 
-      if (!_viewModel.deveInterceptarSaida(staysInSameCroqui: staysInSameCroqui)) {
-        tree.onBackInterceptor = null;
+      if (!mounted ||
+          !_viewModel.deveInterceptarSaida(
+            staysInSameCroqui: staysInSameCroqui,
+          )) {
+        if (tree.onBackInterceptor == _backInterceptor) {
+          tree.onBackInterceptor = null;
+        }
         return false;
       }
 
@@ -176,28 +153,35 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
         tamanhoFormatado: _viewModel.tamanhoFormatado,
         onSalvar: () {
           _iniciarDownload();
-          tree.onBackInterceptor = null;
-          if (context.mounted && AppNav.canGoBack(context)) {
-            AppNav.back(context);
+          if (tree.onBackInterceptor == _backInterceptor) {
+            tree.onBackInterceptor = null;
+          }
+          if (tree.currentNode.parent != null) {
+            tree.goBack();
           }
         },
         onSairSemSalvar: () {
-          tree.onBackInterceptor = null;
-          if (context.mounted && AppNav.canGoBack(context)) {
-            AppNav.back(context);
+          if (tree.onBackInterceptor == _backInterceptor) {
+            tree.onBackInterceptor = null;
+          }
+          if (tree.currentNode.parent != null) {
+            tree.goBack();
           }
         },
       );
       return true;
-    };
+    }
+
+    _backInterceptor = interceptor;
+    tree.onBackInterceptor = interceptor;
   }
 
   @override
   void dispose() {
     ConstrutorCaminhoTrajeto.limparCache();
     _viewModel.removeListener(_aoAtualizarViewModel);
-    final tree = TreeNavigationWrapper.currentTreeController;
-    if (tree != null) {
+    final tree = _treeControllerRegistrado;
+    if (tree != null && tree.onBackInterceptor == _backInterceptor) {
       tree.onBackInterceptor = null;
     }
     _viewModel.dispose();
@@ -205,6 +189,7 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   }
 
   void _iniciarDownload() async {
+    if (!mounted) return;
     final tree = TreeNavigationWrapper.maybeOf(context);
     final syncService = tree?.syncService;
 
@@ -217,9 +202,9 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
     if (!mounted) return;
 
     if (success) {
-      final currentTree = TreeNavigationWrapper.maybeOf(context)?.treeController ??
-          TreeNavigationWrapper.currentTreeController;
-      if (currentTree != null) {
+      final currentTree = _treeControllerRegistrado;
+      if (currentTree != null &&
+          currentTree.onBackInterceptor == _backInterceptor) {
         currentTree.onBackInterceptor = null;
       }
     }
@@ -243,44 +228,11 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _viewModel,
-      builder: (context, _) {
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) return;
-            final tree = TreeNavigationWrapper.maybeOf(context)?.treeController;
-            final parentNode = tree?.currentNode.parent;
-            final staysInSameCroqui =
-                parentNode is PicoContextNode && parentNode.cragId == widget.cragId;
-
-            if (!_viewModel.deveInterceptarSaida(staysInSameCroqui: staysInSameCroqui)) {
-              if (context.mounted && AppNav.canGoBack(context)) {
-                AppNav.back(context);
-              }
-              return;
-            }
-
-            ModalConfirmacaoSaida.mostrar(
-              context: context,
-              nomePico: widget.pico.nome,
-              tamanhoFormatado: _viewModel.tamanhoFormatado,
-              onSalvar: () {
-                _iniciarDownload();
-                if (context.mounted && AppNav.canGoBack(context)) {
-                  AppNav.back(context);
-                }
-              },
-              onSairSemSalvar: () {
-                if (context.mounted && AppNav.canGoBack(context)) {
-                  AppNav.back(context);
-                }
-              },
-            );
-          },
-          child: Scaffold(
+      builder: (_, _) {
+        return Scaffold(
         backgroundColor: context.colors.deepBasalt,
         body: Builder(
-          builder: (context) {
+          builder: (_) {
             final topPadding = MediaQuery.of(context).padding.top;
             final alturaExpandida = _calcularAlturaExpandida(context);
 
@@ -800,7 +752,6 @@ class _PicoDetailsPageState extends State<PicoDetailsPage> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    ),
     );
       },
     );

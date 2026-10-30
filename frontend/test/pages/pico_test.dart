@@ -64,11 +64,13 @@ class _NotificadorDownloadComLatencia extends GerenciadorNotificacaoDownload {
 }
 
 class _FakeDatasetRepository extends DatasetRepository {
-  _FakeDatasetRepository() : super(editorDeCroqui: EditorDeCroqui());
+  final bool resultadoDelete;
+  _FakeDatasetRepository({this.resultadoDelete = true})
+      : super(editorDeCroqui: EditorDeCroqui());
 
   @override
   Future<bool> deleteCrag(String id) async {
-    return true;
+    return resultadoDelete;
   }
 }
 
@@ -195,6 +197,117 @@ void main() {
         find.text('Guia removido do armazenamento offline.'),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage permite cancelar exclusão no modal e exibe erro quando deleteCrag retorna false',
+    (tester) async {
+      final datasetRepoFalha = _FakeDatasetRepository(resultadoDelete: false);
+      final pico = Pico()..nome = 'Pico Teste';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: _criarPicoDetailsPage(
+            pico: pico,
+            croqui: Croqui(),
+            cragId: 'crag1',
+            datasetRepo: datasetRepoFalha,
+          ),
+        ),
+      );
+
+      // 1. Clica na lixeira e cancela
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CANCELAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('Excluir?'), findsNothing);
+
+      // 2. Clica na lixeira e confirma com falha no repositório
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('EXCLUIR'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erro ao excluir guia.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'PicoDetailsPage navega para Via ou Setor ao selecionar resultado no PicoSearchDelegate e fecha busca via onBackInterceptor',
+    (tester) async {
+      final mockTelemetry = MockTelemetryService();
+      TelemetryService.instance = mockTelemetry;
+
+      final datasetRepo = _FakeDatasetRepository();
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final via = Escalada()..viaEsportiva = (ViaEsportiva()..nome = 'Via Sol');
+      final setor = Setor()
+        ..nome = 'Setor Norte'
+        ..escaladas.add(via);
+      final pico = Pico()
+        ..nome = 'Pico Busca'
+        ..setoresOuGrupos.add(
+          SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+        );
+      final tree = TreeNavigationController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTemaEscuro(),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: tree,
+            child: _criarPicoDetailsPage(
+              pico: pico,
+              croqui: Croqui(),
+              cragId: 'crag_busca',
+              datasetRepo: datasetRepo,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Abre busca e fecha pelo onBackInterceptor da árvore
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      expect(tree.onBackInterceptor!(), isTrue);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+
+      // 2. Abre busca e seleciona a Escalada ("Via Sol")
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Via Sol');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Via Sol'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tree.currentNode, isA<ViaNode>());
+      expect((tree.currentNode as ViaNode).escaladaNome, 'Via Sol');
+
+      // Volta para a raiz para exibir novamente o child (_criarPicoDetailsPage)
+      tree.navigateTo(const HomeNode());
+      await tester.pumpAndSettle();
+
+      // 3. Abre busca novamente e seleciona o Setor ("Setor Norte")
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Setor Norte');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Setor Norte'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tree.currentNode, isA<SetorNode>());
+      expect((tree.currentNode as SetorNode).setorNome, 'Setor Norte');
     },
   );
 
@@ -1889,6 +2002,144 @@ void main() {
 
             expect(tester.takeException(), isNull);
             expect(datasetRepoReal.isPicoDownloaded(cragId), isTrue);
+          },
+        );
+
+        testWidgets(
+          'fluxo completo: excluir guia offline em Meus Croquis, voltar pelo BackButton da AppBar exibindo ModalConfirmacaoSaida com PicoDetailsPage montada e sair sem salvar sem crash mesmo se State for desmontado',
+          (WidgetTester tester) async {
+            tester.view.physicalSize = const Size(800, 2400);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            const cragId = 'br_mg_araxa_bocaina_esportivas';
+            final pico = Pico()
+              ..nome = 'Bocaina Park (Esportivas)'
+              ..estado = 'MG';
+            final croqui = Croqui()
+              ..id = cragId
+              ..nome = 'Bocaina Park (Esportivas)'
+              ..picos.add(pico);
+
+            await tester.runAsync(() async {
+              final picoDir = Directory('${tempDirSync.path}/downloads/$cragId')
+                ..createSync(recursive: true);
+              File('${picoDir.path}/compilado.binarypb')
+                  .writeAsBytesSync(croqui.writeToBuffer());
+
+              final indice = Indice()
+                ..croquis.add(
+                  ResumoCroqui()
+                    ..id = cragId
+                    ..nome = 'Bocaina Park (Esportivas)'
+                    ..caminhoRelativo = '$cragId/compilado.binarypb',
+                );
+              await datasetRepoReal.loadIndiceToMemory(indice);
+              await datasetRepoReal.getCroqui(
+                cragId,
+                indiceJaSincronizado: true,
+              );
+            });
+
+            final clienteLocal = ClienteHttpAresta.paraTestes(http.Client());
+            final syncService = SyncService(
+              datasetRepository: datasetRepoReal,
+              client: clienteLocal,
+              network: SyncNetwork(clienteLocal, Duration.zero),
+            );
+            syncService.syncStatus.value = SyncStatus.updated;
+
+            final noMeusCroquis = MeusCroquisNode(const HomeNode());
+            final noPico = PicoNode(cragId: cragId, parent: noMeusCroquis);
+            final tree = TreeNavigationController(
+              estadoInicial: ArvoreNavegacao(noAtual: noPico),
+            );
+
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: construirTemaEscuro(),
+                home: TreeNavigationWrapper(
+                  key: TreeNavigationWrapper.navKey,
+                  datasetRepo: datasetRepoReal,
+                  syncService: syncService,
+                  treeController: tree,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+
+            expect(datasetRepoReal.isPicoDownloaded(cragId), isTrue);
+            expect(find.text('BOCAINA PARK (ESPORTIVAS)'), findsOneWidget);
+
+            // 1. Exclui o guia offline clicando na lixeira
+            final deleteBtnFinder = find.descendant(
+              of: find.byType(PicoDetailsPage),
+              matching: find.widgetWithIcon(IconButton, Icons.delete_outline),
+            );
+            await tester.runAsync(() async {
+              tester.widget<IconButton>(deleteBtnFinder).onPressed!();
+            });
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+            expect(find.text('Excluir?'), findsOneWidget);
+
+            await tester.runAsync(() async {
+              tester
+                  .widget<TextButton>(find.widgetWithText(TextButton, 'EXCLUIR'))
+                  .onPressed!();
+              await Future<void>.delayed(const Duration(milliseconds: 100));
+            });
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+
+            expect(datasetRepoReal.isPicoDownloaded(cragId), isFalse);
+            expect(find.byType(PicoDetailsPage), findsOneWidget);
+
+            // 2. Toca no BackButton da AppBar (usa Navigator declarativo real do TreeNavigationWrapper)
+            await tester.tap(find.byType(BackButton));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+
+            // O ModalConfirmacaoSaida deve abrir e a PicoDetailsPage DEVE continuar montada por baixo!
+            expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
+            expect(find.byType(PicoDetailsPage), findsOneWidget);
+            expect(tree.currentNode, isA<PicoNode>());
+
+            // 3. Toca em "Sair sem Salvar" no modal -> deve fechar o modal e voltar para MeusCroquisNode
+            await tester.tap(find.text('Sair sem Salvar'));
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(find.byType(ModalConfirmacaoSaida), findsNothing);
+            expect(tree.currentNode, isA<MeusCroquisNode>());
+
+            // 4. Reabre o pico (agora online), abre novamente o modal e força o desmonte do State
+            // antes do toque em "Sair sem Salvar" para garantir que não acessa State.context desmontado
+            ModalConfirmacaoSaida.resetarSessaoParaTestes();
+            tree.navigateTo(PicoNode(cragId: cragId, parent: noMeusCroquis));
+            await tester.pumpAndSettle();
+            expect(find.byType(PicoDetailsPage), findsOneWidget);
+
+            await tester.tap(find.byType(BackButton));
+            await tester.pumpAndSettle();
+            expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
+
+            // Desmonta a PicoDetailsPage enquanto o ModalConfirmacaoSaida ainda está no RootNavigator
+            tree.navigateTo(const HomeNode());
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+            expect(find.byType(PicoDetailsPage), findsNothing);
+            expect(find.byType(ModalConfirmacaoSaida), findsOneWidget);
+
+            // Tocar em "Sair sem Salvar" com _PicoDetailsPageState já desmontado NÃO pode lançar erro em State.context!
+            await tester.tap(find.text('Sair sem Salvar'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+
+            expect(tester.takeException(), isNull);
+            expect(find.byType(ModalConfirmacaoSaida), findsNothing);
           },
         );
       },

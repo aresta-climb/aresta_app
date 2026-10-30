@@ -538,5 +538,105 @@ void main() {
         expect(chamadasPlataforma, contains('SystemNavigator.pop'));
       },
     );
+
+    testWidgets(
+      'AppNav.back em página declarativa da árvore delega para treeController.goBack respeitando onBackInterceptor sem desmontar a página',
+      (tester) async {
+        final treeController = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: PicoNode(cragId: 'test_crag', parent: HomeNode()),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construirTemaEscuro(),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: treeController,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final picoFinder = find.text('PICO TESTE');
+        expect(picoFinder, findsOneWidget);
+
+        var interceptorAcionado = false;
+        treeController.onBackInterceptor = () {
+          interceptorAcionado = true;
+          return true;
+        };
+
+        final pageContext = tester.element(picoFinder);
+        AppNav.back(pageContext);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // O interceptor bloqueou a saída: a página declarativa NÃO pode ter sido arrancada do Navigator!
+        expect(interceptorAcionado, isTrue);
+        expect(treeController.currentNode, isA<PicoNode>());
+        expect(find.text('PICO TESTE'), findsOneWidget);
+
+        // Quando o interceptor é liberado, AppNav.back retrocede normalmente para a HomeNode
+        treeController.onBackInterceptor = null;
+        AppNav.back(tester.element(find.text('PICO TESTE')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(treeController.currentNode, isA<HomeNode>());
+        expect(find.text('PICO TESTE'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'AppNav.back em rota imperativa sobreposta desempilha apenas o overlay sem retroceder o nó da árvore',
+      (tester) async {
+        final treeController = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: PicoNode(cragId: 'test_crag', parent: HomeNode()),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construirTemaEscuro(),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: treeController,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final pageContext = tester.element(find.text('PICO TESTE'));
+        late BuildContext overlayContext;
+        showDialog<void>(
+          context: pageContext,
+          useRootNavigator: false,
+          builder: (ctx) {
+            overlayContext = ctx;
+            return const AlertDialog(title: Text('Dialog Imperativo'));
+          },
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('Dialog Imperativo'), findsOneWidget);
+
+        AppNav.back(overlayContext);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('Dialog Imperativo'), findsNothing);
+        expect(treeController.currentNode, isA<PicoNode>());
+        expect(find.text('PICO TESTE'), findsOneWidget);
+      },
+    );
   });
 }

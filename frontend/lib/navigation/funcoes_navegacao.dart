@@ -349,13 +349,23 @@ abstract final class AppNav {
     }
   }
 
-  /// Volta um nível na árvore de navegação ou desempilha rotas sobrepostas do Navigator.
+  /// Volta um nível na árvore de navegação ou desempilha rotas imperativas sobrepostas do Navigator.
+  ///
+  /// Quando chamado a partir de uma página declarativa da árvore (`ModalRoute.of(context)?.settings is Page`),
+  /// delega diretamente para [TreeNavigationController.goBack] para que interceptadores de saída
+  /// (`onBackInterceptor`) sejam avaliados antes de qualquer remoção de página no [Navigator].
+  /// Quando chamado de uma rota imperativa sobreposta (`DialogRoute`, `ModalBottomSheetRoute`,
+  /// `SearchPageRoute`, ou em testes sem [TreeNavigationController]), realiza o `pop()` da rota.
   static void back(BuildContext context) {
-    if (Navigator.of(context).canPop()) {
+    final ctrl = _ctrl(context);
+    final rotaAtual = ModalRoute.of(context);
+    final isRotaDeclarativaDaArvore = rotaAtual?.settings is Page;
+
+    if ((!isRotaDeclarativaDaArvore || ctrl == null) &&
+        Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
       return;
     }
-    final ctrl = _ctrl(context);
     if (ctrl != null) {
       ctrl.goBack();
     }
