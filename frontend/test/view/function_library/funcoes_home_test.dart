@@ -67,11 +67,13 @@ void main() {
     mockSync.syncStatus.value = SyncStatus.updated;
   });
 
-  tearDown(() {
+  tearDown(() async {
     AppLogger.resetForTesting();
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
-    }
+    try {
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
+    } catch (_) {}
   });
 
   Widget buildTestableWidget() {
@@ -300,6 +302,7 @@ void main() {
           dummyPico,
           source: 'explorar',
         );
+        await Future<void>.delayed(const Duration(milliseconds: 350));
       });
 
       await tester.pump();
@@ -684,6 +687,7 @@ void main() {
       // 1. Abre primeiro pico
       await tester.runAsync(() async {
         await handlePicoSelection(context, mockRepo, pico1, source: 'home');
+        await Future<void>.delayed(const Duration(milliseconds: 350));
       });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -701,6 +705,7 @@ void main() {
       // 2. Abre segundo pico online consecutivamente
       await tester.runAsync(() async {
         await handlePicoSelection(context, mockRepo, pico2, source: 'home');
+        await Future<void>.delayed(const Duration(milliseconds: 350));
       });
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

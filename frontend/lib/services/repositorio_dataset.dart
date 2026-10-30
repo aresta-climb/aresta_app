@@ -679,9 +679,10 @@ class DatasetRepository {
         syncAtivo != null &&
         identical(syncAtivo.datasetRepository, this);
 
-    // Fallback: se o pico ainda não constar no índice local em memória,
+    // Fallback: se o índice já estiver carregado em memória mas o pico ainda não constar nele,
     // sincroniza o índice antes de tentar o download remoto.
     if ((caminhoRelativo == null || caminhoRelativo.isEmpty) &&
+        indiceData.value != null &&
         podeSincronizarIndice) {
       await syncAtivo.syncIndex();
       if (syncAtivo.syncStatus.value == SyncStatus.offline) {
