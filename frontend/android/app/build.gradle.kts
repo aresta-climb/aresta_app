@@ -56,7 +56,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Usa a chave oficial de release quando disponível (CI/CD ou key.properties);
+            // caso contrário, faz fallback para a chave local de debug para permitir testes locais em --release.
+            signingConfig = if (signingConfigs.getByName("release").storeFile != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             // Desativado para impedir que o R8 remova blocos ResTable_typeSpec inteiros da tabela resources.arsc,
             // o que causava SIGSEGV nativo em libandroidfw.so (LoadedPackage::FindEntryByName) nos split APKs da Google Play (Issue #20).

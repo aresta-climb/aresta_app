@@ -36,12 +36,12 @@ Ele funciona mantendo uma tabela de _feature flags_ ou valores remotos de config
 ### 4. `validador_app.dart`
 Abstração do `firebase_app_check`.
 Responsável pela atestação de integridade de hardware e software da aplicação.
-- **Produção (Release)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
-- **Desenvolvimento (Debug)**: Utiliza o Provedor de Depuração com suporte a UUIDs cadastrados no Firebase Console, permitindo que os desenvolvedores testem a rota real, ou realiza fallback silencioso em ambiente de desenvolvimento sem bloquear a interface.
+- **Produção Oficial (`kModoReleaseOficial`)**: Ativa Play Integrity no Android e App Attest no iOS para gerar tokens JWT que comprovam a autenticidade do binário perante o backend Supabase.
+- **Desenvolvimento e Release Local (`kModoDesenvolvimento`)**: Em `--debug`, `--profile` ou quando compilado com `--dart-define=RELEASE_LOCAL=true`, utiliza o Provedor de Depuração (`AndroidDebugProvider` / `AppleDebugProvider`) com suporte a UUIDs cadastrados no Firebase Console, evitando erros `403` do Play Integrity quando o APK é assinado com `debug.keystore`.
 - **Degradação Offline em `getToken`**: Falhas de rede ou indisponibilidade ao renovar o token do App Check são reconhecidas via `AppLogger.isFalhaConexaoOuTimeout` e registradas como `logAviso` (breadcrumb), evitando falsos positivos de erro não-fatal no Crashlytics.
 
 ### 5. `app_logger.dart`
-Abstração centralizada de logging e relatórios de erro com **envio dual** para o `firebase_crashlytics` e o `sentry_flutter` (quando inicializado via `--dart-define=SENTRY_DSN=...` em `main.dart`).
+Abstração centralizada de logging, constantes de modo de compilação (`kReleaseLocal`, `kModoReleaseOficial`, `kModoDesenvolvimento`) e relatórios de erro com **envio dual** para o `firebase_crashlytics` e o `sentry_flutter` (quando inicializado via `--dart-define=SENTRY_DSN=...` em `main.dart`).
 O aplicativo adota a regra arquitetural estrita de que nenhum código em `lib/` (fora deste serviço) pode invocar `print` ou `debugPrint` diretamente.
 - **Fila Offline (`outbox`)**: Tanto o Crashlytics quanto o `sentry_flutter` armazenam envelopes e breadcrumbs em disco local quando o escalador está sem sinal na rocha, despachando automaticamente quando a conectividade é restabelecida.
 - **`logInfo(String mensagem)`**:

@@ -22,7 +22,7 @@ class AppCheckService {
 
   /// Inicializa e ativa o Firebase App Check com os provedores adequados para release e debug/profile.
   ///
-  /// Fora de builds de release (`!kReleaseMode`, o que inclui `--debug` e `--profile`), utiliza
+  /// Fora de builds de release oficial ([kModoDesenvolvimento], o que inclui `--debug`, `--profile` e `--dart-define=RELEASE_LOCAL=true`), utiliza
   /// o provedor de depuração para evitar falhas de atestação `403` no Play Integrity causadas
   /// pela assinatura com `debug.keystore` durante sessões locais do Flutter DevTools.
   Future<void> activate({
@@ -30,7 +30,7 @@ class AppCheckService {
     AppleAppCheckProvider? providerApple,
     bool? emModoRelease,
   }) async {
-    final isRelease = emModoRelease ?? kReleaseMode;
+    final isRelease = emModoRelease ?? kModoReleaseOficial;
     try {
       await _appCheck.activate(
         providerAndroid: providerAndroid ??

@@ -38,14 +38,14 @@ class TelemetryService {
 
   /// Inicializa e configura a coleta do Firebase Analytics.
   ///
-  /// Fora do modo de produção (`!kReleaseMode`, incluindo `--debug` e `--profile`),
+  /// Fora do modo de produção oficial ([kModoDesenvolvimento], incluindo `--debug`, `--profile` e `RELEASE_LOCAL`),
   /// a coleta analítica do Firebase é desativada (`setAnalyticsCollectionEnabled(false)`)
   /// para não registrar tráfego falso de teste/profiling nem poluir os relatórios do Looker Studio/GA4.
   Future<void> initialize({
     bool? isDebugMode,
     FirebaseAnalytics? analyticsInstance,
   }) async {
-    final isDebug = isDebugMode ?? !kReleaseMode;
+    final isDebug = isDebugMode ?? kModoDesenvolvimento;
     final analytics = analyticsInstance ?? _analytics;
     if (analytics == null) {
       AppLogger.instance.logAviso(

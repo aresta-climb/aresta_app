@@ -731,5 +731,15 @@ void main() {
         );
       },
     );
+
+    test(
+      'Constantes centralizadas de modo de compilação refletem kModoDesenvolvimento e kModoReleaseOficial',
+      () {
+        expect(kReleaseLocal, isFalse);
+        expect(kModoReleaseOficial, isFalse);
+        expect(kModoDesenvolvimento, isTrue);
+        expect(kModoDesenvolvimento, equals(!kModoReleaseOficial));
+      },
+    );
   });
 }

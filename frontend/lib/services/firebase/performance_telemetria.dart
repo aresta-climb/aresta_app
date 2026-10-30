@@ -3,7 +3,6 @@
 
 import 'dart:async';
 import 'package:firebase_performance/firebase_performance.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'app_logger.dart';
@@ -69,7 +68,7 @@ class ServicoPerformance {
   @visibleForTesting
   FirebasePerformance? debugPerformance;
 
-  bool _coletaAtiva = kReleaseMode;
+  bool _coletaAtiva = kModoReleaseOficial;
 
   /// Indica se o envio de traces para o Firebase Performance está ativo (sempre `false` em modo debug).
   bool get coletaAtiva => _coletaAtiva;
@@ -87,12 +86,12 @@ class ServicoPerformance {
       debugPerformance ??
       (AppLogger.firebaseInicializado ? FirebasePerformance.instance : null);
 
-  /// Inicializa e configura a coleta do Firebase Performance respeitando o bloqueio fora de release (`!kReleaseMode`).
+  /// Inicializa e configura a coleta do Firebase Performance respeitando o bloqueio fora de release oficial ([kModoDesenvolvimento]).
   Future<void> inicializar({
     bool? emModoDebug,
     FirebasePerformance? performanceInstance,
   }) async {
-    final modoDebug = emModoDebug ?? !kReleaseMode;
+    final modoDebug = emModoDebug ?? kModoDesenvolvimento;
     _coletaAtiva = !modoDebug;
     if (performanceInstance != null) {
       debugPerformance = performanceInstance;

@@ -9,6 +9,16 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../http/cliente_http_aresta.dart';
 
+/// Indica se a compilação em modo release foi marcada como execução local (`--dart-define=RELEASE_LOCAL=true`),
+/// permitindo testar o binário AOT/R8 de produção assinado com `debug.keystore` sem acionar o Play Integrity.
+const bool kReleaseLocal = bool.fromEnvironment('RELEASE_LOCAL');
+
+/// Indica se o aplicativo está rodando em modo de produção oficial (`kReleaseMode` ativo e fora de [kReleaseLocal]).
+const bool kModoReleaseOficial = kReleaseMode && !kReleaseLocal;
+
+/// Indica se o aplicativo está em modo de desenvolvimento ou validação local (`!kReleaseMode` ou [kReleaseLocal]).
+const bool kModoDesenvolvimento = !kModoReleaseOficial;
+
 /// Serviço para centralizar logs de erro silenciosos, falhas críticas e mensagens informativas do aplicativo.
 /// No modo de debug, as mensagens e erros são impressos no console local para facilidade de diagnóstico.
 /// Tanto em desenvolvimento quanto em produção (release):
@@ -169,7 +179,7 @@ class AppLogger {
   /// No modo debug, imprime no console local com prefixo informativo.
   /// Registra a mensagem como breadcrumb no Firebase Crashlytics e no Sentry tanto em desenvolvimento quanto em produção.
   void logInfo(String mensagem) {
-    final isDebug = debugModeOverride ?? !kReleaseMode;
+    final isDebug = debugModeOverride ?? kModoDesenvolvimento;
     if (isDebug) {
       debugPrint('ℹ️ [AppLogger] $mensagem');
     }
@@ -194,7 +204,7 @@ class AppLogger {
   /// Registra a mensagem exclusivamente como breadcrumb contextual no Firebase Crashlytics e no Sentry.
   /// Não abre issues/tickets no painel do Crashlytics ou Sentry, preservando a lista de issues para erros reais.
   void logAviso(String mensagem) {
-    final isDebug = debugModeOverride ?? !kReleaseMode;
+    final isDebug = debugModeOverride ?? kModoDesenvolvimento;
     if (isDebug) {
       debugPrint('⚠️ [AppLogger AVISO] $mensagem');
     }

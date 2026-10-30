@@ -8,7 +8,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../services/feedback/feedback_local_repository.dart';
@@ -79,7 +78,7 @@ class FeedbackOrchestrator {
   /// **1. Cleanup & Crash Recovery:** Remove arquivos antigos e destrava itens zumbis via [FeedbackLocalRepository].
   /// **2. Lock Atômico:** Busca e trava as tarefas pendentes através de renomeação atômica no sistema de arquivos.
   /// **3. Atestação de Integridade:** Obtém o token JWT dinâmico do [AppCheckService].
-  /// **4. Mock Gracioso em Debug:** Se estiver em modo de desenvolvimento (`!kReleaseMode`) e não houver token cadastrado,
+  /// **4. Mock Gracioso em Debug:** Se estiver em modo de desenvolvimento ([kModoDesenvolvimento]) e não houver token cadastrado,
   ///    imprime os dados amigavelmente no console e finaliza a tarefa sem travar o aplicativo.
   /// **5. Despacho de Rede:** Envia o payload via [FeedbackNetworkService] para a Edge Function `app-feedback`,
   ///    anexando os arquivos binários locais `indice.binarypb` e `compilado.binarypb` quando disponíveis.
@@ -100,7 +99,7 @@ class FeedbackOrchestrator {
       getSupportDirectoryOverride: getSupportDirectoryOverride,
     );
 
-    final isDebug = isDebugModeOverride ?? !kReleaseMode;
+    final isDebug = isDebugModeOverride ?? kModoDesenvolvimento;
     final edgeFunctionUrl =
         RemoteConfigService.instance.feedbackEdgeFunctionUrl;
 

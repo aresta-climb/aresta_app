@@ -1,8 +1,10 @@
-# Especificação: Download em Segundo Plano Persistente
+# download-segundo-plano-persistente Specification
+
+## Purpose
 
 Esta especificação define os requisitos de download resiliente de croquis em segundo plano com integração a notificações do sistema operacional móvel (Android e iOS).
 
-## Requisitos
+## Requirements
 
 ### Requirement: Gerenciamento Multiplataforma de Permissões de Notificação
 O sistema DEVE (MUST) solicitar ao usuário as permissões de notificação necessárias de acordo com a plataforma em execução:
