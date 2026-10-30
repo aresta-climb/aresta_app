@@ -89,6 +89,19 @@ jobs:
           flutter pub get
           flutter analyze --fatal-infos --fatal-warnings
 
+      - name: Executar Suíte Completa de Testes e Campanha do Robô Caótico (5 min)
+        working-directory: ./frontend
+        run: |
+          flutter test --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --dart-define=REPORTAR_SENTRY_CAOS=true --timeout=10m
+
+      - name: Publicar Receitas de Crash do Robô Caótico
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: receitas-crash-robo-caotico
+          path: frontend/test/caos/caminhos_regressao/*.json
+          if-no-files-found: ignore
+
       - name: Calcular Versão de Release
         id: bump
         run: |

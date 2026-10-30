@@ -237,6 +237,8 @@ class CragCard extends StatelessWidget {
                     children: [
                       Text(
                         nome,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -247,6 +249,8 @@ class CragCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         statsText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12,

@@ -274,8 +274,8 @@ class FeedbackMetadataCollector {
       // 1. Auditoria do indice.binarypb local
       final indiceFile = File('$docsPath/indice.binarypb');
       Indice? indice;
-      if (await indiceFile.exists()) {
-        final indiceBytes = await indiceFile.readAsBytes();
+      if (indiceFile.existsSync()) {
+        final indiceBytes = indiceFile.readAsBytesSync();
         indiceSha256 = sha256.convert(indiceBytes).toString();
         try {
           indice = Indice.fromBuffer(indiceBytes);
@@ -345,30 +345,30 @@ class FeedbackMetadataCollector {
         final caminhoLegado =
             File('$docsPath/downloads/$croquiId/$croquiId.binarypb');
 
-        if (await caminhoPermanente.exists()) {
+        if (caminhoPermanente.existsSync()) {
           croquiFile = caminhoPermanente;
-        } else if (await caminhoLegado.exists()) {
+        } else if (caminhoLegado.existsSync()) {
           croquiFile = caminhoLegado;
         } else {
           // Busca no temp_cache
           if (croquiSha256Esperado != null) {
             final cacheComHash = File(
                 '$tempCachePath/$croquiId/compilado.binarypb.$croquiSha256Esperado');
-            if (await cacheComHash.exists()) {
+            if (cacheComHash.existsSync()) {
               croquiFile = cacheComHash;
             }
           }
           if (croquiFile == null) {
             final cacheSemHash =
                 File('$tempCachePath/$croquiId/compilado.binarypb');
-            if (await cacheSemHash.exists()) {
+            if (cacheSemHash.existsSync()) {
               croquiFile = cacheSemHash;
             }
           }
         }
 
-        if (croquiFile != null && await croquiFile.exists()) {
-          final croquiBytes = await croquiFile.readAsBytes();
+        if (croquiFile != null && croquiFile.existsSync()) {
+          final croquiBytes = croquiFile.readAsBytesSync();
           croquiSha256Real = sha256.convert(croquiBytes).toString();
           if (croquiSha256Esperado != null &&
               croquiSha256Esperado.isNotEmpty) {
@@ -389,7 +389,7 @@ class FeedbackMetadataCollector {
             : '$docsPath/downloads';
         final thumbDownloads = File('$downloadsPath/thumbnails/$croquiId.webp');
 
-        if (await thumbDownloads.exists()) {
+        if (thumbDownloads.existsSync()) {
           thumbFile = thumbDownloads;
         } else {
           if (thumbnailSha256Esperado != null &&
@@ -397,20 +397,20 @@ class FeedbackMetadataCollector {
             final cacheComHash = File(
               '$tempCachePath/thumbnails/$croquiId.webp.$thumbnailSha256Esperado',
             );
-            if (await cacheComHash.exists()) {
+            if (cacheComHash.existsSync()) {
               thumbFile = cacheComHash;
             }
           }
           if (thumbFile == null) {
             final thumbCache = File('$tempCachePath/thumbnails/$croquiId.webp');
-            if (await thumbCache.exists()) {
+            if (thumbCache.existsSync()) {
               thumbFile = thumbCache;
             }
           }
         }
 
-        if (thumbFile != null && await thumbFile.exists()) {
-          final thumbBytes = await thumbFile.readAsBytes();
+        if (thumbFile != null && thumbFile.existsSync()) {
+          final thumbBytes = thumbFile.readAsBytesSync();
           thumbnailSha256Real = sha256.convert(thumbBytes).toString();
           if (thumbnailSha256Esperado != null &&
               thumbnailSha256Esperado.isNotEmpty) {

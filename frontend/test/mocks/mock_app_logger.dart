@@ -39,6 +39,7 @@ class MockAppLogger implements AppLogger {
     StackTrace? stackTrace,
     String? reason,
     bool fatal,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   })?
   sentryCaptureOverride;
 
@@ -58,12 +59,14 @@ class MockAppLogger implements AppLogger {
     dynamic error,
     required StackTrace stackTrace,
     bool fatal = false,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     recordedErrors.add({
       'contextMessage': contextMessage,
       'error': error,
       'stackTrace': stackTrace,
       'fatal': fatal,
+      'contextosExtras': contextosExtras,
     });
   }
 
@@ -72,12 +75,14 @@ class MockAppLogger implements AppLogger {
     String contextMessage, {
     dynamic error,
     required StackTrace stackTrace,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     logError(
       contextMessage,
       error: error,
       stackTrace: stackTrace,
       fatal: true,
+      contextosExtras: contextosExtras,
     );
   }
 

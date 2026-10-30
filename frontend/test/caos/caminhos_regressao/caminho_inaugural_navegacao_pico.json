@@ -1,0 +1,85 @@
+{
+  "seed": 1001,
+  "dataset": "toxico",
+  "assinatura_falha": "RegressaoInaugural|navegacao_abas_e_eventos_toxico",
+  "resumo_erro": "Receita inaugural de regressão validando navegação entre abas, eventos de sync/conectividade e retorno de pilha com dataset tóxico.",
+  "instrucoes_regressao": "1. Salve este JSON em frontend/test/caos/caminhos_regressao/caminho_inaugural_navegacao_pico.json\n2. Reproduza localmente com: flutter test test/caos/regressao_caminhos_test.dart\n3. Corrija a causa raiz e mantenha o arquivo JSON commitado para evitar regressão.",
+  "passos_minimos": [
+    {
+      "acao": "alternarConectividade",
+      "pumpAndSettle": false,
+      "pumpMs": 80
+    },
+    {
+      "acao": "tap",
+      "alvo": {
+        "tipo": "porTipoEIndice",
+        "tipoWidget": "NavigationDestination",
+        "ocorrencia": 1
+      },
+      "pumpAndSettle": true
+    },
+    {
+      "acao": "dispararEventoSync",
+      "pumpAndSettle": false,
+      "pumpMs": 120
+    },
+    {
+      "acao": "tap",
+      "alvo": {
+        "tipo": "porTipoEIndice",
+        "tipoWidget": "NavigationDestination",
+        "ocorrencia": 2
+      },
+      "pumpAndSettle": true
+    },
+    {
+      "acao": "voltarAppNav",
+      "pumpAndSettle": false,
+      "pumpMs": 150
+    },
+    {
+      "acao": "voltarSistema",
+      "pumpAndSettle": true
+    }
+  ],
+  "passos_originais": [
+    {
+      "acao": "alternarConectividade",
+      "pumpAndSettle": false,
+      "pumpMs": 80
+    },
+    {
+      "acao": "tap",
+      "alvo": {
+        "tipo": "porTipoEIndice",
+        "tipoWidget": "NavigationDestination",
+        "ocorrencia": 1
+      },
+      "pumpAndSettle": true
+    },
+    {
+      "acao": "dispararEventoSync",
+      "pumpAndSettle": false,
+      "pumpMs": 120
+    },
+    {
+      "acao": "tap",
+      "alvo": {
+        "tipo": "porTipoEIndice",
+        "tipoWidget": "NavigationDestination",
+        "ocorrencia": 2
+      },
+      "pumpAndSettle": true
+    },
+    {
+      "acao": "voltarAppNav",
+      "pumpAndSettle": false,
+      "pumpMs": 150
+    },
+    {
+      "acao": "voltarSistema",
+      "pumpAndSettle": true
+    }
+  ]
+}

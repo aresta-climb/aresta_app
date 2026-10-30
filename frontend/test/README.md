@@ -8,6 +8,7 @@ Esta pasta contém todos os testes automatizados do frontend do aplicativo Arest
 test/
 ├── application_managers/ Testes dos orquestradores de background, feedback e migração
 ├── architecture/         Testes arquiteturais e de convenção de código (isolamento de pacotes)
+├── caos/                 Robô Caótico de testes exploratórios determinísticos, shrinking (ddmin) e regressão JSON
 ├── constants/            Testes de validação de constantes de rede e URLs
 ├── data/                 Testes de modelos e serialização de metadados
 ├── integration/          Testes de integração de fluxos completos (download, leitura, hot reload)
@@ -27,10 +28,11 @@ Cada pasta tem seu próprio `README.md` com detalhes sobre os arquivos e os cen�
 ## Como executar
 
 ```bash
-# Rodar TODOS os testes
+# Rodar TODOS os testes (executa todos os testes e as receitas salvas de regressão; faz skip automático da campanha exploratória aleatória)
 flutter test
 
 # Rodar uma pasta específica
+flutter test test/caos/
 flutter test test/services/
 flutter test test/view/
 flutter test test/navigation/
@@ -41,6 +43,15 @@ flutter test test/widgets/
 flutter test test/utils/
 flutter test test/pages/
 
+# Rodar apenas a suíte permanente de receitas JSON de regressão de caos (< 1s)
+flutter test test/caos/regressao_caminhos_test.dart
+
+# Rodar campanha prolongada do Robô Caótico localmente (ex: 60 segundos)
+flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=60
+
+# Rodar campanha de release (5 minutos com envio de crashes inéditos ao Sentry)
+flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --dart-define=REPORTAR_SENTRY_CAOS=true --timeout=10m
+
 # Rodar um arquivo específico
 flutter test test/services/editor_croqui_test.dart
 ```
@@ -49,12 +60,13 @@ flutter test test/services/editor_croqui_test.dart
 
 | Módulo | Descrição | Status |
 |---|---|---|
+| `caos/` | Robô Caótico exploratório, shrinking por busca binária (`ddmin`), datasets normal/tóxico e regressão `.json` | 100% aprovado |
 | `services/` e `application_managers/` | Gestão de dados, sincronização atômica, Isolates, offline-first e feedback | 100% aprovado |
 | `navigation/` | Árvore de nós, prevenção de loops, Hot-Reload passivo e API `AppNav` | 100% aprovado |
 | `pages/` e `widgets/` | Interfaces de usuário, carrossel de mapas, busca global, créditos e banners | 100% aprovado |
 | `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | 100% aprovado |
 | `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | 100% aprovado |
-| **Total Geral** | **Suíte completa / 1.318 testes automatizados** | **100% aprovado** |
+| **Total Geral** | **Suíte completa de testes automatizados** | **100% aprovado** |
 
 ## Convenções
 
@@ -62,5 +74,4 @@ flutter test test/services/editor_croqui_test.dart
 - Arquivos temporários criados nos testes são armazenados em `Directory.systemTemp` e removidos no `tearDown`.
 - Testes que dependem de I/O de rede usam um mock de cliente `http` ou servidor local de teste para simular respostas.
 - Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir mocks de bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
-
 - Testes que dependem do binding do Flutter (ex: `path_provider`) são separados nos testes de widget ou integração com binding explícito.

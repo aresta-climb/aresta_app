@@ -64,6 +64,7 @@ class AppLogger {
     StackTrace? stackTrace,
     String? reason,
     bool fatal,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   })?
   sentryCaptureOverride;
 
@@ -128,18 +129,25 @@ class AppLogger {
     }
   }
 
-  /// Configura o escopo do evento Sentry com nível de severidade e contexto da falha.
+  /// Configura o escopo do evento Sentry com nível de severidade, contexto da falha
+  /// e eventuais contextos estruturados extras (como `receita_robo_caotico`).
   @visibleForTesting
   static void configurarEscopoSentry(
     Scope scope,
     String contextMessage, {
     required bool fatal,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     scope.level = fatal ? SentryLevel.fatal : SentryLevel.error;
     scope.setContexts('contexto_erro', {
       'mensagem': contextMessage,
       'fatal': fatal,
     });
+    if (contextosExtras != null) {
+      for (final entrada in contextosExtras.entries) {
+        scope.setContexts(entrada.key, entrada.value);
+      }
+    }
   }
 
   /// Registra uma exceção no Sentry (ou no override de teste configurado).
@@ -148,6 +156,7 @@ class AppLogger {
     required dynamic excecao,
     required StackTrace stackTrace,
     required bool fatal,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     if (!_podeAcessarSentry(ehBreadcrumb: false)) return;
 
@@ -158,6 +167,7 @@ class AppLogger {
           stackTrace: stackTrace,
           reason: contextMessage,
           fatal: fatal,
+          contextosExtras: contextosExtras,
         );
       } else {
         Sentry.captureException(
@@ -167,6 +177,7 @@ class AppLogger {
             scope,
             contextMessage,
             fatal: fatal,
+            contextosExtras: contextosExtras,
           ),
         );
       }
@@ -309,11 +320,13 @@ class AppLogger {
   /// [error] é a exceção original capturada.
   /// [stackTrace] é o rastreamento de pilha associado, estritamente obrigatório para diagnóstico.
   /// [fatal] indica se o erro deve ser tratado com nível de crash fatal (padrão: false).
+  /// [contextosExtras] permite acoplar mapas de diagnóstico adicionais no `Scope` do Sentry.
   void logError(
     String contextMessage, {
     dynamic error,
     required StackTrace stackTrace,
     bool fatal = false,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     // Sempre imprime no console apenas para debug local.
     final prefixo = fatal ? '💥 [AppLogger CRASH]' : '🛑 [AppLogger]';
@@ -328,6 +341,7 @@ class AppLogger {
       excecao: excecaoEfetiva,
       stackTrace: stackTrace,
       fatal: fatal,
+      contextosExtras: contextosExtras,
     );
 
     if (!_podeAcessarCrashlytics(ehLog: false)) return;
@@ -358,17 +372,20 @@ class AppLogger {
   }
 
   /// Registra um erro crítico no nível de crash (`fatal: true`) no Firebase Crashlytics e no Sentry.
-  /// Deve ser usado para falhas severas de integridade, sincronização offline ou downloads corrompidos.
+  /// Deve ser usado para falhas severas de integridade, sincronização offline, downloads corrompidos
+  /// ou falhas capturadas pelo robô caótico de testes exploratórios.
   void logCrash(
     String contextMessage, {
     dynamic error,
     required StackTrace stackTrace,
+    Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
     logError(
       contextMessage,
       error: error,
       stackTrace: stackTrace,
       fatal: true,
+      contextosExtras: contextosExtras,
     );
   }
 

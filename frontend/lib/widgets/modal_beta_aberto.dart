@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:feedback/feedback.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../application_managers/feedback/orquestrador_feedback.dart';
 import '../services/firebase/remote_config.dart';
 import '../services/firebase/telemetria.dart';
 import '../theme/cores_app.dart';
@@ -261,13 +262,31 @@ class ModalBetaAberto extends StatelessWidget {
                       temCroqui: temCroqui,
                       idCroqui: cragId,
                     );
-                    Navigator.of(context).pop();
+                    final navigator = Navigator.of(context);
+                    final contextoAtivo = navigator.context;
+                    final messenger = ScaffoldMessenger.maybeOf(contextoAtivo);
+                    final feedbackController =
+                        (onFeedbackSolicitado == null && FeedbackOrchestrator.isConfigured)
+                        ? BetterFeedback.of(contextoAtivo)
+                        : null;
+                    if (feedbackController != null) {
+                      GerenciadorFeedbackSheet.sincronizarDimensoes(contextoAtivo);
+                    }
+                    navigator.pop();
                     if (onFeedbackSolicitado != null) {
                       onFeedbackSolicitado!();
+                    } else if (!FeedbackOrchestrator.isConfigured) {
+                      messenger?.showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'Envio de feedback indisponível neste ambiente de desenvolvimento.',
+                          ),
+                          backgroundColor: Colors.red.shade800,
+                        ),
+                      );
                     } else {
-                      GerenciadorFeedbackSheet.sincronizarDimensoes(context);
-                      BetterFeedback.of(context).show((UserFeedback feedback) async {
-                        await processFeedbackSubmission(context, feedback);
+                      feedbackController?.show((UserFeedback feedback) async {
+                        await processFeedbackSubmission(contextoAtivo, feedback);
                       });
                     }
                   },

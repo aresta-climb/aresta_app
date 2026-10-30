@@ -1,10 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
+import 'package:frontend/application_managers/feedback/orquestrador_feedback.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/remote_config.dart';
 import 'package:frontend/theme/cores_app.dart';
@@ -13,6 +19,22 @@ import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import '../mocks/mock_app_logger.dart';
 import '../mocks/mock_telemetria.dart';
+
+class _FakePathProviderPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  final String caminho;
+  _FakePathProviderPlatform(this.caminho);
+
+  @override
+  Future<String?> getApplicationSupportPath() async => caminho;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => caminho;
+
+  @override
+  Future<String?> getTemporaryPath() async => caminho;
+}
 
 class FakeRemoteConfigService extends Fake implements RemoteConfigService {
   String url = 'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';
@@ -42,8 +64,20 @@ void main() {
   late MockUrlLauncherPlatform mockLauncher;
   late FakeRemoteConfigService fakeRemoteConfig;
   late MockTelemetryService mockTelemetry;
+  late Directory diretorioTemp;
 
   setUp(() {
+    PackageInfo.setMockInitialValues(
+      appName: 'Aresta Climb',
+      packageName: 'com.arestaclimb.app',
+      version: '0.6.3',
+      buildNumber: '103',
+      buildSignature: '',
+    );
+    diretorioTemp = Directory.systemTemp.createTempSync('modal_beta_test_');
+    PathProviderPlatform.instance = _FakePathProviderPlatform(diretorioTemp.path);
+    FeedbackOrchestrator.debugIsConfiguredOverride = null;
+    SubmitFeedbackUseCase.ultimoEnvioConcluido = false;
     mockTelemetry = MockTelemetryService();
     TelemetryService.instance = mockTelemetry;
     mockLogger = MockAppLogger();
@@ -52,6 +86,13 @@ void main() {
     UrlLauncherPlatform.instance = mockLauncher;
     fakeRemoteConfig = FakeRemoteConfigService();
     RemoteConfigService.instance = fakeRemoteConfig;
+  });
+
+  tearDown(() {
+    FeedbackOrchestrator.debugIsConfiguredOverride = null;
+    if (diretorioTemp.existsSync()) {
+      diretorioTemp.deleteSync(recursive: true);
+    }
   });
 
   Widget criarWidgetTeste({
@@ -147,7 +188,7 @@ void main() {
     expect(find.byType(ModalBetaAberto), findsNothing);
   });
 
-  testWidgets('Aciona o fluxo padrão do BetterFeedback ao clicar no botão de feedback sem callback customizado', (tester) async {
+  testWidgets('Aciona o fluxo padrão do BetterFeedback e conclui o envio de feedback após fechar o modal', (tester) async {
     await tester.pumpWidget(
       BetterFeedback(
         child: criarWidgetTeste(),
@@ -161,6 +202,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ModalBetaAberto), findsNothing);
+
+    final contextoHospedeiro = tester.element(find.byType(Scaffold));
+    final controladorFeedback = BetterFeedback.of(contextoHospedeiro);
+    expect(controladorFeedback.isVisible, isTrue);
+    expect(controladorFeedback.onFeedback, isNotNull);
+
+    await tester.runAsync(() async {
+      await controladorFeedback.onFeedback!(
+        UserFeedback(
+          text: 'Sugestão enviada a partir do botão Beta',
+          screenshot: Uint8List.fromList([1, 2, 3, 4]),
+          extra: {'tipo_feedback': 'app'},
+        ),
+      );
+    });
+    await tester.pumpAndSettle();
+
+    expect(controladorFeedback.isVisible, isFalse);
+    expect(SubmitFeedbackUseCase.ultimoEnvioConcluido, isTrue);
+    expect(
+      find.text('Feedback recebido! Muito obrigado por ajudar a melhorar o app.'),
+      findsOneWidget,
+    );
+    final diretorioFila = Directory('${diretorioTemp.path}/feedback_queue');
+    expect(diretorioFila.existsSync(), isTrue);
+    expect(
+      diretorioFila.listSync().where((f) => f.path.endsWith('.json')),
+      isNotEmpty,
+    );
+  });
+
+  testWidgets('Exibe SnackBar de indisponibilidade quando o serviço de feedback não está configurado', (tester) async {
+    FeedbackOrchestrator.debugIsConfiguredOverride = false;
+
+    await tester.pumpWidget(criarWidgetTeste());
+    await tester.tap(find.text('Abrir Modal'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Enviar Sugestão'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ModalBetaAberto), findsNothing);
+    expect(
+      find.text('Envio de feedback indisponível neste ambiente de desenvolvimento.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Aciona o callback de WhatsApp customizado ao clicar no botão de comunidade', (tester) async {

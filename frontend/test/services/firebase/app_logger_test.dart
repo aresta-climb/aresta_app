@@ -597,7 +597,7 @@ void main() {
         };
 
         AppLogger.instance.sentryCaptureOverride =
-            (exception, {stackTrace, reason, fatal = false}) async {
+            (exception, {stackTrace, reason, fatal = false, contextosExtras}) async {
           errosSentry.add({
             'exception': exception,
             'stackTrace': stackTrace,
@@ -649,7 +649,7 @@ void main() {
 
         AppLogger.instance.sentryBreadcrumbOverride = breadcrumbsSentry.add;
         AppLogger.instance.sentryCaptureOverride =
-            (exception, {stackTrace, reason, fatal = false}) async {
+            (exception, {stackTrace, reason, fatal = false, contextosExtras}) async {
           capturouExcecaoSentry = true;
         };
 
@@ -695,7 +695,7 @@ void main() {
         AppLogger.instance.sentryBreadcrumbOverride = (_) => throw StateError('Falha simulada Sentry breadcrumb');
         AppLogger.instance.crashlyticsOverride = (_, _, {reason, printDetails = false, fatal = false}) =>
             throw StateError('Falha simulada Crashlytics recordError');
-        AppLogger.instance.sentryCaptureOverride = (_, {stackTrace, reason, fatal = false}) =>
+        AppLogger.instance.sentryCaptureOverride = (_, {stackTrace, reason, fatal = false, contextosExtras}) =>
             throw StateError('Falha simulada Sentry capture');
 
         expect(() => AppLogger.instance.logInfo('Teste resiliência info'), returnsNormally);
@@ -739,6 +739,73 @@ void main() {
         expect(kModoReleaseOficial, isFalse);
         expect(kModoDesenvolvimento, isTrue);
         expect(kModoDesenvolvimento, equals(!kModoReleaseOficial));
+      },
+    );
+
+    test(
+      'configurarEscopoSentry, logError e logCrash anexam contextosExtras no Scope do Sentry preservando contexto_erro e breadcrumbs',
+      () async {
+        final options = SentryOptions(
+          dsn: 'https://examplePublicKey@o0.ingest.sentry.io/0',
+        );
+        final scope = Scope(options);
+        final receitaMock = <String, dynamic>{
+          'seed': 849201,
+          'dataset': 'toxico',
+          'passos_minimos': [
+            {'acao': 'tap', 'alvo': 'BackButton'},
+          ],
+        };
+
+        AppLogger.configurarEscopoSentry(
+          scope,
+          'Crash encontrado pelo Robô Caótico',
+          fatal: true,
+          contextosExtras: {'receita_robo_caotico': receitaMock},
+        );
+
+        expect(scope.level, SentryLevel.fatal);
+        expect(scope.contexts['contexto_erro'], {
+          'mensagem': 'Crash encontrado pelo Robô Caótico',
+          'fatal': true,
+        });
+        expect(scope.contexts['receita_robo_caotico'], receitaMock);
+
+        // Verifica também via logCrash / logError com sentryCaptureOverride e MockAppLogger
+        AppLogger.resetForTesting();
+        Map<String, Map<String, dynamic>>? contextosCapturados;
+        AppLogger.instance.sentryCaptureOverride = (
+          exception, {
+          stackTrace,
+          reason,
+          fatal = false,
+          contextosExtras,
+        }) async {
+          contextosCapturados = contextosExtras;
+        };
+
+        AppLogger.instance.logCrash(
+          'Crash no robô caótico',
+          error: StateError('Elemento desmontado'),
+          stackTrace: StackTrace.fromString('stack robo'),
+          contextosExtras: {'receita_robo_caotico': receitaMock},
+        );
+
+        expect(contextosCapturados, isNotNull);
+        expect(contextosCapturados!['receita_robo_caotico'], receitaMock);
+
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+        AppLogger.instance.logCrash(
+          'Crash mock com receita',
+          error: StateError('Erro'),
+          stackTrace: StackTrace.fromString('stack'),
+          contextosExtras: {'receita_robo_caotico': receitaMock},
+        );
+        expect(
+          mockLogger.recordedErrors.last['contextosExtras'],
+          {'receita_robo_caotico': receitaMock},
+        );
       },
     );
   });

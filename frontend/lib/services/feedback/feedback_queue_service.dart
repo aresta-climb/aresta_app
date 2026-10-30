@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 
 import '../../data/modelos/metadados_feedback.dart';
+import '../firebase/app_logger.dart';
 import 'compressor_imagem.dart';
 
 /// Serviço responsável por gerenciar a persistência local (fila) de feedbacks
@@ -64,7 +65,7 @@ class FeedbackQueueService {
 
     final queueDir = Directory(p.join(baseDir.path, queueDirectoryName));
     if (!queueDir.existsSync()) {
-      await queueDir.create(recursive: true);
+      queueDir.createSync(recursive: true);
     }
     return queueDir;
   }
@@ -90,7 +91,7 @@ class FeedbackQueueService {
     // 1. Comprimir e salvar a imagem (.webp ou .png)
     final resultado = await compressorImagem.comprimirParaWebp(screenshot);
     final File imageFile = File(p.join(queueDir.path, '$uuid.${resultado.extensao}'));
-    await imageFile.writeAsBytes(resultado.bytes);
+    imageFile.writeAsBytesSync(resultado.bytes);
 
     // 2. Criar e salvar o arquivo .json atômico correspondente
     final Map<String, dynamic> feedbackData = {
@@ -101,7 +102,7 @@ class FeedbackQueueService {
     };
 
     final File jsonFile = File(p.join(queueDir.path, '$uuid.json'));
-    await jsonFile.writeAsString(jsonEncode(feedbackData));
+    jsonFile.writeAsStringSync(jsonEncode(feedbackData));
 
     // 3. Agendar o envio via Workmanager com Backoff Exponencial
     if (registerOneOffTaskOverride != null) {
@@ -114,20 +115,22 @@ class FeedbackQueueService {
         backoffPolicyDelay: const Duration(minutes: 1),
       );
     } else {
-      await Workmanager().registerOneOffTask(
-        'feedback_$uuid', // uniqueName para garantir rastreabilidade
-        sendTaskName, // taskName capturada no `main.dart`
-        initialDelay: const Duration(
-          seconds: 10,
-        ), // Espera leve para o O.S. respirar
-        constraints: Constraints(
-          networkType:
-              NetworkType.connected, // Só executa se houver conexão atestada
-        ),
-        backoffPolicy: BackoffPolicy
-            .exponential, // Recuperação de falhas (1min, 2min, 4min...)
-        backoffPolicyDelay: const Duration(minutes: 1),
-      );
+      try {
+        await Workmanager().registerOneOffTask(
+          'feedback_$uuid',
+          sendTaskName,
+          initialDelay: const Duration(seconds: 10),
+          constraints: Constraints(networkType: NetworkType.connected),
+          backoffPolicy: BackoffPolicy.exponential,
+          backoffPolicyDelay: const Duration(minutes: 1),
+        );
+      } catch (e, stackTrace) {
+        AppLogger.instance.logError(
+          '[FeedbackQueueService] Falha ao agendar envio no Workmanager',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
   }
 }
