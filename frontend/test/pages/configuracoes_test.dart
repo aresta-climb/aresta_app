@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:io';
@@ -91,4 +91,37 @@ void main() {
 
     expect(find.byType(ModalBetaAberto), findsOneWidget);
   });
+
+  testWidgets(
+    'SettingsPage inclui o recuo inferior do sistema (padding.bottom) no preenchimento inferior do ListView',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [AppColors.dark],
+          ),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: const EdgeInsets.only(bottom: 48),
+              ),
+              child: child!,
+            );
+          },
+          home: SettingsPage(
+            viewModel: SettingsViewModel(
+              datasetRepo: mockRepo,
+              editorDeCroqui: mockEditor,
+            ),
+          ),
+        ),
+      );
+
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(
+        listView.padding,
+        equals(const EdgeInsets.fromLTRB(16, 16, 16, 64)),
+      );
+    },
+  );
 }

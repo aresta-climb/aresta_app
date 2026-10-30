@@ -221,8 +221,10 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
         listenable: widget.viewModel,
         builder: (context, _) {
           final picosAtuais = widget.viewModel.picosNoMapa;
+          final recuoInferior = MediaQuery.paddingOf(context).bottom;
 
           return GoogleMap(
+            padding: EdgeInsets.only(bottom: recuoInferior),
             initialCameraPosition: CameraPosition(
               target: initialTarget,
               zoom: _currentZoom,

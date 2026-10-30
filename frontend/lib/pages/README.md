@@ -16,6 +16,9 @@ Este diretório contém as telas e páginas principais de interação do usuári
 | `SetorPage` | `setor.dart` | Tela unificada de exploração de um setor com capa parallax, mapa, abas ordenadas por volume de vias, filtros reativos herdados do pico e cards com rótulos de croqui. |
 | `ViaPage` | `via.dart` | Visualização detalhada da escalada, integrando carrossel de mapas próprios e referências resolvidas via `DatasetResolver`. |
 | `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croquis vetoriais com pan/zoom fluido, foco por `uid` de POI, traçados com `pontosUids` e cartões flutuantes associados via `alvoUid`. |
+| `MapaGlobalPage` | `mapa_global.dart` | Visualização cartográfica global dos picos com marcadores por faixa de zoom e respeito ao recuo inferior do sistema (`MediaQuery.paddingOf(context).bottom`). |
+| `QRScannerPage` | `qr_scanner.dart` | Leitura de QR Codes de repositórios e sessões experimentais com pílula de instrução posicionada acima do recuo inferior do sistema (`40 + padding.bottom`). |
+| `SettingsPage` | `configuracoes.dart` | Seleção de tema, ativação do modo experimental e rodapé de versão em lista rolável com preenchimento inferior adaptado ao modo ponta a ponta (`16 + padding.bottom`). |
 | `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações práticas de acesso, melhor época para escalar e croquis gerais de aproximação. |
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
 | `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |
@@ -27,7 +30,13 @@ Este diretório contém as telas e páginas principais de interação do usuári
 
 ---
 
-## 2. Ciclo de Vida e Gestão de Recursos no Hub do Pico (`PicoDetailsPage`)
+## 2. Adequação de Ponta a Ponta (*Edge-to-Edge*) e Recuos do Sistema
+
+Com `SystemUiMode.edgeToEdge` habilitado globalmente na inicialização (`configurarExibicaoPontaAPonta`), todas as páginas que estendem o conteúdo até a borda física inferior da tela consultam `MediaQuery.paddingOf(context).bottom` (ou utilizam `SafeArea` / `BottomNavigationBar`) para garantir que controles flutuantes, avisos legais do Google Maps (`MapaGlobalPage`), pílulas de instrução (`QRScannerPage`) e rodapés de lista (`SettingsPage`) nunca fiquem sobrepostos à barra de navegação de 3 botões ou à barra de gestos no Android 15+.
+
+---
+
+## 3. Ciclo de Vida e Gestão de Recursos no Hub do Pico (`PicoDetailsPage`)
 
 A tela de detalhes do pico gerencia conexões e dados online/offline através do seu `PicoViewModel`. Para garantir alta performance e evitar vazamentos de memória e de requisições de rede:
 

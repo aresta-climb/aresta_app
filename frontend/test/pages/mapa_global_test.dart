@@ -193,5 +193,35 @@ void main() {
     final GoogleMap mapWidget = tester.widget<GoogleMap>(googleMapFinder);
     expect(mapWidget.markers.length, equals(1));
   });
-}
 
+  testWidgets(
+    'MapaGlobalPage repassa o recuo inferior do sistema (padding.bottom) ao GoogleMap',
+    (WidgetTester tester) async {
+      final mockEditor = EditorDeCroqui();
+      final mockRepo = FakeDatasetRepository(mockEditor);
+      final mockSync = FakeSyncService(mockRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: const EdgeInsets.only(bottom: 34),
+              ),
+              child: child!,
+            );
+          },
+          home: MapaGlobalPage(
+            viewModel: MapaGlobalViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        ),
+      );
+
+      final mapWidget = tester.widget<GoogleMap>(find.byType(GoogleMap));
+      expect(mapWidget.padding, equals(const EdgeInsets.only(bottom: 34)));
+    },
+  );
+}

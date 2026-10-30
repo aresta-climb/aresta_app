@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -21,6 +21,7 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final recuoInferior = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -28,7 +29,7 @@ class SettingsPage extends StatelessWidget {
           buildCommonAppBar(context, 'Configurações'),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + recuoInferior),
               children: [
                 buildThemeSelectionCard(context),
                 const SizedBox(height: 16),

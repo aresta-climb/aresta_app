@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
@@ -124,6 +125,44 @@ void main() {
       );
       configurarGestaoMemoria();
     });
+  });
+
+  group('Exibição de Ponta a Ponta (configurarExibicaoPontaAPonta)', () {
+    test(
+      'habilita SystemUiMode.edgeToEdge e define barras de status e navegação transparentes sem contraste forçado',
+      () async {
+        final chamadasPlataforma = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+              chamadasPlataforma.add(call);
+              return null;
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, null);
+        });
+
+        await configurarExibicaoPontaAPonta();
+
+        final chamadaModo = chamadasPlataforma.firstWhere(
+          (c) => c.method == 'SystemChrome.setEnabledSystemUIMode',
+        );
+        expect(chamadaModo.arguments, equals('SystemUiMode.edgeToEdge'));
+
+        final chamadaEstilo = chamadasPlataforma.firstWhere(
+          (c) => c.method == 'SystemChrome.setSystemUIOverlayStyle',
+        );
+        final argsEstilo = chamadaEstilo.arguments as Map<dynamic, dynamic>;
+        expect(argsEstilo['statusBarColor'], equals(0x00000000));
+        expect(argsEstilo['systemNavigationBarColor'], equals(0x00000000));
+        expect(
+          argsEstilo['systemNavigationBarDividerColor'],
+          equals(0x00000000),
+        );
+        expect(argsEstilo['systemStatusBarContrastEnforced'], isFalse);
+        expect(argsEstilo['systemNavigationBarContrastEnforced'], isFalse);
+      },
+    );
   });
 
   group('Migração Silenciosa de Termos Legais (migrarTermosLegais)', () {

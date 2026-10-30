@@ -40,6 +40,7 @@ export 'package:frontend/navigation/wrapper_navegacao_arvore.dart'
 export 'package:frontend/services/inicializacao_app.dart'
     show
         ResultadoResolucaoColdStart,
+        configurarExibicaoPontaAPonta,
         configurarGestaoMemoria,
         registrarOuvintesLiveReload,
         resolverDestinoInicialColdStart,
@@ -71,6 +72,7 @@ void main() async {
 
   // Executa tarefas independentes de inicialização em paralelo para acelerar o Cold Start
   await Future.wait([
+    configurarExibicaoPontaAPonta(),
     GerenciadorNotificacaoDownload.instancia.inicializar(),
     initFirebase(),
     ThemeController().loadTheme(),

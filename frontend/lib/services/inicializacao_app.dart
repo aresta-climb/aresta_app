@@ -42,6 +42,26 @@ void configurarGestaoMemoria({
       perfil.limiteCacheImagensBytes;
 }
 
+/// Ativa o modo de interface de ponta a ponta (*edge-to-edge*) na inicialização do aplicativo
+/// e configura o estilo de sobreposição das barras de status e de navegação como transparentes
+/// e sem contraste forçado pelo sistema operacional.
+///
+/// Isso garante que aparelhos com Android 8 a 14 (SDK 26 a 34) operem com o mesmo layout de
+/// janela de ponta a ponta imposto por padrão pelo Android 15+ (SDK 35+), atendendo às
+/// recomendações de experiência do usuário do Google Play (Android Vitals).
+Future<void> configurarExibicaoPontaAPonta() async {
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0x00000000),
+      systemNavigationBarColor: Color(0x00000000),
+      systemNavigationBarDividerColor: Color(0x00000000),
+      systemStatusBarContrastEnforced: false,
+      systemNavigationBarContrastEnforced: false,
+    ),
+  );
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+}
+
 /// Realiza a migração silenciosa das versões antigas dos termos legais aceitos pelo usuário.
 ///
 /// Anteriormente, a aceitação dos termos era armazenada como um booleano (`accepted_terms`).

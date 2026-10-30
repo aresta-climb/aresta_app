@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -66,7 +66,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
             ),
           ),
           Positioned(
-            bottom: 40,
+            bottom: 40 + MediaQuery.paddingOf(context).bottom,
             left: 0,
             right: 0,
             child: Center(
