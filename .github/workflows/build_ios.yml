@@ -38,13 +38,15 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Cache CocoaPods
-        uses: actions/cache@v5
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v6
         with:
-          path: frontend/ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('frontend/pubspec.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-spm-
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
