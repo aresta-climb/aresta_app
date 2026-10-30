@@ -25,6 +25,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
 import '../mocks/mock_telemetria.dart';
 import '../mocks/mock_geolocator_platform.dart';
 
@@ -637,6 +638,79 @@ void main() {
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
         expect(SubmitFeedbackUseCase.isFeedbackOpen.value, isFalse);
+      },
+    );
+
+    testWidgets(
+      'exibe ModalCroquiSemConexao quando itemSemConexaoInicial é fornecido no Cold Start e navega ao tentar novamente',
+      (tester) async {
+        final controller = TreeNavigationController();
+        repo.loadEmpty();
+
+        const itemOffline = ItemCatalogoBusca(
+          uid: 'uidSetorCold14',
+          tipo: 'setor',
+          croquiUid: 'uidCroquiCold1',
+          idSlug: 'br_mg_serra_cipo',
+          nome: 'Setor Véu da Noiva',
+          picoNome: 'Serra do Cipó',
+          cidade: 'Santana do Riacho',
+          estado: 'MG',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(extensions: const [AppColors.dark]),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+              linkInicialProcessado: Uri.parse('https://aresta.cc/uidSetorCold14'),
+              itemSemConexaoInicial: itemOffline,
+              child: const Scaffold(body: Text('Home Cold Start')),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ModalCroquiSemConexao), findsOneWidget);
+        expect(find.textContaining('Setor Véu da Noiva'), findsOneWidget);
+
+        // Carrega o croqui em memória e toca em Tentar novamente
+        final croquiCipo = Croqui()
+          ..id = 'br_mg_serra_cipo'
+          ..uid = 'uidCroquiCold1'
+          ..picos.add(
+            Pico()
+              ..nome = 'Serra do Cipó'
+              ..setoresOuGrupos.add(
+                SetorOuGrupo()
+                  ..setor = (ArquivoSetor()
+                    ..conteudo = (Setor()
+                      ..uid = 'uidSetorCold14'
+                      ..nome = 'Setor Véu da Noiva')),
+              ),
+          );
+        repo.activeDataset.value = TopoDataset(
+          picosBaixados: [
+            {
+              'id': 'br_mg_serra_cipo',
+              'data': {'pico': croquiCipo.picos.first, 'croqui': croquiCipo},
+            },
+          ],
+          picosDisponiveis: [],
+        );
+
+        await tester.tap(find.text('Tentar novamente'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ModalCroquiSemConexao), findsNothing);
+        expect(controller.currentNode, isA<SetorNode>());
+        expect(
+          (controller.currentNode as SetorNode).setorNome,
+          equals('Setor Véu da Noiva'),
+        );
       },
     );
   });

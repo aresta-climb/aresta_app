@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -830,6 +831,8 @@ void main() {
           id: picoId,
           nome: 'Pico Online Atualizado V2',
         );
+        final checksumV2 =
+            sha256.convert(croquiAtualizado.writeToBuffer()).toString();
 
         final servidorLocal = await HttpServer.bind(
           InternetAddress.loopbackIPv4,
@@ -843,7 +846,7 @@ void main() {
               ..id = picoId
               ..nome = 'Pico Online Atualizado V2'
               ..caminhoRelativo = 'croquis/$picoId/compilado_v2.binarypb'
-              ..checksumSha256Croqui = 'checksum_v2',
+              ..checksumSha256Croqui = checksumV2,
           );
 
         servidorLocal.listen((HttpRequest req) async {
@@ -899,7 +902,7 @@ void main() {
         );
         expect(
           datasetRepository.gerenciadorSessaoOnline.obterChecksum(picoId),
-          equals('checksum_v2'),
+          equals(checksumV2),
         );
       },
     );

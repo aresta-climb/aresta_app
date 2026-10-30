@@ -100,6 +100,91 @@ class ItemCatalogoBusca {
 /// em $O(1)$ e consultas relacionais para a Busca Global, serializando todas as operações
 /// de acesso a disco e SQLite para evitar race conditions.
 class RepositorioCatalogo {
+  /// Query parametrizada estática para resolução de `id_slug` por UID.
+  ///
+  /// Mantida como `static const` com placeholders `?` para garantir reutilização
+  /// do statement compilado (`sqlite3_stmt`) no cache LRU do driver SQLite nativo.
+  static const String _sqlObterIdSlugPorUid = '''
+    SELECT id_slug FROM catalogo_croquis WHERE croqui_uid = ? OR id_slug = ?
+    UNION ALL
+    SELECT c.id_slug
+    FROM catalogo_aresta a
+    JOIN catalogo_croquis c ON c.croqui_uid = a.croqui_uid
+    WHERE a.uid = ?
+    LIMIT 1
+  ''';
+
+  /// Query parametrizada estática para resolução de metadados enriquecidos por UID ou `id_slug`.
+  ///
+  /// Mantida como `static const` com placeholders `?` para garantir reutilização
+  /// do statement compilado (`sqlite3_stmt`) no cache LRU do driver SQLite nativo.
+  static const String _sqlObterItemPorUid = '''
+    SELECT
+      e.uid,
+      e.tipo,
+      e.croqui_uid,
+      c.id_slug,
+      e.nome,
+      e.escalada_grau,
+      e.escalada_tipo,
+      e.setor_uid,
+      s.nome AS setor_nome,
+      e.grupo_uid,
+      g.nome AS grupo_nome,
+      c.nome AS pico_nome,
+      c.cidade,
+      c.estado
+    FROM catalogo_aresta e
+    JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
+    LEFT JOIN catalogo_aresta s ON s.uid = e.setor_uid
+    LEFT JOIN catalogo_aresta g ON g.uid = e.grupo_uid
+    WHERE e.uid = ?
+    UNION ALL
+    SELECT
+      c.croqui_uid AS uid,
+      'pico' AS tipo,
+      c.croqui_uid,
+      c.id_slug,
+      c.nome,
+      NULL AS escalada_grau,
+      NULL AS escalada_tipo,
+      NULL AS setor_uid,
+      NULL AS setor_nome,
+      NULL AS grupo_uid,
+      NULL AS grupo_nome,
+      c.nome AS pico_nome,
+      c.cidade,
+      c.estado
+    FROM catalogo_croquis c
+    WHERE c.croqui_uid = ? OR c.id_slug = ?
+    LIMIT 1
+  ''';
+
+  /// Query estática para listagem completa das entidades pesquisáveis na Busca Global.
+  static const String _sqlListarEntidadesDetalhadas = '''
+    SELECT
+      e.uid,
+      e.tipo,
+      e.croqui_uid,
+      c.id_slug,
+      e.nome,
+      e.escalada_grau,
+      e.escalada_tipo,
+      e.setor_uid,
+      s.nome AS setor_nome,
+      e.grupo_uid,
+      g.nome AS grupo_nome,
+      c.nome AS pico_nome,
+      c.cidade,
+      c.estado
+    FROM catalogo_aresta e
+    JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
+    LEFT JOIN catalogo_aresta s ON s.uid = e.setor_uid
+    LEFT JOIN catalogo_aresta g ON g.uid = e.grupo_uid
+    WHERE e.tipo IN ('escalada', 'setor', 'grupo')
+    ORDER BY e.nome COLLATE NOCASE ASC
+  ''';
+
   final Future<String> Function() _provedorCaminhoBanco;
   final DatabaseFactory? _fabricaBanco;
   Database? _banco;
@@ -328,19 +413,32 @@ class RepositorioCatalogo {
       }
       final db = await _obterBanco();
       final linhas = await db.rawQuery(
-        '''
-        SELECT id_slug FROM catalogo_croquis WHERE croqui_uid = ? OR id_slug = ?
-        UNION ALL
-        SELECT c.id_slug
-        FROM catalogo_aresta a
-        JOIN catalogo_croquis c ON c.croqui_uid = a.croqui_uid
-        WHERE a.uid = ?
-        LIMIT 1
-        ''',
+        _sqlObterIdSlugPorUid,
         [uid, uid, uid],
       );
       if (linhas.isNotEmpty) {
         return linhas.first['id_slug'] as String?;
+      }
+      return null;
+    });
+  }
+
+  /// Resolve em $O(1)$ os metadados enriquecidos ([ItemCatalogoBusca]) de uma entidade
+  /// (`escalada`, `setor`, `grupo`, `botao` ou `pico`) a partir do seu [uid] ou `id_slug`.
+  ///
+  /// Retorna `null` caso o banco `catalogo.db` ainda não exista ou o [uid] não conste no catálogo.
+  Future<ItemCatalogoBusca?> obterItemPorUid(String uid) {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return null;
+      }
+      final db = await _obterBanco();
+      final linhas = await db.rawQuery(
+        _sqlObterItemPorUid,
+        [uid, uid, uid],
+      );
+      if (linhas.isNotEmpty) {
+        return ItemCatalogoBusca.deMapa(linhas.first);
       }
       return null;
     });
@@ -369,29 +467,7 @@ class RepositorioCatalogo {
         return const [];
       }
       final db = await _obterBanco();
-      final linhas = await db.rawQuery('''
-        SELECT
-          e.uid,
-          e.tipo,
-          e.croqui_uid,
-          c.id_slug,
-          e.nome,
-          e.escalada_grau,
-          e.escalada_tipo,
-          e.setor_uid,
-          s.nome AS setor_nome,
-          e.grupo_uid,
-          g.nome AS grupo_nome,
-          c.nome AS pico_nome,
-          c.cidade,
-          c.estado
-        FROM catalogo_aresta e
-        JOIN catalogo_croquis c ON c.croqui_uid = e.croqui_uid
-        LEFT JOIN catalogo_aresta s ON s.uid = e.setor_uid
-        LEFT JOIN catalogo_aresta g ON g.uid = e.grupo_uid
-        WHERE e.tipo IN ('escalada', 'setor', 'grupo')
-        ORDER BY e.nome COLLATE NOCASE ASC
-      ''');
+      final linhas = await db.rawQuery(_sqlListarEntidadesDetalhadas);
       return linhas.map(ItemCatalogoBusca.deMapa).toList();
     });
   }

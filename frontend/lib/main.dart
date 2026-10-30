@@ -333,6 +333,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               treeController: _resultadoColdStart?.treeController,
               linkInicialProcessado: _resultadoColdStart?.linkInicialProcessado,
               mensagemAvisoInicial: _resultadoColdStart?.mensagemAvisoInicial,
+              itemSemConexaoInicial: _resultadoColdStart?.itemSemConexaoInicial,
               key: TreeNavigationWrapper.navKey,
             ),
     );

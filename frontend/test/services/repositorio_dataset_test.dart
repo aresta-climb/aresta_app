@@ -6,7 +6,9 @@
 /// (testada indiretamente via regex local equivalente).
 library;
 
+import 'dart:async';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -28,24 +30,62 @@ import 'package:flutter/services.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/utils/construtor_caminho_trajeto.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/sync_rede.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+
+class _ThrowingPathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
+  @override
+  Future<String?> getApplicationDocumentsPath() async =>
+      throw Exception('Falha simulada no diretório de documentos');
+}
 
 class _FakeIndiceHttpClient extends http.BaseClient {
   final Indice indiceRemoto;
+  final Map<String, List<int>> croquisRemotosPorCaminho;
+  final Completer<void>? bloqueadorIndice;
+  final bool simularOffline;
   int chamadasIndice = 0;
+  final List<Uri> urlsCroquiRequisitadas = [];
 
-  _FakeIndiceHttpClient(this.indiceRemoto);
+  _FakeIndiceHttpClient(
+    this.indiceRemoto, {
+    this.croquisRemotosPorCaminho = const {},
+    this.bloqueadorIndice,
+    this.simularOffline = false,
+  });
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     if (request.url.path.endsWith('indice.binarypb')) {
       chamadasIndice++;
+      if (simularOffline) {
+        throw const SocketException('Sem conexão simulada');
+      }
+      if (bloqueadorIndice != null) {
+        await bloqueadorIndice!.future;
+      }
       return http.StreamedResponse(
         Stream.value(indiceRemoto.writeToBuffer()),
         200,
         headers: {'etag': '"etag-getcroqui"'},
       );
+    }
+    if (simularOffline) {
+      urlsCroquiRequisitadas.add(request.url);
+      throw const SocketException('Sem conexão simulada');
+    }
+    for (final entry in croquisRemotosPorCaminho.entries) {
+      if (request.url.path.endsWith(entry.key)) {
+        urlsCroquiRequisitadas.add(request.url);
+        return http.StreamedResponse(
+          Stream.value(entry.value),
+          200,
+          headers: {'etag': '"etag-croqui-cdn"'},
+        );
+      }
     }
     return http.StreamedResponse(const Stream.empty(), 404);
   }
@@ -664,14 +704,46 @@ void main() {
     });
 
     test(
-      'Etapa 4 sincroniza o índice via SyncService antes de baixar da CDN e usa o checksum atualizado, omitindo syncIndex quando indiceJaSincronizado=true',
+      'Etapa 4 baixa compilado.binarypb imediatamente em 1 RTT com ?v=<checksum_local> sem aguardar syncIndex, dispara syncIndex silencioso em background e preserva o SHA-256 real calculado em memória',
       () async {
-        const picoId = 'pico_sync_antes_cdn';
+        const picoId = 'pico_otimista_1rtt';
         const checksumAntigo = 'sha256_antigo_local';
-        const checksumNovo = 'sha256_novo_remoto';
+        final croquiRede = Croqui(id: picoId, nome: 'Croqui Fresco da CDN');
+        final bytesRede = croquiRede.writeToBuffer();
+        final hashReal = sha256.convert(bytesRede).toString();
+
+        // Servidor remoto retorna índice atualizado (bloqueado até liberarmos para provar 1 RTT sem await syncIndex)
+        // e responde imediatamente ao download de compilado.binarypb
+        final bloqueadorIndice = Completer<void>();
+        final indiceRemoto = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoId,
+              nome: 'Pico Sync CDN Atualizado',
+              caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+              checksumSha256Croqui: hashReal,
+            ),
+          ],
+        );
+        final fakeHttpClient = _FakeIndiceHttpClient(
+          indiceRemoto,
+          croquisRemotosPorCaminho: {
+            'picos/$picoId/compilado.binarypb': bytesRede,
+          },
+          bloqueadorIndice: bloqueadorIndice,
+        );
+        final clienteHttp = ClienteHttpAresta.paraTestes(fakeHttpClient);
+        final repoOtimista = DatasetRepository(
+          editorDeCroqui: editor,
+          gerenciadorSessaoOnline: repo.gerenciadorSessaoOnline,
+          servicoCroquiOnline: ServicoCroquiOnline(
+            client: clienteHttp,
+            sessaoOnline: repo.gerenciadorSessaoOnline,
+          ),
+        );
 
         // Índice local em memória está com checksum antigo
-        repoHierarquico.indiceData.value = Indice(
+        repoOtimista.indiceData.value = Indice(
           croquis: [
             ResumoCroqui(
               id: picoId,
@@ -682,50 +754,69 @@ void main() {
           ],
         );
 
-        // Servidor remoto retorna índice atualizado com checksumNovo
-        final indiceRemoto = Indice(
-          croquis: [
-            ResumoCroqui(
-              id: picoId,
-              nome: 'Pico Sync CDN Atualizado',
-              caminhoRelativo: 'picos/$picoId/compilado.binarypb',
-              checksumSha256Croqui: checksumNovo,
-            ),
-          ],
-        );
-        final fakeHttpClient = _FakeIndiceHttpClient(indiceRemoto);
         final syncServiceAtivo = SyncService(
-          datasetRepository: repoHierarquico,
-          client: ClienteHttpAresta.paraTestes(fakeHttpClient),
+          datasetRepository: repoOtimista,
+          client: clienteHttp,
+          network: SyncNetwork(clienteHttp, Duration.zero),
         );
         addTearDown(() async {
+          if (!bloqueadorIndice.isCompleted) {
+            bloqueadorIndice.complete();
+          }
           await syncServiceAtivo.tarefaMidiasEmSegundoPlano;
         });
 
-        final croquiRede = Croqui(id: picoId, nome: 'Croqui Fresco da CDN');
-        final expectedUrlNovo =
-            '${editor.activeBaseUrl}/picos/$picoId/compilado.binarypb?v=$checksumNovo';
-
-        when(
-          () => mockServicoOnline.carregarCroquiRemoto(
-            expectedUrlNovo,
-            picoId: picoId,
-            checksumSha256: checksumNovo,
-          ),
-        ).thenAnswer((_) async => croquiRede);
-
-        // 1. Chamada padrão (indiceJaSincronizado: false) deve sincronizar o índice antes do download
-        final resultado = await repoHierarquico.getCroqui(picoId);
+        // 1. getCroqui deve concluir em 1 RTT ANTES de syncIndex terminar (bloqueadorIndice ainda pendente)
+        final resultado = await repoOtimista.getCroqui(picoId).timeout(
+          const Duration(milliseconds: 500),
+          onTimeout: () {
+            if (!bloqueadorIndice.isCompleted) {
+              bloqueadorIndice.complete();
+            }
+            fail(
+              'getCroqui bloqueou aguardando syncIndex em vez de baixar compilado.binarypb em 1 RTT',
+            );
+          },
+        );
         expect(resultado?.nome, equals('Croqui Fresco da CDN'));
-        expect(fakeHttpClient.chamadasIndice, equals(1));
         expect(
-          repoHierarquico.gerenciadorSessaoOnline.obterChecksum(picoId),
-          equals(checksumNovo),
+          fakeHttpClient.urlsCroquiRequisitadas.single.queryParameters['v'],
+          equals(checksumAntigo),
+          reason:
+              'Deve usar o checksum local imediatamente na query string sem aguardar syncIndex',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(
+          fakeHttpClient.chamadasIndice,
+          equals(1),
+          reason: 'Deve ter disparado syncIndex silenciosamente em background',
+        );
+        expect(
+          repoOtimista.gerenciadorSessaoOnline.obterChecksum(picoId),
+          equals(hashReal),
+          reason:
+              'Não deve sobrescrever o SHA-256 real calculado em memória pelo ServicoCroquiOnline com o checksum antigo do índice local',
         );
 
-        // Limpa sessão online para forçar Etapa 4 novamente com indiceJaSincronizado: true
-        repoHierarquico.gerenciadorSessaoOnline.removerSessao(picoId);
-        final resultadoSemReSync = await repoHierarquico.getCroqui(
+        // Libera o syncIndex em background e aguarda a propagação
+        bloqueadorIndice.complete();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await syncServiceAtivo.tarefaMidiasEmSegundoPlano;
+        expect(
+          repoOtimista.indiceData.value?.croquis.single.checksumSha256Croqui,
+          equals(hashReal),
+        );
+
+        // 2. Com indiceJaSincronizado=true, não deve disparar novo syncIndex
+        repoOtimista.gerenciadorSessaoOnline.removerSessao(picoId);
+        final cacheRoot =
+            await repoOtimista.servicoCroquiOnline.obterDiretorioCache();
+        final dirCachePico = Directory('$cacheRoot/$picoId');
+        if (dirCachePico.existsSync()) {
+          dirCachePico.deleteSync(recursive: true);
+        }
+
+        final resultadoSemReSync = await repoOtimista.getCroqui(
           picoId,
           indiceJaSincronizado: true,
         );
@@ -733,7 +824,148 @@ void main() {
         expect(
           fakeHttpClient.chamadasIndice,
           equals(1),
-          reason: 'Não deve chamar syncIndex novamente quando indiceJaSincronizado=true',
+          reason:
+              'Não deve chamar syncIndex novamente quando indiceJaSincronizado=true',
+        );
+      },
+    );
+
+    test(
+      'Etapa 4 aguarda syncIndex como fallback quando o pico ainda não consta no índice local e baixa da CDN em seguida',
+      () async {
+        const picoId = 'pico_novo_ausente_localmente';
+        final croquiRede = Croqui(id: picoId, nome: 'Pico Descoberto no Sync');
+        final bytesRede = croquiRede.writeToBuffer();
+        final hashReal = sha256.convert(bytesRede).toString();
+
+        final indiceRemoto = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoId,
+              nome: 'Pico Descoberto no Sync',
+              caminhoRelativo: 'picos/$picoId/compilado.binarypb',
+              checksumSha256Croqui: hashReal,
+            ),
+          ],
+        );
+        final fakeHttpClient = _FakeIndiceHttpClient(
+          indiceRemoto,
+          croquisRemotosPorCaminho: {
+            'picos/$picoId/compilado.binarypb': bytesRede,
+          },
+        );
+        final clienteHttp = ClienteHttpAresta.paraTestes(fakeHttpClient);
+        final repoFallback = DatasetRepository(
+          editorDeCroqui: editor,
+          gerenciadorSessaoOnline: repo.gerenciadorSessaoOnline,
+          servicoCroquiOnline: ServicoCroquiOnline(
+            client: clienteHttp,
+            sessaoOnline: repo.gerenciadorSessaoOnline,
+          ),
+        );
+        // Índice local inicialmente vazio (não conhece picoId)
+        repoFallback.indiceData.value = Indice(croquis: []);
+
+        final syncServiceAtivo = SyncService(
+          datasetRepository: repoFallback,
+          client: clienteHttp,
+          network: SyncNetwork(clienteHttp, Duration.zero),
+        );
+        addTearDown(() async {
+          await syncServiceAtivo.tarefaMidiasEmSegundoPlano;
+        });
+
+        final resultado = await repoFallback.getCroqui(picoId);
+
+        expect(resultado?.nome, equals('Pico Descoberto no Sync'));
+        expect(fakeHttpClient.chamadasIndice, equals(1));
+        expect(
+          fakeHttpClient.urlsCroquiRequisitadas.single.queryParameters['v'],
+          equals(hashReal),
+        );
+      },
+    );
+
+    test(
+      'Etapa 4 não dispara syncIndex em background quando carregarCroquiRemoto falha offline e faz curto-circuito quando syncIndex de fallback resulta em SyncStatus.offline',
+      () async {
+        const picoPresenteNoIndice = 'pico_offline_sem_sync_bg';
+        const picoAusenteEmMemoria = 'pico_ausente_mem_offline';
+
+        // Persistimos no disco um indice.binarypb contendo picoAusenteEmMemoria,
+        // mas deixamos indiceData em memória sem ele para exercitar o fallback de syncIndex offline.
+        final indiceNoDisco = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoAusenteEmMemoria,
+              nome: 'Pico No Disco',
+              caminhoRelativo: 'picos/$picoAusenteEmMemoria/compilado.binarypb',
+              checksumSha256Croqui: 'sha_disco_1',
+            ),
+          ],
+        );
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(indiceNoDisco.writeToBuffer());
+
+        final fakeOfflineHttp = _FakeIndiceHttpClient(
+          Indice(),
+          simularOffline: true,
+        );
+        final clienteHttp = ClienteHttpAresta.paraTestes(fakeOfflineHttp);
+        final repoOffline = DatasetRepository(
+          editorDeCroqui: editor,
+          gerenciadorSessaoOnline: repo.gerenciadorSessaoOnline,
+          servicoCroquiOnline: ServicoCroquiOnline(
+            client: clienteHttp,
+            sessaoOnline: repo.gerenciadorSessaoOnline,
+          ),
+        );
+        repoOffline.indiceData.value = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: picoPresenteNoIndice,
+              nome: 'Pico Presente No Indice',
+              caminhoRelativo: 'picos/$picoPresenteNoIndice/compilado.binarypb',
+              checksumSha256Croqui: 'sha_local_1',
+            ),
+          ],
+        );
+
+        final syncServiceAtivo = SyncService(
+          datasetRepository: repoOffline,
+          client: clienteHttp,
+          network: SyncNetwork(clienteHttp, Duration.zero),
+        );
+        addTearDown(() async {
+          await syncServiceAtivo.tarefaMidiasEmSegundoPlano;
+        });
+
+        // Caso A: pico já consta no índice local em memória, mas carregarCroquiRemoto falha offline ->
+        // NÃO deve disparar syncIndex em background!
+        final resPresente = await repoOffline.getCroqui(picoPresenteNoIndice);
+        expect(resPresente, isNull);
+        final chamadasCroquiAposCasoA =
+            fakeOfflineHttp.urlsCroquiRequisitadas.length;
+        expect(chamadasCroquiAposCasoA, greaterThan(0));
+        expect(
+          fakeOfflineHttp.chamadasIndice,
+          equals(0),
+          reason:
+              'Quando carregarCroquiRemoto falha offline, não deve disparar syncIndex em background',
+        );
+
+        // Caso B: pico não consta no índice em memória -> chama syncIndex de fallback ->
+        // syncIndex falha com SyncStatus.offline (e carrega indiceNoDisco) ->
+        // getCroqui deve fazer curto-circuito imediato sem chamar carregarCroquiRemoto!
+        final resAusente = await repoOffline.getCroqui(picoAusenteEmMemoria);
+        expect(resAusente, isNull);
+        expect(syncServiceAtivo.syncStatus.value, equals(SyncStatus.offline));
+        expect(
+          fakeOfflineHttp.urlsCroquiRequisitadas.length,
+          equals(chamadasCroquiAposCasoA),
+          reason:
+              'Quando syncIndex de fallback resulta em SyncStatus.offline, não deve tentar carregarCroquiRemoto',
         );
       },
     );
@@ -1473,6 +1705,34 @@ void main() {
             reason: 'loadIndiceToMemory deve reaproveitar Croqui em memória quando o checksum não mudou',
           );
 
+          // 1b. Fase 1 de syncIndex com checksum novo deve preservar Croqui em memória para evitar flash de loading antes da Fase 2
+          final indiceComChecksumNovo = Indice(
+            croquis: [
+              ResumoCroqui(
+                id: 'pico_1',
+                nome: 'Pico 1',
+                caminhoRelativo: 'picos/pico_1/compilado.binarypb',
+                checksumSha256Croqui: 'sha_pico_1_v2_novo',
+              ),
+              ResumoCroqui(
+                id: 'pico_2',
+                nome: 'Pico 2',
+                caminhoRelativo: 'picos/pico_2/compilado.binarypb',
+                checksumSha256Croqui: 'sha_pico_2_v1',
+              ),
+            ],
+          );
+          await repo.loadIndiceToMemory(indiceComChecksumNovo);
+          final resumoPico1Fase1 = repo.activeDataset.value!.picosBaixados
+              .firstWhere((p) => p.id == 'pico_1');
+          expect(
+            identical(resumoPico1Fase1.croqui, croqui1EmMemoria),
+            isTrue,
+            reason:
+                'loadIndiceToMemory deve preservar o Croqui em memória mesmo quando o checksum do índice muda na Fase 1 do syncIndex',
+          );
+          expect(resumoPico1Fase1.checksum, equals('sha_pico_1_v2_novo'));
+
           // 2. Concluir download de pico_2 deve reaproveitar a instância de pico_1 em memória
           File('${dirPico2.path}/compilado.binarypb')
               .writeAsBytesSync(croqui2Disco.writeToBuffer());
@@ -1566,6 +1826,184 @@ void main() {
             repoComMockOnline.obterUltimaOrigemResolucao('pico_cdn'),
             equals('cdn_online'),
           );
+        },
+      );
+
+      test(
+        'cobre casos de borda: DatasetRepository.instance, callbacks padrão, obterSha256DaMidia em picosBaixados, invalidarCroquisObsoletos, updatePicoMetadata e erros de I/O',
+        () async {
+          sqfliteFfiInit();
+          databaseFactory = databaseFactoryFfi;
+
+          // 1. DatasetRepository.instance e provedorCaminhoBanco padrão
+          expect(DatasetRepository.instance, same(repo));
+          final versaoCat = await repo.repositorioCatalogo.obterVersaoCatalogo();
+          expect(versaoCat, isEmpty);
+          await repo.repositorioCatalogo.fechar();
+
+          // 2. Callbacks padrão de servicoCroquiOnline (verificarPicoBaixado e verificarLiveReloadAtivo)
+          repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+            'pico_poll',
+            Croqui(id: 'pico_poll'),
+          );
+          await repo.servicoCroquiOnline.verificarAtualizacaoEtag(
+            'pico_poll',
+            'https://serving.arestaclimb.com/v4/picos/pico_poll/compilado.binarypb',
+          );
+          repo.gerenciadorSessaoOnline.removerSessao('pico_poll');
+
+          // 3. indexarMidiasDoCroqui com barra inicial '/' e busca pelo nome do arquivo
+          final croquiBarra = Croqui(
+            id: 'pico_barra',
+            nome: 'Pico Barra',
+            picos: [Pico(nome: 'Pico Barra')],
+            arquivosExternos: [
+              ArquivoExterno(
+                caminho: '/subpasta/foto_barra.webp',
+                checksumSha256: 'hash_barra_1',
+              ),
+            ],
+          );
+          repo.indexarMidiasDoCroqui('pico_barra', croquiBarra);
+          expect(
+            repo.obterSha256DaMidia('pico_barra', 'outra/foto_barra.webp'),
+            equals('hash_barra_1'),
+          );
+
+          // 4. obterSha256DaMidia via fallback de picosBaixados e getCroqui via baixadoEmMemoria
+          final croquiBaixadoMem = Croqui(
+            id: 'pico_baixado_mem',
+            nome: 'Pico Baixado Mem',
+            picos: [Pico(nome: 'Pico Baixado Mem')],
+            arquivosExternos: [
+              ArquivoExterno(
+                caminho: 'imagens/setor_mem.webp',
+                checksumSha256: 'hash_setor_mem',
+              ),
+            ],
+          );
+          repo.activeDataset.value = ConjuntoDadosCroqui(
+            metadadosDisponiveis: const [],
+            croquisBaixados: [croquiBaixadoMem],
+            picosDisponiveis: const [],
+            picosBaixados: [
+              ResumoPico(
+                id: 'pico_baixado_mem',
+                nome: 'Pico Baixado Mem',
+                local: 'MG',
+                isDownloaded: true,
+                croqui: croquiBaixadoMem,
+              ),
+            ],
+          );
+          expect(
+            repo.obterSha256DaMidia('pico_baixado_mem', 'imagens/setor_mem.webp'),
+            equals('hash_setor_mem'),
+          );
+          final resMemBaixado = await repo.getCroqui('pico_baixado_mem');
+          expect(resMemBaixado?.nome, equals('Pico Baixado Mem'));
+          expect(
+            repo.obterUltimaOrigemResolucao('pico_baixado_mem'),
+            equals('offline'),
+          );
+
+          // 5. getCroqui com arquivo corrompido no temp_cache registra erro e retorna null
+          repo.indiceData.value = Indice(
+            croquis: [
+              ResumoCroqui(
+                id: 'pico_cache_corrompido',
+                nome: 'Pico Cache Corrompido',
+                caminhoRelativo: '',
+                checksumSha256Croqui: 'hash_corrompido',
+              ),
+            ],
+          );
+          final cacheRoot = await repo.servicoCroquiOnline.obterDiretorioCache();
+          final dirCorrompido =
+              Directory('$cacheRoot/pico_cache_corrompido')
+                ..createSync(recursive: true);
+          File('${dirCorrompido.path}/compilado.binarypb.hash_corrompido')
+              .writeAsBytesSync([255, 255, 255, 255]);
+          final resCorrompido = await repo.getCroqui('pico_cache_corrompido');
+          expect(resCorrompido, isNull);
+
+          // 6. invalidarCroquisObsoletos: pico removido do novoIndice e comparação via oldIndice sem checksum em memória
+          repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+            'pico_removido',
+            Croqui(id: 'pico_removido'),
+          );
+          repo.gerenciadorSessaoOnline.registrarCroquiOnline(
+            'pico_sem_hash_mem',
+            Croqui(id: 'pico_sem_hash_mem'),
+          );
+          repo.invalidarCroquisObsoletos(
+            oldIndice: Indice(
+              croquis: [
+                ResumoCroqui(
+                  id: 'pico_sem_hash_mem',
+                  checksumSha256Croqui: 'hash_antigo',
+                ),
+              ],
+            ),
+            novoIndice: Indice(
+              croquis: [
+                ResumoCroqui(
+                  id: 'pico_sem_hash_mem',
+                  checksumSha256Croqui: 'hash_novo',
+                ),
+              ],
+            ),
+          );
+          expect(
+            repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_removido'),
+            isNull,
+          );
+          expect(
+            repo.gerenciadorSessaoOnline.obterCroquiOnline('pico_sem_hash_mem'),
+            isNull,
+          );
+
+          // 7. updatePicoMetadata atualiza activeDataset e sessão online
+          await repo.updatePicoMetadata(
+            'pico_update_meta',
+            const ResumoPico(
+              id: 'pico_update_meta',
+              nome: 'Pico Update Meta',
+              local: 'MG',
+              isDownloaded: false,
+            ),
+            tempDir.path,
+            parsedPico: Croqui(
+              id: 'pico_update_meta',
+              nome: 'Pico Update Meta',
+              picos: [Pico(nome: 'Pico Update Meta')],
+            ),
+          );
+          expect(
+            repo.gerenciadorSessaoOnline
+                .obterCroquiOnline('pico_update_meta')
+                ?.nome,
+            equals('Pico Update Meta'),
+          );
+          expect(
+            repo.activeDataset.value!.picosBaixados
+                .any((p) => p.id == 'pico_update_meta'),
+            isTrue,
+          );
+
+          // 8. Tratamento de erro em init (índice corrompido) e em loadIndiceToMemory (falha no PathProvider)
+          final indiceFile = File(editor.indicePath(tempDir.path))
+            ..createSync(recursive: true)
+            ..writeAsBytesSync([255, 255, 255, 255]);
+          expect(indiceFile.existsSync(), isTrue);
+          await repo.init();
+          expect(repo.activeDataset.value?.picosDisponiveis, isEmpty);
+
+          repo.activeDataset.value = null;
+          PathProviderPlatform.instance = _ThrowingPathProviderPlatform();
+          await repo.loadIndiceToMemory(Indice());
+          expect(repo.activeDataset.value?.picosDisponiveis, isEmpty);
+          PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
         },
       );
     });

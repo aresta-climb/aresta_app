@@ -180,10 +180,14 @@ class ResultadoResolucaoColdStart {
   /// Mensagem de aviso gerada caso o link inicial aponte para um UID não encontrado.
   final String? mensagemAvisoInicial;
 
+  /// Metadados da entidade/croqui quando o link inicial aponta para um croqui não baixado e sem conexão.
+  final ItemCatalogoBusca? itemSemConexaoInicial;
+
   const ResultadoResolucaoColdStart({
     required this.treeController,
     this.linkInicialProcessado,
     this.mensagemAvisoInicial,
+    this.itemSemConexaoInicial,
   });
 }
 
@@ -223,6 +227,7 @@ Future<ResultadoResolucaoColdStart> resolverDestinoInicialColdStart(
       }
 
       String? mensagemAviso;
+      ItemCatalogoBusca? itemSemConexao;
       final navigator = DeepLinkNavigatorService(
         datasetRepo: datasetRepo,
         treeController: controller,
@@ -231,6 +236,7 @@ Future<ResultadoResolucaoColdStart> resolverDestinoInicialColdStart(
           syncService: syncService,
         ),
         onMensagemAviso: (msg) => mensagemAviso = msg,
+        onCroquiSemConexao: (item, _) => itemSemConexao = item,
       );
 
       await navigator.processarLink(initialUri, tipoStart: 'cold_start');
@@ -239,6 +245,7 @@ Future<ResultadoResolucaoColdStart> resolverDestinoInicialColdStart(
         treeController: controller,
         linkInicialProcessado: initialUri,
         mensagemAvisoInicial: mensagemAviso,
+        itemSemConexaoInicial: itemSemConexao,
       );
     }().timeout(timeoutResolucao);
   } on TimeoutException {

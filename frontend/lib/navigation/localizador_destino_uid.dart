@@ -36,6 +36,31 @@ class DestinoUidLocalizado {
       'DestinoUidLocalizado(idCroqui: $idCroqui, tipo: $tipoDestino, nome: $nomeEntidade)';
 }
 
+/// Resultado estruturado do diagnóstico e localização de um [uid] universal.
+///
+/// Distingue três estados:
+/// - [encontrado] (`destino != null`): O croqui está disponível (memória, `/downloads`, `/temp_cache` ou baixado da CDN) e o nó de navegação está pronto.
+/// - [bloqueadoSemConexao] (`destino == null && itemSemConexao != null`): O [uid] foi identificado no `catalogo.db` ou índice local, mas o croqui não está disponível localmente e não pôde ser baixado por falta de conexão.
+/// - Inexistente (`destino == null && itemSemConexao == null`): O [uid] não foi encontrado no acervo local nem remoto.
+class ResultadoBuscaDestinoUid {
+  /// Destino resolvido com árvore de navegação pronta para ativação.
+  final DestinoUidLocalizado? destino;
+
+  /// Metadados da entidade e do croqui hospedeiro obtidos do catálogo/índice local quando o croqui não pôde ser carregado por falta de conexão.
+  final ItemCatalogoBusca? itemSemConexao;
+
+  const ResultadoBuscaDestinoUid({
+    this.destino,
+    this.itemSemConexao,
+  });
+
+  /// Indica se o destino foi localizado e carregado com sucesso.
+  bool get encontrado => destino != null;
+
+  /// Indica se a entidade foi identificada no catálogo/índice local, mas o croqui não está disponível offline nem pôde ser baixado.
+  bool get bloqueadoSemConexao => destino == null && itemSemConexao != null;
+}
+
 /// Localizador independente de entidades de escalada a partir de identificadores estáveis NanoID 14c.
 ///
 /// Implementa a estratégia em cascata definida no documento oficial de arquitetura:
@@ -52,16 +77,29 @@ class LocalizadorDestinoUid {
     this.syncService,
   });
 
-  Future<String?> _obterIdSlugLocal(String uid) async {
+  Future<ItemCatalogoBusca?> _obterItemLocal(String uid) async {
+    final itemCatalogo = await datasetRepo.repositorioCatalogo.obterItemPorUid(
+      uid,
+    );
+    if (itemCatalogo != null) {
+      return itemCatalogo;
+    }
     final active = datasetRepo.activeDataset.value;
     if (active != null) {
       for (final meta in active.metadadosDisponiveis) {
         if (meta.croquiUid == uid || meta.id == uid) {
-          return meta.id;
+          return ItemCatalogoBusca(
+            uid: uid,
+            tipo: 'pico',
+            croquiUid: meta.croquiUid,
+            idSlug: meta.id,
+            nome: meta.nome,
+            picoNome: meta.nome,
+          );
         }
       }
     }
-    return datasetRepo.repositorioCatalogo.obterIdSlugPorUid(uid);
+    return null;
   }
 
   /// Localiza o destino de um [uid] universal, retornando [DestinoUidLocalizado] ou `null` se não encontrado.
@@ -70,6 +108,17 @@ class LocalizadorDestinoUid {
   /// [MapasCarrosselNode] caso a entidade possua mapas válidos, ou realiza fallback gracioso
   /// para o nó principal caso contrário.
   Future<DestinoUidLocalizado?> localizar(
+    String uid, {
+    bool abrirMapa = false,
+  }) async {
+    final resultado = await localizarComDiagnostico(uid, abrirMapa: abrirMapa);
+    return resultado.destino;
+  }
+
+  /// Localiza o destino de um [uid] universal ou retorna o diagnóstico enriquecido
+  /// ([ResultadoBuscaDestinoUid.itemSemConexao]) quando a entidade consta no catálogo/índice
+  /// local mas o croqui não está disponível offline nem pôde ser baixado por falta de rede.
+  Future<ResultadoBuscaDestinoUid> localizarComDiagnostico(
     String uid, {
     bool abrirMapa = false,
   }) async {
@@ -86,7 +135,9 @@ class LocalizadorDestinoUid {
             uid: uid,
             abrirMapa: abrirMapa,
           );
-          if (destino != null) return destino;
+          if (destino != null) {
+            return ResultadoBuscaDestinoUid(destino: destino);
+          }
         }
       }
     }
@@ -104,45 +155,54 @@ class LocalizadorDestinoUid {
           uid: uid,
           abrirMapa: abrirMapa,
         );
-        if (destino != null) return destino;
-      }
-    }
-
-    // 3. Descobre o idSlug no índice de metadados em memória ou no catálogo SQLite (catalogo.db)
-    //    e carrega o croqui sob demanda na sessão online antes de retornar o nó de navegação
-    var idSlug = await _obterIdSlugLocal(uid);
-    var indiceJaSincronizado = false;
-
-    if (idSlug == null) {
-      final sync = syncService ?? SyncService.instance;
-      if (sync != null &&
-          (syncService != null || identical(sync.datasetRepository, datasetRepo))) {
-        await sync.syncIndex();
-        indiceJaSincronizado = true;
-        idSlug = await _obterIdSlugLocal(uid);
-      }
-    }
-
-    if (idSlug != null) {
-      final croqui = await datasetRepo.getCroqui(
-        idSlug,
-        indiceJaSincronizado: indiceJaSincronizado,
-      );
-      if (croqui != null) {
-        for (final pico in croqui.picos) {
-          final destino = _localizarEmPicoECroqui(
-            idCroqui: idSlug,
-            pico: pico,
-            croqui: croqui,
-            uid: uid,
-            abrirMapa: abrirMapa,
-          );
-          if (destino != null) return destino;
+        if (destino != null) {
+          return ResultadoBuscaDestinoUid(destino: destino);
         }
       }
     }
 
-    return null;
+    // 3. Descobre os metadados locais no catálogo SQLite (catalogo.db) ou no índice em memória
+    //    e carrega o croqui sob demanda (incluindo verificação de /downloads e /temp_cache)
+    var itemLocal = await _obterItemLocal(uid);
+    var indiceJaSincronizado = false;
+
+    if (itemLocal == null) {
+      final sync = syncService ?? SyncService.instance;
+      if (sync != null &&
+          (syncService != null || identical(sync.datasetRepository, datasetRepo))) {
+        await sync.syncIndex();
+        if (sync.syncStatus.value == SyncStatus.offline) {
+          return const ResultadoBuscaDestinoUid();
+        }
+        indiceJaSincronizado = true;
+        itemLocal = await _obterItemLocal(uid);
+      }
+    }
+
+    if (itemLocal != null) {
+      final idSlug = itemLocal.idSlug;
+      final croqui = await datasetRepo.getCroqui(
+        idSlug,
+        indiceJaSincronizado: indiceJaSincronizado,
+      );
+      if (croqui == null) {
+        return ResultadoBuscaDestinoUid(itemSemConexao: itemLocal);
+      }
+      for (final pico in croqui.picos) {
+        final destino = _localizarEmPicoECroqui(
+          idCroqui: idSlug,
+          pico: pico,
+          croqui: croqui,
+          uid: uid,
+          abrirMapa: abrirMapa,
+        );
+        if (destino != null) {
+          return ResultadoBuscaDestinoUid(destino: destino);
+        }
+      }
+    }
+
+    return const ResultadoBuscaDestinoUid();
   }
 
   static bool _mapaValido(Mapa m) =>

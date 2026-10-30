@@ -1,19 +1,42 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import '../mocks/mock_telemetria.dart';
+
+class _FakeUrlLauncher extends UrlLauncherPlatform {
+  String? ultimaUrl;
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    ultimaUrl = url;
+    return true;
+  }
+}
 
 class _FakePathProvider extends PathProviderPlatform {
   final String caminhoBase;
@@ -52,8 +75,8 @@ void main() {
   const String uidViaNoSetor = 'v1siJek3FiG3aB';
   const String uidViaNoGrupoSetor = 'v2siJek3FiG3aB';
 
-  setUp(() async {
-    dirTemp = await Directory.systemTemp.createTemp('servico_deep_link_test_');
+  setUp(() {
+    dirTemp = Directory.systemTemp.createTempSync('servico_deep_link_test_');
     PathProviderPlatform.instance = _FakePathProvider(dirTemp.path);
 
     mockTelemetry = MockTelemetryService();
@@ -61,7 +84,7 @@ void main() {
     editorDeCroqui = EditorDeCroqui();
     repositorioCatalogo = RepositorioCatalogo(
       provedorCaminhoBanco: () async => '${dirTemp.path}/catalogo.db',
-      fabricaBanco: databaseFactoryFfi,
+      fabricaBanco: databaseFactoryFfiNoIsolate,
     );
     datasetRepo = DatasetRepository(
       editorDeCroqui: editorDeCroqui,
@@ -134,9 +157,12 @@ void main() {
   });
 
   tearDown(() async {
+    SyncService.baseUrlOverride = null;
     await repositorioCatalogo.fechar();
     if (dirTemp.existsSync()) {
-      await dirTemp.delete(recursive: true);
+      try {
+        dirTemp.deleteSync(recursive: true);
+      } catch (_) {}
     }
   });
 
@@ -322,6 +348,178 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('z9zzZzZzZzZzZz'), findsOneWidget);
     });
+
+    test('aciona onCroquiSemConexao e registra telemetria croqui_offline_sem_conexao quando o croqui do UID não está baixado e o dispositivo está offline', () async {
+      await repositorioCatalogo.aplicarDelta(
+        const RespostaSyncCatalogo(
+          acao: 'apply_delta',
+          versaoDestino: 'v_itacoa',
+          upserts: UpsertsSyncCatalogo(
+            croquis: [
+              CatalogoCroqui(
+                croquiUid: 'uidItacoa99',
+                idSlug: 'br_rj_itacoa',
+                nome: 'Costão de Itacoatiara',
+                cidade: 'Niterói',
+                estado: 'RJ',
+              ),
+            ],
+            entidades: [
+              CatalogoEntidade(
+                uid: 'uidViaChamine1',
+                tipo: 'escalada',
+                croquiUid: 'uidItacoa99',
+                nome: 'Chaminé Stop',
+                escaladaGrau: '4º V',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final socketFechado = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      final portaFechada = socketFechado.port;
+      await socketFechado.close();
+      SyncService.baseUrlOverride = 'http://127.0.0.1:$portaFechada';
+
+      ItemCatalogoBusca? itemRecebido;
+      String? avisoInesperado;
+      service.onMensagemAviso = (msg) => avisoInesperado = msg;
+      service.onCroquiSemConexao = (item, tentarNovamente) {
+        itemRecebido = item;
+      };
+
+      ServicoPerformance.resetarParaTestes();
+      ServicoPerformance.instancia.iniciarCronometroColdStart();
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+
+      final sucesso = await service.processarLink(
+        'https://aresta.cc/uidViaChamine1',
+        tipoStart: 'cold_start',
+      );
+
+      expect(sucesso, isFalse);
+      expect(avisoInesperado, isNull);
+      expect(itemRecebido, isNotNull);
+      expect(itemRecebido!.nome, equals('Chaminé Stop'));
+      expect(itemRecebido!.picoNome, equals('Costão de Itacoatiara'));
+
+      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], equals('br_rj_itacoa'));
+      expect(params['destino'], equals('via'));
+      expect(params['sucesso'], equals('false'));
+      expect(params['motivo_erro'], equals('croqui_offline_sem_conexao'));
+    });
+
+    testWidgets('exibe ModalCroquiSemConexao quando context montado é fornecido e navega ao reconectar e tocar em Tentar novamente', (tester) async {
+      await tester.runAsync(() async {
+        await repositorioCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_itacoa',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'uidItacoa99',
+                  idSlug: 'br_rj_itacoa',
+                  nome: 'Costão de Itacoatiara',
+                  cidade: 'Niterói',
+                  estado: 'RJ',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'uidViaChamine1',
+                  tipo: 'escalada',
+                  croquiUid: 'uidItacoa99',
+                  nome: 'Chaminé Stop',
+                  escaladaGrau: '4º V',
+                ),
+              ],
+            ),
+          ),
+        );
+      });
+
+      BuildContext? contextoCapturado;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) {
+                contextoCapturado = ctx;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+
+      late Future<bool> futuroProcessamento;
+      await tester.runAsync(() async {
+        futuroProcessamento = service.processarLink(
+          'https://aresta.cc/uidViaChamine1',
+          context: contextoCapturado,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ModalCroquiSemConexao), findsOneWidget);
+      expect(find.textContaining('Chaminé Stop'), findsOneWidget);
+      expect(
+        find.text('Croqui Costão de Itacoatiara • Niterói, RJ'),
+        findsOneWidget,
+      );
+
+      // Agora disponibiliza o croqui em memória (simulando que a conexão voltou) e toca em Tentar novamente
+      final croquiItacoa = Croqui()
+        ..id = 'br_rj_itacoa'
+        ..uid = 'uidItacoa99'
+        ..picos.add(
+          Pico()
+            ..nome = 'Costão de Itacoatiara'
+            ..setoresOuGrupos.add(
+              SetorOuGrupo()
+                ..setor = (ArquivoSetor()
+                  ..conteudo = (Setor()
+                    ..uid = 'uidSetorItacoa1'
+                    ..nome = 'Face Sul'
+                    ..escaladas.add(
+                      Escalada()
+                        ..uid = 'uidViaChamine1'
+                        ..viaEsportiva =
+                            (ViaEsportiva()..nome = 'Chaminé Stop'),
+                    ))),
+            ),
+        );
+      datasetRepo.activeDataset.value = TopoDataset(
+        picosBaixados: [
+          {
+            'id': 'br_rj_itacoa',
+            'data': {'pico': croquiItacoa.picos.first, 'croqui': croquiItacoa},
+          },
+        ],
+        picosDisponiveis: [],
+      );
+
+      await tester.tap(find.text('Tentar novamente'));
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(() async {
+        expect(await futuroProcessamento, isFalse);
+        await repositorioCatalogo.fechar();
+      });
+      expect(find.byType(ModalCroquiSemConexao), findsNothing);
+      expect(treeController.currentNode, isA<ViaNode>());
+      expect(
+        (treeController.currentNode as ViaNode).escaladaNome,
+        equals('Chaminé Stop'),
+      );
+    });
   });
 
   group('DeepLinkNavigatorService - Links de Prévia e Pull Request (previa.arestaclimb.com)', () {
@@ -368,6 +566,140 @@ void main() {
       expect(
         urlExternaAberta?.toString(),
         equals('https://previa.arestaclimb.com/resumo/pr00-0042'),
+      );
+    });
+
+    test('usa launchUrl padrão para abrir resumo de PR e navega para BrowseNode quando a prévia tem múltiplos croquis ou falha quando retorna null', () async {
+      final fakeLauncher = _FakeUrlLauncher();
+      UrlLauncherPlatform.instance = fakeLauncher;
+
+      final resResumo = await service.processarLink(
+        Uri.parse('https://previa.arestaclimb.com/resumo/pr00-0099'),
+      );
+      expect(resResumo, isFalse);
+      expect(
+        fakeLauncher.ultimaUrl,
+        equals('https://previa.arestaclimb.com/resumo/pr00-0099'),
+      );
+
+      // Múltiplos croquis (retorna string vazia -> BrowseNode)
+      final servicoMultiplos = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        conectorSessaoPrevia: (_) async => '',
+      );
+      expect(
+        await servicoMultiplos.processarLink(
+          'https://previa.arestaclimb.com/pr00-0042',
+        ),
+        isTrue,
+      );
+      expect(treeController.currentNode, isA<BrowseNode>());
+
+      // Falha na sessão de prévia (retorna null -> onMensagemAviso)
+      String? msgErroPrevia;
+      final servicoFalha = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        conectorSessaoPrevia: (_) async => null,
+        onMensagemAviso: (m) => msgErroPrevia = m,
+      );
+      expect(
+        await servicoFalha.processarLink(
+          'https://previa.arestaclimb.com/pr00-0042',
+        ),
+        isFalse,
+      );
+      expect(msgErroPrevia, contains('pr00-0042'));
+    });
+
+    test('executa _conectarSessaoPreviaPadrao com cliente HTTP injetado para prévia de croqui único, múltiplos e erro HTTP', () async {
+      final indiceUnico = Indice()
+        ..croquis.add(
+          ResumoCroqui()
+            ..id = 'br_mg_igarape_pedra_grande'
+            ..nome = 'Pedra Grande',
+        );
+      final clienteUnico = ClienteHttpAresta.paraTestes(
+        MockClient((req) async {
+          if (req.url.path.endsWith('/info')) {
+            return http.Response(jsonEncode({'localUrl': ''}), 200);
+          }
+          if (req.url.path.endsWith('/indice.binarypb')) {
+            return http.Response.bytes(indiceUnico.writeToBuffer(), 200);
+          }
+          if (req.url.path.endsWith('/compilado.binarypb')) {
+            return http.Response.bytes(croquiTeste.writeToBuffer(), 200);
+          }
+          return http.Response('', 404);
+        }),
+      );
+
+      final servicoPadraoUnico = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        httpClient: clienteUnico,
+      );
+      final okUnico = await servicoPadraoUnico.processarLink(
+        'https://previa.arestaclimb.com/pr00-0042',
+      );
+      expect(okUnico, isTrue);
+      expect(treeController.currentNode, isA<PicoNode>());
+
+      // Múltiplos croquis no índice
+      final indiceMulti = Indice()
+        ..croquis.addAll([
+          ResumoCroqui()..id = 'c1',
+          ResumoCroqui()..id = 'c2',
+        ]);
+      final clienteMulti = ClienteHttpAresta.paraTestes(
+        MockClient((req) async {
+          if (req.url.path.endsWith('/indice.binarypb')) {
+            return http.Response.bytes(indiceMulti.writeToBuffer(), 200);
+          }
+          return http.Response('', 404);
+        }),
+      );
+      final servicoPadraoMulti = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        httpClient: clienteMulti,
+      );
+      final okMulti = await servicoPadraoMulti.processarLink(
+        'https://previa.arestaclimb.com/pr00-0043',
+      );
+      expect(okMulti, isTrue);
+      expect(treeController.currentNode, isA<BrowseNode>());
+
+      // Erro 404 no indice.binarypb e exceção de rede
+      final cliente404 = ClienteHttpAresta.paraTestes(
+        MockClient((_) async => http.Response('', 404)),
+      );
+      final servicoPadrao404 = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        httpClient: cliente404,
+      );
+      expect(
+        await servicoPadrao404.processarLink(
+          'https://previa.arestaclimb.com/pr00-0044',
+        ),
+        isFalse,
+      );
+
+      final clienteExcecao = ClienteHttpAresta.paraTestes(
+        MockClient((_) async => throw const SocketException('falha')),
+      );
+      final servicoPadraoExcecao = DeepLinkNavigatorService(
+        datasetRepo: datasetRepo,
+        treeController: treeController,
+        httpClient: clienteExcecao,
+      );
+      expect(
+        await servicoPadraoExcecao.processarLink(
+          'https://previa.arestaclimb.com/pr00-0045',
+        ),
+        isFalse,
       );
     });
 

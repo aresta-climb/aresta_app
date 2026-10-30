@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,7 @@ import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
 import 'package:frontend/widgets/busca_global.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -554,8 +556,8 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Setor Lua');
       await tester.pump();
       expect(find.widgetWithText(ListTile, 'Setor Lua'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ListTile, 'Setor Lua'));
       await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(ListTile, 'Setor Lua'));
         await Future.delayed(const Duration(milliseconds: 50));
       });
       await tester.pump();
@@ -596,8 +598,17 @@ void main() {
       expect(find.widgetWithText(ListTile, 'Pico Sem Proto'), findsOneWidget);
       await tester.tap(find.widgetWithText(ListTile, 'Pico Sem Proto'));
       await tester.pump();
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
 
       // Quando indiceData está carregado, filtra croquis/entidades do catalogo.db que não constam no índice publicado
+      repo.indiceData.value = Indice(
+        croquis: [
+          ResumoCroqui(id: 'pico_publicado', nome: 'Pico Publicado Oficial'),
+        ],
+      );
       await tester.runAsync(() async {
         await repoCatalogo.aplicarDelta(
           const RespostaSyncCatalogo(
@@ -627,14 +638,6 @@ void main() {
             ),
           ),
         );
-      });
-      repo.indiceData.value = Indice(
-        croquis: [
-          ResumoCroqui(id: 'pico_publicado', nome: 'Pico Publicado Oficial'),
-        ],
-      );
-
-      await tester.runAsync(() async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -646,7 +649,7 @@ void main() {
             ),
           ),
         );
-        await Future.delayed(const Duration(milliseconds: 80));
+        await Future.delayed(const Duration(milliseconds: 300));
       });
       await tester.pump();
 
@@ -728,11 +731,7 @@ void main() {
         // Deve exibir imediatamente a nova via sem precisar fechar e reabrir a busca
         expect(find.widgetWithText(ListTile, 'Via Live Reload'), findsOneWidget);
 
-        // 2. Atualiza datasetRepo.activeDataset enquanto GlobalSearch está aberto
-        await tester.enterText(find.byType(TextField), 'Pico Novo Dataset');
-        await tester.pump();
-        expect(find.widgetWithText(ListTile, 'Pico Novo Dataset'), findsNothing);
-
+        // 2. Atualiza datasetRepo.activeDataset enquanto GlobalSearch está aberto (sem piscar CircularProgressIndicator quando já há dados carregados)
         await tester.runAsync(() async {
           repo.activeDataset.value = TopoDataset(
             availablePicos: [
@@ -744,10 +743,18 @@ void main() {
             ],
             downloadedPicos: const [],
           );
+          await tester.pump();
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(
+            find.widgetWithText(ListTile, 'Via Live Reload'),
+            findsOneWidget,
+          );
           await Future.delayed(const Duration(milliseconds: 80));
         });
         await tester.pump();
 
+        await tester.enterText(find.byType(TextField), 'Pico Novo Dataset');
+        await tester.pump();
         expect(find.widgetWithText(ListTile, 'Pico Novo Dataset'), findsOneWidget);
 
         // 3. Troca a instância de datasetRepo via didUpdateWidget
@@ -797,6 +804,267 @@ void main() {
         await tester.runAsync(() async {
           await repoCatalogo.fechar();
           await outroRepoCatalogo.fechar();
+        });
+      },
+    );
+
+    testWidgets(
+      'Exibe ModalCroquiSemConexao ao tocar em via de croqui não baixado sem conexão na Busca Global e navega ao reconectar e tocar em Tentar novamente',
+      (WidgetTester tester) async {
+        final treeController = TreeNavigationController();
+
+        await tester.runAsync(() async {
+          await repoCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoDestino: 'v_busca_offline',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'cUidOffline001',
+                    idSlug: 'br_rj_itacoa',
+                    nome: 'Costão de Itacoatiara',
+                    cidade: 'Niterói',
+                    estado: 'RJ',
+                  ),
+                ],
+                entidades: [
+                  CatalogoEntidade(
+                    uid: 'sUidOffline001',
+                    tipo: 'setor',
+                    croquiUid: 'cUidOffline001',
+                    nome: 'Face Sul',
+                  ),
+                  CatalogoEntidade(
+                    uid: 'vUidOffline001',
+                    tipo: 'escalada',
+                    croquiUid: 'cUidOffline001',
+                    setorUid: 'sUidOffline001',
+                    nome: 'Chaminé Stop',
+                    escaladaGrau: '4º',
+                    escaladaTipo: 'tradicional',
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: GlobalSearch(
+                  datasetRepo: repo,
+                  downloadedPicos: const [],
+                  treeController: treeController,
+                ),
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), 'Chaminé Stop');
+        await tester.pump();
+        expect(find.widgetWithText(ListTile, 'Chaminé Stop'), findsOneWidget);
+
+        // Toca na via sem conexão (e sem croqui em cache)
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ListTile, 'Chaminé Stop'));
+          await Future.delayed(const Duration(milliseconds: 100));
+        });
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ModalCroquiSemConexao), findsOneWidget);
+        expect(
+          find.text('Face Sul • Croqui Costão de Itacoatiara • Niterói, RJ'),
+          findsOneWidget,
+        );
+
+        // Disponibiliza o croqui em memória (simulando que a conexão voltou) e toca em Tentar novamente
+        final croquiItacoa = Croqui()
+          ..id = 'br_rj_itacoa'
+          ..uid = 'cUidOffline001'
+          ..picos.add(
+            Pico()
+              ..nome = 'Costão de Itacoatiara'
+              ..setoresOuGrupos.add(
+                SetorOuGrupo()
+                  ..setor = (ArquivoSetor()
+                    ..conteudo = (Setor()
+                      ..uid = 'sUidOffline001'
+                      ..nome = 'Face Sul'
+                      ..escaladas.add(
+                        Escalada()
+                          ..uid = 'vUidOffline001'
+                          ..viaEsportiva =
+                              (ViaEsportiva()..nome = 'Chaminé Stop'),
+                      ))),
+              ),
+          );
+        await tester.runAsync(() async {
+          repo.activeDataset.value = TopoDataset(
+            picosBaixados: [
+              {
+                'id': 'br_rj_itacoa',
+                'data': {'pico': croquiItacoa.picos.first, 'croqui': croquiItacoa},
+              },
+            ],
+            picosDisponiveis: [],
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        await tester.tap(find.text('Tentar novamente'));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 50));
+          await repoCatalogo.fechar();
+        });
+        await tester.pump();
+
+        expect(find.byType(ModalCroquiSemConexao), findsNothing);
+        expect(treeController.currentNode, isA<ViaNode>());
+        expect(
+          (treeController.currentNode as ViaNode).escaladaNome,
+          equals('Chaminé Stop'),
+        );
+      },
+    );
+
+    testWidgets(
+      'exibe modal bloqueante de carregamento ("Abrindo <título>...") ao tocar em resultado e ignora toques repetidos evitando empilhar múltiplos ModalCroquiSemConexao',
+      (WidgetTester tester) async {
+        final dbPath = '${tempDir.path}/catalogo_loading_bloqueante.db';
+        Completer<void>? travaConsulta;
+        int consultasItemPorUid = 0;
+
+        late RepositorioCatalogo repoCatalogo;
+        late DatasetRepository repo;
+        final treeController = TreeNavigationController();
+
+        await tester.runAsync(() async {
+          repoCatalogo = RepositorioCatalogo(
+            provedorCaminhoBanco: () async {
+              if (travaConsulta != null) {
+                consultasItemPorUid++;
+                await travaConsulta.future;
+              }
+              return dbPath;
+            },
+            fabricaBanco: databaseFactoryFfiNoIsolate,
+          );
+          repo = DatasetRepository(
+            editorDeCroqui: EditorDeCroqui(),
+            repositorioCatalogo: repoCatalogo,
+          );
+          repo.loadEmpty();
+
+          await repoCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoDestino: 'v_loading_lock',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'cUidLock000001',
+                    idSlug: 'br_rj_itacoa_lock',
+                    nome: 'Costão de Itacoatiara',
+                    cidade: 'Niterói',
+                    estado: 'RJ',
+                  ),
+                ],
+                entidades: [
+                  CatalogoEntidade(
+                    uid: 'sUidLock000001',
+                    tipo: 'setor',
+                    croquiUid: 'cUidLock000001',
+                    nome: 'Face Sul',
+                  ),
+                  CatalogoEntidade(
+                    uid: 'vUidLock000001',
+                    tipo: 'escalada',
+                    croquiUid: 'cUidLock000001',
+                    setorUid: 'sUidLock000001',
+                    nome: 'Via Bloqueante',
+                    escaladaGrau: '6a',
+                    escaladaTipo: 'esportiva',
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: GlobalSearch(
+                  datasetRepo: repo,
+                  downloadedPicos: const [],
+                  treeController: treeController,
+                ),
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), 'Via Bloqueante');
+        await tester.pump();
+        expect(find.widgetWithText(ListTile, 'Via Bloqueante'), findsOneWidget);
+
+        // Ativa trava para segurar a resolução em andamento
+        travaConsulta = Completer<void>();
+
+        final tile = tester.widget<ListTile>(
+          find.widgetWithText(ListTile, 'Via Bloqueante'),
+        );
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ListTile, 'Via Bloqueante'));
+        });
+        await tester.pump();
+
+        // Antes do limiar visual de 150ms, o diálogo não deve piscar na tela
+        expect(find.text('Abrindo Via Bloqueante...'), findsNothing);
+
+        // Simula 3 toques adicionais nos primeiros milissegundos (< 150ms) enquanto a primeira resolução está em andamento
+        tile.onTap?.call();
+        tile.onTap?.call();
+        tile.onTap?.call();
+
+        // Após ultrapassar 150ms com a resolução ainda pendente, o diálogo bloqueante deve aparecer
+        await tester.runAsync(
+          () => Future.delayed(const Duration(milliseconds: 160)),
+        );
+        await tester.pump(const Duration(milliseconds: 160));
+        expect(find.text('Abrindo Via Bloqueante...'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        expect(
+          consultasItemPorUid,
+          equals(1),
+          reason: 'Toques concorrentes devem ser ignorados pela trava _abrindoDestino desde 0ms',
+        );
+
+        // Libera a consulta e verifica que o diálogo de loading fecha e apenas 1 ModalCroquiSemConexao abre
+        await tester.runAsync(() async {
+          travaConsulta!.complete();
+          await Future.delayed(const Duration(milliseconds: 80));
+        });
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abrindo Via Bloqueante...'), findsNothing);
+        expect(find.byType(ModalCroquiSemConexao), findsOneWidget);
+
+        // Um único clique em Fechar deve fechar o modal completamente (sem modais empilhados atrás)
+        await tester.tap(find.text('Fechar'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ModalCroquiSemConexao), findsNothing);
+
+        await tester.runAsync(() async {
+          await repoCatalogo.fechar();
         });
       },
     );

@@ -55,6 +55,7 @@ void main() {
         expect(await repositorio.listarCroquis(), isEmpty);
         expect(await repositorio.listarEntidadesDetalhadas(), isEmpty);
         expect(await repositorio.obterIdSlugPorUid('uid_qualquer'), isNull);
+        expect(await repositorio.obterItemPorUid('uid_qualquer'), isNull);
       },
     );
 
@@ -154,6 +155,40 @@ void main() {
           await repositorio.obterIdSlugPorUid('inexistente'),
           isNull,
         );
+
+        // Verifica resolução enriquecida via obterItemPorUid para escalada, setor, grupo e croqui
+        final itemVia = await repositorio.obterItemPorUid('via_uid_1');
+        expect(itemVia, isNotNull);
+        expect(itemVia!.tipo, equals('escalada'));
+        expect(itemVia.nome, equals('Fissura da Direita'));
+        expect(itemVia.escaladaGrau, equals('6sup'));
+        expect(itemVia.escaladaTipo, equals('tradicional'));
+        expect(itemVia.setorNome, equals('Setor Principal'));
+        expect(itemVia.grupoNome, equals('Grupo Sherpa'));
+        expect(itemVia.picoNome, equals('Pedra Grande de Igarapé'));
+        expect(itemVia.idSlug, equals('br_mg_igarape_pedra_grande'));
+        expect(itemVia.cidade, equals('Igarapé'));
+        expect(itemVia.estado, equals('MG'));
+
+        final itemCroquiPorUid = await repositorio.obterItemPorUid('croqui_uid_1');
+        expect(itemCroquiPorUid, isNotNull);
+        expect(itemCroquiPorUid!.tipo, equals('pico'));
+        expect(itemCroquiPorUid.uid, equals('croqui_uid_1'));
+        expect(itemCroquiPorUid.croquiUid, equals('croqui_uid_1'));
+        expect(itemCroquiPorUid.idSlug, equals('br_mg_igarape_pedra_grande'));
+        expect(itemCroquiPorUid.nome, equals('Pedra Grande de Igarapé'));
+        expect(itemCroquiPorUid.picoNome, equals('Pedra Grande de Igarapé'));
+        expect(itemCroquiPorUid.cidade, equals('Igarapé'));
+        expect(itemCroquiPorUid.estado, equals('MG'));
+
+        final itemCroquiPorSlug = await repositorio.obterItemPorUid(
+          'br_mg_igarape_pedra_grande',
+        );
+        expect(itemCroquiPorSlug, isNotNull);
+        expect(itemCroquiPorSlug!.tipo, equals('pico'));
+        expect(itemCroquiPorSlug.idSlug, equals('br_mg_igarape_pedra_grande'));
+
+        expect(await repositorio.obterItemPorUid('inexistente'), isNull);
 
         // Verifica listagem detalhada com LEFT JOIN
         final entidades = await repositorio.listarEntidadesDetalhadas();

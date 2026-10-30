@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -172,6 +173,16 @@ class DatasetRepository {
     }
   }
 
+  static String? _buscarEmMapaMidia(
+    Map<String, String>? mapa,
+    String caminhoLimpo,
+  ) {
+    if (mapa == null) return null;
+    if (mapa.containsKey(caminhoLimpo)) return mapa[caminhoLimpo];
+    final nomeArquivo = caminhoLimpo.split('/').last;
+    return nomeArquivo.isNotEmpty ? mapa[nomeArquivo] : null;
+  }
+
   /// Retorna o checksum SHA-256 pré-indexado O(1) para uma mídia de croqui ou thumbnail.
   ///
   /// Caso o pico esteja em uma sessão online ativa e ainda não indexado,
@@ -179,7 +190,6 @@ class DatasetRepository {
   String? obterSha256DaMidia(String picoId, String caminho) {
     if (picoId.isEmpty || caminho.isEmpty) return null;
 
-    final mapaPico = _tabelaSha256PorPico[picoId];
     String caminhoLimpo = caminho.trim().replaceAll(r'\', '/');
     while (caminhoLimpo.startsWith('./')) {
       caminhoLimpo = caminhoLimpo.substring(2);
@@ -188,14 +198,10 @@ class DatasetRepository {
       caminhoLimpo = caminhoLimpo.substring(1);
     }
 
-    if (mapaPico != null) {
-      if (mapaPico.containsKey(caminhoLimpo)) {
-        return mapaPico[caminhoLimpo];
-      }
-      final nomeArquivo = caminhoLimpo.split('/').last;
-      if (nomeArquivo.isNotEmpty && mapaPico.containsKey(nomeArquivo)) {
-        return mapaPico[nomeArquivo];
-      }
+    final hashPreIndexado =
+        _buscarEmMapaMidia(_tabelaSha256PorPico[picoId], caminhoLimpo);
+    if (hashPreIndexado != null) {
+      return hashPreIndexado;
     }
 
     // Fallback: Consulta o índice em memória para thumbnails globais do catálogo
@@ -224,36 +230,18 @@ class DatasetRepository {
     final croquiOnline = gerenciadorSessaoOnline.obterCroquiOnline(picoId);
     if (croquiOnline != null) {
       indexarMidiasDoCroqui(picoId, croquiOnline);
-      final mapaOnline = _tabelaSha256PorPico[picoId];
-      if (mapaOnline != null) {
-        if (mapaOnline.containsKey(caminhoLimpo)) {
-          return mapaOnline[caminhoLimpo];
-        }
-        final nomeArquivo = caminhoLimpo.split('/').last;
-        if (nomeArquivo.isNotEmpty && mapaOnline.containsKey(nomeArquivo)) {
-          return mapaOnline[nomeArquivo];
-        }
-      }
+      final hashOnline =
+          _buscarEmMapaMidia(_tabelaSha256PorPico[picoId], caminhoLimpo);
+      if (hashOnline != null) return hashOnline;
     }
 
     // Fallback: Croqui baixado presente no activeDataset
     final picosBaixados = activeDataset.value?.picosBaixados;
     if (picosBaixados != null) {
       for (final picoData in picosBaixados) {
-        if (picoData['id'] == picoId) {
-          final croqui = picoData['data']?['croqui'];
-          if (croqui is Croqui) {
-            indexarMidiasDoCroqui(picoId, croqui);
-            final mapa = _tabelaSha256PorPico[picoId];
-            if (mapa != null) {
-              if (mapa.containsKey(caminhoLimpo)) return mapa[caminhoLimpo];
-              final nomeArquivo = caminhoLimpo.split('/').last;
-              if (nomeArquivo.isNotEmpty && mapa.containsKey(nomeArquivo)) {
-                return mapa[nomeArquivo];
-              }
-            }
-          }
-          break;
+        if (picoData.id == picoId && picoData.croqui != null) {
+          indexarMidiasDoCroqui(picoId, picoData.croqui!);
+          return _buscarEmMapaMidia(_tabelaSha256PorPico[picoId], caminhoLimpo);
         }
       }
     }
@@ -376,11 +364,7 @@ class DatasetRepository {
 
       final List<ResumoPico> ordenadosCarregados = ordenados.map((picoItem) {
         final existente = mapaBaixadosAtuais[picoItem.id];
-        final Croqui? croquiReaproveitado = (existente != null &&
-                existente.checksum.isNotEmpty &&
-                existente.checksum == picoItem.checksum)
-            ? existente.croqui
-            : null;
+        final Croqui? croquiReaproveitado = existente?.croqui;
         if (croquiReaproveitado == null) {
           return picoItem;
         }
@@ -524,13 +508,7 @@ class DatasetRepository {
     // 2. Fallback para activeDataset (picosDisponiveis / picosBaixados)
     final dataset = activeDataset.value;
     if (dataset != null) {
-      for (final p in dataset.picosDisponiveis) {
-        if (p.id == cragId && p.dataUpdate != null) {
-          final dt = DateTime.tryParse(p.dataUpdate.toString());
-          if (dt != null) return dt.toLocal();
-        }
-      }
-      for (final p in dataset.picosBaixados) {
+      for (final p in [...dataset.picosDisponiveis, ...dataset.picosBaixados]) {
         if (p.id == cragId && p.dataUpdate != null) {
           final dt = DateTime.tryParse(p.dataUpdate.toString());
           if (dt != null) return dt.toLocal();
@@ -695,18 +673,25 @@ class DatasetRepository {
       }
     }
 
-    // 4. Rede remota (CDN com ?v=<sha256>)
-    if (caminhoRelativo != null && caminhoRelativo.isNotEmpty) {
-      final syncAtivo = SyncService.instance;
-      if (!indiceJaSincronizado &&
-          syncAtivo != null &&
-          identical(syncAtivo.datasetRepository, this)) {
-        await syncAtivo.syncIndex();
-        final atualizado = _obterCaminhoEChecksumDoIndice(id);
-        caminhoRelativo = atualizado.$1 ?? caminhoRelativo;
-        checksum = atualizado.$2 ?? checksum;
-      }
+    // 4. Rede remota (CDN com ?v=<sha256> em 1 RTT + syncIndex em background)
+    final syncAtivo = SyncService.instance;
+    final podeSincronizarIndice = !indiceJaSincronizado &&
+        syncAtivo != null &&
+        identical(syncAtivo.datasetRepository, this);
 
+    // Fallback: se o pico ainda não constar no índice local em memória,
+    // sincroniza o índice antes de tentar o download remoto.
+    if ((caminhoRelativo == null || caminhoRelativo.isEmpty) &&
+        podeSincronizarIndice) {
+      await syncAtivo.syncIndex();
+      if (syncAtivo.syncStatus.value == SyncStatus.offline) {
+        return null;
+      }
+      indiceJaSincronizado = true;
+      (caminhoRelativo, checksum) = _obterCaminhoEChecksumDoIndice(id);
+    }
+
+    if (caminhoRelativo != null && caminhoRelativo.isNotEmpty) {
       final queryParam =
           (checksum != null && checksum.isNotEmpty) ? '?v=$checksum' : '';
       final baseUrl =
@@ -718,12 +703,15 @@ class DatasetRepository {
         checksumSha256: checksum,
       );
       if (croquiRemoto != null) {
+        if (!indiceJaSincronizado && podeSincronizarIndice) {
+          unawaited(syncAtivo.syncIndex());
+        }
         _ultimaOrigemResolucaoPorPico[id] = 'cdn_online';
         gerenciadorSessaoOnline.registrarCroquiOnline(
           id,
           croquiRemoto,
           etag: gerenciadorSessaoOnline.obterEtag(id),
-          checksumSha256: checksum,
+          checksumSha256: gerenciadorSessaoOnline.obterChecksum(id) ?? checksum,
         );
         indexarMidiasDoCroqui(id, croquiRemoto);
         return croquiRemoto;

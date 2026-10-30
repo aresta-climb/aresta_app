@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
@@ -63,9 +64,10 @@ void main() {
   });
 
   group('ServicoCroquiOnline', () {
-    test('carregarCroquiRemoto baixa, desserializa e registra na sessão online e salva no temp_cache com hash', () async {
+    test('carregarCroquiRemoto calcula SHA-256 real em memória na chegada do HTTP, grava atomicamente no temp_cache e registra na sessão online mesmo se a URL tinha ?v=hash_antigo', () async {
       final croquiMock = Croqui(id: 'pico_online', nome: 'Pedra do Elefante');
       final bytes = croquiMock.writeToBuffer();
+      final hashReal = sha256.convert(bytes).toString();
 
       when(() => mockClient.get(
             any(),
@@ -79,18 +81,23 @@ void main() {
       );
 
       final resultado = await servico.carregarCroquiRemoto(
-        'https://servidor.com/croquis/pico_online/compilado.binarypb?v=hash123',
+        'https://servidor.com/croquis/pico_online/compilado.binarypb?v=hash_antigo_despejado_pela_cdn',
         picoId: 'pico_online',
-        checksumSha256: 'hash123',
+        checksumSha256: 'hash_antigo_despejado_pela_cdn',
       );
 
       expect(resultado, isNotNull);
       expect(resultado!.nome, equals('Pedra do Elefante'));
       expect(sessaoOnline.obterCroquiOnline('pico_online'), isNotNull);
       expect(sessaoOnline.obterEtag('pico_online'), equals('"v1-hash"'));
+      expect(sessaoOnline.obterChecksum('pico_online'), equals(hashReal));
 
-      final arquivoCache = File('${tempDir.path}/pico_online/compilado.binarypb.hash123');
-      expect(await arquivoCache.exists(), isTrue);
+      final arquivoCacheReal = File('${tempDir.path}/pico_online/compilado.binarypb.$hashReal');
+      final arquivoTmp = File('${tempDir.path}/pico_online/compilado.binarypb.$hashReal.tmp');
+      final arquivoHashAntigo = File('${tempDir.path}/pico_online/compilado.binarypb.hash_antigo_despejado_pela_cdn');
+      expect(await arquivoCacheReal.exists(), isTrue);
+      expect(await arquivoTmp.exists(), isFalse);
+      expect(await arquivoHashAntigo.exists(), isFalse);
     });
 
     test('carregarCroquiRemoto reutiliza arquivo já existente no temp_cache sem fazer requisição HTTP', () async {
@@ -115,7 +122,7 @@ void main() {
       verifyNever(() => mockClient.get(any(), headers: any(named: 'headers')));
     });
 
-    test('carregarCroquiRemoto expurga versões anteriores do compilado.binarypb no temp_cache', () async {
+    test('carregarCroquiRemoto expurga versões anteriores do compilado.binarypb no temp_cache após gravação atômica', () async {
       final cacheDir = Directory('${tempDir.path}/pico_expurgo')..createSync(recursive: true);
       final arquivoAntigo = File('${cacheDir.path}/compilado.binarypb.hash_antigo');
       await arquivoAntigo.writeAsBytes([1, 2, 3]);
@@ -127,26 +134,102 @@ void main() {
       expect(await arquivoLegado.exists(), isTrue);
 
       final croquiNovo = Croqui(id: 'pico_expurgo', nome: 'Pico Novo');
+      final bytesNovo = croquiNovo.writeToBuffer();
+      final hashRealNovo = sha256.convert(bytesNovo).toString();
       when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response.bytes(croquiNovo.writeToBuffer(), 200));
+          .thenAnswer((_) async => http.Response.bytes(bytesNovo, 200));
 
       final resultado = await servico.carregarCroquiRemoto(
-        'https://servidor.com/pico_expurgo/compilado.binarypb?v=hash_novo',
+        'https://servidor.com/pico_expurgo/compilado.binarypb?v=$hashRealNovo',
         picoId: 'pico_expurgo',
-        checksumSha256: 'hash_novo',
+        checksumSha256: hashRealNovo,
       );
 
       expect(resultado, isNotNull);
 
-      final arquivoNovo = File('${cacheDir.path}/compilado.binarypb.hash_novo');
+      final arquivoNovo = File('${cacheDir.path}/compilado.binarypb.$hashRealNovo');
       expect(await arquivoNovo.exists(), isTrue);
       expect(await arquivoAntigo.exists(), isFalse, reason: 'Versão antiga deve ser expurgada');
       expect(await arquivoLegado.exists(), isFalse, reason: 'Arquivo legado deve ser expurgado');
     });
 
-    test('carregarCroquiRemoto retorna null em caso de erro HTTP 404', () async {
+    test('carregarCroquiRemoto usa versão anterior de compilado.binarypb.* no temp_cache como fallback de emergência quando a rede falha', () async {
+      final cacheDir = Directory('${tempDir.path}/pico_fallback')..createSync(recursive: true);
+      final croquiAnterior = Croqui(id: 'pico_fallback', nome: 'Pico Salva-Vidas');
+      final arquivoAntigo = File('${cacheDir.path}/compilado.binarypb.hash_antigo_salvo');
+      await arquivoAntigo.writeAsBytes(croquiAnterior.writeToBuffer());
+
       when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('Not Found', 404));
+          .thenThrow(const SocketException('Sem conexão na rocha'));
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/pico_fallback/compilado.binarypb?v=hash_novo_indice',
+        picoId: 'pico_fallback',
+        checksumSha256: 'hash_novo_indice',
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Salva-Vidas'));
+      expect(sessaoOnline.obterCroquiOnline('pico_fallback')?.nome, equals('Pico Salva-Vidas'));
+      expect(sessaoOnline.obterChecksum('pico_fallback'), equals('hash_antigo_salvo'));
+      expect(await arquivoAntigo.exists(), isTrue);
+    });
+
+    test('carregarCroquiRemoto ignora arquivos .tmp ou corrompidos no fallback offline do temp_cache e retorna null', () async {
+      final cacheDir = Directory('${tempDir.path}/pico_fallback_corrompido')..createSync(recursive: true);
+      await File('${cacheDir.path}/compilado.binarypb.hash1.tmp').writeAsBytes(
+        Croqui(id: 'pico_fallback_corrompido', nome: 'Incompleto').writeToBuffer(),
+      );
+      await File('${cacheDir.path}/compilado.binarypb.hash_corrompido').writeAsBytes([255, 255, 255]);
+
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenThrow(const SocketException('Sem conexão na rocha'));
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/pico_fallback_corrompido/compilado.binarypb?v=hash_novo',
+        picoId: 'pico_fallback_corrompido',
+        checksumSha256: 'hash_novo',
+      );
+
+      expect(resultado, isNull);
+    });
+
+    test('carregarCroquiRemoto recupera da rede quando o arquivo do hash esperado no temp_cache está corrompido e anexa ?v= quando ausente na URL', () async {
+      expect(servico.sessaoOnline, same(sessaoOnline));
+      expect(servico.caminhoCacheVolatil, equals(tempDir.path));
+      expect(await servico.obterDiretorioCache(), equals(tempDir.path));
+
+      final cacheDir = Directory('${tempDir.path}/pico_corrompido_cache')..createSync(recursive: true);
+      final croquiValido = Croqui(id: 'pico_corrompido_cache', nome: 'Pico Recuperado');
+      final bytesValidos = croquiValido.writeToBuffer();
+      final hashEsperado = sha256.convert(bytesValidos).toString();
+
+      await File('${cacheDir.path}/compilado.binarypb.$hashEsperado').writeAsBytes([255, 255, 255]);
+
+      Uri? uriRequisitada;
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer((inv) async {
+        uriRequisitada = inv.positionalArguments.first as Uri;
+        return http.Response.bytes(bytesValidos, 200);
+      });
+
+      final resultado = await servico.carregarCroquiRemoto(
+        'https://servidor.com/pico_corrompido_cache/compilado.binarypb',
+        picoId: 'pico_corrompido_cache',
+        checksumSha256: hashEsperado,
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Recuperado'));
+      expect(uriRequisitada?.queryParameters['v'], equals(hashEsperado));
+    });
+
+    test('carregarCroquiRemoto retorna null em caso de erro HTTP 404 sem retentar erro permanente', () async {
+      var chamadas = 0;
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async {
+        chamadas++;
+        return http.Response('Not Found', 404);
+      });
 
       final resultado = await servico.carregarCroquiRemoto(
         'https://servidor.com/croquis/pico_404.binarypb',
@@ -154,7 +237,85 @@ void main() {
       );
 
       expect(resultado, isNull);
+      expect(chamadas, equals(1), reason: 'HTTP 404 não é falha transitória e não deve retentar');
       expect(sessaoOnline.obterCroquiOnline('pico_404'), isNull);
+    });
+
+    test('carregarCroquiRemoto realiza 2 tentativas escalonadas e recupera quando a 1ª tentativa sofre timeout ou erro de socket Keep-Alive zumbi', () async {
+      expect(
+        ServicoCroquiOnline.padraoTimeoutsTentativas,
+        equals(const [Duration(seconds: 4), Duration(seconds: 6)]),
+      );
+      expect(
+        ServicoCroquiOnline.padraoIntervaloEntreTentativas,
+        equals(const Duration(milliseconds: 350)),
+      );
+
+      final servicoComTimeoutsCurtos = ServicoCroquiOnline(
+        client: ClienteHttpAresta.paraTestes(mockClient),
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: tempDir.path,
+        timeoutsTentativas: const [
+          Duration(milliseconds: 30),
+          Duration(milliseconds: 150),
+        ],
+        intervaloEntreTentativas: const Duration(milliseconds: 10),
+      );
+
+      final croquiValido = Croqui(id: 'pico_retry', nome: 'Pico Recuperado na 2a Tentativa');
+      final bytesValidos = croquiValido.writeToBuffer();
+
+      var tentativa = 0;
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer((_) async {
+        tentativa++;
+        if (tentativa == 1) {
+          // Simula buraco negro pós-TCP que estoura o timeout de 30ms da 1ª tentativa
+          await Future<void>.delayed(const Duration(milliseconds: 80));
+          return http.Response.bytes(bytesValidos, 200);
+        }
+        return http.Response.bytes(bytesValidos, 200);
+      });
+
+      final resultado = await servicoComTimeoutsCurtos.carregarCroquiRemoto(
+        'https://servidor.com/pico_retry/compilado.binarypb?v=hash_retry',
+        picoId: 'pico_retry',
+        checksumSha256: 'hash_retry',
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Recuperado na 2a Tentativa'));
+      expect(tentativa, equals(2));
+    });
+
+    test('carregarCroquiRemoto retenta na 2ª tentativa quando a 1ª tentativa retorna erro HTTP transitório (503)', () async {
+      final servicoRapido = ServicoCroquiOnline(
+        client: ClienteHttpAresta.paraTestes(mockClient),
+        sessaoOnline: sessaoOnline,
+        caminhoCacheVolatil: tempDir.path,
+        intervaloEntreTentativas: const Duration(milliseconds: 5),
+      );
+
+      final croquiValido = Croqui(id: 'pico_503', nome: 'Pico Após 503');
+      final bytesValidos = croquiValido.writeToBuffer();
+
+      var tentativa = 0;
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer((_) async {
+        tentativa++;
+        if (tentativa == 1) {
+          return http.Response('Service Unavailable', 503);
+        }
+        return http.Response.bytes(bytesValidos, 200);
+      });
+
+      final resultado = await servicoRapido.carregarCroquiRemoto(
+        'https://servidor.com/pico_503/compilado.binarypb?v=hash_503',
+        picoId: 'pico_503',
+        checksumSha256: 'hash_503',
+      );
+
+      expect(resultado, isNotNull);
+      expect(resultado!.nome, equals('Pico Após 503'));
+      expect(tentativa, equals(2));
     });
 
     test('verificarAtualizacaoEtag com 304 não gera atualização pendente', () async {
@@ -404,7 +565,7 @@ void main() {
       servicoComWs.dispose();
     });
 
-    test('verificarAtualizacaoEtag com 200 processa bytes, atualiza sessão online e grava em cache volátil', () async {
+    test('verificarAtualizacaoEtag com 200 processa bytes, atualiza sessão online e grava em cache volátil com hash real', () async {
       sessaoOnline.registrarCroquiOnline(
         'pico_1',
         Croqui(id: 'pico_1', nome: 'Pedra Velha'),
@@ -412,12 +573,14 @@ void main() {
       );
 
       final croquiAtualizado = Croqui(id: 'pico_1', nome: 'Pedra Nova');
+      final bytesAtualizados = croquiAtualizado.writeToBuffer();
+      final hashReal = sha256.convert(bytesAtualizados).toString();
       when(() => mockClient.get(
             any(),
             headers: {'If-None-Match': '"etag_antigo"'},
           )).thenAnswer(
         (_) async => http.Response.bytes(
-          croquiAtualizado.writeToBuffer(),
+          bytesAtualizados,
           200,
           headers: {'etag': '"etag_novo"'},
         ),
@@ -429,14 +592,15 @@ void main() {
       );
 
       expect(houveAtualizacao, isTrue);
-      // Deve ter atualizado o croqui diretamente em memória
+      // Deve ter atualizado o croqui diretamente em memória com o hash real
       expect(sessaoOnline.obterCroquiOnline('pico_1')?.nome, equals('Pedra Nova'));
       expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_novo"'));
+      expect(sessaoOnline.obterChecksum('pico_1'), equals(hashReal));
 
-      // Deve ter salvo cópia no cache volátil
-      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb');
+      // Deve ter salvo cópia no cache volátil com o hash real
+      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb.$hashReal');
       expect(await arquivoCache.exists(), isTrue);
-      expect(await arquivoCache.readAsBytes(), equals(croquiAtualizado.writeToBuffer()));
+      expect(await arquivoCache.readAsBytes(), equals(bytesAtualizados));
     });
 
     test('recarregarCroquiOnline baixa com bypass de cache (?t=) e atualiza sessão online', () async {
@@ -447,11 +611,13 @@ void main() {
       );
 
       final croquiRecarregado = Croqui(id: 'pico_1', nome: 'Pedra Recarregada');
+      final bytesRecarregado = croquiRecarregado.writeToBuffer();
+      final hashReal = sha256.convert(bytesRecarregado).toString();
       when(() => mockClient.get(
             any(that: predicate<Uri>((uri) => uri.queryParameters.containsKey('t'))),
           )).thenAnswer(
         (_) async => http.Response.bytes(
-          croquiRecarregado.writeToBuffer(),
+          bytesRecarregado,
           200,
           headers: {'etag': '"etag_2"'},
         ),
@@ -466,10 +632,11 @@ void main() {
       expect(resultado?.nome, equals('Pedra Recarregada'));
       expect(sessaoOnline.obterCroquiOnline('pico_1')?.nome, equals('Pedra Recarregada'));
       expect(sessaoOnline.obterEtag('pico_1'), equals('"etag_2"'));
+      expect(sessaoOnline.obterChecksum('pico_1'), equals(hashReal));
 
-      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb');
+      final arquivoCache = File('${tempDir.path}/pico_1/compilado.binarypb.$hashReal');
       expect(await arquivoCache.exists(), isTrue);
-      expect(await arquivoCache.readAsBytes(), equals(croquiRecarregado.writeToBuffer()));
+      expect(await arquivoCache.readAsBytes(), equals(bytesRecarregado));
     });
 
     test('usa getTemporaryDirectory quando caminhoCacheVolatil for nulo', () async {
@@ -656,4 +823,3 @@ void main() {
     });
   });
 }
-

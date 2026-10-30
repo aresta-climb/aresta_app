@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'package:frontend/application_managers/feedback/caso_uso_enviar_feedback.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/navigation/localizador_destino_uid.dart';
 import 'package:frontend/navigation/servico_navegacao_deep_link.dart';
 import 'package:frontend/navigation/gerenciador_deep_links.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -23,6 +24,7 @@ import 'package:frontend/view/function_library/biblioteca_funcoes_comuns.dart';
 import 'package:frontend/view/view_models/explorar_view_model.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
 import 'package:frontend/view/view_models/meus_croquis_view_model.dart';
+import 'package:frontend/widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
 
 /// O ponto de entrada principal para a navegação do aplicativo.
 ///
@@ -36,6 +38,7 @@ class TreeNavigationWrapper extends StatefulWidget {
   final GerenciadorDeepLinks? gerenciadorDeepLinks;
   final Uri? linkInicialProcessado;
   final String? mensagemAvisoInicial;
+  final ItemCatalogoBusca? itemSemConexaoInicial;
   final Widget? child; // Utilizado puramente para injeção em testes
 
   const TreeNavigationWrapper({
@@ -46,6 +49,7 @@ class TreeNavigationWrapper extends StatefulWidget {
     this.gerenciadorDeepLinks,
     this.linkInicialProcessado,
     this.mensagemAvisoInicial,
+    this.itemSemConexaoInicial,
     this.child,
   });
 
@@ -125,6 +129,10 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     deepLinkNavigator = DeepLinkNavigatorService(
       datasetRepo: widget.datasetRepo,
       treeController: treeController,
+      localizadorUid: LocalizadorDestinoUid(
+        datasetRepo: widget.datasetRepo,
+        syncService: widget.syncService,
+      ),
     );
     gerenciadorDeepLinks = widget.gerenciadorDeepLinks ??
         GerenciadorDeepLinks(navigatorService: deepLinkNavigator);
@@ -133,9 +141,24 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
         widget.linkInicialProcessado!,
       );
     }
-    gerenciadorDeepLinks.inicializar();
+    gerenciadorDeepLinks.inicializar(context: context);
 
-    if (widget.mensagemAvisoInicial != null &&
+    if (widget.itemSemConexaoInicial != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ModalCroquiSemConexao.mostrar(
+            context: context,
+            item: widget.itemSemConexaoInicial!,
+            aoTentarNovamente: () => deepLinkNavigator.processarLink(
+              widget.linkInicialProcessado,
+              context: context,
+              tipoStart: 'warm_start',
+              notificarFalha: false,
+            ),
+          );
+        }
+      });
+    } else if (widget.mensagemAvisoInicial != null &&
         widget.mensagemAvisoInicial!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {

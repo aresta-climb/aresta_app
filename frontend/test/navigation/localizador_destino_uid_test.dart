@@ -876,6 +876,186 @@ void main() {
         );
       },
     );
+
+    test(
+      'localizarComDiagnostico retorna itemSemConexao enriquecido quando a entidade consta no catalogo.db ou no indice mas nao ha conexao nem cache local',
+      () async {
+        const String uidViaOffline = 'vSemConexao123';
+        const String uidCroquiOffline = 'cSemConexao123';
+        const String idSlugOffline = 'br_mg_serra_cip_offline';
+
+        await repositorioCatalogo.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoDestino: 'v_sem_rede',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: uidCroquiOffline,
+                  idSlug: idSlugOffline,
+                  nome: 'Serra do Cipó',
+                  cidade: 'Santana do Riacho',
+                  estado: 'MG',
+                ),
+              ],
+              entidades: [
+                CatalogoEntidade(
+                  uid: 'sSemConexao123',
+                  tipo: 'setor',
+                  croquiUid: uidCroquiOffline,
+                  nome: 'Vale da Lapinha',
+                ),
+                CatalogoEntidade(
+                  uid: uidViaOffline,
+                  tipo: 'escalada',
+                  croquiUid: uidCroquiOffline,
+                  nome: 'Fenda da Paz',
+                  escaladaGrau: '6sup',
+                  escaladaTipo: 'tradicional',
+                  setorUid: 'sSemConexao123',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        // Aponta para porta local fechada simulando ausência de internet
+        final servidorFechado = await HttpServer.bind(
+          InternetAddress.loopbackIPv4,
+          0,
+        );
+        final portaFechada = servidorFechado.port;
+        await servidorFechado.close(force: true);
+
+        SyncService.baseUrlOverride = 'http://127.0.0.1:$portaFechada';
+        addTearDown(() {
+          SyncService.baseUrlOverride = null;
+        });
+
+        final resumoOffline = ResumoCroqui()
+          ..id = idSlugOffline
+          ..croquiUid = uidCroquiOffline
+          ..nome = 'Serra do Cipó'
+          ..caminhoRelativo = '$idSlugOffline/compilado.binarypb'
+          ..checksumSha256Croqui = 'hash_inexistente_no_cache';
+
+        const String uidApenasIndice = 'cApenasIndice1';
+        final resumoApenasIndice = ResumoCroqui()
+          ..id = 'br_sp_pedra_bau'
+          ..croquiUid = uidApenasIndice
+          ..nome = 'Pedra do Baú'
+          ..caminhoRelativo = 'br_sp_pedra_bau/compilado.binarypb'
+          ..checksumSha256Croqui = 'hash_bau';
+
+        datasetRepo.indiceData.value = Indice(
+          croquis: [resumoOffline, resumoApenasIndice],
+        );
+        datasetRepo.activeDataset.value = TopoDataset(
+          picosBaixados: [],
+          picosDisponiveis: [
+            resumoOffline.paraResumoPico(),
+            resumoApenasIndice.paraResumoPico(),
+          ],
+          metadadosDisponiveis: [resumoOffline, resumoApenasIndice],
+        );
+
+        // 1. Via catalogada no catalogo.db sem conexão
+        final diagVia = await localizador.localizarComDiagnostico(
+          uidViaOffline,
+        );
+        expect(diagVia.encontrado, isFalse);
+        expect(diagVia.bloqueadoSemConexao, isTrue);
+        expect(diagVia.destino, isNull);
+        expect(diagVia.itemSemConexao, isNotNull);
+        expect(diagVia.itemSemConexao!.nome, equals('Fenda da Paz'));
+        expect(diagVia.itemSemConexao!.escaladaGrau, equals('6sup'));
+        expect(diagVia.itemSemConexao!.setorNome, equals('Vale da Lapinha'));
+        expect(diagVia.itemSemConexao!.picoNome, equals('Serra do Cipó'));
+        expect(diagVia.itemSemConexao!.cidade, equals('Santana do Riacho'));
+        expect(diagVia.itemSemConexao!.estado, equals('MG'));
+        expect(diagVia.itemSemConexao!.idSlug, equals(idSlugOffline));
+
+        // 2. Croqui presente apenas em metadadosDisponiveis sem conexão
+        final diagIndice = await localizador.localizarComDiagnostico(
+          uidApenasIndice,
+        );
+        expect(diagIndice.encontrado, isFalse);
+        expect(diagIndice.bloqueadoSemConexao, isTrue);
+        expect(diagIndice.itemSemConexao!.tipo, equals('pico'));
+        expect(diagIndice.itemSemConexao!.picoNome, equals('Pedra do Baú'));
+        expect(diagIndice.itemSemConexao!.idSlug, equals('br_sp_pedra_bau'));
+
+        // 3. UID totalmente inexistente
+        final diagInexistente = await localizador.localizarComDiagnostico(
+          uidInexistente,
+        );
+        expect(diagInexistente.encontrado, isFalse);
+        expect(diagInexistente.bloqueadoSemConexao, isFalse);
+        expect(diagInexistente.itemSemConexao, isNull);
+      },
+    );
+
+    test(
+      'localizarComDiagnostico faz curto-circuito imediato quando uid nao consta localmente e syncIndex resulta em SyncStatus.offline',
+      () async {
+        const String uidAusente = 'uAusenteOff123';
+        int chamadasCatalogo = 0;
+
+        final catalogoRastreado = RepositorioCatalogo(
+          provedorCaminhoBanco: () async {
+            chamadasCatalogo++;
+            return '${dirTemp.path}/catalogo_curto_circuito.db';
+          },
+          fabricaBanco: databaseFactoryFfi,
+        );
+        final repoRastreado = DatasetRepository(
+          editorDeCroqui: editorDeCroqui,
+          repositorioCatalogo: catalogoRastreado,
+        );
+
+        final servidorFechado = await HttpServer.bind(
+          InternetAddress.loopbackIPv4,
+          0,
+        );
+        final portaFechada = servidorFechado.port;
+        await servidorFechado.close(force: true);
+
+        SyncService.baseUrlOverride = 'http://127.0.0.1:$portaFechada';
+        addTearDown(() {
+          SyncService.baseUrlOverride = null;
+        });
+
+        final clienteHttp = ClienteHttpAresta.paraTestes(http.Client());
+        final syncOffline = SyncService(
+          datasetRepository: repoRastreado,
+          client: clienteHttp,
+          network: SyncNetwork(clienteHttp, Duration.zero),
+        );
+        addTearDown(() async {
+          await syncOffline.tarefaMidiasEmSegundoPlano;
+          await catalogoRastreado.fechar();
+        });
+
+        final localizadorOffline = LocalizadorDestinoUid(
+          datasetRepo: repoRastreado,
+          syncService: syncOffline,
+        );
+
+        final resultado = await localizadorOffline.localizarComDiagnostico(
+          uidAusente,
+        );
+
+        expect(resultado.encontrado, isFalse);
+        expect(resultado.bloqueadoSemConexao, isFalse);
+        expect(syncOffline.syncStatus.value, equals(SyncStatus.offline));
+        expect(
+          chamadasCatalogo,
+          equals(1),
+          reason:
+              'Não deve consultar o catálogo local uma 2ª vez se syncIndex falhou com SyncStatus.offline',
+        );
+      },
+    );
   });
 }
 

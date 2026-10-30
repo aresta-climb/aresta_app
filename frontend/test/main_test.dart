@@ -27,6 +27,7 @@ import 'package:frontend/constants/constantes_rede.dart';
 import 'package:frontend/services/firebase/performance_telemetria.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -1357,6 +1358,52 @@ void main() {
 
       // O bloqueio da DatabaseMigrationScreen permanece intacto
       expect(find.byType(DatabaseMigrationScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MyApp propaga itemSemConexaoInicial de resolucaoInicialColdStart e exibe ModalCroquiSemConexao após a saída da TelaSplashInicial',
+    (WidgetTester tester) async {
+      final completerColdStart = Completer<ResultadoResolucaoColdStart>();
+
+      await tester.pumpWidget(
+        MyApp(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+          needsMigration: false,
+          remoteConfigService: FakeRemoteConfigService(),
+          acceptedLegalVersion: kLegalVersion,
+          resolucaoInicialColdStart: completerColdStart.future,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(TelaSplashInicial), findsOneWidget);
+
+      completerColdStart.complete(
+        ResultadoResolucaoColdStart(
+          treeController: TreeNavigationController(),
+          linkInicialProcessado: Uri.parse('https://aresta.cc/uidViaColdSt14'),
+          itemSemConexaoInicial: const ItemCatalogoBusca(
+            uid: 'uidViaColdSt14',
+            tipo: 'escalada',
+            croquiUid: 'uidCroquiCold1',
+            idSlug: 'br_mg_serra_cipo',
+            nome: 'Via Estrela',
+            escaladaGrau: '7a',
+            picoNome: 'Serra do Cipó',
+            cidade: 'Santana do Riacho',
+            estado: 'MG',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(TelaSplashInicial), findsNothing);
+      expect(find.byType(ModalCroquiSemConexao), findsOneWidget);
+      expect(find.textContaining('Via Estrela'), findsOneWidget);
     },
   );
 }

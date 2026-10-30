@@ -519,6 +519,66 @@ void main() {
       expect(resultadoErro.linkInicialProcessado, isNull);
     });
 
+    test('captura itemSemConexaoInicial quando o croqui do link inicial não está baixado e o dispositivo está sem conexão', () async {
+      final mockAppLinks = _MockAppLinks();
+      final uri = Uri.parse('https://aresta.cc/uidViaColdOff1');
+      when(() => mockAppLinks.getInitialLink()).thenAnswer((_) async => uri);
+
+      final editor = EditorDeCroqui();
+      final catalogo = RepositorioCatalogo(
+        provedorCaminhoBanco: () async => '${dirTemp.path}/catalogo_cold_offline.db',
+        fabricaBanco: databaseFactoryFfi,
+      );
+      addTearDown(catalogo.fechar);
+      await catalogo.aplicarDelta(
+        const RespostaSyncCatalogo(
+          acao: 'apply_delta',
+          versaoDestino: 'v_cold_offline',
+          upserts: UpsertsSyncCatalogo(
+            croquis: [
+              CatalogoCroqui(
+                croquiUid: 'uidCroquiCold1',
+                idSlug: 'br_mg_serra_cipo',
+                nome: 'Serra do Cipó',
+                cidade: 'Santana do Riacho',
+                estado: 'MG',
+              ),
+            ],
+            entidades: [
+              CatalogoEntidade(
+                uid: 'uidViaColdOff1',
+                tipo: 'escalada',
+                croquiUid: 'uidCroquiCold1',
+                nome: 'Via do Sol',
+                escaladaGrau: '6º',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final repo = DatasetRepository(
+        editorDeCroqui: editor,
+        repositorioCatalogo: catalogo,
+      );
+      repo.activeDataset.value = TopoDataset(
+        picosBaixados: [],
+        picosDisponiveis: [],
+      );
+
+      final resultado = await resolverDestinoInicialColdStart(
+        repo,
+        appLinks: mockAppLinks,
+      );
+
+      expect(resultado.treeController.currentNode, isA<HomeNode>());
+      expect(resultado.linkInicialProcessado, equals(uri));
+      expect(resultado.mensagemAvisoInicial, isNull);
+      expect(resultado.itemSemConexaoInicial, isNotNull);
+      expect(resultado.itemSemConexaoInicial!.nome, equals('Via do Sol'));
+      expect(resultado.itemSemConexaoInicial!.picoNome, equals('Serra do Cipó'));
+    });
+
     test('retorna HomeNode e registra aviso quando a resolução do link inicial exceder o timeoutResolucao', () async {
       final mockLogger = MockAppLogger();
       AppLogger.instance = mockLogger;

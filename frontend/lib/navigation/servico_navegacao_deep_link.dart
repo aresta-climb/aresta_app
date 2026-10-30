@@ -4,12 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/editor_croqui.dart';
+import '../services/firebase/app_logger.dart';
 import '../services/firebase/performance_telemetria.dart';
 import '../services/firebase/telemetria.dart';
 import '../services/http/cliente_http_aresta.dart';
 import '../services/http/servico_download_segundo_plano.dart';
 import '../services/http/sync_service.dart';
 import '../services/repositorio_dataset.dart';
+import '../widgets/bottom_sheets/modal_croqui_sem_conexao.dart';
 import 'analisador_rotas_deep_link.dart';
 import 'arvore_navegacao.dart';
 import 'localizador_destino_uid.dart';
@@ -21,6 +23,7 @@ class DeepLinkNavigatorService {
   final TreeNavigationController treeController;
   final TelemetryService telemetryService;
   final LocalizadorDestinoUid localizadorUid;
+  final ClienteHttpAresta _httpClient;
 
   /// Callback opcional para conexão com sessão de prévia/PR (retorna o `id` do croqui único, `''` para múltiplos ou `null` em caso de falha).
   final Future<String?> Function(String codigo)? conectorSessaoPrevia;
@@ -31,17 +34,27 @@ class DeepLinkNavigatorService {
   /// Callback para emissão de mensagens de aviso/erro à interface (opcional).
   void Function(String mensagem)? onMensagemAviso;
 
+  /// Callback opcional acionado quando um Deep Link aponta para uma entidade cujo croqui
+  /// não está baixado nem em cache local e o dispositivo está sem conexão à internet.
+  void Function(
+    ItemCatalogoBusca item,
+    Future<bool> Function() tentarNovamente,
+  )? onCroquiSemConexao;
+
   DeepLinkNavigatorService({
     required this.datasetRepo,
     required this.treeController,
     this.onMensagemAviso,
+    this.onCroquiSemConexao,
     TelemetryService? telemetryService,
     LocalizadorDestinoUid? localizadorUid,
+    ClienteHttpAresta? httpClient,
     this.conectorSessaoPrevia,
     this.abridorUrlExterna,
   })  : telemetryService = telemetryService ?? TelemetryService.instance,
         localizadorUid =
-            localizadorUid ?? LocalizadorDestinoUid(datasetRepo: datasetRepo);
+            localizadorUid ?? LocalizadorDestinoUid(datasetRepo: datasetRepo),
+        _httpClient = httpClient ?? ClienteHttpAresta.instancia;
 
   static Uri? _converterParaUri(dynamic link) {
     if (link is Uri) return link;
@@ -53,12 +66,23 @@ class DeepLinkNavigatorService {
     return null;
   }
 
+  static int _calcularDuracaoTelemetria(String? tipoStart, int duracaoLocalMs) {
+    final elapsedColdStart =
+        ServicoPerformance.instancia.obterElapsedMsColdStart();
+    if (tipoStart == 'cold_start' && elapsedColdStart > 0) {
+      return elapsedColdStart;
+    }
+    return duracaoLocalMs;
+  }
+
   Future<String?> _conectarSessaoPreviaPadrao(String codigo) async {
     try {
       final editor = datasetRepo.editorDeCroqui;
-      final urlResolvida = await editor.resolverUrlHibrida(codigo);
-      final httpClient = ClienteHttpAresta.instancia;
-      final response = await httpClient
+      final urlResolvida = await editor.resolverUrlHibrida(
+        codigo,
+        client: _httpClient,
+      );
+      final response = await _httpClient
           .get(Uri.parse('$urlResolvida/indice.binarypb'))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) {
@@ -67,7 +91,7 @@ class DeepLinkNavigatorService {
       await editor.activateExperimental(url: urlResolvida);
       final servicoSync = SyncService(
         datasetRepository: datasetRepo,
-        client: httpClient,
+        client: _httpClient,
       );
       await servicoSync.syncIndex(auto: false, forceBypassCache: true);
       await datasetRepo.init();
@@ -96,7 +120,13 @@ class DeepLinkNavigatorService {
     dynamic link, {
     BuildContext? context,
     String? tipoStart,
+    bool notificarFalha = true,
   }) async {
+    final mensageiro =
+        context != null ? ScaffoldMessenger.maybeOf(context) : null;
+    final corErro =
+        context != null ? Theme.of(context).colorScheme.error : null;
+
     final uri = _converterParaUri(link);
     if (uri != null &&
         uri.host.toLowerCase() == EditorDeCroqui.dominioPrevia &&
@@ -115,10 +145,7 @@ class DeepLinkNavigatorService {
       if (idCroqui == null) {
         final msg =
             'Não foi possível conectar à sessão de prévia "${EditorDeCroqui.formatarCodigo(codigoPrevia)}".';
-        _notificarAviso(
-          msg,
-          context != null && context.mounted ? context : null,
-        );
+        _notificarAviso(msg, mensageiro, corErro);
         return false;
       }
       if (idCroqui.isNotEmpty) {
@@ -139,17 +166,69 @@ class DeepLinkNavigatorService {
 
     final parametrosUtm = rota.parametros.isEmpty ? null : rota.parametros;
     final uid = rota.uid;
-    final destino = await localizadorUid.localizar(
+    final diagnostico = await localizadorUid.localizarComDiagnostico(
       uid,
       abrirMapa: rota.abrirMapa,
     );
 
+    if (diagnostico.bloqueadoSemConexao) {
+      cronometro.stop();
+      final item = diagnostico.itemSemConexao!;
+      final int duracaoErroMs = _calcularDuracaoTelemetria(
+        tipoStart,
+        cronometro.elapsedMilliseconds,
+      );
+      final destinoTelemetria =
+          item.tipo == 'escalada' ? 'via' : item.tipo;
+
+      AppLogger.instance.logAviso(
+        'Deep Link bloqueado por falta de conexão: ${item.nome} (UID: $uid, Croqui: ${item.picoNome} [${item.idSlug}])',
+      );
+
+      await ServicoPerformance.instancia.registrarAberturaDeepLink(
+        idCroqui: item.idSlug,
+        destino: destinoTelemetria,
+        sucesso: false,
+        tipoStart: tipoStart ?? 'warm_start',
+        duracaoMs: duracaoErroMs,
+        origemLink: rota.origemLink,
+        abrirMapa: rota.abrirMapa,
+        motivoErro: 'croqui_offline_sem_conexao',
+        parametrosUtm: parametrosUtm,
+        servicoTelemetria: telemetryService,
+      );
+
+      if (notificarFalha) {
+        Future<bool> tentarNovamente() => processarLink(
+              link,
+              tipoStart: 'warm_start',
+              notificarFalha: false,
+            );
+        if (onCroquiSemConexao != null) {
+          onCroquiSemConexao!(item, tentarNovamente);
+        } else if (context != null && context.mounted) {
+          await ModalCroquiSemConexao.mostrar(
+            context: context,
+            item: item,
+            aoTentarNovamente: tentarNovamente,
+          );
+        }
+      }
+      return false;
+    }
+
+    final destino = diagnostico.destino;
     if (destino == null) {
       cronometro.stop();
-      final int duracaoErroMs = (tipoStart == 'cold_start' &&
-              ServicoPerformance.instancia.obterElapsedMsColdStart() > 0)
-          ? ServicoPerformance.instancia.obterElapsedMsColdStart()
-          : cronometro.elapsedMilliseconds;
+      final int duracaoErroMs = _calcularDuracaoTelemetria(
+        tipoStart,
+        cronometro.elapsedMilliseconds,
+      );
+
+      AppLogger.instance.logAviso(
+        'Deep Link com UID não encontrado no acervo: "$uid"',
+      );
+
       await ServicoPerformance.instancia.registrarAberturaDeepLink(
         idCroqui: uid,
         destino: 'uid_desconhecido',
@@ -163,12 +242,11 @@ class DeepLinkNavigatorService {
         servicoTelemetria: telemetryService,
       );
 
-      final mensagem =
-          'Não foi possível encontrar a via ou setor correspondente ao código "$uid". Verifique sua conexão à internet ou baixe o pico previamente.';
-      _notificarAviso(
-        mensagem,
-        context != null && context.mounted ? context : null,
-      );
+      if (notificarFalha) {
+        final mensagem =
+            'Não foi possível encontrar a via ou setor correspondente ao código "$uid". Verifique sua conexão à internet ou baixe o pico previamente.';
+        _notificarAviso(mensagem, mensageiro, corErro);
+      }
       return false;
     }
 
@@ -182,10 +260,10 @@ class DeepLinkNavigatorService {
     await ServicoPerformance.instancia.concluirMedicaoPosFrame(
       cronometro,
       (duracaoLocalMs) async {
-        final int duracaoFinalMs = (tipoStart == 'cold_start' &&
-                ServicoPerformance.instancia.obterElapsedMsColdStart() > 0)
-            ? ServicoPerformance.instancia.obterElapsedMsColdStart()
-            : duracaoLocalMs;
+        final int duracaoFinalMs = _calcularDuracaoTelemetria(
+          tipoStart,
+          duracaoLocalMs,
+        );
         await ServicoPerformance.instancia.registrarAberturaDeepLink(
           idCroqui: destino.idCroqui,
           destino: destino.tipoDestino,
@@ -203,14 +281,18 @@ class DeepLinkNavigatorService {
     return true;
   }
 
-  void _notificarAviso(String mensagem, BuildContext? context) {
+  void _notificarAviso(
+    String mensagem,
+    ScaffoldMessengerState? mensageiro,
+    Color? corErro,
+  ) {
     if (onMensagemAviso != null) {
       onMensagemAviso!(mensagem);
-    } else if (context != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    } else if (mensageiro != null) {
+      mensageiro.showSnackBar(
         SnackBar(
           content: Text(mensagem),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: corErro,
           duration: const Duration(seconds: 4),
         ),
       );
