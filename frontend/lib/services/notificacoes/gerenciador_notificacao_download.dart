@@ -20,7 +20,6 @@ class GerenciadorNotificacaoDownload {
       'Notificações de conclusão ou falha de downloads de croquis';
 
   static const String iconePequeno = '@mipmap/ic_launcher';
-  static const String iconeBitmapRaster = 'ic_launcher_foreground';
   static const String nomeApp = 'Aresta Climb';
 
   final FlutterLocalNotificationsPlugin _plugin;
@@ -41,7 +40,7 @@ class GerenciadorNotificacaoDownload {
   }
 
   GerenciadorNotificacaoDownload({FlutterLocalNotificationsPlugin? plugin})
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   /// Inicializa o plugin de notificações nativas e registra os canais necessários.
   Future<bool> inicializar() async {
@@ -62,8 +61,10 @@ class GerenciadorNotificacaoDownload {
       final inicializado = await _plugin.initialize(settings: settings);
 
       // Registra os canais no Android
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         // Canal de progresso: importância baixa para não emitir sons contínuos
         const canalProgresso = AndroidNotificationChannel(
@@ -104,15 +105,19 @@ class GerenciadorNotificacaoDownload {
   /// Solicita permissões de envio de notificação ao usuário nas plataformas suportadas.
   Future<bool> solicitarPermissoes() async {
     try {
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         final permitido = await androidPlugin.requestNotificationsPermission();
         return permitido ?? true;
       }
 
-      final iosPlugin = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final iosPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (iosPlugin != null) {
         final permitido = await iosPlugin.requestPermissions(
           alert: true,
@@ -159,7 +164,6 @@ class GerenciadorNotificacaoDownload {
         channelDescription: canalProgressoDescricao,
         subText: nomeApp,
         icon: iconePequeno,
-        largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
         importance: Importance.low,
         priority: Priority.low,
         ongoing: true, // Sticky
@@ -173,8 +177,10 @@ class GerenciadorNotificacaoDownload {
         silent: true,
       );
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
 
       if (androidPlugin != null) {
         if (!_servicosAtivos.contains(id)) {
@@ -209,10 +215,11 @@ class GerenciadorNotificacaoDownload {
         );
 
         await _plugin.show(
-            id: id,
-            title: nomePico,
-            body: 'Baixando... $progressoInt%',
-            notificationDetails: notificationDetails);
+          id: id,
+          title: nomePico,
+          body: 'Baixando... $progressoInt%',
+          notificationDetails: notificationDetails,
+        );
       }
     } catch (e, stackTrace) {
       if (!e.toString().contains('LateInitializationError')) {
@@ -235,8 +242,10 @@ class GerenciadorNotificacaoDownload {
       final id = calcularIdNotificacao(picoId);
       _servicosAtivos.remove(id);
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
@@ -244,13 +253,12 @@ class GerenciadorNotificacaoDownload {
       // Cancela a notificação sticky anterior
       await _plugin.cancel(id: id);
 
-      final androidDetails = AndroidNotificationDetails(
+      const androidDetails = AndroidNotificationDetails(
         canalConclusaoId,
         canalConclusaoNome,
         channelDescription: canalConclusaoDescricao,
         subText: nomeApp,
         icon: iconePequeno,
-        largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
         importance: Importance.low,
         priority: Priority.low,
         ongoing: false, // Pode ser limpa (clearable)
@@ -267,7 +275,7 @@ class GerenciadorNotificacaoDownload {
         presentBadge: false,
       );
 
-      final notificationDetails = NotificationDetails(
+      const notificationDetails = NotificationDetails(
         android: androidDetails,
         iOS: darwinDetails,
       );
@@ -300,8 +308,10 @@ class GerenciadorNotificacaoDownload {
       final id = calcularIdNotificacao(picoId);
       _servicosAtivos.remove(id);
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
@@ -309,13 +319,12 @@ class GerenciadorNotificacaoDownload {
       // Cancela a notificação contínua sticky anterior
       await _plugin.cancel(id: id);
 
-      final androidDetails = AndroidNotificationDetails(
+      const androidDetails = AndroidNotificationDetails(
         canalConclusaoId,
         canalConclusaoNome,
         channelDescription: canalConclusaoDescricao,
         subText: nomeApp,
         icon: iconePequeno,
-        largeIcon: const DrawableResourceAndroidBitmap(iconeBitmapRaster),
         importance: Importance.low,
         priority: Priority.low,
         ongoing: false,
@@ -332,7 +341,7 @@ class GerenciadorNotificacaoDownload {
         presentBadge: false,
       );
 
-      final notificationDetails = NotificationDetails(
+      const notificationDetails = NotificationDetails(
         android: androidDetails,
         iOS: darwinDetails,
       );
@@ -360,8 +369,10 @@ class GerenciadorNotificacaoDownload {
       final id = calcularIdNotificacao(picoId);
       _servicosAtivos.remove(id);
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null && _servicosAtivos.isEmpty) {
         await androidPlugin.stopForegroundService();
       }
