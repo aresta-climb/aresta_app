@@ -99,7 +99,6 @@ O sistema DEVE (MUST) manter o fundo branco (`#FFFFFF`) na janela nativa exclusi
 - **WHEN** o aplicativo já foi aberto, vai para segundo plano (`onStop`) e posteriormente é retomado pelo usuário ou por um link externo (*Warm Start*)
 - **THEN** a janela nativa possui fundo `#181312` (`deepBasalt`) e a superfície do Flutter é restaurada sem qualquer flash branco na tela
 
-
 ### Requirement: Carregamento Sob Demanda de Croquis Baixados na Inicialização
 O sistema DEVE (MUST) inicializar o catálogo de picos disponíveis e baixados utilizando exclusivamente os metadados leves do `indice.binarypb` e `catalogo.db`, sem ler do disco nem desserializar arquivos `compilado.binarypb` durante o bootstrap ou atualização do índice. A leitura e desserialização de um `compilado.binarypb` DEVE ocorrer sob demanda apenas quando o croqui específico for requisitado para visualização.
 
@@ -116,20 +115,31 @@ O sistema DEVE (MUST) construir no primeiro frame da aplicação apenas a aba in
 - **THEN** apenas a `HomePage` é construída no primeiro frame, mantendo placeholders leves nas abas ainda não visitadas
 - **AND** quando o usuário toca em uma aba secundária pela primeira vez, seu widget é construído e passa a ser preservado no `IndexedStack`
 
-### Requirement: Garantia de Saída da Splash Reativa com Timeout e Fallback Seguro
-O sistema DEVE (MUST) impor um limite de tempo (*timeout*) e tratamento de exceções na resolução do destino inicial de *Cold Start*, garantindo que a tela de splash reativa seja sempre encerrada com transição para a tela inicial (`HomeNode`) caso ocorra erro inesperado ou lentidão excessiva de rede, sem interferir no bloqueio obrigatório da tela de migração estrutural de dados (`needsMigration == true`) nem dos Termos de Uso.
+### Requirement: Inicialização Determinística e Paralelizada de Serviços Locais no Pré-Boot
+O sistema DEVE (MUST) aguardar até a conclusão todas as inicializações de plugins nativos locais e cancelamento preventivo de tarefas em segundo plano antes de iniciar os serviços de aplicação e o `runApp`, sem aplicar limites de tempo artificiais em operações 100% locais. Adicionalmente, após a conclusão da inicialização do núcleo do Firebase, o sistema DEVE (MUST) executar em paralelo as ativações independentes de App Check, Crashlytics, Analytics e Performance.
 
-#### Scenario: Expiração de tempo limite ou falha ao resolver link inicial no Cold Start
-- **WHEN** a resolução do destino inicial no *Cold Start* exceder o tempo limite configurado ou lançar uma exceção não tratada
-- **THEN** o aplicativo registra o aviso no logger, encerra a exibição da splash screen reativa (`_aguardandoColdStart = false`) e abre a navegação principal posicionada na tela inicial (`HomeNode`)
+#### Scenario: Conclusão garantida da inicialização do Firebase antes do runApp em dispositivo sob carga de I/O
+- **WHEN** o aplicativo inicia a frio (*Cold Start*) em um dispositivo ou emulador cujo canal nativo local leva vários segundos para responder
+- **THEN** o pré-boot aguarda a conclusão integral da inicialização do Firebase, das notificações locais e do cancelamento de tarefas em segundo plano antes de prosseguir para a sincronização inicial e montagem da interface gráfica
+
+#### Scenario: Ativação paralela dos módulos locais do Firebase após o núcleo
+- **WHEN** a inicialização do núcleo do Firebase (`Firebase.initializeApp`) é concluída com sucesso durante o pré-boot
+- **THEN** os módulos locais de App Check, Crashlytics, Analytics e Performance são ativados concorrentemente em paralelo antes da liberação do pré-boot
+
+### Requirement: Guarda Defensiva contra Ausência de Inicialização nos Serviços Firebase
+Os serviços de configuração remota, telemetria de uso e telemetria de performance DEVEM (MUST) verificar se o núcleo do Firebase está inicializado antes de acessar instâncias globais do SDK quando nenhuma instância de teste tiver sido injetada, degradando silenciosamente sem lançar exceções de ausência de aplicativo padrão (`[core/no-app]`) nem reportar falsos erros ao monitoramento.
+
+#### Scenario: Tentativa de uso de serviços Firebase quando o núcleo não está inicializado
+- **WHEN** os serviços de configuração remota, performance ou telemetria de eventos forem acionados em um ambiente onde o núcleo do Firebase não foi inicializado e nenhuma instância de teste foi fornecida
+- **THEN** os serviços retornam de forma segura mantendo valores padrão locais sem lançar `[core/no-app]` e sem emitir eventos de erro não-fatal para o Sentry ou Crashlytics
+
+### Requirement: Garantia de Saída da Splash Reativa com Tratamento de Erros e Diagnóstico Contextual
+O sistema DEVE (MUST) garantir a saída da tela de splash reativa através do tratamento de exceções no ciclo de vida de inicialização, preservando o diagnóstico enriquecido de entidades sem conexão (`itemSemConexaoInicial`) para apresentação do diálogo contextual na interface principal sem abortar prematuramente a resolução de rede por limites de tempo redundantes, mantendo inalterado o bloqueio obrigatório da tela de migração estrutural de dados (`needsMigration == true`) e dos Termos de Uso.
+
+#### Scenario: Falha de rede ao resolver Deep Link no Cold Start preserva diagnóstico para o modal
+- **WHEN** a abertura a frio via Deep Link falha por ausência de conexão ou timeout da camada HTTP ao obter o croqui
+- **THEN** o sistema encerra a splash screen reativa (`_aguardandoColdStart = false`) preservando o `itemSemConexaoInicial` para que o diálogo contextual de croqui sem conexão seja apresentado sobre a navegação principal
 
 #### Scenario: Invariância do bloqueio da tela de migração de versão de dados
 - **WHEN** o aplicativo iniciar com `needsMigration == true` (atualização estrutural de `kDataVersion` pendente) e os termos legais já estiverem aceitos
 - **THEN** a garantia de saída da splash screen NÃO libera o acesso à `HomeNode`, mantendo a `DatabaseMigrationScreen` bloqueante em tela até que a migração estrutural seja concluída com sucesso
-
-### Requirement: Timeouts Defensivos nas Inicializações Assíncronas de Pré-Boot
-O sistema DEVE (MUST) aplicar limites de tempo (*timeouts*) defensivos às inicializações de serviços nativos e de segundo plano executadas antes da montagem da árvore de widgets (`runApp`), degradando graciosamente sem bloquear a saída da splash nativa do sistema operacional caso algum canal nativo demore a responder.
-
-#### Scenario: Lentidão ou bloqueio em canal nativo antes do runApp
-- **WHEN** a inicialização de notificações locais, serviços Firebase ou o cancelamento preventivo de tarefas do `WorkManager` exceder o limite de tempo defensivo durante o pré-boot
-- **THEN** o sistema registra o evento de lentidão/falha sem interromper o fluxo e prossegue imediatamente para o `runApp`

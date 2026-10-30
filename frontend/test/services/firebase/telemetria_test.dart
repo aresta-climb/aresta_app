@@ -1,31 +1,75 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/classificador_dispositivo.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/feedback/gravador_breadcrumbs.dart';
 import '../../mocks/mock_app_logger.dart';
-import '../../mocks/mock_telemetria.dart';
+
+/// Fake determinístico de [FirebaseAnalytics] para testes de fronteira sem rede.
+class FakeFirebaseAnalytics extends Fake implements FirebaseAnalytics {
+  final List<String> recordedEvents = [];
+  final Map<String, Map<String, dynamic>> recordedParams = {};
+  bool? coletaHabilitada;
+  bool lancarErroNoLogEvent = false;
+  bool lancarErroNoAppInstanceId = false;
+  bool lancarErroAoConfigurar = false;
+
+  @override
+  Future<void> setAnalyticsCollectionEnabled(bool enabled) async {
+    if (lancarErroAoConfigurar) {
+      throw Exception('Erro ao configurar analytics');
+    }
+    coletaHabilitada = enabled;
+  }
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    Map<String, Object?>? parameters,
+    AnalyticsCallOptions? callOptions,
+    List<AnalyticsEventItem>? items,
+  }) async {
+    if (lancarErroNoLogEvent) {
+      throw Exception('Falha simulada no logEvent');
+    }
+    recordedEvents.add(name);
+    if (parameters != null) {
+      recordedParams[name] = Map<String, dynamic>.from(parameters);
+    }
+  }
+
+  @override
+  Future<String?> get appInstanceId async {
+    if (lancarErroNoAppInstanceId) {
+      throw Exception('Falha simulada no appInstanceId');
+    }
+    return 'fake_app_instance_id';
+  }
+}
 
 void main() {
-  group('TelemetryService Mock Tests', () {
-    late MockTelemetryService mockTelemetry;
+  group('TelemetryService Eventos de Negócio', () {
+    late FakeFirebaseAnalytics fakeAnalytics;
 
     setUp(() {
-      mockTelemetry = MockTelemetryService();
-      TelemetryService.instance = mockTelemetry;
+      TelemetryService.resetForTesting();
+      GravadorBreadcrumbs.resetForTesting();
+      fakeAnalytics = FakeFirebaseAnalytics();
+      TelemetryService.instance.debugAnalytics = fakeAnalytics;
     });
 
     test('logAcaoExplorar', () async {
       await TelemetryService.instance.logAcaoExplorar('crag1', 'baixar');
-      expect(mockTelemetry.recordedEvents, contains('acao_explorar'));
+      expect(fakeAnalytics.recordedEvents, contains('acao_explorar'));
       expect(
-        mockTelemetry.recordedParams['acao_explorar']!['id_croqui'],
+        fakeAnalytics.recordedParams['acao_explorar']!['id_croqui'],
         'crag1',
       );
-      expect(mockTelemetry.recordedParams['acao_explorar']!['acao'], 'baixar');
+      expect(fakeAnalytics.recordedParams['acao_explorar']!['acao'], 'baixar');
     });
 
     test('logAcaoFeedback registra evento básico e parâmetros enriquecidos', () async {
@@ -35,11 +79,11 @@ void main() {
         temCroqui: true,
         idCroqui: 'br_mg_pedra_grande',
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_feedback'));
-      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'abrir_feedback');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['origem'], 'app_bar');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['tem_croqui'], 'true');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['id_croqui'], 'br_mg_pedra_grande');
+      expect(fakeAnalytics.recordedEvents, contains('acao_feedback'));
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['acao'], 'abrir_feedback');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['origem'], 'app_bar');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['tem_croqui'], 'true');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['id_croqui'], 'br_mg_pedra_grande');
 
       await TelemetryService.instance.logAcaoFeedback(
         'enviar_feedback',
@@ -47,23 +91,25 @@ void main() {
         idCroqui: 'br_mg_pedra_grande',
         qtdCaracteres: 42,
       );
-      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'enviar_feedback');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['tipo_feedback'], 'croqui');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['qtd_caracteres'], 42);
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['acao'], 'enviar_feedback');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['tipo_feedback'], 'croqui');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['qtd_caracteres'], 42);
 
       await TelemetryService.instance.logAcaoFeedback(
         'despacho_feedback',
         status: 'sucesso',
         dispatcher: 'connectivity_plus',
+        erro: 'erro_teste',
       );
-      expect(mockTelemetry.recordedParams['acao_feedback']!['acao'], 'despacho_feedback');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['status'], 'sucesso');
-      expect(mockTelemetry.recordedParams['acao_feedback']!['dispatcher'], 'connectivity_plus');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['acao'], 'despacho_feedback');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['status'], 'sucesso');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['dispatcher'], 'connectivity_plus');
+      expect(fakeAnalytics.recordedParams['acao_feedback']!['erro'], 'erro_teste');
     });
 
-    test('getAppInstanceId retorna valor mockado', () async {
+    test('getAppInstanceId retorna valor do fake', () async {
       final appInstanceId = await TelemetryService.instance.getAppInstanceId();
-      expect(appInstanceId, 'mock_app_instance_id');
+      expect(appInstanceId, 'fake_app_instance_id');
     });
 
     test('logAtualizarCroqui', () async {
@@ -72,17 +118,17 @@ void main() {
         'sha123',
         '2026-06-04T10:00:00.000Z',
       );
-      expect(mockTelemetry.recordedEvents, contains('atualizar_croqui'));
+      expect(fakeAnalytics.recordedEvents, contains('atualizar_croqui'));
       expect(
-        mockTelemetry.recordedParams['atualizar_croqui']!['id_croqui'],
+        fakeAnalytics.recordedParams['atualizar_croqui']!['id_croqui'],
         'crag1',
       );
       expect(
-        mockTelemetry.recordedParams['atualizar_croqui']!['versao'],
+        fakeAnalytics.recordedParams['atualizar_croqui']!['versao'],
         'sha123',
       );
       expect(
-        mockTelemetry
+        fakeAnalytics
             .recordedParams['atualizar_croqui']!['timestamp_atualizacao'],
         '2026-06-04T10:00:00.000Z',
       );
@@ -94,13 +140,13 @@ void main() {
         'abrir_croqui',
         origem: 'explorar',
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(fakeAnalytics.recordedEvents, contains('acao_croqui'));
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['acao'],
+        fakeAnalytics.recordedParams['acao_croqui']!['acao'],
         'abrir_croqui',
       );
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['origem'],
+        fakeAnalytics.recordedParams['acao_croqui']!['origem'],
         'explorar',
       );
     });
@@ -113,194 +159,315 @@ void main() {
         modoAcesso: 'offline',
         primeiraVisita: true,
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(fakeAnalytics.recordedEvents, contains('acao_croqui'));
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'],
+        fakeAnalytics.recordedParams['acao_croqui']!['modo_acesso'],
         'offline',
       );
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'],
+        fakeAnalytics.recordedParams['acao_croqui']!['primeira_visita'],
         'true',
       );
     });
 
     test('logAcaoCroqui com modoAcesso e primeiraVisita false', () async {
       await TelemetryService.instance.logAcaoCroqui(
-        'crag2',
+        'crag1',
         'abrir_croqui',
-        origem: 'meus_croquis',
-        modoAcesso: 'online',
+        origem: 'home',
+        modoAcesso: 'memoria',
         primeiraVisita: false,
+        duracaoMs: 120,
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_croqui'));
+      expect(fakeAnalytics.recordedEvents, contains('acao_croqui'));
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['modo_acesso'],
-        'online',
+        fakeAnalytics.recordedParams['acao_croqui']!['modo_acesso'],
+        'memoria',
       );
       expect(
-        mockTelemetry.recordedParams['acao_croqui']!['primeira_visita'],
+        fakeAnalytics.recordedParams['acao_croqui']!['primeira_visita'],
         'false',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_croqui']!['duracao_ms'],
+        120,
       );
     });
 
     test('logAbrirSetor', () async {
-      await TelemetryService.instance.logAbrirSetor('crag1', 'Setor 1');
-      expect(mockTelemetry.recordedEvents, contains('abrir_setor'));
+      await TelemetryService.instance.logAbrirSetor(
+        'crag1',
+        'Setor Central',
+        modoAcesso: 'offline',
+        duracaoMs: 250,
+      );
+      expect(fakeAnalytics.recordedEvents, contains('abrir_setor'));
+      expect(
+        fakeAnalytics.recordedParams['abrir_setor']!['id_croqui'],
+        'crag1',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_setor']!['nome_setor'],
+        'Setor Central',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_setor']!['modo_acesso'],
+        'offline',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_setor']!['duracao_ms'],
+        250,
+      );
     });
 
     test('logAbrirGrupo', () async {
-      await TelemetryService.instance.logAbrirGrupo('crag1', 'Grupo 1');
-      expect(mockTelemetry.recordedEvents, contains('abrir_grupo'));
+      await TelemetryService.instance.logAbrirGrupo(
+        'crag1',
+        'Bloco Principal',
+        modoAcesso: 'online',
+        duracaoMs: 180,
+      );
+      expect(fakeAnalytics.recordedEvents, contains('abrir_grupo'));
+      expect(
+        fakeAnalytics.recordedParams['abrir_grupo']!['id_croqui'],
+        'crag1',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_grupo']!['nome_grupo'],
+        'Bloco Principal',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_grupo']!['modo_acesso'],
+        'online',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_grupo']!['duracao_ms'],
+        180,
+      );
     });
 
     test('logAbrirMapa', () async {
-      await TelemetryService.instance.logAbrirMapa('crag1', 'Grupo 1');
-      expect(mockTelemetry.recordedEvents, contains('abrir_mapa'));
+      await TelemetryService.instance.logAbrirMapa(
+        'crag1',
+        'Setor Central',
+        modoAcesso: 'temp_cache',
+        origemImagem: 'cache',
+        duracaoMs: 310,
+      );
+      expect(fakeAnalytics.recordedEvents, contains('abrir_mapa'));
+      expect(
+        fakeAnalytics.recordedParams['abrir_mapa']!['id_croqui'],
+        'crag1',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_mapa']!['nome_setor'],
+        'Setor Central',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_mapa']!['modo_acesso'],
+        'temp_cache',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_mapa']!['origem_imagem'],
+        'cache',
+      );
+      expect(
+        fakeAnalytics.recordedParams['abrir_mapa']!['duracao_ms'],
+        310,
+      );
     });
 
     test('logAcaoEscalada', () async {
       await TelemetryService.instance.logAcaoEscalada(
         'crag1',
-        'Setor 1',
-        'Via 1',
-        'abrir_detalhes',
-        'mapa',
+        'Setor Central',
+        'Fissura',
+        'ver_mapa',
+        'detalhe',
+        modoAcesso: 'offline',
+        duracaoMs: 95,
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_escalada'));
+      expect(fakeAnalytics.recordedEvents, contains('acao_escalada'));
       expect(
-        mockTelemetry.recordedParams['acao_escalada']!['nome_escalada'],
-        'Via 1',
+        fakeAnalytics.recordedParams['acao_escalada']!['id_croqui'],
+        'crag1',
       );
       expect(
-        mockTelemetry.recordedParams['acao_escalada']!['acao'],
-        'abrir_detalhes',
+        fakeAnalytics.recordedParams['acao_escalada']!['nome_setor'],
+        'Setor Central',
       );
-      expect(mockTelemetry.recordedParams['acao_escalada']!['origem'], 'mapa');
+      expect(
+        fakeAnalytics.recordedParams['acao_escalada']!['nome_escalada'],
+        'Fissura',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_escalada']!['acao'],
+        'ver_mapa',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_escalada']!['origem'],
+        'detalhe',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_escalada']!['modo_acesso'],
+        'offline',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_escalada']!['duracao_ms'],
+        95,
+      );
     });
 
     test('logAcaoIndiceEscaladas com filtro e detalhe', () async {
       await TelemetryService.instance.logAcaoIndiceEscaladas(
-        'crag_pedra',
+        'crag1',
         'filtrar_grau',
         modalidade: 'Esportiva',
         detalhe: '5º a 8ºb',
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_indice_escaladas'));
-      final params = mockTelemetry.recordedParams['acao_indice_escaladas']!;
-      expect(params['id_croqui'], 'crag_pedra');
-      expect(params['acao'], 'filtrar_grau');
-      expect(params['origem'], 'indice_esportiva');
-      expect(params['detalhe'], '5º a 8ºb');
+      expect(fakeAnalytics.recordedEvents, contains('acao_indice_escaladas'));
+      expect(
+        fakeAnalytics.recordedParams['acao_indice_escaladas']!['id_croqui'],
+        'crag1',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_indice_escaladas']!['acao'],
+        'filtrar_grau',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_indice_escaladas']!['origem'],
+        'indice_esportiva',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_indice_escaladas']!['detalhe'],
+        '5º a 8ºb',
+      );
+
+      // Modalidade já prefixada com indice_
+      await TelemetryService.instance.logAcaoIndiceEscaladas(
+        'crag1',
+        'trocar_aba',
+        modalidade: 'indice_boulder',
+      );
+      expect(
+        fakeAnalytics.recordedParams['acao_indice_escaladas']!['origem'],
+        'indice_boulder',
+      );
     });
 
     test('logDeepLinkAberto com sucesso e parâmetros UTM', () async {
       await TelemetryService.instance.logDeepLinkAberto(
-        idCroqui: 'crag_pedra',
-        destino: 'via',
+        idCroqui: 'br_mg_igarape_pedra_grande',
+        destino: 'setor',
         sucesso: true,
         tipoStart: 'cold_start',
-        parametrosUtm: {
-          'utm_source': 'placa_pedra',
-          'utm_medium': 'qrcode',
-        },
+        origemLink: 'qrcode',
+        abrirMapa: true,
+        modoAcesso: 'offline',
+        duracaoMs: 450,
+        parametrosUtm: {'utm_source': 'placa_parque'},
       );
-      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
-      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
-      expect(params['id_croqui'], 'crag_pedra');
-      expect(params['acao'], 'via');
-      expect(params['destino'], 'via');
+      expect(fakeAnalytics.recordedEvents, contains('deep_link_aberto'));
+      final params = fakeAnalytics.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
+      expect(params['destino'], 'setor');
       expect(params['sucesso'], 'true');
       expect(params['tipo_start'], 'cold_start');
-      expect(params['origem'], 'cold_start');
-      expect(params['utm_source'], 'placa_pedra');
-      expect(params['utm_medium'], 'qrcode');
+      expect(params['origem_link'], 'qrcode');
+      expect(params['abrir_mapa'], 'true');
+      expect(params['modo_acesso'], 'offline');
+      expect(params['duracao_ms'], 450);
+      expect(params['utm_source'], 'placa_parque');
     });
 
     test('logDeepLinkAberto com falha e motivoErro', () async {
       await TelemetryService.instance.logDeepLinkAberto(
-        idCroqui: 'crag_desconhecido',
-        destino: 'pico',
+        idCroqui: 'br_mg_igarape_pedra_grande',
+        destino: 'via',
         sucesso: false,
-        tipoStart: 'warm_start',
         motivoErro: 'sem_conexao',
       );
-      expect(mockTelemetry.recordedEvents, contains('deep_link_aberto'));
-      final params = mockTelemetry.recordedParams['deep_link_aberto']!;
-      expect(params['id_croqui'], 'crag_desconhecido');
+      expect(fakeAnalytics.recordedEvents, contains('deep_link_aberto'));
+      final params = fakeAnalytics.recordedParams['deep_link_aberto']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
       expect(params['sucesso'], 'false');
       expect(params['motivo_erro'], 'sem_conexao');
     });
 
     test('logAcaoBetaAberto para abrir modal e clique em canal', () async {
       await TelemetryService.instance.logAcaoBetaAberto(
-        'abrir_modal_beta',
-        origem: 'home_header',
+        'abrir_modal',
+        origem: 'home',
       );
-      expect(mockTelemetry.recordedEvents, contains('acao_beta_aberto'));
-      var params = mockTelemetry.recordedParams['acao_beta_aberto']!;
-      expect(params['acao'], 'abrir_modal_beta');
-      expect(params['origem'], 'home_header');
+      expect(fakeAnalytics.recordedEvents, contains('acao_beta_aberto'));
+      var params = fakeAnalytics.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'abrir_modal');
+      expect(params['origem'], 'home');
 
       await TelemetryService.instance.logAcaoBetaAberto(
-        'clique_instagram',
-        canal: 'instagram',
+        'clique_canal',
+        canal: 'whatsapp',
+        detalhe: 'https://chat.whatsapp.com/teste',
       );
-      params = mockTelemetry.recordedParams['acao_beta_aberto']!;
-      expect(params['acao'], 'clique_instagram');
-      expect(params['origem'], 'modal_beta');
-      expect(params['detalhe'], 'instagram');
+      params = fakeAnalytics.recordedParams['acao_beta_aberto']!;
+      expect(params['acao'], 'clique_canal');
+      expect(params['canal'], 'whatsapp');
+      expect(params['detalhe'], 'https://chat.whatsapp.com/teste');
     });
 
     test('logApoioPix ao copiar chave pix', () async {
-      await TelemetryService.instance.logApoioPix('crag_pedra');
-      expect(mockTelemetry.recordedEvents, contains('apoio_pico'));
-      final params = mockTelemetry.recordedParams['apoio_pico']!;
-      expect(params['id_croqui'], 'crag_pedra');
+      await TelemetryService.instance.logApoioPix('br_mg_igarape_pedra_grande');
+      expect(fakeAnalytics.recordedEvents, contains('apoio_pico'));
+      final params = fakeAnalytics.recordedParams['apoio_pico']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
       expect(params['acao'], 'copiar_pix');
-      expect(params['origem'], 'apoie_pico');
     });
 
     test('logAcaoGuardiaoSaida para decisões no modal de saída', () async {
       await TelemetryService.instance.logAcaoGuardiaoSaida(
-        'crag_pedra',
-        'guardiao_salvar_offline',
+        'br_mg_igarape_pedra_grande',
+        'confirmar_saida',
       );
-      expect(mockTelemetry.recordedEvents, contains('guardiao_saida'));
-      final params = mockTelemetry.recordedParams['guardiao_saida']!;
-      expect(params['id_croqui'], 'crag_pedra');
-      expect(params['acao'], 'guardiao_salvar_offline');
-      expect(params['modo_acesso'], 'online');
+      expect(fakeAnalytics.recordedEvents, contains('guardiao_saida'));
+      final params = fakeAnalytics.recordedParams['guardiao_saida']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
+      expect(params['acao'], 'confirmar_saida');
     });
 
     test('logSalvarOfflineBanner para ação no banner online', () async {
-      await TelemetryService.instance.logSalvarOfflineBanner('crag_pedra');
-      expect(mockTelemetry.recordedEvents, contains('banner_modo_online'));
-      final params = mockTelemetry.recordedParams['banner_modo_online']!;
-      expect(params['id_croqui'], 'crag_pedra');
+      await TelemetryService.instance.logSalvarOfflineBanner(
+        'br_mg_igarape_pedra_grande',
+      );
+      expect(fakeAnalytics.recordedEvents, contains('banner_modo_online'));
+      final params = fakeAnalytics.recordedParams['banner_modo_online']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
       expect(params['acao'], 'banner_salvar_offline');
-      expect(params['origem'], 'banner_online');
-      expect(params['modo_acesso'], 'online');
     });
 
     test('logNavegacaoPicoHub para navegação nos cards centrais', () async {
       await TelemetryService.instance.logNavegacaoPicoHub(
-        'crag_pedra',
-        'abrir_indice_escaladas',
+        'br_mg_igarape_pedra_grande',
+        'setores',
       );
-      expect(mockTelemetry.recordedEvents, contains('navegacao_pico_hub'));
-      final params = mockTelemetry.recordedParams['navegacao_pico_hub']!;
-      expect(params['id_croqui'], 'crag_pedra');
-      expect(params['acao'], 'abrir_indice_escaladas');
-      expect(params['origem'], 'pico_hub');
+      expect(fakeAnalytics.recordedEvents, contains('navegacao_pico_hub'));
+      final params = fakeAnalytics.recordedParams['navegacao_pico_hub']!;
+      expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
+      expect(params['acao'], 'setores');
     });
 
     test('logAlterarOrdenacao em setores ou vias', () async {
       await TelemetryService.instance.logAlterarOrdenacao('setor', 'grau');
-      expect(mockTelemetry.recordedEvents, contains('alterar_ordenacao'));
-      final params = mockTelemetry.recordedParams['alterar_ordenacao']!;
+      expect(fakeAnalytics.recordedEvents, contains('alterar_ordenacao'));
+      final params = fakeAnalytics.recordedParams['alterar_ordenacao']!;
       expect(params['acao'], 'alterar_ordenacao');
       expect(params['origem'], 'setor');
       expect(params['detalhe'], 'grau');
+    });
+
+    test('logAcaoConfiguracoes', () async {
+      await TelemetryService.instance.logAcaoConfiguracoes('limpar_cache');
+      expect(fakeAnalytics.recordedEvents, contains('acao_configuracoes'));
+      expect(fakeAnalytics.recordedParams['acao_configuracoes']!['acao'], 'limpar_cache');
     });
 
     test('logLinkExterno com detalhe opcional', () async {
@@ -309,11 +476,17 @@ void main() {
         'comunidade',
         detalhe: 'https://instagram.com/aresta',
       );
-      expect(mockTelemetry.recordedEvents, contains('link_externo'));
-      final params = mockTelemetry.recordedParams['link_externo']!;
+      expect(fakeAnalytics.recordedEvents, contains('link_externo'));
+      final params = fakeAnalytics.recordedParams['link_externo']!;
       expect(params['url'], 'https://instagram.com/aresta');
       expect(params['origem'], 'comunidade');
       expect(params['detalhe'], 'https://instagram.com/aresta');
+
+      await TelemetryService.instance.logLinkExterno(
+        'https://aresta.app',
+        'home',
+      );
+      expect(fakeAnalytics.recordedParams['link_externo']!['detalhe'], 'https://aresta.app');
     });
 
     test('logCompartilharEntidade registra página e mapa', () async {
@@ -323,8 +496,8 @@ void main() {
         uid: 'hv7YWgTBQGyWOX',
         abrirMapa: false,
       );
-      expect(mockTelemetry.recordedEvents, contains('compartilhar_entidade'));
-      var params = mockTelemetry.recordedParams['compartilhar_entidade']!;
+      expect(fakeAnalytics.recordedEvents, contains('compartilhar_entidade'));
+      var params = fakeAnalytics.recordedParams['compartilhar_entidade']!;
       expect(params['id_croqui'], 'br_mg_igarape_pedra_grande');
       expect(params['tipo_entidade'], 'setor');
       expect(params['uid'], 'hv7YWgTBQGyWOX');
@@ -337,9 +510,60 @@ void main() {
         uid: 'x8siJek3FiG3aB',
         abrirMapa: true,
       );
-      params = mockTelemetry.recordedParams['compartilhar_entidade']!;
+      params = fakeAnalytics.recordedParams['compartilhar_entidade']!;
       expect(params['abrir_mapa'], 'true');
       expect(params['origem'], 'mapa_interativo');
+    });
+
+    test('logBuscaCroquis e logBuscaEscaladas', () async {
+      await TelemetryService.instance.logBuscaCroquis('pedra', 5);
+      expect(fakeAnalytics.recordedEvents, contains('busca_croquis'));
+      expect(fakeAnalytics.recordedParams['busca_croquis']!['query'], 'pedra');
+      expect(fakeAnalytics.recordedParams['busca_croquis']!['numero_resultados'], 5);
+
+      await TelemetryService.instance.logBuscaEscaladas('via_teste', 2, 'crag1');
+      expect(fakeAnalytics.recordedEvents, contains('busca_escaladas'));
+      expect(fakeAnalytics.recordedParams['busca_escaladas']!['query'], 'via_teste');
+      expect(fakeAnalytics.recordedParams['busca_escaladas']!['numero_resultados'], 2);
+      expect(fakeAnalytics.recordedParams['busca_escaladas']!['id_croqui'], 'crag1');
+    });
+
+    test('logResultadoSincronizacao e logNavegacaoHierarquica', () async {
+      await TelemetryService.instance.logResultadoSincronizacao('sucesso');
+      expect(fakeAnalytics.recordedEvents, contains('resultado_sincronizacao'));
+      expect(fakeAnalytics.recordedParams['resultado_sincronizacao']!['acao'], 'sucesso');
+
+      await TelemetryService.instance.logNavegacaoHierarquica('crag1', 'grupo_a');
+      expect(fakeAnalytics.recordedEvents, contains('navegacao_hierarquica_mapa'));
+      expect(fakeAnalytics.recordedParams['navegacao_hierarquica_mapa']!['id_croqui'], 'crag1');
+      expect(fakeAnalytics.recordedParams['navegacao_hierarquica_mapa']!['acao'], 'grupo_a');
+    });
+
+    test('logDatabaseMigrationScreenOpened e logDatabaseMigrationTryAgain', () async {
+      await TelemetryService.instance.logDatabaseMigrationScreenOpened();
+      expect(fakeAnalytics.recordedEvents, contains('migracao_db'));
+      expect(fakeAnalytics.recordedParams['migracao_db']!['acao'], 'aberta_tela_migracao');
+
+      await TelemetryService.instance.logDatabaseMigrationTryAgain();
+      expect(fakeAnalytics.recordedParams['migracao_db']!['acao'], 'tentar_novamente_clicado_tela_migracao');
+    });
+
+    test('logAppVersion avisos e bloqueios', () async {
+      await TelemetryService.instance.logAppVersionHardBlock();
+      expect(fakeAnalytics.recordedEvents, contains('migracao_db'));
+      expect(fakeAnalytics.recordedParams['migracao_db']!['acao'], 'tela_hard_block_mostrada');
+
+      await TelemetryService.instance.logAppVersionSoftBlock();
+      expect(fakeAnalytics.recordedParams['migracao_db']!['acao'], 'banner_soft_block_mostrado');
+
+      await TelemetryService.instance.logAppVersionRecommendedUpdate();
+      expect(fakeAnalytics.recordedParams['migracao_db']!['acao'], 'banner_versao_recomendada_mostrado');
+    });
+
+    test('logEvento genérico', () async {
+      await TelemetryService.instance.logEvento('evento_custom', parametros: {'chave': 'valor'});
+      expect(fakeAnalytics.recordedEvents, contains('evento_custom'));
+      expect(fakeAnalytics.recordedParams['evento_custom']!['chave'], 'valor');
     });
   });
 
@@ -347,14 +571,9 @@ void main() {
     test(
       'Should not throw exception when logging events before Firebase is initialized',
       () async {
-        // Reseta para a instância real (que chamaria FirebaseAnalytics internamente)
         TelemetryService.resetForTesting();
-
         try {
-          // Isso normalmente quebraria se Firebase.initializeApp() não tiver terminado,
-          // mas o nosso try-catch interno na _logEvent deve absorver graciosamente.
           await TelemetryService.instance.logSincronizarApp(acao: 'automatica');
-          // Passou sem quebrar = sucesso
         } catch (e) {
           fail('Should not throw uncaught exception: $e');
         }
@@ -365,6 +584,8 @@ void main() {
       'Should logError when _logEvent fails',
       () async {
         TelemetryService.resetForTesting();
+        final fake = FakeFirebaseAnalytics()..lancarErroNoLogEvent = true;
+        TelemetryService.instance.debugAnalytics = fake;
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
 
@@ -382,6 +603,8 @@ void main() {
       'Should logError and return null when getAppInstanceId fails',
       () async {
         TelemetryService.resetForTesting();
+        final fake = FakeFirebaseAnalytics()..lancarErroNoAppInstanceId = true;
+        TelemetryService.instance.debugAnalytics = fake;
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
 
@@ -396,10 +619,48 @@ void main() {
     );
 
     test(
+      'initialize desativa coleta analítica em modo debug',
+      () async {
+        TelemetryService.resetForTesting();
+        final fake = FakeFirebaseAnalytics();
+
+        await TelemetryService.instance.initialize(
+          isDebugMode: true,
+          analyticsInstance: fake,
+        );
+
+        expect(fake.coletaHabilitada, isFalse);
+      },
+    );
+
+    test(
+      'initialize captura erro ao desativar coleta analítica e registra logError',
+      () async {
+        TelemetryService.resetForTesting();
+        final fake = FakeFirebaseAnalytics()..lancarErroAoConfigurar = true;
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        await TelemetryService.instance.initialize(
+          isDebugMode: true,
+          analyticsInstance: fake,
+        );
+
+        expect(mockLogger.recordedErrors, isNotEmpty);
+        expect(
+          mockLogger.recordedErrors.first['contextMessage'],
+          '⚠️ [Telemetry] Erro ao desativar coleta do Firebase Analytics',
+        );
+      },
+    );
+
+    test(
       'Deve alimentar o GravadorBreadcrumbs automaticamente em _logEvent',
       () async {
         TelemetryService.resetForTesting();
         GravadorBreadcrumbs.resetForTesting();
+        final fake = FakeFirebaseAnalytics();
+        TelemetryService.instance.debugAnalytics = fake;
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
 
@@ -417,6 +678,8 @@ void main() {
       () async {
         TelemetryService.resetForTesting();
         GravadorBreadcrumbs.resetForTesting();
+        final fake = FakeFirebaseAnalytics();
+        TelemetryService.instance.debugAnalytics = fake;
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
 
@@ -436,6 +699,9 @@ void main() {
           statusHttp: '304',
           origem: 'auto',
           modo: 'oficial',
+          teveAtualizacao: true,
+          qtdPicosAtualizados: 3,
+          qtdThumbs: 12,
         );
         expect(
           GravadorBreadcrumbs.instance.obterBreadcrumbs().last['parametros'],
@@ -463,6 +729,8 @@ void main() {
       () async {
         TelemetryService.resetForTesting();
         GravadorBreadcrumbs.resetForTesting();
+        final fake = FakeFirebaseAnalytics();
+        TelemetryService.instance.debugAnalytics = fake;
         final mockLogger = MockAppLogger();
         AppLogger.instance = mockLogger;
         ClassificadorDispositivo.instancia.classificar(ramTotalMb: 12288);
@@ -494,6 +762,70 @@ void main() {
       },
     );
   });
+
+  group('TelemetryService - Guarda Defensiva AppLogger.firebaseInicializado', () {
+    late MockAppLogger mockLogger;
+
+    setUp(() {
+      TelemetryService.resetForTesting();
+      TelemetryService.instance.debugAnalytics = null;
+      mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+    });
+
+    tearDown(() {
+      AppLogger.resetForTesting();
+    });
+
+    test(
+      'quando Firebase não estiver inicializado e debugAnalytics for nulo, initialize degrada com logAviso sem lançar [core/no-app] nem chamar logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        await expectLater(
+          TelemetryService.instance.initialize(isDebugMode: true),
+          completes,
+        );
+
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(
+          mockLogger.recordedWarnings.first,
+          contains('Firebase não inicializado'),
+        );
+      },
+    );
+
+    test(
+      'quando Firebase não estiver inicializado e debugAnalytics for nulo, _logEvent registra breadcrumbs e log local sem lançar [core/no-app] nem chamar logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+        GravadorBreadcrumbs.resetForTesting();
+
+        await expectLater(
+          TelemetryService.instance.logSincronizarApp(acao: 'manual'),
+          completes,
+        );
+
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(GravadorBreadcrumbs.instance.obterBreadcrumbs(), isNotEmpty);
+        expect(
+          GravadorBreadcrumbs.instance.obterBreadcrumbs().last['evento'],
+          'sincronizar_app',
+        );
+      },
+    );
+
+    test(
+      'quando Firebase não estiver inicializado e debugAnalytics for nulo, getAppInstanceId retorna null sem lançar [core/no-app] nem chamar logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        final id = await TelemetryService.instance.getAppInstanceId();
+
+        expect(id, isNull);
+        expect(mockLogger.recordedErrors, isEmpty);
+      },
+    );
+  });
 }
-
-

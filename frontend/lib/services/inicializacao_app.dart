@@ -63,28 +63,6 @@ Future<int?> migrarTermosLegais(SharedPreferences prefs) async {
   return acceptedLegalVersion;
 }
 
-/// Executa uma etapa assíncrona de pré-boot com limite de tempo ([timeout]) e
-/// captura de falhas, evitando que a lentidão ou travamento de um plugin nativo
-/// congele o aplicativo na splash screen nativa antes do `runApp`.
-Future<void> executarEtapaPreBootComTimeout(
-  String nomeEtapa,
-  Future<void> Function() etapa, {
-  Duration timeout = const Duration(seconds: 4),
-}) async {
-  try {
-    await etapa().timeout(timeout);
-  } catch (e, stackTrace) {
-    AppLogger.instance.logAviso(
-      '[InicializacaoApp] Etapa de pré-boot "$nomeEtapa" excedeu o tempo limite ou falhou: $e',
-    );
-    AppLogger.instance.logError(
-      '[InicializacaoApp] Falha defensiva na etapa de pré-boot: $nomeEtapa',
-      error: e,
-      stackTrace: stackTrace,
-    );
-  }
-}
-
 /// Inicializa os serviços de dados e sincronização no primeiro plano da aplicação.
 ///
 /// Interrompe preventivamente qualquer migração em segundo plano em execução
@@ -95,12 +73,10 @@ Future<bool> setupAppServices(
   DatasetRepository datasetRepo,
   SyncService syncService, {
   Workmanager? workmanager,
-  Duration timeoutCancelamentoMigracao = const Duration(seconds: 2),
 }) async {
   // Cancela com segurança qualquer migração em segundo plano ativa (Foreground Takeover)
   await MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
     workmanager: workmanager,
-    timeoutCancelamento: timeoutCancelamentoMigracao,
   );
 
   await datasetRepo.init();
@@ -195,64 +171,54 @@ class ResultadoResolucaoColdStart {
 /// retornando o [TreeNavigationController] já posicionado no nó de destino para evitar
 /// piscar a `HomePage` antes de navegar para o link.
 ///
-/// Impõe um limite de tempo ([timeoutResolucao]) e captura exceções para garantir que a
-/// splash reativa seja sempre encerrada com transição segura para a [HomeNode].
+/// Preserva o diagnóstico contextual de entidades offline ([ResultadoResolucaoColdStart.itemSemConexaoInicial])
+/// para que o diálogo explicativo seja apresentado sobre a navegação principal, capturando
+/// falhas para garantir que a splash reativa sempre conclua com segurança.
 Future<ResultadoResolucaoColdStart> resolverDestinoInicialColdStart(
   DatasetRepository datasetRepo, {
   AppLinks? appLinks,
   SyncService? syncService,
   TreeNavigationController? treeController,
-  Duration timeoutResolucao = const Duration(seconds: 8),
 }) async {
   final controller = treeController ?? TreeNavigationController();
 
+  Uri? initialUri;
+
   try {
-    return await () async {
-      Uri? initialUri;
-
-      try {
-        initialUri = await (appLinks ?? AppLinks()).getInitialLink();
-      } catch (e, st) {
-        if (e is! MissingPluginException) {
-          AppLogger.instance.logError(
-            '[InicializacaoApp] Falha ao consultar getInitialLink no Cold Start',
-            error: e,
-            stackTrace: st,
-          );
-        }
-      }
-
-      if (initialUri == null) {
-        return ResultadoResolucaoColdStart(treeController: controller);
-      }
-
-      String? mensagemAviso;
-      ItemCatalogoBusca? itemSemConexao;
-      final navigator = DeepLinkNavigatorService(
-        datasetRepo: datasetRepo,
-        treeController: controller,
-        localizadorUid: LocalizadorDestinoUid(
-          datasetRepo: datasetRepo,
-          syncService: syncService,
-        ),
-        onMensagemAviso: (msg) => mensagemAviso = msg,
-        onCroquiSemConexao: (item, _) => itemSemConexao = item,
+    initialUri = await (appLinks ?? AppLinks()).getInitialLink();
+  } catch (e, st) {
+    if (e is! MissingPluginException) {
+      AppLogger.instance.logError(
+        '[InicializacaoApp] Falha ao consultar getInitialLink no Cold Start',
+        error: e,
+        stackTrace: st,
       );
+    }
+  }
 
-      await navigator.processarLink(initialUri, tipoStart: 'cold_start');
-
-      return ResultadoResolucaoColdStart(
-        treeController: controller,
-        linkInicialProcessado: initialUri,
-        mensagemAvisoInicial: mensagemAviso,
-        itemSemConexaoInicial: itemSemConexao,
-      );
-    }().timeout(timeoutResolucao);
-  } on TimeoutException {
-    controller.goHome();
-    AppLogger.instance.logAviso(
-      '[InicializacaoApp] Tempo limite excedido ao resolver destino inicial no Cold Start ($timeoutResolucao). Abrindo na Home.',
-    );
+  if (initialUri == null) {
     return ResultadoResolucaoColdStart(treeController: controller);
   }
+
+  String? mensagemAviso;
+  ItemCatalogoBusca? itemSemConexao;
+  final navigator = DeepLinkNavigatorService(
+    datasetRepo: datasetRepo,
+    treeController: controller,
+    localizadorUid: LocalizadorDestinoUid(
+      datasetRepo: datasetRepo,
+      syncService: syncService,
+    ),
+    onMensagemAviso: (msg) => mensagemAviso = msg,
+    onCroquiSemConexao: (item, _) => itemSemConexao = item,
+  );
+
+  await navigator.processarLink(initialUri, tipoStart: 'cold_start');
+
+  return ResultadoResolucaoColdStart(
+    treeController: controller,
+    linkInicialProcessado: initialUri,
+    mensagemAvisoInicial: mensagemAviso,
+    itemSemConexaoInicial: itemSemConexao,
+  );
 }

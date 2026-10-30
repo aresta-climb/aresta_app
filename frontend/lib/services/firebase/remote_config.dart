@@ -29,8 +29,9 @@ class RemoteConfigService extends ChangeNotifier {
   @visibleForTesting
   FirebaseRemoteConfig? debugRemoteConfig;
 
-  FirebaseRemoteConfig get _remoteConfig =>
-      debugRemoteConfig ?? FirebaseRemoteConfig.instance;
+  FirebaseRemoteConfig? get _remoteConfig =>
+      debugRemoteConfig ??
+      (AppLogger.firebaseInicializado ? FirebaseRemoteConfig.instance : null);
 
   Future<void>? _initFuture;
 
@@ -50,9 +51,17 @@ class RemoteConfigService extends ChangeNotifier {
 
   /// Executa o fluxo interno de inicialização e sincronização com o Firebase Remote Config.
   Future<void> _initializeInternal() async {
+    final remoteConfig = _remoteConfig;
+    if (remoteConfig == null) {
+      AppLogger.instance.logAviso(
+        '🔧 [RemoteConfig] Firebase não inicializado. Usando valores locais padrão.',
+      );
+      return;
+    }
+
     try {
       // 1. Define os padrões locais seguros para garantir funcionamento offline imediato
-      await _remoteConfig.setDefaults({
+      await remoteConfig.setDefaults({
         "recommended_version": 0,
         "soft_min_version": 0,
         "hard_min_version": 0,
@@ -67,7 +76,7 @@ class RemoteConfigService extends ChangeNotifier {
       });
 
       // 2. Define o timeout e o intervalo padrão de cache (12 horas) para evitar requisições repetitivas a frio
-      await _remoteConfig.setConfigSettings(
+      await remoteConfig.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 10),
           minimumFetchInterval: const Duration(hours: 12),
@@ -75,7 +84,7 @@ class RemoteConfigService extends ChangeNotifier {
       );
 
       // 3. Tenta buscar e ativar novas configurações do servidor
-      final updated = await _remoteConfig.fetchAndActivate();
+      final updated = await remoteConfig.fetchAndActivate();
 
       AppLogger.instance.logInfo(
         '🔧 [RemoteConfig] Configuração atualizada com sucesso (novo valor: $updated).',
@@ -102,7 +111,7 @@ class RemoteConfigService extends ChangeNotifier {
   /// Retorna um valor booleano do Remote Config ou [false] em caso de erro.
   bool getBool(String key) {
     try {
-      return _remoteConfig.getBool(key);
+      return _remoteConfig?.getBool(key) ?? false;
     } catch (_) {
       return false;
     }
@@ -111,7 +120,7 @@ class RemoteConfigService extends ChangeNotifier {
   /// Retorna um valor inteiro do Remote Config ou `0` em caso de erro.
   int getInt(String key) {
     try {
-      return _remoteConfig.getInt(key);
+      return _remoteConfig?.getInt(key) ?? 0;
     } catch (_) {
       return 0;
     }
@@ -120,7 +129,7 @@ class RemoteConfigService extends ChangeNotifier {
   /// Retorna uma string do Remote Config ou `""` em caso de erro.
   String getString(String key) {
     try {
-      return _remoteConfig.getString(key);
+      return _remoteConfig?.getString(key) ?? "";
     } catch (_) {
       return "";
     }

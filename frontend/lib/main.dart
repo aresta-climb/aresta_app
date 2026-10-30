@@ -41,7 +41,6 @@ export 'package:frontend/services/inicializacao_app.dart'
     show
         ResultadoResolucaoColdStart,
         configurarGestaoMemoria,
-        executarEtapaPreBootComTimeout,
         registrarOuvintesLiveReload,
         resolverDestinoInicialColdStart,
         setupAppServices;
@@ -70,16 +69,10 @@ void main() async {
   final editorDeCroqui = EditorDeCroqui();
   int? acceptedLegalVersion;
 
-  // Executa tarefas independentes de inicialização em paralelo com timeouts defensivos para acelerar e blindar o Cold Start
+  // Executa tarefas independentes de inicialização em paralelo para acelerar o Cold Start
   await Future.wait([
-    executarEtapaPreBootComTimeout(
-      'notificacoes_download',
-      () => GerenciadorNotificacaoDownload.instancia.inicializar(),
-    ),
-    executarEtapaPreBootComTimeout(
-      'firebase',
-      () => initFirebase(),
-    ),
+    GerenciadorNotificacaoDownload.instancia.inicializar(),
+    initFirebase(),
     ThemeController().loadTheme(),
     SharedPreferences.getInstance().then((prefs) async {
       acceptedLegalVersion = await migrarTermosLegais(prefs);

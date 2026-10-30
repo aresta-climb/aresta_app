@@ -58,7 +58,9 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
-            isShrinkResources = true
+            // Desativado para impedir que o R8 remova blocos ResTable_typeSpec inteiros da tabela resources.arsc,
+            // o que causava SIGSEGV nativo em libandroidfw.so (LoadedPackage::FindEntryByName) nos split APKs da Google Play (Issue #20).
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

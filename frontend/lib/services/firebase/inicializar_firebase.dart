@@ -14,21 +14,31 @@ import 'performance_telemetria.dart';
 
 /// Inicializa os serviços do Firebase e os configura globalmente.
 /// Esta função encapsula todo o contato direto com a API core do Firebase.
-Future<void> initFirebase() async {
-  // Inicialização básica (seguro para isolates secundários)
-  if (Firebase.apps.isEmpty) {
+Future<void> initFirebase({
+  Future<void> Function()? inicializadorCore,
+  Future<void> Function()? ativadorAppCheck,
+  Future<void> Function()? configuradorCrashlytics,
+  Future<void> Function()? configuradorAnalytics,
+  Future<void> Function()? configuradorPerformance,
+  Future<void> Function()? inicializadorRemoteConfig,
+}) async {
+  // Inicialização básica do Core primeiro (seguro para isolates secundários)
+  if (inicializadorCore != null) {
+    await inicializadorCore();
+  } else if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 
-  // Ativação da atestação de integridade de aplicativo (Firebase App Check)
-  await AppCheckService.instance.activate();
-
-  await initCrashlytics();
-  await initAnalytics();
-  await initPerformance();
+  // Ativação paralela das configurações e integrações locais independentes
+  await Future.wait([
+    (ativadorAppCheck ?? AppCheckService.instance.activate)(),
+    (configuradorCrashlytics ?? initCrashlytics)(),
+    (configuradorAnalytics ?? initAnalytics)(),
+    (configuradorPerformance ?? initPerformance)(),
+  ]);
 
   // Dispara o carregamento de configurações remotas sem bloquear a inicialização principal
-  RemoteConfigService.instance.initialize();
+  (inicializadorRemoteConfig ?? RemoteConfigService.instance.initialize)();
 }
 
 /// Inicializa e configura o Crashlytics. Extraído para permitir injeção de dependências nos testes.

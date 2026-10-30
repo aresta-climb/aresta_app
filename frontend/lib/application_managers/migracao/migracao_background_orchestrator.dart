@@ -62,18 +62,12 @@ class MigracaoBackgroundOrchestrator {
 
   /// Cancela qualquer tarefa de migração ativa em segundo plano para que a interface
   /// de primeiro plano assuma o controle com segurança (Estratégia Foreground Takeover).
-  ///
-  /// Aplica um limite de tempo defensivo ([timeoutCancelamento]) para impedir que um
-  /// eventual bloqueio no banco SQLite do `WorkManager` retenha a inicialização do app.
   static Future<void> cancelarMigracaoSegundoPlano({
     Workmanager? workmanager,
-    Duration timeoutCancelamento = const Duration(seconds: 2),
   }) async {
     try {
       final wm = workmanager ?? Workmanager();
-      await wm
-          .cancelByUniqueName(kNomeUnicoMigracao)
-          .timeout(timeoutCancelamento);
+      await wm.cancelByUniqueName(kNomeUnicoMigracao);
       AppLogger.instance.logInfo('[MigracaoBackground] Tarefa em segundo plano cancelada para prioridade do primeiro plano.');
     } catch (e, stackTrace) {
       AppLogger.instance.logError(

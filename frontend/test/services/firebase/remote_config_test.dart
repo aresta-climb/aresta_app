@@ -307,4 +307,71 @@ void main() {
       );
     });
   });
+
+  group('RemoteConfigService - Guarda Defensiva AppLogger.firebaseInicializado', () {
+    late MockAppLogger mockLogger;
+
+    setUp(() {
+      mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      RemoteConfigService.instance.debugRemoteConfig = null;
+      RemoteConfigService.instance.clearInitFuture();
+    });
+
+    tearDown(() {
+      AppLogger.resetForTesting();
+    });
+
+    test(
+      'quando Firebase não estiver inicializado e debugRemoteConfig for nulo, initialize conclui com logAviso sem lançar [core/no-app] nem chamar logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        await expectLater(RemoteConfigService.instance.initialize(), completes);
+
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(
+          mockLogger.recordedWarnings.first,
+          contains('Firebase não inicializado'),
+        );
+      },
+    );
+
+    test(
+      'quando Firebase não estiver inicializado e debugRemoteConfig for nulo, getters retornam valores padrão seguros sem lançar exceções nem chamar logError',
+      () {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        expect(RemoteConfigService.instance.recommendedVersion, 0);
+        expect(RemoteConfigService.instance.softMinVersion, 0);
+        expect(RemoteConfigService.instance.hardMinVersion, 0);
+        expect(RemoteConfigService.instance.storeUrlIos, '');
+        expect(
+          RemoteConfigService.instance.feedbackEdgeFunctionUrl,
+          NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+        );
+        expect(
+          RemoteConfigService.instance.servingBaseUrl,
+          NetworkConstants.kDefaultServingBaseUrl,
+        );
+        expect(
+          RemoteConfigService.instance.whatsappCommunityUrl,
+          NetworkConstants.kDefaultWhatsappCommunityUrl,
+        );
+        expect(
+          RemoteConfigService.instance.discordCommunityUrl,
+          NetworkConstants.kDefaultDiscordCommunityUrl,
+        );
+        expect(
+          RemoteConfigService.instance.officialServerUrl,
+          NetworkConstants.kDefaultOfficialServerUrl,
+        );
+        expect(RemoteConfigService.instance.getBool('feature_flag'), isFalse);
+        expect(RemoteConfigService.instance.getInt('chave_int'), 0);
+        expect(RemoteConfigService.instance.getString('chave_string'), '');
+        expect(mockLogger.recordedErrors, isEmpty);
+      },
+    );
+  });
 }

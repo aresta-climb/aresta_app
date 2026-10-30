@@ -477,4 +477,102 @@ void main() {
       },
     );
   });
+
+  group('ServicoPerformance - Guarda Defensiva AppLogger.firebaseInicializado', () {
+    setUp(() {
+      ServicoPerformance.resetarParaTestes();
+      ServicoPerformance.instancia.debugPerformance = null;
+    });
+
+    test(
+      'quando Firebase não estiver inicializado e performanceInstance for nula, inicializar conclui com logAviso sem lançar [core/no-app] nem chamar logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        await expectLater(
+          ServicoPerformance.instancia.inicializar(emModoDebug: false),
+          completes,
+        );
+
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(mockLogger.recordedWarnings, isNotEmpty);
+        expect(
+          mockLogger.recordedWarnings.first,
+          contains('Firebase não inicializado'),
+        );
+      },
+    );
+
+    test(
+      'quando Firebase não estiver inicializado e debugPerformance for nulo, registrarTrace não envia ao Firebase, grava histórico local e não chama logError',
+      () async {
+        expect(AppLogger.firebaseInicializado, isFalse);
+
+        // Força coleta ativa como se estivesse em release
+        await ServicoPerformance.instancia.inicializar(
+          emModoDebug: false,
+          performanceInstance: fakePerformance,
+        );
+        // Remove a instância para simular ambiente real sem inicialização
+        ServicoPerformance.instancia.debugPerformance = null;
+        mockLogger.recordedErrors.clear();
+
+        await ServicoPerformance.instancia.registrarTrace(
+          'trace_sem_firebase',
+          duracaoMs: 140,
+        );
+
+        expect(mockLogger.recordedErrors, isEmpty);
+        expect(ServicoPerformance.instancia.tracesRegistradas, isNotEmpty);
+        expect(
+          ServicoPerformance.instancia.tracesRegistradas.last.enviadoAoFirebase,
+          isFalse,
+        );
+      },
+    );
+  });
+
+  group('ServicoPerformance - Cobertura Integral de Casos de Borda', () {
+    test('resetarParaTestes desregistra callback de FrameTiming quando ativo', () {
+      ServicoPerformance.instancia.iniciarMonitoramentoFluidez('tela_teste');
+      expect(() => ServicoPerformance.resetarParaTestes(), returnsNormally);
+    });
+
+    test('garantirCronometroColdStartAtivo e obterElapsedMsColdStart cobrem fluxos de medição', () {
+      ServicoPerformance.resetarParaTestes();
+      expect(ServicoPerformance.instancia.obterElapsedMsColdStart(), 0);
+
+      ServicoPerformance.instancia.garantirCronometroColdStartAtivo();
+      expect(ServicoPerformance.instancia.obterElapsedMsColdStart(), greaterThanOrEqualTo(0));
+
+      // Chamada subsequente é idempotente
+      ServicoPerformance.instancia.garantirCronometroColdStartAtivo();
+      expect(ServicoPerformance.instancia.obterElapsedMsColdStart(), greaterThanOrEqualTo(0));
+    });
+
+    test('concluirMedicaoPosFrame executa imediatamente fora do ciclo de build/frame', () async {
+      final sw = Stopwatch()..start();
+      int duracao = 0;
+      await ServicoPerformance.instancia.concluirMedicaoPosFrame(sw, (ms) {
+        duracao = ms;
+      });
+      expect(duracao, greaterThanOrEqualTo(0));
+      expect(sw.isRunning, isFalse);
+    });
+
+    test('registrarTrace descarta trace mais antiga ao ultrapassar limite de 100 itens', () async {
+      await ServicoPerformance.instancia.inicializar(
+        emModoDebug: false,
+        performanceInstance: fakePerformance,
+      );
+
+      for (int i = 0; i < 105; i++) {
+        await ServicoPerformance.instancia.registrarTrace('trace_$i', duracaoMs: i);
+      }
+
+      expect(ServicoPerformance.instancia.tracesRegistradas.length, 100);
+      expect(ServicoPerformance.instancia.tracesRegistradas.first.nome, 'trace_5');
+      expect(ServicoPerformance.instancia.tracesRegistradas.last.nome, 'trace_104');
+    });
+  });
 }

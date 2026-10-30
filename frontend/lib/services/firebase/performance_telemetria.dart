@@ -82,9 +82,10 @@ class ServicoPerformance {
   final Map<String, _SessaoFluidez> _sessoesFluidezAtivas = {};
   bool _callbackTimingsRegistrado = false;
 
-  FirebasePerformance _obterPerformance([FirebasePerformance? override]) {
-    return override ?? debugPerformance ?? FirebasePerformance.instance;
-  }
+  FirebasePerformance? _obterPerformance([FirebasePerformance? override]) =>
+      override ??
+      debugPerformance ??
+      (AppLogger.firebaseInicializado ? FirebasePerformance.instance : null);
 
   /// Inicializa e configura a coleta do Firebase Performance respeitando o bloqueio fora de release (`!kReleaseMode`).
   Future<void> inicializar({
@@ -99,6 +100,12 @@ class ServicoPerformance {
 
     try {
       final perf = _obterPerformance(performanceInstance);
+      if (perf == null) {
+        AppLogger.instance.logAviso(
+          '⏱️ [Performance] Firebase não inicializado. Coleta nativa desativada.',
+        );
+        return;
+      }
       await perf.setPerformanceCollectionEnabled(_coletaAtiva);
       if (modoDebug) {
         AppLogger.instance.logInfo(
@@ -185,24 +192,26 @@ class ServicoPerformance {
 
     bool enviado = false;
     if (_coletaAtiva) {
-      try {
-        final perf = _obterPerformance();
-        final trace = perf.newTrace(nomeNormalizado);
-        await trace.start();
-        for (final entry in atributosNormalizados.entries) {
-          trace.putAttribute(entry.key, entry.value);
+      final perf = _obterPerformance();
+      if (perf != null) {
+        try {
+          final trace = perf.newTrace(nomeNormalizado);
+          await trace.start();
+          for (final entry in atributosNormalizados.entries) {
+            trace.putAttribute(entry.key, entry.value);
+          }
+          for (final entry in metricasNormalizadas.entries) {
+            trace.setMetric(entry.key, entry.value);
+          }
+          await trace.stop();
+          enviado = true;
+        } catch (e, stackTrace) {
+          AppLogger.instance.logError(
+            '⚠️ [Performance] Erro ao enviar trace $nomeNormalizado',
+            error: e,
+            stackTrace: stackTrace,
+          );
         }
-        for (final entry in metricasNormalizadas.entries) {
-          trace.setMetric(entry.key, entry.value);
-        }
-        await trace.stop();
-        enviado = true;
-      } catch (e, stackTrace) {
-        AppLogger.instance.logError(
-          '⚠️ [Performance] Erro ao enviar trace $nomeNormalizado',
-          error: e,
-          stackTrace: stackTrace,
-        );
       }
     }
 

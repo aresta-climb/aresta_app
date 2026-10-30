@@ -27,8 +27,9 @@ class TelemetryService {
   @visibleForTesting
   FirebaseAnalytics? debugAnalytics;
 
-  FirebaseAnalytics get _analytics =>
-      debugAnalytics ?? FirebaseAnalytics.instance;
+  FirebaseAnalytics? get _analytics =>
+      debugAnalytics ??
+      (AppLogger.firebaseInicializado ? FirebaseAnalytics.instance : null);
 
   @visibleForTesting
   static void resetForTesting() {
@@ -46,6 +47,12 @@ class TelemetryService {
   }) async {
     final isDebug = isDebugMode ?? !kReleaseMode;
     final analytics = analyticsInstance ?? _analytics;
+    if (analytics == null) {
+      AppLogger.instance.logAviso(
+        '📊 [Telemetry] Firebase não inicializado. Telemetria nativa desativada.',
+      );
+      return;
+    }
 
     if (isDebug) {
       try {
@@ -82,8 +89,10 @@ class TelemetryService {
     AppLogger.instance.logInfo(
       '📈 [Telemetry] Evento disparado: $name | Parâmetros: $parametrosEnriquecidos',
     );
+    final analytics = _analytics;
+    if (analytics == null) return;
     try {
-      await _analytics.logEvent(
+      await analytics.logEvent(
         name: name,
         parameters: parametrosEnriquecidos,
       );
@@ -98,8 +107,10 @@ class TelemetryService {
 
   /// Retorna o appInstanceId do Firebase Analytics (útil para associar feedbacks à sessão).
   Future<String?> getAppInstanceId() async {
+    final analytics = _analytics;
+    if (analytics == null) return null;
     try {
-      return await _analytics.appInstanceId;
+      return await analytics.appInstanceId;
     } catch (e, stackTrace) {
       AppLogger.instance.logError(
         '⚠️ [Telemetry] Erro ao obter appInstanceId',

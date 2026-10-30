@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -61,7 +60,9 @@ void main() {
       HttpOverrides.global = null;
       TelemetryService.instance = MockTelemetryService();
       tempDir = await Directory.systemTemp.createTemp('migracao_test_');
-      PathProviderPlatform.instance = _PathProviderPlatformMigracao(tempDir.path);
+      PathProviderPlatform.instance = _PathProviderPlatformMigracao(
+        tempDir.path,
+      );
       SharedPreferences.setMockInitialValues({});
 
       chamadasIndice = 0;
@@ -86,7 +87,9 @@ void main() {
       File(editorDeCroqui.indicePath(tempDir.path))
         ..parent.createSync(recursive: true)
         ..writeAsBytesSync(Indice().writeToBuffer());
-      File(editorDeCroqui.catalogoPath(tempDir.path)).writeAsBytesSync([1, 2, 3, 4]);
+      File(
+        editorDeCroqui.catalogoPath(tempDir.path),
+      ).writeAsBytesSync([1, 2, 3, 4]);
 
       datasetRepo = DatasetRepository(editorDeCroqui: editorDeCroqui);
       final cliente = ClienteHttpAresta.paraTestes(http.Client());
@@ -107,154 +110,172 @@ void main() {
       }
     });
 
-    test('executarMigracaoPosAtualizacao executa migração real via SyncService quando a versão armazenada é antiga', () async {
-      SharedPreferences.setMockInitialValues({
-        'cached_data_version': NetworkConstants.kDataVersion - 1,
-      });
+    test(
+      'executarMigracaoPosAtualizacao executa migração real via SyncService quando a versão armazenada é antiga',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'cached_data_version': NetworkConstants.kDataVersion - 1,
+        });
 
-      final result = await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
-        datasetRepo: datasetRepo,
-        syncService: syncService,
-      );
+        final result =
+            await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+            );
 
-      expect(result, isTrue);
-      expect(chamadasIndice, equals(1));
-    });
+        expect(result, isTrue);
+        expect(chamadasIndice, equals(1));
+      },
+    );
 
-    test('executarMigracaoPosAtualizacao pula migração quando checkNeedsMigration é falso', () async {
-      SharedPreferences.setMockInitialValues({
-        'cached_data_version': NetworkConstants.kDataVersion,
-      });
+    test(
+      'executarMigracaoPosAtualizacao pula migração quando checkNeedsMigration é falso',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'cached_data_version': NetworkConstants.kDataVersion,
+        });
 
-      final result = await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
-        datasetRepo: datasetRepo,
-        syncService: syncService,
-      );
+        final result =
+            await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+            );
 
-      expect(result, isTrue);
-      expect(chamadasIndice, equals(0));
-    });
+        expect(result, isTrue);
+        expect(chamadasIndice, equals(0));
+      },
+    );
 
-    test('agendarMigracaoPosAtualizacao registra OneOffTask no Workmanager com constraint de rede', () async {
-      when(
-        () => mockWorkmanager.registerOneOffTask(
-          any(),
-          any(),
-          constraints: any(named: 'constraints'),
-          existingWorkPolicy: any(named: 'existingWorkPolicy'),
-        ),
-      ).thenAnswer((_) async {});
-
-      await MigracaoBackgroundOrchestrator.agendarMigracaoPosAtualizacao(
-        workmanager: mockWorkmanager,
-      );
-
-      verify(
-        () => mockWorkmanager.registerOneOffTask(
-          'migracao_pos_update',
-          MigracaoBackgroundOrchestrator.kNomeTarefaMigracao,
-          constraints: any(
-            named: 'constraints',
-            that: isA<Constraints>().having(
-              (c) => c.networkType,
-              'networkType',
-              NetworkType.connected,
-            ),
+    test(
+      'agendarMigracaoPosAtualizacao registra OneOffTask no Workmanager com constraint de rede',
+      () async {
+        when(
+          () => mockWorkmanager.registerOneOffTask(
+            any(),
+            any(),
+            constraints: any(named: 'constraints'),
+            existingWorkPolicy: any(named: 'existingWorkPolicy'),
           ),
-          existingWorkPolicy: ExistingWorkPolicy.replace,
-        ),
-      ).called(1);
-    });
+        ).thenAnswer((_) async {});
 
-    test('cancelarMigracaoSegundoPlano chama cancelByUniqueName no Workmanager', () async {
-      when(() => mockWorkmanager.cancelByUniqueName(any())).thenAnswer((_) async {});
-
-      await MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
-        workmanager: mockWorkmanager,
-      );
-
-      verify(() => mockWorkmanager.cancelByUniqueName('migracao_pos_update')).called(1);
-    });
-
-    test('executarMigracaoPosAtualizacao retorna false quando o servidor falha durante a migração', () async {
-      SharedPreferences.setMockInitialValues({
-        'cached_data_version': NetworkConstants.kDataVersion - 1,
-      });
-      statusServidorIndice = 500;
-
-      final result = await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
-        datasetRepo: datasetRepo,
-        syncService: syncService,
-      );
-
-      expect(result, isFalse);
-    });
-
-    test('executarMigracaoPosAtualizacao sem parâmetros utiliza instâncias padrão e conclui com sucesso', () async {
-      SharedPreferences.setMockInitialValues({
-        'cached_data_version': NetworkConstants.kDataVersion,
-      });
-
-      final result = await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao();
-      expect(result, isTrue);
-    });
-
-    test('agendarMigracaoPosAtualizacao sem argumentos utiliza Workmanager padrão', () async {
-      try {
-        await MigracaoBackgroundOrchestrator.agendarMigracaoPosAtualizacao();
-      } catch (_) {}
-    });
-
-    test('cancelarMigracaoSegundoPlano sem argumentos utiliza instância padrão e trata erro graciosamente', () async {
-      await expectLater(
-        MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(),
-        completes,
-      );
-    });
-
-    test('cancelarMigracaoSegundoPlano captura exceção do Workmanager e registra no AppLogger via logError', () async {
-      final mockLogger = MockAppLogger();
-      AppLogger.instance = mockLogger;
-      addTearDown(AppLogger.resetForTesting);
-
-      when(() => mockWorkmanager.cancelByUniqueName(any())).thenThrow(Exception('Falha nativa'));
-
-      await expectLater(
-        MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
+        await MigracaoBackgroundOrchestrator.agendarMigracaoPosAtualizacao(
           workmanager: mockWorkmanager,
-        ),
-        completes,
-      );
+        );
 
-      expect(mockLogger.recordedErrors.length, 1);
-      final erro = mockLogger.recordedErrors.first;
-      expect(erro['contextMessage'], contains('[MigracaoBackground] Erro ao cancelar tarefa de segundo plano'));
-      expect(erro['error'].toString(), contains('Falha nativa'));
-      expect(erro['stackTrace'], isNotNull);
-    });
+        verify(
+          () => mockWorkmanager.registerOneOffTask(
+            'migracao_pos_update',
+            MigracaoBackgroundOrchestrator.kNomeTarefaMigracao,
+            constraints: any(
+              named: 'constraints',
+              that: isA<Constraints>().having(
+                (c) => c.networkType,
+                'networkType',
+                NetworkType.connected,
+              ),
+            ),
+            existingWorkPolicy: ExistingWorkPolicy.replace,
+          ),
+        ).called(1);
+      },
+    );
 
-    test('cancelarMigracaoSegundoPlano encerra por timeoutCancelamento quando o Workmanager pendura sem responder', () async {
-      final mockLogger = MockAppLogger();
-      AppLogger.instance = mockLogger;
-      addTearDown(AppLogger.resetForTesting);
+    test(
+      'cancelarMigracaoSegundoPlano chama cancelByUniqueName no Workmanager',
+      () async {
+        when(
+          () => mockWorkmanager.cancelByUniqueName(any()),
+        ).thenAnswer((_) async {});
 
-      final completerPendente = Completer<void>();
-      when(() => mockWorkmanager.cancelByUniqueName(any()))
-          .thenAnswer((_) => completerPendente.future);
-
-      await expectLater(
-        MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
+        await MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
           workmanager: mockWorkmanager,
-          timeoutCancelamento: const Duration(milliseconds: 40),
-        ),
-        completes,
-      );
+        );
 
-      expect(mockLogger.recordedErrors.length, 1);
-      expect(
-        mockLogger.recordedErrors.first['contextMessage'],
-        contains('[MigracaoBackground] Erro ao cancelar tarefa de segundo plano'),
-      );
-    });
+        verify(
+          () => mockWorkmanager.cancelByUniqueName('migracao_pos_update'),
+        ).called(1);
+      },
+    );
+
+    test(
+      'executarMigracaoPosAtualizacao retorna false quando o servidor falha durante a migração',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'cached_data_version': NetworkConstants.kDataVersion - 1,
+        });
+        statusServidorIndice = 500;
+
+        final result =
+            await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao(
+              datasetRepo: datasetRepo,
+              syncService: syncService,
+            );
+
+        expect(result, isFalse);
+      },
+    );
+
+    test(
+      'executarMigracaoPosAtualizacao sem parâmetros utiliza instâncias padrão e conclui com sucesso',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'cached_data_version': NetworkConstants.kDataVersion,
+        });
+
+        final result =
+            await MigracaoBackgroundOrchestrator.executarMigracaoPosAtualizacao();
+        expect(result, isTrue);
+      },
+    );
+
+    test(
+      'agendarMigracaoPosAtualizacao sem argumentos utiliza Workmanager padrão',
+      () async {
+        try {
+          await MigracaoBackgroundOrchestrator.agendarMigracaoPosAtualizacao();
+        } catch (_) {}
+      },
+    );
+
+    test(
+      'cancelarMigracaoSegundoPlano sem argumentos utiliza instância padrão e trata erro graciosamente',
+      () async {
+        await expectLater(
+          MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(),
+          completes,
+        );
+      },
+    );
+
+    test(
+      'cancelarMigracaoSegundoPlano captura exceção do Workmanager e registra no AppLogger via logError',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+        addTearDown(AppLogger.resetForTesting);
+
+        when(
+          () => mockWorkmanager.cancelByUniqueName(any()),
+        ).thenThrow(Exception('Falha nativa'));
+
+        await expectLater(
+          MigracaoBackgroundOrchestrator.cancelarMigracaoSegundoPlano(
+            workmanager: mockWorkmanager,
+          ),
+          completes,
+        );
+
+        expect(mockLogger.recordedErrors.length, 1);
+        final erro = mockLogger.recordedErrors.first;
+        expect(
+          erro['contextMessage'],
+          contains(
+            '[MigracaoBackground] Erro ao cancelar tarefa de segundo plano',
+          ),
+        );
+        expect(erro['error'].toString(), contains('Falha nativa'));
+        expect(erro['stackTrace'], isNotNull);
+      },
+    );
   });
 }
