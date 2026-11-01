@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+# SPDX-License-Identifier: MPL-2.0
+# ============================================================================
+# ARESTA CLIMB — REGRAS DE SINCRONIZAÇÃO DO POWERSYNC (sync_rules.yaml)
+# ============================================================================
+# Sincroniza estritamente o perfil e a caderneta privada do escalador autenticado,
+# mantendo o consumo de replicação WAL e tráfego no Free Tier próximo de zero.
+
+bucket_definitions:
+  bucket_usuario:
+    parameters:
+      - select request.user_id() as usuario_id
+    data:
+      - select * from perfis where user_id = bucket.usuario_id
+      - select * from cadenas where user_id = bucket.usuario_id
