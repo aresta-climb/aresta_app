@@ -313,5 +313,35 @@ CREATE POLICY "fila_interacoes_seguranca_anonima" ON public.fila_interacoes
         AND tipo IN ('ALERTA_SEGURANCA', 'CONFIRMACAO_ALERTA')
     );
 
+-- ============================================================================
+-- 5. PRIVILÉGIOS DE ACESSO POR ROLE (PRINCÍPIO DO MENOR PRIVILÉGIO)
+-- ============================================================================
+
+REVOKE ALL ON public.perfis FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.perfis TO authenticated;
+
+REVOKE ALL ON public.cadenas FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cadenas TO authenticated;
+
+-- Clientes (anon/authenticated) podem apenas ler e enfileirar interações;
+-- atualização de status e purga pertencem exclusivamente ao Aresta Bot (service_role).
+REVOKE UPDATE, DELETE, TRUNCATE ON public.fila_interacoes FROM anon, authenticated;
+GRANT SELECT, INSERT ON public.fila_interacoes TO anon, authenticated;
+
+GRANT ALL ON public.perfis, public.cadenas, public.fila_interacoes TO service_role;
+
+-- ============================================================================
+-- 6. PUBLICAÇÃO DE REPLICAÇÃO LÓGICA PARA O POWERSYNC
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication WHERE pubname = 'powersync'
+    ) THEN
+        CREATE PUBLICATION powersync FOR TABLE public.perfis, public.cadenas;
+    END IF;
+END
+$$;
 
 COMMIT;
