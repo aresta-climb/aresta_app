@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 import '../services/caderneta/repositorio_caderneta.dart';
+import '../services/caderneta/resolvedor_metadados_caderneta.dart';
+import '../services/repositorio_dataset.dart';
 import '../theme/cores_app.dart';
 import '../view/function_library/funcoes_hub_perfil_caderneta.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -18,7 +20,14 @@ class HubPerfilCadernetaPage extends StatefulWidget {
   /// ViewModel injetado (ou inicializado por padrão com a instância local-first).
   final HubPerfilCadernetaViewModel? viewModel;
 
-  const HubPerfilCadernetaPage({super.key, this.viewModel});
+  /// Repositório de dataset e catálogo local utilizado para hidratar a contagem real de picos.
+  final DatasetRepository? datasetRepo;
+
+  const HubPerfilCadernetaPage({
+    super.key,
+    this.viewModel,
+    this.datasetRepo,
+  });
 
   @override
   State<HubPerfilCadernetaPage> createState() => _HubPerfilCadernetaPageState();
@@ -26,6 +35,7 @@ class HubPerfilCadernetaPage extends StatefulWidget {
 
 class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
   late final HubPerfilCadernetaViewModel _viewModel;
+  ResolvedorMetadadosCaderneta? _resolvedorInterno;
   bool _criouViewModelInterno = false;
 
   @override
@@ -34,8 +44,15 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
     } else {
+      final resolvedor = ResolvedorMetadadosCaderneta(
+        repositorioCaderneta: RepositorioCadernetaLocal.instancia,
+        datasetRepo: widget.datasetRepo ?? DatasetRepository.instance,
+      );
+      _resolvedorInterno = resolvedor;
       _viewModel = HubPerfilCadernetaViewModel(
         repositorio: RepositorioCadernetaLocal.instancia,
+        obterTotalPicos: resolvedor.obterTotalPicosDistintos,
+        escutaMetadados: resolvedor,
       );
       _criouViewModelInterno = true;
     }
@@ -45,6 +62,7 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
   void dispose() {
     if (_criouViewModelInterno) {
       _viewModel.dispose();
+      _resolvedorInterno?.dispose();
     }
     super.dispose();
   }

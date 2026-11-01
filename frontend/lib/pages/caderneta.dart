@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import '../data/modelos/cadena.dart';
 import '../services/caderneta/repositorio_caderneta.dart';
+import '../services/caderneta/resolvedor_metadados_caderneta.dart';
+import '../services/repositorio_dataset.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_caderneta.dart';
 import '../view/view_models/perfil_view_model.dart';
@@ -19,7 +21,14 @@ class CadernetaPage extends StatefulWidget {
   /// ViewModel injetado (ou inicializado por padrão com a instância local-first).
   final PerfilViewModel? viewModel;
 
-  const CadernetaPage({super.key, this.viewModel});
+  /// Repositório de dataset e catálogo local utilizado para hidratar nomes e graus das vias.
+  final DatasetRepository? datasetRepo;
+
+  const CadernetaPage({
+    super.key,
+    this.viewModel,
+    this.datasetRepo,
+  });
 
   @override
   State<CadernetaPage> createState() => _CadernetaPageState();
@@ -27,6 +36,7 @@ class CadernetaPage extends StatefulWidget {
 
 class _CadernetaPageState extends State<CadernetaPage> {
   late final PerfilViewModel _viewModel;
+  ResolvedorMetadadosCaderneta? _resolvedorInterno;
   bool _criouViewModelInterno = false;
 
   @override
@@ -35,8 +45,16 @@ class _CadernetaPageState extends State<CadernetaPage> {
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
     } else {
+      final resolvedor = ResolvedorMetadadosCaderneta(
+        repositorioCaderneta: RepositorioCadernetaLocal.instancia,
+        datasetRepo: widget.datasetRepo ?? DatasetRepository.instance,
+      );
+      _resolvedorInterno = resolvedor;
       _viewModel = PerfilViewModel(
         repositorio: RepositorioCadernetaLocal.instancia,
+        obterNomeDaVia: resolvedor.obterNomeDaVia,
+        obterGrauDaVia: resolvedor.obterGrauDaVia,
+        escutaMetadados: resolvedor,
       );
       _criouViewModelInterno = true;
     }
@@ -46,6 +64,7 @@ class _CadernetaPageState extends State<CadernetaPage> {
   void dispose() {
     if (_criouViewModelInterno) {
       _viewModel.dispose();
+      _resolvedorInterno?.dispose();
     }
     super.dispose();
   }
