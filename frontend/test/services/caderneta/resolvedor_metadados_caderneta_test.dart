@@ -4,11 +4,13 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/caderneta/resolvedor_metadados_caderneta.dart';
+import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -265,6 +267,146 @@ void main() {
 
       expect(resolvedor.obterNomeDaVia('viaMutavel0001'), equals('Via K2'));
       expect(resolvedor.obterGrauDaVia('viaMutavel0001'), equals('5ºsup/6a'));
+
+      resolvedor.dispose();
+    });
+
+    test('utiliza croquis carregados no DatasetRepository como fallback síncrono imediato e contabiliza mínimo de 1 pico para UID desconhecido', () async {
+      final datasetRepo = DatasetRepository(
+        editorDeCroqui: EditorDeCroqui(),
+        repositorioCatalogo: repoCatalogo,
+      );
+
+      final viaDireta = Escalada(
+        uid: 'viaOffline0001',
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via da Sessão Offline',
+          dificuldade: GrauVia_GrauVia.BR_7C,
+        ),
+      );
+      final blocoEmGrupo = Escalada(
+        uid: 'blocoOnline001',
+        boulder: Boulder(
+          nome: 'Boulder do Grupo Online',
+          dificuldade: GrauBoulder_GrauBoulder.VB_BARRA_V0,
+        ),
+      );
+
+      final croquiBaixado = Croqui(
+        id: 'br_sp_sao_bento',
+        uid: 'croquiBaixado1',
+        nome: 'Pedra do Baú',
+        picos: [
+          Pico(
+            nome: 'Baú',
+            setoresOuGrupos: [
+              SetorOuGrupo(
+                setor: ArquivoSetor(
+                  conteudo: Setor(
+                    uid: 'setorBaixado01',
+                    nome: 'Face Sul',
+                    escaladas: [viaDireta],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final croquiOnline = Croqui(
+        id: 'br_mg_ouro_preto',
+        nome: 'Ouro Preto',
+        picos: [
+          Pico(
+            nome: 'Ouro Preto',
+            setoresOuGrupos: [
+              SetorOuGrupo(
+                grupo: ArquivoGrupo(
+                  conteudo: Grupo(
+                    uid: 'grupoOnline001',
+                    nome: 'Grupo Central',
+                    setores: [
+                      ArquivoSetor(
+                        conteudo: Setor(
+                          uid: 'setorOnline001',
+                          nome: 'Setor Blocos',
+                          escaladas: [blocoEmGrupo],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      datasetRepo.activeDataset.value = ConjuntoDadosCroqui(
+        picosBaixados: [
+          ResumoPico(
+            id: 'br_sp_sao_bento',
+            nome: 'Pedra do Baú',
+            local: 'SP',
+            isDownloaded: true,
+            croqui: croquiBaixado,
+          ),
+        ],
+        picosDisponiveis: const [],
+        croquisBaixados: [croquiBaixado],
+      );
+      datasetRepo.gerenciadorSessaoOnline.registrarCroquiOnline(
+        'br_mg_ouro_preto',
+        croquiOnline,
+      );
+
+      // 1) Primeiro testa UID totalmente desconhecido: garante mínimo seguro de 1 pico quando há cadena
+      await repoCaderneta.salvarCadena(
+        Cadena.criar(
+          escaladaUid: 'uidSemCatalogo',
+          dataAscensao: DateTime(2026, 10, 1),
+          tipoAscensao: TipoAscensao.tentativa,
+          tipoEscalada: TipoEscalada.guiado,
+        ),
+      );
+
+      final resolvedor = ResolvedorMetadadosCaderneta(
+        repositorioCaderneta: repoCaderneta,
+        datasetRepo: datasetRepo,
+      );
+      await resolvedor.atualizar();
+      expect(resolvedor.obterTotalPicosDistintos(), equals(1));
+
+      // 2) Agora adiciona cadenas das escaladas presentes nos croquis em memória (sem estarem no catalogo.db)
+      await repoCaderneta.salvarCadena(
+        Cadena.criar(
+          escaladaUid: 'viaOffline0001',
+          dataAscensao: DateTime(2026, 10, 2),
+          tipoAscensao: TipoAscensao.aVista,
+          tipoEscalada: TipoEscalada.guiado,
+        ),
+      );
+      await repoCaderneta.salvarCadena(
+        Cadena.criar(
+          escaladaUid: 'blocoOnline001',
+          dataAscensao: DateTime(2026, 10, 3),
+          tipoAscensao: TipoAscensao.flash,
+          tipoEscalada: TipoEscalada.boulder,
+        ),
+      );
+
+      expect(
+        resolvedor.obterNomeDaVia('viaOffline0001'),
+        equals('Via da Sessão Offline'),
+      );
+      expect(resolvedor.obterGrauDaVia('viaOffline0001'), equals('7c'));
+      expect(
+        resolvedor.obterNomeDaVia('blocoOnline001'),
+        equals('Boulder do Grupo Online'),
+      );
+      expect(resolvedor.obterGrauDaVia('blocoOnline001'), equals('VB/V0'));
+      expect(resolvedor.obterTotalPicosDistintos(), equals(2));
 
       resolvedor.dispose();
     });
