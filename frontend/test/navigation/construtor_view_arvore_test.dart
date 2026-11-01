@@ -6,8 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/navigation/construtor_reativo_pagina.dart';
 import 'package:frontend/navigation/construtor_view_arvore.dart';
@@ -19,9 +25,11 @@ import 'package:frontend/pages/configuracoes.dart';
 import 'package:frontend/pages/hub_perfil_caderneta.dart';
 import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/pages/sobre_time.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/theme/cores_app.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -46,6 +54,9 @@ class DummyNavNode extends NavNode {
 }
 
 void main() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
   group('Resolvedor de Rotas da Árvore (construirPaginaParaNo)', () {
     late Directory tempDir;
     late DatasetRepository repo;
@@ -53,16 +64,27 @@ void main() {
     late EditorDeCroqui editor;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      RepositorioCadernetaLocal.instancia = null;
       tempDir = await Directory.systemTemp.createTemp('construtor_view_arvore_test_');
       PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
       editor = EditorDeCroqui();
-      repo = DatasetRepository(editorDeCroqui: editor);
+      repo = DatasetRepository(
+        editorDeCroqui: editor,
+        repositorioCatalogo: RepositorioCatalogo(
+          provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+          fabricaBanco: databaseFactoryFfi,
+        ),
+      );
       syncService = SyncService(datasetRepository: repo);
     });
 
     tearDown(() {
+      RepositorioCadernetaLocal.instancia = null;
       if (tempDir.existsSync()) {
-        tempDir.deleteSync(recursive: true);
+        try {
+          tempDir.deleteSync(recursive: true);
+        } catch (_) {}
       }
     });
 
@@ -115,6 +137,131 @@ void main() {
 
       expect(widget, isA<CadernetaPage>());
     });
+
+    testWidgets(
+      'PerfilNode e CadernetaNode exibem contagem real de picos distintos, nomes de vias e pirâmide hidratados do catalogo.db',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.runAsync(() async {
+          await RepositorioCadernetaLocal.instancia.inicializar();
+          await repo.repositorioCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoDestino: 'v1',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'croquiPedraR14',
+                    idSlug: 'br_mg_pedra_rachada',
+                    nome: 'Pedra Rachada',
+                  ),
+                  CatalogoCroqui(
+                    croquiUid: 'croquiSerraC14',
+                    idSlug: 'br_mg_serra_cipo',
+                    nome: 'Serra do Cipó',
+                  ),
+                ],
+                entidades: [
+                  CatalogoEntidade(
+                    uid: 'viaPedra1NanoX',
+                    tipo: 'escalada',
+                    croquiUid: 'croquiPedraR14',
+                    nome: 'Via Deslize',
+                    escaladaGrau: '6sup',
+                    escaladaTipo: 'esportiva',
+                  ),
+                  CatalogoEntidade(
+                    uid: 'viaCipo1NanoXY',
+                    tipo: 'escalada',
+                    croquiUid: 'croquiSerraC14',
+                    nome: 'Fenda do Cipó',
+                    escaladaGrau: '7b',
+                    escaladaTipo: 'tradicional',
+                  ),
+                ],
+              ),
+            ),
+          );
+          await RepositorioCadernetaLocal.instancia.salvarCadena(
+            Cadena.criar(
+              escaladaUid: 'viaPedra1NanoX',
+              dataAscensao: DateTime(2026, 10, 10),
+              tipoAscensao: TipoAscensao.aVista,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+          );
+          await RepositorioCadernetaLocal.instancia.salvarCadena(
+            Cadena.criar(
+              escaladaUid: 'viaCipo1NanoXY',
+              dataAscensao: DateTime(2026, 10, 11),
+              tipoAscensao: TipoAscensao.flash,
+              tipoEscalada: TipoEscalada.guiado,
+            ),
+          );
+        });
+
+        final widgetPerfil = construirPaginaParaNo(
+          node: const PerfilNode(HomeNode()),
+          datasetRepo: repo,
+          syncService: syncService,
+        );
+
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: widgetPerfil,
+            ),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('card_metrica_picos')),
+            matching: find.text('2'),
+          ),
+          findsOneWidget,
+        );
+
+        final widgetCaderneta = construirPaginaParaNo(
+          node: const CadernetaNode(PerfilNode(HomeNode())),
+          datasetRepo: repo,
+          syncService: syncService,
+        );
+
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: widgetCaderneta,
+            ),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pumpAndSettle();
+
+        expect(find.text('Via Deslize'), findsOneWidget);
+        expect(find.text('Fenda do Cipó'), findsOneWidget);
+        expect(
+          find.text('Nenhuma ascensão registrada nesta modalidade.'),
+          findsNothing,
+        );
+        expect(find.text('6ºsup'), findsAtLeastNWidgets(1));
+        expect(find.text('7b'), findsAtLeastNWidgets(1));
+      },
+    );
 
     testWidgets('resolve MapaGlobalNode para MapaGlobalPage', (tester) async {
       final widget = construirPaginaParaNo(
