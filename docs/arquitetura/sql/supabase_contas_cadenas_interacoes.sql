@@ -70,5 +70,82 @@ BEGIN
 END;
 $$;
 
+-- ============================================================================
+-- 2. TABELA: public.perfis (Identidade Esportiva Pública do Escalador)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.perfis (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    autor_id_publico VARCHAR(14) UNIQUE NOT NULL DEFAULT public.gerar_nanoid_14c()
+        CONSTRAINT chk_perfis_autor_id_nanoid CHECK (autor_id_publico ~ '^[0-9A-Za-z]{14}$'),
+    autor_nome_publico VARCHAR(50) NOT NULL DEFAULT 'Escalador Aresta'
+        CONSTRAINT chk_perfis_autor_nome_nao_vazio CHECK (char_length(btrim(autor_nome_publico)) > 0),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.perfis IS
+    'Metadados públicos do escalador autenticado, vinculando auth.users ao NanoID 14c público.';
+
+DROP TRIGGER IF EXISTS trg_perfis_atualizado_em ON public.perfis;
+CREATE TRIGGER trg_perfis_atualizado_em
+    BEFORE UPDATE ON public.perfis
+    FOR EACH ROW
+    EXECUTE FUNCTION public.atualizar_coluna_atualizado_em();
+
+-- Gatilho para criar automaticamente a linha em public.perfis no cadastro (Sign Up / OAuth),
+-- reaproveitando o autor_id_publico gerado offline no aparelho caso enviado em raw_user_meta_data.
+CREATE OR REPLACE FUNCTION public.criar_perfil_automatico_novo_usuario()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+    uid_candidato TEXT;
+    nome_candidato TEXT;
+    uid_final VARCHAR(14);
+    nome_final VARCHAR(50);
+BEGIN
+    uid_candidato := btrim(COALESCE(NEW.raw_user_meta_data->>'autor_id_publico', ''));
+    IF uid_candidato ~ '^[0-9A-Za-z]{14}$'
+       AND NOT EXISTS (SELECT 1 FROM public.perfis WHERE autor_id_publico = uid_candidato) THEN
+        uid_final := uid_candidato::VARCHAR(14);
+    ELSE
+        uid_final := public.gerar_nanoid_14c();
+    END IF;
+
+    nome_candidato := btrim(COALESCE(
+        NULLIF(btrim(NEW.raw_user_meta_data->>'autor_nome_publico'), ''),
+        NULLIF(btrim(NEW.raw_user_meta_data->>'full_name'), ''),
+        NULLIF(btrim(NEW.raw_user_meta_data->>'name'), ''),
+        'Escalador Aresta'
+    ));
+    nome_final := left(nome_candidato, 50)::VARCHAR(50);
+
+    INSERT INTO public.perfis (user_id, autor_id_publico, autor_nome_publico)
+    VALUES (NEW.id, uid_final, nome_final)
+    ON CONFLICT (user_id) DO NOTHING;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_auth_users_criar_perfil ON auth.users;
+CREATE TRIGGER trg_auth_users_criar_perfil
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.criar_perfil_automatico_novo_usuario();
+
+-- Habilitação obrigatória de RLS em public.perfis
+ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "perfis_proprio_usuario" ON public.perfis;
+CREATE POLICY "perfis_proprio_usuario" ON public.perfis
+    FOR ALL
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
 
 COMMIT;
