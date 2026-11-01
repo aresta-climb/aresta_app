@@ -26,6 +26,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Função customizada opcional para apuração do total de vias.
   final int Function()? _obterTotalVias;
 
+  /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
+  final Listenable? _escutaMetadados;
+
   /// Callback para navegação até a página detalhada da caderneta.
   final VoidCallback? aoAbrirCaderneta;
 
@@ -47,15 +50,18 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     this.funcaoAtleta = 'Escalador',
     int Function()? obterTotalPicos,
     int Function()? obterTotalVias,
+    Listenable? escutaMetadados,
     this.aoAbrirCaderneta,
     this.aoAbrirConfiguracoes,
     this.aoAbrirDadosPrivacidade,
     this.aoConfirmarSaida,
     this.aoEditarPerfil,
-  })  : _obterTotalPicos = obterTotalPicos,
-        _obterTotalVias = obterTotalVias {
+  }) : _obterTotalPicos = obterTotalPicos,
+       _obterTotalVias = obterTotalVias,
+       _escutaMetadados = escutaMetadados {
     repositorio.cadenasNotifier.addListener(_notificarMudanca);
     repositorio.perfilNotifier.addListener(_notificarMudanca);
+    _escutaMetadados?.addListener(_notificarMudanca);
   }
 
   void _notificarMudanca() {
@@ -66,6 +72,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   void dispose() {
     repositorio.cadenasNotifier.removeListener(_notificarMudanca);
     repositorio.perfilNotifier.removeListener(_notificarMudanca);
+    _escutaMetadados?.removeListener(_notificarMudanca);
     super.dispose();
   }
 

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
@@ -161,6 +162,32 @@ void main() {
       expect(editarPerfilAberto, isTrue);
 
       vm.dispose();
+    });
+
+    test('notifica ouvintes reativamente quando escutaMetadados emite atualização e remove listener no dispose', () {
+      final gatilhoMetadados = ChangeNotifier();
+      var picosAtuais = 1;
+      final vm = HubPerfilCadernetaViewModel(
+        repositorio: repositorio,
+        obterTotalPicos: () => picosAtuais,
+        escutaMetadados: gatilhoMetadados,
+      );
+
+      var notificacoes = 0;
+      vm.addListener(() => notificacoes++);
+
+      picosAtuais = 3;
+      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+      gatilhoMetadados.notifyListeners();
+
+      expect(notificacoes, equals(1));
+      expect(vm.totalPicos, equals(3));
+
+      vm.dispose();
+      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+      gatilhoMetadados.notifyListeners();
+      expect(notificacoes, equals(1));
+      gatilhoMetadados.dispose();
     });
   });
 }
