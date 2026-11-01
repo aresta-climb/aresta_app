@@ -39,5 +39,48 @@ void main() {
 
       expect(controlador.interacoesAtivas, isFalse);
     });
+
+    test('persiste alteração de preferência e notifica ouvintes reativamente', () async {
+      final controlador = ControladorInteracoesUsuario();
+      var notificacoes = 0;
+      controlador.interacoesAtivasNotifier.addListener(() {
+        notificacoes++;
+      });
+
+      await controlador.definirInteracoesAtivas(false);
+
+      expect(controlador.interacoesAtivas, isFalse);
+      expect(notificacoes, equals(1));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(ControladorInteracoesUsuario.chavePreferenciaInteracoes),
+        isFalse,
+      );
+    });
+
+    test('exibirElementosInterativos exige simultaneamente perfilHabilitado e preferência ativa do usuário', () async {
+      final controlador = ControladorInteracoesUsuario.instancia;
+      await controlador.inicializar();
+
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+      expect(controlador.exibirElementosInterativos, isFalse);
+
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      expect(controlador.exibirElementosInterativos, isTrue);
+
+      await controlador.definirInteracoesAtivas(false);
+      expect(controlador.exibirElementosInterativos, isFalse);
+    });
+
+    test('permite substituir e redefinir a instância singleton para isolamento em testes', () {
+      final customizado = ControladorInteracoesUsuario();
+      ControladorInteracoesUsuario.instancia = customizado;
+
+      expect(identical(ControladorInteracoesUsuario.instancia, customizado), isTrue);
+
+      ControladorInteracoesUsuario.redefinirParaTestes();
+      expect(identical(ControladorInteracoesUsuario.instancia, customizado), isFalse);
+    });
   });
 }
