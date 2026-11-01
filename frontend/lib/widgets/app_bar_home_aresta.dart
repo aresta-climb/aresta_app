@@ -7,7 +7,7 @@ import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../services/configuracao_recursos.dart';
+import '../services/controlador_interacoes_usuario.dart';
 import 'micro_badge_beta.dart';
 import 'modal_beta_aberto.dart';
 
@@ -126,13 +126,27 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: () => _executarSincronizacao(context),
               ),
               buildFeedbackButton(context, color: context.colors.ashGrey),
-              if (ConfiguracaoRecursos.perfilHabilitado)
-                IconButton(
-                  key: const Key('btn_home_perfil'),
-                  icon: Icon(Icons.person_outline, color: context.colors.ashGrey),
-                  tooltip: 'Meu Perfil',
-                  onPressed: () => _executarPerfil(context),
-                ),
+              ValueListenableBuilder<bool>(
+                valueListenable: ControladorInteracoesUsuario
+                    .instancia
+                    .interacoesAtivasNotifier,
+                builder: (context, _, _) {
+                  if (!ControladorInteracoesUsuario
+                      .instancia
+                      .exibirElementosInterativos) {
+                    return const SizedBox.shrink();
+                  }
+                  return IconButton(
+                    key: const Key('btn_home_perfil'),
+                    icon: Icon(
+                      Icons.person_outline,
+                      color: context.colors.ashGrey,
+                    ),
+                    tooltip: 'Meu Perfil',
+                    onPressed: () => _executarPerfil(context),
+                  );
+                },
+              ),
               IconButton(
                 icon: Icon(Icons.settings, color: context.colors.ashGrey),
                 onPressed: () => _executarConfiguracoes(context),
