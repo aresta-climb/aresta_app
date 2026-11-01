@@ -147,5 +147,52 @@ CREATE POLICY "perfis_proprio_usuario" ON public.perfis
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+-- ============================================================================
+-- 3. TABELA: public.cadenas (Backup Privado da Caderneta Esportiva)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.cadenas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    escalada_uid VARCHAR(14) NOT NULL
+        CONSTRAINT chk_cadenas_escalada_uid_nanoid CHECK (escalada_uid ~ '^[0-9A-Za-z]{14}$'),
+    data_ascensao DATE NOT NULL,
+    -- 1: À Vista, 2: Flash, 3: Trabalhado, 4: Tentativa (alinhado com TipoAscensao)
+    tipo_ascensao SMALLINT NOT NULL
+        CONSTRAINT chk_cadenas_tipo_ascensao CHECK (tipo_ascensao BETWEEN 1 AND 4),
+    -- 1: Guiado, 2: Top Rope, 3: Boulder, 4: Solo (alinhado com TipoEscalada)
+    tipo_escalada SMALLINT NOT NULL
+        CONSTRAINT chk_cadenas_tipo_escalada CHECK (tipo_escalada BETWEEN 1 AND 4),
+    tentativas SMALLINT NOT NULL DEFAULT 1
+        CONSTRAINT chk_cadenas_tentativas_positivas CHECK (tentativas >= 1),
+    -- Código numérico do enum Protobuf (GrauVia / GrauBoulder)
+    grau_sugerido SMALLINT,
+    notas_privadas VARCHAR(200) NOT NULL DEFAULT '',
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.cadenas IS
+    'Caderneta privada do escalador sincronizada via PowerSync (acesso exclusivo do titular).';
+
+DROP TRIGGER IF EXISTS trg_cadenas_atualizado_em ON public.cadenas;
+CREATE TRIGGER trg_cadenas_atualizado_em
+    BEFORE UPDATE ON public.cadenas
+    FOR EACH ROW
+    EXECUTE FUNCTION public.atualizar_coluna_atualizado_em();
+
+CREATE INDEX IF NOT EXISTS idx_cadenas_usuario ON public.cadenas(user_id);
+CREATE INDEX IF NOT EXISTS idx_cadenas_escalada ON public.cadenas(escalada_uid);
+
+-- Habilitação obrigatória de RLS em public.cadenas
+ALTER TABLE public.cadenas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "cadenas_proprio_usuario" ON public.cadenas;
+CREATE POLICY "cadenas_proprio_usuario" ON public.cadenas
+    FOR ALL
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
 
 COMMIT;
