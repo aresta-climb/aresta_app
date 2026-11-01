@@ -15,8 +15,11 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `notificacoes/` | Gerenciamento de notificações nativas de download (`GerenciadorNotificacaoDownload`) com suporte a Foreground Services e progresso contínuo |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
-| `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), exibição de ponta a ponta (`configurarExibicaoPontaAPonta`), foreground takeover (`setupAppServices`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
+| `caderneta/` | Gestão local-first do Perfil do Escalador, Caderneta Esportiva, compilação de estatísticas (`CompiladorEstatisticasCaderneta`) e resolução reativa de metadados via catálogo SQLite e croquis em memória (`ResolvedorMetadadosCaderneta`) |
+| `controlador_interacoes_usuario.dart` | Preferência local reativa (`SharedPreferences` + `ValueNotifier<bool>`) permitindo ao escalador exibir ou ocultar elementos interativos opcionais de Perfil e Caderneta sem apagar seus dados locais |
+| `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), exibição de ponta a ponta (`configurarExibicaoPontaAPonta`), bootstrap paralelo de serviços locais (`setupAppServices`: `DatasetRepository`, `RepositorioCadernetaLocal` e `ControladorInteracoesUsuario`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
 | `configuracao_recursos.dart` | Controle de flags de compilação (`--dart-define`) e chaves secretas de acesso para recursos em desenvolvimento (Perfil do Escalador e Caderneta Esportiva) |
+| `catalogo/` | Banco SQLite FTS5 local (`RepositorioCatalogo` / `catalogo.db`) para busca global instantânea, resolução de UIDs e hidratação offline de metadados da caderneta |
 
 ---
 
@@ -183,4 +186,9 @@ Para testes unitários e de widget, a classe provê métodos estáticos com a an
 - `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true)`: Força o estado habilitado.
 - `ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false)`: Força o estado desabilitado.
 - `ConfiguracaoRecursos.redefinirParaTestes()`: Restaura o estado original derivado do ambiente.
+
+### Preferência Local do Escalador (`ControladorInteracoesUsuario`)
+Mesmo quando `ConfiguracaoRecursos.perfilHabilitado` está ativo na compilação, escaladores que preferem utilizar o aplicativo exclusivamente para consulta de croquis e dados técnicos podem desativar os elementos opcionais de Perfil e Caderneta em tempo de execução na tela de Configurações (`construirCartaoInteracoesCaderneta`):
+- **`ControladorInteracoesUsuario` (`controlador_interacoes_usuario.dart`)**: Persiste a chave `interacoes_caderneta_ativas` no `SharedPreferences` (padrão `true`) e expõe `interacoesAtivasNotifier` (`ValueListenable<bool>`) e `exibirElementosInterativos` (`ConfiguracaoRecursos.perfilHabilitado && interacoesAtivasNotifier.value`).
+- **Ocultação Reativa Sem Perda de Dados**: Quando desativado pelo usuário, o botão de Perfil na Home (`ArestaHomeAppBar`), o bloco de registro de cadena na tela da via (`via_functions.dart`) e a navegação `AppNav.toPerfil` são ocultados/bloqueados imediatamente, preservando intactos todos os registros locais do `RepositorioCadernetaLocal` e mantendo alertas comunitários de segurança irrestritos.
 

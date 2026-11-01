@@ -41,3 +41,12 @@
 - [x] 5.1 Adicionar rota e atalho para o `PerfilPage` na navegação do aplicativo
 - [x] 5.2 Executar a suíte completa de testes (`flutter test --coverage`) e verificar 100% de cobertura de testes nos novos arquivos sem quebra de testes existentes
 - [x] 5.3 Atualizar os arquivos `README.md` pertinentes refletindo o novo módulo de Caderneta e Perfil
+
+## 6. Fase 1 — Ponte Reativa com Catálogo Local, Preferência de Interações e Schema Supabase (TDD)
+
+- [x] 6.1 Entregar DDL PostgreSQL idempotente, políticas RLS (incluindo votos anônimos para alertas de segurança estilo Waze), regras PowerSync e guia passo a passo em `docs/arquitetura/sql/` (`supabase_contas_cadenas_interacoes.sql`, `powersync_sync_rules.yaml`, `README.md`)
+- [x] 6.2 [RED/GREEN] Implementar `ControladorInteracoesUsuario` (`frontend/lib/services/controlador_interacoes_usuario.dart`) e sua inicialização paralela junto ao `RepositorioCadernetaLocal` em `setupAppServices` (`frontend/lib/services/inicializacao_app.dart`)
+- [x] 6.3 [RED/GREEN] Implementar `ResolvedorMetadadosCaderneta` (`frontend/lib/services/caderneta/resolvedor_metadados_caderneta.dart`) integrando `RepositorioCatalogo` (`catalogo.db`) + fallback em memória (`DatasetRepository`) com normalização de graus para alimentar `HubPerfilCadernetaPage` e `CadernetaPage` via `construtor_view_arvore.dart`
+- [x] 6.4 [RED/GREEN] Propagar `obterCodigoGrauOficial(escalada)` no registro de cadenas pela `ViaPage` (`via_functions.dart`) e decodificar `Cadena.grauSugerido` como fallback em `CompiladorEstatisticasCaderneta`
+- [x] 6.5 [RED/GREEN] Expor cartão `'PERFIL E CADERNETA'` (`construirCartaoInteracoesCaderneta`) em `SettingsPage` e ocultar reativamente os atalhos opcionais (`ArestaHomeAppBar`, `ViaPage` e `AppNav.toPerfil`) sem apagar dados locais
+- [x] 6.6 [REFACTOR] Auditar `flutter analyze` (0 problemas), validar 100% de cobertura comportamental nos módulos criados/alterados e atualizar os `README.md` de serviços e caderneta
