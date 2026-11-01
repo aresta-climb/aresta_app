@@ -168,7 +168,7 @@ A persistência reativa local do aplicativo no dispositivo é implementada **exc
 ```
 
 ### 6.1. Regras de Sincronização do PowerSync (`sync_rules.yaml`)
-A sincronização do usuário rejeita redes sociais e foca apenas no titular autenticado:
+A sincronização do usuário rejeita redes sociais e foca apenas no titular autenticado (arquivo executável em [`docs/arquitetura/sql/powersync_sync_rules.yaml`](../sql/powersync_sync_rules.yaml)):
 
 ```yaml
 bucket_definitions:
@@ -176,13 +176,15 @@ bucket_definitions:
     parameters:
       - select request.user_id() as usuario_id
     data:
-      - select * from perfis where user_id = usuario_id
-      - select * from cadenas where user_id = usuario_id
+      - select * from perfis where user_id = bucket.usuario_id
+      - select * from cadenas where user_id = bucket.usuario_id
 ```
 Isso elimina muito do processamento de replicação lógica (WAL) e reduz o tráfego do Supabase a valores próximos de zero.
 
 ### 6.2. Esquema Físico DDL no Supabase (PostgreSQL)
-Em conformidade com a disciplina estrita de bytes, cada coluna e índice foi pensado para manter o consumo de armazenamento mínimo e suportar até 500.000 ascensões dentro do Free Tier:
+O script idempotente completo para o **Supabase SQL Editor** (incluindo função `public.gerar_nanoid_14c()`, gatilho automático em `auth.users`, constraints por tipo de interação e publicação `powersync`) encontra-se em [`docs/arquitetura/sql/supabase_contas_cadenas_interacoes.sql`](../sql/supabase_contas_cadenas_interacoes.sql).
+
+Em conformidade com a disciplina estrita de bytes, cada coluna e índice foi pensado para manter o consumo de armazenamento mínimo e suportar até 500.000 ascensões dentro do Free Tier, separando claramente interações que exigem conta autenticada (`VOTO_GRAU`, `COMENTARIO`) dos alertas comunitários de segurança estilo Waze (`ALERTA_SEGURANCA`, `CONFIRMACAO_ALERTA`), que permitem envio sem barreira de login identificados pelo `autor_id_publico` local:
 
 ```sql
 -- ============================================================================
@@ -191,15 +193,13 @@ Em conformidade com a disciplina estrita de bytes, cada coluna e índice foi pen
 CREATE TABLE public.perfis (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     autor_id_publico VARCHAR(14) UNIQUE NOT NULL, -- NanoID 14c do Autor
-    autor_nome_publico VARCHAR(50) NOT NULL       -- Apelido público ou "Anônimo"
+    autor_nome_publico VARCHAR(50) NOT NULL       -- Apelido público ou "Escalador Aresta"
 );
 
--- Habilitação obrigatória de RLS
 ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
 
--- Política RLS: O atleta tem controle exclusivo do seu próprio perfil
 CREATE POLICY "perfis_proprio_usuario" ON public.perfis
-    FOR ALL
+    FOR ALL TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
@@ -213,21 +213,18 @@ CREATE TABLE public.cadenas (
     data_ascensao DATE NOT NULL,                  -- Data da realização esportiva
     tipo_ascensao SMALLINT NOT NULL,              -- 1: À Vista, 2: Flash, 3: Trabalhado, 4: Tentativa
     tipo_escalada SMALLINT NOT NULL,              -- 1: Guiado, 2: Top Rope, 3: Boulder, 4: Solo
-    tentativas SMALLINT DEFAULT 1,                -- Número de pegas / tentativas
+    tentativas SMALLINT NOT NULL DEFAULT 1,       -- Número de pegas / tentativas
     grau_sugerido SMALLINT,                       -- Sugestão de grau (Enum Protobuf, 2 bytes)
-    notas_privadas VARCHAR(200)                   -- Notas do atleta (crux, métodos, costuras)
+    notas_privadas VARCHAR(200) NOT NULL DEFAULT '' -- Notas do atleta (crux, métodos, costuras)
 );
 
--- Habilitação obrigatória de RLS
 ALTER TABLE public.cadenas ENABLE ROW LEVEL SECURITY;
 
--- Política RLS: O atleta tem acesso exclusivo às suas próprias cadenas
 CREATE POLICY "cadenas_proprio_usuario" ON public.cadenas
-    FOR ALL
+    FOR ALL TO authenticated
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Índices de consulta otimizados
 CREATE INDEX idx_cadenas_usuario ON public.cadenas(user_id);
 CREATE INDEX idx_cadenas_escalada ON public.cadenas(escalada_uid);
 
@@ -237,34 +234,44 @@ CREATE INDEX idx_cadenas_escalada ON public.cadenas(escalada_uid);
 CREATE TABLE public.fila_interacoes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     autor_id_publico VARCHAR(14) NOT NULL,        -- NanoID 14c do Autor (sem user_id privado)
-    autor_nome_publico VARCHAR(50) NOT NULL,      -- Nickname público ou "Anônimo"
+    autor_nome_publico VARCHAR(50) NOT NULL DEFAULT 'Anônimo',
     escalada_uid VARCHAR(14) NOT NULL,            -- NanoID 14c da Via
-    tipo TEXT NOT NULL,                           -- 'VOTO_GRAU' | 'COMENTARIO'
+    tipo TEXT NOT NULL,                           -- 'VOTO_GRAU' | 'COMENTARIO' | 'ALERTA_SEGURANCA' | 'CONFIRMACAO_ALERTA'
+    categoria_alerta TEXT,                        -- Presets Waze: 'ABELHAS_INSETOS' | 'ROCHA_AGARRA_INSTAVEL' | 'PROTECAO_PRECARIA' | 'VIA_MOLHADA' | 'RISCO_EXPOSICAO'
+    alerta_alvo_uid VARCHAR(14),                  -- NanoID 14c do alerta sendo confirmado ("Ainda está lá?")
+    alerta_ativo BOOLEAN,                         -- true = ainda ativo, false = resolvido
     grau_sugerido SMALLINT,                       -- Código numérico do grau sugerido
-    texto_comentario VARCHAR(280),                -- Beta, métodos ou aviso (máx 280 chars na UI)
+    delta_grau SMALLINT,                          -- -2 a +2 níveis em relação ao grau oficial
+    texto_comentario VARCHAR(280),                -- Beta/comentário (<= 280 chars) ou detalhe curto de alerta (<= 100 chars)
     status TEXT NOT NULL DEFAULT 'PENDENTE',      -- 'PENDENTE' | 'PROCESSADO'
-    criado_em TIMESTAMPTZ DEFAULT now()
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Habilitação obrigatória de RLS
 ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS: Leitura livre (transparência) e inserção vinculada ao autor_id_publico
-CREATE POLICY "fila_interacoes_leitura" ON public.fila_interacoes
-    FOR SELECT
+CREATE POLICY "fila_interacoes_leitura_publica" ON public.fila_interacoes
+    FOR SELECT TO anon, authenticated
     USING (true);
 
-CREATE POLICY "fila_interacoes_insercao" ON public.fila_interacoes
-    FOR INSERT
+CREATE POLICY "fila_interacoes_insercao_autenticada" ON public.fila_interacoes
+    FOR INSERT TO authenticated
     WITH CHECK (
-        EXISTS (
+        status = 'PENDENTE'
+        AND EXISTS (
             SELECT 1 FROM public.perfis p
             WHERE p.user_id = auth.uid()
               AND p.autor_id_publico = fila_interacoes.autor_id_publico
         )
     );
 
-CREATE INDEX idx_fila_pendentes ON public.fila_interacoes(status) WHERE status = 'PENDENTE';
+CREATE POLICY "fila_interacoes_seguranca_anonima" ON public.fila_interacoes
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (
+        status = 'PENDENTE'
+        AND tipo IN ('ALERTA_SEGURANCA', 'CONFIRMACAO_ALERTA')
+    );
+
+CREATE INDEX idx_fila_pendentes ON public.fila_interacoes(status, criado_em) WHERE status = 'PENDENTE';
 ```
 
 ---
