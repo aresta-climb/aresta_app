@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/painting.dart';
@@ -18,7 +19,12 @@ import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/constants/constantes_rede.dart';
+import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
@@ -251,6 +257,8 @@ void main() {
     });
 
     tearDown(() async {
+      RepositorioCadernetaLocal.instancia = null;
+      ControladorInteracoesUsuario.redefinirParaTestes();
       await datasetRepo.repositorioCatalogo.fechar();
       await servidor.close(force: true);
     });
@@ -258,6 +266,8 @@ void main() {
     test(
       'cancela tarefa de segundo plano e sincroniza se não precisa de migração',
       () async {
+        RepositorioCadernetaLocal.instancia = null;
+        ControladorInteracoesUsuario.redefinirParaTestes();
         SharedPreferences.setMockInitialValues({
           'cached_data_version': NetworkConstants.kDataVersion,
         });
@@ -280,6 +290,8 @@ void main() {
     test(
       'cancela tarefa de segundo plano e não sincroniza se precisa de migração',
       () async {
+        RepositorioCadernetaLocal.instancia = null;
+        ControladorInteracoesUsuario.redefinirParaTestes();
         SharedPreferences.setMockInitialValues({
           'cached_data_version': NetworkConstants.kDataVersion - 1,
         });
@@ -296,6 +308,47 @@ void main() {
         ).called(1);
         expect(result, isTrue);
         expect(chamadasIndice, equals(0));
+      },
+    );
+
+    test(
+      'inicializa RepositorioCadernetaLocal e ControladorInteracoesUsuario carregando dados persistidos no arranque',
+      () async {
+        RepositorioCadernetaLocal.instancia = null;
+        ControladorInteracoesUsuario.redefinirParaTestes();
+
+        final cadenaPersistida = Cadena.criar(
+          escaladaUid: 'viaPersistida1',
+          dataAscensao: DateTime(2026, 10, 12),
+          tipoAscensao: TipoAscensao.aVista,
+          tipoEscalada: TipoEscalada.guiado,
+        );
+        SharedPreferences.setMockInitialValues({
+          'cached_data_version': NetworkConstants.kDataVersion,
+          ControladorInteracoesUsuario.chavePreferenciaInteracoes: false,
+          'aresta_cadenas_v1': jsonEncode([cadenaPersistida.toMap()]),
+        });
+
+        await setupAppServices(
+          datasetRepo,
+          syncService,
+          workmanager: mockWorkmanager,
+        );
+
+        expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isFalse);
+        expect(
+          RepositorioCadernetaLocal.instancia.cadenasNotifier.value,
+          hasLength(1),
+        );
+        expect(
+          RepositorioCadernetaLocal
+              .instancia
+              .cadenasNotifier
+              .value
+              .first
+              .escaladaUid,
+          equals('viaPersistida1'),
+        );
       },
     );
   });
