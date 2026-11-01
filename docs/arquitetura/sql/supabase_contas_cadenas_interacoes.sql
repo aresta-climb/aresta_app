@@ -194,5 +194,85 @@ CREATE POLICY "cadenas_proprio_usuario" ON public.cadenas
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+-- ============================================================================
+-- 4. TABELA: public.fila_interacoes (Buffer Transitório Comunitário & Alertas Waze)
+-- ============================================================================
+-- Esvaziada de hora em hora pelo Aresta Bot (service_role) para consolidação no
+-- repositório Git aberto (aresta_db/interacoes/) sob licença ODbL.
+-- Nenhum user_id privado ou dado pessoal (e-mail/telefone) é armazenado aqui.
+
+CREATE TABLE IF NOT EXISTS public.fila_interacoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    autor_id_publico VARCHAR(14) NOT NULL
+        CONSTRAINT chk_fila_autor_id_nanoid CHECK (autor_id_publico ~ '^[0-9A-Za-z]{14}$'),
+    autor_nome_publico VARCHAR(50) NOT NULL DEFAULT 'Anônimo'
+        CONSTRAINT chk_fila_autor_nome_nao_vazio CHECK (char_length(btrim(autor_nome_publico)) > 0),
+    escalada_uid VARCHAR(14) NOT NULL
+        CONSTRAINT chk_fila_escalada_uid_nanoid CHECK (escalada_uid ~ '^[0-9A-Za-z]{14}$'),
+    tipo TEXT NOT NULL
+        CONSTRAINT chk_fila_tipo_valido CHECK (
+            tipo IN ('VOTO_GRAU', 'COMENTARIO', 'ALERTA_SEGURANCA', 'CONFIRMACAO_ALERTA')
+        ),
+    -- Presets estilo Waze para avisos rápidos de segurança na via/setor
+    categoria_alerta TEXT
+        CONSTRAINT chk_fila_categoria_alerta CHECK (
+            categoria_alerta IS NULL OR categoria_alerta IN (
+                'ABELHAS_INSETOS',
+                'ROCHA_AGARRA_INSTAVEL',
+                'PROTECAO_PRECARIA',
+                'VIA_MOLHADA',
+                'RISCO_EXPOSICAO'
+            )
+        ),
+    -- NanoID 14c do alerta ativo sendo confirmado ou encerrado ("Ainda está lá?")
+    alerta_alvo_uid VARCHAR(14)
+        CONSTRAINT chk_fila_alerta_alvo_nanoid CHECK (
+            alerta_alvo_uid IS NULL OR alerta_alvo_uid ~ '^[0-9A-Za-z]{14}$'
+        ),
+    -- true = "Sim, ainda está lá", false = "Não, problema resolvido"
+    alerta_ativo BOOLEAN,
+    grau_sugerido SMALLINT,
+    delta_grau SMALLINT
+        CONSTRAINT chk_fila_delta_grau CHECK (delta_grau IS NULL OR delta_grau BETWEEN -2 AND 2),
+    texto_comentario VARCHAR(280),
+    status TEXT NOT NULL DEFAULT 'PENDENTE'
+        CONSTRAINT chk_fila_status CHECK (status IN ('PENDENTE', 'PROCESSADO')),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Validação estrutural dos campos obrigatórios por tipo de interação
+    CONSTRAINT chk_fila_interacoes_payload_por_tipo CHECK (
+        (
+            tipo = 'VOTO_GRAU'
+            AND (grau_sugerido IS NOT NULL OR delta_grau IS NOT NULL)
+        )
+        OR (
+            tipo = 'COMENTARIO'
+            AND texto_comentario IS NOT NULL
+            AND char_length(btrim(texto_comentario)) BETWEEN 1 AND 280
+        )
+        OR (
+            tipo = 'ALERTA_SEGURANCA'
+            AND categoria_alerta IS NOT NULL
+            AND (texto_comentario IS NULL OR char_length(texto_comentario) <= 100)
+        )
+        OR (
+            tipo = 'CONFIRMACAO_ALERTA'
+            AND alerta_alvo_uid IS NOT NULL
+            AND alerta_ativo IS NOT NULL
+        )
+    )
+);
+
+COMMENT ON TABLE public.fila_interacoes IS
+    'Buffer transitório de votos de grau, comentários e alertas de segurança estilo Waze.';
+
+CREATE INDEX IF NOT EXISTS idx_fila_pendentes
+    ON public.fila_interacoes(status, criado_em)
+    WHERE status = 'PENDENTE';
+
+CREATE INDEX IF NOT EXISTS idx_fila_escalada_pendentes
+    ON public.fila_interacoes(escalada_uid)
+    WHERE status = 'PENDENTE';
+
 
 COMMIT;
