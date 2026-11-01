@@ -18,6 +18,7 @@ import 'package:frontend/widgets/verificador_versao_app.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../services/controlador_interacoes_usuario.dart';
 import '../../widgets/modal_beta_aberto.dart';
 
 /// Normaliza a URL do editor, garantindo scheme correto e removendo formatações espúrias (ex: de QR Codes).
@@ -1171,5 +1172,99 @@ Widget buildVersaoBetaFooter(BuildContext context) {
         ),
       );
     },
+  );
+}
+
+/// Constrói o cartão de configuração para exibir ou ocultar os elementos
+/// interativos de Perfil e Caderneta Esportiva na interface do aplicativo.
+Widget construirCartaoInteracoesCaderneta(BuildContext context) {
+  final controlador = ControladorInteracoesUsuario.instancia;
+  return Card(
+    elevation: 0,
+    color: context.colors.caveShadow,
+    margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: context.colors.graniteEdge,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.menu_book_outlined,
+                  color: context.colors.ashGrey,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PERFIL E CADERNETA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Exiba ou oculte seu perfil e o registro de cadenas nas vias sem apagar seus dados locais.',
+                      style: TextStyle(
+                        color: context.colors.ashGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ValueListenableBuilder<bool>(
+            valueListenable: controlador.interacoesAtivasNotifier,
+            builder: (context, ativas, _) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Exibir Perfil e Caderneta nas telas',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    key: const Key('switch_interacoes_caderneta'),
+                    value: ativas,
+                    onChanged: (valor) {
+                      controlador.definirInteracoesAtivas(valor);
+                    },
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: Colors.white.withValues(alpha: 0.5),
+                    inactiveThumbColor: context.colors.ashGrey,
+                    inactiveTrackColor: context.colors.graniteEdge,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ),
   );
 }
