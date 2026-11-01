@@ -16,6 +16,7 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/pages/perfil.dart';
 import 'package:frontend/theme/cores_app.dart';
 
@@ -636,6 +637,46 @@ void main() {
         expect(find.text('Dialog Imperativo'), findsNothing);
         expect(treeController.currentNode, isA<PicoNode>());
         expect(find.text('PICO TESTE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'AppNav.toPerfil respeita preferência local do usuário em ControladorInteracoesUsuario',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        ControladorInteracoesUsuario.redefinirParaTestes();
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          ControladorInteracoesUsuario.redefinirParaTestes();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              child: const Scaffold(body: Text('Host')),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final context = tester.element(find.text('Host'));
+        final controller =
+            TreeNavigationWrapper.navKey.currentState!.treeController;
+
+        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
+          false,
+        );
+        AppNav.toPerfil(context);
+        expect(controller.currentNode, isA<HomeNode>());
+
+        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
+          true,
+        );
+        AppNav.toPerfil(context);
+        expect(controller.currentNode, isA<PerfilNode>());
       },
     );
   });
