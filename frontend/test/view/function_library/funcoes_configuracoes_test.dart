@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/view/function_library/funcoes_configuracoes.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -939,6 +940,43 @@ void main() {
           find.widgetWithText(TextField, 'http://editor.falha.local:8000'),
           findsOneWidget,
         );
+      },
+    );
+  });
+
+  group('construirCartaoInteracoesCaderneta', () {
+    testWidgets(
+      'renderiza cartão de Perfil e Caderneta e alterna ControladorInteracoesUsuario ao acionar o Switch',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final controlador = ControladorInteracoesUsuario();
+        await controlador.inicializar();
+        ControladorInteracoesUsuario.instancia = controlador;
+        addTearDown(() {
+          ControladorInteracoesUsuario.instancia =
+              ControladorInteracoesUsuario();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) =>
+                    construirCartaoInteracoesCaderneta(context),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('PERFIL E CADERNETA'), findsOneWidget);
+        final chaveSwitch = find.byKey(const Key('switch_interacoes_caderneta'));
+        expect(tester.widget<Switch>(chaveSwitch).value, isTrue);
+
+        await tester.tap(chaveSwitch);
+        await tester.pump();
+
+        expect(controlador.interacoesAtivasNotifier.value, isFalse);
+        expect(tester.widget<Switch>(chaveSwitch).value, isFalse);
       },
     );
   });
