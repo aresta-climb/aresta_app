@@ -209,11 +209,11 @@ Widget construirPaginaParaNo({
   }
 
   if (node is PerfilNode) {
-    return const HubPerfilCadernetaPage();
+    return HubPerfilCadernetaPage(datasetRepo: datasetRepo);
   }
 
   if (node is CadernetaNode) {
-    return const CadernetaPage();
+    return CadernetaPage(datasetRepo: datasetRepo);
   }
 
   if (node is ControlesNode) {
