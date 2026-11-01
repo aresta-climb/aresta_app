@@ -274,5 +274,44 @@ CREATE INDEX IF NOT EXISTS idx_fila_escalada_pendentes
     ON public.fila_interacoes(escalada_uid)
     WHERE status = 'PENDENTE';
 
+-- Habilitação obrigatória de RLS em public.fila_interacoes
+ALTER TABLE public.fila_interacoes ENABLE ROW LEVEL SECURITY;
+
+-- Política 1: Transparência total de leitura das interações pendentes na fila
+DROP POLICY IF EXISTS "fila_interacoes_leitura" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_leitura_publica" ON public.fila_interacoes;
+CREATE POLICY "fila_interacoes_leitura_publica" ON public.fila_interacoes
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- Política 2: Escaladores autenticados podem enviar qualquer tipo de interação
+-- vinculada ao seu próprio autor_id_publico registrado em public.perfis.
+DROP POLICY IF EXISTS "fila_interacoes_insercao" ON public.fila_interacoes;
+DROP POLICY IF EXISTS "fila_interacoes_insercao_autenticada" ON public.fila_interacoes;
+CREATE POLICY "fila_interacoes_insercao_autenticada" ON public.fila_interacoes
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        status = 'PENDENTE'
+        AND EXISTS (
+            SELECT 1 FROM public.perfis p
+            WHERE p.user_id = auth.uid()
+              AND p.autor_id_publico = fila_interacoes.autor_id_publico
+        )
+    );
+
+-- Política 3: Qualquer usuário do aplicativo (inclusive anônimo / sem conta) pode
+-- reportar alertas de risco iminente na rocha e responder "Ainda está lá?" usando
+-- o autor_id_publico local do aparelho, sem barreira de login.
+DROP POLICY IF EXISTS "fila_interacoes_seguranca_anonima" ON public.fila_interacoes;
+CREATE POLICY "fila_interacoes_seguranca_anonima" ON public.fila_interacoes
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (
+        status = 'PENDENTE'
+        AND tipo IN ('ALERTA_SEGURANCA', 'CONFIRMACAO_ALERTA')
+    );
+
 
 COMMIT;
