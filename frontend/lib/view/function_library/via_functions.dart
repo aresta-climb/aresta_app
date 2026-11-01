@@ -111,6 +111,29 @@ String getGrauString(Escalada escalada) {
   }
 }
 
+/// Retorna o código inteiro oficial do enum Protobuf de dificuldade da escalada
+/// (`GrauVia_GrauVia.value` ou `GrauBoulder_GrauBoulder.value`), ou `null` quando
+/// a modalidade não possui grau esportivo ou quando o grau é `INDEFINIDO`/`PROJETO`.
+int? obterCodigoGrauOficial(Escalada escalada) {
+  switch (escalada.whichTipo()) {
+    case Escalada_Tipo.viaEsportiva:
+      final grau = escalada.viaEsportiva.dificuldade;
+      return grau.value >= 2 ? grau.value : null;
+    case Escalada_Tipo.viaMovel:
+      final grau = escalada.viaMovel.dificuldade;
+      return grau.value >= 2 ? grau.value : null;
+    case Escalada_Tipo.viaMultiplasEnfiadas:
+      final grau = escalada.viaMultiplasEnfiadas.dificuldadeMaxima;
+      return grau.value >= 2 ? grau.value : null;
+    case Escalada_Tipo.boulder:
+      final grau = escalada.boulder.dificuldade;
+      return grau.value >= 1 ? grau.value : null;
+    case Escalada_Tipo.highline:
+    case Escalada_Tipo.notSet:
+      return null;
+  }
+}
+
 /// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
 /// Retorna string vazia se o grau for indefinido ou não informado.
 String formatGradeString(String name) {
@@ -337,6 +360,7 @@ Widget _buildSeloEBotaoCaderneta(
                   escaladaUid: escalada.uid,
                   nomeEscalada: getEscaladaNome(escalada),
                   tipoEscaladaPadrao: tipoEscalada,
+                  grauSugerido: obterCodigoGrauOficial(escalada),
                   repositorio: repo,
                 );
               },
