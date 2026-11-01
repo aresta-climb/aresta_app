@@ -63,6 +63,65 @@ void main() {
     });
   });
 
+  group('obterCodigoGrauOficial', () {
+    test('retorna o código numérico oficial do enum para vias e boulders com grau definido', () {
+      final esportiva = Escalada(
+        viaEsportiva: ViaEsportiva(dificuldade: GrauVia_GrauVia.BR_7A),
+      );
+      final movel = Escalada(
+        viaMovel: ViaMovel(dificuldade: GrauVia_GrauVia.BR_6SUP),
+      );
+      final multi = Escalada(
+        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(
+          dificuldadeMaxima: GrauVia_GrauVia.BR_8B,
+        ),
+      );
+      final boulder = Escalada(
+        boulder: Boulder(dificuldade: GrauBoulder_GrauBoulder.V4),
+      );
+
+      expect(obterCodigoGrauOficial(esportiva), equals(GrauVia_GrauVia.BR_7A.value));
+      expect(obterCodigoGrauOficial(movel), equals(GrauVia_GrauVia.BR_6SUP.value));
+      expect(obterCodigoGrauOficial(multi), equals(GrauVia_GrauVia.BR_8B.value));
+      expect(
+        obterCodigoGrauOficial(boulder),
+        equals(GrauBoulder_GrauBoulder.V4.value),
+      );
+    });
+
+    test('retorna null para highline, escalada vazia, INDEFINIDO ou PROJETO', () {
+      expect(
+        obterCodigoGrauOficial(Escalada(highline: Highline(nome: 'Fita'))),
+        isNull,
+      );
+      expect(obterCodigoGrauOficial(Escalada()), isNull);
+      expect(
+        obterCodigoGrauOficial(
+          Escalada(
+            viaEsportiva: ViaEsportiva(dificuldade: GrauVia_GrauVia.INDEFINIDO),
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        obterCodigoGrauOficial(
+          Escalada(
+            viaEsportiva: ViaEsportiva(dificuldade: GrauVia_GrauVia.PROJETO),
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        obterCodigoGrauOficial(
+          Escalada(
+            boulder: Boulder(dificuldade: GrauBoulder_GrauBoulder.INDEFINIDO),
+          ),
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('getModalidadeEscalada', () {
     test('deve retornar "Esportiva" para via esportiva', () {
       final escalada = Escalada()..viaEsportiva = ViaEsportiva(nome: 'Via A');
