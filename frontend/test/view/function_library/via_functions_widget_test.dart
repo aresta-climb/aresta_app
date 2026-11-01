@@ -4,9 +4,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('via_functions _buildTopBadges (Map Buttons)', () {
@@ -266,6 +269,60 @@ void main() {
         expect(find.byKey(const Key('btn_registrar_cadena')), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'persiste grauSugerido oficial da escalada ao registrar cadena pelo modal da ViaPage',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        ControladorInteracoesUsuario.redefinirParaTestes();
+        final prefs = await SharedPreferences.getInstance();
+        final repo = RepositorioCadernetaLocal(preferencias: prefs);
+        await repo.inicializar();
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          ControladorInteracoesUsuario.redefinirParaTestes();
+        });
+
+        final escalada = Escalada(
+          uid: 'viaGrauOficial1',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Sete Bê',
+            dificuldade: GrauVia_GrauVia.BR_7B,
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                  repositorio: repo,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('btn_registrar_cadena')));
+        await tester.pumpAndSettle();
+
+        final btnSalvar = find.byKey(const Key('btn_salvar_cadena'));
+        await tester.ensureVisible(btnSalvar);
+        await tester.tap(btnSalvar);
+        await tester.pumpAndSettle();
+
+        expect(repo.cadenasNotifier.value, hasLength(1));
+        expect(
+          repo.cadenasNotifier.value.first.grauSugerido,
+          equals(GrauVia_GrauVia.BR_7B.value),
+        );
+      },
+    );
   });
 }
-
