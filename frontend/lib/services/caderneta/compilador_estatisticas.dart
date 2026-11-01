@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import '../../aresta_api/proto/generated/croqui.pbenum.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/filtro_grau_escalada.dart';
+import '../../view/function_library/via_functions.dart';
 import 'estatisticas_caderneta.dart';
+import 'resolvedor_metadados_caderneta.dart';
 
 /// Algoritmo dedicado para compilação analítica e agregação de métricas da caderneta.
 ///
@@ -15,7 +18,8 @@ abstract final class CompiladorEstatisticasCaderneta {
   /// Compila e consolida uma lista de [cadenas] em uma instância de [EstatisticasCaderneta].
   ///
   /// A função opcional [obterGrauDaVia] recebe o UID de uma escalada e retorna sua graduação
-  /// textual oficial no catálogo (ex: '7a', 'V5').
+  /// textual oficial no catálogo (ex: '7a', 'V5'), utilizando [Cadena.grauSugerido] como
+  /// fallback local quando o catálogo ainda não estiver disponível para aquele UID.
   static EstatisticasCaderneta compilar(
     List<Cadena> cadenas, {
     String? Function(String escaladaUid)? obterGrauDaVia,
@@ -49,7 +53,10 @@ abstract final class CompiladorEstatisticasCaderneta {
         totalAVistaFlash++;
       }
 
-      final grau = obterGrauDaVia?.call(cadena.escaladaUid);
+      final grauCatalogo = obterGrauDaVia?.call(cadena.escaladaUid);
+      final grau = (grauCatalogo != null && grauCatalogo.trim().isNotEmpty)
+          ? grauCatalogo
+          : _resolverGrauPorCodigoSugerido(cadena);
       if (grau != null && grau.trim().isNotEmpty) {
         final grauLimpo = grau.trim();
         if (cadena.tipoEscalada.isBoulder) {
@@ -88,6 +95,29 @@ abstract final class CompiladorEstatisticasCaderneta {
       maiorGrauBoulder: maiorBoulder,
       taxaAVistaFlash: taxa,
     );
+  }
+
+  static String? _resolverGrauPorCodigoSugerido(Cadena cadena) {
+    final codigo = cadena.grauSugerido;
+    if (codigo == null) return null;
+
+    if (cadena.tipoEscalada.isBoulder) {
+      final grauBoulder = GrauBoulder_GrauBoulder.valueOf(codigo);
+      if (grauBoulder == null ||
+          grauBoulder == GrauBoulder_GrauBoulder.INDEFINIDO) {
+        return null;
+      }
+      return ResolvedorMetadadosCaderneta.normalizarGrauEscalada(
+        formatGradeString(grauBoulder.name),
+        tipoEscalada: 'boulder',
+      );
+    }
+
+    final grauVia = GrauVia_GrauVia.valueOf(codigo);
+    if (grauVia == null || grauVia.value < 2) {
+      return null;
+    }
+    return formatGradeString(grauVia.name);
   }
 
   static Map<String, int> _ordenarPiramide(
