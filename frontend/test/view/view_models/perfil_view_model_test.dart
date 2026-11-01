@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
@@ -144,16 +145,46 @@ void main() {
       },
     );
 
-    test(
-      'formatarDataAscensao formata datas corretamente em padrão DD/MM/AAAA',
-      () {
-        final viewModel = PerfilViewModel(repositorio: repositorio);
-        expect(
-          viewModel.formatarDataAscensao(DateTime(2026, 4, 9)),
-          '09/04/2026',
-        );
-        viewModel.dispose();
-      },
-    );
+      test(
+        'formatarDataAscensao formata datas corretamente em padrão DD/MM/AAAA',
+        () {
+          final viewModel = PerfilViewModel(repositorio: repositorio);
+          expect(
+            viewModel.formatarDataAscensao(DateTime(2026, 4, 9)),
+            '09/04/2026',
+          );
+          viewModel.dispose();
+        },
+      );
+
+      test(
+        'notifica ouvintes reativamente quando escutaMetadados emite atualização e remove listener no dispose',
+        () {
+          final gatilhoMetadados = ValueNotifier<int>(0);
+          var nomeResolvido = 'Via Inicial';
+          final viewModel = PerfilViewModel(
+            repositorio: repositorio,
+            obterNomeDaVia: (_) => nomeResolvido,
+            escutaMetadados: gatilhoMetadados,
+          );
+
+          var notificacoes = 0;
+          viewModel.addListener(() => notificacoes++);
+
+          nomeResolvido = 'Via Hidratada do Catálogo';
+          gatilhoMetadados.value = 1;
+
+          expect(notificacoes, equals(1));
+          expect(
+            viewModel.obterNomeEscalada('via-1'),
+            equals('Via Hidratada do Catálogo'),
+          );
+
+          viewModel.dispose();
+          gatilhoMetadados.value = 2;
+          expect(notificacoes, equals(1));
+          gatilhoMetadados.dispose();
+        },
+      );
   });
 }

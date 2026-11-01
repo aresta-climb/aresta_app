@@ -22,6 +22,9 @@ class PerfilViewModel extends ChangeNotifier {
   /// Função opcional para obter o nome legível da via a partir de seu `escaladaUid`.
   final String? Function(String escaladaUid)? obterNomeDaVia;
 
+  /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
+  final Listenable? _escutaMetadados;
+
   bool _modoVias = true;
 
   /// Construtor que aceita o repositório injetado ou utiliza a instância padrão local.
@@ -29,9 +32,12 @@ class PerfilViewModel extends ChangeNotifier {
     RepositorioCaderneta? repositorio,
     this.obterGrauDaVia,
     this.obterNomeDaVia,
-  }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia {
+    Listenable? escutaMetadados,
+  }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
+       _escutaMetadados = escutaMetadados {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
     this.repositorio.perfilNotifier.addListener(_aoAtualizarRepositorio);
+    _escutaMetadados?.addListener(_aoAtualizarRepositorio);
   }
 
   void _aoAtualizarRepositorio() {
@@ -42,6 +48,7 @@ class PerfilViewModel extends ChangeNotifier {
   void dispose() {
     repositorio.cadenasNotifier.removeListener(_aoAtualizarRepositorio);
     repositorio.perfilNotifier.removeListener(_aoAtualizarRepositorio);
+    _escutaMetadados?.removeListener(_aoAtualizarRepositorio);
     super.dispose();
   }
 
