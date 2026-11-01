@@ -3,6 +3,8 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../view/function_library/via_functions.dart';
 import '../repositorio_dataset.dart';
 import 'repositorio_caderneta.dart';
 
@@ -148,9 +150,50 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
     }
   }
 
+  _MetadadosEscaladaResolvidos? _resolverMetadados(String escaladaUid) {
+    return _cacheCatalogo[escaladaUid] ??
+        _buscarEmCroquisCarregados(escaladaUid);
+  }
 
-  _MetadadosEscaladaResolvidos? _resolverMetadados(String escaladaUid) =>
-      _cacheCatalogo[escaladaUid];
+  _MetadadosEscaladaResolvidos? _buscarEmCroquisCarregados(String escaladaUid) {
+    final repo = _datasetRepo;
+    if (repo == null) return null;
+
+    final croquis = <Croqui>[
+      ...repo.gerenciadorSessaoOnline.croquisEmMemoria.values,
+      ...?repo.activeDataset.value?.croquisBaixados,
+    ];
+
+    for (final croqui in croquis) {
+      final identificadorCroqui = croqui.uid.isNotEmpty
+          ? croqui.uid
+          : croqui.id;
+      for (final escalada in _iterarEscaladasDoCroqui(croqui)) {
+        if (escalada.uid == escaladaUid) {
+          return _MetadadosEscaladaResolvidos(
+            nome: getEscaladaNome(escalada),
+            grau: normalizarGrauEscalada(getGrauString(escalada)),
+            croquiUid: identificadorCroqui,
+          );
+        }
+      }
+    }
+    return null;
+  }
+
+  static Iterable<Escalada> _iterarEscaladasDoCroqui(Croqui croqui) sync* {
+    for (final pico in croqui.picos) {
+      for (final item in pico.setoresOuGrupos) {
+        if (item.hasSetor()) {
+          yield* item.setor.conteudo.escaladas;
+        } else if (item.hasGrupo()) {
+          for (final arquivoSetor in item.grupo.conteudo.setores) {
+            yield* arquivoSetor.conteudo.escaladas;
+          }
+        }
+      }
+    }
+  }
 
   /// Retorna o nome legível da via ou bloco correspondente a [escaladaUid],
   /// ou `null` caso não conste no catálogo local nem nos croquis carregados.
