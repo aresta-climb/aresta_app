@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -122,6 +124,61 @@ void main() {
         listView.padding,
         equals(const EdgeInsets.fromLTRB(16, 16, 16, 64)),
       );
+    },
+  );
+
+  testWidgets(
+    'SettingsPage oculta cartão PERFIL E CADERNETA quando perfilHabilitado é false e permite alternar preferência quando habilitado',
+    (tester) async {
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+      ControladorInteracoesUsuario.redefinirParaTestes();
+      addTearDown(() {
+        ConfiguracaoRecursos.redefinirParaTestes();
+        ControladorInteracoesUsuario.redefinirParaTestes();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [AppColors.dark]),
+          home: SettingsPage(
+            viewModel: SettingsViewModel(
+              datasetRepo: mockRepo,
+              editorDeCroqui: mockEditor,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PERFIL E CADERNETA'), findsNothing);
+      expect(
+        find.byKey(const Key('switch_interacoes_caderneta')),
+        findsNothing,
+      );
+
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [AppColors.dark]),
+          home: SettingsPage(
+            viewModel: SettingsViewModel(
+              datasetRepo: mockRepo,
+              editorDeCroqui: mockEditor,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PERFIL E CADERNETA'), findsOneWidget);
+      final switchFinder = find.byKey(const Key('switch_interacoes_caderneta'));
+      expect(switchFinder, findsOneWidget);
+      expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isTrue);
+
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      expect(ControladorInteracoesUsuario.instancia.interacoesAtivas, isFalse);
     },
   );
 }
