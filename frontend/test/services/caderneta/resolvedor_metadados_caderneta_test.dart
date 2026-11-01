@@ -196,5 +196,77 @@ void main() {
 
       resolvedor.dispose();
     });
+
+    test('recarrega metadados reativamente quando o catalogo.db recebe um delta sync', () async {
+      await repoCatalogo.aplicarDelta(
+        const RespostaSyncCatalogo(
+          acao: 'apply_delta',
+          versaoDestino: 'v1',
+          upserts: UpsertsSyncCatalogo(
+            croquis: [
+              CatalogoCroqui(
+                croquiUid: 'croquiDelta001',
+                idSlug: 'br_rj_urca',
+                nome: 'Morro da Urca',
+              ),
+            ],
+            entidades: [
+              CatalogoEntidade(
+                uid: 'viaMutavel0001',
+                tipo: 'escalada',
+                croquiUid: 'croquiDelta001',
+                nome: 'Nome Antigo',
+                escaladaGrau: '5',
+                escaladaTipo: 'tradicional',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await repoCaderneta.salvarCadena(
+        Cadena.criar(
+          escaladaUid: 'viaMutavel0001',
+          dataAscensao: DateTime(2026, 10, 5),
+          tipoAscensao: TipoAscensao.flash,
+          tipoEscalada: TipoEscalada.guiado,
+        ),
+      );
+
+      final resolvedor = ResolvedorMetadadosCaderneta(
+        repositorioCaderneta: repoCaderneta,
+        repositorioCatalogo: repoCatalogo,
+      );
+      await resolvedor.atualizar();
+
+      expect(resolvedor.obterNomeDaVia('viaMutavel0001'), equals('Nome Antigo'));
+      expect(resolvedor.obterGrauDaVia('viaMutavel0001'), equals('5º'));
+
+      await repoCatalogo.aplicarDelta(
+        const RespostaSyncCatalogo(
+          acao: 'apply_delta',
+          versaoDestino: 'v2',
+          upserts: UpsertsSyncCatalogo(
+            croquis: [],
+            entidades: [
+              CatalogoEntidade(
+                uid: 'viaMutavel0001',
+                tipo: 'escalada',
+                croquiUid: 'croquiDelta001',
+                nome: 'Via K2',
+                escaladaGrau: '5sup/6a',
+                escaladaTipo: 'tradicional',
+              ),
+            ],
+          ),
+        ),
+      );
+      await resolvedor.atualizar();
+
+      expect(resolvedor.obterNomeDaVia('viaMutavel0001'), equals('Via K2'));
+      expect(resolvedor.obterGrauDaVia('viaMutavel0001'), equals('5ºsup/6a'));
+
+      resolvedor.dispose();
+    });
   });
 }
