@@ -324,5 +324,56 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'oculta reativamente o bloco de caderneta sem apagar cadenas salvas quando o usuário desativa interações',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        ControladorInteracoesUsuario.redefinirParaTestes();
+        final prefs = await SharedPreferences.getInstance();
+        final repo = RepositorioCadernetaLocal(preferencias: prefs);
+        await repo.inicializar();
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          ControladorInteracoesUsuario.redefinirParaTestes();
+        });
+
+        final escalada = Escalada(
+          uid: 'viaToggleTeste1',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Toggle',
+            dificuldade: GrauVia_GrauVia.BR_6SUP,
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
+                  repositorio: repo,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('btn_registrar_cadena')), findsOneWidget);
+
+        await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
+          false,
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
+      },
+    );
   });
 }
+

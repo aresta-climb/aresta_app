@@ -17,7 +17,7 @@ import '../../navigation/arvore_navegacao.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
-import '../../services/configuracao_recursos.dart';
+import '../../services/controlador_interacoes_usuario.dart';
 import '../../widgets/caderneta/modal_registro_cadena.dart';
 
 /// Retorna o nome da escalada com base em seu tipo.
@@ -234,8 +234,22 @@ Widget buildViaBody(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (ConfiguracaoRecursos.perfilHabilitado)
-          _buildSeloEBotaoCaderneta(context, escalada, repositorio: repositorio),
+        ValueListenableBuilder<bool>(
+          valueListenable:
+              ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier,
+          builder: (context, _, _) {
+            if (!ControladorInteracoesUsuario
+                .instancia
+                .exibirElementosInterativos) {
+              return const SizedBox.shrink();
+            }
+            return _buildSeloEBotaoCaderneta(
+              context,
+              escalada,
+              repositorio: repositorio,
+            );
+          },
+        ),
         _buildContentForEscalada(
           context,
           escalada,
