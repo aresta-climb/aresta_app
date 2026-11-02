@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +12,13 @@ void main() {
       const arvore = ArvoreNavegacao();
 
       expect(arvore.noAtual, isA<HomeNode>());
+      expect(arvore.currentNode, isA<HomeNode>());
       expect(arvore.profundidade, 1);
       expect(arvore.estaNaRaiz, isTrue);
       expect(arvore.caminho.length, 1);
+      expect(arvore.path.length, 1);
+      expect(arvore.hashCode, equals(const ArvoreNavegacao().hashCode));
+      expect(arvore.toString(), contains('ArvoreNavegacao('));
     });
 
     test('navega adicionando nós em profundidade', () {
@@ -118,5 +122,76 @@ void main() {
       expect(arvore1.encontrarAncestralCorrespondente(candidatoPico), isNotNull);
       expect(arvore1.encontrarAncestralCorrespondente(candidatoOutro), isNull);
     });
+
+    test(
+      'podarNosPerfilECaderneta mantém árvore intacta quando não há PerfilNode nem CadernetaNode',
+      () {
+        const home = HomeNode();
+        final arvore = ArvoreNavegacao(noAtual: SettingsNode(home));
+
+        final podada = arvore.podarNosPerfilECaderneta();
+        expect(identical(podada, arvore), isTrue);
+      },
+    );
+
+    test(
+      'podarNosPerfilECaderneta retorna ao ancestral sobrevivente quando noAtual é PerfilNode ou CadernetaNode',
+      () {
+        const home = HomeNode();
+        const perfil = PerfilNode(home);
+        const caderneta = CadernetaNode(perfil);
+
+        final arvorePerfil = const ArvoreNavegacao(
+          noAtual: perfil,
+        ).podarNosPerfilECaderneta();
+        expect(arvorePerfil.noAtual, isA<HomeNode>());
+        expect(arvorePerfil.profundidade, equals(1));
+
+        final arvoreCaderneta = const ArvoreNavegacao(
+          noAtual: caderneta,
+        ).podarNosPerfilECaderneta();
+        expect(arvoreCaderneta.noAtual, isA<HomeNode>());
+        expect(arvoreCaderneta.profundidade, equals(1));
+      },
+    );
+
+    test(
+      'podarNosPerfilECaderneta reancora SettingsNode e SobreTimeNode ao remover PerfilNode e CadernetaNode intermediários',
+      () {
+        const home = HomeNode();
+        const perfil = PerfilNode(home);
+        const caderneta = CadernetaNode(perfil);
+        const settings = SettingsNode(caderneta);
+        const sobreTime = SobreTimeNode(settings);
+
+        final arvoreSettings = const ArvoreNavegacao(
+          noAtual: settings,
+        ).podarNosPerfilECaderneta();
+        expect(arvoreSettings.profundidade, equals(2));
+        expect(arvoreSettings.caminho[0], isA<HomeNode>());
+        expect(arvoreSettings.noAtual, isA<SettingsNode>());
+        expect(arvoreSettings.noAtual.parent, isA<HomeNode>());
+
+        final arvoreSobreTime = const ArvoreNavegacao(
+          noAtual: sobreTime,
+        ).podarNosPerfilECaderneta();
+        expect(arvoreSobreTime.profundidade, equals(3));
+        expect(arvoreSobreTime.caminho[0], isA<HomeNode>());
+        expect(arvoreSobreTime.caminho[1], isA<SettingsNode>());
+        expect(arvoreSobreTime.noAtual, isA<SobreTimeNode>());
+
+        const pico = PicoNode(cragId: 'bau', parent: home);
+        const perfilAposPico = PerfilNode(pico);
+        const settingsAposPico = SettingsNode(perfilAposPico);
+        final arvorePicoSettings = const ArvoreNavegacao(
+          noAtual: settingsAposPico,
+        ).podarNosPerfilECaderneta();
+        expect(arvorePicoSettings.profundidade, equals(3));
+        expect(arvorePicoSettings.caminho[0], isA<HomeNode>());
+        expect(arvorePicoSettings.caminho[1], isA<PicoNode>());
+        expect(arvorePicoSettings.noAtual, isA<SettingsNode>());
+        expect(arvorePicoSettings.noAtual.parent, isA<PicoNode>());
+      },
+    );
   });
 }

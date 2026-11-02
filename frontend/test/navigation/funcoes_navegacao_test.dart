@@ -17,7 +17,6 @@ import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/controlador_interacoes_usuario.dart';
-import 'package:frontend/pages/perfil.dart';
 import 'package:frontend/theme/cores_app.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform
@@ -388,10 +387,13 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toPerfil, toCaderneta e canGoBack funcionam quando não há TreeNavigationWrapper montado',
+      'AppNav.toPerfil, toCaderneta e canGoBack operam como no-op seguro quando não há TreeNavigationWrapper montado',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-        addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          ControladorInteracoesUsuario.redefinirParaTestes();
+        });
 
         await tester.pumpWidget(
           MaterialApp(
@@ -405,25 +407,20 @@ void main() {
         expect(AppNav.canGoBack(context), isFalse);
         AppNav.toMapas(context, cragId: 'test_crag', mapas: const []);
 
-        // Com perfil desabilitado, toPerfil não navega
+        // Com perfil desabilitado, toPerfil e toCaderneta não navegam
         AppNav.toPerfil(context);
-        await tester.pumpAndSettle();
-        expect(find.byType(PerfilPage), findsNothing);
-
-        // Com perfil habilitado e sem TreeNavigationWrapper, faz push de MaterialPageRoute
-        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-        AppNav.toPerfil(context);
-        await tester.pumpAndSettle();
-        expect(find.byType(PerfilPage), findsOneWidget);
-
-        AppNav.back(tester.element(find.byType(PerfilPage)));
-        await tester.pumpAndSettle();
-        expect(find.byType(PerfilPage), findsNothing);
-
-        // toCaderneta sem TreeNavigationWrapper faz push de MaterialPageRoute
         AppNav.toCaderneta(context);
         await tester.pumpAndSettle();
-        expect(find.byType(CadernetaPage), findsOneWidget);
+        expect(find.text('Tela Inicial'), findsOneWidget);
+
+        // Com perfil habilitado porém sem TreeNavigationWrapper, toPerfil e toCaderneta são no-op seguros
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        ControladorInteracoesUsuario.redefinirParaTestes();
+        AppNav.toPerfil(context);
+        AppNav.toCaderneta(context);
+        await tester.pumpAndSettle();
+        expect(find.text('Tela Inicial'), findsOneWidget);
+        expect(AppNav.canGoBack(context), isFalse);
       },
     );
 
@@ -641,7 +638,7 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toPerfil respeita preferência local do usuário em ControladorInteracoesUsuario',
+      'AppNav.toPerfil e AppNav.toCaderneta respeitam preferência local do usuário em ControladorInteracoesUsuario',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
@@ -671,12 +668,16 @@ void main() {
         );
         AppNav.toPerfil(context);
         expect(controller.currentNode, isA<HomeNode>());
+        AppNav.toCaderneta(context);
+        expect(controller.currentNode, isA<HomeNode>());
 
         await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
           true,
         );
         AppNav.toPerfil(context);
         expect(controller.currentNode, isA<PerfilNode>());
+        AppNav.toCaderneta(context);
+        expect(controller.currentNode, isA<CadernetaNode>());
       },
     );
   });

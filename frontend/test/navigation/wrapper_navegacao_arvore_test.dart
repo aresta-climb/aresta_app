@@ -20,6 +20,8 @@ import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/meus_croquis.dart';
 import 'package:frontend/pages/pico.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -711,6 +713,63 @@ void main() {
           (controller.currentNode as SetorNode).setorNome,
           equals('Setor Véu da Noiva'),
         );
+      },
+    );
+
+    testWidgets(
+      'desativar interações de Perfil e Caderneta na SettingsPage poda PerfilNode ancestral da árvore ativa e retorna direto à HomeNode',
+      (tester) async {
+        ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+        ControladorInteracoesUsuario.redefinirParaTestes();
+        addTearDown(() {
+          ConfiguracaoRecursos.redefinirParaTestes();
+          ControladorInteracoesUsuario.redefinirParaTestes();
+        });
+
+        final controller = TreeNavigationController();
+        repo.loadEmpty();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: controller,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Toca no botão de perfil na HomePage -> PerfilNode(HomeNode)
+        await tester.tap(find.byKey(const Key('btn_home_perfil')));
+        await tester.pumpAndSettle();
+        expect(controller.currentNode, isA<PerfilNode>());
+
+        // 2. No HubPerfilCadernetaPage, abre Configurações -> SettingsNode(PerfilNode(HomeNode))
+        await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
+        await tester.pumpAndSettle();
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<PerfilNode>());
+        expect(controller.arvore.profundidade, equals(3));
+
+        // 3. Desativa o Switch de interações na SettingsPage
+        final switchFinder = find.byKey(const Key('switch_interacoes_caderneta'));
+        await tester.ensureVisible(switchFinder);
+        await tester.tap(switchFinder);
+        await tester.pumpAndSettle();
+
+        // A árvore deve ter podado PerfilNode mantendo SettingsNode reancorado diretamente em HomeNode
+        expect(controller.currentNode, isA<SettingsNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+        expect(controller.arvore.profundidade, equals(2));
+
+        // 4. Ao voltar da SettingsPage, pousa diretamente em HomeNode (sem passar pelo PerfilNode desativado)
+        controller.goBack();
+        await tester.pumpAndSettle();
+        expect(controller.currentNode, isA<HomeNode>());
+        expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
       },
     );
   });
