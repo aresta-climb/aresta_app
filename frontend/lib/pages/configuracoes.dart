@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
-import '../services/configuracao_recursos.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_configuracoes.dart';
 import '../view/view_models/configuracoes_view_model.dart';
+import '../widgets/configuracoes/cartao_preferencia_caderneta.dart';
 
 /// Página de Configurações do aplicativo (Dumb UI).
 ///
@@ -34,8 +34,12 @@ class SettingsPage extends StatelessWidget {
               children: [
                 buildThemeSelectionCard(context),
                 const SizedBox(height: 16),
-                if (ConfiguracaoRecursos.perfilHabilitado) ...[
-                  construirCartaoInteracoesCaderneta(context),
+                if (viewModel.exibirSecaoInteracoesCaderneta) ...[
+                  CartaoPreferenciaCaderneta(
+                    interacoesAtivasListenable:
+                        viewModel.interacoesCadernetaAtivasNotifier,
+                    aoAlternar: viewModel.definirInteracoesCadernetaAtivas,
+                  ),
                   const SizedBox(height: 16),
                 ],
                 buildEditorCard(

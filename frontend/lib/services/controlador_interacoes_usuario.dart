@@ -49,11 +49,14 @@ class ControladorInteracoesUsuario {
   /// Indica se o usuário optou por manter os recursos de perfil e caderneta visíveis.
   bool get interacoesAtivas => _interacoesAtivasNotifier.value;
 
+  /// Indica se o recurso de Perfil e Caderneta está habilitado na compilação atual.
+  bool get recursoHabilitadoNoAmbiente => ConfiguracaoRecursos.perfilHabilitado;
+
   /// Indica se os elementos opcionais de Perfil e Caderneta devem ser exibidos na UI,
-  /// combinando a liberação do recurso na compilação ([ConfiguracaoRecursos.perfilHabilitado])
+  /// combinando a liberação do recurso na compilação ([recursoHabilitadoNoAmbiente])
   /// com a preferência ativa do usuário ([interacoesAtivas]).
   bool get exibirElementosInterativos =>
-      ConfiguracaoRecursos.perfilHabilitado && _interacoesAtivasNotifier.value;
+      recursoHabilitadoNoAmbiente && _interacoesAtivasNotifier.value;
 
   /// Carrega a preferência previamente salva no dispositivo, mantendo `true` por padrão.
   Future<void> inicializar() async {

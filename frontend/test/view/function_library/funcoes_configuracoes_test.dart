@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
-import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/view/function_library/funcoes_configuracoes.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -946,23 +945,20 @@ void main() {
 
   group('construirCartaoInteracoesCaderneta', () {
     testWidgets(
-      'renderiza cartão de Perfil e Caderneta e alterna ControladorInteracoesUsuario ao acionar o Switch',
+      'renderiza cartão de Perfil e Caderneta e aciona callback aoAlternar ao alternar o Switch',
       (WidgetTester tester) async {
-        SharedPreferences.setMockInitialValues({});
-        final controlador = ControladorInteracoesUsuario();
-        await controlador.inicializar();
-        ControladorInteracoesUsuario.instancia = controlador;
-        addTearDown(() {
-          ControladorInteracoesUsuario.instancia =
-              ControladorInteracoesUsuario();
-        });
+        final interacoesNotifier = ValueNotifier<bool>(true);
+        addTearDown(interacoesNotifier.dispose);
 
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: Builder(
-                builder: (context) =>
-                    construirCartaoInteracoesCaderneta(context),
+                builder: (context) => construirCartaoInteracoesCaderneta(
+                  context,
+                  interacoesAtivasListenable: interacoesNotifier,
+                  aoAlternar: (ativo) => interacoesNotifier.value = ativo,
+                ),
               ),
             ),
           ),
@@ -975,7 +971,7 @@ void main() {
         await tester.tap(chaveSwitch);
         await tester.pump();
 
-        expect(controlador.interacoesAtivasNotifier.value, isFalse);
+        expect(interacoesNotifier.value, isFalse);
         expect(tester.widget<Switch>(chaveSwitch).value, isFalse);
       },
     );
