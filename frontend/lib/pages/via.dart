@@ -3,10 +3,10 @@
 
 import 'package:flutter/material.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
-import '../services/caderneta/repositorio_caderneta.dart';
 import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
+import '../view/view_models/secao_caderneta_via_view_model.dart';
 
 /// Uma página que exibe informações detalhadas sobre uma via de escalada específica.
 ///
@@ -22,7 +22,7 @@ class ViaPage extends StatelessWidget {
   fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
   final bool
   fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
-  final RepositorioCaderneta? repositorio;
+  final SecaoCadernetaViaViewModel? cadernetaViewModel;
 
   const ViaPage({
     super.key,
@@ -33,7 +33,7 @@ class ViaPage extends StatelessWidget {
     this.grupo,
     this.fromSetorPage = false,
     this.fromMapaPage = false,
-    this.repositorio,
+    this.cadernetaViewModel,
   });
 
   @override
@@ -75,7 +75,7 @@ class ViaPage extends StatelessWidget {
           grupo: grupo,
           fromSetorPage: fromSetorPage,
           fromMapaPage: fromMapaPage,
-          repositorio: repositorio,
+          cadernetaViewModel: cadernetaViewModel,
         ),
       ),
       // bottomNavigationBar: buildSecondaryBottomNav(context),

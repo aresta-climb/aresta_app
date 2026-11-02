@@ -12,31 +12,16 @@ import '../../widgets/linha_localizacao_setor.dart';
 import '../../navigation/funcoes_navegacao.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import '../../utils/consulta_dataset.dart';
+import '../../utils/formatador_escalada.dart';
 import '../../navigation/construtor_reativo_pagina.dart';
 import '../../navigation/arvore_navegacao.dart';
-import '../../data/modelos/cadena.dart';
-import '../../data/modelos/tipo_escalada.dart';
-import '../../services/caderneta/repositorio_caderneta.dart';
-import '../../services/controlador_interacoes_usuario.dart';
-import '../../widgets/caderneta/modal_registro_cadena.dart';
+import '../view_models/secao_caderneta_via_view_model.dart';
+import '../../widgets/caderneta/secao_caderneta_via.dart';
+
+export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
 
 /// Retorna o nome da escalada com base em seu tipo.
-String getEscaladaNome(Escalada escalada) {
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      return escalada.viaEsportiva.nome;
-    case Escalada_Tipo.viaMovel:
-      return escalada.viaMovel.nome;
-    case Escalada_Tipo.boulder:
-      return escalada.boulder.nome;
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      return escalada.viaMultiplasEnfiadas.nome;
-    case Escalada_Tipo.highline:
-      return escalada.highline.nome;
-    case Escalada_Tipo.notSet:
-      return 'Sem Nome';
-  }
-}
+String getEscaladaNome(Escalada escalada) => obterNomeEscalada(escalada);
 
 /// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multienfiada', 'Highline').
 /// Vias móveis que possuam proteções intermediárias fixas são identificadas como 'Mista'.
@@ -95,63 +80,11 @@ String getProtecoesString(Escalada escalada) {
 }
 
 /// Retorna a string formatada do grau/dificuldade da escalada.
-String getGrauString(Escalada escalada) {
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      return formatGradeString(escalada.viaEsportiva.dificuldade.name);
-    case Escalada_Tipo.viaMovel:
-      return formatGradeString(escalada.viaMovel.dificuldade.name);
-    case Escalada_Tipo.boulder:
-      return formatGradeString(escalada.boulder.dificuldade.name);
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      return formatGradeString(
-          escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
-    default:
-      return '';
-  }
-}
-
-/// Retorna o código inteiro oficial do enum Protobuf de dificuldade da escalada
-/// (`GrauVia_GrauVia.value` ou `GrauBoulder_GrauBoulder.value`), ou `null` quando
-/// a modalidade não possui grau esportivo ou quando o grau é `INDEFINIDO`/`PROJETO`.
-int? obterCodigoGrauOficial(Escalada escalada) {
-  switch (escalada.whichTipo()) {
-    case Escalada_Tipo.viaEsportiva:
-      final grau = escalada.viaEsportiva.dificuldade;
-      return grau.value >= 2 ? grau.value : null;
-    case Escalada_Tipo.viaMovel:
-      final grau = escalada.viaMovel.dificuldade;
-      return grau.value >= 2 ? grau.value : null;
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      final grau = escalada.viaMultiplasEnfiadas.dificuldadeMaxima;
-      return grau.value >= 2 ? grau.value : null;
-    case Escalada_Tipo.boulder:
-      final grau = escalada.boulder.dificuldade;
-      return grau.value >= 1 ? grau.value : null;
-    case Escalada_Tipo.highline:
-    case Escalada_Tipo.notSet:
-      return null;
-  }
-}
+String getGrauString(Escalada escalada) => obterTextoGrauEscalada(escalada);
 
 /// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
 /// Retorna string vazia se o grau for indefinido ou não informado.
-String formatGradeString(String name) {
-  if (name.isEmpty || name.toUpperCase().contains('INDEFINIDO')) {
-    return '';
-  }
-  String g = name
-      .replaceAll('BR_', '')
-      .replaceAll('_BARRA_', '/')
-      .replaceAll('_', ' ')
-      .toLowerCase();
-
-  return g.replaceAllMapped(RegExp(r'\b([1-9])\s?(sup)?\b'), (match) {
-    String num = match.group(1) ?? '';
-    String sup = match.group(2) != null ? 'sup' : '';
-    return '$numº$sup';
-  });
-}
+String formatGradeString(String name) => formatarTextoGrau(name);
 
 int getGradeSortWeight(String gradeName) {
   if (gradeName.contains('INDEFINIDO')) return 9998;
@@ -227,28 +160,16 @@ Widget buildViaBody(
   Grupo? grupo,
   bool fromSetorPage = false,
   bool fromMapaPage = false,
-  RepositorioCaderneta? repositorio,
+  SecaoCadernetaViaViewModel? cadernetaViewModel,
 }) {
   return SingleChildScrollView(
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ValueListenableBuilder<bool>(
-          valueListenable:
-              ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier,
-          builder: (context, _, _) {
-            if (!ControladorInteracoesUsuario
-                .instancia
-                .exibirElementosInterativos) {
-              return const SizedBox.shrink();
-            }
-            return _buildSeloEBotaoCaderneta(
-              context,
-              escalada,
-              repositorio: repositorio,
-            );
-          },
+        SecaoCadernetaVia(
+          escalada: escalada,
+          viewModel: cadernetaViewModel,
         ),
         _buildContentForEscalada(
           context,
@@ -284,126 +205,6 @@ Widget buildViaBody(
         ),
       ],
     ),
-  );
-}
-
-Widget _buildSeloEBotaoCaderneta(
-  BuildContext context,
-  Escalada escalada, {
-  RepositorioCaderneta? repositorio,
-}) {
-  final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
-  final cores = context.colors;
-
-  return ValueListenableBuilder<List<Cadena>>(
-    valueListenable: repo.cadenasNotifier,
-    builder: (context, _, child) {
-      final melhorAscensao = escalada.hasUid() && escalada.uid.isNotEmpty
-          ? repo.obterMelhorAscensao(escalada.uid)
-          : null;
-
-      final isCadena = melhorAscensao?.isCadena ?? false;
-
-      return Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isCadena
-              ? cores.darkPine.withValues(alpha: 0.5)
-              : cores.caveShadow,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isCadena
-                ? cores.fernGreen.withValues(alpha: 0.6)
-                : cores.graniteEdge,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (melhorAscensao != null) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    isCadena
-                        ? Icons.check_circle_rounded
-                        : Icons.refresh_rounded,
-                    color: isCadena ? cores.fernGreen : cores.rustIron,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isCadena
-                          ? 'Encadenada em ${melhorAscensao.dataAscensao.day.toString().padLeft(2, '0')}/${melhorAscensao.dataAscensao.month.toString().padLeft(2, '0')} (${melhorAscensao.tipoAscensao.rotulo})'
-                          : 'Tentativa em ${melhorAscensao.dataAscensao.day.toString().padLeft(2, '0')}/${melhorAscensao.dataAscensao.month.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        color: cores.chalkWhite,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (melhorAscensao.notasPrivadas.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  '“${melhorAscensao.notasPrivadas}”',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: cores.ashGrey,
-                    fontStyle: FontStyle.italic,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-            ],
-            ElevatedButton.icon(
-              key: const Key('btn_registrar_cadena'),
-              onPressed: () {
-                final tipoEscalada = escalada.whichTipo() == Escalada_Tipo.boulder
-                    ? TipoEscalada.boulder
-                    : TipoEscalada.guiado;
-
-                exibirModalRegistroCadena(
-                  context,
-                  escaladaUid: escalada.uid,
-                  nomeEscalada: getEscaladaNome(escalada),
-                  tipoEscaladaPadrao: tipoEscalada,
-                  grauSugerido: obterCodigoGrauOficial(escalada),
-                  repositorio: repo,
-                );
-              },
-              icon: Icon(
-                melhorAscensao == null
-                    ? Icons.bookmark_add_outlined
-                    : Icons.add_circle_outline,
-                size: 18,
-                color: cores.chalkWhite,
-              ),
-              label: Text(
-                melhorAscensao == null
-                    ? 'Registrar Cadena / Tentativa'
-                    : 'Nova Ascensão / Tentativa',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isCadena ? cores.fernGreen : cores.rustIron,
-                foregroundColor: cores.chalkWhite,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
   );
 }
 

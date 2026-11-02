@@ -9,6 +9,7 @@ import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/function_library/via_functions.dart';
+import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -292,6 +293,12 @@ void main() {
           ),
         );
 
+        final cadernetaVm = SecaoCadernetaViaViewModel(
+          escalada: escalada,
+          repositorio: repo,
+        );
+        addTearDown(cadernetaVm.dispose);
+
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -301,7 +308,7 @@ void main() {
                   context,
                   escalada,
                   'crag1',
-                  repositorio: repo,
+                  cadernetaViewModel: cadernetaVm,
                 ),
               ),
             ),
@@ -346,6 +353,11 @@ void main() {
             dificuldade: GrauVia_GrauVia.BR_6SUP,
           ),
         );
+        final cadernetaVm = SecaoCadernetaViaViewModel(
+          escalada: escalada,
+          repositorio: repo,
+        );
+        addTearDown(cadernetaVm.dispose);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -356,7 +368,7 @@ void main() {
                   context,
                   escalada,
                   'crag1',
-                  repositorio: repo,
+                  cadernetaViewModel: cadernetaVm,
                 ),
               ),
             ),

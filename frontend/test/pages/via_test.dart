@@ -11,6 +11,7 @@ import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
 
 void main() {
   tearDown(() {
@@ -188,6 +189,11 @@ void main() {
 
     final repo = RepositorioCadernetaLocal();
     await repo.salvarCadena(cadena);
+    final cadernetaVm = SecaoCadernetaViaViewModel(
+      escalada: escalada,
+      repositorio: repo,
+    );
+    addTearDown(cadernetaVm.dispose);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -195,7 +201,7 @@ void main() {
         home: ViaPage(
           escalada: escalada,
           cragId: 'crag1',
-          repositorio: repo,
+          cadernetaViewModel: cadernetaVm,
         ),
       ),
     );
