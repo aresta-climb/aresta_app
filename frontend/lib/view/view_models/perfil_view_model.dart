@@ -6,8 +6,10 @@ import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../services/caderneta/estatisticas_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/caderneta/resolvedor_metadados_caderneta.dart';
+import '../../services/repositorio_dataset.dart';
 
-/// ViewModel da tela de Perfil do Escalador ([PerfilPage]).
+/// ViewModel da tela de Caderneta Esportiva do Escalador ([CadernetaPage]).
 ///
 /// Gerencia a interação reativa com o [RepositorioCaderneta], provendo os dados de identidade
 /// esportiva pública ([PerfilEscalador]), histórico de cadenas, métricas analíticas e a pirâmide
@@ -25,6 +27,9 @@ class PerfilViewModel extends ChangeNotifier {
   /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
 
+  /// Resolvedor instanciado e gerenciado internamente quando criado via [comCatalogo].
+  final ResolvedorMetadadosCaderneta? _resolvedorProprio;
+
   bool _modoVias = true;
 
   /// Construtor que aceita o repositório injetado ou utiliza a instância padrão local.
@@ -33,11 +38,33 @@ class PerfilViewModel extends ChangeNotifier {
     this.obterGrauDaVia,
     this.obterNomeDaVia,
     Listenable? escutaMetadados,
+    ResolvedorMetadadosCaderneta? resolvedorProprio,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
-       _escutaMetadados = escutaMetadados {
+       _escutaMetadados = escutaMetadados,
+       _resolvedorProprio = resolvedorProprio {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
     this.repositorio.perfilNotifier.addListener(_aoAtualizarRepositorio);
     _escutaMetadados?.addListener(_aoAtualizarRepositorio);
+  }
+
+  /// Cria o ViewModel conectado automaticamente ao catálogo local ([ResolvedorMetadadosCaderneta]),
+  /// assumindo a responsabilidade de descartar o resolvedor em [dispose].
+  factory PerfilViewModel.comCatalogo({
+    RepositorioCaderneta? repositorio,
+    DatasetRepository? datasetRepo,
+  }) {
+    final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
+    final resolvedor = ResolvedorMetadadosCaderneta(
+      repositorioCaderneta: repo,
+      datasetRepo: datasetRepo ?? DatasetRepository.instance,
+    );
+    return PerfilViewModel(
+      repositorio: repo,
+      obterNomeDaVia: resolvedor.obterNomeDaVia,
+      obterGrauDaVia: resolvedor.obterGrauDaVia,
+      escutaMetadados: resolvedor,
+      resolvedorProprio: resolvedor,
+    );
   }
 
   void _aoAtualizarRepositorio() {
@@ -49,6 +76,7 @@ class PerfilViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.removeListener(_aoAtualizarRepositorio);
     repositorio.perfilNotifier.removeListener(_aoAtualizarRepositorio);
     _escutaMetadados?.removeListener(_aoAtualizarRepositorio);
+    _resolvedorProprio?.dispose();
     super.dispose();
   }
 

@@ -7,6 +7,8 @@ import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/caderneta/resolvedor_metadados_caderneta.dart';
+import '../../services/repositorio_dataset.dart';
 
 /// Modelo de apresentação para a tela de Hub do Perfil do Escalador e Caderneta.
 ///
@@ -28,6 +30,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
 
   /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
+
+  /// Resolvedor instanciado e gerenciado internamente quando criado via [comCatalogo].
+  final ResolvedorMetadadosCaderneta? _resolvedorProprio;
 
   /// Callback para navegação até a página detalhada da caderneta.
   final VoidCallback? aoAbrirCaderneta;
@@ -51,6 +56,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     int Function()? obterTotalPicos,
     int Function()? obterTotalVias,
     Listenable? escutaMetadados,
+    ResolvedorMetadadosCaderneta? resolvedorProprio,
     this.aoAbrirCaderneta,
     this.aoAbrirConfiguracoes,
     this.aoAbrirDadosPrivacidade,
@@ -58,10 +64,32 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     this.aoEditarPerfil,
   }) : _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
-       _escutaMetadados = escutaMetadados {
+       _escutaMetadados = escutaMetadados,
+       _resolvedorProprio = resolvedorProprio {
     repositorio.cadenasNotifier.addListener(_notificarMudanca);
     repositorio.perfilNotifier.addListener(_notificarMudanca);
     _escutaMetadados?.addListener(_notificarMudanca);
+  }
+
+  /// Cria o ViewModel conectado automaticamente ao catálogo local ([ResolvedorMetadadosCaderneta]),
+  /// assumindo a responsabilidade de descartar o resolvedor em [dispose].
+  factory HubPerfilCadernetaViewModel.comCatalogo({
+    RepositorioCaderneta? repositorio,
+    DatasetRepository? datasetRepo,
+    String funcaoAtleta = 'Escalador',
+  }) {
+    final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
+    final resolvedor = ResolvedorMetadadosCaderneta(
+      repositorioCaderneta: repo,
+      datasetRepo: datasetRepo ?? DatasetRepository.instance,
+    );
+    return HubPerfilCadernetaViewModel(
+      repositorio: repo,
+      funcaoAtleta: funcaoAtleta,
+      obterTotalPicos: resolvedor.obterTotalPicosDistintos,
+      escutaMetadados: resolvedor,
+      resolvedorProprio: resolvedor,
+    );
   }
 
   void _notificarMudanca() {
@@ -73,6 +101,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.removeListener(_notificarMudanca);
     repositorio.perfilNotifier.removeListener(_notificarMudanca);
     _escutaMetadados?.removeListener(_notificarMudanca);
+    _resolvedorProprio?.dispose();
     super.dispose();
   }
 
