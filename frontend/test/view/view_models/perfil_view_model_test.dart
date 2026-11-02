@@ -194,7 +194,7 @@ void main() {
       );
 
       test(
-        'comCatalogo hidrata nomes e graus da pirâmide a partir de DatasetRepository real e descarta resolvedor no dispose',
+        'comCatalogo hidrata nomes e graus da pirâmide a partir de DatasetRepository real e descarta catálogo no dispose',
         () async {
           final croqui = Croqui(
             id: 'cipo',

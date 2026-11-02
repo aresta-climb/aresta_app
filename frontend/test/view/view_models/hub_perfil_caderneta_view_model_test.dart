@@ -44,7 +44,7 @@ void main() {
       vm.dispose();
     });
 
-    test('permite customizar a função do atleta e os resolvedores de picos e vias', () {
+    test('permite customizar a função do atleta e as consultas de picos e vias', () {
       final vm = HubPerfilCadernetaViewModel(
         repositorio: repositorio,
         funcaoAtleta: 'Escaladora',
@@ -197,7 +197,7 @@ void main() {
     });
 
     test(
-      'comCatalogo hidrata totalPicos a partir de DatasetRepository real e descarta resolvedor próprio no dispose',
+      'comCatalogo hidrata totalPicos a partir de DatasetRepository real e descarta catálogo próprio no dispose',
       () async {
         final croqui = Croqui(
           id: 'cipo',

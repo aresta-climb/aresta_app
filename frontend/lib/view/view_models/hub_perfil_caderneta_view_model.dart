@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../data/modelos/tipo_ascensao.dart';
+import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
-import '../../services/caderneta/resolvedor_metadados_caderneta.dart';
 import '../../services/repositorio_dataset.dart';
 
 /// Modelo de apresentação para a tela de Hub do Perfil do Escalador e Caderneta.
@@ -31,8 +31,8 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
 
-  /// Resolvedor instanciado e gerenciado internamente quando criado via [comCatalogo].
-  final ResolvedorMetadadosCaderneta? _resolvedorProprio;
+  /// Catálogo de vias instanciado e gerenciado internamente quando criado via [comCatalogo].
+  final CatalogoViasCaderneta? _catalogoViasProprio;
 
   /// Callback para navegação até a página detalhada da caderneta.
   final VoidCallback? aoAbrirCaderneta;
@@ -56,7 +56,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     int Function()? obterTotalPicos,
     int Function()? obterTotalVias,
     Listenable? escutaMetadados,
-    ResolvedorMetadadosCaderneta? resolvedorProprio,
+    CatalogoViasCaderneta? catalogoViasProprio,
     this.aoAbrirCaderneta,
     this.aoAbrirConfiguracoes,
     this.aoAbrirDadosPrivacidade,
@@ -65,30 +65,30 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   }) : _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
        _escutaMetadados = escutaMetadados,
-       _resolvedorProprio = resolvedorProprio {
+       _catalogoViasProprio = catalogoViasProprio {
     repositorio.cadenasNotifier.addListener(_notificarMudanca);
     repositorio.perfilNotifier.addListener(_notificarMudanca);
     _escutaMetadados?.addListener(_notificarMudanca);
   }
 
-  /// Cria o ViewModel conectado automaticamente ao catálogo local ([ResolvedorMetadadosCaderneta]),
-  /// assumindo a responsabilidade de descartar o resolvedor em [dispose].
+  /// Cria o ViewModel conectado automaticamente ao catálogo local ([CatalogoViasCaderneta]),
+  /// assumindo a responsabilidade de descartar o catálogo em [dispose].
   factory HubPerfilCadernetaViewModel.comCatalogo({
     RepositorioCaderneta? repositorio,
     DatasetRepository? datasetRepo,
     String funcaoAtleta = 'Escalador',
   }) {
     final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
-    final resolvedor = ResolvedorMetadadosCaderneta(
+    final catalogoVias = CatalogoViasCaderneta(
       repositorioCaderneta: repo,
       datasetRepo: datasetRepo ?? DatasetRepository.instance,
     );
     return HubPerfilCadernetaViewModel(
       repositorio: repo,
       funcaoAtleta: funcaoAtleta,
-      obterTotalPicos: resolvedor.obterTotalPicosDistintos,
-      escutaMetadados: resolvedor,
-      resolvedorProprio: resolvedor,
+      obterTotalPicos: catalogoVias.obterTotalPicosDistintos,
+      escutaMetadados: catalogoVias,
+      catalogoViasProprio: catalogoVias,
     );
   }
 
@@ -101,7 +101,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.removeListener(_notificarMudanca);
     repositorio.perfilNotifier.removeListener(_notificarMudanca);
     _escutaMetadados?.removeListener(_notificarMudanca);
-    _resolvedorProprio?.dispose();
+    _catalogoViasProprio?.dispose();
     super.dispose();
   }
 
@@ -124,7 +124,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   int get totalTentativas =>
       cadenas.where((c) => c.tipoAscensao == TipoAscensao.tentativa).length;
 
-  /// Total de picos distintos com registros ou valor provido pelo resolver.
+  /// Total de picos distintos com registros no catálogo.
   int get totalPicos {
     if (_obterTotalPicos != null) {
       return _obterTotalPicos();
@@ -132,7 +132,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     return totalVias > 0 ? 1 : 0;
   }
 
-  /// Total de vias distintas com registros ou valor provido pelo resolver.
+  /// Total de vias distintas com registros na caderneta.
   int get totalVias {
     if (_obterTotalVias != null) {
       return _obterTotalVias();

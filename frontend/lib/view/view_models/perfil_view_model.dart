@@ -4,9 +4,9 @@
 import 'package:flutter/foundation.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
+import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/estatisticas_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
-import '../../services/caderneta/resolvedor_metadados_caderneta.dart';
 import '../../services/repositorio_dataset.dart';
 
 /// ViewModel da tela de Caderneta Esportiva do Escalador ([CadernetaPage]).
@@ -27,8 +27,8 @@ class PerfilViewModel extends ChangeNotifier {
   /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
 
-  /// Resolvedor instanciado e gerenciado internamente quando criado via [comCatalogo].
-  final ResolvedorMetadadosCaderneta? _resolvedorProprio;
+  /// Catálogo de vias instanciado e gerenciado internamente quando criado via [comCatalogo].
+  final CatalogoViasCaderneta? _catalogoViasProprio;
 
   bool _modoVias = true;
 
@@ -38,32 +38,32 @@ class PerfilViewModel extends ChangeNotifier {
     this.obterGrauDaVia,
     this.obterNomeDaVia,
     Listenable? escutaMetadados,
-    ResolvedorMetadadosCaderneta? resolvedorProprio,
+    CatalogoViasCaderneta? catalogoViasProprio,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
        _escutaMetadados = escutaMetadados,
-       _resolvedorProprio = resolvedorProprio {
+       _catalogoViasProprio = catalogoViasProprio {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
     this.repositorio.perfilNotifier.addListener(_aoAtualizarRepositorio);
     _escutaMetadados?.addListener(_aoAtualizarRepositorio);
   }
 
-  /// Cria o ViewModel conectado automaticamente ao catálogo local ([ResolvedorMetadadosCaderneta]),
-  /// assumindo a responsabilidade de descartar o resolvedor em [dispose].
+  /// Cria o ViewModel conectado automaticamente ao catálogo local ([CatalogoViasCaderneta]),
+  /// assumindo a responsabilidade de descartar o catálogo em [dispose].
   factory PerfilViewModel.comCatalogo({
     RepositorioCaderneta? repositorio,
     DatasetRepository? datasetRepo,
   }) {
     final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
-    final resolvedor = ResolvedorMetadadosCaderneta(
+    final catalogoVias = CatalogoViasCaderneta(
       repositorioCaderneta: repo,
       datasetRepo: datasetRepo ?? DatasetRepository.instance,
     );
     return PerfilViewModel(
       repositorio: repo,
-      obterNomeDaVia: resolvedor.obterNomeDaVia,
-      obterGrauDaVia: resolvedor.obterGrauDaVia,
-      escutaMetadados: resolvedor,
-      resolvedorProprio: resolvedor,
+      obterNomeDaVia: catalogoVias.obterNomeDaVia,
+      obterGrauDaVia: catalogoVias.obterGrauDaVia,
+      escutaMetadados: catalogoVias,
+      catalogoViasProprio: catalogoVias,
     );
   }
 
@@ -76,7 +76,7 @@ class PerfilViewModel extends ChangeNotifier {
     repositorio.cadenasNotifier.removeListener(_aoAtualizarRepositorio);
     repositorio.perfilNotifier.removeListener(_aoAtualizarRepositorio);
     _escutaMetadados?.removeListener(_aoAtualizarRepositorio);
-    _resolvedorProprio?.dispose();
+    _catalogoViasProprio?.dispose();
     super.dispose();
   }
 
