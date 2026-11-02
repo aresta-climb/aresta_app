@@ -54,10 +54,11 @@ Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcion
 Encapsula as regras de domínio puras da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
 - Gestão do nó raiz e nó atual.
 - Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
+- Poda imutável de ancestrais de Perfil e Caderneta (`podarNosPerfilECaderneta`), reancorando telas sobreviventes (`SettingsNode`, `SobreTimeNode`) ao ancestral válido anterior quando o usuário desativa as interações sociais/caderneta.
 - Cálculo de profundidade e caminho canônico.
 
 ### `arvore/navegador_arvore.dart`
-Controlador de estado `TreeNavigationController` que estende `ChangeNotifier`, orquestrando a navegação reativa e notificando a interface quando o nó ativo transiciona.
+Controlador de estado `TreeNavigationController` (`NavegadorArvore`) que estende `ChangeNotifier`, orquestrando a navegação reativa (incluindo `podarNosPerfilECaderneta()`) e notificando a interface quando o nó ativo ou a cadeia de ancestrais transiciona.
 
 ### `arvore_navegacao.dart`
 Fachada principal que reexporta todos os módulos de `arvore/` para garantir uma importação limpa e centralizada em todo o app.
@@ -68,17 +69,18 @@ A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Es
 
 ### `funcoes_navegacao.dart`
 Contém a classe estática `AppNav`, que funciona como uma interface limpa (API) para acessar e modificar a árvore de navegação sem precisar lidar diretamente com o `BuildContext` complexo do controlador.
-Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. A API aceita objetos complexos por comodidade (ex: `AppNav.toSetor(context, setor: meuSetor)`), mas descarta os objetos nos bastidores e salva apenas o `nome` do setor na árvore.
+Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. Todas as rotas principais (incluindo `AppNav.toPerfil` $\rightarrow$ `PerfilNode` e `AppNav.toCaderneta` $\rightarrow$ `CadernetaNode`) operam exclusivamente na árvore de nós, sem fallbacks imperativos de `MaterialPageRoute`.
 
 ### `construtor_view_arvore.dart`
 Centraliza a lógica de fábrica para converter nós abstratos da árvore em páginas Flutter concretas:
-- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós utilitários (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`) para suas respectivas páginas, encapsulando-as com `PageListenableBuilder` para hot-reload reativo de dados.
+- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós globais (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`, `PerfilNode`, `CadernetaNode`) para suas respectivas páginas Dumb UI com ViewModels injetados (`HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `SettingsViewModel`), encapsulando nós de pico com `PageListenableBuilder` para hot-reload reativo de dados.
 - **`construirPaginaModalParaNo`**: Constrói folhas modais declarativas (`ModalBottomSheetPage`) para exibição em DraggableScrollableSheet de `TextNode` (artigos e beta) e `TextCarouselNode`.
 
 ### `wrapper_navegacao_arvore.dart`
 O orquestrador visual principal da navegação em árvore:
 - Mantém o `IndexedStack` permanente para as abas base (Home, Browse, Meus Croquis e Comunidade), preservando as posições de rolagem de tela dos usuários.
-- Empilha rotas de forma estritamente declarativa via `Navigator(pages: ...)`.
+- Empilha rotas de forma estritamente declarativa via `Navigator(pages: ...)` com cache de páginas ativas.
+- Escuta `ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier` para podar automaticamente `PerfilNode` e `CadernetaNode` da árvore quando o recurso é desativado nas Configurações.
 - Trata eventos de sincronização em segundo plano, Live Reload de croquis e interceptação do botão Voltar do sistema operacional via `PopScope`.
 
 ## Como usar (A API `AppNav`)
