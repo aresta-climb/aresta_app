@@ -8,8 +8,8 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/services/caderneta/catalogo_vias_caderneta.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
-import 'package:frontend/services/caderneta/resolvedor_metadados_caderneta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -41,7 +41,7 @@ void main() {
 
   setUp(() async {
     dirTemp = await Directory.systemTemp.createTemp(
-      'resolvedor_metadados_caderneta_test_',
+      'catalogo_vias_caderneta_test_',
     );
     PathProviderPlatform.instance = _PathProviderTemporarioFake(dirTemp.path);
     SharedPreferences.setMockInitialValues({});
@@ -64,19 +64,19 @@ void main() {
     }
   });
 
-  group('ResolvedorMetadadosCaderneta', () {
+  group('CatalogoViasCaderneta', () {
     test('retorna zero picos distintos e metadados nulos quando a caderneta está vazia', () async {
-      final resolvedor = ResolvedorMetadadosCaderneta(
+      final catalogoVias = CatalogoViasCaderneta(
         repositorioCaderneta: repoCaderneta,
         repositorioCatalogo: repoCatalogo,
       );
-      await resolvedor.atualizar();
+      await catalogoVias.atualizar();
 
-      expect(resolvedor.obterTotalPicosDistintos(), equals(0));
-      expect(resolvedor.obterNomeDaVia('uidInexistente'), isNull);
-      expect(resolvedor.obterGrauDaVia('uidInexistente'), isNull);
+      expect(catalogoVias.obterTotalPicosDistintos(), equals(0));
+      expect(catalogoVias.obterNomeDaVia('uidInexistente'), isNull);
+      expect(catalogoVias.obterGrauDaVia('uidInexistente'), isNull);
 
-      resolvedor.dispose();
+      catalogoVias.dispose();
     });
 
     test('hidrata nomes, graus normalizados e picos distintos a partir do catalogo.db SQLite real', () async {
@@ -152,23 +152,23 @@ void main() {
         ),
       );
 
-      final resolvedor = ResolvedorMetadadosCaderneta(
+      final catalogoVias = CatalogoViasCaderneta(
         repositorioCaderneta: repoCaderneta,
         repositorioCatalogo: repoCatalogo,
       );
-      await resolvedor.atualizar();
+      await catalogoVias.atualizar();
 
       // Duas escaladas no mesmo croqui contam como 1 pico distinto
-      expect(resolvedor.obterTotalPicosDistintos(), equals(1));
-      expect(resolvedor.obterNomeDaVia('viaPedra1NanoX'), equals('Via Deslize'));
+      expect(catalogoVias.obterTotalPicosDistintos(), equals(1));
+      expect(catalogoVias.obterNomeDaVia('viaPedra1NanoX'), equals('Via Deslize'));
       // Normaliza '6sup' do catálogo para '6ºsup' compatível com a pirâmide de graus
-      expect(resolvedor.obterGrauDaVia('viaPedra1NanoX'), equals('6ºsup'));
-      expect(resolvedor.obterNomeDaVia('blocoPedra2Nan'), equals('Bloco da Gruta'));
-      expect(resolvedor.obterGrauDaVia('blocoPedra2Nan'), equals('V4'));
+      expect(catalogoVias.obterGrauDaVia('viaPedra1NanoX'), equals('6ºsup'));
+      expect(catalogoVias.obterNomeDaVia('blocoPedra2Nan'), equals('Bloco da Gruta'));
+      expect(catalogoVias.obterGrauDaVia('blocoPedra2Nan'), equals('V4'));
 
       // Ao salvar cadena em um segundo pico e em highline, reage automaticamente
       var notificou = false;
-      resolvedor.addListener(() => notificou = true);
+      catalogoVias.addListener(() => notificou = true);
 
       await repoCaderneta.salvarCadena(
         Cadena.criar(
@@ -186,17 +186,17 @@ void main() {
           tipoEscalada: TipoEscalada.guiado,
         ),
       );
-      await resolvedor.atualizar();
+      await catalogoVias.atualizar();
 
       expect(notificou, isTrue);
-      expect(resolvedor.obterTotalPicosDistintos(), equals(2));
-      expect(resolvedor.obterNomeDaVia('viaCipo1NanoXY'), equals('Fenda do Cipó'));
-      expect(resolvedor.obterGrauDaVia('viaCipo1NanoXY'), equals('7b'));
+      expect(catalogoVias.obterTotalPicosDistintos(), equals(2));
+      expect(catalogoVias.obterNomeDaVia('viaCipo1NanoXY'), equals('Fenda do Cipó'));
+      expect(catalogoVias.obterGrauDaVia('viaCipo1NanoXY'), equals('7b'));
       // Highline não possui grau esportivo de escalada para a pirâmide
-      expect(resolvedor.obterNomeDaVia('highlineCipo1X'), equals('Fita Aérea'));
-      expect(resolvedor.obterGrauDaVia('highlineCipo1X'), isNull);
+      expect(catalogoVias.obterNomeDaVia('highlineCipo1X'), equals('Fita Aérea'));
+      expect(catalogoVias.obterGrauDaVia('highlineCipo1X'), isNull);
 
-      resolvedor.dispose();
+      catalogoVias.dispose();
     });
 
     test('recarrega metadados reativamente quando o catalogo.db recebe um delta sync', () async {
@@ -235,14 +235,14 @@ void main() {
         ),
       );
 
-      final resolvedor = ResolvedorMetadadosCaderneta(
+      final catalogoVias = CatalogoViasCaderneta(
         repositorioCaderneta: repoCaderneta,
         repositorioCatalogo: repoCatalogo,
       );
-      await resolvedor.atualizar();
+      await catalogoVias.atualizar();
 
-      expect(resolvedor.obterNomeDaVia('viaMutavel0001'), equals('Nome Antigo'));
-      expect(resolvedor.obterGrauDaVia('viaMutavel0001'), equals('5º'));
+      expect(catalogoVias.obterNomeDaVia('viaMutavel0001'), equals('Nome Antigo'));
+      expect(catalogoVias.obterGrauDaVia('viaMutavel0001'), equals('5º'));
 
       await repoCatalogo.aplicarDelta(
         const RespostaSyncCatalogo(
@@ -263,12 +263,12 @@ void main() {
           ),
         ),
       );
-      await resolvedor.atualizar();
+      await catalogoVias.atualizar();
 
-      expect(resolvedor.obterNomeDaVia('viaMutavel0001'), equals('Via K2'));
-      expect(resolvedor.obterGrauDaVia('viaMutavel0001'), equals('5ºsup/6a'));
+      expect(catalogoVias.obterNomeDaVia('viaMutavel0001'), equals('Via K2'));
+      expect(catalogoVias.obterGrauDaVia('viaMutavel0001'), equals('5ºsup/6a'));
 
-      resolvedor.dispose();
+      catalogoVias.dispose();
     });
 
     test('utiliza croquis carregados no DatasetRepository como fallback síncrono imediato e contabiliza mínimo de 1 pico para UID desconhecido', () async {
@@ -371,12 +371,12 @@ void main() {
         ),
       );
 
-      final resolvedor = ResolvedorMetadadosCaderneta(
+      final catalogoVias = CatalogoViasCaderneta(
         repositorioCaderneta: repoCaderneta,
         datasetRepo: datasetRepo,
       );
-      await resolvedor.atualizar();
-      expect(resolvedor.obterTotalPicosDistintos(), equals(1));
+      await catalogoVias.atualizar();
+      expect(catalogoVias.obterTotalPicosDistintos(), equals(1));
 
       // 2) Agora adiciona cadenas das escaladas presentes nos croquis em memória (sem estarem no catalogo.db)
       await repoCaderneta.salvarCadena(
@@ -397,18 +397,18 @@ void main() {
       );
 
       expect(
-        resolvedor.obterNomeDaVia('viaOffline0001'),
+        catalogoVias.obterNomeDaVia('viaOffline0001'),
         equals('Via da Sessão Offline'),
       );
-      expect(resolvedor.obterGrauDaVia('viaOffline0001'), equals('7c'));
+      expect(catalogoVias.obterGrauDaVia('viaOffline0001'), equals('7c'));
       expect(
-        resolvedor.obterNomeDaVia('blocoOnline001'),
+        catalogoVias.obterNomeDaVia('blocoOnline001'),
         equals('Boulder do Grupo Online'),
       );
-      expect(resolvedor.obterGrauDaVia('blocoOnline001'), equals('VB/V0'));
-      expect(resolvedor.obterTotalPicosDistintos(), equals(2));
+      expect(catalogoVias.obterGrauDaVia('blocoOnline001'), equals('VB/V0'));
+      expect(catalogoVias.obterTotalPicosDistintos(), equals(2));
 
-      resolvedor.dispose();
+      catalogoVias.dispose();
     });
   });
 }
