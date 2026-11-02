@@ -5,7 +5,7 @@ import '../../aresta_api/proto/generated/croqui.pbenum.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/filtro_grau_escalada.dart';
-import '../../view/function_library/via_functions.dart';
+import '../../utils/formatador_escalada.dart';
 import 'estatisticas_caderneta.dart';
 import 'resolvedor_metadados_caderneta.dart';
 
@@ -108,7 +108,7 @@ abstract final class CompiladorEstatisticasCaderneta {
         return null;
       }
       return ResolvedorMetadadosCaderneta.normalizarGrauEscalada(
-        formatGradeString(grauBoulder.name),
+        formatarTextoGrau(grauBoulder.name),
         tipoEscalada: 'boulder',
       );
     }
@@ -117,7 +117,7 @@ abstract final class CompiladorEstatisticasCaderneta {
     if (grauVia == null || grauVia.value < 2) {
       return null;
     }
-    return formatGradeString(grauVia.name);
+    return formatarTextoGrau(grauVia.name);
   }
 
   static Map<String, int> _ordenarPiramide(

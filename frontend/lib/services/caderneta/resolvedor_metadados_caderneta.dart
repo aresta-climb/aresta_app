@@ -4,7 +4,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
-import '../../view/function_library/via_functions.dart';
+import '../../utils/formatador_escalada.dart' as formatador_escalada;
 import '../repositorio_dataset.dart';
 import 'repositorio_caderneta.dart';
 
@@ -55,44 +55,14 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
   }
 
   /// Normaliza strings brutas de graduação vindas do catálogo SQLite ou de Protobufs
-  /// para os rótulos canônicos esperados pela pirâmide esportiva (ex.: `'6sup'` -> `'6ºsup'`,
-  /// `'5'` -> `'5º'`, `'v4'` -> `'V4'`), descartando metragens de `'highline'`.
+  /// delegando ao utilitário puro [formatador_escalada.normalizarGrauEscalada].
   static String? normalizarGrauEscalada(
     String? grauBruto, {
     String? tipoEscalada,
-  }) {
-    if (tipoEscalada == 'highline' || grauBruto == null) {
-      return null;
-    }
-    final texto = grauBruto.trim();
-    if (texto.isEmpty) {
-      return null;
-    }
-
-    final ehBoulder =
-        tipoEscalada == 'boulder' ||
-        RegExp(r'^[vV]([bB]|\d+)').hasMatch(texto);
-    if (ehBoulder) {
-      return texto.toUpperCase();
-    }
-
-    return texto
-        .split('/')
-        .map((parte) {
-          final limpa = parte.trim();
-          final match = RegExp(
-            r'^([1-9])\s*(sup)?$',
-            caseSensitive: false,
-          ).firstMatch(limpa);
-          if (match != null) {
-            final numero = match.group(1)!;
-            final sufixo = match.group(2) != null ? 'sup' : '';
-            return '$numeroº$sufixo';
-          }
-          return limpa;
-        })
-        .join('/');
-  }
+  }) => formatador_escalada.normalizarGrauEscalada(
+    grauBruto,
+    tipoEscalada: tipoEscalada,
+  );
 
   void _aoMudarFonteDeDados() {
     if (_descartado) return;
@@ -168,31 +138,19 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
       final identificadorCroqui = croqui.uid.isNotEmpty
           ? croqui.uid
           : croqui.id;
-      for (final escalada in _iterarEscaladasDoCroqui(croqui)) {
+      for (final escalada in formatador_escalada.iterarEscaladasDoCroqui(croqui)) {
         if (escalada.uid == escaladaUid) {
           return _MetadadosEscaladaResolvidos(
-            nome: getEscaladaNome(escalada),
-            grau: normalizarGrauEscalada(getGrauString(escalada)),
+            nome: formatador_escalada.obterNomeEscalada(escalada),
+            grau: normalizarGrauEscalada(
+              formatador_escalada.obterTextoGrauEscalada(escalada),
+            ),
             croquiUid: identificadorCroqui,
           );
         }
       }
     }
     return null;
-  }
-
-  static Iterable<Escalada> _iterarEscaladasDoCroqui(Croqui croqui) sync* {
-    for (final pico in croqui.picos) {
-      for (final item in pico.setoresOuGrupos) {
-        if (item.hasSetor()) {
-          yield* item.setor.conteudo.escaladas;
-        } else if (item.hasGrupo()) {
-          for (final arquivoSetor in item.grupo.conteudo.setores) {
-            yield* arquivoSetor.conteudo.escaladas;
-          }
-        }
-      }
-    }
   }
 
   /// Retorna o nome legível da via ou bloco correspondente a [escaladaUid],

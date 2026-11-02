@@ -115,5 +115,53 @@ void main() {
         expect(stats.maiorGrauBoulder, equals('V5'));
       },
     );
+
+    test(
+      'ordena pirâmide de boulders por peso oficial, fallback numérico e desempate alfabético',
+      () {
+        final cadenas = [
+          Cadena.criar(
+            escaladaUid: 'b1',
+            dataAscensao: DateTime(2026, 9, 1),
+            tipoAscensao: TipoAscensao.flash,
+            tipoEscalada: TipoEscalada.boulder,
+          ),
+          Cadena.criar(
+            escaladaUid: 'b2',
+            dataAscensao: DateTime(2026, 9, 2),
+            tipoAscensao: TipoAscensao.flash,
+            tipoEscalada: TipoEscalada.boulder,
+          ),
+          Cadena.criar(
+            escaladaUid: 'b3',
+            dataAscensao: DateTime(2026, 9, 3),
+            tipoAscensao: TipoAscensao.flash,
+            tipoEscalada: TipoEscalada.boulder,
+          ),
+          Cadena.criar(
+            escaladaUid: 'b4',
+            dataAscensao: DateTime(2026, 9, 4),
+            tipoAscensao: TipoAscensao.flash,
+            tipoEscalada: TipoEscalada.boulder,
+          ),
+        ];
+
+        final stats = CompiladorEstatisticasCaderneta.compilar(
+          cadenas,
+          obterGrauDaVia: (uid) => switch (uid) {
+            'b1' => 'V99',
+            'b2' => 'V3',
+            'b3' => 'VZ',
+            'b4' => 'VA',
+            _ => null,
+          },
+        );
+
+        expect(
+          stats.piramideBoulders.keys.toList(),
+          equals(['VA', 'VZ', 'V3', 'V99']),
+        );
+      },
+    );
   });
 }
