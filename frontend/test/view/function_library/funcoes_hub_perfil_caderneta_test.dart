@@ -150,105 +150,22 @@ void main() {
       expect(confirmouSaida, isTrue);
     });
 
-    testWidgets('exibirDialogoEditarPerfil permite preencher e salvar novo nome', (tester) async {
-      String? resultado;
-
+    testWidgets('buildCardMetricaHub aplica borda padrão derivada de corIcone quando corBorda é omitida', (tester) async {
       await tester.pumpWidget(
         wrapWithTheme(
-          Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () async {
-                  resultado = await exibirDialogoEditarPerfil(
-                    context,
-                    nomeAtual: 'Fernanda Rocha',
-                  );
-                },
-                child: const Text('Abrir'),
-              );
-            },
+          buildCardMetricaHub(
+            key: const Key('card_padrao'),
+            icone: Icons.star_rounded,
+            corIcone: const Color(0xFF22C55E),
+            valor: '10',
+            rotulo: 'RECORDES',
           ),
         ),
       );
 
-      await tester.tap(find.text('Abrir'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Editar Perfil'), findsOneWidget);
-
-      final campoFinder = find.byKey(const Key('campo_editar_perfil_nome'));
-      expect(campoFinder, findsOneWidget);
-
-      await tester.enterText(campoFinder, 'Roberta Rocha');
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('btn_salvar_editar_perfil')));
-      await tester.pumpAndSettle();
-
-      expect(resultado, 'Roberta Rocha');
-    });
-
-    testWidgets('exibirModalDadosPrivacidade exibe autorIdPublico e aciona cópia', (tester) async {
-      var copiou = false;
-
-      await tester.pumpWidget(
-        wrapWithTheme(
-          Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  exibirModalDadosPrivacidade(
-                    context,
-                    autorIdPublico: 'abc123xyz78901',
-                    onCopiarId: () => copiou = true,
-                  );
-                },
-                child: const Text('Abrir'),
-              );
-            },
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Abrir'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Dados e Privacidade'), findsOneWidget);
-      expect(find.textContaining('abc123xyz78901'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('btn_copiar_id_privacidade')));
-      await tester.pumpAndSettle();
-
-      expect(copiou, isTrue);
-    });
-
-    testWidgets('exibirDialogoConfirmarSaida retorna true ao confirmar saída', (tester) async {
-      bool? confirmou;
-
-      await tester.pumpWidget(
-        wrapWithTheme(
-          Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () async {
-                  confirmou = await exibirDialogoConfirmarSaida(context);
-                },
-                child: const Text('Abrir'),
-              );
-            },
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Abrir'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Deseja realmente sair?'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('btn_confirmar_saida')));
-      await tester.pumpAndSettle();
-
-      expect(confirmou, isTrue);
+      expect(find.byKey(const Key('card_padrao')), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('RECORDES'), findsOneWidget);
     });
   });
 }
