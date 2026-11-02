@@ -32,6 +32,8 @@ import 'package:frontend/view/function_library/markdown_offline.dart';
 import 'package:frontend/view/view_models/mapa_global_view_model.dart';
 import 'package:frontend/view/view_models/pico_view_model.dart';
 import 'package:frontend/view/view_models/configuracoes_view_model.dart';
+import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
+import 'package:frontend/view/view_models/perfil_view_model.dart';
 import 'package:frontend/widgets/conteudo_modal_carrossel.dart';
 
 /// Constrói e resolve a página ([Widget]) correspondente a um nó ([NavNode]) da árvore de navegação.
@@ -209,11 +211,19 @@ Widget construirPaginaParaNo({
   }
 
   if (node is PerfilNode) {
-    return HubPerfilCadernetaPage(datasetRepo: datasetRepo);
+    return HubPerfilCadernetaPage(
+      construtorViewModel: () => HubPerfilCadernetaViewModel.comCatalogo(
+        datasetRepo: datasetRepo,
+      ),
+    );
   }
 
   if (node is CadernetaNode) {
-    return CadernetaPage(datasetRepo: datasetRepo);
+    return CadernetaPage(
+      construtorViewModel: () => PerfilViewModel.comCatalogo(
+        datasetRepo: datasetRepo,
+      ),
+    );
   }
 
   if (node is ControlesNode) {

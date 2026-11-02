@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'no_navegacao.dart';
@@ -82,6 +82,35 @@ class ArvoreNavegacao {
       return this;
     }
     return ArvoreNavegacao(noAtual: node);
+  }
+
+  /// Remove quaisquer nós [PerfilNode] e [CadernetaNode] da cadeia ativa de ancestrais,
+  /// reancorando os nós sobreviventes posteriores (como [SettingsNode] ou [SobreTimeNode])
+  /// ao ancestral válido imediatamente anterior.
+  ArvoreNavegacao podarNosPerfilECaderneta() {
+    final nos = caminho;
+    if (!nos.any((n) => n is PerfilNode || n is CadernetaNode)) {
+      return this;
+    }
+
+    NavNode ancestralValido = nos.first;
+    var houvePoda = false;
+    for (final no in nos.skip(1)) {
+      if (no is PerfilNode || no is CadernetaNode) {
+        houvePoda = true;
+        continue;
+      }
+      if (!houvePoda) {
+        ancestralValido = no;
+        continue;
+      }
+      if (no is SettingsNode) {
+        ancestralValido = SettingsNode(ancestralValido);
+      } else if (no is SobreTimeNode) {
+        ancestralValido = SobreTimeNode(ancestralValido);
+      }
+    }
+    return ArvoreNavegacao(noAtual: ancestralValido);
   }
 
   @override

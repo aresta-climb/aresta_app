@@ -17,6 +17,7 @@ import 'package:frontend/pages/explorar.dart';
 import 'package:frontend/pages/comunidade.dart';
 import 'package:frontend/pages/home.dart';
 import 'package:frontend/pages/meus_croquis.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/theme/cores_app.dart';
@@ -90,6 +91,7 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
   late final BrowseViewModel _browseViewModel;
   late final MeusCroquisViewModel _meusCroquisViewModel;
   FeedbackController? _feedbackController;
+  late final Listenable _escutaInteracoesUsuario;
   bool _ultimoFeedbackAberto = false;
   final Set<int> _abasVisitadas = {};
   final Map<String, Page> _paginasDaPilhaCache = {};
@@ -123,6 +125,9 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     treeController = widget.treeController ?? TreeNavigationController();
     _sincronizarPicoAbertoId();
     treeController.addListener(_onNodeChanged);
+    _escutaInteracoesUsuario =
+        ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier;
+    _escutaInteracoesUsuario.addListener(_aoMudarPreferenciaInteracoes);
     widget.syncService.syncStatus.addListener(_onSyncStatusChanged);
     widget.datasetRepo.notificadorCroquiAtualizado.addListener(_onCroquiOnlineAtualizado);
 
@@ -220,11 +225,18 @@ class TreeNavigationWrapperState extends State<TreeNavigationWrapper> {
     _meusCroquisViewModel.dispose();
     gerenciadorDeepLinks.dispose();
     _feedbackController?.removeListener(_onFeedbackChanged);
+    _escutaInteracoesUsuario.removeListener(_aoMudarPreferenciaInteracoes);
     widget.datasetRepo.notificadorCroquiAtualizado.removeListener(_onCroquiOnlineAtualizado);
     widget.syncService.syncStatus.removeListener(_onSyncStatusChanged);
     treeController.removeListener(_onNodeChanged);
     treeController.dispose();
     super.dispose();
+  }
+
+  void _aoMudarPreferenciaInteracoes() {
+    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
+      treeController.podarNosPerfilECaderneta();
+    }
   }
 
   void _onCroquiOnlineAtualizado() {

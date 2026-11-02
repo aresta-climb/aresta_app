@@ -7,8 +7,8 @@ import '../main.dart';
 import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
+import '../utils/formatador_escalada.dart';
 import '../services/controlador_interacoes_usuario.dart';
-import '../pages/perfil.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -206,7 +206,7 @@ abstract final class AppNav {
         setorNome: setor.nome,
         grupoNome: grupoContext?.nome,
         scrollToEscaladaNome: scrollToEscalada != null
-            ? _getNomeEscalada(scrollToEscalada)
+            ? obterNomeEscalada(scrollToEscalada, padrao: '')
             : null,
         cragId: finalCragId,
         parent: ctrl.currentNode,
@@ -283,7 +283,7 @@ abstract final class AppNav {
 
     ctrl.navigateTo(
       ViaNode(
-        escaladaNome: _getNomeEscalada(escalada),
+        escaladaNome: obterNomeEscalada(escalada, padrao: ''),
         setorNome: setor?.nome,
         grupoNome: grupo?.nome,
         cragId: finalCragId,
@@ -321,7 +321,7 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para a página de Perfil e Caderneta Esportiva do Escalador,
+  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós,
   /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
   static void toPerfil(BuildContext context) {
     if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
@@ -330,22 +330,18 @@ abstract final class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       ctrl.navigateTo(PerfilNode(ctrl.currentNode));
-    } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PerfilPage()),
-      );
     }
   }
 
-  /// Navega para a página de Caderneta Esportiva pessoal do atleta.
+  /// Navega para a página de Caderneta Esportiva pessoal ([CadernetaNode]) na árvore de nós,
+  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
   static void toCaderneta(BuildContext context) {
+    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
+      return;
+    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       ctrl.navigateTo(CadernetaNode(ctrl.currentNode));
-    } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const CadernetaPage()),
-      );
     }
   }
 
@@ -382,15 +378,6 @@ abstract final class AppNav {
     final ctrl = _ctrl(context);
     if (ctrl == null) return Navigator.of(context).canPop();
     return ctrl.currentNode.parent != null;
-  }
-
-  static String _getNomeEscalada(Escalada e) {
-    if (e.hasViaEsportiva()) return e.viaEsportiva.nome;
-    if (e.hasViaMovel()) return e.viaMovel.nome;
-    if (e.hasBoulder()) return e.boulder.nome;
-    if (e.hasViaMultiplasEnfiadas()) return e.viaMultiplasEnfiadas.nome;
-    if (e.hasHighline()) return e.highline.nome;
-    return '';
   }
 }
 

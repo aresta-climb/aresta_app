@@ -67,6 +67,15 @@ class NavegadorArvore extends ChangeNotifier {
 
   /// Apelido em português brasileiro para [goHome].
   void irParaHome() => goHome();
+
+  /// Remove nós de Perfil e Caderneta da árvore ativa quando as interações de usuário são desativadas.
+  void podarNosPerfilECaderneta() {
+    final arvorePodada = _arvore.podarNosPerfilECaderneta();
+    if (!identical(_arvore, arvorePodada)) {
+      _arvore = arvorePodada;
+      notifyListeners();
+    }
+  }
 }
 
 /// Alias de compatibilidade retroativa para [NavegadorArvore].
