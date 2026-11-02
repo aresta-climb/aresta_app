@@ -1,23 +1,30 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/cores_app.dart';
 import '../view/view_models/home_view_model.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
-import '../services/controlador_interacoes_usuario.dart';
 import 'micro_badge_beta.dart';
 import 'modal_beta_aberto.dart';
 
-/// Barra de aplicativo superior dedicada da página inicial do Aresta Climb.
+/// Barra de aplicativo superior dedicada da página inicial do Aresta Climb (Dumb UI).
 ///
 /// Apresenta o logotipo vetorizado, a marca com selo interativo [MicroBadgeBeta]
-/// e os botões de ação para sincronização manual, feedback, perfil do escalador e configurações.
+/// e os botões de ação para sincronização manual, feedback, perfil do escalador e configurações,
+/// lendo o estado reativo através do [HomeViewModel] sem acessar singletons de serviço diretamente.
 class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  /// ViewModel da tela inicial para sincronização manual padrão.
+  /// ViewModel da tela inicial para sincronização manual e estado reativo.
   final HomeViewModel? viewModel;
+
+  /// Visibilidade estática do botão de perfil quando [viewModel] e [exibirBotaoPerfilListenable] não são fornecidos.
+  final bool exibirBotaoPerfil;
+
+  /// Notificador opcional para controle reativo de visibilidade do botão de perfil quando [viewModel] é omitido.
+  final ValueListenable<bool>? exibirBotaoPerfilListenable;
 
   /// Callback executado ao pressionar o botão de sincronização.
   final VoidCallback? onSync;
@@ -31,6 +38,8 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ArestaHomeAppBar({
     super.key,
     this.viewModel,
+    this.exibirBotaoPerfil = false,
+    this.exibirBotaoPerfilListenable,
     this.onSync,
     this.onSettings,
     this.onProfile,
@@ -61,6 +70,48 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     } else {
       AppNav.toSettings(context);
     }
+  }
+
+  Widget _construirBotaoPerfil(BuildContext context) {
+    return IconButton(
+      key: const Key('btn_home_perfil'),
+      icon: Icon(
+        Icons.person_outline,
+        color: context.colors.ashGrey,
+      ),
+      tooltip: 'Meu Perfil',
+      onPressed: () => _executarPerfil(context),
+    );
+  }
+
+  Widget _construirSlotBotaoPerfil(BuildContext context) {
+    final vm = viewModel;
+    if (vm != null) {
+      return ValueListenableBuilder<bool>(
+        valueListenable: vm.interacoesUsuarioAtivasListenable,
+        builder: (context, _, _) {
+          return vm.exibirBotaoPerfil
+              ? _construirBotaoPerfil(context)
+              : const SizedBox.shrink();
+        },
+      );
+    }
+
+    final listenable = exibirBotaoPerfilListenable;
+    if (listenable != null) {
+      return ValueListenableBuilder<bool>(
+        valueListenable: listenable,
+        builder: (context, visivel, _) {
+          return visivel
+              ? _construirBotaoPerfil(context)
+              : const SizedBox.shrink();
+        },
+      );
+    }
+
+    return exibirBotaoPerfil
+        ? _construirBotaoPerfil(context)
+        : const SizedBox.shrink();
   }
 
   @override
@@ -126,27 +177,7 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: () => _executarSincronizacao(context),
               ),
               buildFeedbackButton(context, color: context.colors.ashGrey),
-              ValueListenableBuilder<bool>(
-                valueListenable: ControladorInteracoesUsuario
-                    .instancia
-                    .interacoesAtivasNotifier,
-                builder: (context, _, _) {
-                  if (!ControladorInteracoesUsuario
-                      .instancia
-                      .exibirElementosInterativos) {
-                    return const SizedBox.shrink();
-                  }
-                  return IconButton(
-                    key: const Key('btn_home_perfil'),
-                    icon: Icon(
-                      Icons.person_outline,
-                      color: context.colors.ashGrey,
-                    ),
-                    tooltip: 'Meu Perfil',
-                    onPressed: () => _executarPerfil(context),
-                  );
-                },
-              ),
+              _construirSlotBotaoPerfil(context),
               IconButton(
                 icon: Icon(Icons.settings, color: context.colors.ashGrey),
                 onPressed: () => _executarConfiguracoes(context),

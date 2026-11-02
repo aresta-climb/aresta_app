@@ -3,7 +3,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/view_models/home_view_model.dart';
 import 'package:frontend/widgets/app_bar_home_aresta.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
@@ -100,10 +104,8 @@ void main() {
   });
 
   testWidgets(
-    'ArestaHomeAppBar oculta o botão de perfil quando o recurso está desabilitado',
+    'ArestaHomeAppBar oculta o botão de perfil por padrão quando desabilitado',
     (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
-
       await tester.pumpWidget(
         criarAppTeste(
           child: const ArestaHomeAppBar(),
@@ -116,15 +118,14 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil quando habilitado',
+    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil quando exibirBotaoPerfil é true',
     (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
       bool abriuPerfil = false;
 
       await tester.pumpWidget(
         criarAppTeste(
           child: ArestaHomeAppBar(
+            exibirBotaoPerfil: true,
             onProfile: () => abriuPerfil = true,
           ),
         ),
@@ -140,29 +141,54 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar oculta e reexibe reativamente o botão de perfil conforme preferência do usuário',
+    'ArestaHomeAppBar alterna visibilidade reativamente via exibirBotaoPerfilListenable e via HomeViewModel',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
       ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
+
+      // 1. Modo exibirBotaoPerfilListenable (Dumb UI puro sem ViewModel)
+      final visibilidadeNotifier = ValueNotifier<bool>(true);
+      addTearDown(visibilidadeNotifier.dispose);
 
       await tester.pumpWidget(
         criarAppTeste(
-          child: const ArestaHomeAppBar(),
+          child: ArestaHomeAppBar(
+            exibirBotaoPerfilListenable: visibilidadeNotifier,
+          ),
         ),
       );
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
 
-      await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
-        false,
-      );
+      visibilidadeNotifier.value = false;
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
 
-      await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
-        true,
+      // 2. Modo HomeViewModel reativo
+      final controlador = ControladorInteracoesUsuario(preferencias: prefs);
+      await controlador.inicializar();
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final homeVm = HomeViewModel(
+        datasetRepo: datasetRepo,
+        syncService: syncService,
+        controladorInteracoes: controlador,
       );
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: ArestaHomeAppBar(viewModel: homeVm),
+        ),
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+
+      await controlador.definirInteracoesAtivas(false);
+      await tester.pump();
+      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+
+      await controlador.definirInteracoesAtivas(true);
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
     },
@@ -210,7 +236,7 @@ void main() {
 
       await tester.pumpWidget(
         criarAppTeste(
-          child: const ArestaHomeAppBar(),
+          child: const ArestaHomeAppBar(exibirBotaoPerfil: true),
         ),
       );
       await tester.pump();
