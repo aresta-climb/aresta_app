@@ -8,18 +8,18 @@ import '../../utils/formatador_escalada.dart' as formatador_escalada;
 import '../repositorio_dataset.dart';
 import 'repositorio_caderneta.dart';
 
-class _MetadadosEscaladaResolvidos {
+class _DadosEscaladaCatalogo {
   final String nome;
   final String? grau;
   final String croquiUid;
 
-  const _MetadadosEscaladaResolvidos({
+  const _DadosEscaladaCatalogo({
     required this.nome,
     required this.grau,
     required this.croquiUid,
   });
 
-  bool equivalenteA(_MetadadosEscaladaResolvidos outro) =>
+  bool equivalenteA(_DadosEscaladaCatalogo outro) =>
       nome == outro.nome &&
       grau == outro.grau &&
       croquiUid == outro.croquiUid;
@@ -31,17 +31,17 @@ class _MetadadosEscaladaResolvidos {
 /// esportiva e contagem de picos distintos a partir do `catalogo.db` ([RepositorioCatalogo]),
 /// utilizando os croquis carregados em memória no [DatasetRepository] como fallback
 /// síncrono imediato para funcionamento offline e em sessões online sob demanda.
-class ResolvedorMetadadosCaderneta extends ChangeNotifier {
+class CatalogoViasCaderneta extends ChangeNotifier {
   final RepositorioCaderneta _repositorioCaderneta;
   final DatasetRepository? _datasetRepo;
   final RepositorioCatalogo? _catalogo;
 
-  final Map<String, _MetadadosEscaladaResolvidos> _cacheCatalogo = {};
+  final Map<String, _DadosEscaladaCatalogo> _cacheCatalogo = {};
   int? _versaoCatalogoHidratada;
   bool _descartado = false;
 
-  /// Cria o resolvedor e inicia a escuta reativa da caderneta e do catálogo local.
-  ResolvedorMetadadosCaderneta({
+  /// Cria o índice reativo de vias e inicia a escuta da caderneta e do catálogo local.
+  CatalogoViasCaderneta({
     required RepositorioCaderneta repositorioCaderneta,
     RepositorioCatalogo? repositorioCatalogo,
     DatasetRepository? datasetRepo,
@@ -55,7 +55,7 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
   }
 
   /// Normaliza strings brutas de graduação vindas do catálogo SQLite ou de Protobufs
-  /// delegando ao utilitário puro [formatador_escalada.normalizarGrauEscalada].
+  /// delegando ao utilitário [formatador_escalada.normalizarGrauEscalada].
   static String? normalizarGrauEscalada(
     String? grauBruto, {
     String? tipoEscalada,
@@ -79,8 +79,8 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
     final versaoAtual = catalogo.versaoNotificador.value;
     final invalidarCache = _versaoCatalogoHidratada != versaoAtual;
     final proximoCache = invalidarCache
-        ? <String, _MetadadosEscaladaResolvidos>{}
-        : Map<String, _MetadadosEscaladaResolvidos>.from(_cacheCatalogo);
+        ? <String, _DadosEscaladaCatalogo>{}
+        : Map<String, _DadosEscaladaCatalogo>.from(_cacheCatalogo);
 
     final uidsDistintos = _repositorioCaderneta.cadenasNotifier.value
         .map((c) => c.escaladaUid)
@@ -94,7 +94,7 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
       final item = await catalogo.obterItemPorUid(uid);
       if (_descartado) return;
       if (item != null) {
-        final novo = _MetadadosEscaladaResolvidos(
+        final novo = _DadosEscaladaCatalogo(
           nome: item.nome,
           grau: normalizarGrauEscalada(
             item.escaladaGrau,
@@ -120,12 +120,12 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
     }
   }
 
-  _MetadadosEscaladaResolvidos? _resolverMetadados(String escaladaUid) {
+  _DadosEscaladaCatalogo? _buscarDadosEscalada(String escaladaUid) {
     return _cacheCatalogo[escaladaUid] ??
         _buscarEmCroquisCarregados(escaladaUid);
   }
 
-  _MetadadosEscaladaResolvidos? _buscarEmCroquisCarregados(String escaladaUid) {
+  _DadosEscaladaCatalogo? _buscarEmCroquisCarregados(String escaladaUid) {
     final repo = _datasetRepo;
     if (repo == null) return null;
 
@@ -140,7 +140,7 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
           : croqui.id;
       for (final escalada in formatador_escalada.iterarEscaladasDoCroqui(croqui)) {
         if (escalada.uid == escaladaUid) {
-          return _MetadadosEscaladaResolvidos(
+          return _DadosEscaladaCatalogo(
             nome: formatador_escalada.obterNomeEscalada(escalada),
             grau: normalizarGrauEscalada(
               formatador_escalada.obterTextoGrauEscalada(escalada),
@@ -156,12 +156,12 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
   /// Retorna o nome legível da via ou bloco correspondente a [escaladaUid],
   /// ou `null` caso não conste no catálogo local nem nos croquis carregados.
   String? obterNomeDaVia(String escaladaUid) =>
-      _resolverMetadados(escaladaUid)?.nome;
+      _buscarDadosEscalada(escaladaUid)?.nome;
 
   /// Retorna a graduação normalizada da via ou bloco correspondente a [escaladaUid],
   /// ou `null` quando indisponível ou pertencente à modalidade highline.
   String? obterGrauDaVia(String escaladaUid) =>
-      _resolverMetadados(escaladaUid)?.grau;
+      _buscarDadosEscalada(escaladaUid)?.grau;
 
   /// Calcula a quantidade real de picos/croquis distintos presentes nas cadenas.
   ///
@@ -173,7 +173,7 @@ class ResolvedorMetadadosCaderneta extends ChangeNotifier {
 
     final croquisDistintos = <String>{};
     for (final cadena in cadenas) {
-      final croquiUid = _resolverMetadados(cadena.escaladaUid)?.croquiUid;
+      final croquiUid = _buscarDadosEscalada(cadena.escaladaUid)?.croquiUid;
       if (croquiUid != null && croquiUid.isNotEmpty) {
         croquisDistintos.add(croquiUid);
       }
