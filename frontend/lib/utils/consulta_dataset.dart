@@ -205,7 +205,7 @@ extension EscaladaExtension on Escalada {
   }
 }
 
-/// Resolvedor e catálogo relacional em tempo constante O(1) de entidades de croqui por UIDs.
+/// Buscador indexado e catálogo relacional em tempo constante O(1) de entidades de croqui por UIDs.
 ///
 /// Indexa exclusivamente as entidades do quarteto estrutural ([Botao], [Grupo],
 /// [Setor] e [Escalada]) em uma única passada durante a inicialização, associando

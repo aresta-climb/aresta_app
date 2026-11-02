@@ -12,7 +12,7 @@ import '../../navigation/funcoes_navegacao.dart';
 import '../../services/firebase/performance_telemetria.dart';
 import '../../services/firebase/telemetria.dart';
 import '../../services/repositorio_dataset.dart';
-import '../../utils/resolvedor_rotulos_referencia.dart';
+import '../../utils/extrator_rotulos_referencia.dart';
 
 /// Constrói o corpo rolável principal da página do Setor.
 ///
