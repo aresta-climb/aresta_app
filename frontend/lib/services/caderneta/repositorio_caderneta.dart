@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
+import 'armazenamento_local_caderneta.dart';
 import 'estatisticas_caderneta.dart';
 
 /// Contrato abstrato do repositório reativo da caderneta pessoal de cadenas e perfil.
@@ -50,12 +50,9 @@ abstract interface class RepositorioCaderneta {
   });
 }
 
-/// Implementação padrão local-first de [RepositorioCaderneta] utilizando persistência
-/// atômica segura no dispositivo através de [SharedPreferences].
+/// Implementação padrão local-first de [RepositorioCaderneta], separando o estado
+/// reativo e as consultas de domínio do adaptador de persistência [ArmazenamentoLocalCaderneta].
 class RepositorioCadernetaLocal implements RepositorioCaderneta {
-  static const String _chaveCadenas = 'aresta_cadenas_v1';
-  static const String _chavePerfil = 'aresta_perfil_escalador_v1';
-
   static RepositorioCadernetaLocal? _instanciaCompartilhada;
 
   /// Retorna ou instancia a instância singleton do repositório.
@@ -64,11 +61,11 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   /// Permite sobrescrever a instância singleton para fins de teste.
   @visibleForTesting
-  static set instancia(RepositorioCadernetaLocal? mock) {
-    _instanciaCompartilhada = mock;
+  static set instancia(RepositorioCadernetaLocal? substituto) {
+    _instanciaCompartilhada = substituto;
   }
 
-  SharedPreferences? _preferencias;
+  final ArmazenamentoLocalCaderneta _armazenamento;
   final ValueNotifier<List<Cadena>> _cadenasNotifier =
       ValueNotifier<List<Cadena>>(const []);
   final ValueNotifier<PerfilEscalador> _perfilNotifier =
@@ -76,9 +73,13 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   final List<Cadena> _cadenas = [];
 
-  /// Construtor que aceita opcionalmente uma instância injetada de [SharedPreferences].
-  RepositorioCadernetaLocal({SharedPreferences? preferencias})
-    : _preferencias = preferencias;
+  /// Construtor que aceita opcionalmente um [ArmazenamentoLocalCaderneta] ou [SharedPreferences].
+  RepositorioCadernetaLocal({
+    SharedPreferences? preferencias,
+    ArmazenamentoLocalCaderneta? armazenamento,
+  }) : _armazenamento =
+           armazenamento ??
+           ArmazenamentoLocalCaderneta(preferencias: preferencias);
 
   @override
   ValueListenable<List<Cadena>> get cadenasNotifier => _cadenasNotifier;
@@ -88,38 +89,10 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
 
   @override
   Future<void> inicializar() async {
-    _preferencias ??= await SharedPreferences.getInstance();
-
-    // Carrega o perfil do atleta
-    final jsonPerfil = _preferencias!.getString(_chavePerfil);
-    if (jsonPerfil != null && jsonPerfil.isNotEmpty) {
-      try {
-        _perfilNotifier.value = PerfilEscalador.fromJson(jsonPerfil);
-      } catch (_) {
-        _perfilNotifier.value = PerfilEscalador.criarPadrao();
-        await _persistirPerfil();
-      }
-    } else {
-      _perfilNotifier.value = PerfilEscalador.criarPadrao();
-      await _persistirPerfil();
-    }
-
-    // Carrega as cadenas salvas
-    final jsonCadenas = _preferencias!.getString(_chaveCadenas);
-    _cadenas.clear();
-    if (jsonCadenas != null && jsonCadenas.isNotEmpty) {
-      try {
-        final lista = json.decode(jsonCadenas) as List<dynamic>;
-        for (final item in lista) {
-          if (item is Map<String, dynamic>) {
-            _cadenas.add(Cadena.fromMap(item));
-          }
-        }
-      } catch (_) {
-        _cadenas.clear();
-      }
-    }
-
+    _perfilNotifier.value = await _armazenamento.carregarOuCriarPerfil();
+    _cadenas
+      ..clear()
+      ..addAll(await _armazenamento.carregarCadenas());
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
   }
 
@@ -132,14 +105,14 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
       _cadenas.insert(0, cadena);
     }
 
-    await _persistirCadenas();
+    await _armazenamento.salvarCadenas(_cadenas);
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
   }
 
   @override
   Future<void> excluirCadena(String id) async {
     _cadenas.removeWhere((c) => c.id == id);
-    await _persistirCadenas();
+    await _armazenamento.salvarCadenas(_cadenas);
     _cadenasNotifier.value = List.unmodifiable(_cadenas);
   }
 
@@ -170,7 +143,7 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
   @override
   Future<void> salvarPerfil(PerfilEscalador perfil) async {
     _perfilNotifier.value = perfil;
-    await _persistirPerfil();
+    await _armazenamento.salvarPerfil(perfil);
   }
 
   @override
@@ -183,18 +156,6 @@ class RepositorioCadernetaLocal implements RepositorioCaderneta {
     return EstatisticasCaderneta.calcular(
       _cadenas,
       obterGrauDaVia: obterGrauDaVia,
-    );
-  }
-
-  Future<void> _persistirCadenas() async {
-    final mapList = _cadenas.map((c) => c.toMap()).toList();
-    await _preferencias?.setString(_chaveCadenas, json.encode(mapList));
-  }
-
-  Future<void> _persistirPerfil() async {
-    await _preferencias?.setString(
-      _chavePerfil,
-      _perfilNotifier.value.toJson(),
     );
   }
 }
