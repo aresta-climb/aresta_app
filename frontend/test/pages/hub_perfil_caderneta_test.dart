@@ -7,9 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/hub_perfil_caderneta.dart';
 import 'package:frontend/pages/caderneta.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -96,20 +103,44 @@ void main() {
       expect(find.text('Sair'), findsOneWidget);
     });
 
-    testWidgets('ao tocar em Minha caderneta, navega para a CadernetaPage', (tester) async {
+    testWidgets('ao tocar em Minha caderneta, navega para CadernetaNode na árvore de navegação', (tester) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      ControladorInteracoesUsuario.redefinirParaTestes();
+      RepositorioCadernetaLocal.instancia = repositorio;
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
+        ConfiguracaoRecursos.redefinirParaTestes();
+        ControladorInteracoesUsuario.redefinirParaTestes();
       });
 
-      await tester.pumpWidget(criarHubWidget());
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final treeController = TreeNavigationController(
+        estadoInicial: const ArvoreNavegacao(
+          noAtual: PerfilNode(HomeNode()),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: treeController,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
       await tester.pumpAndSettle();
 
+      expect(treeController.currentNode, isA<CadernetaNode>());
       expect(find.byType(CadernetaPage), findsOneWidget);
       expect(find.text('MINHA CADERNETA'), findsOneWidget);
     });

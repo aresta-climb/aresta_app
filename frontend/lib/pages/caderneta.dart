@@ -3,9 +3,6 @@
 
 import 'package:flutter/material.dart';
 import '../data/modelos/cadena.dart';
-import '../services/caderneta/repositorio_caderneta.dart';
-import '../services/caderneta/resolvedor_metadados_caderneta.dart';
-import '../services/repositorio_dataset.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_caderneta.dart';
 import '../view/view_models/perfil_view_model.dart';
@@ -18,16 +15,17 @@ import '../navigation/funcoes_navegacao.dart';
 /// histórico cronológico detalhado de ascensões, delegando o estado ao
 /// [PerfilViewModel] e os elementos visuais à biblioteca [funcoes_caderneta.dart].
 class CadernetaPage extends StatefulWidget {
-  /// ViewModel injetado (ou inicializado por padrão com a instância local-first).
+  /// ViewModel injetado externamente (cujo ciclo de vida pertence ao chamador).
   final PerfilViewModel? viewModel;
 
-  /// Repositório de dataset e catálogo local utilizado para hidratar nomes e graus das vias.
-  final DatasetRepository? datasetRepo;
+  /// Fábrica opcional para criação tardia do ViewModel em [State.initState],
+  /// cujo ciclo de vida passa a ser gerenciado e descartado por esta página.
+  final PerfilViewModel Function()? construtorViewModel;
 
   const CadernetaPage({
     super.key,
     this.viewModel,
-    this.datasetRepo,
+    this.construtorViewModel,
   });
 
   @override
@@ -36,8 +34,7 @@ class CadernetaPage extends StatefulWidget {
 
 class _CadernetaPageState extends State<CadernetaPage> {
   late final PerfilViewModel _viewModel;
-  ResolvedorMetadadosCaderneta? _resolvedorInterno;
-  bool _criouViewModelInterno = false;
+  bool _gerenciaCicloVida = false;
 
   @override
   void initState() {
@@ -45,26 +42,17 @@ class _CadernetaPageState extends State<CadernetaPage> {
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
     } else {
-      final resolvedor = ResolvedorMetadadosCaderneta(
-        repositorioCaderneta: RepositorioCadernetaLocal.instancia,
-        datasetRepo: widget.datasetRepo ?? DatasetRepository.instance,
-      );
-      _resolvedorInterno = resolvedor;
-      _viewModel = PerfilViewModel(
-        repositorio: RepositorioCadernetaLocal.instancia,
-        obterNomeDaVia: resolvedor.obterNomeDaVia,
-        obterGrauDaVia: resolvedor.obterGrauDaVia,
-        escutaMetadados: resolvedor,
-      );
-      _criouViewModelInterno = true;
+      _viewModel =
+          widget.construtorViewModel?.call() ??
+          PerfilViewModel.comCatalogo();
+      _gerenciaCicloVida = true;
     }
   }
 
   @override
   void dispose() {
-    if (_criouViewModelInterno) {
+    if (_gerenciaCicloVida) {
       _viewModel.dispose();
-      _resolvedorInterno?.dispose();
     }
     super.dispose();
   }
