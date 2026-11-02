@@ -57,7 +57,7 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  group('Resolvedor de Rotas da Árvore (construirPaginaParaNo)', () {
+  group('Construtor de Rotas da Árvore (construirPaginaParaNo)', () {
     late Directory tempDir;
     late DatasetRepository repo;
     late SyncService syncService;
@@ -399,7 +399,7 @@ void main() {
     });
   });
 
-  group('Resolvedor de Modais da Árvore (construirModalParaNo)', () {
+  group('Construtor de Modais da Árvore (construirModalParaNo)', () {
     testWidgets('cria página modal para TextNode', (tester) async {
       const node = TextNode(
         title: 'Ajuda',

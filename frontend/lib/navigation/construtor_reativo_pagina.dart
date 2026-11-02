@@ -11,16 +11,16 @@ import 'funcoes_navegacao.dart';
 /// Provedor em árvore de widgets que compartilha a instância indexada de
 /// [DatasetResolver] para todas as páginas e sub-componentes de um mesmo croqui.
 class _ProvedorResolverCroqui extends InheritedWidget {
-  final DatasetResolver resolvedor;
+  final DatasetResolver consultaCroqui;
 
   const _ProvedorResolverCroqui({
-    required this.resolvedor,
+    required this.consultaCroqui,
     required super.child,
   });
 
   @override
   bool updateShouldNotify(_ProvedorResolverCroqui oldWidget) =>
-      !identical(resolvedor, oldWidget.resolvedor);
+      !identical(consultaCroqui, oldWidget.consultaCroqui);
 }
 
 /// Um builder reativo que escuta as atualizações do `DatasetRepository` e
@@ -57,7 +57,7 @@ class PageListenableBuilder extends StatelessWidget {
   static DatasetResolver? resolverOf(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<_ProvedorResolverCroqui>()
-        ?.resolvedor;
+        ?.consultaCroqui;
   }
 
   @override
@@ -140,7 +140,7 @@ class PageListenableBuilder extends StatelessWidget {
         try {
           final picoResolvido = pico;
           final croquiResolvido = croqui;
-          final resolvedor = DatasetResolver(
+          final consultaCroqui = DatasetResolver(
             pico: picoResolvido,
             croqui: croquiResolvido,
           );
@@ -152,7 +152,7 @@ class PageListenableBuilder extends StatelessWidget {
           );
 
           return _ProvedorResolverCroqui(
-            resolvedor: resolvedor,
+            consultaCroqui: consultaCroqui,
             child: Builder(
               builder: (innerContext) => builder(
                 innerContext,

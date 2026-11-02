@@ -22,7 +22,7 @@ import '../widgets/badges_modalidades.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/consolidador_modalidades.dart';
 import '../utils/pincel_destaque_mapa.dart';
-import '../utils/resolvedor_rotulos_referencia.dart';
+import '../utils/extrator_rotulos_referencia.dart';
 
 /// A página principal para visualização e interação com croquis topográficos (mapas) offline.
 ///
@@ -262,7 +262,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
 
 
   void _buildReferenceMaps() {
-    final resolvedor = DatasetResolver(pico: widget.pico);
+    final consultaCroqui = DatasetResolver(pico: widget.pico);
     NormalizadorCroqui.normalizarMapa(
       widget.mapa,
       grupoNomeContexto: widget.grupoContext?.nome,
@@ -278,7 +278,7 @@ class _MapaInterativoPageState extends State<MapaInterativoPage>
       try {
         final resolved =
             (ref.alvoUid.isNotEmpty
-                ? resolvedor.obterPorUid(ref.alvoUid)
+                ? consultaCroqui.obterPorUid(ref.alvoUid)
                 : null) ??
             DatasetResolver.resolveReferencia(
               pico: widget.pico,

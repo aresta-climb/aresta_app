@@ -85,11 +85,11 @@ Widget construirPaginaParaNo({
       grupoNome: grupoNome,
       escaladaNome: escaladaNome,
       builder: (context, pico, croqui, setor, grupo, escalada) {
-        final resolvedor = PageListenableBuilder.resolverOf(context);
+        final consultaCroqui = PageListenableBuilder.resolverOf(context);
         if (node is PicoNode) {
           Setor? returnToSetor;
           if (node.returnToSetorNome != null) {
-            returnToSetor = resolvedor
+            returnToSetor = consultaCroqui
                 ?.buscarPorNome(setorNome: node.returnToSetorNome)
                 ?.setor;
           }
@@ -147,7 +147,7 @@ Widget construirPaginaParaNo({
         } else if (node is SetorNode) {
           Escalada? scrollToEscalada;
           if (node.scrollToEscaladaNome != null && setor != null) {
-            scrollToEscalada = resolvedor
+            scrollToEscalada = consultaCroqui
                 ?.buscarPorNome(
                   grupoNome: grupo?.nome,
                   setorNome: setor.nome,
