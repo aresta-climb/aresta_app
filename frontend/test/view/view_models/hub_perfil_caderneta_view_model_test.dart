@@ -1,18 +1,24 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
 
   late RepositorioCadernetaLocal repositorio;
 
@@ -189,5 +195,73 @@ void main() {
       expect(notificacoes, equals(1));
       gatilhoMetadados.dispose();
     });
+
+    test(
+      'comCatalogo hidrata totalPicos a partir de DatasetRepository real e descarta resolvedor próprio no dispose',
+      () async {
+        final croqui = Croqui(
+          id: 'cipo',
+          uid: 'croqui_cipo_uid',
+          picos: [
+            Pico(
+              nome: 'Serra do Cipó',
+              setoresOuGrupos: [
+                SetorOuGrupo(
+                  setor: ArquivoSetor(
+                    conteudo: Setor(
+                      nome: 'Fenda',
+                      escaladas: [
+                        Escalada(
+                          uid: 'via_cipo_1',
+                          viaEsportiva: ViaEsportiva(nome: 'Via 1'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+        final tempDir = await Directory.systemTemp.createTemp(
+          'hub_vm_catalogo_test_',
+        );
+        addTearDown(() async {
+          if (tempDir.existsSync()) {
+            try {
+              await tempDir.delete(recursive: true);
+            } catch (_) {}
+          }
+        });
+        final datasetRepo = DatasetRepository(
+          editorDeCroqui: EditorDeCroqui(),
+          repositorioCatalogo: RepositorioCatalogo(
+            provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+            fabricaBanco: databaseFactoryFfi,
+          ),
+        );
+        datasetRepo.activeDataset.value = ConjuntoDadosCroqui(
+          croquisBaixados: [croqui],
+        );
+
+        await repositorio.salvarCadena(
+          Cadena.criar(
+            escaladaUid: 'via_cipo_1',
+            dataAscensao: DateTime(2026, 10, 1),
+            tipoAscensao: TipoAscensao.aVista,
+          ),
+        );
+
+        final vm = HubPerfilCadernetaViewModel.comCatalogo(
+          repositorio: repositorio,
+          datasetRepo: datasetRepo,
+        );
+
+        expect(vm.totalPicos, equals(1));
+        expect(vm.totalCadenas, equals(1));
+
+        vm.dispose();
+      },
+    );
   });
 }
