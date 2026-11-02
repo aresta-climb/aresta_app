@@ -7,7 +7,6 @@ import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/filtro_grau_escalada.dart';
 import '../../utils/formatador_escalada.dart';
 import 'estatisticas_caderneta.dart';
-import 'resolvedor_metadados_caderneta.dart';
 
 /// Algoritmo dedicado para compilação analítica e agregação de métricas da caderneta.
 ///
@@ -56,7 +55,7 @@ abstract final class CompiladorEstatisticasCaderneta {
       final grauCatalogo = obterGrauDaVia?.call(cadena.escaladaUid);
       final grau = (grauCatalogo != null && grauCatalogo.trim().isNotEmpty)
           ? grauCatalogo
-          : _resolverGrauPorCodigoSugerido(cadena);
+          : _obterGrauPorCodigoSugerido(cadena);
       if (grau != null && grau.trim().isNotEmpty) {
         final grauLimpo = grau.trim();
         if (cadena.tipoEscalada.isBoulder) {
@@ -97,7 +96,7 @@ abstract final class CompiladorEstatisticasCaderneta {
     );
   }
 
-  static String? _resolverGrauPorCodigoSugerido(Cadena cadena) {
+  static String? _obterGrauPorCodigoSugerido(Cadena cadena) {
     final codigo = cadena.grauSugerido;
     if (codigo == null) return null;
 
@@ -107,7 +106,7 @@ abstract final class CompiladorEstatisticasCaderneta {
           grauBoulder == GrauBoulder_GrauBoulder.INDEFINIDO) {
         return null;
       }
-      return ResolvedorMetadadosCaderneta.normalizarGrauEscalada(
+      return normalizarGrauEscalada(
         formatarTextoGrau(grauBoulder.name),
         tipoEscalada: 'boulder',
       );
