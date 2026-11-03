@@ -8,12 +8,13 @@ import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/estatisticas_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../services/repositorio_dataset.dart';
+import 'registro_cadena_view_model.dart';
 
 /// ViewModel da tela de Caderneta Esportiva do Escalador ([CadernetaPage]).
 ///
 /// Gerencia a interação reativa com o [RepositorioCaderneta], provendo os dados de identidade
-/// esportiva pública ([PerfilEscalador]), histórico de cadenas, métricas analíticas e a pirâmide
-/// de graus com suporte a alternância dinâmica entre modalidades (Vias e Boulders).
+/// esportiva pública ([PerfilEscalador]), histórico de cadenas, métricas analíticas, textos
+/// formatados prontos para exibição na Dumb UI e callbacks de intenção de navegação/ação.
 class PerfilViewModel extends ChangeNotifier {
   /// Repositório da caderneta esportiva utilizado para persistência e consultas.
   final RepositorioCaderneta repositorio;
@@ -23,6 +24,15 @@ class PerfilViewModel extends ChangeNotifier {
 
   /// Função opcional para obter o nome legível da via a partir de seu `escaladaUid`.
   final String? Function(String escaladaUid)? obterNomeDaVia;
+
+  /// Callback opcional invocado quando o usuário solicita editar uma ascensão.
+  final ValueChanged<Cadena>? _aoEditarCadena;
+
+  /// Callback opcional invocado quando o usuário solicita excluir uma ascensão.
+  final ValueChanged<Cadena>? _aoExcluirCadena;
+
+  /// Callback opcional invocado quando o usuário toca em uma ascensão para abrir sua via.
+  final ValueChanged<Cadena>? _aoTocarVia;
 
   /// Fonte reativa opcional de metadados externos (ex.: catálogo SQLite hidratado).
   final Listenable? _escutaMetadados;
@@ -37,9 +47,15 @@ class PerfilViewModel extends ChangeNotifier {
     RepositorioCaderneta? repositorio,
     this.obterGrauDaVia,
     this.obterNomeDaVia,
+    ValueChanged<Cadena>? aoEditarCadena,
+    ValueChanged<Cadena>? aoExcluirCadena,
+    ValueChanged<Cadena>? aoTocarVia,
     Listenable? escutaMetadados,
     CatalogoViasCaderneta? catalogoViasProprio,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
+       _aoEditarCadena = aoEditarCadena,
+       _aoExcluirCadena = aoExcluirCadena,
+       _aoTocarVia = aoTocarVia,
        _escutaMetadados = escutaMetadados,
        _catalogoViasProprio = catalogoViasProprio {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizarRepositorio);
@@ -52,6 +68,9 @@ class PerfilViewModel extends ChangeNotifier {
   factory PerfilViewModel.comCatalogo({
     RepositorioCaderneta? repositorio,
     DatasetRepository? datasetRepo,
+    ValueChanged<Cadena>? aoEditarCadena,
+    ValueChanged<Cadena>? aoExcluirCadena,
+    ValueChanged<Cadena>? aoTocarVia,
   }) {
     final repo = repositorio ?? RepositorioCadernetaLocal.instancia;
     final catalogoVias = CatalogoViasCaderneta(
@@ -62,6 +81,9 @@ class PerfilViewModel extends ChangeNotifier {
       repositorio: repo,
       obterNomeDaVia: catalogoVias.obterNomeDaVia,
       obterGrauDaVia: catalogoVias.obterGrauDaVia,
+      aoEditarCadena: aoEditarCadena,
+      aoExcluirCadena: aoExcluirCadena,
+      aoTocarVia: aoTocarVia,
       escutaMetadados: catalogoVias,
       catalogoViasProprio: catalogoVias,
     );
@@ -86,6 +108,10 @@ class PerfilViewModel extends ChangeNotifier {
   /// Retorna a lista de todas as ascensões registradas na caderneta.
   List<Cadena> get historicoCadenas => repositorio.cadenasNotifier.value;
 
+  /// Retorna o título formatado da seção de histórico com a contagem atual de registros.
+  String get tituloSecaoHistorico =>
+      'Histórico de Ascensões (${historicoCadenas.length})';
+
   /// Retorna as estatísticas agregadas atualizadas.
   EstatisticasCaderneta get estatisticas =>
       repositorio.calcularEstatisticas(obterGrauDaVia: obterGrauDaVia);
@@ -96,6 +122,15 @@ class PerfilViewModel extends ChangeNotifier {
   /// Retorna os dados da pirâmide de graduação conforme a modalidade selecionada.
   Map<String, int> get piramideAtiva =>
       _modoVias ? estatisticas.piramideVias : estatisticas.piramideBoulders;
+
+  /// Indica se um callback customizado de edição foi injetado neste ViewModel.
+  bool get possuiCallbackEditar => _aoEditarCadena != null;
+
+  /// Indica se um callback customizado de exclusão foi injetado neste ViewModel.
+  bool get possuiCallbackExcluir => _aoExcluirCadena != null;
+
+  /// Indica se um callback customizado de navegação para a via foi injetado neste ViewModel.
+  bool get possuiCallbackTocarVia => _aoTocarVia != null;
 
   /// Alterna a modalidade exibida na pirâmide entre Vias (`true`) e Boulders (`false`).
   void alternarModoModalidade(bool apenasVias) {
@@ -116,6 +151,30 @@ class PerfilViewModel extends ChangeNotifier {
     await repositorio.excluirCadena(id);
   }
 
+  /// Aciona a intenção de editar a [cadena] através do callback injetado.
+  void editarCadena(Cadena cadena) {
+    _aoEditarCadena?.call(cadena);
+  }
+
+  /// Aciona a intenção de solicitar exclusão da [cadena] através do callback injetado.
+  void solicitarExclusaoCadena(Cadena cadena) {
+    _aoExcluirCadena?.call(cadena);
+  }
+
+  /// Aciona a intenção de abrir a página da via associada à [cadena] através do callback injetado.
+  void tocarVia(Cadena cadena) {
+    _aoTocarVia?.call(cadena);
+  }
+
+  /// Constrói um [RegistroCadenaViewModel] pré-configurado para editar a [cadena] informada.
+  RegistroCadenaViewModel criarViewModelEdicao(Cadena cadena) {
+    return RegistroCadenaViewModel.paraEdicao(
+      cadena: cadena,
+      nomeEscalada: obterNomeEscalada(cadena.escaladaUid),
+      repositorio: repositorio,
+    );
+  }
+
   /// Obtém o nome amigável da escalada pelo seu [uid], provendo fallback quando não localizado.
   String obterNomeEscalada(String uid) {
     return obterNomeDaVia?.call(uid) ?? 'Via ($uid)';
@@ -131,5 +190,20 @@ class PerfilViewModel extends ChangeNotifier {
     final dia = data.day.toString().padLeft(2, '0');
     final mes = data.month.toString().padLeft(2, '0');
     return '$dia/$mes/${data.year}';
+  }
+
+  /// Formata a linha de metadados secundários de uma [cadena] (data, modalidade e tentativas)
+  /// com concordância nominal pronta para exibição na Dumb UI.
+  String formatarSubtituloAscensao(Cadena cadena) {
+    final data = formatarDataAscensao(cadena.dataAscensao);
+    final rotuloTentativas = cadena.tentativas == 1 ? 'tentativa' : 'tentativas';
+    return '$data • ${cadena.tipoEscalada.rotulo} • ${cadena.tentativas} $rotuloTentativas';
+  }
+
+  /// Formata as notas privadas da [cadena] entre aspas tipográficas ou retorna `null` quando vazia.
+  String? formatarCitacaoNotas(Cadena cadena) {
+    final texto = cadena.notasPrivadas.trim();
+    if (texto.isEmpty) return null;
+    return '“$texto”';
   }
 }
