@@ -243,5 +243,77 @@ void main() {
         expect(uids, equals(['via-direta', 'via-grupo']));
       },
     );
+
+    test(
+      'localizarEscaladaPorUidEmCroquis resolve contexto completo de setor direto ou grupo aninhado e retorna null quando ausente',
+      () {
+        final viaSetorDireto = Escalada()
+          ..uid = 'uid-direta'
+          ..viaEsportiva = (ViaEsportiva()..nome = 'Via Direta');
+        final viaEmGrupo = Escalada()
+          ..uid = 'uid-grupo'
+          ..boulder = (Boulder()..nome = 'Bloco do Grupo');
+
+        final croqui = Croqui(
+          id: 'cipo_id',
+          uid: 'cipo_uid_14c',
+          picos: [
+            Pico(
+              nome: 'Serra do Cipó',
+              setoresOuGrupos: [
+                SetorOuGrupo(
+                  setor: ArquivoSetor(
+                    conteudo: Setor(
+                      nome: 'Setor Sol',
+                      escaladas: [viaSetorDireto],
+                    ),
+                  ),
+                ),
+                SetorOuGrupo(
+                  grupo: ArquivoGrupo(
+                    conteudo: Grupo(
+                      nome: 'Grupo Vale',
+                      setores: [
+                        ArquivoSetor(
+                          conteudo: Setor(
+                            nome: 'Setor Sombra',
+                            escaladas: [viaEmGrupo],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+        expect(localizarEscaladaPorUidEmCroquis('', [croqui]), isNull);
+        expect(
+          localizarEscaladaPorUidEmCroquis('inexistente', [croqui]),
+          isNull,
+        );
+
+        final locDireta = localizarEscaladaPorUidEmCroquis('uid-direta', [
+          croqui,
+        ]);
+        expect(locDireta, isNotNull);
+        expect(locDireta!.idCroqui, equals('cipo_id'));
+        expect(locDireta.croquiUid, equals('cipo_uid_14c'));
+        expect(locDireta.escaladaNome, equals('Via Direta'));
+        expect(locDireta.setorNome, equals('Setor Sol'));
+        expect(locDireta.grupoNome, isNull);
+
+        final locGrupo = localizarEscaladaPorUidEmCroquis('uid-grupo', [
+          croqui,
+        ]);
+        expect(locGrupo, isNotNull);
+        expect(locGrupo!.idCroqui, equals('cipo_id'));
+        expect(locGrupo.escaladaNome, equals('Bloco do Grupo'));
+        expect(locGrupo.setorNome, equals('Setor Sombra'));
+        expect(locGrupo.grupoNome, equals('Grupo Vale'));
+      },
+    );
   });
 }
