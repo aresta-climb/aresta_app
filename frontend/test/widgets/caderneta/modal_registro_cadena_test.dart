@@ -308,5 +308,53 @@ void main() {
         expect(find.text('Notas Privadas (Crux / Métodos)'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'renderiza modo de edição com título e botão específicos e atualiza registro existente',
+      (tester) async {
+        final original = Cadena(
+          id: 'cadena-edit-99',
+          escaladaUid: 'via-edit-99',
+          dataAscensao: DateTime(2026, 7, 15),
+          tipoAscensao: TipoAscensao.tentativa,
+          tipoEscalada: TipoEscalada.guiado,
+          tentativas: 2,
+          notasPrivadas: 'Queda no crux',
+        );
+        await repositorio.salvarCadena(original);
+
+        final vm = RegistroCadenaViewModel.paraEdicao(
+          cadena: original,
+          nomeEscalada: 'Aresta Solar',
+          repositorio: repositorio,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(
+              extensions: const [AppColors.dark],
+            ),
+            home: Scaffold(body: ModalRegistroCadena(viewModel: vm)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Editar Ascensão'), findsOneWidget);
+        expect(find.text('Aresta Solar'), findsOneWidget);
+        expect(find.text('Salvar Alterações'), findsOneWidget);
+        expect(find.text('Queda no crux'), findsOneWidget);
+
+        await tester.tap(find.text('Trabalhado'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Salvar Alterações'));
+        await tester.pumpAndSettle();
+
+        expect(repositorio.cadenasNotifier.value.length, 1);
+        final atualizada = repositorio.cadenasNotifier.value.first;
+        expect(atualizada.id, 'cadena-edit-99');
+        expect(atualizada.tipoAscensao, TipoAscensao.trabalhado);
+      },
+    );
   });
 }

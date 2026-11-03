@@ -64,7 +64,7 @@ void main() {
     );
 
     testWidgets(
-      'abre modal de registro ao tocar no botão e atualiza selo após salvar cadena',
+      'abre modal de registro ao tocar no botão, exibe snackbar e atualiza selo após salvar cadena ou tentativa',
       (tester) async {
         final escalada = Escalada()
           ..uid = 'via_interativa'
@@ -100,9 +100,25 @@ void main() {
         await tester.tap(find.byKey(const Key('btn_salvar_cadena')));
         await tester.pumpAndSettle();
 
+        expect(find.text('Cadena salva na caderneta!'), findsOneWidget);
         expect(find.textContaining('Encadenada em'), findsOneWidget);
         expect(find.text('“Crux no reglete”'), findsOneWidget);
         expect(find.text('Nova Ascensão / Tentativa'), findsOneWidget);
+
+        ScaffoldMessenger.of(
+          tester.element(find.byType(SecaoCadernetaVia)),
+        ).clearSnackBars();
+        await tester.pumpAndSettle();
+
+        // Registra uma tentativa e valida snackbar específica de tentativa
+        await tester.tap(find.byKey(const Key('btn_registrar_cadena')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tentativa'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_salvar_cadena')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tentativa salva na caderneta!'), findsOneWidget);
       },
     );
 
