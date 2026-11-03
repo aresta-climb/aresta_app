@@ -144,3 +144,88 @@ Iterable<Escalada> iterarEscaladasDoCroqui(Croqui croqui) sync* {
   }
 }
 
+/// Metadados estruturais de localização de uma [Escalada] dentro de um [Croqui].
+///
+/// Permite que serviços de catálogo e a árvore de navegação resolvam de forma pura
+/// e síncrona o contexto hierárquico (`idCroqui`, `setorNome`, `grupoNome`) de uma
+/// via a partir de seu identificador único (`uid`).
+class LocalizacaoEscaladaCroqui {
+  /// Identificador de rota do croqui (`croqui.id` ou fallback para `croqui.uid`).
+  final String idCroqui;
+
+  /// Identificador único estável do croqui (`croqui.uid` ou fallback para `croqui.id`).
+  final String croquiUid;
+
+  /// Nome legível da via ou bloco resolvido pela modalidade.
+  final String escaladaNome;
+
+  /// Nome do setor imediato ao qual a escalada pertence.
+  final String? setorNome;
+
+  /// Nome do grupo pai caso o setor esteja aninhado em um [Grupo].
+  final String? grupoNome;
+
+  /// Instância Protobuf da [Escalada] localizada.
+  final Escalada escalada;
+
+  const LocalizacaoEscaladaCroqui({
+    required this.idCroqui,
+    required this.croquiUid,
+    required this.escaladaNome,
+    required this.setorNome,
+    required this.grupoNome,
+    required this.escalada,
+  });
+}
+
+/// Busca uma [Escalada] pelo seu [escaladaUid] em uma coleção de [croquis],
+/// retornando sua [LocalizacaoEscaladaCroqui] completa ou `null` se ausente.
+LocalizacaoEscaladaCroqui? localizarEscaladaPorUidEmCroquis(
+  String escaladaUid,
+  Iterable<Croqui> croquis,
+) {
+  if (escaladaUid.isEmpty) return null;
+
+  for (final croqui in croquis) {
+    final idCroqui = croqui.id.isNotEmpty ? croqui.id : croqui.uid;
+    final croquiUid = croqui.uid.isNotEmpty ? croqui.uid : croqui.id;
+
+    for (final pico in croqui.picos) {
+      for (final item in pico.setoresOuGrupos) {
+        if (item.hasSetor()) {
+          final setor = item.setor.conteudo;
+          for (final escalada in setor.escaladas) {
+            if (escalada.uid == escaladaUid) {
+              return LocalizacaoEscaladaCroqui(
+                idCroqui: idCroqui,
+                croquiUid: croquiUid,
+                escaladaNome: obterNomeEscalada(escalada, padrao: ''),
+                setorNome: setor.nome,
+                grupoNome: null,
+                escalada: escalada,
+              );
+            }
+          }
+        } else if (item.hasGrupo()) {
+          final grupo = item.grupo.conteudo;
+          for (final arquivoSetor in grupo.setores) {
+            final setor = arquivoSetor.conteudo;
+            for (final escalada in setor.escaladas) {
+              if (escalada.uid == escaladaUid) {
+                return LocalizacaoEscaladaCroqui(
+                  idCroqui: idCroqui,
+                  croquiUid: croquiUid,
+                  escaladaNome: obterNomeEscalada(escalada, padrao: ''),
+                  setorNome: setor.nome,
+                  grupoNome: grupo.nome,
+                  escalada: escalada,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
