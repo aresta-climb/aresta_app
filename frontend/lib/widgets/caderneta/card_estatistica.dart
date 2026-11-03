@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import '../../services/caderneta/estatisticas_caderneta.dart';
 import '../../theme/cores_app.dart';
 
 /// Card visual conciso para apresentação de métricas esportivas do perfil do escalador.
@@ -91,6 +92,85 @@ class CardEstatistica extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Painel em grade 2x2 que apresenta as 4 métricas principais da caderneta esportiva
+/// (`Total de Cadenas`, `Taxa À Vista/Flash`, `Maior Grau (Vias)` e `Maior Grau (Boulders)`).
+///
+/// Componente puramente declarativo (Dumb UI) que compõe instâncias de [CardEstatistica]
+/// a partir de [EstatisticasCaderneta].
+class PainelResumoEstatisticasCaderneta extends StatelessWidget {
+  /// Estatísticas consolidadas da caderneta a serem exibidas nos 4 cartões.
+  final EstatisticasCaderneta estatisticas;
+
+  const PainelResumoEstatisticasCaderneta({
+    super.key,
+    required this.estatisticas,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: CardEstatistica(
+                  key: const Key('card_resumo_total_cadenas'),
+                  titulo: 'Total de Cadenas',
+                  valor: '${estatisticas.totalCadenas}',
+                  icone: Icons.check_circle_outline,
+                  corIcone: cores.fernGreen,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: CardEstatistica(
+                  key: const Key('card_resumo_taxa_avista_flash'),
+                  titulo: 'Taxa À Vista/Flash',
+                  valor: '${estatisticas.taxaAVistaFlash.round()}%',
+                  icone: Icons.bolt_rounded,
+                  corIcone: cores.rustIron,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: CardEstatistica(
+                  key: const Key('card_resumo_maior_grau_via'),
+                  titulo: 'Maior Grau (Vias)',
+                  valor: estatisticas.maiorGrauVia ?? '-',
+                  icone: Icons.trending_up_rounded,
+                  corIcone: cores.rustIron,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: CardEstatistica(
+                  key: const Key('card_resumo_maior_grau_boulder'),
+                  titulo: 'Maior Grau (Boulders)',
+                  valor: estatisticas.maiorGrauBoulder ?? '-',
+                  icone: Icons.landscape_rounded,
+                  corIcone: cores.rustIron,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
