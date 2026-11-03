@@ -134,23 +134,19 @@ class CatalogoViasCaderneta extends ChangeNotifier {
       ...?repo.activeDataset.value?.croquisBaixados,
     ];
 
-    for (final croqui in croquis) {
-      final identificadorCroqui = croqui.uid.isNotEmpty
-          ? croqui.uid
-          : croqui.id;
-      for (final escalada in formatador_escalada.iterarEscaladasDoCroqui(croqui)) {
-        if (escalada.uid == escaladaUid) {
-          return _DadosEscaladaCatalogo(
-            nome: formatador_escalada.obterNomeEscalada(escalada),
-            grau: normalizarGrauEscalada(
-              formatador_escalada.obterTextoGrauEscalada(escalada),
-            ),
-            croquiUid: identificadorCroqui,
-          );
-        }
-      }
-    }
-    return null;
+    final localizacao = formatador_escalada.localizarEscaladaPorUidEmCroquis(
+      escaladaUid,
+      croquis,
+    );
+    if (localizacao == null) return null;
+
+    return _DadosEscaladaCatalogo(
+      nome: formatador_escalada.obterNomeEscalada(localizacao.escalada),
+      grau: normalizarGrauEscalada(
+        formatador_escalada.obterTextoGrauEscalada(localizacao.escalada),
+      ),
+      croquiUid: localizacao.croquiUid,
+    );
   }
 
   /// Retorna o nome legível da via ou bloco correspondente a [escaladaUid],
