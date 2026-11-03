@@ -9,6 +9,7 @@ import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/formatador_escalada.dart';
 import '../services/controlador_interacoes_usuario.dart';
+import '../services/repositorio_dataset.dart';
 
 /// API de navegação centralizada para o sistema de navegação baseado em árvore do aresta.
 ///
@@ -290,6 +291,50 @@ abstract final class AppNav {
         parent: ctrl.currentNode,
       ),
     );
+  }
+
+  /// Localiza e navega para a página de uma Via ([ViaNode]) a partir de seu [escaladaUid]
+  /// (NanoID 14c) nos croquis disponíveis localmente ou em sessão ativa, preservando o nó
+  /// atual da árvore (ex.: [CadernetaNode]) como ancestral direto.
+  ///
+  /// Retorna `true` se a via foi encontrada e a navegação ocorreu, ou `false` caso contrário.
+  static bool toViaPorUid(
+    BuildContext context,
+    String escaladaUid, {
+    DatasetRepository? datasetRepo,
+  }) {
+    final ctrl = _ctrl(context);
+    final wrapperState =
+        TreeNavigationWrapper.maybeOf(context) ??
+        TreeNavigationWrapper.navKey.currentState;
+    final repo = datasetRepo ?? wrapperState?.widget.datasetRepo;
+    if (ctrl == null || repo == null || escaladaUid.isEmpty) return false;
+
+    final croquis = <Croqui>[];
+    final active = repo.activeDataset.value;
+    if (active != null) {
+      for (final p in active.picosBaixados) {
+        if (p.croqui != null) {
+          croquis.add(p.croqui!);
+        }
+      }
+      croquis.addAll(active.croquisBaixados);
+    }
+    croquis.addAll(repo.gerenciadorSessaoOnline.croquisEmMemoria.values);
+
+    final localizacao = localizarEscaladaPorUidEmCroquis(escaladaUid, croquis);
+    if (localizacao == null) return false;
+
+    ctrl.navigateTo(
+      ViaNode(
+        escaladaNome: localizacao.escaladaNome,
+        setorNome: localizacao.setorNome,
+        grupoNome: localizacao.grupoNome,
+        cragId: localizacao.idCroqui,
+        parent: ctrl.currentNode,
+      ),
+    );
+    return true;
   }
 
   /// Navega para a página de GPS do pico atual.
