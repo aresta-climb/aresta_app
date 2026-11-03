@@ -18,6 +18,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -45,6 +46,7 @@ class _ItemQueLancaNoId {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
 
   late Directory tempDir;
   late DatasetRepository repo;
@@ -57,7 +59,13 @@ void main() {
     PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
 
     editor = EditorDeCroqui();
-    repo = DatasetRepository(editorDeCroqui: editor);
+    repo = DatasetRepository(
+      editorDeCroqui: editor,
+      repositorioCatalogo: RepositorioCatalogo(
+        provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+        fabricaBanco: databaseFactoryFfi,
+      ),
+    );
     syncService = SyncService(datasetRepository: repo);
     syncService.syncStatus.value = SyncStatus.updated;
 
@@ -678,6 +686,92 @@ void main() {
         expect(controller.currentNode, isA<PerfilNode>());
         AppNav.toCaderneta(context);
         expect(controller.currentNode, isA<CadernetaNode>());
+      },
+    );
+
+    testWidgets(
+      'AppNav.toViaPorUid resolve via existente reancorando no nó atual ou retorna false quando ausente/sem controlador',
+      (tester) async {
+        final viaComUid = ViaEsportiva()..nome = 'Via Com UID';
+        final escaladaComUid = Escalada()
+          ..uid = 'uidViaTeste001'
+          ..viaEsportiva = viaComUid;
+        final setor = Setor()
+          ..nome = 'Setor UID'
+          ..escaladas.add(escaladaComUid);
+        final pico = Pico()
+          ..nome = 'Pico UID'
+          ..setoresOuGrupos.add(
+            SetorOuGrupo()..setor = (ArquivoSetor()..conteudo = setor),
+          );
+        final croqui = Croqui()
+          ..id = 'crag_uid'
+          ..nome = 'Pico UID'
+          ..picos.add(pico);
+
+        repo.activeDataset.value = ConjuntoDadosCroqui(
+          picosBaixados: [
+            ResumoPico(
+              id: 'crag_uid',
+              nome: 'Pico UID',
+              local: 'MG',
+              isDownloaded: true,
+              pico: pico,
+              croqui: croqui,
+            ),
+          ],
+          croquisBaixados: [croqui],
+        );
+
+        // Sem TreeNavigationWrapper (sem controlador) -> retorna false
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: Text('Orfao'))),
+        );
+        final ctxOrfao = tester.element(find.text('Orfao'));
+        expect(
+          AppNav.toViaPorUid(
+            ctxOrfao,
+            'uidViaTeste001',
+            datasetRepo: repo,
+          ),
+          isFalse,
+        );
+
+        final treeController = TreeNavigationController(
+          estadoInicial: const ArvoreNavegacao(
+            noAtual: CadernetaNode(HomeNode()),
+          ),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: TreeNavigationWrapper(
+              key: TreeNavigationWrapper.navKey,
+              datasetRepo: repo,
+              syncService: syncService,
+              treeController: treeController,
+              child: const Scaffold(body: Text('HostUid')),
+            ),
+          ),
+        );
+        await tester.pump();
+        final ctx = tester.element(find.text('HostUid'));
+
+        // UID inexistente -> retorna false
+        expect(
+          AppNav.toViaPorUid(ctx, 'uidInexistente', datasetRepo: repo),
+          isFalse,
+        );
+        expect(treeController.currentNode, isA<CadernetaNode>());
+
+        // UID válido de via -> navega para ViaNode com CadernetaNode como parent e retorna true
+        expect(
+          AppNav.toViaPorUid(ctx, 'uidViaTeste001', datasetRepo: repo),
+          isTrue,
+        );
+        expect(treeController.currentNode, isA<ViaNode>());
+        final viaNode = treeController.currentNode as ViaNode;
+        expect(viaNode.escaladaNome, 'Via Com UID');
+        expect(viaNode.parent, isA<CadernetaNode>());
       },
     );
   });
