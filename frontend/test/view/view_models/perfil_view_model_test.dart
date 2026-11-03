@@ -268,5 +268,69 @@ void main() {
           viewModel.dispose();
         },
       );
+
+      test(
+        'formatarSubtituloAscensao, formatarCitacaoNotas, tituloSecaoHistorico e callbacks delegam ações para a Dumb UI',
+        () {
+          Cadena? editada;
+          Cadena? excluida;
+          Cadena? tocada;
+
+          final viewModel = PerfilViewModel(
+            repositorio: repositorio,
+            aoEditarCadena: (c) => editada = c,
+            aoExcluirCadena: (c) => excluida = c,
+            aoTocarVia: (c) => tocada = c,
+          );
+          final cUmaTentativa = Cadena.criar(
+            escaladaUid: 'v1',
+            dataAscensao: DateTime(2026, 4, 9),
+            tipoAscensao: TipoAscensao.aVista,
+            tipoEscalada: TipoEscalada.guiado,
+            tentativas: 1,
+            notasPrivadas: 'Crux técnico',
+          );
+          final cVariasTentativas = Cadena.criar(
+            escaladaUid: 'v2',
+            dataAscensao: DateTime(2026, 4, 10),
+            tipoAscensao: TipoAscensao.trabalhado,
+            tipoEscalada: TipoEscalada.boulder,
+            tentativas: 3,
+            notasPrivadas: '',
+          );
+
+          expect(viewModel.tituloSecaoHistorico, 'Histórico de Ascensões (0)');
+          expect(
+            viewModel.formatarSubtituloAscensao(cUmaTentativa),
+            '09/04/2026 • Guiado • 1 tentativa',
+          );
+          expect(
+            viewModel.formatarSubtituloAscensao(cVariasTentativas),
+            '10/04/2026 • Boulder • 3 tentativas',
+          );
+          expect(
+            viewModel.formatarCitacaoNotas(cUmaTentativa),
+            '“Crux técnico”',
+          );
+          expect(viewModel.formatarCitacaoNotas(cVariasTentativas), isNull);
+
+          expect(viewModel.possuiCallbackEditar, isTrue);
+          expect(viewModel.possuiCallbackExcluir, isTrue);
+          expect(viewModel.possuiCallbackTocarVia, isTrue);
+
+          viewModel.editarCadena(cUmaTentativa);
+          viewModel.solicitarExclusaoCadena(cUmaTentativa);
+          viewModel.tocarVia(cUmaTentativa);
+
+          expect(editada, equals(cUmaTentativa));
+          expect(excluida, equals(cUmaTentativa));
+          expect(tocada, equals(cUmaTentativa));
+
+          final vmEdicao = viewModel.criarViewModelEdicao(cUmaTentativa);
+          expect(vmEdicao.editando, isTrue);
+          vmEdicao.dispose();
+          viewModel.dispose();
+        },
+      );
   });
 }
