@@ -3,17 +3,20 @@
 
 import 'package:flutter/material.dart';
 import '../data/modelos/cadena.dart';
+import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/funcoes_caderneta.dart';
 import '../view/view_models/perfil_view_model.dart';
+import '../widgets/caderneta/card_estatistica.dart';
 import '../widgets/caderneta/grafico_piramide_graus.dart';
-import '../navigation/funcoes_navegacao.dart';
+import '../widgets/caderneta/modal_registro_cadena.dart';
 
 /// Página dedicada à exibição da Caderneta Esportiva pessoal do atleta (Dumb UI).
 ///
-/// Apresenta o gráfico da pirâmide de graduação (vias e boulders) e o
-/// histórico cronológico detalhado de ascensões, delegando o estado ao
-/// [PerfilViewModel] e os elementos visuais à biblioteca [funcoes_caderneta.dart].
+/// Apresenta o painel de resumo estatístico, o gráfico da pirâmide de graduação
+/// (vias e boulders) e o histórico cronológico detalhado de ascensões com suporte
+/// a edição, exclusão e navegação direta para a via, delegando todo o estado e a
+/// formatação de apresentação ao [PerfilViewModel].
 class CadernetaPage extends StatefulWidget {
   /// ViewModel injetado externamente (cujo ciclo de vida pertence ao chamador).
   final PerfilViewModel? viewModel;
@@ -57,11 +60,51 @@ class _CadernetaPageState extends State<CadernetaPage> {
     super.dispose();
   }
 
-  Future<void> _confirmarExclusaoCadena(Cadena cadena) async {
+  Future<void> _aoSolicitarExclusao(Cadena cadena) async {
+    if (_viewModel.possuiCallbackExcluir) {
+      _viewModel.solicitarExclusaoCadena(cadena);
+      return;
+    }
     final confirmado = await exibirDialogoConfirmarExclusao(context);
-
     if (confirmado == true) {
       await _viewModel.excluirCadena(cadena.id);
+    }
+  }
+
+  void _aoSolicitarEdicao(Cadena cadena) {
+    if (_viewModel.possuiCallbackEditar) {
+      _viewModel.editarCadena(cadena);
+      return;
+    }
+    final vmEdicao = _viewModel.criarViewModelEdicao(cadena);
+    exibirModalRegistroCadena(
+      context,
+      viewModel: vmEdicao,
+      onSalvo: (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ascensão atualizada na caderneta!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+    ).whenComplete(vmEdicao.dispose);
+  }
+
+  void _aoTocarVia(Cadena cadena) {
+    if (_viewModel.possuiCallbackTocarVia) {
+      _viewModel.tocarVia(cadena);
+      return;
+    }
+    final navegou = AppNav.toViaPorUid(context, cadena.escaladaUid);
+    if (!navegou && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Via não disponível offline no momento.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -84,19 +127,26 @@ class _CadernetaPageState extends State<CadernetaPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  PainelResumoEstatisticasCaderneta(
+                    estatisticas: _viewModel.estatisticas,
+                  ),
+                  const SizedBox(height: 20),
                   GraficoPiramideGraus(
                     piramide: _viewModel.piramideAtiva,
                     modoVias: _viewModel.modoVias,
                     onAlternarModo: _viewModel.alternarModoModalidade,
                   ),
                   const SizedBox(height: 24),
-                  buildSecaoHistoricoCadenas(
-                    context,
+                  SecaoHistoricoCadenas(
+                    tituloSecao: _viewModel.tituloSecaoHistorico,
                     historico: _viewModel.historicoCadenas,
                     obterNomeVia: _viewModel.obterNomeEscalada,
                     obterGrauVia: _viewModel.obterGrauEscalada,
-                    formatarData: _viewModel.formatarDataAscensao,
-                    onExcluirCadena: _confirmarExclusaoCadena,
+                    formatarSubtitulo: _viewModel.formatarSubtituloAscensao,
+                    formatarCitacaoNotas: _viewModel.formatarCitacaoNotas,
+                    onExcluirCadena: _aoSolicitarExclusao,
+                    onEditarCadena: _aoSolicitarEdicao,
+                    onTocarVia: _aoTocarVia,
                   ),
                   const SizedBox(height: 32),
                 ],
