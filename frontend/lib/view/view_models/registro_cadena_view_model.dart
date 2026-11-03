@@ -7,7 +7,7 @@ import '../../data/modelos/tipo_ascensao.dart';
 import '../../data/modelos/tipo_escalada.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
 
-/// ViewModel que encapsula o estado e as regras de negócio do registro de ascensões e cadenas.
+/// ViewModel que encapsula o estado e as regras de negócio do registro e edição de ascensões e cadenas.
 ///
 /// Responsável por gerenciar a seleção de estilo esportivo ([TipoAscensao]), modalidade ([TipoEscalada]),
 /// contagem de tentativas, data da ascensão e notas técnicas privadas, viabilizando uma interface visual
@@ -28,6 +28,9 @@ class RegistroCadenaViewModel extends ChangeNotifier {
   /// Repositório da caderneta esportiva utilizado para persistência.
   final RepositorioCaderneta repositorio;
 
+  /// Instância original da ascensão quando o formulário opera em modo de edição.
+  final Cadena? cadenaOriginal;
+
   TipoAscensao _tipoAscensao;
   TipoEscalada _tipoEscalada;
   int _tentativas;
@@ -44,6 +47,7 @@ class RegistroCadenaViewModel extends ChangeNotifier {
     DateTime? dataAscensaoInicial,
     String notasIniciais = '',
     this.grauSugerido,
+    this.cadenaOriginal,
     RepositorioCaderneta? repositorio,
   })  : _tipoEscalada = tipoEscaladaPadrao,
         _tipoAscensao = tipoAscensaoPadrao,
@@ -53,6 +57,36 @@ class RegistroCadenaViewModel extends ChangeNotifier {
             ? notasIniciais.substring(0, limiteNotasPrivadas)
             : notasIniciais,
         repositorio = repositorio ?? RepositorioCadernetaLocal.instancia;
+
+  /// Cria um [RegistroCadenaViewModel] pré-populado para edição de uma [cadena] existente.
+  factory RegistroCadenaViewModel.paraEdicao({
+    required Cadena cadena,
+    required String nomeEscalada,
+    RepositorioCaderneta? repositorio,
+  }) {
+    return RegistroCadenaViewModel(
+      escaladaUid: cadena.escaladaUid,
+      nomeEscalada: nomeEscalada,
+      tipoEscaladaPadrao: cadena.tipoEscalada,
+      tipoAscensaoPadrao: cadena.tipoAscensao,
+      tentativasIniciais: cadena.tentativas,
+      dataAscensaoInicial: cadena.dataAscensao,
+      notasIniciais: cadena.notasPrivadas,
+      grauSugerido: cadena.grauSugerido,
+      cadenaOriginal: cadena,
+      repositorio: repositorio,
+    );
+  }
+
+  /// Indica se o ViewModel está editando um registro existente na caderneta.
+  bool get editando => cadenaOriginal != null;
+
+  /// Título contextual exibido no cabeçalho do modal.
+  String get tituloModal => editando ? 'Editar Ascensão' : 'Registrar Ascensão';
+
+  /// Rótulo contextual exibido no botão principal de salvamento.
+  String get rotuloBotaoSalvar =>
+      editando ? 'Salvar Alterações' : 'Salvar na Caderneta';
 
   /// Estilo esportivo de ascensão atualmente selecionado.
   TipoAscensao get tipoAscensao => _tipoAscensao;
@@ -133,17 +167,27 @@ class RegistroCadenaViewModel extends ChangeNotifier {
     }
   }
 
-  /// Salva a ascensão na caderneta através do [repositorio] e retorna a instância criada.
+  /// Salva ou atualiza a ascensão na caderneta através do [repositorio] e retorna a instância persistida.
   Future<Cadena> salvar() async {
-    final cadena = Cadena.criar(
-      escaladaUid: escaladaUid,
-      dataAscensao: _dataAscensao,
-      tipoAscensao: _tipoAscensao,
-      tipoEscalada: _tipoEscalada,
-      tentativas: _tentativas,
-      grauSugerido: grauSugerido,
-      notasPrivadas: _notasPrivadas.trim(),
-    );
+    final original = cadenaOriginal;
+    final cadena = original != null
+        ? original.copyWith(
+            dataAscensao: _dataAscensao,
+            tipoAscensao: _tipoAscensao,
+            tipoEscalada: _tipoEscalada,
+            tentativas: _tentativas,
+            grauSugerido: grauSugerido,
+            notasPrivadas: _notasPrivadas.trim(),
+          )
+        : Cadena.criar(
+            escaladaUid: escaladaUid,
+            dataAscensao: _dataAscensao,
+            tipoAscensao: _tipoAscensao,
+            tipoEscalada: _tipoEscalada,
+            tentativas: _tentativas,
+            grauSugerido: grauSugerido,
+            notasPrivadas: _notasPrivadas.trim(),
+          );
 
     await repositorio.salvarCadena(cadena);
     return cadena;
