@@ -9,7 +9,7 @@ import '../../theme/cores_app.dart';
 import '../../view/view_models/registro_cadena_view_model.dart';
 import 'controles_formulario_cadena.dart';
 
-/// Exibe o modal de registro de cadena em formato Bottom Sheet.
+/// Exibe o modal de registro ou edição de cadena em formato Bottom Sheet.
 ///
 /// Aceita diretamente um [viewModel] ou instancia um automaticamente a partir
 /// dos parâmetros fornecidos.
@@ -50,7 +50,7 @@ Future<void> exibirModalRegistroCadena(
   );
 }
 
-/// Interface gráfica declarativa (Dumb UI) para o registro de ascensões e cadenas.
+/// Interface gráfica declarativa (Dumb UI) para o registro e edição de ascensões e cadenas.
 ///
 /// Todas as regras de negócio, persistência e estados de formulário são delegados ao
 /// [RegistroCadenaViewModel], enquanto os controles visuais são compostos a partir de
@@ -173,7 +173,10 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const _AlcaArrasteModal(),
-              _CabecalhoModal(nomeEscalada: _viewModel.nomeEscalada),
+              _CabecalhoModal(
+                titulo: _viewModel.tituloModal,
+                nomeEscalada: _viewModel.nomeEscalada,
+              ),
               const SizedBox(height: 20),
               SeletorEstiloAscensao(
                 estiloSelecionado: _viewModel.tipoAscensao,
@@ -199,7 +202,10 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
                 limiteCaracteres: RegistroCadenaViewModel.limiteNotasPrivadas,
               ),
               const SizedBox(height: 24),
-              _BotaoSalvarCadena(onPressed: _salvarAscensao),
+              _BotaoSalvarCadena(
+                rotulo: _viewModel.rotuloBotaoSalvar,
+                onPressed: _salvarAscensao,
+              ),
             ],
           ),
         );
@@ -231,9 +237,13 @@ class _AlcaArrasteModal extends StatelessWidget {
 
 /// Cabeçalho textual do modal contendo título da ação e nome da via.
 class _CabecalhoModal extends StatelessWidget {
+  final String titulo;
   final String nomeEscalada;
 
-  const _CabecalhoModal({required this.nomeEscalada});
+  const _CabecalhoModal({
+    required this.titulo,
+    required this.nomeEscalada,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -242,7 +252,7 @@ class _CabecalhoModal extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Registrar Ascensão',
+          titulo,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: cores.chalkWhite,
             fontWeight: FontWeight.bold,
@@ -264,9 +274,13 @@ class _CabecalhoModal extends StatelessWidget {
 
 /// Botão de submissão do formulário de cadena.
 class _BotaoSalvarCadena extends StatelessWidget {
+  final String rotulo;
   final VoidCallback onPressed;
 
-  const _BotaoSalvarCadena({required this.onPressed});
+  const _BotaoSalvarCadena({
+    required this.rotulo,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -281,9 +295,9 @@ class _BotaoSalvarCadena extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: const Text(
-        'Salvar na Caderneta',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      child: Text(
+        rotulo,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
     );
   }

@@ -57,6 +57,18 @@ class _SecaoCadernetaViaState extends State<SecaoCadernetaVia> {
     exibirModalRegistroCadena(
       context,
       viewModel: registroVm,
+      onSalvo: (cadenaSalva) {
+        if (!context.mounted) return;
+        final mensagem = cadenaSalva.isCadena
+            ? 'Cadena salva na caderneta!'
+            : 'Tentativa salva na caderneta!';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(mensagem),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
     ).whenComplete(registroVm.dispose);
   }
 
