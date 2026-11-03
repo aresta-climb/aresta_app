@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
@@ -40,7 +41,8 @@ void main() {
       expect(vm.dataAscensaoFormatada, isNotEmpty);
     });
 
-    test('respeita valores iniciais customizados fornecidos no construtor', () {
+    test('respeita valores iniciais customizados fornecidos no construtor e trunca notas iniciais acima do limite', () {
+      RepositorioCadernetaLocal.instancia = repositorio;
       final data = DateTime(2026, 5, 20);
       final vm = RegistroCadenaViewModel(
         escaladaUid: 'boulder-002',
@@ -51,7 +53,6 @@ void main() {
         dataAscensaoInicial: data,
         notasIniciais: 'Passada de calcanhar',
         grauSugerido: 4,
-        repositorio: repositorio,
       );
 
       expect(vm.tipoEscalada, TipoEscalada.boulder);
@@ -61,6 +62,16 @@ void main() {
       expect(vm.dataAscensaoFormatada, '20/05/2026');
       expect(vm.notasPrivadas, 'Passada de calcanhar');
       expect(vm.grauSugerido, 4);
+      expect(vm.repositorio, same(repositorio));
+
+      final vmNotasLongas = RegistroCadenaViewModel(
+        escaladaUid: 'boulder-003',
+        nomeEscalada: 'Bloco Longo',
+        tentativasIniciais: 0,
+        notasIniciais: 'X' * 250,
+      );
+      expect(vmNotasLongas.tentativas, 1);
+      expect(vmNotasLongas.notasPrivadas.length, 200);
     });
 
     test('incrementa e decrementa tentativas notificando ouvintes', () {
@@ -166,5 +177,55 @@ void main() {
       expect(salvas.length, 1);
       expect(salvas.first.id, cadena.id);
     });
+
+    test(
+      'paraEdicao carrega dados da cadena existente e atualiza mantendo id e criadoEm',
+      () async {
+        final original = Cadena(
+          id: 'id-original-fixo',
+          escaladaUid: 'via-edicao-01',
+          dataAscensao: DateTime(2026, 6, 10),
+          tipoAscensao: TipoAscensao.tentativa,
+          tipoEscalada: TipoEscalada.guiado,
+          tentativas: 2,
+          grauSugerido: 10,
+          notasPrivadas: 'Nota antiga',
+          criadoEm: DateTime(2026, 6, 10, 12, 0),
+        );
+        await repositorio.salvarCadena(original);
+
+        final vm = RegistroCadenaViewModel.paraEdicao(
+          cadena: original,
+          nomeEscalada: 'Via da Evolução',
+          repositorio: repositorio,
+        );
+
+        expect(vm.editando, isTrue);
+        expect(vm.tituloModal, 'Editar Ascensão');
+        expect(vm.rotuloBotaoSalvar, 'Salvar Alterações');
+        expect(vm.escaladaUid, 'via-edicao-01');
+        expect(vm.nomeEscalada, 'Via da Evolução');
+        expect(vm.tipoAscensao, TipoAscensao.tentativa);
+        expect(vm.tentativas, 2);
+        expect(vm.notasPrivadas, 'Nota antiga');
+
+        vm.definirTipoAscensao(TipoAscensao.trabalhado);
+        vm.incrementarTentativas();
+        vm.definirNotasPrivadas('Encadenada na 3ª pega!');
+
+        final atualizada = await vm.salvar();
+
+        expect(atualizada.id, 'id-original-fixo');
+        expect(atualizada.criadoEm, DateTime(2026, 6, 10, 12, 0));
+        expect(atualizada.tipoAscensao, TipoAscensao.trabalhado);
+        expect(atualizada.tentativas, 3);
+        expect(atualizada.notasPrivadas, 'Encadenada na 3ª pega!');
+
+        final salvas = repositorio.obterCadenasPorEscalada('via-edicao-01');
+        expect(salvas.length, 1);
+        expect(salvas.first.id, 'id-original-fixo');
+        expect(salvas.first.tipoAscensao, TipoAscensao.trabalhado);
+      },
+    );
   });
 }
