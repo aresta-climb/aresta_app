@@ -12,7 +12,7 @@ A caderneta do escalador é concebida com arquitetura **offline-first reativa**:
   - Cada ascensão (`Cadena`) possui chave primária UUID v4 (`id`) e faz referência à via escalada via `escaladaUid` (NanoID 14c em formato Base62).
   - O perfil do atleta (`PerfilEscalador`) possui um `autorIdPublico` (NanoID 14c) único e legível para compartilhamento seguro e futuras funcionalidades comunitárias (ex.: beta de vias, croquis colaborativos).
 - **Reatividade com `ValueListenable`**:
-  O repositório expõe listeners reativos (`cadenasNotifier` e `perfilNotifier`) permitindo que a interface do usuário (ex.: `PerfilPage`, `ViaPage`) reaja imediatamente a inserções, edições e exclusões sem requisições síncronas de rede.
+  O repositório expõe listeners reativos (`cadenasNotifier` e `perfilNotifier`) permitindo que a interface do usuário (ex.: `PerfilPage`, `CadernetaPage`, `ViaPage`) reaja imediatamente a inserções, edições e exclusões sem requisições síncronas de rede.
 - **Preparação para Sincronização PowerSync**:
   O esquema de dados em memória e em cache persistente reflete a estrutura relacional mapeada para futuras tabelas SQLite locais (`cadenas`, `perfis`) integradas com o PowerSync.
 
@@ -39,9 +39,11 @@ Classe de valor imutável e compilador puro que agregam métricas consolidadas:
 ### `CatalogoViasCaderneta` e `formatador_escalada.dart`
 Ponte reativa (`ChangeNotifier`) entre a `RepositorioCaderneta` e o catálogo local de escaladas:
 - **Hidratação via SQLite + Fallback em Memória**: Escuta simultaneamente `cadenasNotifier`, `RepositorioCatalogo.versaoNotificador` (`catalogo.db`) e `DatasetRepository.activeDataset`. Busca de forma assíncrona os nomes de vias (`obterNomeDaVia`), graduações normalizadas (`obterGrauDaVia`) e a contagem real de picos/croquis distintos (`obterTotalPicosDistintos`), utilizando os `Croqui` carregados em memória (`gerenciadorSessaoOnline` e `activeDataset`) como fallback síncrono imediato.
-- **Utilitários de Domínio (`lib/utils/formatador_escalada.dart`)**: Concentra as funções `obterNomeEscalada`, `formatarTextoGrau`, `obterTextoGrauEscalada`, `obterCodigoGrauOficial`, `normalizarGrauEscalada` e `iterarEscaladasDoCroqui`, sem qualquer dependência reversa de `lib/services/` para `lib/view/`.
+- **Utilitários de Domínio (`lib/utils/formatador_escalada.dart`)**: Concentra as funções `obterNomeEscalada`, `formatarTextoGrau`, `obterTextoGrauEscalada`, `obterCodigoGrauOficial`, `normalizarGrauEscalada`, `iterarEscaladasDoCroqui`, a classe `LocalizacaoEscaladaCroqui` e `localizarEscaladaPorUidEmCroquis` (compartilhada entre `CatalogoViasCaderneta` e `AppNav.toViaPorUid`), sem qualquer dependência reversa de `lib/services/` para `lib/view/`.
 - **Clean Architecture, MVVM (Dumb UI) e Componentes Modulares**:
-  - `HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo` e `SecaoCadernetaViaViewModel` encapsulam integralmente os repositórios e consultas ao catálogo.
+  - `HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `RegistroCadenaViewModel.paraEdicao` e `SecaoCadernetaViaViewModel` encapsulam integralmente os repositórios, a formatação de strings de apresentação (`formatarSubtituloAscensao`, `formatarCitacaoNotas`, `tituloSecaoHistorico`), os callbacks de intenção (`aoEditarCadena`, `aoExcluirCadena`, `aoTocarVia`) e as consultas ao catálogo.
+  - `PainelResumoEstatisticasCaderneta` (`lib/widgets/caderneta/card_estatistica.dart`) compõe em grade 2×2 os 4 cartões de resumo estatístico (`CardEstatistica`).
+  - `SecaoHistoricoCadenas`, `EstadoVazioHistoricoCaderneta`, `ItemHistoricoCadena` e `DialogoConfirmarExclusaoCadena` (`lib/view/function_library/funcoes_caderneta.dart`) são `StatelessWidget`s modulares e puramente declarativos (Dumb UI) consumidos por `CadernetaPage`.
   - `lib/widgets/caderneta/controles_formulario_cadena.dart` fornece controles Dumb UI reutilizáveis (`SeletorEstiloAscensao`, `ContadorTentativasAscensao`, `SeletorDataAscensao`, `CampoNotasPrivadasAscensao`) compostos por `ModalRegistroCadena`.
   - `lib/widgets/perfil/dialogos_hub_perfil.dart` isola os fluxos modais e diálogos do Hub (`DialogoEditarPerfil`, `ModalDadosPrivacidade`, `DialogoConfirmarSaida`) com descarte seguro de `TextEditingController`.
   - `lib/widgets/configuracoes/cartao_preferencia_caderneta.dart` encapsula o cartão declarativo `CartaoPreferenciaCaderneta` consumido pela `SettingsPage`.
@@ -57,5 +59,5 @@ O módulo foi integralmente desenvolvido através de **TDD estrito (Red-Green-Re
 - Testes unitários do compilador estatístico e fallback `grauSugerido`: `test/services/caderneta/compilador_estatisticas_test.dart`
 - Testes de integração com `catalogo.db` real e croquis em memória: `test/services/caderneta/catalogo_vias_caderneta_test.dart`
 - Testes unitários de formatação e domínio de escaladas: `test/utils/formatador_escalada_test.dart`
-- Testes de widgets modulares: `test/widgets/caderneta/controles_formulario_cadena_test.dart`, `test/widgets/perfil/dialogos_hub_perfil_test.dart` e `test/widgets/configuracoes/cartao_preferencia_caderneta_test.dart`
+- Testes de widgets modulares e Dumb UI: `test/widgets/caderneta/card_estatistica_test.dart`, `test/widgets/caderneta/controles_formulario_cadena_test.dart`, `test/view/function_library/funcoes_caderneta_test.dart`, `test/pages/caderneta_test.dart`, `test/widgets/perfil/dialogos_hub_perfil_test.dart` e `test/widgets/configuracoes/cartao_preferencia_caderneta_test.dart`
 - 100% de cobertura comportamental em língua portuguesa.
