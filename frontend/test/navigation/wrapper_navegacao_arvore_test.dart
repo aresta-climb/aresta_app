@@ -717,7 +717,7 @@ void main() {
     );
 
     testWidgets(
-      'fluxo Home -> Login -> Continuar sem conta -> Perfil -> Configurações e poda de PerfilNode ao desativar interações mantendo botão de Perfil acessível na Home',
+      'fluxo Home -> Login -> Continuar sem conta -> Perfil -> Configurações e poda de PerfilNode ao desativar interações restaurando botão de Configurações na Home',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
@@ -771,11 +771,12 @@ void main() {
         expect(controller.currentNode.parent, isA<HomeNode>());
         expect(controller.arvore.profundidade, equals(2));
 
-        // 5. Ao voltar da SettingsPage, pousa diretamente em HomeNode e o botão de Perfil permanece visível (único caminho para Configurações)
+        // 5. Ao voltar da SettingsPage, pousa diretamente em HomeNode e o botão de Configurações substitui o botão de Perfil na Home
         controller.goBack();
         await tester.pumpAndSettle();
         expect(controller.currentNode, isA<HomeNode>());
-        expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+        expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+        expect(find.byIcon(Icons.settings), findsOneWidget);
       },
     );
   });

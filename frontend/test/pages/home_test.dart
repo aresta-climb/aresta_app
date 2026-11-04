@@ -17,6 +17,8 @@ import '../mocks/mock_geolocator_platform.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
 
@@ -187,7 +189,13 @@ void main() {
     expect(params['origem'], 'home_header');
   });
 
-  testWidgets('HomePage mantém appbar visível após rolagem do conteúdo sem botão de configurações', (tester) async {
+  testWidgets('HomePage mantém appbar visível após rolagem exibindo configurações quando perfil está desabilitado e perfil quando habilitado', (tester) async {
+    addTearDown(() {
+      ConfiguracaoRecursos.redefinirParaTestes();
+      ControladorInteracoesUsuario.redefinirParaTestes();
+    });
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+    ControladorInteracoesUsuario.redefinirParaTestes();
     repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
 
     await tester.pumpWidget(createTestWidget());
@@ -197,9 +205,17 @@ void main() {
     await tester.pump();
 
     expect(find.text('ARESTA CLIMB'), findsOneWidget);
+    expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+    expect(find.byIcon(Icons.sync), findsOneWidget);
+
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(false);
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
+    await tester.pump();
+
     expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
     expect(find.byIcon(Icons.settings), findsNothing);
-    expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
   testWidgets('HomePage aciona onSwitchTab(1) ao tocar no card VER MAIS -> do carrossel', (tester) async {

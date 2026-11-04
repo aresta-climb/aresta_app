@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/cores_app.dart';
+import '../services/controlador_interacoes_usuario.dart';
 import '../view/view_models/home_view_model.dart';
 import '../navigation/funcoes_navegacao.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
@@ -14,14 +15,15 @@ import 'modal_beta_aberto.dart';
 /// Barra de aplicativo superior dedicada da página inicial do Aresta Climb (Dumb UI).
 ///
 /// Apresenta o logotipo vetorizado, a marca com selo interativo [MicroBadgeBeta]
-/// e os botões de ação para sincronização manual, feedback e acesso ao Perfil/Login
-/// (por onde as Configurações também são acessadas).
+/// e os botões de ação para sincronização manual, feedback e alternância condicional
+/// entre o botão de Perfil/Login (quando `perfilHabilitado` está ativo) e o botão
+/// direto de Configurações (quando o módulo de perfil está oculto/desabilitado).
 class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  /// ViewModel da tela inicial para sincronização manual.
+  /// ViewModel da tela inicial para sincronização manual e estado reativo do perfil.
   final HomeViewModel? viewModel;
 
-  /// Visibilidade estática do botão de perfil quando [exibirBotaoPerfilListenable] não é fornecido (padrão `true`).
-  final bool exibirBotaoPerfil;
+  /// Sobrescrita estática opcional de visibilidade do botão de perfil.
+  final bool? exibirBotaoPerfil;
 
   /// Notificador opcional para controle reativo de visibilidade do botão de perfil.
   final ValueListenable<bool>? exibirBotaoPerfilListenable;
@@ -32,13 +34,17 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Callback executado ao pressionar o botão de perfil do escalador.
   final VoidCallback? onProfile;
 
+  /// Callback executado ao pressionar o botão de configurações (quando o perfil está oculto).
+  final VoidCallback? onSettings;
+
   const ArestaHomeAppBar({
     super.key,
     this.viewModel,
-    this.exibirBotaoPerfil = true,
+    this.exibirBotaoPerfil,
     this.exibirBotaoPerfilListenable,
     this.onSync,
     this.onProfile,
+    this.onSettings,
   });
 
   @override
@@ -60,6 +66,14 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
   }
 
+  void _executarConfiguracoes(BuildContext context) {
+    if (onSettings != null) {
+      onSettings!();
+    } else {
+      AppNav.toSettings(context);
+    }
+  }
+
   Widget _construirBotaoPerfil(BuildContext context) {
     return IconButton(
       key: const Key('btn_home_perfil'),
@@ -72,22 +86,44 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _construirSlotBotaoPerfil(BuildContext context) {
-    final listenable = exibirBotaoPerfilListenable;
-    if (listenable != null) {
-      return ValueListenableBuilder<bool>(
-        valueListenable: listenable,
-        builder: (context, visivel, _) {
-          return visivel
-              ? _construirBotaoPerfil(context)
-              : const SizedBox.shrink();
-        },
-      );
+  Widget _construirBotaoConfiguracoes(BuildContext context) {
+    return IconButton(
+      key: const Key('btn_home_configuracoes'),
+      icon: Icon(
+        Icons.settings,
+        color: context.colors.ashGrey,
+      ),
+      tooltip: 'Configurações',
+      onPressed: () => _executarConfiguracoes(context),
+    );
+  }
+
+  Widget _construirSlotPerfilOuConfiguracoes(BuildContext context) {
+    if (exibirBotaoPerfil != null) {
+      return exibirBotaoPerfil!
+          ? _construirBotaoPerfil(context)
+          : _construirBotaoConfiguracoes(context);
     }
 
-    return exibirBotaoPerfil
-        ? _construirBotaoPerfil(context)
-        : const SizedBox.shrink();
+    final listenable =
+        exibirBotaoPerfilListenable ??
+        viewModel?.interacoesUsuarioAtivasListenable ??
+        ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier;
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: listenable,
+      builder: (context, valorNotificador, _) {
+        final exibirPerfil = exibirBotaoPerfilListenable != null
+            ? valorNotificador
+            : (viewModel?.exibirBotaoPerfil ??
+                  ControladorInteracoesUsuario
+                      .instancia
+                      .exibirElementosInterativos);
+        return exibirPerfil
+            ? _construirBotaoPerfil(context)
+            : _construirBotaoConfiguracoes(context);
+      },
+    );
   }
 
   @override
@@ -153,7 +189,7 @@ class ArestaHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: () => _executarSincronizacao(context),
               ),
               buildFeedbackButton(context, color: context.colors.ashGrey),
-              _construirSlotBotaoPerfil(context),
+              _construirSlotPerfilOuConfiguracoes(context),
             ],
           ),
         ],

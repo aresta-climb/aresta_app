@@ -40,8 +40,11 @@ void main() {
   }
 
   testWidgets(
-    'ArestaHomeAppBar renderiza elementos da marca, sincronização e perfil sem botão de configurações',
+    'ArestaHomeAppBar renderiza botão de configurações por padrão quando perfilHabilitado é false e alterna para botão de perfil quando habilitado',
     (tester) async {
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+      ControladorInteracoesUsuario.redefinirParaTestes();
+
       await tester.pumpWidget(
         criarAppTeste(
           child: const ArestaHomeAppBar(),
@@ -52,6 +55,17 @@ void main() {
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
       expect(find.byType(MicroBadgeBeta), findsOneWidget);
       expect(find.byIcon(Icons.sync), findsOneWidget);
+      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: const ArestaHomeAppBar(),
+        ),
+      );
+      await tester.pump();
+
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsNothing);
 
@@ -88,22 +102,43 @@ void main() {
   });
 
   testWidgets(
-    'ArestaHomeAppBar oculta o botão de perfil quando exibirBotaoPerfil é false',
+    'ArestaHomeAppBar exibe botão de configurações quando exibirBotaoPerfil é false e botão de perfil quando exibirBotaoPerfil é true',
     (tester) async {
+      bool abriuConfiguracoes = false;
       await tester.pumpWidget(
         criarAppTeste(
-          child: const ArestaHomeAppBar(exibirBotaoPerfil: false),
+          child: ArestaHomeAppBar(
+            exibirBotaoPerfil: false,
+            onSettings: () => abriuConfiguracoes = true,
+          ),
         ),
       );
       await tester.pump();
 
       expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pump();
+      expect(abriuConfiguracoes, isTrue);
+
+      await tester.pumpWidget(
+        criarAppTeste(
+          child: const ArestaHomeAppBar(exibirBotaoPerfil: true),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
     },
   );
 
   testWidgets(
     'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil',
     (tester) async {
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      ControladorInteracoesUsuario.redefinirParaTestes();
       bool abriuPerfil = false;
 
       await tester.pumpWidget(
@@ -124,7 +159,7 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar alterna visibilidade reativamente via exibirBotaoPerfilListenable',
+    'ArestaHomeAppBar alterna visibilidade reativamente entre perfil e configurações via exibirBotaoPerfilListenable',
     (tester) async {
       final visibilidadeNotifier = ValueNotifier<bool>(true);
       addTearDown(visibilidadeNotifier.dispose);
@@ -138,14 +173,17 @@ void main() {
       );
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
 
       visibilidadeNotifier.value = false;
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
 
       visibilidadeNotifier.value = true;
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
     },
   );
 
@@ -184,7 +222,7 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar executa sincronização padrão e roteia botão de perfil para LoginNode (deslogado) ou PerfilNode (logado)',
+    'ArestaHomeAppBar executa sincronização padrão, roteia para SettingsNode quando perfilHabilitado é false e para LoginNode/PerfilNode quando habilitado',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -197,6 +235,9 @@ void main() {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final syncService = SyncService(datasetRepository: datasetRepo);
       final treeController = TreeNavigationController();
+
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+      ControladorInteracoesUsuario.redefinirParaTestes();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -216,6 +257,22 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.sync));
       await tester.pump();
+
+      // Com perfilHabilitado = false -> tocar em Icons.settings abre SettingsNode
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      expect(treeController.currentNode, isA<SettingsNode>());
+
+      // Agora com perfilHabilitado = true
+      treeController.navigateTo(const HomeNode());
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+      await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
+        false,
+      );
+      await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
+        true,
+      );
+      await tester.pumpAndSettle();
 
       // Deslogado -> tocar em btn_home_perfil abre LoginNode
       await tester.tap(find.byKey(const Key('btn_home_perfil')));
