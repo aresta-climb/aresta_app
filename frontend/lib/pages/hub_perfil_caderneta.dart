@@ -126,6 +126,8 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
       final novoNome = await exibirDialogoEditarPerfil(
         context,
         nomeAtual: _viewModel.nomeAtleta,
+        fotoUrlAtual: _viewModel.fotoUrl,
+        aoSelecionarNovaFoto: _viewModel.selecionarEObterNovaFoto,
       );
 
       if (novoNome != null && novoNome.isNotEmpty) {
@@ -165,7 +167,9 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
                   buildCabecalhoHubPerfil(
                     nome: _viewModel.nomeAtleta,
                     funcao: _viewModel.funcaoAtleta,
+                    avatarUrl: _viewModel.fotoUrl,
                     onEditarPerfil: () => _onEditarPerfil(context),
+                    onAlterarFoto: () => _viewModel.selecionarEAtualizarFoto(),
                   ),
                   const SizedBox(height: 24),
                   buildBarraMetricasHub(

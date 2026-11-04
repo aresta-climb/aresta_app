@@ -11,10 +11,18 @@ import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/editor_croqui.dart';
+import 'package:frontend/services/midia/seletor_foto_perfil.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/view/view_models/hub_perfil_caderneta_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+class _SeletorFotoPerfilFake implements SeletorFotoPerfil {
+  String? proximaFoto;
+
+  @override
+  Future<String?> selecionarFotoComoDataUri() async => proximaFoto;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -100,17 +108,44 @@ void main() {
       vm.dispose();
     });
 
-    test('atualiza o nome do atleta e notifica os ouvintes', () async {
-      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+    test('atualiza o nome e a foto de perfil do atleta e notifica os ouvintes', () async {
+      final seletorFake = _SeletorFotoPerfilFake();
+      final vm = HubPerfilCadernetaViewModel(
+        repositorio: repositorio,
+        seletorFotoPerfil: seletorFake,
+      );
 
       var notificou = false;
       vm.addListener(() => notificou = true);
+
+      // Ignora atualização vazia ou igual ao nome atual
+      await vm.atualizarNome('   ');
+      await vm.atualizarNome('Escalador Aresta');
 
       await vm.atualizarNome('Fernanda Rocha');
 
       expect(notificou, isTrue);
       expect(vm.nomeAtleta, 'Fernanda Rocha');
       expect(repositorio.obterPerfil().autorNomePublico, 'Fernanda Rocha');
+      expect(vm.fotoUrl, isNull);
+
+      // Seleção cancelada pelo usuário retorna false e null
+      seletorFake.proximaFoto = null;
+      expect(await vm.selecionarEAtualizarFoto(), isFalse);
+      expect(await vm.selecionarEObterNovaFoto(), isNull);
+      expect(vm.fotoUrl, isNull);
+
+      // Seleção bem-sucedida atualiza fotoUrl e persiste no repositório
+      const dataUriTeste = 'data:image/jpeg;base64,/9j/4AAQ';
+      seletorFake.proximaFoto = dataUriTeste;
+      expect(await vm.selecionarEObterNovaFoto(), equals(dataUriTeste));
+      expect(vm.fotoUrl, equals(dataUriTeste));
+      expect(repositorio.obterPerfil().fotoUrl, equals(dataUriTeste));
+
+      // Ignora foto vazia ou idêntica à atual
+      await vm.atualizarFotoPerfil('   ');
+      await vm.atualizarFotoPerfil(dataUriTeste);
+      expect(vm.fotoUrl, equals(dataUriTeste));
 
       vm.dispose();
     });
