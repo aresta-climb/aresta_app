@@ -1,13 +1,13 @@
 # Utilitários de Domínio - Aresta Climb
 
-Este diretório (`lib/utils/`) reúne utilitários e serviços de suporte de domínio para manipulação de dados, geometria e navegação no Aresta Climb.
+Este diretório (`lib/utils/`) reúne utilitários e serviços de suporte de domínio para manipulação de dados, identificadores universais, geometria e navegação no Aresta Climb.
 
 ## 1. ConstrutorCaminhoTrajeto (`construtor_caminho_trajeto.dart`)
 
 O `ConstrutorCaminhoTrajeto` é o componente central responsável por converter traçados vetoriais de escalada compilados em formato SVG Path Data (`M ... C ...`) para caminhos gráficos nativos (`ui.Path`) e viabilizar interações ergonômicas de toque no mapa interativo.
 
 ### Isolamento Arquitetural de Pacotes
-Seguindo as diretrizes de engenharia do repositório (`AGENTS.md`), o uso de bibliotecas externas de parsing de caminhos vetoriais é estritamente isolado:
+O uso de bibliotecas externas de parsing de caminhos vetoriais é estritamente isolado:
 - **Barreira Exclusiva**: Apenas o arquivo `lib/utils/construtor_caminho_trajeto.dart` tem autorização para importar o pacote `package:path_drawing/`.
 - **Garantia por Teste**: O teste arquitetural `test/architecture/path_drawing_isolation_test.dart` varre todos os arquivos do projeto em `lib/` e falha automaticamente o CI se qualquer outro arquivo violar este isolamento.
 
@@ -39,11 +39,18 @@ A renderização dos traçados no `MarkerPainter` segue rigorosamente as especif
 O `FormatadorCreditos` centraliza a lógica de validação, filtragem e formatação dos créditos dos croquis:
 - **Filtragem de Placeholders**: Ignora automaticamente termos genéricos (ex: `"Autores do Croqui Original"`, `"Desconhecido"`, `"Sem autor"`, `"Créditos"`).
 - **Formatação Amigável**: Gera frases como `"Croqui por Autor 1, Autor 2"`, respeitando prefixos já existentes.
-- **Desacoplamento de UI**: Utilidade pura em Dart, consumida pelo componente `LinhaCreditoAutor`.
+- **Desacoplamento de UI**: Utilidade em Dart, consumida pelo componente `LinhaCreditoAutor`.
 
 ---
 
-## 3. Filtros, Normalização e Mediana de Graduação (`filtro_grau_escalada.dart`)
+## 3. Gerador e Validador de Identificadores (`gerador_uid.dart`) e Formatação de Escaladas (`formatador_escalada.dart`)
+
+- **`gerador_uid.dart`**: Gera e valida identificadores públicos estáveis `NanoID 14c` em alfabeto Base62 (`[0-9a-zA-Z]`, como `autorIdPublico` do `PerfilEscalador` e `escaladaUid` de vias) e identificadores `UUID v4` (`Cadena.id`).
+- **`formatador_escalada.dart`**: Concentra a formatação de texto de graus (`formatarTextoGrau`, `obterTextoGrauEscalada`), nomes (`obterNomeEscalada`) e a localização de escaladas por UID (`localizarEscaladaPorUidEmCroquis`).
+
+---
+
+## 4. Filtros, Normalização e Mediana de Graduação (`filtro_grau_escalada.dart`)
 
 Centraliza os algoritmos matemáticos e modelos de estado para a exploração unificada de escaladas e setores:
 
@@ -68,5 +75,3 @@ Consolida em uma única estrutura de dados os critérios de busca de todo o pico
 - `setores`, `grupos` e `conquistadores`: Conjuntos de seleção contextual e multi-seleção.
 - `tipoOrdenacao` e `direcaoCrescente`: Controle de ordenação bidirecional (`padrao`, `grau`, `alfabetico`).
 - Métodos reativos `filtrarSetores`, `filtrarEscaladas`, `obterContadorSetores` e `obterContadorModalidade`.
-
-

@@ -2,7 +2,7 @@
 
 Este diretório concentra a camada de apresentação e visualização da aplicação Aresta Climb, organizada segundo o padrão de arquitetura **MVVM (Model-View-ViewModel)** e o princípio **Feature-First**.
 
-A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos e focados estritamente na composição do Scaffold, ciclo de vida do Flutter e integração com o sistema de navegação reativa (`PageListenableBuilder`). Todo o trabalho pesado de montagem de componentes visuais, callbacks, cálculo de dados derivados de tela e formatação é delegado a este módulo.
+A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos e focados na composição do Scaffold, ciclo de vida do Flutter e integração com o sistema de navegação reativa (`PageListenableBuilder`). Todo o trabalho de montagem de componentes visuais, callbacks, cálculo de dados derivados de tela e formatação é delegado a este módulo.
 
 ---
 
@@ -11,9 +11,9 @@ A finalidade desta camada é manter os arquivos de telas (`lib/pages/`) enxutos 
 ```text
 lib/view/
 ├── function_library/             - Biblioteca de funções construtoras de UI e callbacks
-│   ├── biblioteca_funcoes_comuns.dart     - Componentes base, menus suspensos e barras de navegação
+│   ├── biblioteca_funcoes_comuns.dart - Componentes base, menus suspensos e barras de navegação
 │   ├── funcoes_explorar.dart     - Construtores de tela e lógica da página Explorar
-│   ├── funcoes_home.dart       - Renderizadores da tela inicial e carrossel
+│   ├── funcoes_home.dart         - Renderizadores da tela inicial e carrossel
 │   ├── pico_functions.dart       - Cabeçalho, botões e seções da página do Pico
 │   ├── setor_functions.dart      - Listagem de vias, badges FEMEMG e itens de setor
 │   ├── via_functions.dart        - Visualizador de beta, croquis e formatação de graus
@@ -21,8 +21,8 @@ lib/view/
 │   ├── grupo_functions.dart      - Resumo e listagem de subsetores
 │   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
 │   ├── funcoes_caderneta.dart    - Seção de histórico, cards de ascensão e diálogo de exclusão
-│   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho, métricas em cards e menu do Hub de Perfil
-│   ├── funcoes_configuracoes.dart   - Conexão com Editor Desktop, QR Code e temas
+│   ├── funcoes_hub_perfil_caderneta.dart - Avatar/câmera, cabeçalho, métricas em cards e menu do Hub de Perfil
+│   ├── funcoes_configuracoes.dart - Conexão com Editor Desktop, QR Code e temas
 │   ├── sobre_time_functions.dart - Listagem tipada de membros e colaboradores
 │   ├── markdown_offline.dart     - Renderização de Markdown com imagens em disco
 │   ├── sintaxe_tag_small.dart    - Sintaxe inline para reconhecimento de tags <small>
@@ -32,31 +32,34 @@ lib/view/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
-    ├── login_view_model.dart         - Estado reativo, validação e ações de autenticação (Google, e-mail/senha e modo offline)
-    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, sessão e métricas
-    ├── perfil_view_model.dart        - Estado reativo de estatísticas e histórico da caderneta
-    ├── explorar_view_model.dart    - Estado reativo de filtros, downloads e busca no Explorar
+    ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google OAuth, e-mail/senha, criação de conta e modo offline)
+    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão e métricas
+    ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
+    ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
-    ├── comunidade_view_model.dart- Estado de links e mídias sociais comunitárias
+    ├── comunidade_view_model.dart - Estado de links e mídias sociais comunitárias
     ├── home_view_model.dart      - Estado do carrossel principal e listas locais
     ├── mapa_global_view_model.dart - Estado dos marcadores e coordenadas do mapa global
     ├── mapa_pico_view_model.dart - Apresentação e coordenadas de picos para o Google Maps
     ├── meus_croquis_view_model.dart - Estado de filtragem e remoção de croquis baixados
     ├── pico_proximo_view_model.dart - Cálculo de distâncias e proximidade do usuário
     ├── pico_view_model.dart      - Estado de subpáginas e estatísticas do pico ativo
-    └── configuracoes_view_model.dart  - Estado do modo de desenvolvedor e preferências
+    └── configuracoes_view_model.dart - Estado do modo de desenvolvedor e preferências
 ```
 
 ---
 
 ## 1. Biblioteca de Funções (`function_library/`)
 
-Os arquivos da `function_library` são coleções de funções puras e construtores de widgets (`build...`) que recebem dados fortemente tipados e o `BuildContext`, retornando a árvore de widgets correspondente:
+Os arquivos da `function_library` são coleções de funções e construtores de widgets (`build...`) que recebem dados fortemente tipados e o `BuildContext`, retornando a árvore de widgets correspondente:
 
 - **Desacoplamento e Testabilidade**: Ao isolar construtores de UI em funções especializadas, os testes de widget podem ser executados isoladamente sem necessidade de instanciar scaffolds complexos ou navegação global.
+- **Cabeçalho e Avatar do Hub de Perfil (`funcoes_hub_perfil_caderneta.dart`)**:
+  - `construirProvedorAvatarPerfil`: Resolve tanto Data URIs em base64 (`data:image/...;base64,...` $\rightarrow$ `MemoryImage`) quanto URLs públicas do Supabase Storage ou Google (`http`/`https` $\rightarrow$ `NetworkImage`).
+  - `buildCabecalhoHubPerfil`: Renderiza o avatar circular com anel de destaque, botão flutuante de câmera (`btn_alterar_foto_perfil_hub`) para troca rápida da foto, nome, função esportiva e botão cápsula `"Editar perfil"`.
 - **Formatação de Domínio**: Utilitários como `getGrauString` e `getGrauValue` (em `via_functions.dart`) realizam a conversão limpa dos enums Protobuf para a notação de graduação brasileira (esportiva, boulder, móvel).
 - **Marcadores Customizados**: O módulo `mapa/mapa_marker.dart` utiliza a API do `Canvas` e `Path` nativos do Flutter para gerar mapas de bits (`BitmapDescriptor`) com o logotipo do Aresta, adaptando o tamanho dinamicamente conforme a densidade de pixels do dispositivo.
-- **Suporte Offline e Markdown Enriquecido**: O componente `markdown_offline.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`), mantendo o compromisso de funcionamento 100% offline. Além disso, com os módulos `sintaxe_tag_small.dart` e `construtor_elemento_small.dart`, o aplicativo suporta nativamente a tag HTML semântica `<small>` para textos e notas com escala reduzida (80%), preservando alinhamento de linha de base e formatação aninhada.
+- **Suporte Offline e Markdown Enriquecido**: O componente `markdown_offline.dart` garante que qualquer imagem referenciada em textos Markdown seja carregada diretamente do disco (`FileImage`). Além disso, com os módulos `sintaxe_tag_small.dart` e `construtor_elemento_small.dart`, o aplicativo suporta nativamente a tag HTML semântica `<small>` para textos e notas com escala reduzida (80%), preservando alinhamento de linha de base e formatação aninhada.
 - **Abertura Resiliente de Croquis (`handlePicoSelection`)**: A função central de seleção de picos em `funcoes_home.dart` diferencia falhas de conectividade em croquis ainda não baixados (`!isBaixado` — registrando apenas breadcrumb via `AppLogger.logAviso` e exibindo `SnackBar` contextualizada com ícone `cloud_off_outlined` e ação `"Tentar novamente"`) de falhas de integridade em croquis que já constam como salvos localmente (`isBaixado` — reportando erro rastreável via `AppLogger.logError`).
 
 ---
@@ -72,6 +75,8 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 - **Isolamento e Segurança de Tipos**: Protegem a interface de variações na estrutura de dados subjacente, fornecendo contratos claros e testáveis.
 
 ### Principais View Models
+- **`LoginViewModel`**: Coordena a alternância entre login e criação de conta, validação de campos e chamadas a `ServicoAutenticacao.entrarComEmailSenha`, `criarContaComEmailSenha` e `entrarComGoogle`.
+- **`HubPerfilCadernetaViewModel`**: Expõe reativamente os dados do `PerfilEscalador` (`nomeAtleta`, `fotoUrl`, `autorIdPublico`, `estaAutenticado`), métricas rápidas (`totalCadenas`, `totalTentativas`, `totalPicos`, `totalVias`) e comandos de atualização de nome e foto (`atualizarNome`, `atualizarFotoPerfil`, `selecionarEAtualizarFoto`, `selecionarEObterNovaFoto`, `copiarIdPublico`, `encerrarSessao`).
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.
 - **`MapaGlobalViewModel`**: Gerencia a conversão de identificadores de picos e cartões (`CardCroquiViewModel`) em marcadores geográficos com coordenadas (`MapaPicoViewModel`), provendo fallback transparente para o catálogo completo e monitoramento reativo de downloads.
@@ -84,4 +89,4 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 
 1. **Tudo em Português**: Nomes de classes, métodos, variáveis e documentação devem ser integralmente em português brasileiro (`pt-BR`).
 2. **Espelhamento de Testes**: Qualquer novo arquivo criado em `lib/view/` deve ter seu teste correspondente em `test/view/` (`function_library/` ou `view_models/`).
-3. **Simplicidade**: Evite heranças complexas ou abstrações prematuras. Prefira funções puras e classes imutáveis com construtores `const`.
+3. **Simplicidade**: Evite heranças complexas ou abstrações prematuras. Prefira funções diretas e classes imutáveis com construtores `const`.
