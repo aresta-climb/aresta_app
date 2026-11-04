@@ -10,13 +10,13 @@ test/
 ├── architecture/         Testes arquiteturais e de convenção de código (isolamento de pacotes)
 ├── caos/                 Robô Caótico de testes exploratórios determinísticos, shrinking (ddmin) e regressão JSON
 ├── constants/            Testes de validação de constantes de rede e URLs
-├── data/                 Testes de modelos e serialização de metadados
+├── data/                 Testes de modelos de domínio (PerfilEscalador, Cadena, FeedbackMetadata)
 ├── integration/          Testes de integração de fluxos completos (download, leitura, hot reload)
 ├── legal/                Testes para validação e extração de datas de documentos legais
-├── navigation/           Testes unitários da árvore de navegação, prevenção de loops e reatividade do PageListenableBuilder
+├── navigation/           Testes unitários da árvore de navegação, deep links, callbacks OAuth e PageListenableBuilder
 ├── pages/                Testes de widget de todas as páginas de navegação
 ├── protobuf/             Testes de serialização/desserialização dos objetos Protobuf
-├── services/             Testes unitários dos serviços centrais (DatasetRepository, SyncService, EditorDeCroqui, etc.)
+├── services/             Testes unitários dos serviços centrais (Autenticacao, Midia, Caderneta, DatasetRepository, SyncService, etc.)
 ├── theme/                Testes unitários do gerenciamento de temas e persistência
 ├── utils/                Testes de funções utilitárias isoladas (FormatadorCreditos, ConstrutorCaminhoTrajeto, etc.)
 ├── view/                 Testes unitários da camada de apresentação (function_library e view_models)
@@ -60,18 +60,18 @@ flutter test test/services/editor_croqui_test.dart
 
 | Módulo | Descrição | Status |
 |---|---|---|
-| `caos/` | Robô Caótico exploratório, shrinking por busca binária (`ddmin`), datasets normal/tóxico e regressão `.json` | 100% aprovado |
-| `services/` e `application_managers/` | Gestão de dados, sincronização atômica, Isolates, offline-first e feedback | 100% aprovado |
-| `navigation/` | Árvore de nós, prevenção de loops, Hot-Reload passivo e API `AppNav` | 100% aprovado |
-| `pages/` e `widgets/` | Interfaces de usuário, carrossel de mapas, busca global, créditos e banners | 100% aprovado |
-| `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | 100% aprovado |
-| `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | 100% aprovado |
-| **Total Geral** | **Suíte completa de testes automatizados** | **100% aprovado** |
+| `caos/` | Robô Caótico exploratório, shrinking por busca binária (`ddmin`), datasets normal/tóxico e regressão `.json` | Aprovado |
+| `services/` e `application_managers/` | Autenticação Supabase, mídia nativa, caderneta, sincronização atômica, Isolates, offline-first e feedback | Aprovado |
+| `navigation/` | Árvore de nós, prevenção de loops, callbacks OAuth, Hot-Reload passivo e API `AppNav` | Aprovado |
+| `pages/` e `widgets/` | Interfaces de usuário, Hub de Perfil, carrossel de mapas, busca global, créditos e banners | Aprovado |
+| `view/` e `utils/` | Formatação de graus, traçados vetoriais, view models e builders de UI | Aprovado |
+| `architecture/`, `legal/`, `protobuf/` e `data/` | Garantia de isolamento arquitetural, conformidade e integridade de modelos | Aprovado |
+| **Total Geral** | **Suíte completa de testes automatizados** | **Aprovado** |
 
 ## Convenções
 
 - Todos os comentários e nomes de testes estão em **português**.
 - Arquivos temporários criados nos testes são armazenados em `Directory.systemTemp` e removidos no `tearDown`.
-- Testes que dependem de I/O de rede usam um mock de cliente `http` ou servidor local de teste para simular respostas.
-- Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir mocks de bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
+- Testes que dependem de I/O de rede usam um cliente `http` simulado (`ClienteHttpAresta.paraTestes`) ou servidor local de teste para simular respostas.
+- Testes avançados de Sincronização em Background (como o `SyncService` e `SyncIsolate`) instanciam um **Micro Servidor HTTP Local** na porta `localhost` dinamicamente durante o `setUp` para garantir que instâncias de `Isolate` consigam consumir bytes através de fronteiras isoladas de memória, preservando a fidelidade da thread separada.
 - Testes que dependem do binding do Flutter (ex: `path_provider`) são separados nos testes de widget ou integração com binding explícito.
