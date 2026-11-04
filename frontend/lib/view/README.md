@@ -32,7 +32,8 @@ lib/view/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
-    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil e métricas
+    ├── login_view_model.dart         - Estado reativo, validação e ações de autenticação (Google, e-mail/senha e modo offline)
+    ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, sessão e métricas
     ├── perfil_view_model.dart        - Estado reativo de estatísticas e histórico da caderneta
     ├── explorar_view_model.dart    - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui

@@ -73,7 +73,7 @@ Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos def
 
 ### `construtor_view_arvore.dart`
 Centraliza a lógica de fábrica para converter nós abstratos da árvore em páginas Flutter concretas:
-- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós globais (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`, `PerfilNode`, `CadernetaNode`) para suas respectivas páginas Dumb UI com ViewModels injetados (`HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `SettingsViewModel`), encapsulando nós de pico com `PageListenableBuilder` para hot-reload reativo de dados.
+- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós globais (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`, `LoginNode`, `PerfilNode`, `CadernetaNode`) para suas respectivas páginas Dumb UI com ViewModels injetados (`LoginViewModel`, `HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `SettingsViewModel`), encapsulando nós de pico com `PageListenableBuilder` para hot-reload reativo de dados.
 - **`construirPaginaModalParaNo`**: Constrói folhas modais declarativas (`ModalBottomSheetPage`) para exibição em DraggableScrollableSheet de `TextNode` (artigos e beta) e `TextCarouselNode`.
 
 ### `wrapper_navegacao_arvore.dart`
