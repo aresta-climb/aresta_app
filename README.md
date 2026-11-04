@@ -7,11 +7,10 @@ Aplicativo de escalada da **ARESTA** — guia digital offline para centralizar e
 ```text
 aresta_app/
 ├── docs/              Documentação do sistema e especificações arquiteturais
-│   ├── arquitetura/   Modelagem de UIDs estáveis, PowerSync, contas e design docs
+│   ├── arquitetura/   Modelagem de UIDs estáveis, Supabase, PowerSync, contas e design docs
 │   └── sistema_de_acesso.md
 ├── frontend/          Aplicativo Flutter (Android / iOS)
 ├── openspec/          Especificações e propostas de mudanças (OpenSpec)
-├── AGENTS.md          Princípios de Engenharia e diretrizes inegociáveis para agentes
 ├── CONTRIBUTING.md    Guia de contribuição (DCO)
 └── README.md
 ```
@@ -22,17 +21,17 @@ aresta_app/
 
 ## O que é o Aresta Climb?
 
-O Aresta Climb é um guia de escalada digital. O app permite que alpinistas baixem informações completas de picos — croquis, betas, mapas GPS e descrições — para acesso **completamente offline** no campo, sem depender de sinal de celular.
+O Aresta Climb é um guia de escalada digital. O app permite que escaladores baixem informações completas de picos — croquis, betas, mapas GPS e descrições — para acesso **offline** no campo, sem depender de sinal de celular, além de manterem sua **Caderneta Esportiva** e **Perfil do Escalador** com sincronização opcional em nuvem via Supabase.
 
-Os dados são distribuídos no formato `.binarypb` e imagens WebP, sincronizados a partir do nosso servidor remoto ou consumidos em tempo real pelo Live Reload do Editor Desktop.
+Os dados dos guias são distribuídos no formato `.binarypb` e imagens WebP, sincronizados a partir do nosso servidor remoto ou consumidos em tempo real pelo Live Reload do Editor Desktop.
 
 ## Arquitetura e Padrões
 
-O aplicativo é desenvolvido com uma arquitetura **MVVM (Model-View-ViewModel)** robusta e utiliza classes **Protobuf** geradas automaticamente (`ResumoCroqui`, `Indice`, `Croqui`) como seus **Models** centrais, fortemente tipados de ponta a ponta.
+O aplicativo é desenvolvido com arquitetura **MVVM (Model-View-ViewModel)** e utiliza classes **Protobuf** geradas automaticamente (`ResumoCroqui`, `Indice`, `Croqui`) como seus **Models** centrais, fortemente tipados de ponta a ponta.
 
-A sincronização de picos com a nuvem é de última geração: o `SyncService` utiliza **Isolates em background** para realizar cálculos de criptografia (SHA256) e persistência de arquivos sem travar a interface (`Main Thread`). Os downloads são do tipo **Delta Syncs (Atômicos)** — o aplicativo só baixa imagens e arquivos que sofreram mutação na nova versão, economizando banda e validando integridade bit a bit.
+A sincronização de picos com a nuvem utiliza **Isolates em background** no `SyncService` para realizar cálculos de criptografia (SHA256) e persistência de arquivos sem travar a interface (`Main Thread`). Os downloads são do tipo **Delta Syncs (Atômicos)** — o aplicativo só baixa imagens e arquivos que sofreram mutação na nova versão, economizando banda e validando integridade bit a bit.
 
-Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em favor de uma **Árvore de Navegação** baseada em IDs de nós. Isso se estende para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download através de barras de progresso lineares, tudo em **tempo real** e sem piscar a tela.
+A navegação principal utiliza uma **Árvore de Navegação** baseada em IDs de nós, estendendo-se para **Navegação em Carrossel** para múltiplos mapas de forma horizontal (swiping). Em conjunto com o `PageListenableBuilder` e o `ValueNotifier` de progresso, o aplicativo possui uma arquitetura reativa que injeta passivamente as versões em memória dos objetos na UI e exibe o andamento do download através de barras de progresso lineares em tempo real.
 
 ---
 
@@ -43,15 +42,16 @@ Adicionalmente, a navegação principal foge da tradicional pilha (Push/Pop) em 
 | [`frontend/README.md`](frontend/README.md) | Ponto de entrada para desenvolvedores: tecnologias, funcionalidades, estrutura e como rodar |
 | [`frontend/lib/README.md`](frontend/lib/README.md) | Arquitetura interna: MVVM, serviços, páginas, funções e widgets |
 | [`frontend/lib/view/README.md`](frontend/lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
-| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, Modo Experimental e ciclo de importação |
+| [`frontend/lib/services/README.md`](frontend/lib/services/README.md) | Descrição dos serviços centrais, autenticação Supabase, Modo Experimental e ciclo de importação |
+| [`frontend/lib/services/caderneta/README.md`](frontend/lib/services/caderneta/README.md) | Caderneta esportiva pessoal, estatísticas de escalada e sincronização de perfil |
 | [`frontend/lib/services/http/README.md`](frontend/lib/services/http/README.md) | Módulo HTTP: Sincronização, downloads atômicos e streaming sob demanda |
 | [`frontend/lib/services/firebase/README.md`](frontend/lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`frontend/test/README.md`](frontend/test/README.md) | Suíte de testes: estrutura, como executar e convenções |
-| [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação técnica unificada: NanoID 14c universal, PowerSync, contas e dados abertos ODbL |
+| [`docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md`](docs/arquitetura/mds/arquitetura_unificada_contas_cadenas_uids.md) | Especificação técnica unificada: NanoID 14c universal, Supabase, PowerSync, contas e dados abertos ODbL |
+| [`docs/arquitetura/sql/README.md`](docs/arquitetura/sql/README.md) | Scripts SQL e regras de segurança (RLS e Storage) para contas, fotos de perfil, cadenas e interações no Supabase |
 | [`docs/arquitetura/pdfs/oficial/`](docs/arquitetura/pdfs/oficial/) | Documentos oficiais de design e arquitetura diagramados em PDF |
 | [`docs/sistema_de_acesso.md`](docs/sistema_de_acesso.md) | Especificação das regras e fluxos do sistema de acesso a croquis |
 | [`docs/guia_configuracao_observabilidade_e_alertas.md`](docs/guia_configuracao_observabilidade_e_alertas.md) | Guia completo de configuração: Sentry Open Source, GitHub Issues, WAHA em GCP `e2-micro` e fallback Resend |
-| [`AGENTS.md`](AGENTS.md) | Princípios de Engenharia Aresta App (Tudo em Português, 100% Test Coverage, TDD, Anti-Abstração) |
 
 ---
 
@@ -91,5 +91,4 @@ Contribuições da comunidade são muito bem-vindas!
 
 Adotamos o **Developer Certificate of Origin (DCO v1.1)** para gerenciar as contribuições de forma ágil e sem a necessidade de contratos burocráticos de CLA. Ao enviar um Pull Request, você certifica que tem o direito de disponibilizar o código sob a licença MPL 2.0 assinando seus commits com a flag `-s` (`Signed-off-by`).
 
-Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md) e nossos [Princípios de Engenharia](AGENTS.md).
-
+Consulte o guia completo em [CONTRIBUTING.md](CONTRIBUTING.md).
