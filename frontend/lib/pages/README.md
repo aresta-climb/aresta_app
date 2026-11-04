@@ -1,6 +1,6 @@
 # Módulo de Páginas — Aresta Climb
 
-Este diretório contém as telas e páginas principais de interação do usuário no aplicativo Aresta Climb, seguindo os princípios de **Componentes Independentes**, **100% de Cobertura de Testes**, **TDD** e **Tudo em Português**.
+Este diretório contém as telas e páginas principais de interação do usuário no aplicativo Aresta Climb, estruturadas em componentes modulares independentes no padrão MVVM.
 
 ---
 
@@ -14,17 +14,17 @@ Este diretório contém as telas e páginas principais de interação do usuári
 | `SetoresPage` | `pico_subpages/setores_page.dart` | Tela unificada de exploração de setores e escaladas com abas por modalidade, filtros reativos e ordenações contextuais. |
 | `GrupoPage` | `grupo.dart` | Tela de exploração de um grupo agregado de setores com capa parallax, abas por modalidade, mapa e filtros sincronizados. |
 | `SetorPage` | `setor.dart` | Tela unificada de exploração de um setor com capa parallax, mapa, abas ordenadas por volume de vias, filtros reativos herdados do pico e cards com rótulos de croqui. |
-| `ViaPage` | `via.dart` | Visualização detalhada da escalada, integrando carrossel de mapas próprios e referências resolvidas via `DatasetResolver`. |
+| `ViaPage` | `via.dart` | Visualização detalhada da escalada, integrando carrossel de mapas próprios, referências resolvidas via `DatasetResolver` e seção de registro da caderneta. |
 | `MapaInterativoPage` | `mapa_interativo.dart` | Visualizador de croquis vetoriais com pan/zoom fluido, foco por `uid` de POI, traçados com `pontosUids` e cartões flutuantes associados via `alvoUid`. |
 | `MapaGlobalPage` | `mapa_global.dart` | Visualização cartográfica global dos picos com marcadores por faixa de zoom e respeito ao recuo inferior do sistema (`MediaQuery.paddingOf(context).bottom`). |
 | `QRScannerPage` | `qr_scanner.dart` | Leitura de QR Codes de repositórios e sessões experimentais com pílula de instrução posicionada acima do recuo inferior do sistema (`40 + padding.bottom`). |
-| `SettingsPage` | `configuracoes.dart` | Seleção de tema, ativação do modo experimental e rodapé de versão em lista rolável com preenchimento inferior adaptado ao modo ponta a ponta (`16 + padding.bottom`). |
+| `SettingsPage` | `configuracoes.dart` | Seleção de tema, visibilidade das interações de perfil/caderneta, ativação do modo experimental e rodapé de versão em lista rolável com preenchimento inferior adaptado ao modo ponta a ponta (`16 + padding.bottom`). |
 | `ExplorarLocalPage` | `pico_subpages/explorar_local_page.dart` | Informações práticas de acesso, melhor época para escalar e croquis gerais de aproximação. |
 | `ComunidadePicoPage` | `pico_subpages/comunidade_pico_page.dart` | Guia de contatos locais, grupos e canais comunitários de escalada. |
 | `ApoiePicoPage` | `pico_subpages/apoie_pico_page.dart` | Chaves PIX e informações para suporte financeiro e manutenção de vias e trilhas. |
 | `TermosDeUsoPage` | `termos_de_uso.dart` | Apresentação e aceite formal dos termos legais de uso do aplicativo. |
-| `LoginPage` | `login.dart` | Tela de autenticação e criação de conta (Dumb UI / MVVM) com suporte a Google (Gmail), e-mail/senha (entrar ou criar conta) e opção de continuar sem conta no modo offline. |
-| `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Hub principal de identidade esportiva do atleta, exibindo avatar, nome, métricas rápidas (cadenas, tentativas, picos, vias) e menu de navegação modular (caderneta, configurações, entrar na conta, dados/privacidade e saída). |
+| `LoginPage` | `login.dart` | Tela de autenticação e criação de conta no Supabase com suporte a Google OAuth 2.0 (PKCE/Implicit), e-mail/senha (entrar ou criar conta) e opção de continuar sem conta no modo offline. |
+| `HubPerfilCadernetaPage` | `hub_perfil_caderneta.dart` | Hub principal de identidade esportiva do atleta, exibindo avatar com botão de câmera para seleção e upload de foto no Supabase Storage, nome editável, métricas rápidas (cadenas, tentativas, picos, vias) e menu de navegação modular (entrar na conta, minha caderneta, configurações, dados/privacidade e saída). |
 | `CadernetaPage` | `caderneta.dart` | Visão detalhada da caderneta esportiva pessoal com gráfico da pirâmide de graduação (vias/boulders), histórico de ascensões e exclusão de registros. |
 | `PerfilPage` | `perfil.dart` | Exportação e alias canônico de compatibilidade para `HubPerfilCadernetaPage`. |
 | `DatabaseMigrationScreen` | `tela_migracao_banco.dart` | Tela de bloqueio e progresso exibida durante migrações estruturais do banco de dados local. |

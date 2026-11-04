@@ -7,7 +7,7 @@ Este diretório contém os componentes modulares e independentes de interface (*
 ## 1. Componentes
 
 ### `ModalRegistroCadena`
-Bottom sheet modal para registro e edição de cadenas, seguindo o padrão de **Dumb UI / Humble View** alimentado pelo `RegistroCadenaViewModel`:
+Bottom sheet modal para registro e edição de cadenas, alimentado pelo `RegistroCadenaViewModel`:
 - **Chips de Estilo Esportivo**: Permite a seleção entre *À Vista*, *Flash*, *Trabalhado* e *Tentativa*.
 - **Contador de Tentativas**: Campo numérico com validação para garantir que tentativas sejam sempre maiores ou iguais a 1.
 - **Seletor de Data**: `DatePicker` integrado permitindo registrar ascensões passadas com data retroativa.
@@ -29,7 +29,8 @@ Card modular de resumo métrico:
 
 ## 2. Testes de Widget
 
-Seguindo os princípios **V e VIII (Testes de Widget em Primeiro Lugar)** do `AGENTS.md`, cada componente possui uma suíte dedicada em `test/widgets/caderneta/`:
+Cada componente possui uma suíte dedicada em `test/widgets/caderneta/`:
 - `modal_registro_cadena_test.dart`
+- `controles_formulario_cadena_test.dart`
 - `grafico_piramide_graus_test.dart`
 - `card_estatistica_test.dart`

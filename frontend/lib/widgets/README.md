@@ -24,7 +24,7 @@ Fachada unificada e assíncrona para resolução e exibição de imagens em todo
    - **Deduplicação de Requisições Concorrentes**: Mantém um mapa em memória (`_downloadsEmAndamento`) indexado pelo caminho de destino. Múltiplos widgets solicitando a mesma imagem concorrentemente compartilham o mesmo `Future`, disparando apenas uma requisição HTTP real.
 4. **Downsampling Opcional na Decodificação**:
    - Caso `larguraAlvo` ou `alturaAlvo` sejam informados, encapsula o provedor resultante com `ResizeImage.resizeIfNeeded`.
-    - Utilizado de forma padronizada (`larguraAlvo: 300`) em cartões de picos (`CardPico`), fundos de lista (`_CragBackgroundWidget`) e carrosséis.
+   - Utilizado de forma padronizada (`larguraAlvo: 300`) em cartões de picos (`CardPico`), fundos de lista (`_CragBackgroundWidget`) e carrosséis.
 
 ---
 
@@ -35,10 +35,13 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 
 ---
 
-## 2. Componentes de Navegação e Modos Operacionais
+## 2. Componentes de Navegação, Perfil e Modos Operacionais
 
 | Widget | Responsabilidade |
 |---|---|
+| `DialogoEditarPerfil` (`perfil/dialogos_hub_perfil.dart`) | Diálogo de edição do nome esportivo e seleção de nova foto de perfil com miniatura de pré-visualização ao vivo e descarte automático de `TextEditingController`. |
+| `ModalDadosPrivacidade` (`perfil/dialogos_hub_perfil.dart`) | Modal inferior exibindo a política de soberania de dados da caderneta e o identificador público NanoID 14c com botão de cópia rápida. |
+| `DialogoConfirmarSaida` (`perfil/dialogos_hub_perfil.dart`) | Diálogo de confirmação de encerramento de sessão informando a preservação local da caderneta. |
 | `BannerModoExperimental` | Faixa fixa no topo da interface durante o Modo de Desenvolvimento/Live Reload, exibindo animação de pulso ao receber atualizações via WebSocket e botão de encerramento rápido. |
 | `ModalSessaoExperimentalEncerrada` | Diálogo modal exibido quando a sessão efêmera do Editor Desktop expira ou é encerrada remotamente (`HTTP 404`), informando o retorno automático ao catálogo oficial do Aresta Climb. |
 | `BannerModoOnline` | Alerta visual discreto indicando navegação em croqui sob demanda (sem download offline completo). |
@@ -49,5 +52,5 @@ Extensão customizada de `FileImage` que incorpora o `checksumSha256` na chave d
 | `BuscaGlobal` | Barra unificada de busca textual por picos, setores e vias alimentada pelo `catalogo.db` e pelo estado em memória. Ao selecionar qualquer item, ativa no milissegundo zero (`0 ms`) uma trava de concorrência (`_abrindoDestino = true`) e agenda um limiar visual de `150 ms` antes de abrir o diálogo modal bloqueante de carregamento (`"Abrindo <título>..."`, `barrierDismissible: false`), evitando piscadas de diálogo em resoluções locais ou falhas instantâneas em Modo Avião (`< 150 ms`) enquanto resolve o destino via `LocalizadorDestinoUid`. Além disso, recargas reativas do catálogo em segundo plano preservam os resultados visíveis sem exibir spinner (`CircularProgressIndicator`) quando `_allData` já está populado. |
 | `ArestaHomeAppBar` | Barra de aplicativo superior dedicada da tela inicial com identidade visual da marca, selo beta e ações de sincronização, feedback e alternância condicional sob `ConfiguracaoRecursos.perfilHabilitado` (exibindo o botão de Configurações na Home quando o recurso está oculto/desabilitado e substituindo-o pelo botão de Perfil/Login quando habilitado). |
 | `BarraOrdenacaoExploracao` | Barra consistente com a tríade de ordenação `[ PADRÃO | GRAU | ALFABÉTICO ]` e alternador bidirecional `[ ▲ / ▼ ]`, adaptando-se tanto à lista de setores quanto às listas de vias. |
-| `PainelFiltrosIndice` | Painel expansível compartilhado de filtros que opera sobre `EstadoFiltrosUnificado`, atuando como superset na aba Setores (com ativação de modalidades e faixas de grau unificadas para Vias e Boulders) e projeção contextual nas abas de modalidade. Implementado como card unificado coeso em coluna: linha superior 100% clicável com rótulo "Filtros e Ordenação" e ícone indicador (`keyboard_arrow_down_rounded`), e área inferior com quebra de linha fluida (`Wrap(spacing: 8, runSpacing: 8)`) para os chips de filtros ativos, garantindo visual limpo sem corte ou scroll horizontal esmagado. O modal de controles é exibido via `showModalBottomSheet(useRootNavigator: true)`, assegurando que o botão Voltar do sistema operacional fecha exclusivamente o BottomSheet no primeiro toque e preserva a tela de exploração ativa intacta. Conta ainda com régua adaptativa de graduações baseada em `FaixaGrauDisponivel` e emite telemetria analítica detalhada de funil (`acao_indice_escaladas`) e ordenação global (`alterar_ordenacao`). |
+| `PainelFiltrosIndice` | Painel expansível compartilhado de filtros que opera sobre `EstadoFiltrosUnificado`, atuando como superset na aba Setores (com ativação de modalidades e faixas de grau unificadas para Vias e Boulders) e projeção contextual nas abas de modalidade. Implementado como card unificado coeso em coluna: linha superior clicável com rótulo "Filtros e Ordenação" e ícone indicador (`keyboard_arrow_down_rounded`), e área inferior com quebra de linha fluida (`Wrap(spacing: 8, runSpacing: 8)`) para os chips de filtros ativos, garantindo visual limpo sem corte ou scroll horizontal esmagado. O modal de controles é exibido via `showModalBottomSheet(useRootNavigator: true)`, assegurando que o botão Voltar do sistema operacional fecha exclusivamente o BottomSheet no primeiro toque e preserva a tela de exploração ativa intacta. Conta ainda com régua adaptativa de graduações baseada em `FaixaGrauDisponivel` e emite telemetria analítica detalhada de funil (`acao_indice_escaladas`) e ordenação global (`alterar_ordenacao`). |
 | `CardIndiceEscalada` | Cartão rico para renderização de vias e boulders nos catálogos de exploração (Pico, Grupo e Setor), exibindo grau ou rótulo de referência do croqui no badge, modalidade, proteções, localização opcional e animação de realce pulsante para navegação direta (`scrollToEscalada`). |

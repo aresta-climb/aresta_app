@@ -11,32 +11,35 @@ Com a navegação em árvore, nós declaramos um **estado atual** na hierarquia 
 
 ## Arquitetura e Módulos (`lib/navigation/`)
 
-A arquitetura foi refatorada seguindo Clean Architecture, decompondo o controlador e os nós em submódulos dedicados em `arvore/`:
+A arquitetura decompõe o controlador e os nós em submódulos dedicados em `arvore/`:
 
 ```text
 lib/navigation/
 ├── arvore/
-│   ├── no_navegacao.dart                  - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
-│   ├── nos_globais.dart              - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, etc.)
-│   ├── nos_pico.dart                - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
-│   ├── nos_modais.dart               - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
-│   ├── modelo_arvore_navegacao.dart     - Modelo de domínio puro ArvoreNavegacao com operações de pilha e prevenção de loops
-│   └── navegador_arvore.dart - Controlador reativo TreeNavigationController (ChangeNotifier)
-├── arvore_navegacao.dart               - Fachada de re-exports dos módulos da árvore para importação unificada
+│   ├── no_navegacao.dart                - Classe base abstrata NavNode, rotuloAmigavel e obterCaminhoCurto()
+│   ├── nos_globais.dart                 - Nós de nível superior (HomeNode, BrowseNode, MapaGlobalNode, SettingsNode, LoginNode, PerfilNode, CadernetaNode, etc.)
+│   ├── nos_pico.dart                    - Nós da hierarquia de escalada (PicoNode, SetorNode, GrupoNode, ViaNode, etc.)
+│   ├── nos_modais.dart                  - Nós para modais e carrosséis (TextNode, TextCarouselNode, MapasCarrosselNode)
+│   ├── modelo_arvore_navegacao.dart     - Modelo de domínio ArvoreNavegacao com operações de pilha e prevenção de loops
+│   └── navegador_arvore.dart            - Controlador reativo TreeNavigationController (ChangeNotifier)
+├── arvore_navegacao.dart                - Fachada de re-exports dos módulos da árvore para importação unificada
 ├── construtor_reativo_pagina.dart       - Elo de Hot-Reload reativo entre a árvore e a UI
-├── construtor_view_arvore.dart       - Fábrica e resolução modular de nós da árvore para telas e modais
-├── wrapper_navegacao_arvore.dart       - Roteador principal e envoltório declarativo com suporte a abas persistentes
-├── funcoes_navegacao.dart          - API pública simplificada AppNav
-├── analisador_rotas_deep_link.dart     - Parser normalizador de URLs, QR Codes e parâmetros UTM (aresta.cc e legados)
-├── localizador_destino_uid.dart        - Localizador de UIDs universais (NanoID 14c) para nós da árvore de navegação
-├── servico_navegacao_deep_link.dart    - Orquestrador de linhagem e transição de rotas para deep links
-└── gerenciador_deep_links.dart         - Gerenciador de ciclo de vida de links externos do sistema (Cold e Warm Start)
+├── construtor_view_arvore.dart          - Fábrica e resolução modular de nós da árvore para telas e modais
+├── wrapper_navegacao_arvore.dart        - Roteador principal e envoltório declarativo com suporte a abas persistentes
+├── funcoes_navegacao.dart               - API pública simplificada AppNav
+├── analisador_rotas_deep_link.dart      - Parser normalizador de URLs, QR Codes e parâmetros UTM (aresta.cc e legados)
+├── localizador_destino_uid.dart         - Localizador de UIDs universais (NanoID 14c) para nós da árvore de navegação
+├── servico_navegacao_deep_link.dart     - Orquestrador de linhagem, transição de rotas para deep links e interceptação de callbacks OAuth
+└── gerenciador_deep_links.dart          - Gerenciador de ciclo de vida de links externos do sistema (Cold e Warm Start)
 ```
 
-## Deep Links e Placas Físicas nas Falésias (`aresta.cc`)
+## Deep Links, Placas Físicas nas Falésias (`aresta.cc`) e Callbacks OAuth (`aresta://`)
 
-Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte de primeira classe à navegação por placas físicas e links compartilháveis:
+Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte à navegação por placas físicas, links compartilháveis e retornos de autenticação externa:
 
+- **Interceptação de Callback OAuth (`DeepLinkNavigatorService`)**:
+  - Antes de analisar rotas de conteúdo, `DeepLinkNavigatorService.navigateToUri` (em `servico_navegacao_deep_link.dart`) verifica se o URI recebido é um retorno do fluxo OAuth 2.0 do Supabase (`aresta://app.arestaclimb.com/auth-callback`) através de `ServicoAutenticacao.processarCallbackOAuth(uri)`.
+  - Quando positivo, entrega os parâmetros de sessão (`code` PKCE ou `access_token` Implicit) ao `ClienteSupabaseAutenticacao` e encerra o processamento sem alterar a rota da árvore de navegação nem emitir telemetria de deep link de croqui.
 - **Protocolo Compacto (`≤ 35 chars`):**
   - `https://aresta.cc/<uid>` (padrão) e `https://aresta.cc/m/<uid>` (abre o mapa interativo).
   - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (ou `/ms/<uid>`): links de compartilhamento (`origem_link: 'compartilhamento'`).
@@ -51,7 +54,7 @@ Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcion
 - **`rotuloAmigavel` & `obterCaminhoCurto()`**: Gera caminhos canônicos resumidos (ex: `Início -> Pico (pedra_grande) -> Setor (Falésia Central) -> Via (Via Láctea)`) para telemetria, depuração e feedback.
 
 ### `arvore/modelo_arvore_navegacao.dart`
-Encapsula as regras de domínio puras da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
+Encapsula as regras de domínio da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
 - Gestão do nó raiz e nó atual.
 - Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
 - Poda imutável de ancestrais de Login, Perfil e Caderneta (`podarNosPerfilECaderneta`), reancorando telas sobreviventes (`SettingsNode`, `SobreTimeNode`) ao ancestral válido anterior quando o usuário desativa as interações sociais/caderneta.
@@ -65,22 +68,22 @@ Fachada principal que reexporta todos os módulos de `arvore/` para garantir uma
 
 ### `construtor_reativo_pagina.dart`
 É o elo de **Hot-Reload** da UI. 
-A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Escadaria"), mas é o `PageListenableBuilder` quem consome esse ID e busca o dado atualizado diretamente da memória (`downloadedPicos` para croquis offline ou `gerenciadorSessaoOnline` para croquis explorados sob demanda). Se um croqui for atualizado em background, o builder notará a alteração e redesenhará a página perfeitamente injetando os objetos novinhos, mantendo a tela do aplicativo em sincronia com os arquivos locais e a nuvem.
+A árvore de navegação fornece o ID do que deve ser renderizado (ex: a Via "Escadaria"), mas é o `PageListenableBuilder` quem consome esse ID e busca o dado atualizado diretamente da memória (`downloadedPicos` para croquis offline ou `gerenciadorSessaoOnline` para croquis explorados sob demanda). Se um croqui for atualizado em background, o builder notará a alteração e redesenhará a página injetando os objetos atualizados, mantendo a tela do aplicativo em sincronia com os arquivos locais e a nuvem.
 
 ### `funcoes_navegacao.dart`
 Contém a classe estática `AppNav`, que funciona como uma interface limpa (API) para acessar e modificar a árvore de navegação sem precisar lidar diretamente com o `BuildContext` complexo do controlador.
-Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. Todas as rotas principais (incluindo `AppNav.toPerfil` $\rightarrow$ `PerfilNode` e `AppNav.toCaderneta` $\rightarrow$ `CadernetaNode`) operam exclusivamente na árvore de nós, sem fallbacks imperativos de `MaterialPageRoute`.
+Sempre que precisar navegar para uma nova tela, prefira utilizar os métodos definidos aqui em vez de `Navigator.push` ou `Navigator.pop`. Todas as rotas principais (incluindo `AppNav.toLogin` $\rightarrow$ `LoginNode`, `AppNav.toPerfil` $\rightarrow$ `PerfilNode`, `AppNav.abrirPerfilOuLogin` e `AppNav.toCaderneta` $\rightarrow$ `CadernetaNode`) operam exclusivamente na árvore de nós, sem fallbacks imperativos de `MaterialPageRoute`.
 
 ### `construtor_view_arvore.dart`
 Centraliza a lógica de fábrica para converter nós abstratos da árvore em páginas Flutter concretas:
-- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós globais (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`, `LoginNode`, `PerfilNode`, `CadernetaNode`) para suas respectivas páginas Dumb UI com ViewModels injetados (`LoginViewModel`, `HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `SettingsViewModel`), encapsulando nós de pico com `PageListenableBuilder` para hot-reload reativo de dados.
+- **`construirPaginaParaNo`**: Mapeia nós da hierarquia de escalada e nós globais (`GPSNode`, `SettingsNode`, `MapaGlobalNode`, `SobreTimeNode`, `LoginNode`, `PerfilNode`, `CadernetaNode`) para suas respectivas páginas com ViewModels injetados (`LoginViewModel`, `HubPerfilCadernetaViewModel.comCatalogo`, `PerfilViewModel.comCatalogo`, `SettingsViewModel`), encapsulando nós de pico com `PageListenableBuilder` para hot-reload reativo de dados.
 - **`construirPaginaModalParaNo`**: Constrói folhas modais declarativas (`ModalBottomSheetPage`) para exibição em DraggableScrollableSheet de `TextNode` (artigos e beta) e `TextCarouselNode`.
 
 ### `wrapper_navegacao_arvore.dart`
 O orquestrador visual principal da navegação em árvore:
 - Mantém o `IndexedStack` permanente para as abas base (Home, Browse, Meus Croquis e Comunidade), preservando as posições de rolagem de tela dos usuários.
-- Empilha rotas de forma estritamente declarativa via `Navigator(pages: ...)` com cache de páginas ativas.
-- Escuta `ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier` para podar automaticamente `PerfilNode` e `CadernetaNode` da árvore quando o recurso é desativado nas Configurações.
+- Empilha rotas de forma declarativa via `Navigator(pages: ...)` com cache de páginas ativas.
+- Escuta `ControladorInteracoesUsuario.instancia.interacoesAtivasNotifier` para podar automaticamente `LoginNode`, `PerfilNode` e `CadernetaNode` da árvore quando o recurso é desativado nas Configurações.
 - Trata eventos de sincronização em segundo plano, Live Reload de croquis e interceptação do botão Voltar do sistema operacional via `PopScope`.
 
 ## Como usar (A API `AppNav`)
@@ -100,7 +103,10 @@ AppNav.toVia(context, escalada: minhaVia, setor: meuSetor);
 // Para abrir o Mapa de forma integrada à árvore:
 AppNav.toMapaInterativo(context, mapa: mapa, cragId: id, escaladas: vias, setores: setores);
 
-// Para abrir o Perfil do Escalador e a Caderneta Pessoal:
+// Para abrir o Perfil do Escalador ou Login conforme estado de autenticação:
+AppNav.abrirPerfilOuLogin(context);
+
+// Para abrir diretamente o Perfil do Escalador e a Caderneta Pessoal:
 AppNav.toPerfil(context);
 ```
 
@@ -116,9 +122,10 @@ Para retornar à página inicial instantaneamente:
 AppNav.home(context);
 ```
 
-> **Nota sobre sobreposições hierárquicas (Mapas):** Telas de tela cheia que fazem parte da exploração da escalada (como Mapas Interativos) estão perfeitamente integradas na árvore como `MapaInterativoNode` para manter o contexto. Não utilize `Navigator.push` para mapas.
+> **Nota sobre sobreposições hierárquicas (Mapas):** Telas de tela cheia que fazem parte da exploração da escalada (como Mapas Interativos) estão integradas na árvore como `MapaInterativoNode` para manter o contexto. Não utilize `Navigator.push` para mapas.
 
-> **Exceção - Popups Utilitários e Dialogs:** O `Navigator.push` e `Navigator.pop` PADRÃO DO FLUTTER DEVEM SER USADOS para overlays utilitários isolados que não fazem parte do fluxo contínuo de navegação ou que precisam retornar dados via `await` (Exemplos: Scanner de QR Code, modais de "Termos de Uso", caixas de diálogo e indicadores de carregamento). A Navegação em Árvore destina-se estritamente à hierarquia principal de conteúdo (Home -> Pico -> Setor -> Via).
+> **Exceção - Popups Utilitários e Dialogs:** O `Navigator.push` e `Navigator.pop` padrão do Flutter são usados para overlays utilitários isolados que não fazem parte do fluxo contínuo de navegação ou que precisam retornar dados via `await` (Exemplos: Scanner de QR Code, modais de "Termos de Uso", caixas de diálogo e indicadores de carregamento). A Navegação em Árvore destina-se à hierarquia principal de conteúdo (Home -> Pico -> Setor -> Via).
+
 ## Hierarquia Lógica da UI vs Herança de Classes
 
 Ao ler o código (`arvore_navegacao.dart`), é importante não confundir a **Hierarquia Lógica da Interface (UI)** com a **Hierarquia de Herança de Classes no Código**.
