@@ -1,24 +1,28 @@
 # Aresta Climb App — Frontend
 
-Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a croquis, mapas GPS e sincronização de repositórios.
+Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a croquis, mapas GPS, caderneta esportiva e sincronização de repositórios.
 
 ---
 
 ## Funcionalidades
 
 - **Sincronização Atômica & Background Isolates**: Downloads de croquis e atualizações funcionam em plano de fundo via Isolates, processando criptografia SHA256 e validação de arquivos Delta-Sync em paralelo, sem travar a interface de usuário. Feedback de progresso granular via barras lineares (`LinearProgressIndicator`) e gerenciamento de notificações silenciosas em Foreground Service nativo ininterrupto.
+- **Perfil do Escalador, Autenticação Supabase e Caderneta Esportiva**:
+  - Registro offline-first de ascensões (`Cadena`) por estilo (*À Vista*, *Flash*, *Trabalhado*, *Tentativa*), pirâmide de graduação (vias e boulders), estatísticas pessoais e identidade pública por NanoID de 14 caracteres (`autorIdPublico`).
+  - Criação de conta e login via **E-mail/Senha** ou **Google OAuth 2.0 (PKCE / Implicit)** integrados diretamente ao **Supabase Auth** (`/auth/v1`) e à tabela `public.perfis`, preservando o NanoID 14c e as cadenas locais ao vincular uma conta.
+  - Seleção nativa de foto de perfil (`app.escalada.croquis/seletor_midia` no Android e iOS) com recorte quadrado central `256x256` em JPEG e upload automático para o bucket público `avatars` no **Supabase Storage**.
 - **Home com Busca Global Unificada (`catalogo.db`)**: Carrossel dos guias baixados com ordenação por prioridade/acesso recente e barra de busca integrada que carrega o catálogo relacional SQLite (`catalogo.db`), realiza Fuzzy Search aproximado (insensível a acentos) em todos os picos, grupos, setores e escaladas, prioriza picos baixados offline (exibindo badge **`Offline`**) e navega sob demanda para qualquer entidade via UID.
-- **Compartilhamento Nativo & Deep Links Compactos (`aresta.cc`)**: Botões de compartilhamento nativo (`share_plus`) nas páginas de Pico, Grupo, Setor, Via e Mapa Interativo, gerando URLs compactas de até 35 caracteres (`https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>`) e resolvendo deep links de placas físicas QR Code (`/q/<uid>`, `/qm/<uid>`) com telemetria de origem.
+- **Compartilhamento Nativo & Deep Links Compactos (`aresta.cc`)**: Botões de compartilhamento nativo (`share_plus`) nas páginas de Pico, Grupo, Setor, Via e Mapa Interativo, gerando URLs compactas de até 35 caracteres (`https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>`), resolvendo deep links de placas físicas QR Code (`/q/<uid>`, `/qm/<uid>`) e interceptando retornos de autenticação OAuth (`aresta://app.arestaclimb.com/auth-callback`).
 - **Explorar & Sincronização com Serving**: Lista todos os picos do índice remoto com download paralelo, sincronização assíncrona incremental do catálogo SQLite (`catalogo.arestaclimb.com/sync`), botão de sincronização forçada com o serving ativo e acesso direto ao **Mapão Global**, projetando os crags em um mapa 2D interativo com Google Maps.
 - **Croquis Topográficos e Mapas Interativos**:
   - Renderização vetorial nativa de traçados de vias (sólido, tracejado, pontilhado) com hit-testing por distância euclidiana (16dp).
   - Contenção rígida de limites (`boundaryMargin: EdgeInsets.zero`) e zoom mínimo (`minScale: 1.0`) para evitar perda do mapa em telas pretas.
   - Botão de recentralização ergonômico no canto inferior direito com a mesma identidade visual do Mapa Global.
-- **Leitura Offline e Streaming Online**: Textos, imagens de alta resolução e betas funcionam 100% offline após o download ou em modo streaming online sob demanda (com guardião de saída para salvar offline).
+- **Leitura Offline e Streaming Online**: Textos, imagens de alta resolução e betas funcionam offline após o download ou em modo streaming online sob demanda (com guardião de saída para salvar offline).
 - **Formatação Padronizada de Graus**: Dificuldades de escalada esportiva, móvel, boulder e multienfiada formatadas no padrão brasileiro com barras diagonais (ex: `7b/7c`, `4º/5º`, `6ºsup/7a`, `10a/10b`).
 - **Índice de Escaladas (Catálogo e Filtros)**: Aba dedicada ao catálogo de vias e boulders de cada pico com abas dinâmicas por modalidade existente (`Esportivas`, `Boulders`, `Móveis`, `Multienfiadas`), painel colapsável de filtros rápidos e avançados (grau, setor, autor, clássicas), busca textual em tempo real e atalho direto ao croqui do setor.
 - **Créditos e Conquistadores**: Componente `LinhaCreditoAutor` com quebra automática em múltiplas linhas e higienização de placeholders genéricos (`FormatadorCreditos`).
-- **Live Reload & Modo Experimental**: Conexão WebSocket e sincronização em tempo real com o Editor Desktop (vida útil de 20 minutos com Nuke automático ao expirar).
+- **Live Reload & Modo Experimental**: Conexão WebSocket e sincronização em tempo real com o Editor Desktop.
 - **Importação via QR Code**: Leitura rápida de QR codes para emparelhamento instantâneo com o editor em rede local ou relay.
 
 ---
@@ -31,15 +35,16 @@ Aplicativo Flutter para Android e iOS. Guia de escalada offline com suporte a cr
 | **`protobuf`** | `^6.0.0` | Serialização binária de dados de escalada (`.binarypb`) |
 | **`sqflite`** | `^2.4.1` | Banco de dados relacional SQLite local (`catalogo.db`) com sincronização incremental (Delta Sync) |
 | **`share_plus`** | `^13.3.1` | Compartilhamento nativo de links compactos (`aresta.cc/s/<uid>` e `aresta.cc/sm/<uid>`) |
-| **`http`** | `^1.2.0` | Camada de rede e downloads atômicos |
+| **`app_links` / `url_launcher`** | `^6.3.2` | Captura de deep links (`aresta.cc`, callbacks OAuth `aresta://`) e abertura de fluxos externos |
+| **`http`** | `^1.2.0` | Camada de rede, downloads atômicos e comunicação REST/Auth/Storage com o Supabase |
 | **`path_provider`** | `^2.1.2` | Resolução de diretórios de armazenamento local |
-| **`shared_preferences`** | `^2.2.2` | Persistência leve de configurações |
+| **`shared_preferences`** | `^2.2.2` | Persistência leve de configurações, perfil local e caderneta |
 | **`fuzzy`** | `^0.5.1` | Busca textual aproximada (Fuzzy Search) para a pesquisa global |
 | **`google_maps_flutter`**| `^2.5.3` | Renderização nativa e otimizada de mapas e geolocalização do Mapão Global |
 | **`flutter_markdown`** | `^0.7.7+1` | Renderização de betas e descrições em Markdown |
 | **`mobile_scanner`** | `^7.2.0` | Leitura de QR codes para conexão com o editor |
 | **`sentry_flutter`** | `^8.14.2` | Observabilidade e rastreamento dual de erros/breadcrumbs com fila offline (em conjunto com Firebase Crashlytics) |
-| **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync |
+| **`crypto`** | `any` | Checksums SHA-256 para validação de arquivos na sync e desafios OAuth PKCE (`S256`) |
 
 ---
 
@@ -58,36 +63,45 @@ frontend/
 │   ├── firebase_options.dart            - Configurações geradas pelo FlutterFire
 │   ├── constants/
 │   │   └── legal_version.g.dart         - Constante de data autogerada da última atualização legal
+│   ├── data/
+│   │   └── modelos/                     - Modelos de domínio locais (PerfilEscalador, Cadena, TipoAscensao, TipoEscalada, FeedbackMetadata)
 │   ├── theme/
-│   │   ├── cores_app.dart              - Definição da paleta mestre de cores com suporte a Light/Dark Mode
+│   │   ├── cores_app.dart               - Definição da paleta mestre de cores com suporte a Light/Dark Mode
 │   │   └── gerenciador_tema.dart        - Gerenciamento de estado do tema
 │   ├── utils/
-│   │   ├── utilitarios_markdown.dart          - Funções utilitárias para parseamento de strings Markdown
-│   │   └── categorizacao_pico.dart     - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
+│   │   ├── utilitarios_markdown.dart    - Funções utilitárias para parseamento de strings Markdown
+│   │   ├── formatador_escalada.dart     - Formatação de graus, nomes e localização de escaladas por UID
+│   │   └── categorizacao_pico.dart      - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas
 │   ├── view/                            - Camada de visualização e apresentação
-│   │   ├── function_library/            - Builders de UI, callbacks e renderizadores puros
-│   │   │   ├── biblioteca_funcoes_comuns.dart    - Sistema de design (paletas, tipografia, componentes base)
+│   │   ├── function_library/            - Construtores de UI, callbacks e componentes visuais
+│   │   │   ├── biblioteca_funcoes_comuns.dart - Sistema de design (paletas, tipografia, componentes base)
 │   │   │   ├── markdown_offline.dart    - Visualizador Markdown com FileImage offline
-│   │   │   ├── funcoes_configuracoes.dart  - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
+│   │   │   ├── funcoes_configuracoes.dart - Conexão com Editor Desktop via QR Code/URL, temas e diagnósticos
+│   │   │   ├── funcoes_hub_perfil_caderneta.dart - Cabeçalho com avatar/câmera, cartões de métricas e menu do Hub de Perfil
+│   │   │   ├── funcoes_caderneta.dart   - Histórico de ascensões e componentes da caderneta
 │   │   │   ├── mapa/
-│   │   │   │   ├── mapa_global_functions.dart - Funções e visual builders específicos para o mapa mundial
-│   │   │   │   └── mapa_marker.dart    - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
+│   │   │   │   ├── mapa_global_functions.dart - Construtores visuais específicos para o mapa mundial
+│   │   │   │   └── mapa_marker.dart     - Renderiza via Canvas o pino (BitmapDescriptor) com o logo no Mapa
 │   │   │   └── *_functions.dart         - Funções específicas por página (home, browse, pico, …)
 │   │   └── view_models/                 - Modelos de apresentação e gerenciamento de estado
+│   │       ├── login_view_model.dart    - Estado e comandos de login, criação de conta e Google OAuth
+│   │       ├── hub_perfil_caderneta_view_model.dart - Estado reativo do Hub de Perfil, foto e métricas
+│   │       ├── perfil_view_model.dart   - Estatísticas e histórico da caderneta esportiva
 │   │       ├── card_croqui_view_model.dart - Estado e apresentação de cards de croqui
-│   │       ├── mapa_pico_view_model.dart   - Apresentação e coordenadas de picos no mapa
-│   │       ├── pico_proximo_view_model.dart- Apresentação de picos próximos e distâncias
+│   │       ├── mapa_pico_view_model.dart - Apresentação e coordenadas de picos no mapa
+│   │       ├── pico_proximo_view_model.dart - Apresentação de picos próximos e distâncias
 │   │       └── *_view_model.dart        - View models para páginas e componentes reativos
 │   ├── aresta_api/                      - Submodule: arquivos .proto, SQL, OpenAPI e código Protobuf gerado
 │   ├── navigation/                      - Estrutura de navegação baseada em árvore (Tree Nav) e Hot-Reload
 │   │   ├── README.md                    - Detalhamento da arquitetura de navegação reativa sem pilha
-│   │   ├── funcoes_navegacao.dart    - API estática AppNav com herança de contexto
-│   │   ├── arvore_navegacao.dart         - Classes dos nós baseados em ID (NavNode) e controlador central
-│   │   └── construtor_reativo_pagina.dart - O coração do Hot-Reload Reativo (injetor de UI passivo)
+│   │   ├── funcoes_navegacao.dart       - API estática AppNav com herança de contexto
+│   │   ├── arvore_navegacao.dart        - Classes dos nós baseados em ID (NavNode) e controlador central
+│   │   ├── servico_navegacao_deep_link.dart - Resolução de deep links aresta.cc e interceptação de callbacks OAuth
+│   │   └── construtor_reativo_pagina.dart - Injetor reativo de UI para hot-reload de croquis
 │   ├── pages/                           - Páginas do app
 │   │   ├── home.dart                    - Carrossel e lista de guias locais
 │   │   ├── explorar.dart                - Índice remoto com download inline
-│   │   ├── mapa_global.dart            - Visão de mapa global interativa a partir do Explorar
+│   │   ├── mapa_global.dart             - Visão de mapa global interativa a partir do Explorar
 │   │   ├── gps.dart                     - Entrada do mapa
 │   │   ├── mapa_interativo.dart         - Mapa interativo com overlay de setores/vias e compartilhamento
 │   │   ├── mapa_geral_pico.dart         - Mapa contendo o overview de todos os setores do pico
@@ -96,49 +110,67 @@ frontend/
 │   │   ├── comunidade.dart              - Hub global de redes sociais (Discord, WhatsApp, GitHub)
 │   │   ├── grupo.dart                   - Agrupamento de setores
 │   │   ├── setor.dart                   - Subárea com lista de vias ou boulders
-│   │   ├── via.dart                     - Nó folha: beta, croqui e imagens
+│   │   ├── via.dart                     - Nó folha: beta, croqui, imagens e seção da caderneta
+│   │   ├── login.dart                   - Autenticação com Google, e-mail/senha, criação de conta e modo offline
+│   │   ├── hub_perfil_caderneta.dart    - Hub de Perfil do Escalador com avatar, métricas e menu
+│   │   ├── caderneta.dart               - Caderneta esportiva detalhada e pirâmide de graus
 │   │   ├── configuracoes.dart           - Configurações e ferramentas de editor
 │   │   ├── termos_de_uso.dart           - Visualizador dos documentos legais
 │   │   └── qr_scanner.dart              - Scanner de QR code
 │   ├── services/                        - Serviços centrais
+│   │   ├── autenticacao/
+│   │   │   ├── servico_autenticacao.dart - Domínio de autenticação, validação e persistência do PerfilEscalador
+│   │   │   └── cliente_supabase_autenticacao.dart - Comunicação GoTrue (/auth/v1), PostgREST (perfis), Storage (avatars) e OAuth PKCE
+│   │   ├── midia/
+│   │   │   └── seletor_foto_perfil.dart - Seletor nativo de foto de perfil recortada 256x256 em Data URI base64
+│   │   ├── caderneta/
+│   │   │   ├── repositorio_caderneta.dart - Repositório reativo de cadenas e perfil do escalador
+│   │   │   ├── armazenamento_local_caderneta.dart - Persistência local em SharedPreferences
+│   │   │   ├── compilador_estatisticas.dart - Cálculo de pirâmide de graus e recordes
+│   │   │   └── catalogo_vias_caderneta.dart - Hidratação de nomes, graus e picos via SQLite e memória
 │   │   ├── catalogo/
 │   │   │   └── repositorio_catalogo.dart - Banco SQLite local (catalogo.db), batch delta sync e consultas relacionais
 │   │   ├── compartilhamento/
 │   │   │   └── servico_compartilhamento.dart - Formatação de links compactos aresta.cc (/s/<uid>, /sm/<uid>) e share_plus
 │   │   ├── firebase/
-│   │   │   ├── inicializar_firebase.dart       - Inicialização e captura de Crashlytics
-│   │   │   ├── telemetria.dart   - Isolamento do Analytics
-│   │   │   ├── remote_config.dart - Fallbacks, cache local e degradação graciosa offline
-│   │   │   ├── validador_app.dart - Atestação de integridade via App Check resiliente a quedas de rede
+│   │   │   ├── inicializar_firebase.dart - Inicialização e captura de Crashlytics
+│   │   │   ├── telemetria.dart          - Isolamento do Analytics
+│   │   │   ├── remote_config.dart       - Fallbacks (incluindo URL e chave pública do Supabase), cache local e degradação offline
+│   │   │   ├── validador_app.dart       - Atestação de integridade via App Check resiliente a quedas de rede
 │   │   │   └── app_logger.dart          - Logger centralizado com filtro de falhas transitórias HTTP e Firebase
 │   │   ├── http/
+│   │   │   ├── cliente_http_aresta.dart - Pool compartilhado de conexões HTTP Keep-Alive
 │   │   │   ├── sync_service.dart        - Orquestra download, validação e sincronização assíncrona do catálogo
 │   │   │   ├── sync_isolate.dart        - Processa downloads e cálculos em background thread
-│   │   │   ├── sync_rede.dart        - Faz o download HTTP bruto, consulta /sync do catálogo e gestão de ETags
-│   │   │   ├── sync_armazenamento.dart        - Trata arquivos `.tmp` e salva de forma atômica
-│   │   │   └── baixador_atualizacoes.dart   - Verificação e download de atualizações do APK
+│   │   │   ├── sync_rede.dart           - Faz o download HTTP bruto, consulta /sync do catálogo e gestão de ETags
+│   │   │   ├── sync_armazenamento.dart  - Trata arquivos `.tmp` e salva de forma atômica
+│   │   │   └── baixador_atualizacoes.dart - Verificação e download de atualizações do APK
 │   │   ├── feedback/
 │   │   │   ├── background_worker.dart   - Worker (Workmanager) de envio para o Supabase
 │   │   │   ├── feedback_metadata_collector.dart - Coleta diagnóstico do aparelho (RAM, bateria, logs)
 │   │   │   └── feedback_queue_service.dart - Fila local persistente (SharedPreferences)
-│   │   ├── repositorio_dataset.dart      - Estado central: downloads e metadados
-│   │   └── editor_croqui.dart           - Contexto de modo e temporizador experimental
+│   │   ├── repositorio_dataset.dart     - Estado central: downloads e metadados
+│   │   └── editor_croqui.dart           - Contexto de modo experimental e Live Reload
 │   └── widgets/
 │       ├── bottom_sheets/               - Painéis flutuantes (Regras, Mapas) de ativação interativa
+│       ├── caderneta/                   - Modal de registro de cadena, pirâmide de graus e cards estatísticos
+│       ├── perfil/
+│       │   └── dialogos_hub_perfil.dart - Diálogos de edição de perfil/foto, dados/privacidade e confirmação de saída
 │       ├── feedback/
 │       │   └── construtor_feedback_usuario.dart - Construtor de interface customizada para formulário de in-app feedback
 │       ├── card_pico.dart               - Card interativo do pico com status, progresso de download e estatísticas
 │       ├── pico_menu_card.dart          - Card estilizado base para botões da página raiz do Pico
-│       ├── busca_global.dart           - Busca global Fuzzy sobre catalogo.db com prioridade e badge Offline
+│       ├── busca_global.dart            - Busca global Fuzzy sobre catalogo.db com prioridade e badge Offline
 │       └── mapa_thumbnail.dart          - Preview interativo de mapa com resolução offline
 └── test/
     ├── architecture/                    - Testes arquiteturais e de convenção de código
+    ├── data/                            - Testes de modelos de domínio (PerfilEscalador, Cadena, FeedbackMetadata)
     ├── integration/                     - Testes de integração de fluxos completos (download, leitura, etc)
     ├── legal/                           - Testes para validação e extração de datas de documentos legais
     ├── navigation/                      - Testes unitários da árvore de navegação, loops e reatividade
     ├── pages/                           - Testes de widget das páginas de roteamento superior
     ├── protobuf/                        - Testes de serialização/desserialização dos objetos Protobuf
-    ├── services/                        - Testes unitários dos serviços principais (SyncService, etc)
+    ├── services/                        - Testes unitários dos serviços principais (Autenticacao, Midia, Caderneta, SyncService, etc)
     ├── theme/                           - Testes unitários do gerenciamento de temas e persistência
     ├── view/                            - Testes unitários da camada de apresentação
     │   ├── function_library/            - Testes de funções utilitárias e builders de tela
@@ -156,6 +188,9 @@ flutter pub get
 
 # Rodar em modo de desenvolvimento
 flutter run
+
+# Rodar em modo de desenvolvimento com Perfil e Caderneta habilitados
+flutter run --dart-define=HABILITAR_PERFIL=true
 
 # Rodar a suíte de testes
 flutter test
@@ -252,10 +287,11 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 | [`lib/README.md`](lib/README.md) | Arquitetura completa: serviços, páginas, funções e widgets |
 | [`lib/view/README.md`](lib/view/README.md) | Camada de apresentação: separação entre `function_library` e `view_models` |
 | [`lib/navigation/README.md`](lib/navigation/README.md) | Estrutura e API do sistema de navegação baseada em árvore com Hot-Reload (Tree Navigation) |
-| [`lib/services/README.md`](lib/services/README.md) | Modo Experimental, ciclo de vida de importação e isolamento de dados |
+| [`lib/services/README.md`](lib/services/README.md) | Serviços centrais, autenticação Supabase, Modo Experimental e isolamento de dados |
+| [`lib/services/caderneta/README.md`](lib/services/caderneta/README.md) | Caderneta esportiva, estatísticas e sincronização de perfil |
 | [`lib/services/firebase/README.md`](lib/services/firebase/README.md) | Isolamento e integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | [`test/README.md`](test/README.md) | Estrutura dos testes, como executar e convenções adotadas |
-| [`test/navigation/README.md`](test/navigation/README.md) | Cobertura dos testes da árvore de navegação e validação de loop prevention |
+| [`test/navigation/README.md`](test/navigation/README.md) | Cobertura dos testes da árvore de navegação e validação de prevenção de loops |
 
 ---
 
@@ -263,6 +299,3 @@ O pacote gerado estará em: `build\app\outputs\bundle\release\app-release.aab`
 
 - **Código-Fonte**: Licenciado sob a [Mozilla Public License 2.0 (MPL 2.0)](../LICENSE).
 - **Diretrizes de Contribuição**: Adotamos o Developer Certificate of Origin (DCO com `git commit -s`). Veja detalhes em [CONTRIBUTING.md](../CONTRIBUTING.md).
-- **Princípios de Engenharia**: Desenvolvimento orientado a testes (TDD), 100% de cobertura e tudo em português brasileiro. Consulte [AGENTS.md](../AGENTS.md).
-
-
