@@ -238,10 +238,20 @@ Widget buildMenuOpcoesHub({
   required VoidCallback onAbrirConfiguracoes,
   required VoidCallback onAbrirDadosPrivacidade,
   required VoidCallback onConfirmarSaida,
+  VoidCallback? onEntrarNaConta,
 }) {
   return Column(
     mainAxisSize: MainAxisSize.min,
     children: [
+      if (onEntrarNaConta != null) ...[
+        buildItemMenuHub(
+          key: const Key('item_menu_entrar_conta'),
+          icone: Icons.login_rounded,
+          titulo: 'Entrar na conta',
+          onTap: onEntrarNaConta,
+        ),
+        const SizedBox(height: 10),
+      ],
       buildItemMenuHub(
         key: const Key('item_menu_minha_caderneta'),
         icone: Icons.menu_book_outlined,
@@ -334,4 +344,3 @@ Widget buildItemMenuHub({
     },
   );
 }
-

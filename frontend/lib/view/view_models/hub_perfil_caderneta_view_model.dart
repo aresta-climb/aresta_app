@@ -49,6 +49,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Callback para edição do perfil do escalador.
   final VoidCallback? aoEditarPerfil;
 
+  /// Callback para abertura da página de login/criação de conta.
+  final VoidCallback? aoEntrarNaConta;
+
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
     required this.repositorio,
@@ -62,6 +65,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     this.aoAbrirDadosPrivacidade,
     this.aoConfirmarSaida,
     this.aoEditarPerfil,
+    this.aoEntrarNaConta,
   }) : _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
        _escutaMetadados = escutaMetadados,
@@ -108,6 +112,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Retorna os metadados do perfil do escalador.
   PerfilEscalador get perfil => repositorio.obterPerfil();
 
+  /// Indica se o perfil atual está vinculado a uma conta autenticada.
+  bool get estaAutenticado => perfil.estaAutenticado;
+
   /// Nome público esportivo do atleta.
   String get nomeAtleta => perfil.autorNomePublico;
 
@@ -153,6 +160,18 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Copia o [autorIdPublico] do atleta para a área de transferência do dispositivo.
   Future<void> copiarIdPublico() async {
     await Clipboard.setData(ClipboardData(text: autorIdPublico));
+  }
+
+  /// Encerra a sessão autenticada do escalador, preservando o ID público e as cadenas locais.
+  Future<void> encerrarSessao() async {
+    if (estaAutenticado) {
+      await repositorio.salvarPerfil(perfil.copyWith(limparUserId: true));
+    }
+  }
+
+  /// Aciona a abertura da tela de Login / Criação de Conta.
+  void abrirLogin() {
+    aoEntrarNaConta?.call();
   }
 
   /// Aciona a abertura da tela detalhada de Caderneta.

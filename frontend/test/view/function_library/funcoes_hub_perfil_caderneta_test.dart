@@ -110,16 +110,17 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-
     testWidgets('buildMenuOpcoesHub renderiza itens e aciona callbacks de navegação', (tester) async {
       var abriuCaderneta = false;
       var abriuConfiguracoes = false;
       var abriuDados = false;
       var confirmouSaida = false;
+      var abriuEntrarConta = false;
 
       await tester.pumpWidget(
         wrapWithTheme(
           buildMenuOpcoesHub(
+            onEntrarNaConta: () => abriuEntrarConta = true,
             onAbrirCaderneta: () => abriuCaderneta = true,
             onAbrirConfiguracoes: () => abriuConfiguracoes = true,
             onAbrirDadosPrivacidade: () => abriuDados = true,
@@ -128,10 +129,15 @@ void main() {
         ),
       );
 
+      expect(find.text('Entrar na conta'), findsOneWidget);
       expect(find.text('Minha caderneta'), findsOneWidget);
       expect(find.text('Configurações'), findsOneWidget);
       expect(find.text('Dados e privacidade'), findsOneWidget);
       expect(find.text('Sair'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('item_menu_entrar_conta')));
+      await tester.pump();
+      expect(abriuEntrarConta, isTrue);
 
       await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
       await tester.pump();

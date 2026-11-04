@@ -57,6 +57,14 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
     super.dispose();
   }
 
+  void _onEntrarNaConta(BuildContext context) {
+    if (_viewModel.aoEntrarNaConta != null) {
+      _viewModel.abrirLogin();
+    } else {
+      AppNav.toLogin(context);
+    }
+  }
+
   void _onAbrirCaderneta(BuildContext context) {
     if (_viewModel.aoAbrirCaderneta != null) {
       _viewModel.abrirCaderneta();
@@ -102,8 +110,11 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
       _viewModel.confirmarSaida();
     } else {
       final confirmou = await exibirDialogoConfirmarSaida(context);
-      if (confirmou == true && context.mounted) {
-        AppNav.back(context);
+      if (confirmou == true) {
+        await _viewModel.encerrarSessao();
+        if (context.mounted) {
+          AppNav.back(context);
+        }
       }
     }
   }
@@ -165,6 +176,9 @@ class _HubPerfilCadernetaPageState extends State<HubPerfilCadernetaPage> {
                   ),
                   const SizedBox(height: 28),
                   buildMenuOpcoesHub(
+                    onEntrarNaConta: _viewModel.estaAutenticado
+                        ? null
+                        : () => _onEntrarNaConta(context),
                     onAbrirCaderneta: () => _onAbrirCaderneta(context),
                     onAbrirConfiguracoes: () => _onAbrirConfiguracoes(context),
                     onAbrirDadosPrivacidade: () =>

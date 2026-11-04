@@ -97,6 +97,7 @@ void main() {
       expect(find.text('VIAS'), findsOneWidget);
 
       // Itens de menu
+      expect(find.text('Entrar na conta'), findsOneWidget);
       expect(find.text('Minha caderneta'), findsOneWidget);
       expect(find.text('Configurações'), findsOneWidget);
       expect(find.text('Dados e privacidade'), findsOneWidget);
@@ -224,7 +225,7 @@ void main() {
       expect(find.text('Deseja realmente sair?'), findsNothing);
     });
 
-    testWidgets('ao tocar em Sair e confirmar, fecha a tela se houver rota anterior', (tester) async {
+    testWidgets('ao tocar em Sair e confirmar, encerra a sessão autenticada e fecha a tela', (tester) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -232,7 +233,11 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(userId: 'usr-logado-99'),
+      );
       final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+      expect(vm.estaAutenticado, isTrue);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -258,6 +263,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HubPerfilCadernetaPage), findsOneWidget);
+      expect(find.byKey(const Key('item_menu_entrar_conta')), findsNothing);
 
       await tester.tap(find.byKey(const Key('item_menu_sair')));
       await tester.pumpAndSettle();
@@ -267,6 +273,7 @@ void main() {
 
       expect(find.byType(HubPerfilCadernetaPage), findsNothing);
       expect(find.text('Abrir Hub'), findsOneWidget);
+      expect(repositorio.obterPerfil().estaAutenticado, isFalse);
     });
 
     testWidgets('HubPerfilCadernetaPage instancia e descarta viewModel interno quando não injetado', (tester) async {
@@ -355,7 +362,7 @@ void main() {
     });
 
     testWidgets(
-      'ao tocar em Configurações sem callback customizado, aciona navegação padrão sem erro',
+      'ao tocar em Entrar na conta e Configurações sem callbacks customizados, aciona navegação padrão sem erro',
       (tester) async {
         tester.view.physicalSize = const Size(800, 1000);
         tester.view.devicePixelRatio = 1.0;
@@ -366,6 +373,9 @@ void main() {
 
         await tester.pumpWidget(criarHubWidget());
         await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('item_menu_entrar_conta')));
+        await tester.pump();
 
         await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
         await tester.pump();
@@ -386,6 +396,7 @@ void main() {
         final acionados = <String>[];
         final vmCustom = HubPerfilCadernetaViewModel(
           repositorio: repositorio,
+          aoEntrarNaConta: () => acionados.add('entrar'),
           aoEditarPerfil: () => acionados.add('editar'),
           aoAbrirCaderneta: () => acionados.add('caderneta'),
           aoAbrirConfiguracoes: () => acionados.add('configuracoes'),
@@ -396,6 +407,7 @@ void main() {
         await tester.pumpWidget(criarHubWidget(viewModel: vmCustom));
         await tester.pumpAndSettle();
 
+        await tester.tap(find.byKey(const Key('item_menu_entrar_conta')));
         await tester.tap(find.byKey(const Key('btn_editar_perfil_hub')));
         await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
         await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
@@ -406,6 +418,7 @@ void main() {
         expect(
           acionados,
           equals([
+            'entrar',
             'editar',
             'caderneta',
             'configuracoes',

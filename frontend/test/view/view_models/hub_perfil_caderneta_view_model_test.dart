@@ -36,6 +36,7 @@ void main() {
       expect(vm.nomeAtleta, 'Escalador Aresta');
       expect(vm.autorIdPublico.length, 14);
       expect(vm.funcaoAtleta, 'Escalador');
+      expect(vm.estaAutenticado, isFalse);
       expect(vm.totalCadenas, 0);
       expect(vm.totalTentativas, 0);
       expect(vm.totalPicos, 0);
@@ -139,12 +140,13 @@ void main() {
       vm.dispose();
     });
 
-    test('executa callbacks de navegação injetados', () {
+    test('executa callbacks de navegação injetados e gerencia encerrarSessao', () async {
       var cadernetaAberta = false;
       var configuracoesAberta = false;
       var dadosPrivacidadeAberto = false;
       var saidaConfirmada = false;
       var editarPerfilAberto = false;
+      var loginAberto = false;
 
       final vm = HubPerfilCadernetaViewModel(
         repositorio: repositorio,
@@ -153,6 +155,7 @@ void main() {
         aoAbrirDadosPrivacidade: () => dadosPrivacidadeAberto = true,
         aoConfirmarSaida: () => saidaConfirmada = true,
         aoEditarPerfil: () => editarPerfilAberto = true,
+        aoEntrarNaConta: () => loginAberto = true,
       );
 
       vm.abrirCaderneta();
@@ -160,12 +163,22 @@ void main() {
       vm.abrirDadosPrivacidade();
       vm.confirmarSaida();
       vm.editarPerfil();
+      vm.abrirLogin();
 
       expect(cadernetaAberta, isTrue);
       expect(configuracoesAberta, isTrue);
       expect(dadosPrivacidadeAberto, isTrue);
       expect(saidaConfirmada, isTrue);
       expect(editarPerfilAberto, isTrue);
+      expect(loginAberto, isTrue);
+
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(userId: 'usr-logado-1'),
+      );
+      expect(vm.estaAutenticado, isTrue);
+
+      await vm.encerrarSessao();
+      expect(vm.estaAutenticado, isFalse);
 
       vm.dispose();
     });
