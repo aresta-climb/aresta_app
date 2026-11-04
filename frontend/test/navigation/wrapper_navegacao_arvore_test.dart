@@ -717,7 +717,7 @@ void main() {
     );
 
     testWidgets(
-      'desativar interações de Perfil e Caderneta na SettingsPage poda PerfilNode ancestral da árvore ativa e retorna direto à HomeNode',
+      'fluxo Home -> Login -> Continuar sem conta -> Perfil -> Configurações e poda de PerfilNode ao desativar interações mantendo botão de Perfil acessível na Home',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
@@ -742,19 +742,25 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // 1. Toca no botão de perfil na HomePage -> PerfilNode(HomeNode)
+        // 1. Toca no botão de perfil na HomePage enquanto deslogado -> LoginNode(HomeNode)
         await tester.tap(find.byKey(const Key('btn_home_perfil')));
         await tester.pumpAndSettle();
-        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode, isA<LoginNode>());
 
-        // 2. No HubPerfilCadernetaPage, abre Configurações -> SettingsNode(PerfilNode(HomeNode))
+        // 2. Na LoginPage, escolhe Continuar sem conta / Offline -> PerfilNode(HomeNode)
+        await tester.tap(find.byKey(const Key('btn_continuar_sem_conta')));
+        await tester.pumpAndSettle();
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+
+        // 3. No HubPerfilCadernetaPage, abre Configurações -> SettingsNode(PerfilNode(HomeNode))
         await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
         await tester.pumpAndSettle();
         expect(controller.currentNode, isA<SettingsNode>());
         expect(controller.currentNode.parent, isA<PerfilNode>());
         expect(controller.arvore.profundidade, equals(3));
 
-        // 3. Desativa o Switch de interações na SettingsPage
+        // 4. Desativa o Switch de interações na SettingsPage
         final switchFinder = find.byKey(const Key('switch_interacoes_caderneta'));
         await tester.ensureVisible(switchFinder);
         await tester.tap(switchFinder);
@@ -765,11 +771,11 @@ void main() {
         expect(controller.currentNode.parent, isA<HomeNode>());
         expect(controller.arvore.profundidade, equals(2));
 
-        // 4. Ao voltar da SettingsPage, pousa diretamente em HomeNode (sem passar pelo PerfilNode desativado)
+        // 5. Ao voltar da SettingsPage, pousa diretamente em HomeNode e o botão de Perfil permanece visível (único caminho para Configurações)
         controller.goBack();
         await tester.pumpAndSettle();
         expect(controller.currentNode, isA<HomeNode>());
-        expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
+        expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
       },
     );
   });

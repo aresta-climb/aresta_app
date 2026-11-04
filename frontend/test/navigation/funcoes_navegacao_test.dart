@@ -12,6 +12,8 @@ import 'package:frontend/main.dart';
 import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/editor_croqui.dart';
@@ -117,6 +119,7 @@ void main() {
   });
 
   tearDown(() {
+    ServicoAutenticacaoLocal.redefinirParaTestes();
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
@@ -395,7 +398,7 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toPerfil, toCaderneta e canGoBack operam como no-op seguro quando não há TreeNavigationWrapper montado',
+      'AppNav.toLogin, abrirPerfilOuLogin, toPerfil, toCaderneta e canGoBack operam como no-op seguro quando não há TreeNavigationWrapper montado',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
         addTearDown(() {
@@ -415,13 +418,13 @@ void main() {
         expect(AppNav.canGoBack(context), isFalse);
         AppNav.toMapas(context, cragId: 'test_crag', mapas: const []);
 
-        // Com perfil desabilitado, toPerfil e toCaderneta não navegam
+        AppNav.toLogin(context);
+        AppNav.abrirPerfilOuLogin(context);
         AppNav.toPerfil(context);
         AppNav.toCaderneta(context);
         await tester.pumpAndSettle();
         expect(find.text('Tela Inicial'), findsOneWidget);
 
-        // Com perfil habilitado porém sem TreeNavigationWrapper, toPerfil e toCaderneta são no-op seguros
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
         AppNav.toPerfil(context);
@@ -433,10 +436,17 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toPerfil, toCaderneta e toSettings empilham nós quando TreeNavigationController está presente',
+      'AppNav.toLogin, abrirPerfilOuLogin, toPerfil, toCaderneta e toSettings empilham nós quando TreeNavigationController está presente',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         addTearDown(ConfiguracaoRecursos.redefinirParaTestes);
+
+        final prefs = await SharedPreferences.getInstance();
+        final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+        await repoCaderneta.inicializar();
+        RepositorioCadernetaLocal.instancia = repoCaderneta;
+        final servicoAuth = ServicoAutenticacaoLocal(repositorio: repoCaderneta);
+        ServicoAutenticacaoLocal.instancia = servicoAuth;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -453,7 +463,24 @@ void main() {
         final context = tester.element(find.text('Host'));
         final controller = TreeNavigationWrapper.currentTreeController!;
 
+        // Desautenticado: abrirPerfilOuLogin leva a LoginNode
+        AppNav.abrirPerfilOuLogin(context);
+        expect(controller.currentNode, isA<LoginNode>());
+
+        // A partir de LoginNode, toPerfil substitui pelo PerfilNode reancorando no pai
         AppNav.toPerfil(context);
+        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+
+        // A partir de PerfilNode, toLogin substitui pelo LoginNode reancorando no pai
+        AppNav.toLogin(context);
+        expect(controller.currentNode, isA<LoginNode>());
+        expect(controller.currentNode.parent, isA<HomeNode>());
+
+        // Autenticado: abrirPerfilOuLogin leva direto a PerfilNode
+        controller.navigateTo(const HomeNode());
+        await servicoAuth.entrarComGoogle();
+        AppNav.abrirPerfilOuLogin(context);
         expect(controller.currentNode, isA<PerfilNode>());
 
         AppNav.toCaderneta(context);
@@ -646,7 +673,7 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toPerfil e AppNav.toCaderneta respeitam preferência local do usuário em ControladorInteracoesUsuario',
+      'AppNav.toCaderneta respeita preferência local em ControladorInteracoesUsuario enquanto toPerfil permanece acessível para Configurações',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
@@ -674,16 +701,15 @@ void main() {
         await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
           false,
         );
-        AppNav.toPerfil(context);
-        expect(controller.currentNode, isA<HomeNode>());
         AppNav.toCaderneta(context);
         expect(controller.currentNode, isA<HomeNode>());
+
+        AppNav.toPerfil(context);
+        expect(controller.currentNode, isA<PerfilNode>());
 
         await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
           true,
         );
-        AppNav.toPerfil(context);
-        expect(controller.currentNode, isA<PerfilNode>());
         AppNav.toCaderneta(context);
         expect(controller.currentNode, isA<CadernetaNode>());
       },
@@ -756,9 +782,9 @@ void main() {
         await tester.pump();
         final ctx = tester.element(find.text('HostUid'));
 
-        // UID inexistente -> retorna false
+        // UID inexistente (resolvendo datasetRepo via TreeNavigationWrapper) -> retorna false
         expect(
-          AppNav.toViaPorUid(ctx, 'uidInexistente', datasetRepo: repo),
+          AppNav.toViaPorUid(ctx, 'uidInexistente'),
           isFalse,
         );
         expect(treeController.currentNode, isA<CadernetaNode>());

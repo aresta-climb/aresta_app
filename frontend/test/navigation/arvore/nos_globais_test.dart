@@ -126,6 +126,21 @@ void main() {
       expect(copiado.parent, same(outroPai));
     });
 
+    test('LoginNode possui metadados, caminho e cópia de ancestral adequados', () {
+      const home = HomeNode();
+      const login = LoginNode(home);
+
+      expect(login.parent, same(home));
+      expect(login.rotuloAmigavel, 'Entrar');
+      expect(login.obterCaminhoCurto(), 'Início -> Entrar');
+      expect(login.toString(), 'LoginNode');
+
+      const outroPai = HomeNode();
+      final copiado = login.copyWithMergedAncestor(const LoginNode(outroPai));
+      expect(copiado, isA<LoginNode>());
+      expect(copiado.parent, same(outroPai));
+    });
+
     test('PerfilNode possui metadados, caminho e cópia de ancestral adequados', () {
       const home = HomeNode();
       final perfil = PerfilNode(home);
@@ -163,11 +178,13 @@ void main() {
       final perfil2 = PerfilNode(const HomeNode());
       final caderneta = CadernetaNode(perfil1);
       final settings = SettingsNode(home);
+      const login = LoginNode(home);
 
       expect(perfil1.isSameNode(perfil2), isTrue);
       expect(perfil1.isSameNode(caderneta), isFalse);
       expect(caderneta.isSameNode(settings), isFalse);
       expect(perfil1.isSameNode(home), isFalse);
+      expect(login.isSameNode(perfil1), isFalse);
     });
 
     test('caminho hierárquico encadeia a rota completa de Home a Caderneta', () {
