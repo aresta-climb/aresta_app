@@ -188,13 +188,20 @@ class RemoteConfigService extends ChangeNotifier {
   /// URL base do projeto Supabase para autenticação e sincronização.
   ///
   /// Caso `supabase_url` não esteja definido explicitamente no Remote Config,
-  /// extrai automaticamente a origem (`https://<ref>.supabase.co`) de [feedbackEdgeFunctionUrl].
+  /// extrai a origem de `feedback_edge_function_url` (quando customizada) ou
+  /// utiliza [NetworkConstants.kDefaultSupabaseUrl].
   String get supabaseUrl {
     final value = getString('supabase_url').trim();
     if (value.isNotEmpty) return value;
-    final uriFeedback = Uri.tryParse(feedbackEdgeFunctionUrl);
-    if (uriFeedback != null && uriFeedback.hasScheme && uriFeedback.hasAuthority) {
-      return uriFeedback.origin;
+    final feedbackRemoto = getString('feedback_edge_function_url').trim();
+    if (feedbackRemoto.isNotEmpty &&
+        feedbackRemoto != NetworkConstants.kDefaultFeedbackEdgeFunctionUrl) {
+      final uriFeedback = Uri.tryParse(feedbackRemoto);
+      if (uriFeedback != null &&
+          uriFeedback.hasScheme &&
+          uriFeedback.hasAuthority) {
+        return uriFeedback.origin;
+      }
     }
     return NetworkConstants.kDefaultSupabaseUrl;
   }
