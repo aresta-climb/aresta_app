@@ -242,6 +242,52 @@ void main() {
       );
     });
 
+    test('Acessar supabaseUrl e supabaseAnonKey retorna valores do Remote Config ou defaults', () {
+      when(
+        () => mockFirebaseRemoteConfig.getString('supabase_url'),
+      ).thenReturn('https://custom.supabase.co');
+      when(
+        () => mockFirebaseRemoteConfig.getString('supabase_anon_key'),
+      ).thenReturn('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.anon');
+
+      expect(
+        RemoteConfigService.instance.supabaseUrl,
+        'https://custom.supabase.co',
+      );
+      expect(
+        RemoteConfigService.instance.supabaseAnonKey,
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.anon',
+      );
+
+      when(
+        () => mockFirebaseRemoteConfig.getString('supabase_url'),
+      ).thenReturn('   ');
+      when(
+        () => mockFirebaseRemoteConfig.getString('feedback_edge_function_url'),
+      ).thenReturn('https://yzkhiaoqtxvvcyyuwmqg.supabase.co/functions/v1/app-feedback');
+      when(
+        () => mockFirebaseRemoteConfig.getString('supabase_anon_key'),
+      ).thenReturn('   ');
+
+      // Deriva automaticamente a URL base do Supabase a partir de feedback_edge_function_url
+      expect(
+        RemoteConfigService.instance.supabaseUrl,
+        'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+      );
+      expect(
+        RemoteConfigService.instance.supabaseAnonKey,
+        NetworkConstants.kDefaultSupabaseAnonKey,
+      );
+
+      when(
+        () => mockFirebaseRemoteConfig.getString('feedback_edge_function_url'),
+      ).thenReturn('::url_invalida::');
+      expect(
+        RemoteConfigService.instance.supabaseUrl,
+        NetworkConstants.kDefaultSupabaseUrl,
+      );
+    });
+
     test('Acessar officialServerUrl combina servingBaseUrl com a versão de dados', () {
       when(
         () => mockFirebaseRemoteConfig.getString('serving_base_url'),

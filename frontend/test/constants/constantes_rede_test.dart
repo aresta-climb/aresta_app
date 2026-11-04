@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +7,11 @@ import 'package:frontend/constants/constantes_rede.dart';
 void main() {
   group('NetworkConstants', () {
     test('possui valores padrão estáticos consistentes e imutáveis', () {
+      expect(
+        NetworkConstants.kDefaultSupabaseUrl,
+        'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+      );
+      expect(NetworkConstants.kDefaultSupabaseAnonKey, isEmpty);
       expect(NetworkConstants.kDataVersion, isPositive);
       expect(
         NetworkConstants.kDefaultServingBaseUrl,

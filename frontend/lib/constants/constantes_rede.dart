@@ -17,6 +17,18 @@ class NetworkConstants {
   static const String kDefaultFeedbackEdgeFunctionUrl =
       'https://gawgqiqzptckwghgqypt.supabase.co/functions/v1/app-feedback';
 
+  /// URL base padrão do projeto Supabase (sobrescritível via `--dart-define=SUPABASE_URL=...` ou Remote Config).
+  static const String kDefaultSupabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+  );
+
+  /// Chave pública anônima (`anon` key) padrão do Supabase (provida via Remote Config `supabase_anon_key` ou `--dart-define=SUPABASE_ANON_KEY=...`).
+  static const String kDefaultSupabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+
   /// URL oficial padrão de convite para a comunidade do WhatsApp.
   static const String kDefaultWhatsappCommunityUrl =
       'https://chat.whatsapp.com/JmxWeLSmGTT66AREtrKyjA';

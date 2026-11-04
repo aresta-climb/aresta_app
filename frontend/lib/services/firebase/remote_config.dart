@@ -68,6 +68,8 @@ class RemoteConfigService extends ChangeNotifier {
         "store_url_ios": "",
         "feedback_edge_function_url":
             NetworkConstants.kDefaultFeedbackEdgeFunctionUrl,
+        "supabase_url": NetworkConstants.kDefaultSupabaseUrl,
+        "supabase_anon_key": NetworkConstants.kDefaultSupabaseAnonKey,
         "serving_base_url": NetworkConstants.kDefaultServingBaseUrl,
         "whatsapp_community_url":
             NetworkConstants.kDefaultWhatsappCommunityUrl,
@@ -181,6 +183,26 @@ class RemoteConfigService extends ChangeNotifier {
     return value.isNotEmpty
         ? value
         : NetworkConstants.kDefaultDiscordCommunityUrl;
+  }
+
+  /// URL base do projeto Supabase para autenticação e sincronização.
+  ///
+  /// Caso `supabase_url` não esteja definido explicitamente no Remote Config,
+  /// extrai automaticamente a origem (`https://<ref>.supabase.co`) de [feedbackEdgeFunctionUrl].
+  String get supabaseUrl {
+    final value = getString('supabase_url').trim();
+    if (value.isNotEmpty) return value;
+    final uriFeedback = Uri.tryParse(feedbackEdgeFunctionUrl);
+    if (uriFeedback != null && uriFeedback.hasScheme && uriFeedback.hasAuthority) {
+      return uriFeedback.origin;
+    }
+    return NetworkConstants.kDefaultSupabaseUrl;
+  }
+
+  /// Chave pública anônima (`anon` key) do Supabase provida via Remote Config.
+  String get supabaseAnonKey {
+    final value = getString('supabase_anon_key').trim();
+    return value.isNotEmpty ? value : NetworkConstants.kDefaultSupabaseAnonKey;
   }
 
   /// URL combinada do servidor de dados com a versão atual de dados.
