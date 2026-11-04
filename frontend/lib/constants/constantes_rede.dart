@@ -26,7 +26,7 @@ class NetworkConstants {
   /// Chave pública anônima (`anon` key) padrão do Supabase (provida via Remote Config `supabase_anon_key` ou `--dart-define=SUPABASE_ANON_KEY=...`).
   static const String kDefaultSupabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '',
+    defaultValue: 'sb_publishable_dHPpa5IlhOmKQ9RiNcaXWA_TP5edNam',
   );
 
   /// URL oficial padrão de convite para a comunidade do WhatsApp.
