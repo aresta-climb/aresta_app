@@ -8,6 +8,7 @@ import 'arvore_navegacao.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 import '../utils/formatador_escalada.dart';
+import '../services/autenticacao/servico_autenticacao.dart';
 import '../services/controlador_interacoes_usuario.dart';
 import '../services/repositorio_dataset.dart';
 
@@ -366,15 +367,41 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós,
-  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
-  static void toPerfil(BuildContext context) {
-    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
-      return;
-    }
+  /// Navega para a página de Login e Criação de Conta ([LoginNode]) na árvore de nós.
+  ///
+  /// Quando acionado a partir do [PerfilNode], substitui o nó de perfil mantendo o
+  /// mesmo ancestral base para evitar ciclos entre Login e Perfil.
+  static void toLogin(BuildContext context) {
     final ctrl = _ctrl(context);
     if (ctrl != null) {
-      ctrl.navigateTo(PerfilNode(ctrl.currentNode));
+      final ancestralBase = ctrl.currentNode is PerfilNode
+          ? (ctrl.currentNode.parent ?? const HomeNode())
+          : ctrl.currentNode;
+      ctrl.navigateTo(LoginNode(ancestralBase));
+    }
+  }
+
+  /// Abre diretamente o Hub de Perfil ([PerfilNode]) quando o escalador já está
+  /// autenticado, ou direciona para a página de autenticação ([LoginNode]) caso contrário.
+  static void abrirPerfilOuLogin(BuildContext context) {
+    if (ServicoAutenticacaoLocal.instancia.estaAutenticado) {
+      toPerfil(context);
+    } else {
+      toLogin(context);
+    }
+  }
+
+  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós.
+  ///
+  /// Quando chamado a partir do [LoginNode] (após autenticação ou ao escolher
+  /// continuar sem conta), substitui o [LoginNode] preservando o ancestral base.
+  static void toPerfil(BuildContext context) {
+    final ctrl = _ctrl(context);
+    if (ctrl != null) {
+      final ancestralBase = ctrl.currentNode is LoginNode
+          ? (ctrl.currentNode.parent ?? const HomeNode())
+          : ctrl.currentNode;
+      ctrl.navigateTo(PerfilNode(ancestralBase));
     }
   }
 

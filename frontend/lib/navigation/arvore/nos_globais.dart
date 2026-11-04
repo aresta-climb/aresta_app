@@ -153,6 +153,25 @@ class MeusCroquisNode extends NavNode {
   String toString() => 'MeusCroquisNode';
 }
 
+/// Nó que representa a tela de autenticação e criação de conta (LoginPage).
+class LoginNode extends NavNode {
+  const LoginNode(NavNode parent) : super(parent: parent);
+
+  @override
+  NavNode copyWithMergedAncestor(covariant LoginNode matchingAncestor) {
+    return LoginNode(matchingAncestor.parent!);
+  }
+
+  @override
+  String get rotuloAmigavel => 'Entrar';
+
+  @override
+  String obterCaminhoCurto() => 'Início -> Entrar';
+
+  @override
+  String toString() => 'LoginNode';
+}
+
 /// Nó que representa o Hub de Perfil do atleta e caderneta esportiva (HubPerfilCadernetaPage).
 class PerfilNode extends NavNode {
   const PerfilNode(NavNode parent) : super(parent: parent);

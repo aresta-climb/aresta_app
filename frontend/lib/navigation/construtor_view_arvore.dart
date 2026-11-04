@@ -20,6 +20,7 @@ import 'package:frontend/pages/setor.dart';
 import 'package:frontend/pages/configuracoes.dart';
 import 'package:frontend/pages/hub_perfil_caderneta.dart';
 import 'package:frontend/pages/caderneta.dart';
+import 'package:frontend/pages/login.dart';
 import 'package:frontend/pages/sobre_time.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -208,6 +209,10 @@ Widget construirPaginaParaNo({
 
   if (node is SobreTimeNode) {
     return const SobreTimePage();
+  }
+
+  if (node is LoginNode) {
+    return const LoginPage();
   }
 
   if (node is PerfilNode) {
