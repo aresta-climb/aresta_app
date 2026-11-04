@@ -80,12 +80,15 @@ CREATE TABLE IF NOT EXISTS public.perfis (
         CONSTRAINT chk_perfis_autor_id_nanoid CHECK (autor_id_publico ~ '^[0-9A-Za-z]{14}$'),
     autor_nome_publico VARCHAR(50) NOT NULL DEFAULT 'Escalador Aresta'
         CONSTRAINT chk_perfis_autor_nome_nao_vazio CHECK (char_length(btrim(autor_nome_publico)) > 0),
+    avatar_url TEXT,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
 COMMENT ON TABLE public.perfis IS
-    'Metadados públicos do escalador autenticado, vinculando auth.users ao NanoID 14c público.';
+    'Metadados públicos do escalador autenticado, vinculando auth.users ao NanoID 14c público e foto de perfil.';
 
 DROP TRIGGER IF EXISTS trg_perfis_atualizado_em ON public.perfis;
 CREATE TRIGGER trg_perfis_atualizado_em
@@ -104,6 +107,7 @@ AS $$
 DECLARE
     uid_candidato TEXT;
     nome_candidato TEXT;
+    avatar_candidato TEXT;
     uid_final VARCHAR(14);
     nome_final VARCHAR(50);
 BEGIN
@@ -123,9 +127,16 @@ BEGIN
     ));
     nome_final := left(nome_candidato, 50)::VARCHAR(50);
 
-    INSERT INTO public.perfis (user_id, autor_id_publico, autor_nome_publico)
-    VALUES (NEW.id, uid_final, nome_final)
-    ON CONFLICT (user_id) DO NOTHING;
+    avatar_candidato := NULLIF(btrim(COALESCE(
+        NULLIF(btrim(NEW.raw_user_meta_data->>'avatar_url'), ''),
+        NULLIF(btrim(NEW.raw_user_meta_data->>'picture'), ''),
+        ''
+    )), '');
+
+    INSERT INTO public.perfis (user_id, autor_id_publico, autor_nome_publico, avatar_url)
+    VALUES (NEW.id, uid_final, nome_final, avatar_candidato)
+    ON CONFLICT (user_id) DO UPDATE
+        SET avatar_url = COALESCE(public.perfis.avatar_url, EXCLUDED.avatar_url);
 
     RETURN NEW;
 END;
@@ -331,8 +342,31 @@ GRANT SELECT, INSERT ON public.fila_interacoes TO anon, authenticated;
 GRANT ALL ON public.perfis, public.cadenas, public.fila_interacoes TO service_role;
 
 -- ============================================================================
--- 6. PUBLICAÇÃO DE REPLICAÇÃO LÓGICA PARA O POWERSYNC
+-- 6. BUCKET DE FOTOS DE PERFIL (SUPABASE STORAGE: avatars) E POWERSYNC
 -- ============================================================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "avatars_leitura_publica" ON storage.objects;
+CREATE POLICY "avatars_leitura_publica" ON storage.objects
+    FOR SELECT
+    TO anon, authenticated
+    USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "avatars_escrita_proprio_usuario" ON storage.objects;
+CREATE POLICY "avatars_escrita_proprio_usuario" ON storage.objects
+    FOR ALL
+    TO authenticated
+    USING (
+        bucket_id = 'avatars'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+    )
+    WITH CHECK (
+        bucket_id = 'avatars'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+    );
 
 DO $$
 BEGIN
