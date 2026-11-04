@@ -287,7 +287,13 @@ void main() {
       expect(params['utm_medium'], equals('qrcode'));
     });
 
-    test('retorna false se a URL for inválida, de outro domínio ou rota legada não cadastrada', () async {
+    test('retorna false se a URL for inválida, de outro domínio, callback OAuth ou rota legada não cadastrada', () async {
+      expect(
+        await service.processarLink(
+          'aresta://app.arestaclimb.com/auth-callback?code=pkce-123',
+        ),
+        isFalse,
+      );
       expect(
         await service.processarLink('https://outrodominio.com/teste'),
         isFalse,
