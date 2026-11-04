@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -44,6 +44,10 @@ class FakeRemoteConfigService extends ChangeNotifier implements RemoteConfigServ
   String get servingBaseUrl => "";
   @override
   String get officialServerUrl => "";
+  @override
+  String get supabaseUrl => "";
+  @override
+  String get supabaseAnonKey => "";
   @override
   Future<void> initialize() async {}
   @override
