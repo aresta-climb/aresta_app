@@ -23,6 +23,9 @@ class PerfilEscalador {
   /// UUID do usuário vinculado no serviço de autenticação (se logado).
   final String? userId;
 
+  /// Indica se este perfil está atualmente vinculado a uma conta autenticada.
+  bool get estaAutenticado => userId != null && userId!.trim().isNotEmpty;
+
   /// Cria uma instância imutável de [PerfilEscalador], validando limites e campos.
   PerfilEscalador({
     required this.autorIdPublico,
@@ -80,15 +83,19 @@ class PerfilEscalador {
       PerfilEscalador.fromMap(json.decode(source) as Map<String, dynamic>);
 
   /// Cria uma cópia da instância permitindo a substituição seletiva de campos.
+  ///
+  /// Quando [limparUserId] é `true`, remove o vínculo de autenticação (`userId: null`),
+  /// preservando o [autorIdPublico] e o [autorNomePublico] locais.
   PerfilEscalador copyWith({
     String? autorIdPublico,
     String? autorNomePublico,
     String? userId,
+    bool limparUserId = false,
   }) {
     return PerfilEscalador(
       autorIdPublico: autorIdPublico ?? this.autorIdPublico,
       autorNomePublico: autorNomePublico ?? this.autorNomePublico,
-      userId: userId ?? this.userId,
+      userId: limparUserId ? null : (userId ?? this.userId),
     );
   }
 

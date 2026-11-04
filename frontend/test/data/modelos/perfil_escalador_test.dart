@@ -106,5 +106,26 @@ void main() {
       final identico = original.copyWith();
       expect(identico, equals(original));
     });
+
+    test('estaAutenticado reflete presença de userId válido e copyWith(limparUserId: true) remove o vínculo', () {
+      final anonimo = PerfilEscalador(
+        autorIdPublico: autorIdValido,
+        autorNomePublico: 'Escalador Offline',
+      );
+      expect(anonimo.estaAutenticado, isFalse);
+
+      final comEspacos = anonimo.copyWith(userId: '   ');
+      expect(comEspacos.estaAutenticado, isFalse);
+
+      final logado = anonimo.copyWith(userId: 'usr-google-999');
+      expect(logado.estaAutenticado, isTrue);
+      expect(logado.userId, 'usr-google-999');
+
+      final deslogado = logado.copyWith(limparUserId: true);
+      expect(deslogado.estaAutenticado, isFalse);
+      expect(deslogado.userId, isNull);
+      expect(deslogado.autorIdPublico, autorIdValido);
+      expect(deslogado.autorNomePublico, 'Escalador Offline');
+    });
   });
 }
