@@ -367,11 +367,15 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para a página de Login e Criação de Conta ([LoginNode]) na árvore de nós.
+  /// Navega para a página de Login e Criação de Conta ([LoginNode]) na árvore de nós,
+  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
   ///
   /// Quando acionado a partir do [PerfilNode], substitui o nó de perfil mantendo o
   /// mesmo ancestral base para evitar ciclos entre Login e Perfil.
   static void toLogin(BuildContext context) {
+    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
+      return;
+    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       final ancestralBase = ctrl.currentNode is PerfilNode
@@ -391,11 +395,15 @@ abstract final class AppNav {
     }
   }
 
-  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós.
+  /// Navega para o Hub de Perfil e Caderneta Esportiva ([PerfilNode]) na árvore de nós,
+  /// caso o recurso esteja habilitado no ambiente e ativo nas preferências do usuário.
   ///
   /// Quando chamado a partir do [LoginNode] (após autenticação ou ao escolher
   /// continuar sem conta), substitui o [LoginNode] preservando o ancestral base.
   static void toPerfil(BuildContext context) {
+    if (!ControladorInteracoesUsuario.instancia.exibirElementosInterativos) {
+      return;
+    }
     final ctrl = _ctrl(context);
     if (ctrl != null) {
       final ancestralBase = ctrl.currentNode is LoginNode

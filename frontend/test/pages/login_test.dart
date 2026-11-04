@@ -8,6 +8,8 @@ import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
 import 'package:frontend/pages/login.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -22,6 +24,8 @@ void main() {
   late ServicoAutenticacaoLocal servicoAutenticacao;
 
   setUp(() async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    ControladorInteracoesUsuario.redefinirParaTestes();
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
@@ -32,6 +36,8 @@ void main() {
   });
 
   tearDown(() {
+    ConfiguracaoRecursos.redefinirParaTestes();
+    ControladorInteracoesUsuario.redefinirParaTestes();
     ServicoAutenticacaoLocal.redefinirParaTestes();
   });
 

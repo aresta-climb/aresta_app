@@ -84,19 +84,19 @@ class ArvoreNavegacao {
     return ArvoreNavegacao(noAtual: node);
   }
 
-  /// Remove quaisquer nós [PerfilNode] e [CadernetaNode] da cadeia ativa de ancestrais,
+  /// Remove quaisquer nós [LoginNode], [PerfilNode] e [CadernetaNode] da cadeia ativa de ancestrais,
   /// reancorando os nós sobreviventes posteriores (como [SettingsNode] ou [SobreTimeNode])
   /// ao ancestral válido imediatamente anterior.
   ArvoreNavegacao podarNosPerfilECaderneta() {
     final nos = caminho;
-    if (!nos.any((n) => n is PerfilNode || n is CadernetaNode)) {
+    if (!nos.any((n) => n is LoginNode || n is PerfilNode || n is CadernetaNode)) {
       return this;
     }
 
     NavNode ancestralValido = nos.first;
     var houvePoda = false;
     for (final no in nos.skip(1)) {
-      if (no is PerfilNode || no is CadernetaNode) {
+      if (no is LoginNode || no is PerfilNode || no is CadernetaNode) {
         houvePoda = true;
         continue;
       }

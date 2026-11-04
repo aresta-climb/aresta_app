@@ -427,6 +427,7 @@ void main() {
 
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
+        AppNav.toLogin(context);
         AppNav.toPerfil(context);
         AppNav.toCaderneta(context);
         await tester.pumpAndSettle();
@@ -673,7 +674,7 @@ void main() {
     );
 
     testWidgets(
-      'AppNav.toCaderneta respeita preferência local em ControladorInteracoesUsuario enquanto toPerfil permanece acessível para Configurações',
+      'AppNav.toLogin, abrirPerfilOuLogin, toPerfil e toCaderneta respeitam a flag perfilHabilitado e a preferência local em ControladorInteracoesUsuario',
       (tester) async {
         ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
         ControladorInteracoesUsuario.redefinirParaTestes();
@@ -701,15 +702,27 @@ void main() {
         await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
           false,
         );
-        AppNav.toCaderneta(context);
+        AppNav.toLogin(context);
+        expect(controller.currentNode, isA<HomeNode>());
+
+        AppNav.abrirPerfilOuLogin(context);
         expect(controller.currentNode, isA<HomeNode>());
 
         AppNav.toPerfil(context);
-        expect(controller.currentNode, isA<PerfilNode>());
+        expect(controller.currentNode, isA<HomeNode>());
+
+        AppNav.toCaderneta(context);
+        expect(controller.currentNode, isA<HomeNode>());
 
         await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(
           true,
         );
+        AppNav.toLogin(context);
+        expect(controller.currentNode, isA<LoginNode>());
+
+        AppNav.toPerfil(context);
+        expect(controller.currentNode, isA<PerfilNode>());
+
         AppNav.toCaderneta(context);
         expect(controller.currentNode, isA<CadernetaNode>());
       },

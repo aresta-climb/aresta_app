@@ -54,7 +54,7 @@ Contém a classe base abstrata `NavNode`. Cada nó guarda uma referência opcion
 Encapsula as regras de domínio puras da árvore de navegação (`ArvoreNavegacao`), desacopladas do framework Flutter:
 - Gestão do nó raiz e nó atual.
 - Algoritmo de prevenção de loops e retrocesso inteligente no histórico.
-- Poda imutável de ancestrais de Perfil e Caderneta (`podarNosPerfilECaderneta`), reancorando telas sobreviventes (`SettingsNode`, `SobreTimeNode`) ao ancestral válido anterior quando o usuário desativa as interações sociais/caderneta.
+- Poda imutável de ancestrais de Login, Perfil e Caderneta (`podarNosPerfilECaderneta`), reancorando telas sobreviventes (`SettingsNode`, `SobreTimeNode`) ao ancestral válido anterior quando o usuário desativa as interações sociais/caderneta.
 - Cálculo de profundidade e caminho canônico.
 
 ### `arvore/navegador_arvore.dart`

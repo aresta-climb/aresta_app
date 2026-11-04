@@ -135,11 +135,18 @@ void main() {
     );
 
     test(
-      'podarNosPerfilECaderneta retorna ao ancestral sobrevivente quando noAtual é PerfilNode ou CadernetaNode',
+      'podarNosPerfilECaderneta retorna ao ancestral sobrevivente quando noAtual é LoginNode, PerfilNode ou CadernetaNode',
       () {
         const home = HomeNode();
+        const login = LoginNode(home);
         const perfil = PerfilNode(home);
         const caderneta = CadernetaNode(perfil);
+
+        final arvoreLogin = const ArvoreNavegacao(
+          noAtual: login,
+        ).podarNosPerfilECaderneta();
+        expect(arvoreLogin.noAtual, isA<HomeNode>());
+        expect(arvoreLogin.profundidade, equals(1));
 
         final arvorePerfil = const ArvoreNavegacao(
           noAtual: perfil,
