@@ -5,8 +5,8 @@ Este diretório contém os testes de unidade dedicados a validar o comportamento
 ## O que está sendo testado?
 
 Os testes estão organizados em testes de integração de navegação e testes de domínio modular em `test/navigation/arvore/`:
-- `navigation_test.dart` e `arvore_navegacao_test.dart`: Testes de integração de roteamento e fluxos de tela.
-- `arvore/modelo_arvore_navegacao_test.dart`: Testes unitários puros das regras de domínio da árvore (push, pop, rewind, reset, canonical path).
+- `navigation_test.dart`, `arvore_navegacao_test.dart` e `servico_navegacao_deep_link_test.dart`: Testes de integração de roteamento, fluxos de tela, deep links `aresta.cc` e interceptação de callbacks OAuth (`aresta://app.arestaclimb.com/auth-callback`).
+- `arvore/modelo_arvore_navegacao_test.dart`: Testes unitários das regras de domínio da árvore (push, pop, rewind, reset, canonical path e poda de nós de login/perfil/caderneta).
 - `arvore/navegador_arvore_test.dart`: Testes do controlador reativo e notificações do `ChangeNotifier`.
 - `arvore/no_navegacao_test.dart`: Testes unitários dos nós (`NoNavegacao`, rótulos amigáveis e caminhos canônicos curtos).
 
