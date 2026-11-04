@@ -10,6 +10,8 @@ import '../../utils/gerador_uid.dart';
 /// * [autorIdPublico]: Identificador público universal (NanoID 14c Base62) do atleta.
 /// * [autorNomePublico]: Apelido ou nome esportivo público (máximo 50 caracteres).
 /// * [userId]: Identificador UUID de autenticação do usuário (opcional em modo offline puro).
+/// * [fotoUrl]: URL remota (`https://...`) ou Data URI (`data:image/jpeg;base64,...`) da foto de perfil.
+/// * [accessToken]: Token JWT de sessão do Supabase Auth (quando autenticado).
 class PerfilEscalador {
   /// Apelido esportivo padrão adotado quando o usuário não especificar um nome.
   static const String apelidoPadrao = 'Escalador Aresta';
@@ -23,6 +25,12 @@ class PerfilEscalador {
   /// UUID do usuário vinculado no serviço de autenticação (se logado).
   final String? userId;
 
+  /// URL remota ou Data URI (`data:image/...;base64,...`) da foto de perfil do escalador.
+  final String? fotoUrl;
+
+  /// Token de acesso JWT ativo da sessão do Supabase Auth.
+  final String? accessToken;
+
   /// Indica se este perfil está atualmente vinculado a uma conta autenticada.
   bool get estaAutenticado => userId != null && userId!.trim().isNotEmpty;
 
@@ -31,17 +39,25 @@ class PerfilEscalador {
     required this.autorIdPublico,
     String autorNomePublico = apelidoPadrao,
     this.userId,
-  }) : autorNomePublico = _sanitizarNome(autorNomePublico);
+    String? fotoUrl,
+    String? accessToken,
+  }) : autorNomePublico = _sanitizarNome(autorNomePublico),
+       fotoUrl = _sanitizarOpcional(fotoUrl),
+       accessToken = _sanitizarOpcional(accessToken);
 
   /// Cria uma nova identidade de perfil gerando um [autorIdPublico] NanoID 14c automaticamente.
   factory PerfilEscalador.criarPadrao({
     String? autorNomePublico,
     String? userId,
+    String? fotoUrl,
+    String? accessToken,
   }) {
     return PerfilEscalador(
       autorIdPublico: gerarUid(),
       autorNomePublico: autorNomePublico ?? apelidoPadrao,
       userId: userId,
+      fotoUrl: fotoUrl,
+      accessToken: accessToken,
     );
   }
 
@@ -54,12 +70,20 @@ class PerfilEscalador {
     return aparado.length > 50 ? aparado.substring(0, 50) : aparado;
   }
 
+  static String? _sanitizarOpcional(String? valor) {
+    if (valor == null) return null;
+    final aparado = valor.trim();
+    return aparado.isEmpty ? null : aparado;
+  }
+
   /// Converte a instância em um mapa compatível com persistência local e banco de dados.
   Map<String, dynamic> toMap() {
     return {
       'autor_id_publico': autorIdPublico,
       'autor_nome_publico': autorNomePublico,
       'user_id': userId,
+      'foto_url': fotoUrl,
+      'access_token': accessToken,
     };
   }
 
@@ -72,6 +96,8 @@ class PerfilEscalador {
       autorNomePublico:
           map['autor_nome_publico'] as String? ?? apelidoPadrao,
       userId: map['user_id'] as String?,
+      fotoUrl: (map['foto_url'] ?? map['avatar_url']) as String?,
+      accessToken: map['access_token'] as String?,
     );
   }
 
@@ -84,18 +110,26 @@ class PerfilEscalador {
 
   /// Cria uma cópia da instância permitindo a substituição seletiva de campos.
   ///
-  /// Quando [limparUserId] é `true`, remove o vínculo de autenticação (`userId: null`),
-  /// preservando o [autorIdPublico] e o [autorNomePublico] locais.
+  /// Quando [limparUserId] é `true`, remove o vínculo de autenticação (`userId: null` e `accessToken: null`),
+  /// preservando o [autorIdPublico], [autorNomePublico] e [fotoUrl] locais.
   PerfilEscalador copyWith({
     String? autorIdPublico,
     String? autorNomePublico,
     String? userId,
+    String? fotoUrl,
+    String? accessToken,
     bool limparUserId = false,
+    bool limparFotoUrl = false,
+    bool limparAccessToken = false,
   }) {
     return PerfilEscalador(
       autorIdPublico: autorIdPublico ?? this.autorIdPublico,
       autorNomePublico: autorNomePublico ?? this.autorNomePublico,
       userId: limparUserId ? null : (userId ?? this.userId),
+      fotoUrl: limparFotoUrl ? null : (fotoUrl ?? this.fotoUrl),
+      accessToken: (limparUserId || limparAccessToken)
+          ? null
+          : (accessToken ?? this.accessToken),
     );
   }
 
@@ -105,14 +139,22 @@ class PerfilEscalador {
     return other is PerfilEscalador &&
         other.autorIdPublico == autorIdPublico &&
         other.autorNomePublico == autorNomePublico &&
-        other.userId == userId;
+        other.userId == userId &&
+        other.fotoUrl == fotoUrl &&
+        other.accessToken == accessToken;
   }
 
   @override
-  int get hashCode => Object.hash(autorIdPublico, autorNomePublico, userId);
+  int get hashCode => Object.hash(
+    autorIdPublico,
+    autorNomePublico,
+    userId,
+    fotoUrl,
+    accessToken,
+  );
 
   @override
   String toString() {
-    return 'PerfilEscalador(autorIdPublico: $autorIdPublico, autorNomePublico: $autorNomePublico, userId: $userId)';
+    return 'PerfilEscalador(autorIdPublico: $autorIdPublico, autorNomePublico: $autorNomePublico, userId: $userId, fotoUrl: $fotoUrl)';
   }
 }
