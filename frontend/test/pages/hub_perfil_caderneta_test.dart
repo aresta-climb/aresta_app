@@ -368,7 +368,7 @@ void main() {
     });
 
     testWidgets(
-      'ao tocar em Entrar na conta e Configurações sem callbacks customizados, aciona navegação padrão sem erro',
+      'ao tocar em Entrar na conta e Configurações, aciona navegação padrão sem erro',
       (tester) async {
         tester.view.physicalSize = const Size(800, 1000);
         tester.view.devicePixelRatio = 1.0;
@@ -386,52 +386,6 @@ void main() {
         await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
         await tester.pump();
         expect(tester.takeException(), isNull);
-      },
-    );
-
-    testWidgets(
-      'delega ações do menu e edição aos callbacks injetados no HubPerfilCadernetaViewModel',
-      (tester) async {
-        tester.view.physicalSize = const Size(800, 1000);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
-        });
-
-        final acionados = <String>[];
-        final vmCustom = HubPerfilCadernetaViewModel(
-          repositorio: repositorio,
-          aoEntrarNaConta: () => acionados.add('entrar'),
-          aoEditarPerfil: () => acionados.add('editar'),
-          aoAbrirCaderneta: () => acionados.add('caderneta'),
-          aoAbrirConfiguracoes: () => acionados.add('configuracoes'),
-          aoAbrirDadosPrivacidade: () => acionados.add('privacidade'),
-          aoConfirmarSaida: () => acionados.add('sair'),
-        );
-
-        await tester.pumpWidget(criarHubWidget(viewModel: vmCustom));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byKey(const Key('item_menu_entrar_conta')));
-        await tester.tap(find.byKey(const Key('btn_editar_perfil_hub')));
-        await tester.tap(find.byKey(const Key('item_menu_minha_caderneta')));
-        await tester.tap(find.byKey(const Key('item_menu_configuracoes')));
-        await tester.tap(find.byKey(const Key('item_menu_dados_privacidade')));
-        await tester.tap(find.byKey(const Key('item_menu_sair')));
-        await tester.pump();
-
-        expect(
-          acionados,
-          equals([
-            'entrar',
-            'editar',
-            'caderneta',
-            'configuracoes',
-            'privacidade',
-            'sair',
-          ]),
-        );
       },
     );
   });

@@ -14,9 +14,9 @@ import '../../services/repositorio_dataset.dart';
 
 /// Modelo de apresentação para a tela de Hub do Perfil do Escalador e Caderneta.
 ///
-/// Centraliza a orquestração reativa dos metadados de identidade esportiva,
-/// cálculo de métricas rápidas (cadenas, tentativas, picos e vias) e o
-/// roteamento de ações modulares (caderneta, configurações, dados e saída).
+/// Centraliza o estado reativo de identidade esportiva, o cálculo de métricas rápidas
+/// (cadenas, tentativas, picos e vias) e os comandos de negócio do perfil
+/// (edição de nome, troca de foto, cópia do ID público e encerramento de sessão).
 class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Repositório de persistência e consulta da caderneta.
   final RepositorioCaderneta repositorio;
@@ -42,24 +42,6 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Catálogo de vias instanciado e gerenciado internamente quando criado via [comCatalogo].
   final CatalogoViasCaderneta? _catalogoViasProprio;
 
-  /// Callback para navegação até a página detalhada da caderneta.
-  final VoidCallback? aoAbrirCaderneta;
-
-  /// Callback para navegação até as configurações do aplicativo.
-  final VoidCallback? aoAbrirConfiguracoes;
-
-  /// Callback para abertura do diálogo de dados e privacidade.
-  final VoidCallback? aoAbrirDadosPrivacidade;
-
-  /// Callback para confirmação de encerramento de sessão / logout.
-  final VoidCallback? aoConfirmarSaida;
-
-  /// Callback para edição do perfil do escalador.
-  final VoidCallback? aoEditarPerfil;
-
-  /// Callback para abertura da página de login/criação de conta.
-  final VoidCallback? aoEntrarNaConta;
-
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
     required this.repositorio,
@@ -70,16 +52,11 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     int Function()? obterTotalVias,
     Listenable? escutaMetadados,
     CatalogoViasCaderneta? catalogoViasProprio,
-    this.aoAbrirCaderneta,
-    this.aoAbrirConfiguracoes,
-    this.aoAbrirDadosPrivacidade,
-    this.aoConfirmarSaida,
-    this.aoEditarPerfil,
-    this.aoEntrarNaConta,
   }) : _servicoAutenticacao =
            servicoAutenticacao ??
            ServicoAutenticacaoLocal(repositorio: repositorio),
-       _seletorFotoPerfil = seletorFotoPerfil ?? SeletorFotoPerfilNativo.instancia,
+       _seletorFotoPerfil =
+           seletorFotoPerfil ?? SeletorFotoPerfilNativo.instancia,
        _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
        _escutaMetadados = escutaMetadados,
@@ -212,35 +189,5 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Encerra a sessão autenticada do escalador, preservando o ID público e as cadenas locais.
   Future<void> encerrarSessao() async {
     await _servicoAutenticacao.encerrarSessao();
-  }
-
-  /// Aciona a abertura da tela de Login / Criação de Conta.
-  void abrirLogin() {
-    aoEntrarNaConta?.call();
-  }
-
-  /// Aciona a abertura da tela detalhada de Caderneta.
-  void abrirCaderneta() {
-    aoAbrirCaderneta?.call();
-  }
-
-  /// Aciona a abertura da tela de configurações.
-  void abrirConfiguracoes() {
-    aoAbrirConfiguracoes?.call();
-  }
-
-  /// Aciona a visualização dos dados e privacidade.
-  void abrirDadosPrivacidade() {
-    aoAbrirDadosPrivacidade?.call();
-  }
-
-  /// Aciona o fluxo de saída / logout.
-  void confirmarSaida() {
-    aoConfirmarSaida?.call();
-  }
-
-  /// Aciona a edição dos dados do perfil.
-  void editarPerfil() {
-    aoEditarPerfil?.call();
   }
 }
