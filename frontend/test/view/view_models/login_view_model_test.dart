@@ -19,7 +19,10 @@ void main() {
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
     await repositorio.inicializar();
     RepositorioCadernetaLocal.instancia = repositorio;
-    servicoAutenticacao = ServicoAutenticacaoLocal(repositorio: repositorio);
+    servicoAutenticacao = ServicoAutenticacaoLocal(
+      repositorio: repositorio,
+      obterAnonKeySupabase: () => '',
+    );
     ServicoAutenticacaoLocal.instancia = servicoAutenticacao;
   });
 

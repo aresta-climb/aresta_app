@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
@@ -9,6 +10,22 @@ import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+class _FakeUrlLauncherOAuth extends UrlLauncherPlatform {
+  final void Function(String url) aoAbrir;
+  _FakeUrlLauncherOAuth(this.aoAbrir);
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    aoAbrir(url);
+    return true;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +52,10 @@ void main() {
       expect(servico.obterPerfil().estaAutenticado, isFalse);
       expect(servico.perfilListenable.value.estaAutenticado, isFalse);
 
-      final custom = ServicoAutenticacaoLocal(repositorio: repositorio);
+      final custom = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+      );
       ServicoAutenticacaoLocal.instancia = custom;
       expect(identical(ServicoAutenticacaoLocal.instancia, custom), isTrue);
 
@@ -44,7 +64,10 @@ void main() {
     });
 
     test('entrarComEmailSenha valida formato de e-mail e tamanho mínimo da senha', () async {
-      final servico = ServicoAutenticacaoLocal(repositorio: repositorio);
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+      );
 
       await expectLater(
         () => servico.entrarComEmailSenha(email: 'invalido', senha: '123456'),
@@ -73,8 +96,11 @@ void main() {
       expect(servico.estaAutenticado, isFalse);
     });
 
-    test('entrarComEmailSenha autentica usuário e adota prefixo do e-mail quando perfil usa apelido padrão', () async {
-      final servico = ServicoAutenticacaoLocal(repositorio: repositorio);
+    test('entrarComEmailSenha autentica usuário em modo offline e adota prefixo do e-mail quando perfil usa apelido padrão', () async {
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+      );
       final idPublicoOriginal = repositorio.obterPerfil().autorIdPublico;
 
       final perfil = await servico.entrarComEmailSenha(
@@ -99,7 +125,10 @@ void main() {
     });
 
     test('criarContaComEmailSenha valida nome, e-mail e senha e persiste novo perfil autenticado', () async {
-      final servico = ServicoAutenticacaoLocal(repositorio: repositorio);
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+      );
 
       await expectLater(
         () => servico.criarContaComEmailSenha(
@@ -127,8 +156,11 @@ void main() {
       expect(perfil.autorNomePublico, equals('Marina Bastos'));
     });
 
-    test('entrarComGoogle autentica com provedor padrão ou customizado e encerrarSessao limpa apenas o userId', () async {
-      final servicoPadrao = ServicoAutenticacaoLocal(repositorio: repositorio);
+    test('entrarComGoogle autentica com provedor offline ou customizado e encerrarSessao limpa userId e accessToken', () async {
+      final servicoPadrao = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+      );
       final idPublicoOriginal = repositorio.obterPerfil().autorIdPublico;
 
       final perfilGoogle = await servicoPadrao.entrarComGoogle();
@@ -143,7 +175,7 @@ void main() {
       expect(repositorio.obterPerfil().autorIdPublico, equals(idPublicoOriginal));
       expect(repositorio.obterPerfil().autorNomePublico, equals('Escalador Google'));
 
-      // Quando já possui apelido customizado e usa provedor padrão, preserva o apelido atual
+      // Quando já possui apelido customizado e usa provedor offline, preserva o apelido atual
       await repositorio.salvarPerfil(
         repositorio.obterPerfil().copyWith(autorNomePublico: 'Apelido Customizado'),
       );
@@ -153,17 +185,23 @@ void main() {
       // Provedores customizados injetados (ex: Google / Email / Criar Conta)
       final servicoCustom = ServicoAutenticacaoLocal(
         repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
         provedorEmailSenha: (email, senha) async => const ResultadoProvedorAutenticacao(
           userId: 'uid-email-custom',
           nomeExibicao: 'Nome Provedor Email',
+          fotoUrl: 'https://exemplo.com/email.jpg',
+          accessToken: 'tok-email',
         ),
         provedorCriarConta: (nome, email, senha) async => ResultadoProvedorAutenticacao(
           userId: 'uid-criar-custom',
           nomeExibicao: nome,
+          accessToken: 'tok-criar',
         ),
         provedorGoogle: () async => const ResultadoProvedorAutenticacao(
           userId: 'uid-google-custom',
           nomeExibicao: 'Conta Gmail Real',
+          fotoUrl: 'https://lh3.googleusercontent.com/a/gmail.jpg',
+          accessToken: 'tok-google',
         ),
       );
 
@@ -173,6 +211,8 @@ void main() {
       );
       expect(p1.userId, equals('uid-email-custom'));
       expect(p1.autorNomePublico, equals('Nome Provedor Email'));
+      expect(p1.fotoUrl, equals('https://exemplo.com/email.jpg'));
+      expect(p1.accessToken, equals('tok-email'));
 
       final p2 = await servicoCustom.criarContaComEmailSenha(
         nome: 'Conta Nova',
@@ -181,18 +221,22 @@ void main() {
       );
       expect(p2.userId, equals('uid-criar-custom'));
       expect(p2.autorNomePublico, equals('Conta Nova'));
+      expect(p2.accessToken, equals('tok-criar'));
 
       final p3 = await servicoCustom.entrarComGoogle();
       expect(p3.userId, equals('uid-google-custom'));
       expect(p3.autorNomePublico, equals('Conta Gmail Real'));
+      expect(p3.fotoUrl, equals('https://lh3.googleusercontent.com/a/gmail.jpg'));
+      expect(p3.accessToken, equals('tok-google'));
     });
 
-    test('integra com Supabase Auth via RemoteConfig (supabaseUrl e supabaseAnonKey) para login e criação de conta preservando autorIdPublico', () async {
+    test('integra com Supabase Auth e tabela public.perfis para login e criação de conta por e-mail e senha', () async {
       final requisicoes = <http.Request>[];
       final clienteFake = ClienteHttpAresta.paraTestes(
         MockClient((request) async {
           requisicoes.add(request);
-          if (request.url.path.endsWith('/auth/v1/token')) {
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'password') {
             final body = jsonDecode(request.body) as Map<String, dynamic>;
             if (body['password'] == 'senhaErrada') {
               return http.Response(
@@ -203,6 +247,7 @@ void main() {
             if (body['email'] == 'semmeta@gmail.com') {
               return http.Response(
                 jsonEncode({
+                  'access_token': 'jwt-sem-meta',
                   'user': {
                     'id': 'uuid-supabase-sem-meta',
                   },
@@ -212,10 +257,12 @@ void main() {
             }
             return http.Response(
               jsonEncode({
+                'access_token': 'jwt-login-1',
                 'user': {
                   'id': 'uuid-supabase-login-1',
                   'user_metadata': {
                     'autor_nome_publico': 'Escalador Remoto',
+                    'avatar_url': 'https://supabase.co/avatar1.jpg',
                   },
                 },
               }),
@@ -232,11 +279,36 @@ void main() {
             }
             return http.Response(
               jsonEncode({
-                'id': 'uuid-supabase-signup-2',
-                'user_metadata': body['data'],
+                'access_token': 'jwt-signup-2',
+                'user': {
+                  'id': 'uuid-supabase-signup-2',
+                  'user_metadata': body['data'],
+                },
               }),
               200,
             );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            if (request.method == 'GET') {
+              if (request.url.queryParameters['user_id'] ==
+                  'eq.uuid-supabase-login-1') {
+                return http.Response(
+                  jsonEncode([
+                    {
+                      'autor_id_publico': 'r9siJek3FiG3aZ',
+                      'autor_nome_publico': 'Escalador Remoto Perfis',
+                      'avatar_url': 'https://supabase.co/avatar_perfis.jpg',
+                    },
+                  ]),
+                  200,
+                );
+              }
+              return http.Response(jsonEncode([]), 200);
+            }
+            return http.Response(jsonEncode([{}]), 201);
+          }
+          if (request.url.path.endsWith('/auth/v1/user')) {
+            return http.Response(jsonEncode({}), 200);
           }
           return http.Response('{}', 404);
         }),
@@ -264,17 +336,21 @@ void main() {
         ),
       );
 
-      // 2. Login com sucesso usa user.id e metadados do Supabase
+      // 2. Login com sucesso sincroniza dados da tabela public.perfis e preserva accessToken
       final perfilLogado = await servicoRemoto.entrarComEmailSenha(
         email: 'atleta@gmail.com',
         senha: 'senhaCorreta',
       );
       expect(perfilLogado.userId, equals('uuid-supabase-login-1'));
-      expect(perfilLogado.autorNomePublico, equals('Escalador Remoto'));
-      expect(perfilLogado.autorIdPublico, equals(idPublicoLocal));
-      expect(requisicoes.last.headers['apikey'], equals('anon-key-remote-config'));
+      expect(perfilLogado.autorIdPublico, equals('r9siJek3FiG3aZ'));
+      expect(perfilLogado.autorNomePublico, equals('Escalador Remoto Perfis'));
+      expect(perfilLogado.fotoUrl, equals('https://supabase.co/avatar_perfis.jpg'));
+      expect(perfilLogado.accessToken, equals('jwt-login-1'));
 
-      // 2b. Login sem user_metadata adota prefixo do e-mail
+      // 2b. Login sem user_metadata e sem linha prévia em public.perfis cria linha em public.perfis
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(autorIdPublico: idPublicoLocal),
+      );
       final perfilSemMeta = await servicoRemoto.entrarComEmailSenha(
         email: 'semmeta@gmail.com',
         senha: 'senhaCorreta',
@@ -282,7 +358,7 @@ void main() {
       expect(perfilSemMeta.userId, equals('uuid-supabase-sem-meta'));
       expect(perfilSemMeta.autorNomePublico, equals('semmeta'));
 
-      // 3. Criação de conta envia autor_id_publico e autor_nome_publico em data para o trigger do Supabase
+      // 3. Criação de conta envia autor_id_publico e autor_nome_publico no signup e sincroniza public.perfis
       final perfilCriado = await servicoRemoto.criarContaComEmailSenha(
         nome: 'Ana Escaladora',
         email: 'ana@gmail.com',
@@ -290,8 +366,12 @@ void main() {
       );
       expect(perfilCriado.userId, equals('uuid-supabase-signup-2'));
       expect(perfilCriado.autorNomePublico, equals('Ana Escaladora'));
-      final payloadSignup =
-          jsonDecode(requisicoes.last.body) as Map<String, dynamic>;
+      expect(perfilCriado.accessToken, equals('jwt-signup-2'));
+
+      final reqSignup = requisicoes.firstWhere(
+        (r) => r.url.path.endsWith('/auth/v1/signup'),
+      );
+      final payloadSignup = jsonDecode(reqSignup.body) as Map<String, dynamic>;
       expect(
         (payloadSignup['data'] as Map<String, dynamic>)['autor_id_publico'],
         equals(idPublicoLocal),
@@ -316,6 +396,403 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('entrarComGoogle realiza fluxo OAuth PKCE e Implicit no Supabase sincronizando nome e foto de perfil', () async {
+      final controladorLinks = StreamController<Uri>.broadcast();
+      addTearDown(controladorLinks.close);
+
+      Uri? urlAbertaNoNavegador;
+      final requisicoes = <http.Request>[];
+
+      final clienteFake = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          requisicoes.add(request);
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'pkce') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['auth_code'] == 'codigo-invalido') {
+              return http.Response(
+                jsonEncode({'error_description': 'Código PKCE inválido.'}),
+                400,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-google-pkce',
+                'user': {
+                  'id': 'uuid-google-123',
+                  'email': 'escalador.google@gmail.com',
+                  'user_metadata': {
+                    'full_name': 'Pedro Google',
+                    'avatar_url': 'https://lh3.googleusercontent.com/a/pedro.jpg',
+                  },
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/auth/v1/user') &&
+              request.method == 'GET') {
+            if (request.headers['Authorization'] == 'Bearer tok-invalido') {
+              return http.Response(
+                jsonEncode({'msg': 'Token inválido.'}),
+                401,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'id': 'uuid-google-implicit',
+                'email': 'implicit@gmail.com',
+                'user_metadata': {
+                  'name': 'Camila Implicit',
+                  'picture': 'https://lh3.googleusercontent.com/a/camila.jpg',
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/auth/v1/user') &&
+              request.method == 'PUT') {
+            return http.Response(jsonEncode({}), 200);
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            if (request.method == 'GET') {
+              return http.Response(jsonEncode([]), 200);
+            }
+            return http.Response(jsonEncode([{}]), 201);
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteFake,
+        obterUrlSupabase: () => 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+        obterAnonKeySupabase: () => 'anon-key-supabase',
+        fluxoLinksOAuth: controladorLinks.stream,
+        lancadorUrlOAuth: (uri) async {
+          urlAbertaNoNavegador = uri;
+          // Simula retorno do navegador com código PKCE
+          Future<void>.microtask(() {
+            controladorLinks.add(
+              Uri.parse(
+                'aresta://app.arestaclimb.com/auth-callback?code=codigo-pkce-valido',
+              ),
+            );
+          });
+          return true;
+        },
+      );
+
+      // 1. Fluxo PKCE completo via stream de links
+      final perfilPkce = await servico.entrarComGoogle();
+      expect(urlAbertaNoNavegador, isNotNull);
+      expect(
+        urlAbertaNoNavegador!.queryParameters['provider'],
+        equals('google'),
+      );
+      expect(
+        urlAbertaNoNavegador!.queryParameters['redirect_to'],
+        equals(ServicoAutenticacaoLocal.urlRedirecionamentoOAuth),
+      );
+      expect(
+        urlAbertaNoNavegador!.queryParameters['code_challenge_method'],
+        equals('s256'),
+      );
+      expect(perfilPkce.userId, equals('uuid-google-123'));
+      expect(perfilPkce.autorNomePublico, equals('Pedro Google'));
+      expect(
+        perfilPkce.fotoUrl,
+        equals('https://lh3.googleusercontent.com/a/pedro.jpg'),
+      );
+      expect(perfilPkce.accessToken, equals('jwt-google-pkce'));
+
+      // Confirma que gravou na tabela public.perfis
+      final postPerfis = requisicoes.where(
+        (r) => r.url.path.endsWith('/rest/v1/perfis') && r.method == 'POST',
+      );
+      expect(postPerfis, isNotEmpty);
+
+      // 2. Fluxo Implicit (#access_token=...) acionado via processarCallbackOAuth e lancadorUrlOAuth padrão
+      late ServicoAutenticacaoLocal servicoImplicit;
+      UrlLauncherPlatform.instance = _FakeUrlLauncherOAuth((_) {
+        Future<void>.microtask(() {
+          servicoImplicit.processarCallbackOAuth(
+            Uri.parse(
+              'aresta://app.arestaclimb.com/auth-callback#access_token=jwt-implicit&token_type=bearer',
+            ),
+          );
+        });
+      });
+      servicoImplicit = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteFake,
+        obterUrlSupabase: () => 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+        obterAnonKeySupabase: () => 'anon-key-supabase',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+      );
+
+      final perfilImplicit = await servicoImplicit.entrarComGoogle();
+      expect(perfilImplicit.userId, equals('uuid-google-implicit'));
+      expect(perfilImplicit.autorNomePublico, equals('Camila Implicit'));
+      expect(
+        perfilImplicit.fotoUrl,
+        equals('https://lh3.googleusercontent.com/a/camila.jpg'),
+      );
+      expect(perfilImplicit.accessToken, equals('jwt-implicit'));
+
+      // Links comuns que não são de callback OAuth retornam false em processarCallbackOAuth
+      expect(
+        servicoImplicit.processarCallbackOAuth(
+          Uri.parse('https://aresta.cc/pQ9mRt2Kx1Vw8L'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('entrarComGoogle trata erros de abertura de navegador, cancelamento OAuth, erro de troca de token e timeout', () async {
+      final clienteErro = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/auth/v1/token')) {
+            return http.Response(
+              jsonEncode({'error_description': 'Código PKCE expirado.'}),
+              400,
+            );
+          }
+          if (request.url.path.endsWith('/auth/v1/user')) {
+            return http.Response(
+              jsonEncode({'msg': 'Sessão inválida.'}),
+              401,
+            );
+          }
+          return http.Response('{}', 400);
+        }),
+      );
+
+      // 1. Falha ao abrir o navegador externo
+      final servicoFalhaNav = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async => false,
+      );
+      await expectLater(
+        () => servicoFalhaNav.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('Não foi possível abrir o navegador'),
+          ),
+        ),
+      );
+
+      // 2. Callback OAuth com error_description
+      late ServicoAutenticacaoLocal servicoErroCallback;
+      servicoErroCallback = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async {
+          Future<void>.microtask(() {
+            servicoErroCallback.processarCallbackOAuth(
+              Uri.parse(
+                'aresta://app.arestaclimb.com/auth-callback?error=access_denied&error_description=Acesso+negado+pelo+usuario',
+              ),
+            );
+          });
+          return true;
+        },
+      );
+      await expectLater(
+        () => servicoErroCallback.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('Acesso negado pelo usuario'),
+          ),
+        ),
+      );
+
+      // 3. Callback sem code nem access_token
+      late ServicoAutenticacaoLocal servicoCallbackVazio;
+      servicoCallbackVazio = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async {
+          Future<void>.microtask(() {
+            servicoCallbackVazio.processarCallbackOAuth(
+              Uri.parse('aresta://app.arestaclimb.com/auth-callback'),
+            );
+          });
+          return true;
+        },
+      );
+      await expectLater(
+        () => servicoCallbackVazio.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('incompleta'),
+          ),
+        ),
+      );
+
+      // 4. Erro HTTP ao trocar código PKCE
+      late ServicoAutenticacaoLocal servicoErroPkce;
+      servicoErroPkce = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async {
+          Future<void>.microtask(() {
+            servicoErroPkce.processarCallbackOAuth(
+              Uri.parse(
+                'aresta://app.arestaclimb.com/auth-callback?code=codigo-expirado',
+              ),
+            );
+          });
+          return true;
+        },
+      );
+      await expectLater(
+        () => servicoErroPkce.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            'Código PKCE expirado.',
+          ),
+        ),
+      );
+
+      // 5. Erro HTTP ao consultar /auth/v1/user no fluxo implicit
+      late ServicoAutenticacaoLocal servicoErroUser;
+      servicoErroUser = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async {
+          Future<void>.microtask(() {
+            servicoErroUser.processarCallbackOAuth(
+              Uri.parse(
+                'aresta://app.arestaclimb.com/auth-callback#access_token=tok-invalido',
+              ),
+            );
+          });
+          return true;
+        },
+      );
+      await expectLater(
+        () => servicoErroUser.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            'Sessão inválida.',
+          ),
+        ),
+      );
+
+      // 6. Timeout ao aguardar callback OAuth
+      final servicoTimeout = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteErro,
+        obterAnonKeySupabase: () => 'anon-key',
+        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        lancadorUrlOAuth: (_) async => true,
+        timeoutOAuth: const Duration(milliseconds: 20),
+      );
+      await expectLater(
+        () => servicoTimeout.entrarComGoogle(),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('Tempo esgotado'),
+          ),
+        ),
+      );
+    });
+
+    test('atualizarPerfilRemoto persiste nome e foto localmente e sincroniza com Supabase Storage, Auth e public.perfis', () async {
+      final requisicoes = <http.Request>[];
+      var storageDisponivel = true;
+
+      final clienteFake = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          requisicoes.add(request);
+          if (request.url.path.contains('/storage/v1/object/avatars/')) {
+            if (!storageDisponivel) {
+              return http.Response('{"error":"Bucket not found"}', 404);
+            }
+            return http.Response('{"Key":"avatars/usr-1/avatar.jpg"}', 200);
+          }
+          if (request.url.path.endsWith('/auth/v1/user')) {
+            return http.Response('{}', 200);
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            return http.Response('[{}]', 200);
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          userId: 'usr-1',
+          autorNomePublico: 'Nome Antigo',
+          accessToken: 'jwt-ativo-1',
+        ),
+      );
+
+      final servico = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        clienteHttp: clienteFake,
+        obterUrlSupabase: () => 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
+        obterAnonKeySupabase: () => 'anon-key-1',
+      );
+
+      final bytesBase64 = base64Encode([0xFF, 0xD8, 0xFF, 0xD9]);
+      final dataUri = 'data:image/jpeg;base64,$bytesBase64';
+
+      // 1. Quando o bucket avatars existe no Supabase Storage, converte Data URI para URL pública do Storage
+      final atualizadoStorage = await servico.atualizarPerfilRemoto(
+        novoNome: 'Novo Nome Supabase',
+        novaFotoUrl: dataUri,
+      );
+      expect(atualizadoStorage.autorNomePublico, equals('Novo Nome Supabase'));
+      expect(
+        atualizadoStorage.fotoUrl,
+        startsWith(
+          'https://yzkhiaoqtxvvcyyuwmqg.supabase.co/storage/v1/object/public/avatars/usr-1/avatar.jpg',
+        ),
+      );
+      expect(
+        requisicoes.any((r) => r.url.path.endsWith('/auth/v1/user') && r.method == 'PUT'),
+        isTrue,
+      );
+      expect(
+        requisicoes.any((r) => r.url.path.endsWith('/rest/v1/perfis') && r.method == 'POST'),
+        isTrue,
+      );
+
+      // 2. Quando o bucket avatars ainda não existe (404), preserva a Data URI no Auth e em public.perfis
+      storageDisponivel = false;
+      final atualizadoDataUri = await servico.atualizarPerfilRemoto(
+        novaFotoUrl: dataUri,
+      );
+      expect(atualizadoDataUri.fotoUrl, equals(dataUri));
     });
   });
 }
