@@ -1,6 +1,6 @@
 # Documentação de Serviços — Aresta Climb
 
-Este diretório contém a lógica de negócios e os serviços centrais do aplicativo. A arquitetura é construída com princípios de Clean Architecture e separação de responsabilidades, suportando tanto o modo de produção oficial quanto o modo experimental de Live Reload para editores.
+Este diretório contém a lógica de negócios e os serviços centrais do aplicativo. A arquitetura é construída com separação de responsabilidades, suportando tanto o modo de produção oficial quanto o modo experimental de Live Reload para editores.
 
 ---
 
@@ -11,16 +11,35 @@ Este diretório contém a lógica de negócios e os serviços centrais do aplica
 | `repositorio_dataset.dart` | Fachada e gerenciador de estado central: downloads, índice, metadados e prioridade |
 | `dataset/` | Submódulos desacoplados de responsabilidade única (`modelos/`, `armazenamento/`, `metadados/`, `sessao_online/`) |
 | `editor_croqui.dart` | Controle de contexto: modo ativo, caminhos de diretório, temporizador experimental |
-| `http/` | Módulo de rede e sincronização (downloads, atualizações OTA, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano`) |
+| `http/` | Módulo de rede e sincronização (downloads, atualizações OTA, `ClienteHttpAresta`, `ServicoCroquiOnline`, `ServicoDownloadSegundoPlano`) |
 | `notificacoes/` | Gerenciamento de notificações nativas de download (`GerenciadorNotificacaoDownload`) com suporte a Foreground Services e progresso contínuo |
 | `firebase/` | Diretório isolado contendo toda integração com Firebase (Analytics, Crashlytics, Remote Config) |
 | `feedback/` | Gerenciamento de envio de In-App Feedbacks via fila local (SharedPreferences) e despacho assíncrono em background (Workmanager) para o Supabase |
-| `autenticacao/` | Serviço reativo de autenticação do escalador (`ServicoAutenticacao` / `ServicoAutenticacaoLocal`) suportando login com Google (Gmail), e-mail/senha, criação de conta e encerramento de sessão preservando a caderneta local |
-| `caderneta/` | Gestão local-first do Perfil do Escalador, Caderneta Esportiva, compilação de estatísticas (`CompiladorEstatisticasCaderneta`) e resolução reativa de metadados via catálogo SQLite e croquis em memória (`ResolvedorMetadadosCaderneta`) |
+| `autenticacao/` | Domínio de autenticação (`ServicoAutenticacao` / `ServicoAutenticacaoLocal`) e cliente HTTP/OAuth para o Supabase (`ClienteSupabaseAutenticacao`), suportando login e criação de conta por e-mail/senha, Google OAuth 2.0 (PKCE e Implicit), sincronização em `public.perfis` e upload de foto no bucket `avatars` |
+| `midia/` | Seletor nativo de foto de perfil (`SeletorFotoPerfil` / `SeletorFotoPerfilNativo`) integrado ao canal `app.escalada.croquis/seletor_midia` para recorte quadrado `256x256` e compressão JPEG em base64 |
+| `caderneta/` | Gestão local-first do Perfil do Escalador, Caderneta Esportiva, compilação de estatísticas (`CompiladorEstatisticasCaderneta`) e resolução reativa de metadados via catálogo SQLite e croquis em memória (`CatalogoViasCaderneta`) |
 | `controlador_interacoes_usuario.dart` | Preferência local reativa (`SharedPreferences` + `ValueNotifier<bool>`) permitindo ao escalador exibir ou ocultar elementos interativos opcionais de Perfil e Caderneta sem apagar seus dados locais |
 | `inicializacao_app.dart` | Rotinas de inicialização e ciclo de vida: gestão de memória/vitals (`configurarGestaoMemoria`), exibição de ponta a ponta (`configurarExibicaoPontaAPonta`), bootstrap paralelo de serviços locais (`setupAppServices`: `DatasetRepository`, `RepositorioCadernetaLocal` e `ControladorInteracoesUsuario`), ouvintes WebSocket (`registrarOuvintesLiveReload`) e migração de termos legais (`migrarTermosLegais`) |
 | `configuracao_recursos.dart` | Controle de flags de compilação (`--dart-define`) e chaves secretas de acesso para recursos em desenvolvimento (Perfil do Escalador e Caderneta Esportiva) |
 | `catalogo/` | Banco SQLite FTS5 local (`RepositorioCatalogo` / `catalogo.db`) para busca global instantânea, resolução de UIDs e hidratação offline de metadados da caderneta |
+
+---
+
+## Autenticação, Foto de Perfil e Sincronização com Supabase (`autenticacao/` e `midia/`)
+
+O subsistema de autenticação foi desenhado em duas camadas desacopladas para preservar a experiência offline-first e manter a separação entre regras de negócio locais e protocolos de rede:
+
+1. **`ServicoAutenticacaoLocal` (`autenticacao/servico_autenticacao.dart`)**:
+   - Valida formato de e-mail, tamanho mínimo de senha (6 caracteres) e nome do escalador.
+   - Orquestra `entrarComEmailSenha`, `criarContaComEmailSenha`, `entrarComGoogle`, `atualizarPerfilRemoto`, `processarCallbackOAuth` e `encerrarSessao`.
+   - Ao autenticar ou criar conta, preserva o `autorIdPublico` (NanoID 14c) gerado localmente (ou adota o `autor_id_publico` já vinculado à conta no banco remoto) e mantém todas as ascensões locais intactas no `RepositorioCaderneta`.
+2. **`ClienteSupabaseAutenticacao` (`autenticacao/cliente_supabase_autenticacao.dart`)**:
+   - **E-mail e Senha (`/auth/v1/token?grant_type=password` e `/auth/v1/signup`)**: Autentica ou registra o usuário no Supabase GoTrue enviando `autor_id_publico`, `autor_nome_publico` e `avatar_url` em `raw_user_meta_data` e sincroniza a linha correspondente na tabela `public.perfis` via PostgREST (`/rest/v1/perfis`).
+   - **Google OAuth 2.0 (`/auth/v1/authorize`)**: Gera par criptográfico PKCE (`code_verifier` e `code_challenge` SHA-256 em Base64URL), abre o navegador externo com `redirect_to=aresta://app.arestaclimb.com/auth-callback` e aguarda o retorno interceptado por `DeepLinkNavigatorService` / `AppLinks`. Suporta tanto a troca de código PKCE (`/auth/v1/token?grant_type=pkce`) quanto o fluxo `Implicit` (`#access_token=...` + `/auth/v1/user`), extraindo o nome e a foto do Google (`full_name` / `name`, `avatar_url` / `picture`) e sincronizando com `public.perfis`.
+   - **Upload de Foto e Atualização de Perfil (`sincronizarPerfilAtualizado`)**: Quando o escalador seleciona uma nova foto (`data:image/jpeg;base64,...`), envia os bytes binários para o bucket público `avatars` no Supabase Storage (`POST /storage/v1/object/avatars/<userId>/avatar.jpg` com `x-upsert: true`), atualiza os metadados do usuário no GoTrue (`PUT /auth/v1/user`) e realiza upsert em `public.perfis`.
+3. **`SeletorFotoPerfilNativo` (`midia/seletor_foto_perfil.dart`)**:
+   - Invoca o método `selecionarFotoPerfil` no `MethodChannel('app.escalada.croquis/seletor_midia')`.
+   - No **Android** (`MainActivity.kt`) e no **iOS** (`AppDelegate.swift`), abre o seletor nativo do sistema operacional, recorta a imagem em quadrado central, redimensiona para `256x256` pixels e comprime em JPEG (qualidade 82%), retornando um Data URI (`data:image/jpeg;base64,...`) pronto para pré-visualização imediata offline e upload para o Supabase Storage.
 
 ---
 
@@ -56,7 +75,7 @@ Ao sair do Modo Experimental (via botão `[ SAIR ✕ ]` no `BannerModoExperiment
 1. **Limpeza e Desconexão Coordenada (`nukeExperimentalData`)**: Encerra o WebSocket de Live Reload, aguarda o fechamento serializado da conexão SQLite ativa (`await aoAntesDeLimparDadosExperimentais?.call()` -> `repositorioCatalogo.fechar()`), remove recursivamente os diretórios voláteis (`editor/experimental` e `edited`), grava a configuração atômica e redefine `isExperimentalMode.value = false` antes de zerar `editorUrl.value`. Isso previne `FileSystemException` por arquivo bloqueado no Windows e impede que ouvintes tentem ler arquivos no caminho experimental já excluído.
 2. **Restauração Imediata em Memória (`DatasetRepository.init`)**: Ao alternar o modo (`_handleModeChange`), o repositório limpa a sessão online em memória (`gerenciadorSessaoOnline.limparTudo()`) e a tabela de hashes (`_tabelaSha256PorPico.clear()`), fecha a conexão SQLite anterior e recarrega imediatamente o índice de produção oficial (`indice.binarypb`) a partir do disco, populando `activeDataset` sem esvaziamentos prévios (`loadEmpty()`) ou piscadas na interface.
 3. **Encerramento Automático de Sessão Expirada (`HTTP 404`)**: Quando o Editor Desktop é fechado pelo autor ou o túnel Cloudflare Relay (`previa.arestaclimb.com`) expira e `SyncNetwork.fetchIndiceWithRetries` retorna `IndiceErroServidor(statusCode: 404)` com `isExperimentalMode.value == true`, o `SyncService` executa `nukeExperimentalData()`, restaura o índice oficial em memória (`datasetRepository.init()`), define `syncStatus.value = SyncStatus.updated` e aciona `notificarSessaoExperimentalExpirada()`. O widget raiz `MyApp` escuta `notificadorSessaoExpirada`, redireciona a navegação para a Home (`AppNav.home`) e apresenta o diálogo `ModalSessaoExperimentalEncerrada`.
-4. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça 100% disponível offline e online.
+4. **Resiliência a Cache HTTP 304 (`SyncService`)**: Caso o servidor retorne HTTP 304 Not Modified, o `SyncService` detecta se a memória local está vazia (`isEmpty`) e força o recarregamento do arquivo local de índice, garantindo que o catálogo oficial permaneça disponível offline e online.
 
 ### Estabilização de Cotas e Proteção do Relay (Cloudflare & WebSocket)
 
@@ -113,9 +132,9 @@ Para evitar exaustão de requisições e consumo excessivo de cotas em túneis d
 
 ---
 
-## Navegação Online Sob Demanda (Clean Architecture)
+## Navegação Online Sob Demanda
 
-A partir da versão atual, o usuário pode navegar livremente por qualquer croqui do catálogo sem ser obrigado a baixá-lo previamente para o dispositivo.
+O usuário pode navegar livremente por qualquer croqui do catálogo sem ser obrigado a baixá-lo previamente para o dispositivo.
 
 ### Componentes Chave:
 - **`ClienteHttpAresta` (`http/cliente_http_aresta.dart`)**: Cliente HTTP encapsulado e centralizado de todo o aplicativo. Mantém pool de conexões TCP/TLS persistente (*HTTP Keep-Alive* com `idleTimeout` de 120 segundos e `connectionTimeout` de 10 segundos). Possui construtor privado com apenas dois pontos de obtenção (`ClienteHttpAresta.instancia` em produção e `@visibleForTesting ClienteHttpAresta.paraTestes` em testes), omite deliberadamente o método `.close()` para impedir o encerramento acidental do pool compartilhado e isola `package:http/http.dart` do restante do código de produção (fiscalizado por `isolamento_cliente_http_test.dart`).
@@ -192,4 +211,3 @@ Para testes unitários e de widget, a classe provê métodos estáticos com a an
 Mesmo quando `ConfiguracaoRecursos.perfilHabilitado` está ativo na compilação, escaladores que preferem utilizar o aplicativo exclusivamente para consulta de croquis e dados técnicos podem desativar os elementos opcionais de Perfil e Caderneta em tempo de execução na tela de Configurações (`construirCartaoInteracoesCaderneta`):
 - **`ControladorInteracoesUsuario` (`controlador_interacoes_usuario.dart`)**: Persiste a chave `interacoes_caderneta_ativas` no `SharedPreferences` (padrão `true`) e expõe `interacoesAtivasNotifier` (`ValueListenable<bool>`) e `exibirElementosInterativos` (`ConfiguracaoRecursos.perfilHabilitado && interacoesAtivasNotifier.value`).
 - **Ocultação Reativa Sem Perda de Dados**: Quando desativado pelo usuário, o botão de Perfil na Home (`ArestaHomeAppBar`), o bloco de registro de cadena na tela da via (`via_functions.dart`) e a navegação `AppNav.toPerfil` são ocultados/bloqueados imediatamente, preservando intactos todos os registros locais do `RepositorioCadernetaLocal` e mantendo alertas comunitários de segurança irrestritos.
-
