@@ -146,7 +146,7 @@ void main() {
       expect(find.text('MINHA CADERNETA'), findsOneWidget);
     });
 
-    testWidgets('ao tocar em Editar perfil, abre diálogo e permite alterar o nome', (tester) async {
+    testWidgets('ao tocar em Editar perfil, abre diálogo e permite alterar o nome e a foto de perfil', (tester) async {
       tester.view.physicalSize = const Size(800, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -157,10 +157,16 @@ void main() {
       await tester.pumpWidget(criarHubWidget());
       await tester.pumpAndSettle();
 
+      await tester.tap(find.byKey(const Key('btn_alterar_foto_perfil_hub')));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.byKey(const Key('btn_editar_perfil_hub')));
       await tester.pumpAndSettle();
 
       expect(find.text('Editar Perfil'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_alterar_foto_dialogo')));
+      await tester.pumpAndSettle();
 
       final campoNome = find.byKey(const Key('campo_editar_perfil_nome'));
       await tester.enterText(campoNome, 'Fernanda Rocha');

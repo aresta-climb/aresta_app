@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../data/modelos/tipo_ascensao.dart';
+import '../../services/autenticacao/servico_autenticacao.dart';
 import '../../services/caderneta/catalogo_vias_caderneta.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/midia/seletor_foto_perfil.dart';
 import '../../services/repositorio_dataset.dart';
 
 /// Modelo de apresentação para a tela de Hub do Perfil do Escalador e Caderneta.
@@ -18,6 +20,12 @@ import '../../services/repositorio_dataset.dart';
 class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Repositório de persistência e consulta da caderneta.
   final RepositorioCaderneta repositorio;
+
+  /// Serviço de autenticação e sincronização remota com o Supabase.
+  final ServicoAutenticacao _servicoAutenticacao;
+
+  /// Seletor nativo de foto de perfil.
+  final SeletorFotoPerfil _seletorFotoPerfil;
 
   /// Rótulo esportivo do escalador (ex.: "Escalador" ou "Escaladora").
   final String funcaoAtleta;
@@ -55,6 +63,8 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// Construtor com injeção de dependências e configuração de ouvintes reativos.
   HubPerfilCadernetaViewModel({
     required this.repositorio,
+    ServicoAutenticacao? servicoAutenticacao,
+    SeletorFotoPerfil? seletorFotoPerfil,
     this.funcaoAtleta = 'Escalador',
     int Function()? obterTotalPicos,
     int Function()? obterTotalVias,
@@ -66,7 +76,11 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     this.aoConfirmarSaida,
     this.aoEditarPerfil,
     this.aoEntrarNaConta,
-  }) : _obterTotalPicos = obterTotalPicos,
+  }) : _servicoAutenticacao =
+           servicoAutenticacao ??
+           ServicoAutenticacaoLocal(repositorio: repositorio),
+       _seletorFotoPerfil = seletorFotoPerfil ?? SeletorFotoPerfilNativo.instancia,
+       _obterTotalPicos = obterTotalPicos,
        _obterTotalVias = obterTotalVias,
        _escutaMetadados = escutaMetadados,
        _catalogoViasProprio = catalogoViasProprio {
@@ -79,6 +93,8 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
   /// assumindo a responsabilidade de descartar o catálogo em [dispose].
   factory HubPerfilCadernetaViewModel.comCatalogo({
     RepositorioCaderneta? repositorio,
+    ServicoAutenticacao? servicoAutenticacao,
+    SeletorFotoPerfil? seletorFotoPerfil,
     DatasetRepository? datasetRepo,
     String funcaoAtleta = 'Escalador',
   }) {
@@ -89,6 +105,8 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     );
     return HubPerfilCadernetaViewModel(
       repositorio: repo,
+      servicoAutenticacao: servicoAutenticacao,
+      seletorFotoPerfil: seletorFotoPerfil,
       funcaoAtleta: funcaoAtleta,
       obterTotalPicos: catalogoVias.obterTotalPicosDistintos,
       escutaMetadados: catalogoVias,
@@ -117,6 +135,9 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
 
   /// Nome público esportivo do atleta.
   String get nomeAtleta => perfil.autorNomePublico;
+
+  /// URL ou Data URI da foto de perfil do escalador.
+  String? get fotoUrl => perfil.fotoUrl;
 
   /// Identificador público único do autor (NanoID 14 caracteres).
   String get autorIdPublico => perfil.autorIdPublico;
@@ -147,14 +168,40 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
     return cadenas.map((c) => c.escaladaUid).toSet().length;
   }
 
-  /// Atualiza o nome público esportivo do atleta de forma persistente.
+  /// Atualiza o nome público esportivo do atleta de forma persistente e sincroniza com o Supabase.
   Future<void> atualizarNome(String novoNome) async {
     final nomeTratado = novoNome.trim();
     if (nomeTratado.isEmpty || nomeTratado == nomeAtleta) {
       return;
     }
-    final perfilAtualizado = perfil.copyWith(autorNomePublico: nomeTratado);
-    await repositorio.salvarPerfil(perfilAtualizado);
+    await _servicoAutenticacao.atualizarPerfilRemoto(novoNome: nomeTratado);
+  }
+
+  /// Atualiza a foto de perfil do atleta de forma persistente e sincroniza com o Supabase.
+  Future<void> atualizarFotoPerfil(String novaFotoUrl) async {
+    final fotoTratada = novaFotoUrl.trim();
+    if (fotoTratada.isEmpty || fotoTratada == fotoUrl) {
+      return;
+    }
+    await _servicoAutenticacao.atualizarPerfilRemoto(novaFotoUrl: fotoTratada);
+  }
+
+  /// Abre a galeria do dispositivo para selecionar uma nova foto e atualiza o perfil no Supabase.
+  ///
+  /// Retorna `true` quando uma nova foto foi selecionada e salva.
+  Future<bool> selecionarEAtualizarFoto() async {
+    final dataUri = await _seletorFotoPerfil.selecionarFotoComoDataUri();
+    if (dataUri == null || dataUri.isEmpty) {
+      return false;
+    }
+    await atualizarFotoPerfil(dataUri);
+    return true;
+  }
+
+  /// Seleciona uma nova foto na galeria, persiste no perfil e retorna a [fotoUrl] resultante (ou `null` se cancelado).
+  Future<String?> selecionarEObterNovaFoto() async {
+    final alterou = await selecionarEAtualizarFoto();
+    return alterou ? fotoUrl : null;
   }
 
   /// Copia o [autorIdPublico] do atleta para a área de transferência do dispositivo.
@@ -164,9 +211,7 @@ class HubPerfilCadernetaViewModel extends ChangeNotifier {
 
   /// Encerra a sessão autenticada do escalador, preservando o ID público e as cadenas locais.
   Future<void> encerrarSessao() async {
-    if (estaAutenticado) {
-      await repositorio.salvarPerfil(perfil.copyWith(limparUserId: true));
-    }
+    await _servicoAutenticacao.encerrarSessao();
   }
 
   /// Aciona a abertura da tela de Login / Criação de Conta.
