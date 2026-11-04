@@ -101,8 +101,9 @@ void main() {
       await tester.pumpWidget(buildTestableWidget());
       await tester.pump();
 
-      // Verify Header buttons exist even when downloadedPicos is empty
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      // Verify Header buttons exist even when downloadedPicos is empty (Profile instead of Settings)
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
       expect(find.byIcon(Icons.sync), findsOneWidget);
       expect(find.byIcon(Icons.search), findsNWidgets(2));
       expect(find.text('Buscar picos, setores ou vias...'), findsOneWidget);
@@ -172,7 +173,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(SingleChildScrollView),
-          matching: find.byIcon(Icons.settings),
+          matching: find.byKey(const Key('btn_home_perfil')),
         ),
         findsNothing,
       );
@@ -196,7 +197,8 @@ void main() {
       await tester.pump();
 
       // A AppBar continua visível na tela
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
       expect(find.byIcon(Icons.sync), findsOneWidget);
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
     },

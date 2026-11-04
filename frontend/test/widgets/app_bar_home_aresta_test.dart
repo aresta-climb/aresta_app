@@ -3,11 +3,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/navigation/arvore_navegacao.dart';
+import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
+import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
+import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
-import 'package:frontend/view/view_models/home_view_model.dart';
 import 'package:frontend/widgets/app_bar_home_aresta.dart';
 import 'package:frontend/widgets/micro_badge_beta.dart';
 import 'package:frontend/widgets/modal_beta_aberto.dart';
@@ -37,7 +40,7 @@ void main() {
   }
 
   testWidgets(
-    'ArestaHomeAppBar renderiza elementos da marca e ações principais',
+    'ArestaHomeAppBar renderiza elementos da marca, sincronização e perfil sem botão de configurações',
     (tester) async {
       await tester.pumpWidget(
         criarAppTeste(
@@ -49,7 +52,8 @@ void main() {
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
       expect(find.byType(MicroBadgeBeta), findsOneWidget);
       expect(find.byIcon(Icons.sync), findsOneWidget);
-      expect(find.byIcon(Icons.settings), findsOneWidget);
+      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsNothing);
 
       const appBar = ArestaHomeAppBar();
       expect(appBar.preferredSize.height, greaterThan(0));
@@ -77,38 +81,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    'ArestaHomeAppBar aciona callback onSettings ao tocar no botão de configurações',
-    (tester) async {
-      bool abriuConfiguracoes = false;
-
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: ArestaHomeAppBar(
-            onSettings: () => abriuConfiguracoes = true,
-          ),
-        ),
-      );
-      await tester.pump();
-
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pump();
-
-      expect(abriuConfiguracoes, isTrue);
-    },
-  );
-
   tearDown(() {
     ConfiguracaoRecursos.redefinirParaTestes();
     ControladorInteracoesUsuario.redefinirParaTestes();
+    ServicoAutenticacaoLocal.redefinirParaTestes();
   });
 
   testWidgets(
-    'ArestaHomeAppBar oculta o botão de perfil por padrão quando desabilitado',
+    'ArestaHomeAppBar oculta o botão de perfil quando exibirBotaoPerfil é false',
     (tester) async {
       await tester.pumpWidget(
         criarAppTeste(
-          child: const ArestaHomeAppBar(),
+          child: const ArestaHomeAppBar(exibirBotaoPerfil: false),
         ),
       );
       await tester.pump();
@@ -118,14 +102,13 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil quando exibirBotaoPerfil é true',
+    'ArestaHomeAppBar aciona callback onProfile ao tocar no botão de perfil',
     (tester) async {
       bool abriuPerfil = false;
 
       await tester.pumpWidget(
         criarAppTeste(
           child: ArestaHomeAppBar(
-            exibirBotaoPerfil: true,
             onProfile: () => abriuPerfil = true,
           ),
         ),
@@ -141,13 +124,8 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar alterna visibilidade reativamente via exibirBotaoPerfilListenable e via HomeViewModel',
+    'ArestaHomeAppBar alterna visibilidade reativamente via exibirBotaoPerfilListenable',
     (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-
-      // 1. Modo exibirBotaoPerfilListenable (Dumb UI puro sem ViewModel)
       final visibilidadeNotifier = ValueNotifier<bool>(true);
       addTearDown(visibilidadeNotifier.dispose);
 
@@ -165,30 +143,7 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
 
-      // 2. Modo HomeViewModel reativo
-      final controlador = ControladorInteracoesUsuario(preferencias: prefs);
-      await controlador.inicializar();
-      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
-      final syncService = SyncService(datasetRepository: datasetRepo);
-      final homeVm = HomeViewModel(
-        datasetRepo: datasetRepo,
-        syncService: syncService,
-        controladorInteracoes: controlador,
-      );
-
-      await tester.pumpWidget(
-        criarAppTeste(
-          child: ArestaHomeAppBar(viewModel: homeVm),
-        ),
-      );
-      await tester.pump();
-      expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
-
-      await controlador.definirInteracoesAtivas(false);
-      await tester.pump();
-      expect(find.byKey(const Key('btn_home_perfil')), findsNothing);
-
-      await controlador.definirInteracoesAtivas(true);
+      visibilidadeNotifier.value = true;
       await tester.pump();
       expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
     },
@@ -229,14 +184,32 @@ void main() {
   );
 
   testWidgets(
-    'ArestaHomeAppBar executa ações padrão de sincronização, perfil e configurações quando callbacks opcionais são omitidos',
+    'ArestaHomeAppBar executa sincronização padrão e roteia botão de perfil para LoginNode (deslogado) ou PerfilNode (logado)',
     (tester) async {
-      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-      ControladorInteracoesUsuario.redefinirParaTestes();
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+      await repoCaderneta.inicializar();
+      RepositorioCadernetaLocal.instancia = repoCaderneta;
+      final servicoAuth = ServicoAutenticacaoLocal(repositorio: repoCaderneta);
+      ServicoAutenticacaoLocal.instancia = servicoAuth;
+
+      final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
+      final syncService = SyncService(datasetRepository: datasetRepo);
+      final treeController = TreeNavigationController();
 
       await tester.pumpWidget(
-        criarAppTeste(
-          child: const ArestaHomeAppBar(exibirBotaoPerfil: true),
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: TreeNavigationWrapper(
+            key: TreeNavigationWrapper.navKey,
+            datasetRepo: datasetRepo,
+            syncService: syncService,
+            treeController: treeController,
+            child: const Scaffold(
+              body: SafeArea(child: ArestaHomeAppBar()),
+            ),
+          ),
         ),
       );
       await tester.pump();
@@ -244,13 +217,19 @@ void main() {
       await tester.tap(find.byIcon(Icons.sync));
       await tester.pump();
 
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pump();
+      // Deslogado -> tocar em btn_home_perfil abre LoginNode
+      await tester.tap(find.byKey(const Key('btn_home_perfil')));
+      await tester.pumpAndSettle();
+      expect(treeController.currentNode, isA<LoginNode>());
+
+      // Logado -> tocar em btn_home_perfil abre diretamente PerfilNode
+      treeController.navigateTo(const HomeNode());
+      await servicoAuth.entrarComGoogle();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('btn_home_perfil')));
       await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
+      expect(treeController.currentNode, isA<PerfilNode>());
     },
   );
 }

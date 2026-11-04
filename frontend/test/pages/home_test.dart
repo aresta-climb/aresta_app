@@ -187,7 +187,7 @@ void main() {
     expect(params['origem'], 'home_header');
   });
 
-  testWidgets('HomePage mantém appbar visível após rolagem do conteúdo', (tester) async {
+  testWidgets('HomePage mantém appbar visível após rolagem do conteúdo sem botão de configurações', (tester) async {
     repo.activeDataset.value = TopoDataset(availablePicos: [], downloadedPicos: []);
 
     await tester.pumpWidget(createTestWidget());
@@ -197,7 +197,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('ARESTA CLIMB'), findsOneWidget);
-    expect(find.byIcon(Icons.settings), findsOneWidget);
+    expect(find.byKey(const Key('btn_home_perfil')), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsNothing);
     expect(find.byIcon(Icons.sync), findsOneWidget);
   });
 
