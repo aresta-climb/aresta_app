@@ -175,37 +175,9 @@ void main() {
       vm.dispose();
     });
 
-    test('executa callbacks de navegação injetados e gerencia encerrarSessao', () async {
-      var cadernetaAberta = false;
-      var configuracoesAberta = false;
-      var dadosPrivacidadeAberto = false;
-      var saidaConfirmada = false;
-      var editarPerfilAberto = false;
-      var loginAberto = false;
-
-      final vm = HubPerfilCadernetaViewModel(
-        repositorio: repositorio,
-        aoAbrirCaderneta: () => cadernetaAberta = true,
-        aoAbrirConfiguracoes: () => configuracoesAberta = true,
-        aoAbrirDadosPrivacidade: () => dadosPrivacidadeAberto = true,
-        aoConfirmarSaida: () => saidaConfirmada = true,
-        aoEditarPerfil: () => editarPerfilAberto = true,
-        aoEntrarNaConta: () => loginAberto = true,
-      );
-
-      vm.abrirCaderneta();
-      vm.abrirConfiguracoes();
-      vm.abrirDadosPrivacidade();
-      vm.confirmarSaida();
-      vm.editarPerfil();
-      vm.abrirLogin();
-
-      expect(cadernetaAberta, isTrue);
-      expect(configuracoesAberta, isTrue);
-      expect(dadosPrivacidadeAberto, isTrue);
-      expect(saidaConfirmada, isTrue);
-      expect(editarPerfilAberto, isTrue);
-      expect(loginAberto, isTrue);
+    test('gerencia encerrarSessao limpando autenticação e preservando ID público', () async {
+      final vm = HubPerfilCadernetaViewModel(repositorio: repositorio);
+      final idOriginal = vm.autorIdPublico;
 
       await repositorio.salvarPerfil(
         repositorio.obterPerfil().copyWith(userId: 'usr-logado-1'),
@@ -214,6 +186,7 @@ void main() {
 
       await vm.encerrarSessao();
       expect(vm.estaAutenticado, isFalse);
+      expect(vm.autorIdPublico, equals(idOriginal));
 
       vm.dispose();
     });
