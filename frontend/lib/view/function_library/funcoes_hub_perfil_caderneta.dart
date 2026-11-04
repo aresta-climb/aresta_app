@@ -1,43 +1,112 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
 
+/// Constrói um [ImageProvider] a partir de uma URL remota (`http`/`https`) ou Data URI (`data:image/...;base64,...`).
+ImageProvider<Object>? construirProvedorAvatarPerfil(String? avatarUrl) {
+  if (avatarUrl == null) return null;
+  final limpo = avatarUrl.trim();
+  if (limpo.isEmpty) return null;
+
+  if (limpo.startsWith('data:image/')) {
+    final indiceVirgula = limpo.indexOf(',');
+    if (indiceVirgula != -1 && indiceVirgula + 1 < limpo.length) {
+      try {
+        final bytes = base64Decode(limpo.substring(indiceVirgula + 1));
+        if (bytes.isNotEmpty) {
+          return MemoryImage(bytes);
+        }
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  if (limpo.startsWith('http://') || limpo.startsWith('https://')) {
+    return NetworkImage(limpo);
+  }
+
+  return null;
+}
+
 /// Constrói o cabeçalho centralizado de identidade do atleta no Hub de Perfil.
 ///
-/// Renderiza o avatar circular envolvido pelo anel de acento da marca,
-/// o nome esportivo em destaque, o rótulo de função e o botão cápsula de edição.
+/// Renderiza o avatar circular envolvido pelo anel de acento da marca (com selo de câmera
+/// para troca da foto de perfil), o nome esportivo em destaque, o rótulo de função e o botão cápsula de edição.
 Widget buildCabecalhoHubPerfil({
   required String nome,
   required String funcao,
   required VoidCallback onEditarPerfil,
+  VoidCallback? onAlterarFoto,
   String? avatarUrl,
 }) {
   return Builder(
     builder: (context) {
       final cores = context.colors;
+      final provedorImagem = construirProvedorAvatarPerfil(avatarUrl);
+      final acaoFoto = onAlterarFoto ?? onEditarPerfil;
 
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Avatar central com anel de acento vibrante
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE05A47), width: 2.5),
-            ),
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: cores.caveShadow,
-              child: Icon(
-                Icons.person,
-                color: cores.chalkWhite,
-                size: 42,
+          // Avatar central com anel de acento vibrante e botão de troca de foto
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onTap: acaoFoto,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFE05A47),
+                      width: 2.5,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 40,
+                    backgroundColor: cores.caveShadow,
+                    backgroundImage: provedorImagem,
+                    child: provedorImagem == null
+                        ? Icon(
+                            Icons.person,
+                            color: cores.chalkWhite,
+                            size: 42,
+                          )
+                        : null,
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Material(
+                  color: const Color(0xFFE05A47),
+                  shape: CircleBorder(
+                    side: BorderSide(color: cores.deepBasalt, width: 2),
+                  ),
+                  child: InkWell(
+                    key: const Key('btn_alterar_foto_perfil_hub'),
+                    customBorder: const CircleBorder(),
+                    onTap: acaoFoto,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.camera_alt_rounded,
+                        size: 15,
+                        color: cores.chalkWhite,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           // Nome do atleta
