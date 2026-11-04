@@ -3,21 +3,28 @@
 
 import 'package:flutter/material.dart';
 import '../../theme/cores_app.dart';
+import '../../view/function_library/funcoes_hub_perfil_caderneta.dart';
 
-/// Exibe o diálogo de edição do nome esportivo do atleta.
+/// Exibe o diálogo de edição do nome esportivo e foto de perfil do atleta.
 ///
 /// Retorna o novo nome normalizado (`trim()`) ou `null` quando cancelado ou vazio.
 Future<String?> exibirDialogoEditarPerfil(
   BuildContext context, {
   required String nomeAtual,
+  String? fotoUrlAtual,
+  Future<String?> Function()? aoSelecionarNovaFoto,
 }) {
   return showDialog<String>(
     context: context,
-    builder: (_) => DialogoEditarPerfil(nomeAtual: nomeAtual),
+    builder: (_) => DialogoEditarPerfil(
+      nomeAtual: nomeAtual,
+      fotoUrlAtual: fotoUrlAtual,
+      aoSelecionarNovaFoto: aoSelecionarNovaFoto,
+    ),
   );
 }
 
-/// Diálogo com ciclo de vida gerenciado (`StatefulWidget`) para edição do nome do atleta.
+/// Diálogo com ciclo de vida gerenciado (`StatefulWidget`) para edição do nome e foto do atleta.
 ///
 /// Encapsula e descarta apropriadamente seu [TextEditingController] em [State.dispose],
 /// evitando vazamentos de memória após o fechamento do modal.
@@ -25,9 +32,17 @@ class DialogoEditarPerfil extends StatefulWidget {
   /// Nome atual exibido inicialmente no campo de texto.
   final String nomeAtual;
 
+  /// URL ou Data URI atual da foto de perfil.
+  final String? fotoUrlAtual;
+
+  /// Callback opcional para selecionar e salvar uma nova foto de perfil a partir do diálogo.
+  final Future<String?> Function()? aoSelecionarNovaFoto;
+
   const DialogoEditarPerfil({
     super.key,
     required this.nomeAtual,
+    this.fotoUrlAtual,
+    this.aoSelecionarNovaFoto,
   });
 
   @override
@@ -36,11 +51,13 @@ class DialogoEditarPerfil extends StatefulWidget {
 
 class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
   late final TextEditingController _controladorNome;
+  String? _fotoUrlExibida;
 
   @override
   void initState() {
     super.initState();
     _controladorNome = TextEditingController(text: widget.nomeAtual);
+    _fotoUrlExibida = widget.fotoUrlAtual;
   }
 
   @override
@@ -49,9 +66,21 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
     super.dispose();
   }
 
+  Future<void> _selecionarFoto() async {
+    final callback = widget.aoSelecionarNovaFoto;
+    if (callback == null) return;
+    final novaFoto = await callback();
+    if (novaFoto != null && mounted) {
+      setState(() {
+        _fotoUrlExibida = novaFoto;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
+    final provedorImagem = construirProvedorAvatarPerfil(_fotoUrlExibida);
 
     return AlertDialog(
       backgroundColor: cores.deepBasalt,
@@ -66,21 +95,51 @@ class _DialogoEditarPerfilState extends State<DialogoEditarPerfil> {
           fontWeight: FontWeight.bold,
         ),
       ),
-      content: TextField(
-        key: const Key('campo_editar_perfil_nome'),
-        controller: _controladorNome,
-        autofocus: true,
-        style: TextStyle(color: cores.chalkWhite),
-        decoration: InputDecoration(
-          labelText: 'Nome do atleta',
-          labelStyle: TextStyle(color: cores.ashGrey),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: cores.graniteEdge),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.aoSelecionarNovaFoto != null) ...[
+            Center(
+              child: TextButton.icon(
+                key: const Key('btn_alterar_foto_dialogo'),
+                onPressed: _selecionarFoto,
+                icon: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: cores.caveShadow,
+                  backgroundImage: provedorImagem,
+                  child: provedorImagem == null
+                      ? Icon(
+                          Icons.camera_alt_rounded,
+                          color: cores.chalkWhite,
+                          size: 18,
+                        )
+                      : null,
+                ),
+                label: const Text(
+                  'Alterar foto de perfil',
+                  style: TextStyle(color: Color(0xFFE05A47)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          TextField(
+            key: const Key('campo_editar_perfil_nome'),
+            controller: _controladorNome,
+            autofocus: true,
+            style: TextStyle(color: cores.chalkWhite),
+            decoration: InputDecoration(
+              labelText: 'Nome do atleta',
+              labelStyle: TextStyle(color: cores.ashGrey),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: cores.graniteEdge),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFE05A47)),
+              ),
+            ),
           ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Color(0xFFE05A47)),
-          ),
-        ),
+        ],
       ),
       actions: [
         TextButton(
