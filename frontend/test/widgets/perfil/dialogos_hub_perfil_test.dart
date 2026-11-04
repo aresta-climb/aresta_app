@@ -18,9 +18,10 @@ void main() {
 
   group('exibirDialogoEditarPerfil', () {
     testWidgets(
-      'pré-preenche nome atual e retorna novo nome normalizado ao salvar',
+      'pré-preenche nome atual, permite alterar foto e retorna novo nome normalizado ao salvar',
       (tester) async {
         String? resultado;
+        var selecionouFoto = false;
 
         await tester.pumpWidget(
           envolverComTema(
@@ -30,6 +31,10 @@ void main() {
                   resultado = await exibirDialogoEditarPerfil(
                     context,
                     nomeAtual: 'Fernanda Rocha',
+                    aoSelecionarNovaFoto: () async {
+                      selecionouFoto = true;
+                      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                    },
                   );
                 },
                 child: const Text('Abrir'),
@@ -44,6 +49,10 @@ void main() {
         expect(find.text('Editar Perfil'), findsOneWidget);
         final campoFinder = find.byKey(const Key('campo_editar_perfil_nome'));
         expect(tester.widget<TextField>(campoFinder).controller?.text, 'Fernanda Rocha');
+
+        await tester.tap(find.byKey(const Key('btn_alterar_foto_dialogo')));
+        await tester.pumpAndSettle();
+        expect(selecionouFoto, isTrue);
 
         await tester.enterText(campoFinder, '  Roberta Rocha  ');
         await tester.pumpAndSettle();
