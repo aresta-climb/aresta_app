@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/theme/cores_app.dart';
@@ -8,6 +9,16 @@ import 'package:frontend/view/function_library/funcoes_hub_perfil_caderneta.dart
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // PNG transparente 1x1 válido para testes de MemoryImage
+  final png1x1Base64 = base64Encode(const [
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+    0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  ]);
 
   Widget wrapWithTheme(Widget child) {
     return MaterialApp(
@@ -21,8 +32,9 @@ void main() {
   }
 
   group('funcoes_hub_perfil_caderneta', () {
-    testWidgets('buildCabecalhoHubPerfil renderiza nome, função, avatar e aciona editar perfil', (tester) async {
+    testWidgets('buildCabecalhoHubPerfil renderiza nome, função, avatar (padrão, Data URI e URL) e aciona editar perfil e alterar foto', (tester) async {
       var editou = false;
+      var alterouFoto = false;
 
       await tester.pumpWidget(
         wrapWithTheme(
@@ -30,6 +42,7 @@ void main() {
             nome: 'Fernanda Rocha',
             funcao: 'Escaladora',
             onEditarPerfil: () => editou = true,
+            onAlterarFoto: () => alterouFoto = true,
           ),
         ),
       );
@@ -37,11 +50,40 @@ void main() {
       expect(find.text('Fernanda Rocha'), findsOneWidget);
       expect(find.text('Escaladora'), findsOneWidget);
       expect(find.text('Editar perfil'), findsOneWidget);
+      expect(find.byIcon(Icons.person), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('btn_editar_perfil_hub')));
       await tester.pump();
-
       expect(editou, isTrue);
+
+      await tester.tap(find.byKey(const Key('btn_alterar_foto_perfil_hub')));
+      await tester.pump();
+      expect(alterouFoto, isTrue);
+
+      // Com Data URI base64 válida, renderiza MemoryImage no CircleAvatar
+      await tester.pumpWidget(
+        wrapWithTheme(
+          buildCabecalhoHubPerfil(
+            nome: 'Fernanda Rocha',
+            funcao: 'Escaladora',
+            onEditarPerfil: () {},
+            avatarUrl: 'data:image/png;base64,$png1x1Base64',
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.person), findsNothing);
+      final avatarMemory = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+      expect(avatarMemory.backgroundImage, isA<MemoryImage>());
+
+      // Valida construirProvedorAvatarPerfil para URL HTTP/HTTPS e entradas inválidas
+      expect(
+        construirProvedorAvatarPerfil('https://lh3.googleusercontent.com/a/f.jpg'),
+        isA<NetworkImage>(),
+      );
+      expect(construirProvedorAvatarPerfil(null), isNull);
+      expect(construirProvedorAvatarPerfil('   '), isNull);
+      expect(construirProvedorAvatarPerfil('data:image/jpeg;base64,:::invalido:::'), isNull);
+      expect(construirProvedorAvatarPerfil('ftp://invalido'), isNull);
     });
 
     testWidgets('buildBarraMetricasHub renderiza 4 cartões com valores e rótulos corretos', (tester) async {
