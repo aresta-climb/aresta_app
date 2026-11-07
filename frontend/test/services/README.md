@@ -6,7 +6,8 @@ Esta pasta contém os testes unitários dos serviços principais da aplicação.
 
 | Arquivo | Serviço testado | Descrição |
 |---|---|---|
-| `autenticacao/cliente_supabase_autenticacao_test.dart` | `ClienteSupabaseAutenticacao` | Testa os fluxos HTTP e OAuth 2.0 com o Supabase: login e criação de conta no GoTrue (`/auth/v1/token`, `/auth/v1/signup`), Google OAuth PKCE (`S256`) e `Implicit`, espelhamento em `public.perfis` (`/rest/v1/perfis`) e upload de foto no bucket `avatars` do Supabase Storage |
+| `autenticacao/autenticador_nativo_test.dart` | `AutenticadorNativoCanal` | Testa o canal nativo `app.escalada.croquis/autenticacao_nativa` para obtenção de `id_token` do Google e da Apple, tratamento de cancelamento pelo usuário e fallback silencioso em `PlatformException` |
+| `autenticacao/cliente_supabase_autenticacao_test.dart` | `ClienteSupabaseAutenticacao` | Testa os fluxos HTTP, `grant_type=id_token` nativo e OAuth 2.0 com o Supabase: login e criação de conta no GoTrue (`/auth/v1/token`, `/auth/v1/signup`), Google e Apple OAuth PKCE (`S256`) e `Implicit`, espelhamento em `public.perfis` (`/rest/v1/perfis`) e upload de foto no bucket `avatars` do Supabase Storage |
 | `autenticacao/servico_autenticacao_test.dart` | `ServicoAutenticacaoLocal` | Testa validação de e-mail/senha/nome, preservação do `autorIdPublico` (NanoID 14c) e cadenas locais, integração com `ClienteSupabaseAutenticacao`, atualização remota de perfil/foto e encerramento de sessão |
 | `midia/seletor_foto_perfil_test.dart` | `SeletorFotoPerfilNativo` | Testa a invocação do canal nativo `app.escalada.croquis/seletor_midia`, retorno do Data URI `data:image/jpeg;base64,...`, cancelamento pelo usuário e resiliência a `PlatformException` |
 | `caderneta/repositorio_caderneta_test.dart` | `RepositorioCadernetaLocal` | Testa persistência e reatividade de cadenas e perfil do escalador |
