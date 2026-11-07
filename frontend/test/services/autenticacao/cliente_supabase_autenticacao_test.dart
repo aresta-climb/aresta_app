@@ -256,6 +256,30 @@ void main() {
       expect(resPkce.nomeExibicao, equals('Atleta PKCE'));
       expect(resPkce.fotoUrl, equals('https://lh3.googleusercontent.com/a/pkce.jpg'));
 
+      // 1b. Sucesso PKCE com Apple OAuth (provider=apple)
+      Uri? uriAutorizacaoApple;
+      final clienteApple = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+        fluxoLinksOAuth: controladorLinks.stream,
+        lancadorUrlOAuth: (uri) async {
+          uriAutorizacaoApple = uri;
+          Future<void>.microtask(() {
+            controladorLinks.add(
+              Uri.parse('aresta://app.arestaclimb.com/auth-callback?code=ok'),
+            );
+          });
+          return true;
+        },
+      );
+      final resApple = await clienteApple.autenticarAppleOAuth(
+        autorIdPublicoLocal: idPublicoLocal,
+        anonKey: anonKey,
+      );
+      expect(uriAutorizacaoApple?.queryParameters['provider'], equals('apple'));
+      expect(resApple.userId, equals('uuid-pkce'));
+      expect(resApple.nomeExibicao, equals('Atleta PKCE'));
+
       // 2. Sucesso Implicit via lancadorUrlOAuth padrão e processarCallbackOAuth
       late ClienteSupabaseAutenticacao clienteImp;
       UrlLauncherPlatform.instance = _FakeUrlLauncherOAuth((_) {

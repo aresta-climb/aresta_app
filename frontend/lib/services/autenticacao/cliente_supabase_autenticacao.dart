@@ -142,6 +142,36 @@ class ClienteSupabaseAutenticacao {
   Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
+  }) {
+    return autenticarProvedorOAuth(
+      provedor: 'google',
+      nomeFallback: 'Escalador Google',
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      anonKey: anonKey,
+    );
+  }
+
+  /// Inicia o fluxo OAuth 2.0 com a Apple (Sign in with Apple) via navegador externo
+  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
+  Future<ResultadoProvedorAutenticacao> autenticarAppleOAuth({
+    required String autorIdPublicoLocal,
+    required String anonKey,
+  }) {
+    return autenticarProvedorOAuth(
+      provedor: 'apple',
+      nomeFallback: 'Escalador Apple',
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      anonKey: anonKey,
+    );
+  }
+
+  /// Inicia o fluxo OAuth 2.0 com o [provedor] (`'google'` ou `'apple'`) via navegador externo
+  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
+  Future<ResultadoProvedorAutenticacao> autenticarProvedorOAuth({
+    required String provedor,
+    required String nomeFallback,
+    required String autorIdPublicoLocal,
+    required String anonKey,
   }) async {
     final baseUrl = _baseUrl;
     final codeVerifier = _gerarCodeVerifierPkce();
@@ -149,7 +179,7 @@ class ClienteSupabaseAutenticacao {
 
     final uriAutorizacao = Uri.parse('$baseUrl/auth/v1/authorize').replace(
       queryParameters: {
-        'provider': 'google',
+        'provider': provedor,
         'redirect_to': urlRedirecionamentoOAuth,
         'code_challenge': codeChallenge,
         'code_challenge_method': 's256',
@@ -166,7 +196,7 @@ class ClienteSupabaseAutenticacao {
       final abriu = await _lancadorUrlOAuth(uriAutorizacao);
       if (!abriu) {
         throw const ExcecaoAutenticacao(
-          'Não foi possível abrir o navegador para autenticar com o Google.',
+          'Não foi possível abrir o navegador para concluir a autenticação.',
         );
       }
 
@@ -186,6 +216,7 @@ class ClienteSupabaseAutenticacao {
           codigoPkce: codigoPkce,
           codeVerifier: codeVerifier,
           autorIdPublicoLocal: autorIdPublicoLocal,
+          nomeFallback: nomeFallback,
         );
       }
 
@@ -196,15 +227,16 @@ class ClienteSupabaseAutenticacao {
           anonKey: anonKey,
           tokenImplicito: tokenImplicito,
           autorIdPublicoLocal: autorIdPublicoLocal,
+          nomeFallback: nomeFallback,
         );
       }
 
       throw const ExcecaoAutenticacao(
-        'Resposta de autenticação do Google incompleta.',
+        'Resposta de autenticação OAuth incompleta.',
       );
     } on TimeoutException {
       throw const ExcecaoAutenticacao(
-        'Tempo esgotado ao aguardar o retorno do login com Google.',
+        'Tempo esgotado ao aguardar o retorno da autenticação.',
       );
     } finally {
       await inscricao.cancel();
@@ -286,6 +318,7 @@ class ClienteSupabaseAutenticacao {
     required String codigoPkce,
     required String codeVerifier,
     required String autorIdPublicoLocal,
+    required String nomeFallback,
   }) async {
     final resposta = await _clienteHttp.post(
       Uri.parse('$baseUrl/auth/v1/token?grant_type=pkce'),
@@ -302,7 +335,7 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Falha ao validar login com o Google.'),
+        _extrairMensagemErro(mapa, 'Falha ao validar login OAuth.'),
       );
     }
 
@@ -314,7 +347,7 @@ class ClienteSupabaseAutenticacao {
       accessToken: accessToken,
       usuario: usuario,
       autorIdPublicoLocal: autorIdPublicoLocal,
-      nomeFallback: 'Escalador Google',
+      nomeFallback: nomeFallback,
     );
   }
 
@@ -323,6 +356,7 @@ class ClienteSupabaseAutenticacao {
     required String anonKey,
     required String tokenImplicito,
     required String autorIdPublicoLocal,
+    required String nomeFallback,
   }) async {
     final resposta = await _clienteHttp.get(
       Uri.parse('$baseUrl/auth/v1/user'),
@@ -335,7 +369,7 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Sessão do Google inválida.'),
+        _extrairMensagemErro(mapa, 'Sessão OAuth inválida.'),
       );
     }
 
@@ -345,7 +379,7 @@ class ClienteSupabaseAutenticacao {
       accessToken: tokenImplicito,
       usuario: mapa,
       autorIdPublicoLocal: autorIdPublicoLocal,
-      nomeFallback: 'Escalador Google',
+      nomeFallback: nomeFallback,
     );
   }
 
