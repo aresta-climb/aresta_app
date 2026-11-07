@@ -173,9 +173,7 @@ class MainActivity : FlutterActivity() {
                     )
                 }
             } catch (e: ApiException) {
-                if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED ||
-                    resultCode == Activity.RESULT_CANCELED
-                ) {
+                if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
                     callback?.success(mapOf("cancelado" to true))
                 } else {
                     callback?.success(null)
