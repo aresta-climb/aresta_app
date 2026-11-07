@@ -309,7 +309,12 @@ class ClienteSupabaseAutenticacao {
 
       final erroOAuth = params['error_description'] ?? params['error'];
       if (erroOAuth != null && erroOAuth.trim().isNotEmpty) {
-        throw ExcecaoAutenticacao(erroOAuth.replaceAll('+', ' '));
+        throw ExcecaoAutenticacao(
+          _traduzirMensagemServidor(
+            erroOAuth.replaceAll('+', ' '),
+            'Não foi possível concluir a autenticação.',
+          ),
+        );
       }
 
       final codigoPkce = params['code'];
@@ -683,12 +688,56 @@ class ClienteSupabaseAutenticacao {
     } catch (_) {}
   }
 
+  static const Map<String, String> _traducoesErrosServidor = {
+    'invalid api key': 'Chave de acesso do servidor inválida. Tente novamente.',
+    'no api key': 'Chave de acesso do servidor inválida. Tente novamente.',
+    'invalid login credentials': 'E-mail ou senha incorretos.',
+    'email not confirmed': 'Confirme seu endereço de e-mail antes de entrar.',
+    'already registered': 'Este e-mail já está cadastrado.',
+    'user_already_exists': 'Este e-mail já está cadastrado.',
+    'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
+    'unable to validate email': 'Informe um endereço de e-mail válido.',
+    'unacceptable audience':
+        'Não foi possível validar a credencial nativa no servidor.',
+    'bad_jwt': 'Não foi possível validar a credencial nativa no servidor.',
+    'invalid_grant':
+        'Não foi possível validar a credencial nativa no servidor.',
+    'nonce': 'Não foi possível validar a credencial nativa no servidor.',
+    'rate limit':
+        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
+    'for security purposes':
+        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
+    'expired': 'Sua sessão expirou. Faça login novamente.',
+    'invalid token': 'Sua sessão expirou. Faça login novamente.',
+    'access_denied': 'Autenticação cancelada pelo escalador.',
+  };
+
+  static String _traduzirMensagemServidor(
+    String textoBruto,
+    String mensagemPadrao,
+  ) {
+    final limpo = textoBruto.trim();
+    final minusculo = limpo.toLowerCase();
+    for (final entrada in _traducoesErrosServidor.entries) {
+      if (minusculo.contains(entrada.key)) {
+        return entrada.value;
+      }
+    }
+    return limpo;
+  }
+
   static String _extrairMensagemErro(
     Map<String, dynamic> mapa,
     String mensagemPadrao,
   ) {
-    final msg = mapa['error_description'] ?? mapa['msg'];
-    return msg != null ? msg.toString() : mensagemPadrao;
+    final msg =
+        mapa['error_description'] ??
+        mapa['msg'] ??
+        mapa['message'] ??
+        mapa['error'];
+    return msg != null
+        ? _traduzirMensagemServidor(msg.toString(), mensagemPadrao)
+        : mensagemPadrao;
   }
 
   static String _gerarCodeVerifierPkce() {

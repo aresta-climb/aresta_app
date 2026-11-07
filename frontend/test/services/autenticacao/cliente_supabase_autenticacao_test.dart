@@ -435,8 +435,14 @@ void main() {
             final body = jsonDecode(request.body) as Map<String, dynamic>;
             if (body['id_token'] == 'token-invalido') {
               return http.Response(
-                jsonEncode({'error_description': 'ID token inválido.'}),
+                jsonEncode({'message': 'Unacceptable audience in id_token'}),
                 400,
+              );
+            }
+            if (body['id_token'] == 'token-apikey-invalida') {
+              return http.Response(
+                jsonEncode({'message': 'Invalid API key'}),
+                401,
               );
             }
             if (body['provider'] == 'apple') {
@@ -548,7 +554,7 @@ void main() {
       );
       expect(abriuNavegador, isFalse);
 
-      // 4. Erro HTTP ao validar id_token no Supabase lança ExcecaoAutenticacao
+      // 4. Erro HTTP em inglês no Supabase é traduzido para português na ExcecaoAutenticacao
       fakeNativo.respostaGoogle = const CredencialNativaOAuth(
         idToken: 'token-invalido',
       );
@@ -561,7 +567,24 @@ void main() {
           isA<ExcecaoAutenticacao>().having(
             (e) => e.mensagem,
             'mensagem',
-            'ID token inválido.',
+            'Não foi possível validar a credencial nativa no servidor.',
+          ),
+        ),
+      );
+
+      fakeNativo.respostaGoogle = const CredencialNativaOAuth(
+        idToken: 'token-apikey-invalida',
+      );
+      await expectLater(
+        () => cliente.autenticarGoogleOAuth(
+          autorIdPublicoLocal: idPublicoLocal,
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            'Chave de acesso do servidor inválida. Tente novamente.',
           ),
         ),
       );
