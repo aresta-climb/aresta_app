@@ -1,5 +1,8 @@
 import Flutter
 import UIKit
+import AuthenticationServices
+import CryptoKit
+import Security
 import GoogleMaps
 #if canImport(workmanager_apple)
 import workmanager_apple
@@ -8,8 +11,10 @@ import workmanager
 #endif
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
   private var resultadoPendenteFoto: FlutterResult?
+  private var resultadoPendenteApple: FlutterResult?
+  private var nonceBrutoAppleAtual: String?
 
   override func application(
     _ application: UIApplication,
@@ -41,6 +46,122 @@ import workmanager
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let canalAutenticacao = FlutterMethodChannel(
+      name: "app.escalada.croquis/autenticacao_nativa",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    canalAutenticacao.setMethodCallHandler { [weak self] (call, result) in
+      guard let self = self else {
+        result(nil)
+        return
+      }
+      switch call.method {
+      case "solicitarIdTokenApple":
+        self.iniciarLoginNativoApple(result: result)
+      case "solicitarIdTokenGoogle":
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func iniciarLoginNativoApple(result: @escaping FlutterResult) {
+    DispatchQueue.main.async {
+      self.resultadoPendenteApple?(nil)
+      self.resultadoPendenteApple = result
+      let nonceBruto = self.gerarNonceAleatorio()
+      self.nonceBrutoAppleAtual = nonceBruto
+
+      let provedor = ASAuthorizationAppleIDProvider()
+      let requisicao = provedor.createRequest()
+      requisicao.requestedScopes = [.fullName, .email]
+      requisicao.nonce = self.sha256Hex(nonceBruto)
+
+      let controlador = ASAuthorizationController(authorizationRequests: [requisicao])
+      controlador.delegate = self
+      controlador.presentationContextProvider = self
+      controlador.performRequests()
+    }
+  }
+
+  func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+    return self.window ?? UIWindow()
+  }
+
+  func authorizationController(
+    controller: ASAuthorizationController,
+    didCompleteWithAuthorization authorization: ASAuthorization
+  ) {
+    let callback = resultadoPendenteApple
+    let nonce = nonceBrutoAppleAtual
+    resultadoPendenteApple = nil
+    nonceBrutoAppleAtual = nil
+
+    guard let credencial = authorization.credential as? ASAuthorizationAppleIDCredential,
+          let dadosToken = credencial.identityToken,
+          let idToken = String(data: dadosToken, encoding: .utf8) else {
+      callback?(nil)
+      return
+    }
+
+    var partesNome: [String] = []
+    if let nome = credencial.fullName?.givenName, !nome.isEmpty {
+      partesNome.append(nome)
+    }
+    if let sobrenome = credencial.fullName?.familyName, !sobrenome.isEmpty {
+      partesNome.append(sobrenome)
+    }
+    let nomeCompleto = partesNome.isEmpty ? nil : partesNome.joined(separator: " ")
+
+    callback?([
+      "idToken": idToken,
+      "nonce": nonce as Any,
+      "nomeExibicao": nomeCompleto as Any,
+      "cancelado": false
+    ])
+  }
+
+  func authorizationController(
+    controller: ASAuthorizationController,
+    didCompleteWithError error: Error
+  ) {
+    let callback = resultadoPendenteApple
+    resultadoPendenteApple = nil
+    nonceBrutoAppleAtual = nil
+
+    if let erroAuth = error as? ASAuthorizationError, erroAuth.code == .canceled {
+      callback?(["cancelado": true])
+    } else {
+      callback?(nil)
+    }
+  }
+
+  private func gerarNonceAleatorio(tamanho: Int = 32) -> String {
+    let caracteres = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+    var resultado = ""
+    var bytesRestantes = tamanho
+    while bytesRestantes > 0 {
+      var aleatorios = [UInt8](repeating: 0, count: 16)
+      let status = SecRandomCopyBytes(kSecRandomDefault, aleatorios.count, &aleatorios)
+      if status != errSecSuccess {
+        return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+      }
+      for byte in aleatorios where bytesRestantes > 0 {
+        if Int(byte) < caracteres.count {
+          resultado.append(caracteres[Int(byte)])
+          bytesRestantes -= 1
+        }
+      }
+    }
+    return resultado
+  }
+
+  private func sha256Hex(_ texto: String) -> String {
+    let dados = Data(texto.utf8)
+    let resumo = SHA256.hash(data: dados)
+    return resumo.compactMap { String(format: "%02x", $0) }.joined()
   }
 
   private func apresentarSeletorFoto(result: @escaping FlutterResult) {
