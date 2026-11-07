@@ -130,7 +130,7 @@ void main() {
       vm.dispose();
     });
 
-    test('entrarComGoogle e continuarSemConta acionam callbacks e tratam exceções', () async {
+    test('entrarComGoogle, entrarComApple e continuarSemConta acionam callbacks e tratam exceções', () async {
       var autenticado = 0;
       var continuouSemConta = 0;
       final vm = LoginViewModel(
@@ -144,23 +144,31 @@ void main() {
       expect(autenticado, equals(1));
       expect(servicoAutenticacao.estaAutenticado, isTrue);
 
+      await servicoAutenticacao.encerrarSessao();
+      final logouApple = await vm.entrarComApple();
+      expect(logouApple, isTrue);
+      expect(autenticado, equals(2));
+      expect(servicoAutenticacao.estaAutenticado, isTrue);
+
       vm.continuarSemConta();
       expect(continuouSemConta, equals(1));
 
       vm.dispose();
     });
 
-    test('captura ExcecaoAutenticacao e exceções inesperadas do provedor no e-mail e no Google', () async {
-      final servicoComFalhaDominioGoogle = ServicoAutenticacaoLocal(
+    test('captura ExcecaoAutenticacao e exceções inesperadas do provedor no e-mail, Google e Apple', () async {
+      final servicoComFalhaDominio = ServicoAutenticacaoLocal(
         repositorio: repositorio,
         provedorGoogle: () async =>
             throw const ExcecaoAutenticacao('Login com Google cancelado.'),
+        provedorApple: () async =>
+            throw const ExcecaoAutenticacao('Login com Apple cancelado.'),
         provedorEmailSenha: (email, senha) async =>
             throw Exception('Falha de rede'),
       );
 
       final vm1 = LoginViewModel(
-        servicoAutenticacao: servicoComFalhaDominioGoogle,
+        servicoAutenticacao: servicoComFalhaDominio,
       );
       vm1.definirEmail('teste@gmail.com');
       vm1.definirSenha('123456');
@@ -173,19 +181,29 @@ void main() {
 
       expect(await vm1.entrarComGoogle(), isFalse);
       expect(vm1.mensagemErro, equals('Login com Google cancelado.'));
+
+      expect(await vm1.entrarComApple(), isFalse);
+      expect(vm1.mensagemErro, equals('Login com Apple cancelado.'));
       vm1.dispose();
 
-      final servicoComFalhaGenericaGoogle = ServicoAutenticacaoLocal(
+      final servicoComFalhaGenerica = ServicoAutenticacaoLocal(
         repositorio: repositorio,
         provedorGoogle: () async => throw Exception('Erro OAuth'),
+        provedorApple: () async => throw Exception('Erro Apple OAuth'),
       );
       final vm2 = LoginViewModel(
-        servicoAutenticacao: servicoComFalhaGenericaGoogle,
+        servicoAutenticacao: servicoComFalhaGenerica,
       );
       expect(await vm2.entrarComGoogle(), isFalse);
       expect(
         vm2.mensagemErro,
         equals('Não foi possível entrar com o Google. Tente novamente.'),
+      );
+
+      expect(await vm2.entrarComApple(), isFalse);
+      expect(
+        vm2.mensagemErro,
+        equals('Não foi possível entrar com a Apple. Tente novamente.'),
       );
       vm2.dispose();
     });
