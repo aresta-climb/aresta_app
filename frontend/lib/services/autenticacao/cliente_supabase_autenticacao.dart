@@ -11,6 +11,7 @@ import '../../data/modelos/perfil_escalador.dart';
 import '../../utils/gerador_uid.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
+import 'autenticador_nativo.dart';
 import 'servico_autenticacao.dart';
 
 /// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit) com o Supabase.
@@ -25,6 +26,8 @@ class ClienteSupabaseAutenticacao {
 
   final ClienteHttpAresta _clienteHttp;
   final String Function() _obterUrlSupabase;
+  final AutenticadorNativo _autenticadorNativo;
+  final String _idClienteWebGoogle;
   final Future<bool> Function(Uri uri) _lancadorUrlOAuth;
   final Stream<Uri>? _fluxoLinksOAuth;
   final Duration _timeoutOAuth;
@@ -35,12 +38,18 @@ class ClienteSupabaseAutenticacao {
   ClienteSupabaseAutenticacao({
     ClienteHttpAresta? clienteHttp,
     String Function()? obterUrlSupabase,
+    AutenticadorNativo? autenticadorNativo,
+    String idClienteWebGoogle =
+        AutenticadorNativoCanal.idClienteWebGooglePadrao,
     Future<bool> Function(Uri uri)? lancadorUrlOAuth,
     Stream<Uri>? fluxoLinksOAuth,
     Duration timeoutOAuth = const Duration(minutes: 3),
   }) : _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia,
        _obterUrlSupabase =
            obterUrlSupabase ?? (() => RemoteConfigService.instance.supabaseUrl),
+       _autenticadorNativo =
+           autenticadorNativo ?? AutenticadorNativoCanal.instancia,
+       _idClienteWebGoogle = idClienteWebGoogle,
        _lancadorUrlOAuth =
            lancadorUrlOAuth ??
            ((uri) => launchUrl(uri, mode: LaunchMode.externalApplication)),
@@ -137,12 +146,31 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Inicia o fluxo OAuth 2.0 com o Google via navegador externo e aguarda o callback
-  /// (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
+  /// Autentica com o Google priorizando o seletor nativo de contas do sistema operacional
+  /// (`grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
   Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) {
+  }) async {
+    final credencialNativa = await _autenticadorNativo.solicitarCredencialGoogle(
+      webClientId: _idClienteWebGoogle,
+    );
+    if (credencialNativa != null) {
+      if (credencialNativa.cancelado) {
+        throw const ExcecaoAutenticacao('Login com o Google cancelado.');
+      }
+      return autenticarComIdToken(
+        provedor: 'google',
+        idToken: credencialNativa.idToken!,
+        nonce: credencialNativa.nonce,
+        nomeSugeridoNativo: credencialNativa.nomeExibicao,
+        fotoSugeridaNativa: credencialNativa.fotoUrl,
+        nomeFallback: 'Escalador Google',
+        autorIdPublicoLocal: autorIdPublicoLocal,
+        anonKey: anonKey,
+      );
+    }
+
     return autenticarProvedorOAuth(
       provedor: 'google',
       nomeFallback: 'Escalador Google',
@@ -151,17 +179,93 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Inicia o fluxo OAuth 2.0 com a Apple (Sign in with Apple) via navegador externo
-  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
+  /// Autentica com a Apple priorizando o modal nativo do sistema operacional (Face ID / Touch ID
+  /// via `grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
   Future<ResultadoProvedorAutenticacao> autenticarAppleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) {
+  }) async {
+    final credencialNativa = await _autenticadorNativo.solicitarCredencialApple();
+    if (credencialNativa != null) {
+      if (credencialNativa.cancelado) {
+        throw const ExcecaoAutenticacao('Login com a Apple cancelado.');
+      }
+      return autenticarComIdToken(
+        provedor: 'apple',
+        idToken: credencialNativa.idToken!,
+        nonce: credencialNativa.nonce,
+        nomeSugeridoNativo: credencialNativa.nomeExibicao,
+        fotoSugeridaNativa: credencialNativa.fotoUrl,
+        nomeFallback: 'Escalador Apple',
+        autorIdPublicoLocal: autorIdPublicoLocal,
+        anonKey: anonKey,
+      );
+    }
+
     return autenticarProvedorOAuth(
       provedor: 'apple',
       nomeFallback: 'Escalador Apple',
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
+    );
+  }
+
+  /// Autentica diretamente no GoTrue (`/auth/v1/token?grant_type=id_token`) utilizando
+  /// um `id_token` emitido pelo modal nativo do sistema operacional (sem abrir o navegador).
+  Future<ResultadoProvedorAutenticacao> autenticarComIdToken({
+    required String provedor,
+    required String idToken,
+    String? nonce,
+    String? nomeSugeridoNativo,
+    String? fotoSugeridaNativa,
+    required String nomeFallback,
+    required String autorIdPublicoLocal,
+    required String anonKey,
+  }) async {
+    final baseUrl = _baseUrl;
+    final resposta = await _clienteHttp.post(
+      Uri.parse('$baseUrl/auth/v1/token?grant_type=id_token'),
+      headers: {
+        'apikey': anonKey,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'provider': provedor,
+        'id_token': idToken,
+        'nonce': ?nonce,
+      }),
+    );
+
+    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoAutenticacao(
+        _extrairMensagemErro(mapa, 'Falha ao validar credencial nativa.'),
+      );
+    }
+
+    final accessToken = mapa['access_token'] as String?;
+    final usuarioBruto = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
+    final metadadosAtuais = Map<String, dynamic>.from(
+      (usuarioBruto['user_metadata'] as Map<String, dynamic>?) ?? const {},
+    );
+    if (nomeSugeridoNativo != null && nomeSugeridoNativo.trim().isNotEmpty) {
+      metadadosAtuais.putIfAbsent('full_name', () => nomeSugeridoNativo.trim());
+    }
+    if (fotoSugeridaNativa != null && fotoSugeridaNativa.trim().isNotEmpty) {
+      metadadosAtuais.putIfAbsent('avatar_url', () => fotoSugeridaNativa.trim());
+    }
+    final usuarioEnriquecido = <String, dynamic>{
+      ...usuarioBruto,
+      'user_metadata': metadadosAtuais,
+    };
+
+    return _extrairESincronizarUsuario(
+      baseUrl: baseUrl,
+      anonKey: anonKey,
+      accessToken: accessToken,
+      usuario: usuarioEnriquecido,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      nomeFallback: nomeFallback,
     );
   }
 

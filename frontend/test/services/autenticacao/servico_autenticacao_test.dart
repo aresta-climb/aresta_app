@@ -46,11 +46,12 @@ void main() {
   });
 
   group('ServicoAutenticacaoLocal', () {
-    test('expõe instância singleton configurável e estado inicial desautenticado', () {
+    test('expõe instância singleton configurável e estado inicial desautenticado', () async {
       final servico = ServicoAutenticacaoLocal.instancia;
       expect(servico.estaAutenticado, isFalse);
       expect(servico.obterPerfil().estaAutenticado, isFalse);
       expect(servico.perfilListenable.value.estaAutenticado, isFalse);
+      await servico.atualizarPerfilRemoto();
 
       final custom = ServicoAutenticacaoLocal(
         repositorio: repositorio,

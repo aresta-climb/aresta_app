@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
 import 'package:frontend/services/autenticacao/cliente_supabase_autenticacao.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
@@ -11,6 +12,22 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+class _FakeAutenticadorNativo implements AutenticadorNativo {
+  CredencialNativaOAuth? respostaGoogle;
+  CredencialNativaOAuth? respostaApple;
+
+  _FakeAutenticadorNativo({this.respostaGoogle, this.respostaApple});
+
+  @override
+  Future<CredencialNativaOAuth?> solicitarCredencialGoogle({
+    required String webClientId,
+  }) async => respostaGoogle;
+
+  @override
+  Future<CredencialNativaOAuth?> solicitarCredencialApple() async =>
+      respostaApple;
+}
 
 class _FakeUrlLauncherOAuth extends UrlLauncherPlatform {
   final void Function(String url) aoAbrir;
@@ -404,6 +421,150 @@ void main() {
         fotoFinal: dataUri,
       );
       expect(urlFallback, equals(dataUri));
+    });
+
+    test('autenticarGoogleOAuth e autenticarAppleOAuth priorizam modal nativo (grant_type=id_token) sem abrir navegador e tratam cancelamento e erro', () async {
+      var abriuNavegador = false;
+      final requisicoes = <http.Request>[];
+
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          requisicoes.add(request);
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'id_token') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['id_token'] == 'token-invalido') {
+              return http.Response(
+                jsonEncode({'error_description': 'ID token inválido.'}),
+                400,
+              );
+            }
+            if (body['provider'] == 'apple') {
+              return http.Response(
+                jsonEncode({
+                  'access_token': 'jwt-supabase-apple',
+                  'user': {
+                    'id': 'uuid-apple-nativo',
+                    'user_metadata': <String, dynamic>{},
+                  },
+                }),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-supabase-google',
+                'user': {
+                  'id': 'uuid-google-nativo',
+                  'user_metadata': <String, dynamic>{},
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            return http.Response(jsonEncode([]), 200);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
+
+      final fakeNativo = _FakeAutenticadorNativo(
+        respostaGoogle: const CredencialNativaOAuth(
+          idToken: 'id-token-google-valido',
+          nomeExibicao: 'Eduardo Nativo Google',
+          fotoUrl: 'https://lh3.googleusercontent.com/a/nativo.jpg',
+        ),
+        respostaApple: const CredencialNativaOAuth(
+          idToken: 'id-token-apple-valido',
+          nonce: 'nonce-apple-123',
+          nomeExibicao: 'Eduardo Nativo Apple',
+        ),
+      );
+
+      final cliente = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+        autenticadorNativo: fakeNativo,
+        lancadorUrlOAuth: (_) async {
+          abriuNavegador = true;
+          return true;
+        },
+      );
+
+      // 1. Login nativo com Google envia grant_type=id_token sem abrir navegador
+      final resGoogle = await cliente.autenticarGoogleOAuth(
+        autorIdPublicoLocal: idPublicoLocal,
+        anonKey: anonKey,
+      );
+      expect(abriuNavegador, isFalse);
+      expect(resGoogle.userId, equals('uuid-google-nativo'));
+      expect(resGoogle.nomeExibicao, equals('Eduardo Nativo Google'));
+      expect(
+        resGoogle.fotoUrl,
+        equals('https://lh3.googleusercontent.com/a/nativo.jpg'),
+      );
+      expect(resGoogle.accessToken, equals('jwt-supabase-google'));
+
+      // 2. Login nativo com Apple envia grant_type=id_token + nonce sem abrir navegador
+      final resApple = await cliente.autenticarAppleOAuth(
+        autorIdPublicoLocal: idPublicoLocal,
+        anonKey: anonKey,
+      );
+      expect(abriuNavegador, isFalse);
+      expect(resApple.userId, equals('uuid-apple-nativo'));
+      expect(resApple.nomeExibicao, equals('Eduardo Nativo Apple'));
+      expect(resApple.accessToken, equals('jwt-supabase-apple'));
+
+      // 3. Cancelamento explícito no modal nativo lança ExcecaoAutenticacao sem abrir navegador
+      fakeNativo.respostaGoogle = const CredencialNativaOAuth(cancelado: true);
+      fakeNativo.respostaApple = const CredencialNativaOAuth(cancelado: true);
+
+      await expectLater(
+        () => cliente.autenticarGoogleOAuth(
+          autorIdPublicoLocal: idPublicoLocal,
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('cancelado'),
+          ),
+        ),
+      );
+      await expectLater(
+        () => cliente.autenticarAppleOAuth(
+          autorIdPublicoLocal: idPublicoLocal,
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            contains('cancelado'),
+          ),
+        ),
+      );
+      expect(abriuNavegador, isFalse);
+
+      // 4. Erro HTTP ao validar id_token no Supabase lança ExcecaoAutenticacao
+      fakeNativo.respostaGoogle = const CredencialNativaOAuth(
+        idToken: 'token-invalido',
+      );
+      await expectLater(
+        () => cliente.autenticarGoogleOAuth(
+          autorIdPublicoLocal: idPublicoLocal,
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            'ID token inválido.',
+          ),
+        ),
+      );
     });
   });
 }
