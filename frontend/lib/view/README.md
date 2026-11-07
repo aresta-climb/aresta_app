@@ -32,7 +32,7 @@ lib/view/
 │       ├── mapa_global_functions.dart - Marcadores, bottom sheet e zoom do Mapa Global
 │       └── mapa_marker.dart      - Desenho via Canvas do pino vetorial da marca
 └── view_models/                  - Modelos de apresentação e gerenciamento de estado de tela
-    ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google OAuth, e-mail/senha, criação de conta e modo offline)
+    ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google e Apple OAuth, e-mail/senha, criação de conta e modo offline)
     ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão e métricas
     ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
     ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
@@ -75,7 +75,7 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 - **Isolamento e Segurança de Tipos**: Protegem a interface de variações na estrutura de dados subjacente, fornecendo contratos claros e testáveis.
 
 ### Principais View Models
-- **`LoginViewModel`**: Coordena a alternância entre login e criação de conta, validação de campos e chamadas a `ServicoAutenticacao.entrarComEmailSenha`, `criarContaComEmailSenha` e `entrarComGoogle`.
+- **`LoginViewModel`**: Coordena a alternância entre login e criação de conta, validação de campos e chamadas a `ServicoAutenticacao.entrarComEmailSenha`, `criarContaComEmailSenha`, `entrarComGoogle` e `entrarComApple`.
 - **`HubPerfilCadernetaViewModel`**: Expõe reativamente os dados do `PerfilEscalador` (`nomeAtleta`, `fotoUrl`, `autorIdPublico`, `estaAutenticado`), métricas rápidas (`totalCadenas`, `totalTentativas`, `totalPicos`, `totalVias`) e comandos de atualização de nome e foto (`atualizarNome`, `atualizarFotoPerfil`, `selecionarEAtualizarFoto`, `selecionarEObterNovaFoto`, `copiarIdPublico`, `encerrarSessao`).
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.
