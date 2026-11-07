@@ -182,7 +182,18 @@ void main() {
       final perfilPreservado = await servicoPadrao.entrarComGoogle();
       expect(perfilPreservado.autorNomePublico, equals('Apelido Customizado'));
 
-      // Provedores customizados injetados (ex: Google / Email / Criar Conta)
+      // Login offline com Apple quando perfil usa apelido padrão
+      await repositorio.salvarPerfil(
+        repositorio.obterPerfil().copyWith(
+          autorNomePublico: 'Escalador Aresta',
+          limparUserId: true,
+        ),
+      );
+      final perfilAppleOffline = await servicoPadrao.entrarComApple();
+      expect(perfilAppleOffline.userId, startsWith('usr_apple_'));
+      expect(perfilAppleOffline.autorNomePublico, equals('Escalador Apple'));
+
+      // Provedores customizados injetados (ex: Google / Apple / Email / Criar Conta)
       final servicoCustom = ServicoAutenticacaoLocal(
         repositorio: repositorio,
         obterAnonKeySupabase: () => '',
@@ -202,6 +213,11 @@ void main() {
           nomeExibicao: 'Conta Gmail Real',
           fotoUrl: 'https://lh3.googleusercontent.com/a/gmail.jpg',
           accessToken: 'tok-google',
+        ),
+        provedorApple: () async => const ResultadoProvedorAutenticacao(
+          userId: 'uid-apple-custom',
+          nomeExibicao: 'Conta Apple Real',
+          accessToken: 'tok-apple',
         ),
       );
 
@@ -228,6 +244,11 @@ void main() {
       expect(p3.autorNomePublico, equals('Conta Gmail Real'));
       expect(p3.fotoUrl, equals('https://lh3.googleusercontent.com/a/gmail.jpg'));
       expect(p3.accessToken, equals('tok-google'));
+
+      final p4 = await servicoCustom.entrarComApple();
+      expect(p4.userId, equals('uid-apple-custom'));
+      expect(p4.autorNomePublico, equals('Conta Apple Real'));
+      expect(p4.accessToken, equals('tok-apple'));
     });
 
     test('integra com Supabase Auth e tabela public.perfis para login e criação de conta por e-mail e senha', () async {
@@ -515,6 +536,15 @@ void main() {
       );
       expect(postPerfis, isNotEmpty);
 
+      // 1b. Fluxo PKCE com Apple via ServicoAutenticacaoLocal
+      final perfilApplePkce = await servico.entrarComApple();
+      expect(
+        urlAbertaNoNavegador!.queryParameters['provider'],
+        equals('apple'),
+      );
+      expect(perfilApplePkce.userId, equals('uuid-google-123'));
+      expect(perfilApplePkce.accessToken, equals('jwt-google-pkce'));
+
       // 2. Fluxo Implicit (#access_token=...) acionado via processarCallbackOAuth e lancadorUrlOAuth padrão
       late ServicoAutenticacaoLocal servicoImplicit;
       UrlLauncherPlatform.instance = _FakeUrlLauncherOAuth((_) {
@@ -793,6 +823,13 @@ void main() {
         novaFotoUrl: dataUri,
       );
       expect(atualizadoDataUri.fotoUrl, equals(dataUri));
+
+      // 3. Quando apenas o nome é atualizado, preserva a foto atual
+      final atualizadoApenasNome = await servico.atualizarPerfilRemoto(
+        novoNome: 'Apenas Nome',
+      );
+      expect(atualizadoApenasNome.autorNomePublico, equals('Apenas Nome'));
+      expect(atualizadoApenasNome.fotoUrl, equals(dataUri));
     });
   });
 }

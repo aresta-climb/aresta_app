@@ -65,6 +65,9 @@ typedef ProvedorCriarContaEmailSenha = Future<ResultadoProvedorAutenticacao> Fun
 /// Assinatura para provedor de login via conta Google (Gmail).
 typedef ProvedorLoginGoogle = Future<ResultadoProvedorAutenticacao> Function();
 
+/// Assinatura para provedor de login via conta Apple (Apple ID).
+typedef ProvedorLoginApple = Future<ResultadoProvedorAutenticacao> Function();
+
 /// Contrato da camada de serviço responsável pela autenticação e vínculo do [PerfilEscalador].
 abstract class ServicoAutenticacao {
   /// Notificador reativo do perfil atual do escalador.
@@ -91,6 +94,9 @@ abstract class ServicoAutenticacao {
 
   /// Autentica o escalador utilizando sua conta Google (Gmail) via Supabase OAuth.
   Future<PerfilEscalador> entrarComGoogle();
+
+  /// Autentica o escalador utilizando sua conta Apple (Apple ID) via Supabase OAuth.
+  Future<PerfilEscalador> entrarComApple();
 
   /// Atualiza o nome e/ou a foto de perfil localmente e sincroniza com o Supabase (Auth, Storage e `public.perfis`).
   Future<PerfilEscalador> atualizarPerfilRemoto({
@@ -139,6 +145,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   final ProvedorLoginEmailSenha? _provedorEmailSenha;
   final ProvedorCriarContaEmailSenha? _provedorCriarConta;
   final ProvedorLoginGoogle? _provedorGoogle;
+  final ProvedorLoginApple? _provedorApple;
 
   /// Cria uma instância de [ServicoAutenticacaoLocal].
   ServicoAutenticacaoLocal({
@@ -150,6 +157,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
     ProvedorLoginEmailSenha? provedorEmailSenha,
     ProvedorCriarContaEmailSenha? provedorCriarConta,
     ProvedorLoginGoogle? provedorGoogle,
+    ProvedorLoginApple? provedorApple,
     Future<bool> Function(Uri uri)? lancadorUrlOAuth,
     Stream<Uri>? fluxoLinksOAuth,
     Duration timeoutOAuth = const Duration(minutes: 3),
@@ -168,7 +176,8 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
            (() => RemoteConfigService.instance.supabaseAnonKey),
        _provedorEmailSenha = provedorEmailSenha,
        _provedorCriarConta = provedorCriarConta,
-       _provedorGoogle = provedorGoogle;
+       _provedorGoogle = provedorGoogle,
+       _provedorApple = provedorApple;
 
   @override
   ValueListenable<PerfilEscalador> get perfilListenable =>
@@ -338,6 +347,39 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       perfilAtual: atual,
       nomeDoProvedor: resultado.nomeExibicao,
       autenticouEmProvedorReal: _provedorGoogle != null || anonKey.isNotEmpty,
+    );
+
+    return _salvarPerfilAutenticado(
+      perfilAtual: atual,
+      resultado: resultado,
+      nomeFinal: nomeFinal,
+    );
+  }
+
+  @override
+  Future<PerfilEscalador> entrarComApple() async {
+    final atual = _repositorio.obterPerfil();
+    final anonKey = _obterAnonKeySupabase().trim();
+
+    final ResultadoProvedorAutenticacao resultado;
+    if (_provedorApple != null) {
+      resultado = await _provedorApple();
+    } else if (anonKey.isNotEmpty) {
+      resultado = await _clienteSupabase.autenticarAppleOAuth(
+        autorIdPublicoLocal: atual.autorIdPublico,
+        anonKey: anonKey,
+      );
+    } else {
+      resultado = ResultadoProvedorAutenticacao(
+        userId: 'usr_apple_${gerarUid()}',
+        nomeExibicao: 'Escalador Apple',
+      );
+    }
+
+    final nomeFinal = _resolverNomeParaLogin(
+      perfilAtual: atual,
+      nomeDoProvedor: resultado.nomeExibicao,
+      autenticouEmProvedorReal: _provedorApple != null || anonKey.isNotEmpty,
     );
 
     return _salvarPerfilAutenticado(
