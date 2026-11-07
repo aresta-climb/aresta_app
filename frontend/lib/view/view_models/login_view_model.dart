@@ -179,6 +179,33 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
+  /// Inicia o fluxo de autenticação via conta Apple (Apple ID).
+  ///
+  /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
+  Future<bool> entrarComApple() async {
+    _carregando = true;
+    _mensagemErro = null;
+    notifyListeners();
+
+    try {
+      await servicoAutenticacao.entrarComApple();
+      _carregando = false;
+      notifyListeners();
+      aoAutenticarComSucesso?.call();
+      return true;
+    } on ExcecaoAutenticacao catch (e) {
+      _carregando = false;
+      _mensagemErro = e.mensagem;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _carregando = false;
+      _mensagemErro = 'Não foi possível entrar com a Apple. Tente novamente.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Aciona o fluxo de navegação para continuar usando o aplicativo sem conta (modo offline).
   void continuarSemConta() {
     _mensagemErro = null;
