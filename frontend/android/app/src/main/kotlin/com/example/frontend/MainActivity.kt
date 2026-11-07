@@ -8,6 +8,10 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.ColorDrawable
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -18,11 +22,14 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CANAL_CICLO_VIDA = "app.escalada.croquis/ciclo_vida"
         private const val CANAL_SELETOR_MIDIA = "app.escalada.croquis/seletor_midia"
+        private const val CANAL_AUTENTICACAO_NATIVA = "app.escalada.croquis/autenticacao_nativa"
         private const val CODIGO_SELECIONAR_FOTO = 9401
+        private const val CODIGO_LOGIN_GOOGLE = 9402
         private const val TAMANHO_AVATAR_PX = 256
     }
 
     private var resultadoPendenteFoto: MethodChannel.Result? = null
+    private var resultadoPendenteAuthGoogle: MethodChannel.Result? = null
 
     /**
      * Registra o canal nativo de ciclo de vida para permitir que o Flutter mova
@@ -69,6 +76,47 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CANAL_AUTENTICACAO_NATIVA
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "solicitarIdTokenGoogle" -> {
+                    val webClientId = call.argument<String>("webClientId")?.trim().orEmpty()
+                    if (webClientId.isEmpty()) {
+                        result.success(null)
+                        return@setMethodCallHandler
+                    }
+                    resultadoPendenteAuthGoogle?.success(null)
+                    resultadoPendenteAuthGoogle = result
+                    try {
+                        val opcoes = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestEmail()
+                            .requestProfile()
+                            .requestIdToken(webClientId)
+                            .build()
+                        val cliente = GoogleSignIn.getClient(this, opcoes)
+                        cliente.signOut().addOnCompleteListener {
+                            try {
+                                startActivityForResult(cliente.signInIntent, CODIGO_LOGIN_GOOGLE)
+                            } catch (_: Exception) {
+                                val pendente = resultadoPendenteAuthGoogle
+                                resultadoPendenteAuthGoogle = null
+                                pendente?.success(null)
+                            }
+                        }
+                    } catch (_: Exception) {
+                        resultadoPendenteAuthGoogle = null
+                        result.success(null)
+                    }
+                }
+                "solicitarIdTokenApple" -> {
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -102,6 +150,36 @@ class MainActivity : FlutterActivity() {
                 val saida = ByteArrayOutputStream()
                 redimensionado.compress(Bitmap.CompressFormat.JPEG, 82, saida)
                 callback?.success(saida.toByteArray())
+            } catch (_: Exception) {
+                callback?.success(null)
+            }
+        } else if (requestCode == CODIGO_LOGIN_GOOGLE) {
+            val callback = resultadoPendenteAuthGoogle
+            resultadoPendenteAuthGoogle = null
+            val tarefa = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                val conta = tarefa.getResult(ApiException::class.java)
+                val token = conta.idToken
+                if (token.isNullOrBlank()) {
+                    callback?.success(null)
+                } else {
+                    callback?.success(
+                        mapOf(
+                            "idToken" to token,
+                            "nomeExibicao" to conta.displayName,
+                            "fotoUrl" to conta.photoUrl?.toString(),
+                            "cancelado" to false
+                        )
+                    )
+                }
+            } catch (e: ApiException) {
+                if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED ||
+                    resultCode == Activity.RESULT_CANCELED
+                ) {
+                    callback?.success(mapOf("cancelado" to true))
+                } else {
+                    callback?.success(null)
+                }
             } catch (_: Exception) {
                 callback?.success(null)
             }
