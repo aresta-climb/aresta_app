@@ -68,6 +68,7 @@ void main() {
 
       expect(find.text('Entrar na sua conta'), findsOneWidget);
       expect(find.text('Continuar com o Google'), findsOneWidget);
+      expect(find.text('Continuar com a Apple'), findsOneWidget);
       expect(find.byKey(const Key('campo_login_email')), findsOneWidget);
       expect(find.byKey(const Key('campo_login_senha')), findsOneWidget);
       expect(find.byKey(const Key('campo_login_nome')), findsNothing);
@@ -179,6 +180,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // 1. Toca em Continuar sem conta / Offline -> navega para PerfilNode(HomeNode)
+      await tester.ensureVisible(find.byKey(const Key('btn_continuar_sem_conta')));
       await tester.tap(find.byKey(const Key('btn_continuar_sem_conta')));
       await tester.pumpAndSettle();
 
@@ -191,6 +193,18 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('btn_login_google')));
+      await tester.pumpAndSettle();
+
+      expect(servicoAutenticacao.estaAutenticado, isTrue);
+      expect(treeController.currentNode, isA<PerfilNode>());
+      expect(treeController.currentNode.parent, isA<HomeNode>());
+
+      // 3. Encerra sessão, volta para LoginNode e toca em Continuar com a Apple -> autentica e navega para PerfilNode(HomeNode)
+      await servicoAutenticacao.encerrarSessao();
+      treeController.navigateTo(const LoginNode(HomeNode()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_login_apple')));
       await tester.pumpAndSettle();
 
       expect(servicoAutenticacao.estaAutenticado, isTrue);

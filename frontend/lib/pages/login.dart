@@ -68,6 +68,13 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _executarLoginApple() async {
+    final autenticado = await _vm.entrarComApple();
+    if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
+      AppNav.toPerfil(context);
+    }
+  }
+
   Future<void> _executarSubmissaoEmailSenha() async {
     final autenticado = await _vm.submeterEmailSenha();
     if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
@@ -97,18 +104,20 @@ class _LoginPageState extends State<LoginPage> {
                 _construirBarraTopo(context, cores),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                    padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _construirCabecalho(cores),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
                         _construirBotaoGoogle(cores),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 8),
+                        _construirBotaoApple(cores),
+                        const SizedBox(height: 10),
                         _construirDivisorOuEmail(cores),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 10),
                         _construirCartaoFormulario(cores),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 10),
                         _construirBotaoContinuarSemConta(cores),
                       ],
                     ),
@@ -124,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _construirBarraTopo(BuildContext context, AppColors cores) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 4),
+      padding: const EdgeInsets.fromLTRB(8, 2, 20, 0),
       child: Row(
         children: [
           IconButton(
@@ -186,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: cores.caveShadow,
         foregroundColor: cores.chalkWhite,
         side: BorderSide(color: cores.graniteEdge, width: 1.2),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -229,6 +238,54 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _construirBotaoApple(AppColors cores) {
+    return OutlinedButton(
+      key: const Key('btn_login_apple'),
+      onPressed: _vm.carregando ? null : _executarLoginApple,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: cores.caveShadow,
+        foregroundColor: cores.chalkWhite,
+        side: BorderSide(color: cores.graniteEdge, width: 1.2),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.apple,
+              color: Colors.black,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              'Continuar com a Apple',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _construirDivisorOuEmail(AppColors cores) {
     return Row(
       children: [
@@ -256,7 +313,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _construirCartaoFormulario(AppColors cores) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cores.caveShadow,
         borderRadius: BorderRadius.circular(18),
@@ -277,7 +334,7 @@ class _LoginPageState extends State<LoginPage> {
                 icone: Icons.person_outline,
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
           ],
           TextField(
             key: const Key('campo_login_email'),
@@ -291,7 +348,7 @@ class _LoginPageState extends State<LoginPage> {
               icone: Icons.alternate_email,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           TextField(
             key: const Key('campo_login_senha'),
             controller: _senhaController,
@@ -316,7 +373,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           if (_vm.mensagemErro != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Container(
               key: const Key('banner_erro_login'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -345,14 +402,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           ElevatedButton(
             key: const Key('btn_submeter_email_senha'),
             onPressed: _vm.carregando ? null : _executarSubmissaoEmailSenha,
             style: ElevatedButton.styleFrom(
               backgroundColor: cores.rustIron,
               foregroundColor: cores.chalkWhite,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -366,7 +423,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           TextButton(
             key: const Key('btn_alternar_modo_conta'),
             onPressed: _vm.carregando ? null : _vm.alternarModoConta,
