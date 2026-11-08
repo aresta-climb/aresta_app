@@ -69,3 +69,29 @@ String extrairMensagemErroAutenticacao(
       ? traduzirMensagemServidorAutenticacao(msg.toString(), mensagemPadrao)
       : mensagemPadrao;
 }
+
+/// Gera um `code_verifier` criptograficamente seguro de 56 caracteres para o fluxo OAuth 2.0 PKCE.
+String gerarCodeVerifierPkce() {
+  const caracteres =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  final random = Random.secure();
+  return List.generate(
+    56,
+    (_) => caracteres[random.nextInt(caracteres.length)],
+  ).join();
+}
+
+/// Calcula o `code_challenge` SHA-256 em Base64URL sem padding (`S256`) a partir do [codeVerifier].
+String calcularCodeChallengeS256(String codeVerifier) {
+  final digest = sha256.convert(utf8.encode(codeVerifier));
+  return base64UrlEncode(digest.bytes).replaceAll('=', '');
+}
+
+/// Extrai parâmetros combinados de query string (`?code=...`) e fragmento (`#access_token=...`) de uma URI de retorno OAuth.
+Map<String, String> extrairParametrosCallbackOAuth(Uri uri) {
+  final resultado = <String, String>{...uri.queryParameters};
+  if (uri.fragment.contains('=')) {
+    resultado.addAll(Uri.splitQueryString(uri.fragment));
+  }
+  return resultado;
+}
