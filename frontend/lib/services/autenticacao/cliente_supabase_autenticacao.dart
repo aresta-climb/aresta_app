@@ -14,11 +14,11 @@ import '../http/cliente_http_aresta.dart';
 import 'autenticador_nativo.dart';
 import 'servico_autenticacao.dart';
 
-/// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit) com o Supabase.
+/// Cliente modular dedicado ├á comunica├º├úo HTTP e OAuth 2.0 (PKCE/Implicit) com o Supabase.
 ///
 /// Isola os protocolos de rede do GoTrue (`/auth/v1`), PostgREST (`/rest/v1/perfis`)
-/// e Supabase Storage (`/storage/v1/object/avatars`) das regras de negócio locais
-/// de domínio do [ServicoAutenticacaoLocal].
+/// e Supabase Storage (`/storage/v1/object/avatars`) das regras de neg├│cio locais
+/// de dom├¡nio do [ServicoAutenticacaoLocal].
 class ClienteSupabaseAutenticacao {
   /// URL oficial de redirecionamento OAuth registrada nos esquemas nativos Android e iOS.
   static const String urlRedirecionamentoOAuth =
@@ -34,7 +34,7 @@ class ClienteSupabaseAutenticacao {
 
   Completer<Uri>? _aguardandoCallbackOAuth;
 
-  /// Cria uma instância de [ClienteSupabaseAutenticacao].
+  /// Cria uma inst├óncia de [ClienteSupabaseAutenticacao].
   ClienteSupabaseAutenticacao({
     ClienteHttpAresta? clienteHttp,
     String Function()? obterUrlSupabase,
@@ -99,7 +99,7 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados públicos do escalador
+  /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados p├║blicos do escalador
   /// e garante o espelhamento em `public.perfis`.
   Future<ResultadoProvedorAutenticacao> criarConta({
     required String nome,
@@ -130,7 +130,7 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Não foi possível criar a conta.'),
+        _extrairMensagemErro(mapa, 'N├úo foi poss├¡vel criar a conta.'),
       );
     }
 
@@ -270,7 +270,7 @@ class ClienteSupabaseAutenticacao {
   }
 
   /// Inicia o fluxo OAuth 2.0 com o [provedor] (`'google'` ou `'apple'`) via navegador externo
-  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
+  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sess├úo no Supabase.
   Future<ResultadoProvedorAutenticacao> autenticarProvedorOAuth({
     required String provedor,
     required String nomeFallback,
@@ -300,7 +300,7 @@ class ClienteSupabaseAutenticacao {
       final abriu = await _lancadorUrlOAuth(uriAutorizacao);
       if (!abriu) {
         throw const ExcecaoAutenticacao(
-          'Não foi possível abrir o navegador para concluir a autenticação.',
+          'N├úo foi poss├¡vel abrir o navegador para concluir a autentica├º├úo.',
         );
       }
 
@@ -312,7 +312,7 @@ class ClienteSupabaseAutenticacao {
         throw ExcecaoAutenticacao(
           _traduzirMensagemServidor(
             erroOAuth.replaceAll('+', ' '),
-            'Não foi possível concluir a autenticação.',
+            'N├úo foi poss├¡vel concluir a autentica├º├úo.',
           ),
         );
       }
@@ -341,11 +341,11 @@ class ClienteSupabaseAutenticacao {
       }
 
       throw const ExcecaoAutenticacao(
-        'Resposta de autenticação OAuth incompleta.',
+        'Resposta de autentica├º├úo OAuth incompleta.',
       );
     } on TimeoutException {
       throw const ExcecaoAutenticacao(
-        'Tempo esgotado ao aguardar o retorno da autenticação.',
+        'Tempo esgotado ao aguardar o retorno da autentica├º├úo.',
       );
     } finally {
       await inscricao.cancel();
@@ -355,10 +355,10 @@ class ClienteSupabaseAutenticacao {
     }
   }
 
-  /// Sincroniza alterações de nome e foto de perfil com o Supabase Storage (`avatars`),
+  /// Sincroniza altera├º├Áes de nome e foto de perfil com o Supabase Storage (`avatars`),
   /// GoTrue (`PUT /auth/v1/user`) e PostgREST (`public.perfis`).
   ///
-  /// Retorna a URL pública definitiva da foto (ou a [fotoFinal] original em fallback).
+  /// Retorna a URL p├║blica definitiva da foto (ou a [fotoFinal] original em fallback).
   Future<String?> sincronizarPerfilAtualizado({
     required String anonKey,
     required String accessToken,
@@ -407,7 +407,7 @@ class ClienteSupabaseAutenticacao {
 
   /// Intercepta um deep link de retorno do fluxo OAuth (`aresta://app.arestaclimb.com/auth-callback`).
   ///
-  /// Retorna `true` se o link era um callback de autenticação OAuth.
+  /// Retorna `true` se o link era um callback de autentica├º├úo OAuth.
   bool processarCallbackOAuth(Uri uri) {
     final caminho = uri.path.toLowerCase();
     final host = uri.host.toLowerCase();
@@ -478,7 +478,7 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Sessão OAuth inválida.'),
+        _extrairMensagemErro(mapa, 'Sess├úo OAuth inv├ílida.'),
       );
     }
 
@@ -688,81 +688,4 @@ class ClienteSupabaseAutenticacao {
     } catch (_) {}
   }
 
-  static const Map<String, String> _traducoesErrosServidor = {
-    'invalid api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-    'no api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-    'invalid login credentials': 'E-mail ou senha incorretos.',
-    'email not confirmed': 'Confirme seu endereço de e-mail antes de entrar.',
-    'already registered': 'Este e-mail já está cadastrado.',
-    'user_already_exists': 'Este e-mail já está cadastrado.',
-    'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
-    'unable to validate email': 'Informe um endereço de e-mail válido.',
-    'unacceptable audience':
-        'Não foi possível validar a credencial nativa no servidor.',
-    'bad_jwt': 'Não foi possível validar a credencial nativa no servidor.',
-    'invalid_grant':
-        'Não foi possível validar a credencial nativa no servidor.',
-    'nonce': 'Não foi possível validar a credencial nativa no servidor.',
-    'rate limit':
-        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
-    'for security purposes':
-        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
-    'expired': 'Sua sessão expirou. Faça login novamente.',
-    'invalid token': 'Sua sessão expirou. Faça login novamente.',
-    'access_denied': 'Autenticação cancelada pelo escalador.',
-  };
-
-  static String _traduzirMensagemServidor(
-    String textoBruto,
-    String mensagemPadrao,
-  ) {
-    final limpo = textoBruto.trim();
-    final minusculo = limpo.toLowerCase();
-    for (final entrada in _traducoesErrosServidor.entries) {
-      if (minusculo.contains(entrada.key)) {
-        return entrada.value;
-      }
-    }
-    return limpo;
-  }
-
-  static String _extrairMensagemErro(
-    Map<String, dynamic> mapa,
-    String mensagemPadrao,
-  ) {
-    final msg =
-        mapa['error_description'] ??
-        mapa['msg'] ??
-        mapa['message'] ??
-        mapa['error'];
-    return msg != null
-        ? _traduzirMensagemServidor(msg.toString(), mensagemPadrao)
-        : mensagemPadrao;
-  }
-
-  static String _gerarCodeVerifierPkce() {
-    const caracteres =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-    final random = Random.secure();
-    return List.generate(
-      56,
-      (_) => caracteres[random.nextInt(caracteres.length)],
-    ).join();
-  }
-
-  static String _calcularCodeChallengeS256(String codeVerifier) {
-    final digest = sha256.convert(utf8.encode(codeVerifier));
-    return base64UrlEncode(digest.bytes).replaceAll('=', '');
-  }
-
-  static Map<String, String> _extrairParametrosCallback(Uri uri) {
-    final resultado = <String, String>{...uri.queryParameters};
-    if (uri.fragment.isNotEmpty) {
-      try {
-        resultado.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (_) {}
-    }
-    return resultado;
-  }
 }
-
