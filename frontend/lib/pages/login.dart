@@ -62,8 +62,22 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _executarAutenticacao(Future<bool> Function() acao) async {
-    final autenticado = await acao();
+  Future<void> _executarLoginGoogle() async {
+    final autenticado = await _vm.entrarComGoogle();
+    if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
+      AppNav.toPerfil(context);
+    }
+  }
+
+  Future<void> _executarLoginApple() async {
+    final autenticado = await _vm.entrarComApple();
+    if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
+      AppNav.toPerfil(context);
+    }
+  }
+
+  Future<void> _executarSubmissaoEmailSenha() async {
+    final autenticado = await _vm.submeterEmailSenha();
     if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
       AppNav.toPerfil(context);
     }
@@ -105,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                           rotulo: 'Continuar com o Google',
                           aoPressionar: _vm.carregando
                               ? null
-                              : () => _executarAutenticacao(_vm.entrarComGoogle),
+                              : _executarLoginGoogle,
                           distintivo: const Text(
                             'G',
                             style: TextStyle(
@@ -121,7 +135,7 @@ class _LoginPageState extends State<LoginPage> {
                           rotulo: 'Continuar com a Apple',
                           aoPressionar: _vm.carregando
                               ? null
-                              : () => _executarAutenticacao(_vm.entrarComApple),
+                              : _executarLoginApple,
                           distintivo: const Icon(
                             Icons.apple,
                             color: Colors.black,
@@ -148,8 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                           aoAlterarSenha: _vm.definirSenha,
                           aoAlternarVisibilidadeSenha:
                               _vm.alternarVisibilidadeSenha,
-                          aoSubmeter: () =>
-                              _executarAutenticacao(_vm.submeterEmailSenha),
+                          aoSubmeter: _executarSubmissaoEmailSenha,
                           aoAlternarModoConta: _vm.alternarModoConta,
                         ),
                         const SizedBox(height: 10),
