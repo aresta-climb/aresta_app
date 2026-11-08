@@ -445,5 +445,68 @@ void main() {
     expect(find.text('Via Clássica'), findsOneWidget);
     expect(find.text('Via Normal'), findsNothing);
   });
+
+  testWidgets('SetorPage com múltiplas modalidades isola filtro de grau de Via mantendo contador Boulders (total) limpo e listando todos os boulders', (tester) async {
+    final cragId = 'crag-setor-isolamento';
+    GerenciadorFiltrosCroqui.instance.atualizarFiltros(
+      cragId,
+      const EstadoFiltrosUnificado(
+        minGrauPorModalidade: {'Via': 810}, // 7a+
+      ),
+    );
+
+    final via1 = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Esportiva 6º',
+        dificuldade: GrauVia_GrauVia.BR_6,
+      ),
+    );
+    final via2 = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Esportiva 7a',
+        dificuldade: GrauVia_GrauVia.BR_7A,
+      ),
+    );
+    final via3 = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Esportiva 7b',
+        dificuldade: GrauVia_GrauVia.BR_7B,
+      ),
+    );
+    final boulder = Escalada(
+      boulder: Boulder(
+        nome: 'Boulder V4',
+        dificuldade: GrauBoulder_GrauBoulder.V4,
+      ),
+    );
+
+    final setor = Setor()
+      ..nome = 'Setor Misto Isolado'
+      ..escaladas.addAll([via1, via2, via3, boulder]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTemaEscuro(),
+        home: SetorPage(setor: setor, cragId: cragId),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Aba Esportivas exibe contador filtrado (2/3), enquanto Boulders exibe contador limpo (1)
+    expect(find.text('Esportivas (2/3)'), findsOneWidget);
+    expect(find.text('Boulders (1)'), findsOneWidget);
+    expect(find.text('Boulders (1/1)'), findsNothing);
+
+    // Na aba Esportivas, apenas 7a e 7b aparecem
+    expect(find.text('Esportiva 6º'), findsNothing);
+    expect(find.text('Esportiva 7a'), findsOneWidget);
+    expect(find.text('Esportiva 7b'), findsOneWidget);
+
+    // Ao tocar na aba Boulders (1), exibe o boulder sem interferência do filtro de Via
+    await tester.tap(find.text('Boulders (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Boulder V4'), findsOneWidget);
+  });
 }
 

@@ -733,5 +733,55 @@ void main() {
 
       expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
     });
+
+    testWidgets('filtrar grau de via oculta setores e badges de boulder na aba Setores, mantém contador Boulders (total) limpo e lista todos os boulders na aba dedicada', (tester) async {
+      // Adiciona um boulder ao Setor Alvorada (tornando-o misto: 3 esportivas + 1 boulder)
+      final setorMisto = pico.setoresOuGrupos.first.setor.conteudo;
+      setorMisto.escaladas.add(
+        Escalada()
+          ..boulder = (Boulder()
+            ..nome = 'Bloco Alvorada'
+            ..dificuldade = GrauBoulder_GrauBoulder.V3),
+      );
+
+      // Configura filtro de grau apenas para Via (6ºsup a 7a -> valores 705 a 810)
+      GerenciadorFiltrosCroqui.instance.atualizarFiltros(
+        'pedra-bela',
+        const EstadoFiltrosUnificado(
+          minGrauPorModalidade: {'Via': 705},
+          maxGrauPorModalidade: {'Via': 810},
+        ),
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(pico: pico, cragId: 'pedra-bela', croqui: croqui),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Na aba Setores:
+      // - Setor exclusivo de boulders ('Blocos da Floresta') e Setor Noturno (9a) ficam ocultos
+      expect(find.text('Setor Alvorada'), findsOneWidget);
+      expect(find.text('Blocos da Floresta'), findsNothing);
+      expect(find.text('Setor Noturno'), findsNothing);
+
+      // - No card do Setor Alvorada (misto), exibe o badge filtrado de esportivas e oculta o badge de boulder
+      expect(find.text('2 de 3 esportivas - 6ºsup a 7a'), findsOneWidget);
+      expect(find.textContaining('boulder'), findsNothing);
+
+      // 2. Contadores das abas:
+      // - Setores e Esportivas mostram proporção filtrada, enquanto Boulders mantém (3) limpo!
+      expect(find.text('Setores (1/3)'), findsOneWidget);
+      expect(find.text('Esportivas (2/4)'), findsOneWidget);
+      expect(find.text('Boulders (3)'), findsOneWidget);
+      expect(find.text('Boulders (3/3)'), findsNothing);
+
+      // 3. Ao alternar para a aba Boulders (3), ignora o filtro de grau de via e lista todos os 3 boulders
+      await tester.tap(find.text('Boulders (3)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pedra Inicial'), findsOneWidget);
+      expect(find.text('Teto Sombrio'), findsOneWidget);
+      expect(find.text('Bloco Alvorada'), findsOneWidget);
+    });
   });
 }

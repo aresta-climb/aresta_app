@@ -491,19 +491,29 @@ void main() {
         ]);
       });
 
-      test('formatação de contadores nas abas com e sem filtros', () {
+      test('formatação de contadores nas abas com e sem filtros e isolamento por modalidade', () {
         const estadoSemFiltro = EstadoFiltrosUnificado();
         expect(estadoSemFiltro.obterContadorSetores(todosSetores, todasEscaladas), '(3)');
         expect(estadoSemFiltro.obterContadorModalidade('Esportiva', todasEscaladas), '(2)');
         expect(estadoSemFiltro.obterContadorModalidade('Boulder', todasEscaladas), '(1)');
 
-        final estadoComFiltro = const EstadoFiltrosUnificado(
+        // Quando há apenas filtro de grau de via e/ou modalidadesAtivas de via,
+        // a aba 'Boulder' ignora esses filtros e mantém contador limpo '(1)'.
+        final estadoComFiltroVia = const EstadoFiltrosUnificado(
           minGrauPorModalidade: {'Esportiva': 800},
           modalidadesAtivas: {'Esportiva'},
         );
-        expect(estadoComFiltro.obterContadorSetores(todosSetores, todasEscaladas), '(1/3)');
-        expect(estadoComFiltro.obterContadorModalidade('Esportiva', todasEscaladas), '(1/2)');
-        expect(estadoComFiltro.obterContadorModalidade('Boulder', todasEscaladas), '(0/1)');
+        expect(estadoComFiltroVia.obterContadorSetores(todosSetores, todasEscaladas), '(1/3)');
+        expect(estadoComFiltroVia.obterContadorModalidade('Esportiva', todasEscaladas), '(1/2)');
+        expect(estadoComFiltroVia.obterContadorModalidade('Boulder', todasEscaladas), '(1)');
+
+        // Quando há filtro transversal (apenasClassicas), afeta também a aba 'Boulder'
+        final estadoComClassicas = const EstadoFiltrosUnificado(
+          apenasClassicas: true,
+        );
+        expect(estadoComClassicas.obterContadorSetores(todosSetores, todasEscaladas), '(1/3)');
+        expect(estadoComClassicas.obterContadorModalidade('Esportiva', todasEscaladas), '(1/2)');
+        expect(estadoComClassicas.obterContadorModalidade('Boulder', todasEscaladas), '(0/1)');
       });
 
       test('copyWith e flags de limpeza de EstadoFiltrosUnificado', () {
@@ -668,7 +678,7 @@ void main() {
         expect(EstadoFiltrosUnificado.obterCategoriaGrau('BOULDER'), 'Boulder');
       });
 
-      test('filtro de grau com chave "Via" restringe todas as modalidades de via sem afetar boulders', () {
+      test('filtro de grau com chave "Via" restringe vias e oculta boulders na visão de setores, mas isola aba Boulder', () {
         final viaEspFacil = ItemIndiceEscalada(
           escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Esp Fácil', dificuldade: GrauVia_GrauVia.BR_5)),
           setor: Setor(nome: 'Setor 1'),
@@ -695,13 +705,18 @@ void main() {
           minGrauPorModalidade: {'Via': 910},
         );
 
-        final filtrados = estadoVias.filtrarEscaladas([viaEspFacil, viaEspDificil, viaTradFacil, boulder]);
+        final todosItens = [viaEspFacil, viaEspDificil, viaTradFacil, boulder];
+        final filtradosSetores = estadoVias.filtrarEscaladas(todosItens);
 
-        // Apenas Esp Difícil e o Boulder devem permanecer (o boulder não tem restrição de grau ativada)
-        expect(filtrados.map((e) => e.nome).toSet(), {'Esp Difícil', 'Bloco'});
+        // Na visão de setores (modalidadeEspecifica == null), apenas Esp Difícil permanece (Boulder é ocultado)
+        expect(filtradosSetores.map((e) => e.nome).toSet(), {'Esp Difícil'});
+
+        // Na aba específica 'Boulder', o filtro de grau de 'Via' é ignorado e o boulder aparece normalmente
+        final filtradosAbaBoulder = estadoVias.filtrarEscaladas(todosItens, modalidadeEspecifica: 'Boulder');
+        expect(filtradosAbaBoulder.map((e) => e.nome).toSet(), {'Bloco'});
       });
 
-      test('filtro de grau com chave "Boulder" restringe boulders sem afetar vias', () {
+      test('filtro de grau com chave "Boulder" restringe boulders e oculta vias na visão de setores, mas isola aba Esportiva', () {
         final via = ItemIndiceEscalada(
           escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Qualquer', dificuldade: GrauVia_GrauVia.BR_5)),
           setor: Setor(nome: 'Setor 1'),
@@ -723,10 +738,81 @@ void main() {
           minGrauPorModalidade: {'Boulder': 500},
         );
 
-        final filtrados = estadoBoulder.filtrarEscaladas([via, boulderFacil, boulderDificil]);
+        final todosItens = [via, boulderFacil, boulderDificil];
+        final filtradosSetores = estadoBoulder.filtrarEscaladas(todosItens);
 
-        // Apenas a Via (não afetada) e o V5 devem permanecer
-        expect(filtrados.map((e) => e.nome).toSet(), {'Via Qualquer', 'V5'});
+        // Na visão de setores, apenas o V5 permanece (Via é ocultada)
+        expect(filtradosSetores.map((e) => e.nome).toSet(), {'V5'});
+
+        // Na aba específica 'Esportiva', o filtro de grau de 'Boulder' é ignorado e a via aparece normalmente
+        final filtradosAbaEsportiva = estadoBoulder.filtrarEscaladas(todosItens, modalidadeEspecifica: 'Esportiva');
+        expect(filtradosAbaEsportiva.map((e) => e.nome).toSet(), {'Via Qualquer'});
+      });
+
+      test('filtro de grau simultâneo em Via e Boulder mantém ambas as categorias filtradas na visão de setores', () {
+        final viaFacil = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via 5º', dificuldade: GrauVia_GrauVia.BR_5)),
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final viaDificil = ItemIndiceEscalada(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via 8a', dificuldade: GrauVia_GrauVia.BR_8A)),
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final boulderFacil = ItemIndiceEscalada(
+          escalada: Escalada(boulder: Boulder(nome: 'V1', dificuldade: GrauBoulder_GrauBoulder.V1)),
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+        final boulderDificil = ItemIndiceEscalada(
+          escalada: Escalada(boulder: Boulder(nome: 'V5', dificuldade: GrauBoulder_GrauBoulder.V5)),
+          setor: Setor(nome: 'Setor 1'),
+          cragId: 'c1',
+        );
+
+        const estadoAmbos = EstadoFiltrosUnificado(
+          minGrauPorModalidade: {'Via': 800, 'Boulder': 500},
+        );
+
+        final filtrados = estadoAmbos.filtrarEscaladas([viaFacil, viaDificil, boulderFacil, boulderDificil]);
+        expect(filtrados.map((e) => e.nome).toSet(), {'Via 8a', 'V5'});
+      });
+
+      test('categoriasComFiltroGrau, isModalidadeAtivaNosSetores, isCategoriaAtivaNosSetores e temFiltrosAtivosParaModalidade', () {
+        const estadoVazio = EstadoFiltrosUnificado();
+        expect(estadoVazio.categoriasComFiltroGrau, isEmpty);
+        expect(estadoVazio.isModalidadeAtivaNosSetores('Esportiva'), isTrue);
+        expect(estadoVazio.isModalidadeAtivaNosSetores('Boulder'), isTrue);
+        expect(estadoVazio.isCategoriaAtivaNosSetores('Via', ['Esportiva', 'Boulder']), isTrue);
+        expect(estadoVazio.isCategoriaAtivaNosSetores('Boulder', ['Esportiva', 'Boulder']), isTrue);
+        expect(estadoVazio.temFiltrosAtivosParaModalidade('Esportiva'), isFalse);
+        expect(estadoVazio.temFiltrosAtivosParaModalidade('Boulder'), isFalse);
+
+        const estadoFiltroGrauVia = EstadoFiltrosUnificado(
+          minGrauPorModalidade: {'Via': 700},
+        );
+        expect(estadoFiltroGrauVia.categoriasComFiltroGrau, {'Via'});
+        expect(estadoFiltroGrauVia.isModalidadeAtivaNosSetores('Esportiva'), isTrue);
+        expect(estadoFiltroGrauVia.isModalidadeAtivaNosSetores('Móvel'), isTrue);
+        expect(estadoFiltroGrauVia.isModalidadeAtivaNosSetores('Boulder'), isFalse);
+        expect(estadoFiltroGrauVia.isCategoriaAtivaNosSetores('Via', ['Esportiva', 'Boulder']), isTrue);
+        expect(estadoFiltroGrauVia.isCategoriaAtivaNosSetores('Boulder', ['Esportiva', 'Boulder']), isFalse);
+        expect(estadoFiltroGrauVia.isCategoriaAtivaNosSetores('Via', const []), isTrue);
+        expect(estadoFiltroGrauVia.isCategoriaAtivaNosSetores('Boulder', const []), isFalse);
+        expect(estadoFiltroGrauVia.temFiltrosAtivosParaModalidade('Esportiva'), isTrue);
+        expect(estadoFiltroGrauVia.temFiltrosAtivosParaModalidade('Boulder'), isFalse);
+
+        const estadoModalidadeExplicita = EstadoFiltrosUnificado(
+          modalidadesAtivas: {'Boulder'},
+        );
+        expect(estadoModalidadeExplicita.isModalidadeAtivaNosSetores('Esportiva'), isFalse);
+        expect(estadoModalidadeExplicita.isModalidadeAtivaNosSetores('Boulder'), isTrue);
+        expect(estadoModalidadeExplicita.isCategoriaAtivaNosSetores('Via', ['Esportiva', 'Boulder']), isFalse);
+        expect(estadoModalidadeExplicita.isCategoriaAtivaNosSetores('Boulder', ['Esportiva', 'Boulder']), isTrue);
+        // Na aba específica de modalidade, modalidadesAtivas é ignorado:
+        expect(estadoModalidadeExplicita.temFiltrosAtivosParaModalidade('Esportiva'), isFalse);
+        expect(estadoModalidadeExplicita.temFiltrosAtivosParaModalidade('Boulder'), isFalse);
       });
     });
 

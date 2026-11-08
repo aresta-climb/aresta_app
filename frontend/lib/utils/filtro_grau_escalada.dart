@@ -539,8 +539,61 @@ class EstadoFiltrosUnificado {
     return 'Via';
   }
 
+  /// Retorna as categorias de grau ('Via' e/ou 'Boulder') que possuem limite mínimo ou máximo ativo.
+  Set<String> get categoriasComFiltroGrau => {
+        ...minGrauPorModalidade.keys.map(obterCategoriaGrau),
+        ...maxGrauPorModalidade.keys.map(obterCategoriaGrau),
+      };
+
+  /// Verifica se uma modalidade está ativa na visualização agregada de setores.
+  ///
+  /// Quando [modalidadesAtivas] não estiver vazio, respeita a seleção explícita.
+  /// Quando [modalidadesAtivas] estiver vazio e houver filtro de grau em alguma categoria,
+  /// ativa automaticamente apenas as modalidades pertencentes às categorias com filtro de grau.
+  bool isModalidadeAtivaNosSetores(String modalidade) {
+    if (modalidadesAtivas.isNotEmpty) {
+      return modalidadesAtivas.contains(modalidade);
+    }
+    final categoriasGrau = categoriasComFiltroGrau;
+    if (categoriasGrau.isNotEmpty) {
+      return categoriasGrau.contains(obterCategoriaGrau(modalidade));
+    }
+    return true;
+  }
+
+  /// Verifica se uma categoria de grau ('Via' ou 'Boulder') possui ao menos uma
+  /// modalidade ativa na visualização agregada de setores.
+  bool isCategoriaAtivaNosSetores(
+    String categoria,
+    List<String> modalidadesDisponiveis,
+  ) {
+    final modalidadesDaCategoria = modalidadesDisponiveis
+        .where((m) => obterCategoriaGrau(m) == categoria)
+        .toList();
+    if (modalidadesDaCategoria.isEmpty) {
+      return isModalidadeAtivaNosSetores(categoria);
+    }
+    return modalidadesDaCategoria.any(isModalidadeAtivaNosSetores);
+  }
+
+  /// Indica se há algum filtro ativo que afete a aba específica de [modalidade].
+  ///
+  /// Ignora [modalidadesAtivas] da aba Setores e filtros de grau de outras categorias,
+  /// considerando apenas o filtro de grau da própria categoria e os filtros transversais.
+  bool temFiltrosAtivosParaModalidade(String modalidade) {
+    final categoria = obterCategoriaGrau(modalidade);
+    final temGrauCategoria = categoriasComFiltroGrau.contains(categoria);
+    return temGrauCategoria ||
+        setores.isNotEmpty ||
+        grupos.isNotEmpty ||
+        conquistadores.isNotEmpty ||
+        apenasClassicas ||
+        termoBusca.trim().isNotEmpty;
+  }
+
   /// Filtra a lista de escaladas de acordo com os filtros ativos.
-  /// Se [modalidadeEspecifica] for informada, restringe àquela modalidade.
+  /// Se [modalidadeEspecifica] for informada, restringe àquela modalidade ignorando
+  /// restrições de outras modalidades/categorias.
   List<ItemIndiceEscalada> filtrarEscaladas(
     List<ItemIndiceEscalada> itens, {
     String? modalidadeEspecifica,
@@ -549,12 +602,9 @@ class EstadoFiltrosUnificado {
 
     // 1. Filtro de Modalidade
     if (modalidadeEspecifica != null) {
-      if (modalidadesAtivas.isNotEmpty && !modalidadesAtivas.contains(modalidadeEspecifica)) {
-        return const [];
-      }
       resultado = resultado.where((i) => i.modalidade == modalidadeEspecifica).toList();
-    } else if (modalidadesAtivas.isNotEmpty) {
-      resultado = resultado.where((i) => modalidadesAtivas.contains(i.modalidade)).toList();
+    } else {
+      resultado = resultado.where((i) => isModalidadeAtivaNosSetores(i.modalidade)).toList();
     }
 
     // 2. Filtro de Faixa de Grau por Categoria (Vias vs Boulders) ou Modalidade
@@ -733,7 +783,7 @@ class EstadoFiltrosUnificado {
     List<ItemIndiceEscalada> todasEscaladas,
   ) {
     final total = todasEscaladas.where((e) => e.modalidade == modalidade).length;
-    if (!temFiltrosAtivos) {
+    if (!temFiltrosAtivosParaModalidade(modalidade)) {
       return '($total)';
     }
     final filtradas = filtrarEscaladas(todasEscaladas, modalidadeEspecifica: modalidade).length;

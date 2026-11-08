@@ -218,10 +218,13 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
   }) {
     if (_isUnificado) {
       final u = widget.estadoUnificado!;
+      final minsEfetivos = minGrauPorModalidade ?? u.minGrauPorModalidade;
+      final maxsEfetivos = maxGrauPorModalidade ?? u.maxGrauPorModalidade;
+      final padraoDerivado = _obterModalidadesDerivadasDeGrau(minsEfetivos, maxsEfetivos);
       final normalizarModalidades = modalidadesAtivas != null &&
           (modalidadesAtivas.isEmpty ||
-              (widget.modalidadesDisponiveis.isNotEmpty &&
-                  modalidadesAtivas.length >= widget.modalidadesDisponiveis.length));
+              (modalidadesAtivas.length == padraoDerivado.length &&
+                  modalidadesAtivas.containsAll(padraoDerivado)));
       final novo = u.copyWith(
         modalidadesAtivas: normalizarModalidades ? const {} : modalidadesAtivas,
         clearModalidadesAtivas: clearModalidadesAtivas || normalizarModalidades,
@@ -697,10 +700,7 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
 
   List<String> _obterCategoriasParaSliders() {
-    final u = widget.estadoUnificado!;
-    final modalidadesBase = u.modalidadesAtivas.isNotEmpty
-        ? widget.modalidadesDisponiveis.where((m) => u.modalidadesAtivas.contains(m)).toList()
-        : widget.modalidadesDisponiveis;
+    final modalidadesBase = widget.modalidadesDisponiveis;
 
     final temVias = modalidadesBase.isEmpty ||
         modalidadesBase.any((m) => EstadoFiltrosUnificado.obterCategoriaGrau(m) == 'Via');
@@ -713,15 +713,34 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
     return categorias.isEmpty ? ['Via'] : categorias;
   }
 
+  Set<String> _obterModalidadesDerivadasDeGrau(
+    Map<String, int> mins,
+    Map<String, int> maxs,
+  ) {
+    final categoriasComGrau = <String>{};
+    for (final k in mins.keys) {
+      categoriasComGrau.add(EstadoFiltrosUnificado.obterCategoriaGrau(k));
+    }
+    for (final k in maxs.keys) {
+      categoriasComGrau.add(EstadoFiltrosUnificado.obterCategoriaGrau(k));
+    }
+    if (categoriasComGrau.isEmpty) {
+      return widget.modalidadesDisponiveis.toSet();
+    }
+    return widget.modalidadesDisponiveis
+        .where((m) => categoriasComGrau.contains(EstadoFiltrosUnificado.obterCategoriaGrau(m)))
+        .toSet();
+  }
+
   Widget _buildSeletorModalidadesAtivas(BuildContext context) {
     final colors = context.colors;
-    final ativas = _isUnificado ? widget.estadoUnificado!.modalidadesAtivas : <String>{};
+    final u = _isUnificado ? widget.estadoUnificado : null;
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: widget.modalidadesDisponiveis.map((mod) {
-        final isSelected = ativas.isEmpty || ativas.contains(mod);
+        final isSelected = u == null || u.isModalidadeAtivaNosSetores(mod);
         return FilterChip(
           selected: isSelected,
           showCheckmark: true,
@@ -750,9 +769,11 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
               'filtrar_modalidade',
               detalhe: '$mod:${selected ? 'ativo' : 'inativo'}',
             );
-            final novas = Set<String>.from(
-              ativas.isEmpty ? widget.modalidadesDisponiveis : ativas,
-            );
+            final novas = u != null
+                ? widget.modalidadesDisponiveis
+                    .where((m) => u.isModalidadeAtivaNosSetores(m))
+                    .toSet()
+                : Set<String>.from(widget.modalidadesDisponiveis);
             if (selected) {
               novas.add(mod);
             } else {
@@ -760,10 +781,46 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
                 novas.remove(mod);
               }
             }
-            if (novas.length >= widget.modalidadesDisponiveis.length) {
-              _atualizarFiltros(clearModalidadesAtivas: true);
+
+            Map<String, int>? novosMins;
+            Map<String, int>? novosMaxs;
+            if (u != null) {
+              final categoriasRestantes = novas
+                  .map((m) => EstadoFiltrosUnificado.obterCategoriaGrau(m))
+                  .toSet();
+              novosMins = Map<String, int>.from(u.minGrauPorModalidade)
+                ..removeWhere(
+                  (k, _) => !categoriasRestantes.contains(
+                    EstadoFiltrosUnificado.obterCategoriaGrau(k),
+                  ),
+                );
+              novosMaxs = Map<String, int>.from(u.maxGrauPorModalidade)
+                ..removeWhere(
+                  (k, _) => !categoriasRestantes.contains(
+                    EstadoFiltrosUnificado.obterCategoriaGrau(k),
+                  ),
+                );
+            }
+
+            final padraoDerivado = _obterModalidadesDerivadasDeGrau(
+              novosMins ?? const {},
+              novosMaxs ?? const {},
+            );
+            final coincideComPadrao = novas.length == padraoDerivado.length &&
+                novas.containsAll(padraoDerivado);
+
+            if (coincideComPadrao) {
+              _atualizarFiltros(
+                clearModalidadesAtivas: true,
+                minGrauPorModalidade: novosMins,
+                maxGrauPorModalidade: novosMaxs,
+              );
             } else {
-              _atualizarFiltros(modalidadesAtivas: novas);
+              _atualizarFiltros(
+                modalidadesAtivas: novas,
+                minGrauPorModalidade: novosMins,
+                maxGrauPorModalidade: novosMaxs,
+              );
             }
           },
         );
@@ -1147,9 +1204,18 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
 
     if (startIdx > endIdx) startIdx = endIdx;
 
+    final bool categoriaAtiva = !_isModoSetores ||
+        !_isUnificado ||
+        widget.estadoUnificado!.isCategoriaAtivaNosSetores(
+          categoria,
+          widget.modalidadesDisponiveis,
+        );
+
     final bool cobreTudo = startIdx == 0 && endIdx == maxIndex;
     final String textoRotulo;
-    if (cobreTudo) {
+    if (!categoriaAtiva) {
+      textoRotulo = 'Modalidade inativa';
+    } else if (cobreTudo) {
       textoRotulo = faixaDisponivel != null
           ? 'Todos os graus (${opcoes.first.rotulo} a ${opcoes.last.rotulo})'
           : 'Todos os graus';
@@ -1168,124 +1234,160 @@ class _PainelFiltrosIndiceState extends State<PainelFiltrosIndice> {
       tituloSecao = 'Faixa de Grau';
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(child: _buildSecaoTitulo(context, tituloSecao)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: cobreTudo
-                    ? colors.graniteEdge.withValues(alpha: 0.5)
-                    : colors.rustIron.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: cobreTudo ? colors.graniteEdge : colors.rustIron,
-                ),
-              ),
-              child: Text(
-                textoRotulo,
-                style: TextStyle(
-                  color: cobreTudo ? colors.ashGrey : colors.rustIron,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+    final bool destacarAtivo = categoriaAtiva && !cobreTudo;
 
-        // RangeSlider
-        RangeSlider(
-          values: RangeValues(startIdx.toDouble(), endIdx.toDouble()),
-          min: 0,
-          max: maxIndex.toDouble(),
-          divisions: maxIndex > 0 ? maxIndex : 1,
-          activeColor: colors.rustIron,
-          inactiveColor: colors.graniteEdge,
-          labels: RangeLabels(
-            opcoes[startIdx].rotulo,
-            opcoes[endIdx].rotulo,
-          ),
-          onChanged: (values) {
-            final s = values.start.round();
-            final e = values.end.round();
-            final minVal = s == 0 ? null : opcoes[s].valor;
-            final maxVal = e == maxIndex ? null : opcoes[e].valor;
-
-            if (_isUnificado) {
-              final mins = Map<String, int>.from(widget.estadoUnificado!.minGrauPorModalidade);
-              final maxs = Map<String, int>.from(widget.estadoUnificado!.maxGrauPorModalidade);
-              if (s == 0 && e == maxIndex) {
-                mins.remove(categoria);
-                maxs.remove(categoria);
-                if (categoria == 'Via') {
-                  mins.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Via');
-                  maxs.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Via');
-                } else if (categoria == 'Boulder') {
-                  mins.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Boulder');
-                  maxs.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Boulder');
-                }
-              } else {
-                if (minVal != null) {
-                  mins[categoria] = minVal;
-                } else {
-                  mins.remove(categoria);
-                }
-                if (maxVal != null) {
-                  maxs[categoria] = maxVal;
-                } else {
-                  maxs.remove(categoria);
-                }
-              }
-              _atualizarFiltros(minGrauPorModalidade: mins, maxGrauPorModalidade: maxs);
-            } else {
-              if (s == 0 && e == maxIndex) {
-                _atualizarFiltros(clearMinGrau: true, clearMaxGrau: true);
-              } else {
-                _atualizarFiltros(minGrauValor: minVal, maxGrauValor: maxVal);
-              }
-            }
-          },
-          onChangeEnd: (values) {
-            final s = values.start.round();
-            final e = values.end.round();
-            _logTelemetria(
-              'filtrar_grau',
-              detalhe: '${opcoes[s].rotulo}_a_${opcoes[e].rotulo}',
-            );
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+    return Opacity(
+      opacity: categoriaAtiva ? 1.0 : 0.45,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                opcoes.first.rotulo,
-                style: TextStyle(
-                  color: colors.ashGrey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+              Flexible(child: _buildSecaoTitulo(context, tituloSecao)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: !destacarAtivo
+                      ? colors.graniteEdge.withValues(alpha: 0.5)
+                      : colors.rustIron.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: !destacarAtivo ? colors.graniteEdge : colors.rustIron,
+                  ),
                 ),
-              ),
-              Text(
-                opcoes.last.rotulo,
-                style: TextStyle(
-                  color: colors.ashGrey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                child: Text(
+                  textoRotulo,
+                  style: TextStyle(
+                    color: !destacarAtivo ? colors.ashGrey : colors.rustIron,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+
+          // RangeSlider
+          RangeSlider(
+            values: RangeValues(startIdx.toDouble(), endIdx.toDouble()),
+            min: 0,
+            max: maxIndex.toDouble(),
+            divisions: maxIndex > 0 ? maxIndex : 1,
+            activeColor: colors.rustIron,
+            inactiveColor: colors.graniteEdge,
+            labels: RangeLabels(
+              opcoes[startIdx].rotulo,
+              opcoes[endIdx].rotulo,
+            ),
+            onChanged: (values) {
+              final s = values.start.round();
+              final e = values.end.round();
+              final minVal = s == 0 ? null : opcoes[s].valor;
+              final maxVal = e == maxIndex ? null : opcoes[e].valor;
+
+              if (_isUnificado) {
+                final u = widget.estadoUnificado!;
+                final mins = Map<String, int>.from(u.minGrauPorModalidade);
+                final maxs = Map<String, int>.from(u.maxGrauPorModalidade);
+                if (s == 0 && e == maxIndex) {
+                  mins.remove(categoria);
+                  maxs.remove(categoria);
+                  if (categoria == 'Via') {
+                    mins.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Via');
+                    maxs.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Via');
+                  } else if (categoria == 'Boulder') {
+                    mins.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Boulder');
+                    maxs.removeWhere((k, _) => EstadoFiltrosUnificado.obterCategoriaGrau(k) == 'Boulder');
+                  }
+                  _atualizarFiltros(minGrauPorModalidade: mins, maxGrauPorModalidade: maxs);
+                } else {
+                  if (minVal != null) {
+                    mins[categoria] = minVal;
+                  } else {
+                    mins.remove(categoria);
+                  }
+                  if (maxVal != null) {
+                    maxs[categoria] = maxVal;
+                  } else {
+                    maxs.remove(categoria);
+                  }
+
+                  if (!categoriaAtiva) {
+                    final ativasAntes = widget.modalidadesDisponiveis
+                        .where((m) => u.isModalidadeAtivaNosSetores(m))
+                        .toSet();
+                    final novas = <String>{
+                      ...ativasAntes,
+                      ...widget.modalidadesDisponiveis.where(
+                        (m) => EstadoFiltrosUnificado.obterCategoriaGrau(m) == categoria,
+                      ),
+                    };
+                    final padraoDerivado = _obterModalidadesDerivadasDeGrau(mins, maxs);
+                    final coincideComPadrao = novas.length == padraoDerivado.length &&
+                        novas.containsAll(padraoDerivado);
+                    if (coincideComPadrao) {
+                      _atualizarFiltros(
+                        clearModalidadesAtivas: true,
+                        minGrauPorModalidade: mins,
+                        maxGrauPorModalidade: maxs,
+                      );
+                    } else {
+                      _atualizarFiltros(
+                        modalidadesAtivas: novas,
+                        minGrauPorModalidade: mins,
+                        maxGrauPorModalidade: maxs,
+                      );
+                    }
+                  } else {
+                    _atualizarFiltros(minGrauPorModalidade: mins, maxGrauPorModalidade: maxs);
+                  }
+                }
+              } else {
+                if (s == 0 && e == maxIndex) {
+                  _atualizarFiltros(clearMinGrau: true, clearMaxGrau: true);
+                } else {
+                  _atualizarFiltros(minGrauValor: minVal, maxGrauValor: maxVal);
+                }
+              }
+            },
+            onChangeEnd: (values) {
+              final s = values.start.round();
+              final e = values.end.round();
+              _logTelemetria(
+                'filtrar_grau',
+                detalhe: '${opcoes[s].rotulo}_a_${opcoes[e].rotulo}',
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  opcoes.first.rotulo,
+                  style: TextStyle(
+                    color: colors.ashGrey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  opcoes.last.rotulo,
+                  style: TextStyle(
+                    color: colors.ashGrey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

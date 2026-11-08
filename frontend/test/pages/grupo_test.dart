@@ -299,6 +299,39 @@ void main() {
 
       expect(find.text('Aplicar (1 resultado)'), findsOneWidget);
     });
+
+    testWidgets('filtrar grau de via na GrupoPage oculta setor de boulders na aba Setores, mantém contador Boulders (1) limpo e lista boulders na aba dedicada', (tester) async {
+      GerenciadorFiltrosCroqui.instance.atualizarFiltros(
+        'crag-serra',
+        const EstadoFiltrosUnificado(
+          minGrauPorModalidade: {'Via': 800}, // 7a+
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: GrupoPage(grupo: grupo, cragId: 'crag-serra'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Na aba Setores: Setor das Pedras (apenas boulder) fica oculto; Setor Sol permanece
+      expect(find.text('Setor Sol'), findsOneWidget);
+      expect(find.text('Setor das Pedras'), findsNothing);
+
+      // Contadores: Setores (1/2), Esportivas (1/2), e Boulders (1) limpo (sem 1/1)
+      expect(find.text('Setores (1/2)'), findsOneWidget);
+      expect(find.text('Esportivas (1/2)'), findsOneWidget);
+      expect(find.text('Boulders (1)'), findsOneWidget);
+      expect(find.text('Boulders (1/1)'), findsNothing);
+
+      // Ao alternar para Boulders (1), lista normalmente o boulder do grupo
+      await tester.tap(find.text('Boulders (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bloco Raiz'), findsOneWidget);
+    });
   });
 
   testWidgets('GrupoPage exibe botão de compartilhamento quando grupo possui uid e dispara ServicoCompartilhamento', (tester) async {

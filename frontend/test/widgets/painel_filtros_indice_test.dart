@@ -1933,6 +1933,133 @@ void main() {
 
       expect(find.widgetWithText(ElevatedButton, 'Aplicar'), findsNothing);
     });
+
+    testWidgets('na aba Setores, restringir grau de Vias desmarca chip de Boulder, mantém régua de Boulders visível e esmaecida, e exibe apenas chip de Vias na barra externa com limpeza em 1 clique', (tester) async {
+      EstadoFiltrosUnificado estadoAtual = const EstadoFiltrosUnificado();
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                estadoUnificado: estadoAtual,
+                abaAtiva: 'Setores',
+                modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+                setoresDisponiveis: const [],
+                conquistadoresDisponiveis: const [],
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() => estadoAtual = novo);
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Inicialmente ambos os FilterChips de modalidade estão selecionados e ambas as réguas visíveis
+      expect(find.byType(RangeSlider), findsNWidgets(2));
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Esportiva')).selected, isTrue);
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Boulder')).selected, isTrue);
+      expect(find.text('Modalidade inativa'), findsNothing);
+
+      // Ajusta o primeiro RangeSlider (Faixa de Grau (Vias)) para 5º a 7a (índices 4 a 8)
+      final sliderVias = tester.widget<RangeSlider>(find.byType(RangeSlider).first);
+      sliderVias.onChanged?.call(const RangeValues(4, 8));
+      await tester.pumpAndSettle();
+
+      // 1. Ambas as réguas continuam visíveis (zero salto de layout)
+      expect(find.byType(RangeSlider), findsNWidgets(2));
+      expect(find.text('Faixa de Grau (Vias)'), findsOneWidget);
+      expect(find.text('Faixa de Grau (Boulders)'), findsOneWidget);
+
+      // 2. Chip de Boulder foi desmarcado automaticamente, enquanto Esportiva segue marcado
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Esportiva')).selected, isTrue);
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Boulder')).selected, isFalse);
+
+      // 3. Régua de Boulders exibe badge 'Modalidade inativa' e está envolvida em Opacity < 1.0
+      expect(find.text('Modalidade inativa'), findsOneWidget);
+      final opacityFinder = find.ancestor(
+        of: find.text('Modalidade inativa'),
+        matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity < 1.0),
+      );
+      expect(opacityFinder, findsOneWidget);
+
+      // 4. Contador indica apenas 1 filtro ativo (sem duplicar com modalidade)
+      expect(find.text('1 ativo'), findsOneWidget);
+
+      // Fecha o modal para inspecionar a barra externa
+      await tester.tap(find.byTooltip('Fechar'));
+      await tester.pumpAndSettle();
+
+      // 5. Na barra externa aparece APENAS o chip 'Vias: 5º a 7a' (sem chip de Esportiva)
+      expect(find.byType(Chip), findsOneWidget);
+      expect(find.text('Vias: 5º a 7a'), findsOneWidget);
+
+      // 6. Tocar no '✕' do chip externo limpa o filtro de grau e restaura todas as modalidades em 1 clique
+      final closeIcon = find.descendant(
+        of: find.widgetWithText(Chip, 'Vias: 5º a 7a'),
+        matching: find.byIcon(Icons.close),
+      );
+      await tester.tap(closeIcon);
+      await tester.pumpAndSettle();
+
+      expect(estadoAtual.temFiltrosAtivos, isFalse);
+      expect(estadoAtual.isModalidadeAtivaNosSetores('Boulder'), isTrue);
+      expect(find.byType(Chip), findsNothing);
+    });
+
+    testWidgets('na aba Setores, arrastar uma régua esmaecida reativa automaticamente a modalidade correspondente', (tester) async {
+      // Começa com Boulder desmarcado manualmente
+      EstadoFiltrosUnificado estadoAtual = const EstadoFiltrosUnificado(
+        modalidadesAtivas: {'Esportiva'},
+      );
+
+      await tester.pumpWidget(
+        criarAmbiente(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return PainelFiltrosIndice(
+                estadoUnificado: estadoAtual,
+                abaAtiva: 'Setores',
+                modalidadesDisponiveis: const ['Esportiva', 'Boulder'],
+                setoresDisponiveis: const [],
+                conquistadoresDisponiveis: const [],
+                inicialmenteExpandido: true,
+                onFiltrosUnificadosChanged: (novo) {
+                  setState(() => estadoAtual = novo);
+                },
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Régua de Boulders está visível porém esmaecida com 'Modalidade inativa'
+      expect(find.byType(RangeSlider), findsNWidgets(2));
+      expect(find.text('Modalidade inativa'), findsOneWidget);
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Boulder')).selected, isFalse);
+
+      // Arrasta o segundo RangeSlider (Faixa de Grau (Boulders)) para V2 a V5 (índices 2 a 5)
+      final sliderBoulders = tester.widget<RangeSlider>(find.byType(RangeSlider).last);
+      sliderBoulders.onChanged?.call(const RangeValues(2, 5));
+      await tester.pumpAndSettle();
+
+      // A modalidade Boulder foi reativada automaticamente!
+      expect(estadoAtual.isModalidadeAtivaNosSetores('Boulder'), isTrue);
+      expect(tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Boulder')).selected, isTrue);
+      expect(find.text('Grau: V2 a V5'), findsOneWidget);
+
+      // E se o usuário desmarcar manualmente o chip de Boulder agora, limpa também o grau de Boulder
+      await tester.tap(find.widgetWithText(FilterChip, 'Boulder'));
+      await tester.pumpAndSettle();
+
+      expect(estadoAtual.isModalidadeAtivaNosSetores('Boulder'), isFalse);
+      expect(estadoAtual.minGrauPorModalidade.containsKey('Boulder'), isFalse);
+      expect(find.text('Modalidade inativa'), findsOneWidget);
+    });
   });
 }
 

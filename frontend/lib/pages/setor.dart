@@ -254,7 +254,7 @@ class _SetorPageState extends State<SetorPage> with TickerProviderStateMixin {
   String _formatarRotuloAba(String modalidade) {
     final nomePlural = _obterNomePluralModalidade(modalidade);
     final viasBase = _escaladasPorModalidade[modalidade] ?? [];
-    if (_estadoFiltros.temFiltrosAtivos) {
+    if (_estadoFiltros.temFiltrosAtivosParaModalidade(modalidade)) {
       final filtradas = _estadoFiltros
           .filtrarEscaladas(viasBase, modalidadeEspecifica: modalidade)
           .length;
