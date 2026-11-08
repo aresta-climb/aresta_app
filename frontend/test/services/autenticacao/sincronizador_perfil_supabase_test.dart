@@ -155,5 +155,78 @@ void main() {
       expect(resName.nomeExibicao, equals('Escalador Apple'));
       expect(resName.fotoUrl, equals('https://apple.com/avatar.webp'));
     });
+
+    test('sincronizarPerfilAtualizado envia avatar.webp ao Storage, atualiza Auth e faz upsert em public.perfis com fallback seguro', () async {
+      var storageDisponivel = true;
+      http.Request? reqStorage;
+      http.Request? reqAuthPut;
+      http.Request? reqPerfisPost;
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.contains('/storage/v1/object/avatars/')) {
+            reqStorage = request;
+            return storageDisponivel
+                ? http.Response('{}', 200)
+                : http.Response('{}', 404);
+          }
+          if (request.url.path.endsWith('/auth/v1/user') &&
+              request.method == 'PUT') {
+            reqAuthPut = request;
+            return http.Response('{}', 200);
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis') &&
+              request.method == 'POST') {
+            reqPerfisPost = request;
+            return http.Response('{}', 201);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
+
+      final sincronizador = SincronizadorPerfilSupabase(clienteHttp: clienteHttp);
+      final dataUri = 'data:image/webp;base64,${base64Encode([1, 2, 3, 4])}';
+
+      final urlPublica = await sincronizador.sincronizarPerfilAtualizado(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-1',
+        userId: 'usr-1',
+        autorIdPublico: idLocal,
+        nomeFinal: 'Atleta WebP',
+        fotoFinal: dataUri,
+      );
+      expect(
+        urlPublica,
+        startsWith('$baseUrl/storage/v1/object/public/avatars/usr-1/avatar.webp?t='),
+      );
+      expect(reqStorage?.headers['Content-Type'], startsWith('image/webp'));
+      expect(reqStorage?.headers['x-upsert'], equals('true'));
+      expect(reqAuthPut, isNotNull);
+      expect(reqPerfisPost, isNotNull);
+
+      // Fallback quando Storage retorna erro ou Data URI não possui vírgula
+      storageDisponivel = false;
+      final urlFallback = await sincronizador.sincronizarPerfilAtualizado(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-1',
+        userId: 'usr-1',
+        autorIdPublico: idLocal,
+        nomeFinal: 'Atleta WebP',
+        fotoFinal: dataUri,
+      );
+      expect(urlFallback, equals(dataUri));
+
+      final urlSemVirgula = await sincronizador.sincronizarPerfilAtualizado(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-1',
+        userId: 'usr-1',
+        autorIdPublico: idLocal,
+        nomeFinal: 'Atleta WebP',
+        fotoFinal: 'data:image/webp;base64_invalido',
+      );
+      expect(urlSemVirgula, equals('data:image/webp;base64_invalido'));
+    });
   });
 }
