@@ -167,6 +167,11 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
+  /// Autentica com o Google priorizando o seletor nativo de contas do sistema operacional
+  /// (`grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
+  Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
+    required String autorIdPublicoLocal,
+    required String anonKey,
   }) async {
     final credencialNativa = await _autenticadorNativo.solicitarCredencialGoogle(
       webClientId: _idClienteWebGoogle,
@@ -255,7 +260,10 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Falha ao validar credencial nativa.'),
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Falha ao validar credencial nativa.',
+        ),
       );
     }
 
@@ -275,7 +283,7 @@ class ClienteSupabaseAutenticacao {
       'user_metadata': metadadosAtuais,
     };
 
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -286,7 +294,7 @@ class ClienteSupabaseAutenticacao {
   }
 
   /// Inicia o fluxo OAuth 2.0 com o [provedor] (`'google'` ou `'apple'`) via navegador externo
-  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sess├úo no Supabase.
+  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
   Future<ResultadoProvedorAutenticacao> autenticarProvedorOAuth({
     required String provedor,
     required String nomeFallback,
@@ -294,8 +302,8 @@ class ClienteSupabaseAutenticacao {
     required String anonKey,
   }) async {
     final baseUrl = _baseUrl;
-    final codeVerifier = _gerarCodeVerifierPkce();
-    final codeChallenge = _calcularCodeChallengeS256(codeVerifier);
+    final codeVerifier = gerarCodeVerifierPkce();
+    final codeChallenge = calcularCodeChallengeS256(codeVerifier);
 
     final uriAutorizacao = Uri.parse('$baseUrl/auth/v1/authorize').replace(
       queryParameters: {
@@ -316,19 +324,19 @@ class ClienteSupabaseAutenticacao {
       final abriu = await _lancadorUrlOAuth(uriAutorizacao);
       if (!abriu) {
         throw const ExcecaoAutenticacao(
-          'N├úo foi poss├¡vel abrir o navegador para concluir a autentica├º├úo.',
+          'Não foi possível abrir o navegador para concluir a autenticação.',
         );
       }
 
       final uriRetorno = await completer.future.timeout(_timeoutOAuth);
-      final params = _extrairParametrosCallback(uriRetorno);
+      final params = extrairParametrosCallbackOAuth(uriRetorno);
 
       final erroOAuth = params['error_description'] ?? params['error'];
       if (erroOAuth != null && erroOAuth.trim().isNotEmpty) {
         throw ExcecaoAutenticacao(
-          _traduzirMensagemServidor(
+          traduzirMensagemServidorAutenticacao(
             erroOAuth.replaceAll('+', ' '),
-            'N├úo foi poss├¡vel concluir a autentica├º├úo.',
+            'Não foi possível concluir a autenticação.',
           ),
         );
       }
@@ -357,11 +365,11 @@ class ClienteSupabaseAutenticacao {
       }
 
       throw const ExcecaoAutenticacao(
-        'Resposta de autentica├º├úo OAuth incompleta.',
+        'Resposta de autenticação OAuth incompleta.',
       );
     } on TimeoutException {
       throw const ExcecaoAutenticacao(
-        'Tempo esgotado ao aguardar o retorno da autentica├º├úo.',
+        'Tempo esgotado ao aguardar o retorno da autenticação.',
       );
     } finally {
       await inscricao.cancel();
@@ -371,10 +379,8 @@ class ClienteSupabaseAutenticacao {
     }
   }
 
-  /// Sincroniza altera├º├Áes de nome e foto de perfil com o Supabase Storage (`avatars`),
+  /// Sincroniza alterações de nome e foto de perfil com o Supabase Storage (`avatars`),
   /// GoTrue (`PUT /auth/v1/user`) e PostgREST (`public.perfis`).
-  ///
-  /// Retorna a URL p├║blica definitiva da foto (ou a [fotoFinal] original em fallback).
   Future<String?> sincronizarPerfilAtualizado({
     required String anonKey,
     required String accessToken,
@@ -382,48 +388,21 @@ class ClienteSupabaseAutenticacao {
     required String autorIdPublico,
     required String nomeFinal,
     required String? fotoFinal,
-  }) async {
-    final baseUrl = _baseUrl;
-    var urlFotoResolvida = fotoFinal;
-
-    if (fotoFinal != null && fotoFinal.startsWith('data:image/')) {
-      final urlStorage = await _enviarAvatarParaStorage(
-        baseUrl: baseUrl,
-        anonKey: anonKey,
-        accessToken: accessToken,
-        userId: userId,
-        dataUri: fotoFinal,
-      );
-      if (urlStorage != null) {
-        urlFotoResolvida = urlStorage;
-      }
-    }
-
-    await _atualizarMetadadosAuthUsuario(
-      baseUrl: baseUrl,
-      anonKey: anonKey,
-      accessToken: accessToken,
-      autorIdPublico: autorIdPublico,
-      nomePublico: nomeFinal,
-      fotoUrl: urlFotoResolvida,
-    );
-
-    await _upsertLinhaPerfis(
-      baseUrl: baseUrl,
+  }) {
+    return _sincronizadorPerfil.sincronizarPerfilAtualizado(
+      baseUrl: _baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
       userId: userId,
       autorIdPublico: autorIdPublico,
-      nomePublico: nomeFinal,
-      fotoUrl: urlFotoResolvida,
+      nomeFinal: nomeFinal,
+      fotoFinal: fotoFinal,
     );
-
-    return urlFotoResolvida;
   }
 
   /// Intercepta um deep link de retorno do fluxo OAuth (`aresta://app.arestaclimb.com/auth-callback`).
   ///
-  /// Retorna `true` se o link era um callback de autentica├º├úo OAuth.
+  /// Retorna `true` se o link era um callback de autenticação OAuth.
   bool processarCallbackOAuth(Uri uri) {
     final caminho = uri.path.toLowerCase();
     final host = uri.host.toLowerCase();
@@ -460,13 +439,13 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Falha ao validar login OAuth.'),
+        extrairMensagemErroAutenticacao(mapa, 'Falha ao validar login OAuth.'),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -494,11 +473,11 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Sess├úo OAuth inv├ílida.'),
+        extrairMensagemErroAutenticacao(mapa, 'Sessão OAuth inválida.'),
       );
     }
 
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: tokenImplicito,
@@ -507,5 +486,4 @@ class ClienteSupabaseAutenticacao {
       nomeFallback: nomeFallback,
     );
   }
-
 }
