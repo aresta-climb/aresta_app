@@ -6,19 +6,19 @@ import '../navigation/funcoes_navegacao.dart';
 import '../theme/cores_app.dart';
 import '../view/view_models/login_view_model.dart';
 
-/// Página de autenticação e criação de conta do escalador (Dumb UI / MVVM).
+/// P├ígina de autentica├º├úo e cria├º├úo de conta do escalador (Dumb UI / MVVM).
 ///
-/// Apresenta opções de login via conta Google (Gmail), autenticação/cadastro por
+/// Apresenta op├º├Áes de login via conta Google (Gmail), autentica├º├úo/cadastro por
 /// e-mail e senha e atalho para continuar sem conta (modo offline), delegando
-/// estado, validações e persistência ao [LoginViewModel].
+/// estado, valida├º├Áes e persist├¬ncia ao [LoginViewModel].
 class LoginPage extends StatefulWidget {
   /// ViewModel opcional injetado para testes ou controle externo.
   final LoginViewModel? viewModel;
 
-  /// Construtor preguiçoso opcional do ViewModel (acionado apenas em `initState`).
+  /// Construtor pregui├ºoso opcional do ViewModel (acionado apenas em `initState`).
   final LoginViewModel Function()? construtorViewModel;
 
-  /// Cria uma instância da página de autenticação [LoginPage].
+  /// Cria uma inst├óncia da p├ígina de autentica├º├úo [LoginPage].
   const LoginPage({
     super.key,
     this.viewModel,
@@ -29,7 +29,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-/// Sinônimo em português para [LoginPage].
+/// Sin├┤nimo em portugu├¬s para [LoginPage].
 typedef PaginaLogin = LoginPage;
 
 class _LoginPageState extends State<LoginPage> {
@@ -442,65 +442,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  InputDecoration _decoracaoCampo({
-    required AppColors cores,
-    required String rotulo,
-    required IconData icone,
-    Widget? sufixo,
-  }) {
-    return InputDecoration(
-      labelText: rotulo,
-      labelStyle: TextStyle(color: cores.ashGrey, fontSize: 13),
-      prefixIcon: Icon(icone, color: cores.ashGrey, size: 20),
-      suffixIcon: sufixo,
-      filled: true,
-      fillColor: cores.deepBasalt,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: cores.graniteEdge),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: cores.rustIron, width: 1.4),
-      ),
-    );
-  }
-
-  Widget _construirBotaoContinuarSemConta(AppColors cores) {
-    return TextButton(
-      key: const Key('btn_continuar_sem_conta'),
-      onPressed: _executarContinuarSemConta,
-      style: TextButton.styleFrom(
-        foregroundColor: cores.ashGrey,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: cores.graniteEdge.withValues(alpha: 0.7)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.offline_bolt_outlined,
-            size: 18,
-            color: cores.dryMoss,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              'Continuar sem conta / Offline',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: cores.chalkWhite.withValues(alpha: 0.9),
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
