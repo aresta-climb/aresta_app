@@ -20,7 +20,8 @@ import workmanager
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GMSServices.provideAPIKey("AIzaSyA2wcm3xW9ImUYiIRGgPPrGzcwhnAN7HLU")
+    // Chave oficial iOS do projeto app-escalada-croquis (mesma de GoogleService-Info.plist, com Maps SDK for iOS ativo)
+    GMSServices.provideAPIKey("AIzaSyBEN0WNF_d3mo1NSNyz1INq_YDedDDIhpo")
 #if canImport(workmanager_apple)
     WorkmanagerPlugin.registerLaunchHandlers()
 #elseif canImport(workmanager)
