@@ -3,28 +3,27 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:app_links/app_links.dart';
-import 'package:crypto/crypto.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/modelos/perfil_escalador.dart';
-import '../../utils/gerador_uid.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
 import 'autenticador_nativo.dart';
 import 'servico_autenticacao.dart';
+import 'sincronizador_perfil_supabase.dart';
+import 'tradutor_erros_autenticacao.dart';
 
-/// Cliente modular dedicado ├á comunica├º├úo HTTP e OAuth 2.0 (PKCE/Implicit) com o Supabase.
+/// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit/id_token) com o Supabase GoTrue.
 ///
-/// Isola os protocolos de rede do GoTrue (`/auth/v1`), PostgREST (`/rest/v1/perfis`)
-/// e Supabase Storage (`/storage/v1/object/avatars`) das regras de neg├│cio locais
-/// de dom├¡nio do [ServicoAutenticacaoLocal].
+/// Isola os protocolos de autenticação do GoTrue (`/auth/v1`), delegando a sincronização
+/// de perfil e avatar ao [SincronizadorPerfilSupabase] e a tradução de erros ao
+/// módulo `tradutor_erros_autenticacao.dart`.
 class ClienteSupabaseAutenticacao {
   /// URL oficial de redirecionamento OAuth registrada nos esquemas nativos Android e iOS.
   static const String urlRedirecionamentoOAuth =
       'aresta://app.arestaclimb.com/auth-callback';
 
   final ClienteHttpAresta _clienteHttp;
+  final SincronizadorPerfilSupabase _sincronizadorPerfil;
   final String Function() _obterUrlSupabase;
   final AutenticadorNativo _autenticadorNativo;
   final String _idClienteWebGoogle;
@@ -34,9 +33,10 @@ class ClienteSupabaseAutenticacao {
 
   Completer<Uri>? _aguardandoCallbackOAuth;
 
-  /// Cria uma inst├óncia de [ClienteSupabaseAutenticacao].
+  /// Cria uma instância de [ClienteSupabaseAutenticacao].
   ClienteSupabaseAutenticacao({
     ClienteHttpAresta? clienteHttp,
+    SincronizadorPerfilSupabase? sincronizadorPerfil,
     String Function()? obterUrlSupabase,
     AutenticadorNativo? autenticadorNativo,
     String idClienteWebGoogle =
@@ -45,6 +45,11 @@ class ClienteSupabaseAutenticacao {
     Stream<Uri>? fluxoLinksOAuth,
     Duration timeoutOAuth = const Duration(minutes: 3),
   }) : _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia,
+       _sincronizadorPerfil =
+           sincronizadorPerfil ??
+           SincronizadorPerfilSupabase(
+             clienteHttp: clienteHttp ?? ClienteHttpAresta.instancia,
+           ),
        _obterUrlSupabase =
            obterUrlSupabase ?? (() => RemoteConfigService.instance.supabaseUrl),
        _autenticadorNativo =
@@ -83,13 +88,13 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'E-mail ou senha incorretos.'),
+        extrairMensagemErroAutenticacao(mapa, 'E-mail ou senha incorretos.'),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -99,8 +104,8 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados p├║blicos do escalador
-  /// e garante o espelhamento em `public.perfis`.
+  /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados públicos do escalador
+  /// e garante o espelhamento em `public.perfis` (ou sinaliza `requerConfirmacaoEmail`).
   Future<ResultadoProvedorAutenticacao> criarConta({
     required String nome,
     required String email,
@@ -130,13 +135,29 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'N├úo foi poss├¡vel criar a conta.'),
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Não foi possível criar a conta.',
+        ),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    final identidades = usuario['identities'];
+    if (identidades is List && identidades.isEmpty) {
+      throw const ExcecaoAutenticacao('Este e-mail já está cadastrado.');
+    }
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      return ResultadoProvedorAutenticacao(
+        userId: usuario['id'].toString(),
+        nomeExibicao: nome,
+        fotoUrl: fotoUrlAtual,
+        autorIdPublicoRemoto: autorIdPublico,
+        requerConfirmacaoEmail: true,
+      );
+    }
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -146,11 +167,6 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Autentica com o Google priorizando o seletor nativo de contas do sistema operacional
-  /// (`grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
-  Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
-    required String autorIdPublicoLocal,
-    required String anonKey,
   }) async {
     final credencialNativa = await _autenticadorNativo.solicitarCredencialGoogle(
       webClientId: _idClienteWebGoogle,
