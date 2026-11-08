@@ -183,6 +183,63 @@ class SincronizadorPerfilSupabase {
     );
   }
 
+  /// Envia os bytes decodificados de [dataUri] para `avatars/<userId>/avatar.webp` no Supabase Storage.
+  Future<String?> enviarAvatarParaStorage({
+    required String baseUrl,
+    required String anonKey,
+    required String accessToken,
+    required String userId,
+    required String dataUri,
+  }) async {
+    final indiceVirgula = dataUri.indexOf(',');
+    if (indiceVirgula == -1) return null;
+    try {
+      final bytesImagem = base64Decode(dataUri.substring(indiceVirgula + 1));
+      final caminhoObjeto = '$userId/avatar.webp';
+      final respStorage = await _clienteHttp.post(
+        Uri.parse('$baseUrl/storage/v1/object/avatars/$caminhoObjeto'),
+        headers: {
+          'apikey': anonKey,
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'image/webp',
+          'x-upsert': 'true',
+        },
+        body: bytesImagem,
+      );
+      if (respStorage.statusCode >= 200 && respStorage.statusCode < 300) {
+        return '$baseUrl/storage/v1/object/public/avatars/$caminhoObjeto?t=${DateTime.now().millisecondsSinceEpoch}';
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Atualiza os metadados públicos do usuário (`user_metadata`) no GoTrue (`PUT /auth/v1/user`).
+  Future<void> atualizarMetadadosAuthUsuario({
+    required String baseUrl,
+    required String anonKey,
+    required String accessToken,
+    required String autorIdPublico,
+    required String nomePublico,
+    required String? fotoUrl,
+  }) async {
+    try {
+      final reqPut = Request('PUT', Uri.parse('$baseUrl/auth/v1/user'))
+        ..headers.addAll({
+          'apikey': anonKey,
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        })
+        ..body = jsonEncode({
+          'data': {
+            'autor_id_publico': autorIdPublico,
+            'autor_nome_publico': nomePublico,
+            'avatar_url': ?fotoUrl,
+          },
+        });
+      await _clienteHttp.send(reqPut);
+    } catch (_) {}
+  }
+
   /// Realiza upsert da linha do escalador na tabela `public.perfis` via PostgREST.
   Future<void> upsertLinhaPerfis({
     required String baseUrl,
