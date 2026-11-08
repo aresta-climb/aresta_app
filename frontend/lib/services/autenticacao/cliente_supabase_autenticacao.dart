@@ -172,29 +172,13 @@ class ClienteSupabaseAutenticacao {
   Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) async {
-    final credencialNativa = await _autenticadorNativo.solicitarCredencialGoogle(
-      webClientId: _idClienteWebGoogle,
-    );
-    if (credencialNativa != null) {
-      if (credencialNativa.cancelado) {
-        throw const ExcecaoAutenticacao('Login com o Google cancelado.');
-      }
-      return autenticarComIdToken(
-        provedor: 'google',
-        idToken: credencialNativa.idToken!,
-        nonce: credencialNativa.nonce,
-        nomeSugeridoNativo: credencialNativa.nomeExibicao,
-        fotoSugeridaNativa: credencialNativa.fotoUrl,
-        nomeFallback: 'Escalador Google',
-        autorIdPublicoLocal: autorIdPublicoLocal,
-        anonKey: anonKey,
-      );
-    }
-
-    return autenticarProvedorOAuth(
+  }) {
+    return _autenticarComPrioridadeNativa(
       provedor: 'google',
       nomeFallback: 'Escalador Google',
+      mensagemCancelamento: 'Login com o Google cancelado.',
+      solicitarCredencialNativa: () => _autenticadorNativo
+          .solicitarCredencialGoogle(webClientId: _idClienteWebGoogle),
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
@@ -205,27 +189,46 @@ class ClienteSupabaseAutenticacao {
   Future<ResultadoProvedorAutenticacao> autenticarAppleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
+  }) {
+    return _autenticarComPrioridadeNativa(
+      provedor: 'apple',
+      nomeFallback: 'Escalador Apple',
+      mensagemCancelamento: 'Login com a Apple cancelado.',
+      solicitarCredencialNativa: _autenticadorNativo.solicitarCredencialApple,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      anonKey: anonKey,
+    );
+  }
+
+  Future<ResultadoProvedorAutenticacao> _autenticarComPrioridadeNativa({
+    required String provedor,
+    required String nomeFallback,
+    required String mensagemCancelamento,
+    required Future<CredencialNativaOAuth?> Function()
+    solicitarCredencialNativa,
+    required String autorIdPublicoLocal,
+    required String anonKey,
   }) async {
-    final credencialNativa = await _autenticadorNativo.solicitarCredencialApple();
+    final credencialNativa = await solicitarCredencialNativa();
     if (credencialNativa != null) {
       if (credencialNativa.cancelado) {
-        throw const ExcecaoAutenticacao('Login com a Apple cancelado.');
+        throw ExcecaoAutenticacao(mensagemCancelamento);
       }
       return autenticarComIdToken(
-        provedor: 'apple',
+        provedor: provedor,
         idToken: credencialNativa.idToken!,
         nonce: credencialNativa.nonce,
         nomeSugeridoNativo: credencialNativa.nomeExibicao,
         fotoSugeridaNativa: credencialNativa.fotoUrl,
-        nomeFallback: 'Escalador Apple',
+        nomeFallback: nomeFallback,
         autorIdPublicoLocal: autorIdPublicoLocal,
         anonKey: anonKey,
       );
     }
 
     return autenticarProvedorOAuth(
-      provedor: 'apple',
-      nomeFallback: 'Escalador Apple',
+      provedor: provedor,
+      nomeFallback: nomeFallback,
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
