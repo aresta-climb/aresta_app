@@ -196,3 +196,54 @@ class DivisorSecaoLogin extends StatelessWidget {
   }
 }
 
+/// Banner informativo ou de erro exibido dentro do formulário de autenticação.
+class BannerAvisoLogin extends StatelessWidget {
+  /// Texto da mensagem exibida ao escalador.
+  final String mensagem;
+
+  /// Ícone ilustrativo exibido à esquerda da mensagem.
+  final IconData icone;
+
+  /// Cor principal da borda, fundo translúcido e ícone.
+  final Color corDestaque;
+
+  /// Cria uma instância de [BannerAvisoLogin].
+  const BannerAvisoLogin({
+    super.key,
+    required this.mensagem,
+    required this.icone,
+    required this.corDestaque,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: corDestaque.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: corDestaque.withValues(alpha: 0.52),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icone, color: corDestaque, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              mensagem,
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
