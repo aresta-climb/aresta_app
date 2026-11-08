@@ -67,4 +67,83 @@ class SincronizadorPerfilSupabase {
       autorIdPublicoRemoto: autorIdEfetivo,
     );
   }
+
+  /// Sincroniza alterações de nome e foto de perfil com o Supabase Storage (`avatars/<userId>/avatar.webp`),
+  /// GoTrue (`PUT /auth/v1/user`) e PostgREST (`public.perfis`).
+  ///
+  /// Retorna a URL pública definitiva da foto (ou a [fotoFinal] original em fallback).
+  Future<String?> sincronizarPerfilAtualizado({
+    required String baseUrl,
+    required String anonKey,
+    required String accessToken,
+    required String userId,
+    required String autorIdPublico,
+    required String nomeFinal,
+    required String? fotoFinal,
+  }) async {
+    var urlFotoResolvida = fotoFinal;
+
+    if (fotoFinal != null && fotoFinal.startsWith('data:image/')) {
+      final urlStorage = await enviarAvatarParaStorage(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: accessToken,
+        userId: userId,
+        dataUri: fotoFinal,
+      );
+      if (urlStorage != null) {
+        urlFotoResolvida = urlStorage;
+      }
+    }
+
+    await atualizarMetadadosAuthUsuario(
+      baseUrl: baseUrl,
+      anonKey: anonKey,
+      accessToken: accessToken,
+      autorIdPublico: autorIdPublico,
+      nomePublico: nomeFinal,
+      fotoUrl: urlFotoResolvida,
+    );
+
+    await upsertLinhaPerfis(
+      baseUrl: baseUrl,
+      anonKey: anonKey,
+      accessToken: accessToken,
+      userId: userId,
+      autorIdPublico: autorIdPublico,
+      nomePublico: nomeFinal,
+      fotoUrl: urlFotoResolvida,
+    );
+
+    return urlFotoResolvida;
+  }
+
+  /// Realiza upsert da linha do escalador na tabela `public.perfis` via PostgREST.
+  Future<void> upsertLinhaPerfis({
+    required String baseUrl,
+    required String anonKey,
+    required String accessToken,
+    required String userId,
+    required String autorIdPublico,
+    required String nomePublico,
+    required String? fotoUrl,
+  }) async {
+    try {
+      await _clienteHttp.post(
+        Uri.parse('$baseUrl/rest/v1/perfis?on_conflict=user_id'),
+        headers: {
+          'apikey': anonKey,
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: jsonEncode({
+          'user_id': userId,
+          'autor_id_publico': autorIdPublico,
+          'autor_nome_publico': nomePublico,
+          'avatar_url': ?fotoUrl,
+        }),
+      );
+    } catch (_) {}
+  }
 }
