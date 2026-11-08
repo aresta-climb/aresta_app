@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../aresta_api/openapi/generated/dart/catalogo.dart';
 import '../../aresta_api/sql/generated/dart/catalogo_sql.dart';
+import '../../utils/calculadora_distancia_estrada.dart';
 
 /// Modelo enriquecido de uma entidade do catálogo SQLite (`catalogo_aresta`)
 /// combinada via `LEFT JOIN` com os nomes do setor pai, grupo pai e metadados do croqui.
@@ -185,6 +186,19 @@ class RepositorioCatalogo {
     ORDER BY e.nome COLLATE NOCASE ASC
   ''';
 
+  /// Query estática para carregar as distâncias rodoviárias associadas tanto ao `croqui_uid`
+  /// quanto ao `id_slug` correspondente.
+  static const String _sqlCarregarDistanciasEstrada = '''
+    SELECT
+      d.croqui_uid,
+      c.id_slug,
+      d.no_osm_id,
+      d.distancia_metros,
+      d.e_portal_borda
+    FROM catalogo_distancias_estrada d
+    LEFT JOIN catalogo_croquis c ON c.croqui_uid = d.croqui_uid
+  ''';
+
   final Future<String> Function() _provedorCaminhoBanco;
   final DatabaseFactory? _fabricaBanco;
   Database? _banco;
@@ -326,6 +340,25 @@ class RepositorioCatalogo {
             where: 'croqui_uid = ?',
             whereArgs: [croquiUid],
           );
+          batch.delete(
+            'catalogo_distancias_estrada',
+            where: 'croqui_uid = ?',
+            whereArgs: [croquiUid],
+          );
+        }
+
+        final nosEstradaRemover = delta.deletes?.nosEstrada ?? const <int>[];
+        for (final noOsmId in nosEstradaRemover) {
+          batch.delete(
+            'catalogo_nos_estrada',
+            where: 'no_osm_id = ?',
+            whereArgs: [noOsmId],
+          );
+          batch.delete(
+            'catalogo_distancias_estrada',
+            where: 'no_osm_id = ?',
+            whereArgs: [noOsmId],
+          );
         }
 
         final croquisInserir =
@@ -358,6 +391,35 @@ class RepositorioCatalogo {
               escaladaTipo: e.escaladaTipo,
               setorUid: e.setorUid,
               grupoUid: e.grupoUid,
+            ).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        final nosEstradaInserir =
+            delta.upserts?.nosEstrada ?? const <CatalogoNoEstrada>[];
+        for (final n in nosEstradaInserir) {
+          batch.insert(
+            'catalogo_nos_estrada',
+            LinhaCatalogoNosEstrada(
+              noOsmId: n.noOsmId,
+              latitudeE7: n.latitudeE7,
+              longitudeE7: n.longitudeE7,
+            ).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        final distanciasEstradaInserir = delta.upserts?.distanciasEstrada ??
+            const <CatalogoDistanciaEstrada>[];
+        for (final d in distanciasEstradaInserir) {
+          batch.insert(
+            'catalogo_distancias_estrada',
+            LinhaCatalogoDistanciasEstrada(
+              croquiUid: d.croquiUid,
+              noOsmId: d.noOsmId,
+              distanciaMetros: d.distanciaMetros,
+              ePortalBorda: d.ePortalBorda ?? 0,
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
@@ -469,6 +531,84 @@ class RepositorioCatalogo {
       final db = await _obterBanco();
       final linhas = await db.rawQuery(_sqlListarEntidadesDetalhadas);
       return linhas.map(ItemCatalogoBusca.deMapa).toList();
+    });
+  }
+
+  /// Carrega a malha de nós rodoviários (`catalogo_nos_estrada`) e distâncias até os croquis
+  /// (`catalogo_distancias_estrada`) do banco SQLite local, construindo a [CalculadoraDistanciaEstrada]
+  /// indexada tanto por `croqui_uid` quanto por `id_slug`.
+  Future<CalculadoraDistanciaEstrada> carregarMalhaEstrada() {
+    return _executarSerializado(() async {
+      if (!await _arquivoExiste()) {
+        return const CalculadoraDistanciaEstrada.vazia();
+      }
+      final db = await _obterBanco();
+      final linhasNos = await db.query('catalogo_nos_estrada');
+      if (linhasNos.isEmpty) {
+        return const CalculadoraDistanciaEstrada.vazia();
+      }
+
+      final coordenadasPorNo = <int, (double, double)>{};
+      final distanciasPorNo = <int, Map<String, int>>{};
+      for (final linha in linhasNos) {
+        final no = LinhaCatalogoNosEstrada.fromMap(linha);
+        coordenadasPorNo[no.noOsmId] = (
+          no.latitudeE7 / 1e7,
+          no.longitudeE7 / 1e7,
+        );
+        distanciasPorNo[no.noOsmId] = <String, int>{};
+      }
+
+      final portaisPorCroqui = <String, List<PortalBordaPico>>{};
+      final linhasDistancias = await db.rawQuery(_sqlCarregarDistanciasEstrada);
+      for (final linha in linhasDistancias) {
+        final croquiUid = linha['croqui_uid'] as String;
+        final idSlug = linha['id_slug'] as String?;
+        final noOsmId = linha['no_osm_id'] as int;
+        final distanciaMetros = linha['distancia_metros'] as int;
+        final ePortalBorda = ((linha['e_portal_borda'] as int?) ?? 0) != 0;
+
+        final mapaDistanciasNo = distanciasPorNo[noOsmId];
+        final coords = coordenadasPorNo[noOsmId];
+        if (mapaDistanciasNo != null && coords != null) {
+          mapaDistanciasNo[croquiUid] = distanciaMetros;
+          if (idSlug != null && idSlug.isNotEmpty) {
+            mapaDistanciasNo[idSlug] = distanciaMetros;
+          }
+
+          if (ePortalBorda) {
+            final portal = PortalBordaPico(
+              noOsmId: noOsmId,
+              latitude: coords.$1,
+              longitude: coords.$2,
+              distanciaEstradaAtePicoMetros: distanciaMetros,
+            );
+            portaisPorCroqui
+                .putIfAbsent(croquiUid, () => <PortalBordaPico>[])
+                .add(portal);
+            if (idSlug != null && idSlug.isNotEmpty) {
+              portaisPorCroqui
+                  .putIfAbsent(idSlug, () => <PortalBordaPico>[])
+                  .add(portal);
+            }
+          }
+        }
+      }
+
+      final nos = <NoEstrada>[
+        for (final entry in coordenadasPorNo.entries)
+          NoEstrada(
+            noOsmId: entry.key,
+            latitude: entry.value.$1,
+            longitude: entry.value.$2,
+            distanciasPorCroquiMetros: distanciasPorNo[entry.key]!,
+          ),
+      ];
+
+      return CalculadoraDistanciaEstrada(
+        nos: nos,
+        portaisPorCroqui: portaisPorCroqui,
+      );
     });
   }
 

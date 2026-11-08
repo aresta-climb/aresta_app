@@ -56,6 +56,8 @@ void main() {
         expect(await repositorio.listarEntidadesDetalhadas(), isEmpty);
         expect(await repositorio.obterIdSlugPorUid('uid_qualquer'), isNull);
         expect(await repositorio.obterItemPorUid('uid_qualquer'), isNull);
+        final calculadoraVazia = await repositorio.carregarMalhaEstrada();
+        expect(calculadoraVazia.possuiMalha, isFalse);
       },
     );
 
@@ -485,6 +487,137 @@ void main() {
         final nomesColunas = colunas.map((c) => c['name'] as String?).toSet();
         expect(nomesColunas.contains('atualizado_em'), isFalse);
         await dbInspecao.close();
+      },
+    );
+
+    test(
+      'deve persistir malha rodoviaria em aplicarDelta, carregar CalculadoraDistanciaEstrada por croqui_uid e id_slug, e limpar em cascata nos deletes',
+      () async {
+        // 1. Banco existe mas ainda sem nós rodoviários -> possuiMalha == false
+        await repositorio.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_sem_malha',
+          ),
+        );
+        final calcInicial = await repositorio.carregarMalhaEstrada();
+        expect(calcInicial.possuiMalha, isFalse);
+
+        // 2. Insere 2 croquis, 2 nós rodoviários (1 próximo do usuário e 1 portal de borda) e distâncias
+        await repositorio.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_com_malha_1',
+            upserts: UpsertsSyncCatalogo(
+              croquis: [
+                CatalogoCroqui(
+                  croquiUid: 'uid_cipo',
+                  idSlug: 'br_mg_santana_serra_cipo',
+                  nome: 'Serra do Cipó',
+                  cidade: 'Santana do Riacho',
+                  estado: 'MG',
+                ),
+                CatalogoCroqui(
+                  croquiUid: 'uid_lapinha',
+                  idSlug: 'br_mg_santana_lapinha',
+                  nome: 'Lapinha da Serra',
+                  cidade: 'Santana do Riacho',
+                  estado: 'MG',
+                ),
+              ],
+              entidades: [],
+              nosEstrada: [
+                CatalogoNoEstrada(
+                  noOsmId: 1001,
+                  latitudeE7: -200010000, // -20.0010
+                  longitudeE7: -440010000, // -44.0010
+                ),
+                CatalogoNoEstrada(
+                  noOsmId: 2002,
+                  latitudeE7: -215000000, // -21.5000 (portal de borda)
+                  longitudeE7: -445000000, // -44.5000
+                ),
+              ],
+              distanciasEstrada: [
+                CatalogoDistanciaEstrada(
+                  croquiUid: 'uid_cipo',
+                  noOsmId: 1001,
+                  distanciaMetros: 95000,
+                  ePortalBorda: 0,
+                ),
+                CatalogoDistanciaEstrada(
+                  croquiUid: 'uid_cipo',
+                  noOsmId: 2002,
+                  distanciaMetros: 175000,
+                  ePortalBorda: 1,
+                ),
+                CatalogoDistanciaEstrada(
+                  croquiUid: 'uid_lapinha',
+                  noOsmId: 1001,
+                  distanciaMetros: 132000,
+                ),
+              ],
+            ),
+            deletes: DeletesSyncCatalogo(croquis: [], entidades: []),
+          ),
+        );
+
+        final calculadora = await repositorio.carregarMalhaEstrada();
+        expect(calculadora.possuiMalha, isTrue);
+
+        // Deve resolver distância tanto pelo croqui_uid quanto pelo id_slug
+        final distPorUid = calculadora.calcularDistanciaMetros(
+          latitudeUsuario: -20.0000,
+          longitudeUsuario: -44.0000,
+          identificadorCroqui: 'uid_cipo',
+          latitudePico: -19.3500,
+          longitudePico: -43.6000,
+        );
+        final distPorSlug = calculadora.calcularDistanciaMetros(
+          latitudeUsuario: -20.0000,
+          longitudeUsuario: -44.0000,
+          identificadorCroqui: 'br_mg_santana_serra_cipo',
+          latitudePico: -19.3500,
+          longitudePico: -43.6000,
+        );
+        expect(distPorUid, closeTo(distPorSlug, 0.001));
+        expect(distPorSlug, greaterThan(95000));
+        expect(distPorSlug, lessThan(96000));
+
+        // Usuário longe (> 180 km, sem nós num raio de 15 km) utiliza o portal de borda 2002
+        final distViaPortal = calculadora.calcularDistanciaMetros(
+          latitudeUsuario: -22.0000,
+          longitudeUsuario: -44.5000,
+          identificadorCroqui: 'br_mg_santana_serra_cipo',
+          latitudePico: -19.3500,
+          longitudePico: -43.6000,
+        );
+        expect(distViaPortal, greaterThan(175000));
+
+        // 3. Remove uid_lapinha e o nó 2002 via deletes
+        await repositorio.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_com_malha_2',
+            deletes: DeletesSyncCatalogo(
+              croquis: ['uid_lapinha'],
+              entidades: [],
+              nosEstrada: [2002],
+            ),
+          ),
+        );
+
+        final calcAposDelete = await repositorio.carregarMalhaEstrada();
+        final nosProximos = calcAposDelete.buscarNosProximos(
+          latitudeUsuario: -20.0000,
+          longitudeUsuario: -44.0000,
+        );
+        expect(nosProximos.single.noOsmId, equals(1001));
+        expect(
+          nosProximos.single.distanciasPorCroquiMetros
+              .containsKey('uid_lapinha'),
+          isFalse,
+        );
       },
     );
   });

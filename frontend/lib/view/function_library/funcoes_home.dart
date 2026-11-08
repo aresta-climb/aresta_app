@@ -32,8 +32,9 @@ String formatarDistanciaKm(double? distanciaKm) {
   return '${distanciaKm.toStringAsFixed(1)} km';
 }
 
-/// Calcula as distâncias geodésicas entre o usuário e uma lista de picos,
-/// retornando os picos mais próximos ordenados por distância crescente.
+/// Calcula as distâncias rodoviárias estimadas (quando [calculadoraDistancia] possui malha)
+/// ou geodésicas entre o usuário e uma lista de picos, retornando os picos mais próximos
+/// ordenados por distância crescente.
 ///
 /// Quando [limite] é informado (padrão `6`), retorna no máximo [limite] picos.
 /// Quando [limite] é `null`, retorna todos os picos com coordenadas válidas ordenados.
@@ -42,39 +43,56 @@ List<PicoProximo> calcularPicosMaisProximos({
   required double userLon,
   required List<dynamic> picosDisponiveis,
   int? limite = 6,
+  CalculadoraDistanciaEstrada? calculadoraDistancia,
 }) {
   final List<PicoProximo> picosComDistancia = [];
+  final bool usarMalha =
+      calculadoraDistancia != null && calculadoraDistancia.possuiMalha;
+  final List<NoEstrada>? nosProximos = usarMalha
+      ? calculadoraDistancia.buscarNosProximos(
+          latitudeUsuario: userLat,
+          longitudeUsuario: userLon,
+        )
+      : null;
 
   for (final item in picosDisponiveis) {
     final double? picoLat;
     final double? picoLon;
+    final String idCroqui;
 
     if (item is MetadadosIndice) {
       picoLat = item.latitude;
       picoLon = item.longitude;
+      idCroqui = item.id.isNotEmpty ? item.id : item.croquiUid;
     } else if (item is ResumoPico) {
       picoLat = item.latitude;
       picoLon = item.longitude;
+      idCroqui = item.id;
     } else if (item is Map) {
       final mapa = Map<String, dynamic>.from(item);
       picoLat = (mapa['latitude'] as num?)?.toDouble();
       picoLon = (mapa['longitude'] as num?)?.toDouble();
+      idCroqui = mapa['id']?.toString() ?? '';
     } else {
-      try {
-        picoLat = (item.latitude as num?)?.toDouble();
-        picoLon = (item.longitude as num?)?.toDouble();
-      } catch (_) {
-        continue;
-      }
+      continue;
     }
 
     if (picoLat != null && picoLon != null) {
-      final double distanceInMeters = Geolocator.distanceBetween(
-        userLat,
-        userLon,
-        picoLat,
-        picoLon,
-      );
+      final double distanceInMeters = usarMalha
+          ? calculadoraDistancia.calcularDistanciaMetros(
+              latitudeUsuario: userLat,
+              longitudeUsuario: userLon,
+              identificadorCroqui: idCroqui,
+              latitudePico: picoLat,
+              longitudePico: picoLon,
+              nosProximosPrecalculados: nosProximos,
+            )
+          : Geolocator.distanceBetween(
+              userLat,
+              userLon,
+              picoLat,
+              picoLon,
+            );
 
       picosComDistancia.add(
         PicoProximo(
@@ -129,12 +147,6 @@ Future<void> handlePicoSelection(
     id = pico['id']?.toString() ?? '';
   } else if (pico is String) {
     id = pico;
-  } else {
-    try {
-      id = (pico.id as String?) ?? '';
-    } catch (_) {
-      id = '';
-    }
   }
   if (id.isEmpty) return;
 

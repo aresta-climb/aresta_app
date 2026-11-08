@@ -69,6 +69,7 @@ frontend/
 │   │   ├── cores_app.dart               - Definição da paleta mestre de cores com suporte a Light/Dark Mode
 │   │   └── gerenciador_tema.dart        - Gerenciamento de estado do tema
 │   ├── utils/
+│   │   ├── calculadora_distancia_estrada.dart - KD-Tree 2D e cálculo offline de distância rodoviária estimada
 │   │   ├── utilitarios_markdown.dart    - Funções utilitárias para parseamento de strings Markdown
 │   │   ├── formatador_escalada.dart     - Formatação de graus, nomes e localização de escaladas por UID
 │   │   └── categorizacao_pico.dart      - Analisa metadados (tags) e agrupa botões do pico em categorias semânticas

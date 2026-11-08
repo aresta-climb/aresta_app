@@ -10,6 +10,7 @@ import '../aresta_api/proto/generated/indice.pb.dart';
 import '../aresta_api/proto/generated/croqui.pb.dart';
 import 'editor_croqui.dart';
 import 'firebase/app_logger.dart';
+import '../utils/calculadora_distancia_estrada.dart';
 import '../utils/construtor_caminho_trajeto.dart';
 
 import 'dataset/modelos/conjunto_dados_croqui.dart';
@@ -26,6 +27,7 @@ import 'http/servico_croqui_online.dart';
 import 'http/sync_service.dart';
 
 export 'catalogo/repositorio_catalogo.dart';
+export '../utils/calculadora_distancia_estrada.dart';
 export 'dataset/modelos/conjunto_dados_croqui.dart';
 export 'dataset/modelos/resumo_pico.dart';
 export 'dataset/modelos/estatisticas_pico.dart';
@@ -89,8 +91,21 @@ class DatasetRepository {
     _instance = this;
     editorDeCroqui.aoAntesDeLimparDadosExperimentais =
         this.repositorioCatalogo.fechar;
+    this.repositorioCatalogo.versaoNotificador.addListener(
+          _recarregarMalhaEstrada,
+        );
     editorDeCroqui.isExperimentalMode.addListener(_handleModeChange);
     editorDeCroqui.editorUrl.addListener(_handleModeChange);
+  }
+
+  Future<void> _recarregarMalhaEstrada() async {
+    try {
+      calculadoraDistanciaEstrada.value =
+          await repositorioCatalogo.carregarMalhaEstrada();
+    } catch (_) {
+      calculadoraDistanciaEstrada.value =
+          const CalculadoraDistanciaEstrada.vazia();
+    }
   }
 
   void _handleModeChange() {
@@ -116,6 +131,12 @@ class DatasetRepository {
 
   /// Notificador reativo emitindo o nome ou identificador de um croqui online que acabou de ser atualizado para exibição na UI.
   final ValueNotifier<String?> notificadorCroquiAtualizado = ValueNotifier(null);
+
+  /// Calculadora reativa de distância rodoviária carregada a partir da malha do `catalogo.db`.
+  final ValueNotifier<CalculadoraDistanciaEstrada> calculadoraDistanciaEstrada =
+      ValueNotifier<CalculadoraDistanciaEstrada>(
+    const CalculadoraDistanciaEstrada.vazia(),
+  );
 
   /// Emite notificação para a interface exibir aviso amigável de que um croqui online foi atualizado.
   void notificarCroquiOnlineAtualizadoNaUI(String nomeOuId) {
@@ -382,6 +403,8 @@ class DatasetRepository {
         }
       }
 
+      await _recarregarMalhaEstrada();
+
       activeDataset.value = ConjuntoDadosCroqui(
         metadadosDisponiveis: indice.croquis,
         croquisBaixados: ordenadosCarregados
@@ -407,6 +430,8 @@ class DatasetRepository {
   /// Limpa os dados em memória definindo listas vazias.
   void loadEmpty() {
     ConstrutorCaminhoTrajeto.limparCache();
+    calculadoraDistanciaEstrada.value =
+        const CalculadoraDistanciaEstrada.vazia();
     activeDataset.value = ConjuntoDadosCroqui.vazio();
   }
 

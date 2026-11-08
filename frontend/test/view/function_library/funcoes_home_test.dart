@@ -1,15 +1,22 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/view/function_library/funcoes_home.dart';
+import 'package:frontend/view/view_models/home_view_model.dart';
+import 'package:frontend/view/view_models/pico_proximo_view_model.dart';
+import 'package:frontend/widgets/busca_global.dart';
 import 'package:frontend/view/function_library/funcoes_explorar.dart';
 import 'package:frontend/widgets/carrossel_picos_proximos.dart';
 import 'package:frontend/theme/cores_app.dart';
@@ -762,5 +769,230 @@ void main() {
       expect(formatarDistanciaKm(1.0), equals('1.0 km'));
       expect(formatarDistanciaKm(12.34), equals('12.3 km'));
     });
+
+    test(
+      'calcularPicosMaisProximos inverte a ordem em relação à linha reta quando a malha rodoviária indica contorno de serra',
+      () {
+        final picos = [
+          MetadadosIndice(
+            id: 'pico_atras_serra',
+            nome: 'Pico Atrás da Serra',
+            localizacao: Coordenada(
+              latitude: -201350000,
+              longitude: -440000000,
+            ),
+          ),
+          MetadadosIndice(
+            id: 'pico_acesso_rodovia',
+            nome: 'Pico Acesso Rodovia',
+            localizacao: Coordenada(
+              latitude: -202250000,
+              longitude: -440000000,
+            ),
+          ),
+        ];
+
+        final calculadora = CalculadoraDistanciaEstrada(
+          nos: const <NoEstrada>[
+            NoEstrada(
+              noOsmId: 1,
+              latitude: -20.0010,
+              longitude: -44.0000,
+              distanciasPorCroquiMetros: <String, int>{
+                'pico_atras_serra': 62000,
+                'pico_acesso_rodovia': 28000,
+              },
+            ),
+          ],
+        );
+
+        final resultado = calcularPicosMaisProximos(
+          userLat: -20.0000,
+          userLon: -44.0000,
+          picosDisponiveis: picos,
+          calculadoraDistancia: calculadora,
+        );
+
+        expect(resultado.map((p) => p.id).toList(), <String>[
+          'pico_acesso_rodovia',
+          'pico_atras_serra',
+        ]);
+        expect(resultado.first.distanciaKm, closeTo(28.14, 0.2));
+        expect(resultado.last.distanciaKm, closeTo(62.14, 0.2));
+      },
+    );
+
+    test(
+      'calcularPicosMaisProximos aceita ResumoPico, Map, MetadadosIndice com croquiUid e desempata por nome em ordem alfabética',
+      () {
+        final picos = <dynamic>[
+          const ResumoPico(
+            id: 'resumo_z',
+            nome: 'Zeta Pico',
+            local: 'MG',
+            latitude: -20.01,
+            longitude: -44.00,
+          ),
+          <String, dynamic>{
+            'id': 'mapa_a',
+            'nome': 'Alfa Pico',
+            'latitude': -20.01,
+            'longitude': -44.00,
+          },
+          ResumoCroqui(
+            id: '',
+            croquiUid: 'uid_apenas',
+            nome: 'Beta Pico',
+            localizacao: Coordenada(
+              latitude: -200200000,
+              longitude: -440000000,
+            ),
+          ),
+          'item_invalido_ignorado',
+        ];
+
+        final resultado = calcularPicosMaisProximos(
+          userLat: -20.00,
+          userLon: -44.00,
+          picosDisponiveis: picos,
+        );
+
+        expect(resultado.length, equals(3));
+        // Mesma coordenada (-20.01, -44.00): Alfa Pico vem antes de Zeta Pico
+        expect(resultado[0].nome, equals('Alfa Pico'));
+        expect(resultado[1].nome, equals('Zeta Pico'));
+        expect(resultado[2].nome, equals('Beta Pico'));
+      },
+    );
+
+    testWidgets(
+      'buildHomeBody abre GlobalSearch ao tocar na barra de busca, aceita HomeViewModel diretamente e aciona onVerMais',
+      (WidgetTester tester) async {
+        mockRepo.activeDataset.value = TopoDataset(
+          availablePicos: [],
+          downloadedPicos: [],
+        );
+        final vm = HomeViewModel(
+          datasetRepo: mockRepo,
+          syncService: mockSync,
+        );
+        addTearDown(vm.dispose);
+
+        int? abaSelecionada;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildHomeBody(
+                  context,
+                  vm,
+                  (int idx) => abaSelecionada = idx,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final carrossel = tester.widget<NearbyCragsCarousel>(
+          find.byType(NearbyCragsCarousel),
+        );
+        carrossel.onVerMais?.call();
+        expect(abaSelecionada, equals(1));
+
+        await tester.tap(find.text('Buscar picos, setores ou vias...'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(GlobalSearch), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'handlePicoSelection aceita CardCroquiViewModel, PicoProximoViewModel, MetadadosIndice, String e ignora id vazio',
+      (WidgetTester tester) async {
+        final mockTelemetry = MockTelemetryService();
+        TelemetryService.instance = mockTelemetry;
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(body: SizedBox()),
+          ),
+        );
+        final context = tester.element(find.byType(Scaffold));
+
+        await tester.runAsync(() async {
+          await handlePicoSelection(context, mockRepo, '');
+          expect(mockTelemetry.recordedEvents, isEmpty);
+
+          final proximoVm = PicoProximoViewModel.deValores(
+            id: 'id_proximo_vm',
+            nome: 'Proximo VM',
+            localizacao: 'MG',
+            caminhoMiniatura: '',
+            distanciaKm: 1.0,
+            estaBaixado: false,
+          );
+          await handlePicoSelection(
+            context,
+            mockRepo,
+            proximoVm.paraCardCroquiViewModel(),
+          );
+          await handlePicoSelection(
+            context,
+            mockRepo,
+            proximoVm,
+          );
+          await handlePicoSelection(
+            context,
+            mockRepo,
+            MetadadosIndice(id: 'id_meta', nome: 'Meta'),
+          );
+          await handlePicoSelection(context, mockRepo, 'id_string_direta');
+        });
+        await tester.pump();
+
+        // Verifica que o diálogo de carregamento (CircularProgressIndicator) é exibido durante a abertura
+        final liberarRede = Completer<http.Response>();
+        final clienteLento = ClienteHttpAresta.paraTestes(
+          MockClient((_) => liberarRede.future),
+        );
+        final repoLento = DatasetRepository(
+          editorDeCroqui: mockEditor,
+          servicoCroquiOnline: ServicoCroquiOnline(
+            client: clienteLento,
+            sessaoOnline: mockRepo.gerenciadorSessaoOnline,
+          ),
+        );
+        repoLento.indiceData.value = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'id_com_dialog',
+              nome: 'Pico Dialog',
+              caminhoRelativo: 'picos/id_com_dialog/compilado.binarypb',
+            ),
+          ],
+        );
+
+        late Future<void> futuroDialog;
+        await tester.runAsync(() async {
+          futuroDialog = handlePicoSelection(
+            context,
+            repoLento,
+            'id_com_dialog',
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        await tester.runAsync(() async {
+          liberarRede.complete(http.Response('Not Found', 404));
+          await futuroDialog;
+        });
+        await tester.pump();
+
+        expect(mockTelemetry.recordedEvents.length, equals(5));
+      },
+    );
   });
 }

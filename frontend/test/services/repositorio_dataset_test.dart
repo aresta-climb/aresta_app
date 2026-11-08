@@ -14,6 +14,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'package:frontend/services/repositorio_dataset.dart';
+import 'package:frontend/aresta_api/openapi/generated/dart/catalogo.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
@@ -2004,6 +2005,70 @@ void main() {
           await repo.loadIndiceToMemory(Indice());
           expect(repo.activeDataset.value?.picosDisponiveis, isEmpty);
           PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+        },
+      );
+
+      test(
+        'calculadoraDistanciaEstrada atualiza reativamente após aplicarDelta no catálogo e reseta em loadEmpty',
+        () async {
+          sqfliteFfiInit();
+          final repoComCatalogo = DatasetRepository(
+            editorDeCroqui: editor,
+            repositorioCatalogo: RepositorioCatalogo(
+              provedorCaminhoBanco: () async => '${tempDir.path}/catalogo.db',
+              fabricaBanco: databaseFactoryFfi,
+            ),
+          );
+          addTearDown(repoComCatalogo.repositorioCatalogo.fechar);
+
+          expect(repoComCatalogo.calculadoraDistanciaEstrada.value.possuiMalha, isFalse);
+
+          await repoComCatalogo.repositorioCatalogo.aplicarDelta(
+            const RespostaSyncCatalogo(
+              acao: 'apply_delta',
+              versaoAtual: 'v_malha_repo',
+              upserts: UpsertsSyncCatalogo(
+                croquis: [
+                  CatalogoCroqui(
+                    croquiUid: 'uid_igarape',
+                    idSlug: 'br_mg_igarape_pedra_grande',
+                    nome: 'Pedra Grande',
+                    cidade: 'Igarapé',
+                    estado: 'MG',
+                  ),
+                ],
+                entidades: [],
+                nosEstrada: [
+                  CatalogoNoEstrada(
+                    noOsmId: 9001,
+                    latitudeE7: -200010000,
+                    longitudeE7: -440010000,
+                  ),
+                ],
+                distanciasEstrada: [
+                  CatalogoDistanciaEstrada(
+                    croquiUid: 'uid_igarape',
+                    noOsmId: 9001,
+                    distanciaMetros: 42000,
+                  ),
+                ],
+              ),
+              deletes: DeletesSyncCatalogo(croquis: [], entidades: []),
+            ),
+          );
+
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          expect(repoComCatalogo.calculadoraDistanciaEstrada.value.possuiMalha, isTrue);
+
+          // Se o banco for substituído por bytes inválidos, reverte para calculadora vazia
+          await repoComCatalogo.repositorioCatalogo.substituirBancoCompleto(
+            Uint8List.fromList([1, 2, 3]),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          expect(repoComCatalogo.calculadoraDistanciaEstrada.value.possuiMalha, isFalse);
+
+          repoComCatalogo.loadEmpty();
+          expect(repoComCatalogo.calculadoraDistanciaEstrada.value.possuiMalha, isFalse);
         },
       );
     });

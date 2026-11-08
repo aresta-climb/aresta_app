@@ -46,6 +46,7 @@ class BrowseViewModel extends ChangeNotifier {
   OrdemOrdenacaoPico _ordem = OrdemOrdenacaoPico.proximidade;
   double? _userLat;
   double? _userLon;
+  Map<String, double>? _cacheDistanciasPorId;
   final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
   Timer? _timerDebounce;
 
@@ -55,17 +56,22 @@ class BrowseViewModel extends ChangeNotifier {
     this.telemetria,
   }) {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
+    datasetRepo.calculadoraDistanciaEstrada.addListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.isExperimentalMode.addListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.editorUrl.addListener(_aoAtualizarDataset);
   }
 
-  void _aoAtualizarDataset() => notifyListeners();
+  void _aoAtualizarDataset() {
+    _cacheDistanciasPorId = null;
+    notifyListeners();
+  }
 
   @override
   void dispose() {
     _timerDebounce?.cancel();
     _solicitacaoScrollSetimoPico.dispose();
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
+    datasetRepo.calculadoraDistanciaEstrada.removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.isExperimentalMode.removeListener(_aoAtualizarDataset);
     datasetRepo.editorDeCroqui.editorUrl.removeListener(_aoAtualizarDataset);
     super.dispose();
@@ -95,7 +101,27 @@ class BrowseViewModel extends ChangeNotifier {
   void atualizarLocalizacaoUsuario(double lat, double lon) {
     _userLat = lat;
     _userLon = lon;
+    _cacheDistanciasPorId = null;
     notifyListeners();
+  }
+
+  Map<String, double> _obterDistanciasPorId(List<MetadadosIndice> todosPicos) {
+    final existente = _cacheDistanciasPorId;
+    if (existente != null) {
+      return existente;
+    }
+    final calculados = calcularPicosMaisProximos(
+      userLat: _userLat!,
+      userLon: _userLon!,
+      picosDisponiveis: todosPicos,
+      limite: null,
+      calculadoraDistancia: datasetRepo.calculadoraDistanciaEstrada.value,
+    );
+    final mapa = <String, double>{
+      for (final item in calculados) item.id: item.distanciaKm,
+    };
+    _cacheDistanciasPorId = mapa;
+    return mapa;
   }
 
   /// Limpa filtros de busca, define ordenação por proximidade e solicita rolagem até o 7º pico.
@@ -160,21 +186,20 @@ class BrowseViewModel extends ChangeNotifier {
 
     if (_ordem == OrdemOrdenacaoPico.proximidade) {
       if (_userLat != null && _userLon != null) {
-        final picosComDistancia = calcularPicosMaisProximos(
-          userLat: _userLat!,
-          userLon: _userLon!,
-          picosDisponiveis: resultado,
-          limite: null,
-        );
-        final idsComDistancia = {for (final p in picosComDistancia) p.id};
+        final distanciasPorId = _obterDistanciasPorId(todosPicos);
+        final comCoordenadas = resultado
+            .where((m) => distanciasPorId.containsKey(m.id))
+            .toList()
+          ..sort((a, b) {
+            final cmp =
+                distanciasPorId[a.id]!.compareTo(distanciasPorId[b.id]!);
+            return cmp != 0 ? cmp : a.nome.compareTo(b.nome);
+          });
         final semCoordenadas = resultado
-            .where((m) => !idsComDistancia.contains(m.id))
+            .where((m) => !distanciasPorId.containsKey(m.id))
             .toList()
           ..sort((a, b) => a.nome.compareTo(b.nome));
-        resultado = [
-          ...picosComDistancia.map((p) => p.pico as MetadadosIndice),
-          ...semCoordenadas,
-        ];
+        resultado = [...comCoordenadas, ...semCoordenadas];
       } else {
         resultado.sort((a, b) => a.nome.compareTo(b.nome));
       }
@@ -194,19 +219,14 @@ class BrowseViewModel extends ChangeNotifier {
 
   /// Lista dos picos filtrados mapeados diretamente para [CardCroquiViewModel] (Dumb UI).
   List<CardCroquiViewModel> get picosCards {
+    final dataset = datasetRepo.activeDataset.value;
     final filtrados = picosFiltrados;
-    final Map<String, double> distanciasPorId = {};
-    if (_userLat != null && _userLon != null && filtrados.isNotEmpty) {
-      final calculados = calcularPicosMaisProximos(
-        userLat: _userLat!,
-        userLon: _userLon!,
-        picosDisponiveis: filtrados,
-        limite: null,
-      );
-      for (final item in calculados) {
-        distanciasPorId[item.id] = item.distanciaKm;
-      }
-    }
+    final Map<String, double> distanciasPorId = (_userLat != null &&
+            _userLon != null &&
+            dataset != null &&
+            filtrados.isNotEmpty)
+        ? _obterDistanciasPorId(dataset.metadadosDisponiveis)
+        : const <String, double>{};
 
     return filtrados.map((m) {
       final textoDist = formatarDistanciaKm(distanciasPorId[m.id]);
@@ -270,15 +290,8 @@ class BrowseViewModel extends ChangeNotifier {
 
   /// Abre a página de detalhes de um pico selecionado.
   Future<void> abrirPico(BuildContext context, String picoId) async {
-    final dataset = datasetRepo.activeDataset.value;
-    if (dataset == null) return;
-
-    final meta = dataset.metadadosDisponiveis.firstWhere(
-      (m) => m.id == picoId,
-      orElse: () => MetadadosIndice(id: picoId),
-    );
-
-    await handlePicoSelection(context, datasetRepo, meta, source: 'explorar');
+    if (datasetRepo.activeDataset.value == null) return;
+    await handlePicoSelection(context, datasetRepo, picoId, source: 'explorar');
   }
 
   /// Exibe diálogo para troca do servidor ativo (modo editor/experimental).

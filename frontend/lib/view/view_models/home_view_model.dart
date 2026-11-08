@@ -35,6 +35,7 @@ class HomeViewModel extends ChangeNotifier {
 
   double? _userLat;
   double? _userLon;
+  List<PicoProximoViewModel>? _cachePicosProximos;
 
   HomeViewModel({
     required this.datasetRepo,
@@ -46,14 +47,19 @@ class HomeViewModel extends ChangeNotifier {
            controladorInteracoes ?? ControladorInteracoesUsuario.instancia {
     datasetRepo.activeDataset.addListener(_aoAtualizarDataset);
     datasetRepo.homeResetTrigger.addListener(_aoAtualizarDataset);
+    datasetRepo.calculadoraDistanciaEstrada.addListener(_aoAtualizarDataset);
   }
 
-  void _aoAtualizarDataset() => notifyListeners();
+  void _aoAtualizarDataset() {
+    _cachePicosProximos = null;
+    notifyListeners();
+  }
 
   @override
   void dispose() {
     datasetRepo.activeDataset.removeListener(_aoAtualizarDataset);
     datasetRepo.homeResetTrigger.removeListener(_aoAtualizarDataset);
+    datasetRepo.calculadoraDistanciaEstrada.removeListener(_aoAtualizarDataset);
     super.dispose();
   }
 
@@ -82,6 +88,7 @@ class HomeViewModel extends ChangeNotifier {
   void atualizarLocalizacaoUsuario(double lat, double lon) {
     _userLat = lat;
     _userLon = lon;
+    _cachePicosProximos = null;
     aoAtualizarLocalizacao?.call(lat, lon);
     notifyListeners();
   }
@@ -99,16 +106,10 @@ class HomeViewModel extends ChangeNotifier {
         dataset.picosBaixados.any((p) => p.id == picoId);
   }
 
-  List<dynamic> get _picosDisponiveis {
+  List<MetadadosIndice> get _picosDisponiveis {
     final dataset = datasetRepo.activeDataset.value;
     if (dataset == null) return const [];
-    if (dataset.metadadosDisponiveis.isNotEmpty) {
-      return dataset.metadadosDisponiveis;
-    }
-    if (dataset.picosDisponiveis.isNotEmpty) {
-      return dataset.picosDisponiveis;
-    }
-    return dataset.availablePicos;
+    return dataset.metadadosDisponiveis;
   }
 
   /// Indica se o catálogo possui mais picos disponíveis além dos 6 exibidos no carrossel.
@@ -123,39 +124,28 @@ class HomeViewModel extends ChangeNotifier {
       return const [];
     }
 
+    final emCache = _cachePicosProximos;
+    if (emCache != null) {
+      return emCache;
+    }
+
     final proximos = calcularPicosMaisProximos(
       userLat: _userLat!,
       userLon: _userLon!,
       picosDisponiveis: availablePicos,
+      calculadoraDistancia: datasetRepo.calculadoraDistanciaEstrada.value,
     );
 
-    return proximos.map((item) {
-      final pico = item.pico;
-      if (pico is MetadadosIndice) {
-        return PicoProximoViewModel.deMetadados(
-          metadados: pico,
-          distanciaKm: item.distanciaKm,
-          estaBaixado: estaBaixado(pico.id),
-        );
-      }
-      final String id = item.id;
-      final String nome = item.nome;
-      final String local = pico is ResumoPico
-          ? pico.local
-          : (pico is Map ? (pico['local']?.toString() ?? '') : '');
-      final String thumb = pico is ResumoPico
-          ? pico.thumbnailUrl
-          : (pico is Map ? (pico['thumbnailUrl']?.toString() ?? '') : '');
-
-      return PicoProximoViewModel.deValores(
-        id: id,
-        nome: nome,
-        localizacao: local,
-        caminhoMiniatura: thumb,
+    final resultado = proximos.map((item) {
+      final pico = item.pico as MetadadosIndice;
+      return PicoProximoViewModel.deMetadados(
+        metadados: pico,
         distanciaKm: item.distanciaKm,
-        estaBaixado: estaBaixado(id),
+        estaBaixado: estaBaixado(pico.id),
       );
     }).toList();
+    _cachePicosProximos = resultado;
+    return resultado;
   }
 
   /// Dispara a sincronização manual dos dados com o servidor remoto.
@@ -181,20 +171,7 @@ class HomeViewModel extends ChangeNotifier {
 
   /// Abre a tela de detalhes de um pico a partir do seu identificador único.
   Future<void> abrirPico(BuildContext context, String picoId) async {
-    final dataset = datasetRepo.activeDataset.value;
-    if (dataset == null) return;
-
-    dynamic pico;
-    if (dataset.metadadosDisponiveis.any((m) => m.id == picoId)) {
-      pico = dataset.metadadosDisponiveis.firstWhere((m) => m.id == picoId);
-    } else if (dataset.picosDisponiveis.any((p) => p.id == picoId)) {
-      pico = dataset.picosDisponiveis.firstWhere((p) => p.id == picoId);
-    } else if (dataset.availablePicos.any((p) => (p is Map ? p['id'] : p.id) == picoId)) {
-      pico = dataset.availablePicos.firstWhere((p) => (p is Map ? p['id'] : p.id) == picoId);
-    } else {
-      pico = ResumoCroqui(id: picoId);
-    }
-
-    await handlePicoSelection(context, datasetRepo, pico, source: 'home');
+    if (datasetRepo.activeDataset.value == null) return;
+    await handlePicoSelection(context, datasetRepo, picoId, source: 'home');
   }
 }

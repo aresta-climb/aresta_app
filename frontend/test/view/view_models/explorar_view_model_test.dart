@@ -1,15 +1,23 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/dataset/modelos/metadados_indice.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
+import 'package:frontend/services/firebase/registro_primeira_visita.dart';
 import 'package:frontend/view/view_models/explorar_view_model.dart';
 import 'package:frontend/view/view_models/home_view_model.dart';
 import '../../mocks/mock_telemetria.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:io';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -219,5 +227,176 @@ void main() {
       expect(viewModel.estaBaixado('pico_salvo'), isTrue);
       expect(viewModel.estaBaixado('pico_ausente'), isFalse);
     });
+
+    test(
+      'picosFiltrados e picosCards utilizam distância rodoviária da malha do catálogo e atualizam badges reativamente',
+      () {
+        repositorio.activeDataset.value = TopoDataset(
+          availablePicos: [
+            {
+              'id': 'pico_serra',
+              'nome': 'Pico Atrás da Serra',
+              'latitude': -20.10,
+              'longitude': -44.00,
+            },
+            {
+              'id': 'pico_rodovia',
+              'nome': 'Pico Acesso BR',
+              'latitude': -20.20,
+              'longitude': -44.00,
+            },
+          ],
+          downloadedPicos: [],
+        );
+
+        viewModel.atualizarLocalizacaoUsuario(-20.00, -44.00);
+
+        expect(viewModel.picosFiltrados.first.id, equals('pico_serra'));
+
+        repositorio.calculadoraDistanciaEstrada.value =
+            CalculadoraDistanciaEstrada(
+          nos: const <NoEstrada>[
+            NoEstrada(
+              noOsmId: 77,
+              latitude: -20.001,
+              longitude: -44.000,
+              distanciasPorCroquiMetros: <String, int>{
+                'pico_serra': 65000,
+                'pico_rodovia': 25000,
+              },
+            ),
+          ],
+        );
+
+        expect(viewModel.picosFiltrados.first.id, equals('pico_rodovia'));
+        expect(viewModel.picosCards.first.id, equals('pico_rodovia'));
+        expect(viewModel.picosCards.first.textoDistancia, equals('25.1 km'));
+        expect(viewModel.picosCards.last.id, equals('pico_serra'));
+        expect(viewModel.picosCards.last.textoDistancia, equals('65.1 km'));
+      },
+    );
+
+    testWidgets(
+      'cobre desempate de distância, picos sem coordenadas, debounce de busca, downloads e ações de UI',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({});
+        RegistroPrimeiraVisita.resetForTesting();
+
+        final clienteHttp = ClienteHttpAresta.paraTestes(
+          MockClient((_) async => http.Response('Erro', 500)),
+        );
+        final syncLocal = SyncService(
+          datasetRepository: repositorio,
+          client: clienteHttp,
+        );
+        final vmLocal = BrowseViewModel(
+          datasetRepo: repositorio,
+          syncService: syncLocal,
+          telemetria: mockTelemetria,
+        );
+        addTearDown(vmLocal.dispose);
+
+        expect(vmLocal.downloadingCrags, same(syncLocal.downloadingCrags));
+
+        // Dois picos com mesma coordenada + 1 pico sem coordenada e mesma qtd de vias
+        repositorio.activeDataset.value = TopoDataset(
+          availablePicos: [
+            {
+              'id': 'p_z',
+              'nome': 'Zeta',
+              'latitude': -20.10,
+              'longitude': -44.00,
+              'estatisticas': {'totalVias': 10},
+            },
+            {
+              'id': 'p_a',
+              'nome': 'Alfa',
+              'latitude': -20.10,
+              'longitude': -44.00,
+              'estatisticas': {'totalVias': 10},
+            },
+            {
+              'id': 'p_sem_coord',
+              'nome': 'Sem Coord',
+              'estatisticas': {'totalVias': 10},
+            },
+          ],
+          downloadedPicos: [],
+        );
+        vmLocal.atualizarLocalizacaoUsuario(-20.00, -44.00);
+
+        final filtradosProx = vmLocal.picosFiltrados;
+        expect(filtradosProx.map((m) => m.id).toList(), <String>[
+          'p_a',
+          'p_z',
+          'p_sem_coord',
+        ]);
+
+        // alterarOrdem para a mesma ordem atual não dispara evento duplicado
+        vmLocal.alterarOrdem(OrdemOrdenacaoPico.proximidade);
+        // alterarOrdem para escaladas exercita desempate por nome quando totalEscaladas é igual
+        vmLocal.alterarOrdem(OrdemOrdenacaoPico.escaladas);
+        expect(vmLocal.picosFiltrados.first.id, equals('p_a'));
+
+        // Debounce de busca após 500ms registra logBuscaCroquis
+        vmLocal.alterarTermoBusca('Alfa');
+        await tester.pump(const Duration(milliseconds: 550));
+        expect(mockTelemetria.recordedEvents, contains('busca_croquis'));
+
+        // baixarPico e baixarPicoPorId com indiceData nulo e preenchido
+        repositorio.indiceData.value = null;
+        expect(await vmLocal.baixarPico(MetadadosIndice(id: 'p_a')), isFalse);
+        expect(await vmLocal.baixarPicoPorId('p_a'), isFalse);
+
+        repositorio.indiceData.value = Indice(
+          croquis: [
+            ResumoCroqui(
+              id: 'p_a',
+              nome: 'Alfa',
+              caminhoRelativo: 'picos/p_a/compilado.binarypb',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
+        final context = tester.element(find.byType(Scaffold));
+
+        await tester.runAsync(() async {
+          await vmLocal.baixarPico(MetadadosIndice(id: 'p_a'));
+          await vmLocal.baixarPico(
+            MetadadosIndice(
+              id: 'p_outro_com_caminho',
+              caminhoRelativo: 'picos/outro/compilado.binarypb',
+            ),
+          );
+          expect(
+            await vmLocal.baixarPico(
+              MetadadosIndice(id: 'p_sem_caminho', caminhoRelativo: ''),
+            ),
+            isFalse,
+          );
+
+          await vmLocal.baixarPicoPorId('p_a');
+          expect(await vmLocal.baixarPicoPorId('inexistente'), isFalse);
+
+          // abrirPico com dataset nulo, encontrado e fallback orElse
+          final ds = repositorio.activeDataset.value;
+          repositorio.activeDataset.value = null;
+          await vmLocal.abrirPico(context, 'p_a');
+          repositorio.activeDataset.value = ds;
+          await vmLocal.abrirPico(context, 'p_a');
+          await vmLocal.abrirPico(context, 'inexistente');
+
+          await vmLocal.sincronizarServing(context);
+        });
+        await tester.pump();
+
+        vmLocal.trocarServing(context);
+        await tester.pump();
+        expect(find.text('Trocar serving'), findsOneWidget);
+      },
+    );
   });
 }
