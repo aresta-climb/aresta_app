@@ -100,7 +100,7 @@ void main() {
       vm.dispose();
     });
 
-    test('submeterEmailSenha no modo Criar Conta valida nome e cria conta autenticada', () async {
+    test('submeterEmailSenha no modo Criar Conta valida nome, cria conta autenticada ou exibe aviso de confirmação de e-mail quando pendente', () async {
       var sucessoAcionado = 0;
       final vm = LoginViewModel(
         servicoAutenticacao: servicoAutenticacao,
@@ -123,11 +123,52 @@ void main() {
 
       final criado = await vm.submeterEmailSenha();
       expect(criado, isTrue);
+      expect(vm.mensagemConfirmacaoEmail, isNull);
       expect(sucessoAcionado, equals(1));
       expect(repositorio.obterPerfil().autorNomePublico, equals('Clara Escaladora'));
       expect(repositorio.obterPerfil().estaAutenticado, isTrue);
-
       vm.dispose();
+
+      // Cenário em que o servidor exige confirmação de e-mail antes de liberar a sessão
+      await servicoAutenticacao.encerrarSessao();
+      var sucessoPendente = 0;
+      final servicoPendente = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+        provedorCriarConta: (nome, email, senha) async =>
+            ResultadoProvedorAutenticacao(
+              userId: 'usr-pendente',
+              nomeExibicao: nome,
+              requerConfirmacaoEmail: true,
+            ),
+      );
+      final vmPendente = LoginViewModel(
+        servicoAutenticacao: servicoPendente,
+        aoAutenticarComSucesso: () => sucessoPendente++,
+      );
+      vmPendente.alternarModoConta();
+      vmPendente.definirNome('Bruno Escalador');
+      vmPendente.definirEmail('bruno@gmail.com');
+      vmPendente.definirSenha('123456');
+
+      final submissaoPendente = await vmPendente.submeterEmailSenha();
+      expect(submissaoPendente, isFalse);
+      expect(sucessoPendente, equals(0));
+      expect(vmPendente.modoCriarConta, isFalse);
+      expect(vmPendente.mensagemErro, isNull);
+      expect(
+        vmPendente.mensagemConfirmacaoEmail,
+        contains('bruno@gmail.com'),
+      );
+      expect(
+        vmPendente.mensagemConfirmacaoEmail,
+        contains('Verifique sua caixa de entrada'),
+      );
+
+      // Editar campos ou alternar modo limpa o aviso de confirmação
+      vmPendente.definirSenha('novaSenha123');
+      expect(vmPendente.mensagemConfirmacaoEmail, isNull);
+      vmPendente.dispose();
     });
 
     test('entrarComGoogle, entrarComApple e continuarSemConta acionam callbacks e tratam exceções', () async {
