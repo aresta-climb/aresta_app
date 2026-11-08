@@ -465,3 +465,53 @@ class CartaoFormularioEmailLogin extends StatelessWidget {
   }
 }
 
+/// Botão declarativo para continuar usando o aplicativo sem conta (modo offline).
+class BotaoContinuarSemContaLogin extends StatelessWidget {
+  /// Callback acionado ao escolher continuar sem conta.
+  final VoidCallback aoPressionar;
+
+  /// Cria uma instância de [BotaoContinuarSemContaLogin].
+  const BotaoContinuarSemContaLogin({
+    super.key,
+    required this.aoPressionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return TextButton(
+      key: const Key('btn_continuar_sem_conta'),
+      onPressed: aoPressionar,
+      style: TextButton.styleFrom(
+        foregroundColor: cores.ashGrey,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: cores.graniteEdge.withValues(alpha: 0.7)),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.offline_bolt_outlined,
+            size: 18,
+            color: cores.dryMoss,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Continuar sem conta / Offline',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: cores.chalkWhite.withValues(alpha: 0.9),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
