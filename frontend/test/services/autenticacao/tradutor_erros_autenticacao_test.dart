@@ -48,5 +48,74 @@ void main() {
         equals('Erro customizado em português'),
       );
     });
+
+    test('traduz códigos alternativos do GoTrue ignorando caixa alta/baixa', () {
+      expect(
+        traduzirMensagemServidorAutenticacao('INVALID_CREDENTIALS', 'Padrão'),
+        equals('E-mail ou senha incorretos.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('OVER_EMAIL_SEND_RATE_LIMIT', 'Padrão'),
+        equals('Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('refresh_token_not_found', 'Padrão'),
+        equals('Sua sessão expirou. Faça login novamente.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('USER_CANCELLED', 'Padrão'),
+        equals('Autenticação cancelada pelo escalador.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('invalid_email', 'Padrão'),
+        equals('Informe um endereço de e-mail válido.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('weak_password', 'Padrão'),
+        equals('A senha deve ter pelo menos 6 caracteres.'),
+      );
+    });
+
+    test('extrairMensagemErroAutenticacao prioriza error_description, msg, message e error ou usa mensagem padrão', () {
+      expect(
+        extrairMensagemErroAutenticacao(
+          {'error_description': 'invalid login credentials'},
+          'Falha padrão',
+        ),
+        equals('E-mail ou senha incorretos.'),
+      );
+      expect(
+        extrairMensagemErroAutenticacao(
+          {'msg': 'user_already_exists'},
+          'Falha padrão',
+        ),
+        equals('Este e-mail já está cadastrado.'),
+      );
+      expect(
+        extrairMensagemErroAutenticacao(
+          {'message': 'Invalid API key'},
+          'Falha padrão',
+        ),
+        equals('Chave de acesso do servidor inválida. Tente novamente.'),
+      );
+      expect(
+        extrairMensagemErroAutenticacao(
+          {'error': 'invalid_grant'},
+          'Falha padrão',
+        ),
+        equals('Não foi possível validar a credencial nativa no servidor.'),
+      );
+      expect(
+        extrairMensagemErroAutenticacao(
+          {'error_description': '   ', 'msg': ''},
+          'Falha padrão',
+        ),
+        equals('Falha padrão'),
+      );
+      expect(
+        extrairMensagemErroAutenticacao(<String, dynamic>{}, 'Falha padrão'),
+        equals('Falha padrão'),
+      );
+    });
   });
 }
