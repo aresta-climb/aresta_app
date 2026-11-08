@@ -92,3 +92,68 @@ class CabecalhoTelaLogin extends StatelessWidget {
   }
 }
 
+/// Botão padronizado para provedores de login social OAuth (Google, Apple).
+class BotaoProvedorOAuthLogin extends StatelessWidget {
+  /// Rótulo exibido ao lado do distintivo do provedor.
+  final String rotulo;
+
+  /// Ícone ou letra estilizada que identifica o provedor OAuth.
+  final Widget distintivo;
+
+  /// Callback acionado ao pressionar o botão (`null` desabilita durante carregamento).
+  final VoidCallback? aoPressionar;
+
+  /// Cria uma instância de [BotaoProvedorOAuthLogin].
+  const BotaoProvedorOAuthLogin({
+    super.key,
+    required this.rotulo,
+    required this.distintivo,
+    required this.aoPressionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return OutlinedButton(
+      onPressed: aoPressionar,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: cores.caveShadow,
+        foregroundColor: cores.chalkWhite,
+        side: BorderSide(color: cores.graniteEdge, width: 1.2),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: distintivo,
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              rotulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
