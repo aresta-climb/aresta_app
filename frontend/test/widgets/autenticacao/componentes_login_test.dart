@@ -143,5 +143,53 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
       expect(alternouModo, isTrue);
     });
+
+    testWidgets('CartaoFormularioEmailLogin oculta campo de nome no modo Entrar, exibe ícone de senha visível e desabilita botões quando carregando', (tester) async {
+      final nomeCtrl = TextEditingController();
+      final emailCtrl = TextEditingController();
+      final senhaCtrl = TextEditingController();
+      addTearDown(() {
+        nomeCtrl.dispose();
+        emailCtrl.dispose();
+        senhaCtrl.dispose();
+      });
+
+      var submeteu = false;
+      var alternouModo = false;
+
+      await tester.pumpWidget(
+        envolverComTema(
+          CartaoFormularioEmailLogin(
+            modoCriarConta: false,
+            ocultarSenha: false,
+            carregando: true,
+            rotuloBotaoPrincipal: 'Entrar',
+            rotuloAlternarModo: 'Não tem conta? Criar agora',
+            nomeController: nomeCtrl,
+            emailController: emailCtrl,
+            senhaController: senhaCtrl,
+            aoAlterarNome: (_) {},
+            aoAlterarEmail: (_) {},
+            aoAlterarSenha: (_) {},
+            aoAlternarVisibilidadeSenha: () {},
+            aoSubmeter: () => submeteu = true,
+            aoAlternarModoConta: () => alternouModo = true,
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('campo_login_nome')), findsNothing);
+      expect(
+        find.byKey(const Key('banner_confirmacao_email_login')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('banner_erro_login')), findsNothing);
+      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
+      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
+      expect(submeteu, isFalse);
+      expect(alternouModo, isFalse);
+    });
   });
 }
