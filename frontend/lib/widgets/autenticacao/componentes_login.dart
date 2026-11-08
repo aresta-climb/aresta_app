@@ -48,3 +48,47 @@ class BarraTopoLogin extends StatelessWidget {
   }
 }
 
+/// Cabeçalho textual da tela de login exibindo título e subtítulo do modo atual.
+class CabecalhoTelaLogin extends StatelessWidget {
+  /// Título de destaque (ex.: entrar ou criar conta).
+  final String titulo;
+
+  /// Subtítulo explicativo sobre sincronização de cadenas e interações.
+  final String subtitulo;
+
+  /// Cria uma instância de [CabecalhoTelaLogin].
+  const CabecalhoTelaLogin({
+    super.key,
+    required this.titulo,
+    required this.subtitulo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitulo,
+          style: TextStyle(
+            color: cores.ashGrey,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
