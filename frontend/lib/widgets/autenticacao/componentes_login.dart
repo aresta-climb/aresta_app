@@ -318,4 +318,82 @@ class CartaoFormularioEmailLogin extends StatelessWidget {
     required this.aoAlternarModoConta,
   });
 
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (modoCriarConta) ...[
+            TextField(
+              key: const Key('campo_login_nome'),
+              controller: nomeController,
+              onChanged: aoAlterarNome,
+              style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+              decoration: _decoracaoCampo(
+                cores: cores,
+                rotulo: 'Nome ou apelido',
+                icone: Icons.person_outline,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          TextField(
+            key: const Key('campo_login_email'),
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            onChanged: aoAlterarEmail,
+            style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+            decoration: _decoracaoCampo(
+              cores: cores,
+              rotulo: 'E-mail',
+              icone: Icons.alternate_email,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('campo_login_senha'),
+            controller: senhaController,
+            obscureText: ocultarSenha,
+            onChanged: aoAlterarSenha,
+            style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+            decoration: _decoracaoCampo(
+              cores: cores,
+              rotulo: 'Senha',
+              icone: Icons.lock_outline,
+              sufixo: IconButton(
+                key: const Key('btn_alternar_visibilidade_senha'),
+                icon: Icon(
+                  ocultarSenha
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: cores.ashGrey,
+                  size: 20,
+                ),
+                onPressed: aoAlternarVisibilidadeSenha,
+              ),
+            ),
+          ),
+          if (mensagemConfirmacaoEmail != null) ...[
+            const SizedBox(height: 10),
+            BannerAvisoLogin(
+              key: const Key('banner_confirmacao_email_login'),
+              mensagem: mensagemConfirmacaoEmail!,
+              icone: Icons.mark_email_read_outlined,
+              corDestaque: cores.dryMoss,
+            ),
+          ],
+          if (mensagemErro != null) ...[
+            const SizedBox(height: 10),
+            BannerAvisoLogin(
+      ),
+    );
+  }
 }
