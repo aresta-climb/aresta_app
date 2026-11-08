@@ -145,11 +145,30 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 10),
                         const DivisorSecaoLogin(texto: 'ou use seu e-mail'),
                         const SizedBox(height: 10),
-                        _construirDivisorOuEmail(cores),
+                        CartaoFormularioEmailLogin(
+                          modoCriarConta: _vm.modoCriarConta,
+                          ocultarSenha: _vm.ocultarSenha,
+                          carregando: _vm.carregando,
+                          rotuloBotaoPrincipal: _vm.rotuloBotaoPrincipal,
+                          rotuloAlternarModo: _vm.rotuloAlternarModo,
+                          mensagemConfirmacaoEmail:
+                              _vm.mensagemConfirmacaoEmail,
+                          mensagemErro: _vm.mensagemErro,
+                          nomeController: _nomeController,
+                          emailController: _emailController,
+                          senhaController: _senhaController,
+                          aoAlterarNome: _vm.definirNome,
+                          aoAlterarEmail: _vm.definirEmail,
+                          aoAlterarSenha: _vm.definirSenha,
+                          aoAlternarVisibilidadeSenha:
+                              _vm.alternarVisibilidadeSenha,
+                          aoSubmeter: _executarSubmissaoEmailSenha,
+                          aoAlternarModoConta: _vm.alternarModoConta,
+                        ),
                         const SizedBox(height: 10),
-                        _construirCartaoFormulario(cores),
-                        const SizedBox(height: 10),
-                        _construirBotaoContinuarSemConta(cores),
+                        BotaoContinuarSemContaLogin(
+                          aoPressionar: _executarContinuarSemConta,
+                        ),
                       ],
                     ),
                   ),
@@ -161,4 +180,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
+}
