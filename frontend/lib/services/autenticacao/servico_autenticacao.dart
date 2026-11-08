@@ -39,6 +39,9 @@ class ResultadoProvedorAutenticacao {
   /// Identificador público NanoID 14c recuperado do banco remoto, quando existente.
   final String? autorIdPublicoRemoto;
 
+  /// Indica se a conta foi registrada no servidor mas aguarda confirmação de e-mail antes de liberar a sessão.
+  final bool requerConfirmacaoEmail;
+
   /// Cria uma instância imutável de [ResultadoProvedorAutenticacao].
   const ResultadoProvedorAutenticacao({
     required this.userId,
@@ -46,6 +49,7 @@ class ResultadoProvedorAutenticacao {
     this.fotoUrl,
     this.accessToken,
     this.autorIdPublicoRemoto,
+    this.requerConfirmacaoEmail = false,
   });
 }
 
@@ -316,10 +320,21 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       );
     }
 
+    final nomeFinal = resultado.nomeExibicao ?? nomeLimpo;
+    if (resultado.requerConfirmacaoEmail) {
+      await _repositorio.salvarPerfil(
+        atual.copyWith(
+          autorNomePublico: nomeFinal,
+          limparUserId: true,
+        ),
+      );
+      return _repositorio.obterPerfil();
+    }
+
     return _salvarPerfilAutenticado(
       perfilAtual: atual,
       resultado: resultado,
-      nomeFinal: resultado.nomeExibicao ?? nomeLimpo,
+      nomeFinal: nomeFinal,
     );
   }
 

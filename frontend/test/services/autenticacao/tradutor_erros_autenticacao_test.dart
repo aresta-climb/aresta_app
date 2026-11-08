@@ -117,5 +117,36 @@ void main() {
         equals('Falha padrão'),
       );
     });
+
+    test('gera code_verifier PKCE de 56 caracteres, calcula code_challenge S256 (vetor RFC 7636) e extrai parâmetros de callback OAuth', () {
+      final verifier1 = gerarCodeVerifierPkce();
+      final verifier2 = gerarCodeVerifierPkce();
+      expect(verifier1.length, equals(56));
+      expect(verifier2.length, equals(56));
+      expect(verifier1, isNot(equals(verifier2)));
+      expect(RegExp(r'^[A-Za-z0-9._~-]+$').hasMatch(verifier1), isTrue);
+
+      // Vetor oficial da RFC 7636 Apêndice B para S256
+      expect(
+        calcularCodeChallengeS256('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'),
+        equals('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'),
+      );
+
+      final uriCallback = Uri.parse(
+        'aresta://app.arestaclimb.com/auth-callback?code=abc123#access_token=jwt999&token_type=bearer',
+      );
+      final params = extrairParametrosCallbackOAuth(uriCallback);
+      expect(params['code'], equals('abc123'));
+      expect(params['access_token'], equals('jwt999'));
+      expect(params['token_type'], equals('bearer'));
+
+      // Quando o fragmento não possui pares chave=valor, preserva apenas queryParameters
+      final uriSemParFragmento = Uri.parse(
+        'aresta://app.arestaclimb.com/auth-callback?error=access_denied#ancora',
+      );
+      final paramsSemFragmento = extrairParametrosCallbackOAuth(uriSemParFragmento);
+      expect(paramsSemFragmento['error'], equals('access_denied'));
+      expect(paramsSemFragmento.containsKey('ancora'), isFalse);
+    });
   });
 }
