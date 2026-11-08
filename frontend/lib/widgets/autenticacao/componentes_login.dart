@@ -393,7 +393,75 @@ class CartaoFormularioEmailLogin extends StatelessWidget {
           if (mensagemErro != null) ...[
             const SizedBox(height: 10),
             BannerAvisoLogin(
+              key: const Key('banner_erro_login'),
+              mensagem: mensagemErro!,
+              icone: Icons.error_outline,
+              corDestaque: cores.rustIron,
+            ),
+          ],
+          const SizedBox(height: 12),
+          ElevatedButton(
+            key: const Key('btn_submeter_email_senha'),
+            onPressed: carregando ? null : aoSubmeter,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: cores.rustIron,
+              foregroundColor: cores.chalkWhite,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              rotuloBotaoPrincipal,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            key: const Key('btn_alternar_modo_conta'),
+            onPressed: carregando ? null : aoAlternarModoConta,
+            child: Text(
+              rotuloAlternarModo,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: cores.chalkWhite.withValues(alpha: 0.85),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _decoracaoCampo({
+    required AppColors cores,
+    required String rotulo,
+    required IconData icone,
+    Widget? sufixo,
+  }) {
+    return InputDecoration(
+      labelText: rotulo,
+      labelStyle: TextStyle(color: cores.ashGrey, fontSize: 13),
+      prefixIcon: Icon(icone, color: cores.ashGrey, size: 20),
+      suffixIcon: sufixo,
+      filled: true,
+      fillColor: cores.deepBasalt,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cores.graniteEdge),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cores.rustIron, width: 1.4),
       ),
     );
   }
 }
+
