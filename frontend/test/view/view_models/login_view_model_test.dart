@@ -248,5 +248,52 @@ void main() {
       );
       vm2.dispose();
     });
+
+    test('notifica transições de carregamento durante chamadas assíncronas e limpa confirmação pendente ao editar nome/e-mail ou alternar modo', () async {
+      final estadosCarregando = <bool>[];
+      final servicoPendente = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+        provedorCriarConta: (nome, email, senha) async =>
+            ResultadoProvedorAutenticacao(
+              userId: 'usr-pendente-2',
+              nomeExibicao: nome,
+              requerConfirmacaoEmail: true,
+            ),
+      );
+
+      final vm = LoginViewModel(servicoAutenticacao: servicoPendente);
+      vm.addListener(() {
+        estadosCarregando.add(vm.carregando);
+      });
+
+      vm.alternarModoConta();
+      vm.definirNome('Marina');
+      vm.definirEmail('marina@aresta.com');
+      vm.definirSenha('123456');
+      estadosCarregando.clear();
+
+      await vm.submeterEmailSenha();
+      expect(estadosCarregando, containsAllInOrder([true, false]));
+      expect(vm.mensagemConfirmacaoEmail, isNotNull);
+
+      // Alternar modo limpa o banner de confirmação de e-mail
+      vm.alternarModoConta();
+      expect(vm.mensagemConfirmacaoEmail, isNull);
+
+      // Gerar novamente e limpar via edição de nome e e-mail
+      await vm.submeterEmailSenha();
+      expect(vm.mensagemConfirmacaoEmail, isNotNull);
+      vm.definirNome('Marina Silva');
+      expect(vm.mensagemConfirmacaoEmail, isNull);
+
+      vm.alternarModoConta();
+      await vm.submeterEmailSenha();
+      expect(vm.mensagemConfirmacaoEmail, isNotNull);
+      vm.definirEmail('marina.silva@aresta.com');
+      expect(vm.mensagemConfirmacaoEmail, isNull);
+
+      vm.dispose();
+    });
   });
 }
