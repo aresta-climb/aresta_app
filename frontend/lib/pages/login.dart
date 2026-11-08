@@ -377,69 +377,7 @@ class _LoginPageState extends State<LoginPage> {
             Container(
               key: const Key('banner_erro_login'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: cores.rustIron.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: cores.rustIron.withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: cores.rustIron, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _vm.mensagemErro!,
-                      style: TextStyle(
-                        color: cores.chalkWhite,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          ElevatedButton(
-            key: const Key('btn_submeter_email_senha'),
-            onPressed: _vm.carregando ? null : _executarSubmissaoEmailSenha,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cores.rustIron,
-              foregroundColor: cores.chalkWhite,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              _vm.rotuloBotaoPrincipal,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          TextButton(
-            key: const Key('btn_alternar_modo_conta'),
-            onPressed: _vm.carregando ? null : _vm.alternarModoConta,
-            child: Text(
-              _vm.rotuloAlternarModo,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: cores.chalkWhite.withValues(alpha: 0.85),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
-
 }
