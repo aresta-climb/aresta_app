@@ -75,6 +75,85 @@ void main() {
       expect(resNovo.userId, equals('usr-novo'));
       expect(resNovo.autorIdPublicoRemoto, equals(idLocal));
       expect(resNovo.nomeExibicao, equals('Novo Escalador'));
+      expect(
+        requisicoes.any(
+          (r) => r.url.path.endsWith('/rest/v1/perfis') && r.method == 'POST',
+        ),
+        isTrue,
+      );
+
+      // 3. Sem accessToken (confirmação pendente), não realiza chamadas PostgREST
+      final resPendente = await SincronizadorPerfilSupabase()
+          .extrairESincronizarUsuario(
+            baseUrl: baseUrl,
+            anonKey: anonKey,
+            accessToken: null,
+            usuario: {'id': 'usr-pendente'},
+            autorIdPublicoLocal: idLocal,
+            nomeFallback: 'Pendente',
+          );
+      expect(resPendente.accessToken, isNull);
+      expect(resPendente.nomeExibicao, equals('Pendente'));
+    });
+
+    test('extrairESincronizarUsuario respeita prioridade de metadados OAuth (full_name/name, avatar_url/picture) e rejeita NanoID inválido', () async {
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(
+              jsonEncode([
+                {
+                  'autor_id_publico': 'id-curto-invalido',
+                  'autor_nome_publico': '   ',
+                  'foto_url': '',
+                },
+              ]),
+              200,
+            );
+          }
+          return http.Response('{}', 201);
+        }),
+      );
+      final sincronizador = SincronizadorPerfilSupabase(clienteHttp: clienteHttp);
+
+      final resFullName = await sincronizador.extrairESincronizarUsuario(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-oauth',
+        usuario: {
+          'id': 'usr-oauth-1',
+          'user_metadata': {
+            'autor_id_publico': 'invalido',
+            'full_name': 'Escaladora Google',
+            'picture': 'https://lh3.googleusercontent.com/foto.webp',
+          },
+        },
+        autorIdPublicoLocal: idLocal,
+        nomeFallback: 'Fallback',
+      );
+      expect(resFullName.autorIdPublicoRemoto, equals(idLocal));
+      expect(resFullName.nomeExibicao, equals('Escaladora Google'));
+      expect(
+        resFullName.fotoUrl,
+        equals('https://lh3.googleusercontent.com/foto.webp'),
+      );
+
+      final resName = await sincronizador.extrairESincronizarUsuario(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: null,
+        usuario: {
+          'id': 'usr-oauth-2',
+          'user_metadata': {
+            'name': 'Escalador Apple',
+            'avatar_url': 'https://apple.com/avatar.webp',
+          },
+        },
+        autorIdPublicoLocal: idLocal,
+        nomeFallback: 'Fallback',
+      );
+      expect(resName.nomeExibicao, equals('Escalador Apple'));
+      expect(resName.fotoUrl, equals('https://apple.com/avatar.webp'));
     });
   });
 }
