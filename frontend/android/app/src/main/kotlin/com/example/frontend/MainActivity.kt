@@ -7,7 +7,10 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.drawable.ColorDrawable
+import android.media.ExifInterface
+import android.os.Build
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
@@ -15,6 +18,7 @@ import com.google.android.gms.common.api.ApiException
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlin.math.min
 
@@ -130,17 +134,27 @@ class MainActivity : FlutterActivity() {
             }
             try {
                 val uri = data.data!!
-                val bitmapOriginal = contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)
+                val bytesOriginais = contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.readBytes()
                 }
-                if (bitmapOriginal == null) {
+                if (bytesOriginais == null || bytesOriginais.isEmpty()) {
                     callback?.success(null)
                     return
                 }
-                val lado = min(bitmapOriginal.width, bitmapOriginal.height)
-                val x = (bitmapOriginal.width - lado) / 2
-                val y = (bitmapOriginal.height - lado) / 2
-                val quadrado = Bitmap.createBitmap(bitmapOriginal, x, y, lado, lado)
+                val bitmapDecodificado = BitmapFactory.decodeByteArray(
+                    bytesOriginais,
+                    0,
+                    bytesOriginais.size
+                )
+                if (bitmapDecodificado == null) {
+                    callback?.success(null)
+                    return
+                }
+                val bitmapOrientado = corrigirOrientacaoExif(bytesOriginais, bitmapDecodificado)
+                val lado = min(bitmapOrientado.width, bitmapOrientado.height)
+                val x = (bitmapOrientado.width - lado) / 2
+                val y = (bitmapOrientado.height - lado) / 2
+                val quadrado = Bitmap.createBitmap(bitmapOrientado, x, y, lado, lado)
                 val redimensionado = Bitmap.createScaledBitmap(
                     quadrado,
                     TAMANHO_AVATAR_PX,
@@ -148,7 +162,13 @@ class MainActivity : FlutterActivity() {
                     true
                 )
                 val saida = ByteArrayOutputStream()
-                redimensionado.compress(Bitmap.CompressFormat.JPEG, 82, saida)
+                val formatoWebp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Bitmap.CompressFormat.WEBP_LOSSY
+                } else {
+                    @Suppress("DEPRECATION")
+                    Bitmap.CompressFormat.WEBP
+                }
+                redimensionado.compress(formatoWebp, 82, saida)
                 callback?.success(saida.toByteArray())
             } catch (_: Exception) {
                 callback?.success(null)
@@ -181,6 +201,41 @@ class MainActivity : FlutterActivity() {
             } catch (_: Exception) {
                 callback?.success(null)
             }
+        }
+    }
+
+    /**
+     * Lê o metadado EXIF `TAG_ORIENTATION` dos bytes originais da foto e aplica a matriz
+     * de rotação/espelhamento correspondente para evitar que fotos da câmera em modo
+     * retrato fiquem tombadas em 90 graus após `BitmapFactory.decodeByteArray`.
+     */
+    private fun corrigirOrientacaoExif(bytesOriginais: ByteArray, bitmap: Bitmap): Bitmap {
+        return try {
+            val exif = ExifInterface(ByteArrayInputStream(bytesOriginais))
+            val orientacao = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+            val matriz = Matrix()
+            when (orientacao) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> matriz.postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> matriz.postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> matriz.postRotate(270f)
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matriz.postScale(-1f, 1f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL -> matriz.postScale(1f, -1f)
+                ExifInterface.ORIENTATION_TRANSPOSE -> {
+                    matriz.postRotate(90f)
+                    matriz.postScale(-1f, 1f)
+                }
+                ExifInterface.ORIENTATION_TRANSVERSE -> {
+                    matriz.postRotate(270f)
+                    matriz.postScale(-1f, 1f)
+                }
+                else -> return bitmap
+            }
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matriz, true)
+        } catch (_: Exception) {
+            bitmap
         }
     }
 
