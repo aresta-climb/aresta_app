@@ -228,5 +228,37 @@ void main() {
       );
       expect(urlSemVirgula, equals('data:image/webp;base64_invalido'));
     });
+
+    test('operações de sincronização toleram falhas de rede em PostgREST, Storage e GoTrue sem interromper o fluxo offline-first', () async {
+      final clienteComFalhaRede = ClienteHttpAresta.paraTestes(
+        MockClient((_) async => throw Exception('Sem conexão com a internet')),
+      );
+      final sincronizador = SincronizadorPerfilSupabase(
+        clienteHttp: clienteComFalhaRede,
+      );
+
+      final resLogin = await sincronizador.extrairESincronizarUsuario(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-offline',
+        usuario: {'id': 'usr-1'},
+        autorIdPublicoLocal: idLocal,
+        nomeFallback: 'Atleta Local',
+      );
+      expect(resLogin.autorIdPublicoRemoto, equals(idLocal));
+      expect(resLogin.nomeExibicao, equals('Atleta Local'));
+
+      final dataUri = 'data:image/webp;base64,${base64Encode([10, 20])}';
+      final fotoMantida = await sincronizador.sincronizarPerfilAtualizado(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-offline',
+        userId: 'usr-1',
+        autorIdPublico: idLocal,
+        nomeFinal: 'Atleta Local',
+        fotoFinal: dataUri,
+      );
+      expect(fotoMantida, equals(dataUri));
+    });
   });
 }
