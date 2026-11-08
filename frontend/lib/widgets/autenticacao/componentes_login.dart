@@ -157,3 +157,42 @@ class BotaoProvedorOAuthLogin extends StatelessWidget {
   }
 }
 
+/// Divisor horizontal com rótulo centralizado entre login social e e-mail.
+class DivisorSecaoLogin extends StatelessWidget {
+  /// Texto exibido ao centro do divisor.
+  final String texto;
+
+  /// Cria uma instância de [DivisorSecaoLogin].
+  const DivisorSecaoLogin({
+    super.key,
+    required this.texto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: cores.graniteEdge, thickness: 1)),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: cores.ashGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: cores.graniteEdge, thickness: 1)),
+      ],
+    );
+  }
+}
+
