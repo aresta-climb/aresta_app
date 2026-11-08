@@ -69,5 +69,79 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_oauth_teste')));
       expect(acionado, equals(1));
     });
+
+    testWidgets('CartaoFormularioEmailLogin renderiza campos, banners de confirmação e erro e aciona callbacks de edição e submissão', (tester) async {
+      final nomeCtrl = TextEditingController();
+      final emailCtrl = TextEditingController();
+      final senhaCtrl = TextEditingController();
+      addTearDown(() {
+        nomeCtrl.dispose();
+        emailCtrl.dispose();
+        senhaCtrl.dispose();
+      });
+
+      String? nomeDigitado;
+      String? emailDigitado;
+      String? senhaDigitada;
+      var alternouSenha = false;
+      var submeteu = false;
+      var alternouModo = false;
+
+      await tester.pumpWidget(
+        envolverComTema(
+          CartaoFormularioEmailLogin(
+            modoCriarConta: true,
+            ocultarSenha: true,
+            carregando: false,
+            rotuloBotaoPrincipal: 'Criar conta',
+            rotuloAlternarModo: 'Já tem uma conta? Entrar',
+            mensagemConfirmacaoEmail: 'Confirme seu e-mail na caixa de entrada.',
+            mensagemErro: 'Erro de validação.',
+            nomeController: nomeCtrl,
+            emailController: emailCtrl,
+            senhaController: senhaCtrl,
+            aoAlterarNome: (v) => nomeDigitado = v,
+            aoAlterarEmail: (v) => emailDigitado = v,
+            aoAlterarSenha: (v) => senhaDigitada = v,
+            aoAlternarVisibilidadeSenha: () => alternouSenha = true,
+            aoSubmeter: () => submeteu = true,
+            aoAlternarModoConta: () => alternouModo = true,
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('banner_confirmacao_email_login')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('banner_erro_login')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('campo_login_nome')),
+        'Escalador',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_login_email')),
+        'atleta@aresta.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_login_senha')),
+        '123456',
+      );
+      expect(nomeDigitado, equals('Escalador'));
+      expect(emailDigitado, equals('atleta@aresta.com'));
+      expect(senhaDigitada, equals('123456'));
+
+      await tester.tap(
+        find.byKey(const Key('btn_alternar_visibilidade_senha')),
+      );
+      expect(alternouSenha, isTrue);
+
+      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
+      expect(submeteu, isTrue);
+
+      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
+      expect(alternouModo, isTrue);
+    });
   });
 }
