@@ -118,6 +118,71 @@ class SincronizadorPerfilSupabase {
     return urlFotoResolvida;
   }
 
+  /// Consulta a linha do escalador em `public.perfis` ou realiza upsert inicial caso ainda não exista.
+  Future<({String autorIdPublico, String nomePublico, String? fotoUrl})>
+  sincronizarLinhaPerfis({
+    required String baseUrl,
+    required String anonKey,
+    required String accessToken,
+    required String userId,
+    required String autorIdPublico,
+    required String nomePublico,
+    required String? fotoUrl,
+  }) async {
+    var idFinal = autorIdPublico;
+    var nomeFinal = nomePublico;
+    var fotoFinal = fotoUrl;
+
+    try {
+      final consulta = await _clienteHttp.get(
+        Uri.parse(
+          '$baseUrl/rest/v1/perfis?user_id=eq.$userId&select=autor_id_publico,autor_nome_publico,avatar_url',
+        ),
+        headers: {
+          'apikey': anonKey,
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (consulta.statusCode >= 200 && consulta.statusCode < 300) {
+        final lista = jsonDecode(consulta.body) as List<dynamic>;
+        if (lista.isNotEmpty) {
+          final linha = lista.first as Map<String, dynamic>;
+          final idBanco = linha['autor_id_publico'] as String?;
+          final nomeBanco = linha['autor_nome_publico'] as String?;
+          final fotoBanco = linha['avatar_url'] as String?;
+          if (validarUid(idBanco)) {
+            idFinal = idBanco!;
+          }
+          if (nomeBanco != null &&
+              nomeBanco.trim().isNotEmpty &&
+              nomeBanco != PerfilEscalador.apelidoPadrao) {
+            nomeFinal = nomeBanco.trim();
+          }
+          if (fotoBanco != null && fotoBanco.trim().isNotEmpty) {
+            fotoFinal = fotoBanco.trim();
+          }
+        } else {
+          await upsertLinhaPerfis(
+            baseUrl: baseUrl,
+            anonKey: anonKey,
+            accessToken: accessToken,
+            userId: userId,
+            autorIdPublico: idFinal,
+            nomePublico: nomeFinal,
+            fotoUrl: fotoFinal,
+          );
+        }
+      }
+    } catch (_) {}
+
+    return (
+      autorIdPublico: idFinal,
+      nomePublico: nomeFinal,
+      fotoUrl: fotoFinal,
+    );
+  }
+
   /// Realiza upsert da linha do escalador na tabela `public.perfis` via PostgREST.
   Future<void> upsertLinhaPerfis({
     required String baseUrl,
