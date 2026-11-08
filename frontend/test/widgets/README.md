@@ -7,6 +7,7 @@ Esta pasta contém testes de widget da interface do usuário. Os testes aqui ver
 | Arquivo | Widget testado | Descrição |
 |---|---|---|
 | `widget_test.dart` | `HomePage` | Teste básico de carregamento da página principal da aplicação |
+| `autenticacao/componentes_login_test.dart` | `componentes_login.dart` | Testa os componentes declarativos (Dumb UI) da tela de login: barra superior, cabeçalho, botões OAuth, divisor, banners de aviso/erro e cartão de formulário de e-mail/senha |
 | `perfil/dialogos_hub_perfil_test.dart` | `DialogoEditarPerfil`, `ModalDadosPrivacidade`, `DialogoConfirmarSaida` | Testa a edição de nome e seleção/pré-visualização de foto de perfil, cópia do NanoID 14c e confirmação de encerramento de sessão |
 | `caderneta/modal_registro_cadena_test.dart` | `ModalRegistroCadena` | Testa o registro e edição de ascensões na caderneta |
 | `caderneta/controles_formulario_cadena_test.dart` | Controles de formulário | Testa seletores de estilo, tentativas, data e notas privadas da caderneta |

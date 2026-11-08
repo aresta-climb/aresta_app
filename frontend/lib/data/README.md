@@ -33,7 +33,7 @@ Representa a identidade esportiva pública e o estado de autenticação do escal
 - `autorIdPublico`: NanoID de 14 caracteres criptograficamente gerado, estável e compartilhável, preservado ao criar ou vincular uma conta.
 - `autorNomePublico`: Nome ou apelido esportivo exibido nas telas, sincronizado com `public.perfis` no Supabase.
 - `userId`: Identificador UUID opcional da conta autenticada no Supabase Auth (`auth.users`).
-- `fotoUrl`: URL pública da foto de perfil no Supabase Storage (`avatars/<userId>/avatar.jpg`) ou Data URI em base64 (`data:image/jpeg;base64,...`) para exibição offline.
+- `fotoUrl`: URL pública da foto de perfil no Supabase Storage (`avatars/<userId>/avatar.webp`) ou Data URI em base64 (`data:image/webp;base64,...`) para exibição offline.
 - `accessToken`: Token JWT opcional da sessão autenticada no Supabase Auth, utilizado para operações autenticadas no Storage e PostgREST.
 - `estaAutenticado`: Indica se há um `userId` não vazio vinculado ao perfil. Ao invocar `copyWith(limparUserId: true)` no encerramento de sessão, tanto `userId` quanto `accessToken` são limpos simultaneamente, mantendo `autorIdPublico` e demais dados locais intactos.
 
