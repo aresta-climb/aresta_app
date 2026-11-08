@@ -247,3 +247,75 @@ class BannerAvisoLogin extends StatelessWidget {
   }
 }
 
+/// Cartão de formulário declarativo para autenticação ou cadastro por e-mail e senha.
+class CartaoFormularioEmailLogin extends StatelessWidget {
+  /// Indica se o formulário deve exibir o campo adicional de nome/apelido.
+  final bool modoCriarConta;
+
+  /// Indica se os caracteres da senha devem permanecer ocultos.
+  final bool ocultarSenha;
+
+  /// Indica se há uma operação de rede em andamento (desabilitando ações).
+  final bool carregando;
+
+  /// Rótulo do botão principal de submissão.
+  final String rotuloBotaoPrincipal;
+
+  /// Rótulo do botão secundário que alterna entre entrar e criar conta.
+  final String rotuloAlternarModo;
+
+  /// Mensagem de confirmação de e-mail pendente, quando existente.
+  final String? mensagemConfirmacaoEmail;
+
+  /// Mensagem de erro de validação ou autenticação, quando existente.
+  final String? mensagemErro;
+
+  /// Controlador do campo de nome ou apelido.
+  final TextEditingController nomeController;
+
+  /// Controlador do campo de e-mail.
+  final TextEditingController emailController;
+
+  /// Controlador do campo de senha.
+  final TextEditingController senhaController;
+
+  /// Callback acionado ao alterar o texto do nome.
+  final ValueChanged<String> aoAlterarNome;
+
+  /// Callback acionado ao alterar o texto do e-mail.
+  final ValueChanged<String> aoAlterarEmail;
+
+  /// Callback acionado ao alterar o texto da senha.
+  final ValueChanged<String> aoAlterarSenha;
+
+  /// Callback acionado ao alternar a visibilidade da senha.
+  final VoidCallback aoAlternarVisibilidadeSenha;
+
+  /// Callback acionado ao tocar no botão principal de submissão.
+  final VoidCallback aoSubmeter;
+
+  /// Callback acionado ao tocar no botão de alternância de modo da conta.
+  final VoidCallback aoAlternarModoConta;
+
+  /// Cria uma instância de [CartaoFormularioEmailLogin].
+  const CartaoFormularioEmailLogin({
+    super.key,
+    required this.modoCriarConta,
+    required this.ocultarSenha,
+    required this.carregando,
+    required this.rotuloBotaoPrincipal,
+    required this.rotuloAlternarModo,
+    this.mensagemConfirmacaoEmail,
+    this.mensagemErro,
+    required this.nomeController,
+    required this.emailController,
+    required this.senhaController,
+    required this.aoAlterarNome,
+    required this.aoAlterarEmail,
+    required this.aoAlterarSenha,
+    required this.aoAlternarVisibilidadeSenha,
+    required this.aoSubmeter,
+    required this.aoAlternarModoConta,
+  });
+
+}
