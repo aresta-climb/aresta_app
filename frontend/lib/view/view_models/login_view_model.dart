@@ -26,6 +26,7 @@ class LoginViewModel extends ChangeNotifier {
   bool _ocultarSenha = true;
   bool _carregando = false;
   String? _mensagemErro;
+  String? _mensagemConfirmacaoEmail;
 
   /// Cria uma instância de [LoginViewModel].
   LoginViewModel({
@@ -56,6 +57,9 @@ class LoginViewModel extends ChangeNotifier {
   /// Mensagem de erro de validação ou falha de autenticação a ser exibida na interface.
   String? get mensagemErro => _mensagemErro;
 
+  /// Mensagem informativa exibida após o cadastro quando o servidor exige confirmação por e-mail antes do primeiro login.
+  String? get mensagemConfirmacaoEmail => _mensagemConfirmacaoEmail;
+
   /// Título principal exibido no cabeçalho da tela de login.
   String get tituloCabecalho =>
       _modoCriarConta ? 'Criar conta Aresta' : 'Entrar na sua conta';
@@ -73,37 +77,37 @@ class LoginViewModel extends ChangeNotifier {
       ? 'Já tem uma conta? Entrar'
       : 'Não tem conta? Criar agora';
 
+  void _limparAvisosAoEditar() {
+    if (_mensagemErro != null || _mensagemConfirmacaoEmail != null) {
+      _mensagemErro = null;
+      _mensagemConfirmacaoEmail = null;
+      notifyListeners();
+    }
+  }
+
   /// Atualiza o nome/apelido digitado e limpa mensagens de erro anteriores.
   void definirNome(String valor) {
     _nome = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Atualiza o e-mail digitado e limpa mensagens de erro anteriores.
   void definirEmail(String valor) {
     _email = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Atualiza a senha digitada e limpa mensagens de erro anteriores.
   void definirSenha(String valor) {
     _senha = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Alterna entre o modo de login (`Entrar`) e criação de conta (`Criar conta`).
   void alternarModoConta() {
     _modoCriarConta = !_modoCriarConta;
     _mensagemErro = null;
+    _mensagemConfirmacaoEmail = null;
     notifyListeners();
   }
 
@@ -119,15 +123,24 @@ class LoginViewModel extends ChangeNotifier {
   Future<bool> submeterEmailSenha() async {
     _carregando = true;
     _mensagemErro = null;
+    _mensagemConfirmacaoEmail = null;
     notifyListeners();
 
     try {
       if (_modoCriarConta) {
-        await servicoAutenticacao.criarContaComEmailSenha(
+        final perfil = await servicoAutenticacao.criarContaComEmailSenha(
           nome: _nome,
           email: _email,
           senha: _senha,
         );
+        if (!perfil.estaAutenticado) {
+          _carregando = false;
+          _modoCriarConta = false;
+          _mensagemConfirmacaoEmail =
+              'Enviamos um link de confirmação para ${_email.trim()}. Verifique sua caixa de entrada (e a pasta de spam) antes de entrar.';
+          notifyListeners();
+          return false;
+        }
       } else {
         await servicoAutenticacao.entrarComEmailSenha(
           email: _email,
