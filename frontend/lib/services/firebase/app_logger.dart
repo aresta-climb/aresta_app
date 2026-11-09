@@ -68,6 +68,17 @@ class AppLogger {
   })?
   sentryCaptureOverride;
 
+  /// Callback opcional invocado sempre que [logError] ou [logCrash] registra uma falha,
+  /// permitindo que oráculos de teste (como o Robô Caótico) detectem erros tratados por `try/catch`.
+  @visibleForTesting
+  void Function(
+    Object erro,
+    StackTrace stackTrace,
+    String mensagem, {
+    required bool fatal,
+  })?
+  aoRegistrarErroOuCrash;
+
   /// Indica se a execução atual está rodando sob o ambiente de testes do Flutter (`flutter test`).
   static bool get estaEmAmbienteDeTestes =>
       Platform.environment.containsKey('FLUTTER_TEST');
@@ -335,6 +346,12 @@ class AppLogger {
     debugPrint('Stack: $stackTrace');
 
     final excecaoEfetiva = error ?? Exception(contextMessage);
+    aoRegistrarErroOuCrash?.call(
+      excecaoEfetiva as Object,
+      stackTrace,
+      contextMessage,
+      fatal: fatal,
+    );
 
     _registrarExcecaoSentry(
       contextMessage,

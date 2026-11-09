@@ -253,6 +253,9 @@ class MotorRoboCaotico {
     var sessoesExecutadas = 0;
 
     while (cronometro.elapsed < duracaoMaxima || sessoesExecutadas < 2) {
+      if (reportarAoSentry) {
+        await _garantirSentryInicializadoParaCampanha();
+      }
       final seedAtual = seedInicial + sessoesExecutadas;
       final datasetAtual = sessoesExecutadas.isEven
           ? TipoDatasetCaos.normal
@@ -393,6 +396,25 @@ class MotorRoboCaotico {
     }
 
     return receita;
+  }
+
+  /// Garante que o Sentry e o [AppLogger] estejam liberados em tempo real durante toda a campanha.
+  Future<void> _garantirSentryInicializadoParaCampanha() async {
+    final logger = AppLogger.instance;
+    if (logger.runtimeType != AppLogger || logger.sentryCaptureOverride != null) {
+      return;
+    }
+    await tester.runAsync(() async {
+      await HttpOverrides.runWithHttpOverrides(() async {
+        if (!Sentry.isEnabled) {
+          await Sentry.init((options) {
+            options.dsn = kSentryDsn;
+            options.environment = 'robo_caotico';
+          });
+        }
+        logger.ignorarAmbienteDeTestesOverride = true;
+      }, _HttpOverridesRedeRealCaos());
+    });
   }
 
   /// Envia a falha capturada ao `AppLogger.instance.logCrash`.
@@ -715,16 +737,28 @@ class MotorRoboCaotico {
     return finderBase.at(seletor.ocorrencia);
   }
 
-  /// Executa [bloco] interceptando erros do framework Flutter (`FlutterError.onError` / `takeException`)
-  /// e exceções assíncronas diretas.
+  /// Executa [bloco] interceptando erros do framework Flutter (`FlutterError.onError` / `takeException`),
+  /// erros tratados registrados em [AppLogger.logError] / [AppLogger.logCrash] e exceções assíncronas diretas.
   Future<_FalhaCapturada?> _executarCapturandoErro(
     Future<void> Function() bloco,
   ) async {
     FlutterErrorDetails? detalhesFlutter;
+    _FalhaCapturada? falhaLogger;
     final handlerAnterior = FlutterError.onError;
+    final hookLoggerAnterior = AppLogger.instance.aoRegistrarErroOuCrash;
+
     FlutterError.onError = (FlutterErrorDetails details) {
       detalhesFlutter ??= details;
       handlerAnterior?.call(details);
+    };
+    AppLogger.instance.aoRegistrarErroOuCrash = (
+      erro,
+      stackTrace,
+      mensagem, {
+      required fatal,
+    }) {
+      falhaLogger ??= _FalhaCapturada(excecao: erro, stackTrace: stackTrace);
+      hookLoggerAnterior?.call(erro, stackTrace, mensagem, fatal: fatal);
     };
 
     try {
@@ -735,6 +769,7 @@ class MotorRoboCaotico {
       return _FalhaCapturada(excecao: erro, stackTrace: stack);
     } finally {
       FlutterError.onError = handlerAnterior;
+      AppLogger.instance.aoRegistrarErroOuCrash = hookLoggerAnterior;
     }
 
     final excecaoBinding = tester.takeException();
@@ -749,6 +784,9 @@ class MotorRoboCaotico {
         excecao: detalhesFlutter!.exception,
         stackTrace: detalhesFlutter!.stack ?? StackTrace.current,
       );
+    }
+    if (falhaLogger != null) {
+      return falhaLogger;
     }
     return null;
   }

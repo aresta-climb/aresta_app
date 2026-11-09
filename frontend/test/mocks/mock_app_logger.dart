@@ -44,6 +44,15 @@ class MockAppLogger implements AppLogger {
   sentryCaptureOverride;
 
   @override
+  void Function(
+    Object erro,
+    StackTrace stackTrace,
+    String mensagem, {
+    required bool fatal,
+  })?
+  aoRegistrarErroOuCrash;
+
+  @override
   void logInfo(String mensagem) {
     recordedInfos.add(mensagem);
   }
@@ -61,6 +70,13 @@ class MockAppLogger implements AppLogger {
     bool fatal = false,
     Map<String, Map<String, dynamic>>? contextosExtras,
   }) {
+    final excecaoEfetiva = error ?? Exception(contextMessage);
+    aoRegistrarErroOuCrash?.call(
+      excecaoEfetiva as Object,
+      stackTrace,
+      contextMessage,
+      fatal: fatal,
+    );
     recordedErrors.add({
       'contextMessage': contextMessage,
       'error': error,

@@ -239,5 +239,57 @@ void main() {
         }
       },
     );
+
+    testWidgets(
+      'Detecta erros tratados registrados via AppLogger.logError (mesmo dentro de try/catch), encolhe receita e envia ao Sentry',
+      (tester) async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        final motor = MotorRoboCaotico(
+          tester: tester,
+          diretorioSaidaReceitas: tempDir,
+          reportarAoSentry: true,
+          montarCenario: (_) async {
+            await tester.pumpWidget(
+              MaterialApp(
+                home: Scaffold(
+                  body: FilledButton(
+                    key: const ValueKey<String>('botao_erro_tratado'),
+                    onPressed: () {
+                      try {
+                        throw const FormatException('Erro silencioso tratado em try/catch');
+                      } catch (e, st) {
+                        AppLogger.instance.logError(
+                          'Falha tratada no botão',
+                          error: e,
+                          stackTrace: st,
+                        );
+                      }
+                    },
+                    child: const Text('Disparar Erro Tratado'),
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+          },
+        );
+
+        final resultado = await motor.executarSessao(
+          seed: 7,
+          dataset: TipoDatasetCaos.normal,
+          maxPassos: 15,
+        );
+
+        expect(resultado.teveFalha, isTrue);
+        expect(resultado.excecao, isA<FormatException>());
+        expect(resultado.receitaGerada, isNotNull);
+        expect(
+          mockLogger.recordedErrors.last['contextosExtras'],
+          contains('receita_robo_caotico'),
+        );
+      },
+    );
   });
 }

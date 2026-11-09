@@ -806,6 +806,30 @@ void main() {
           mockLogger.recordedErrors.last['contextosExtras'],
           {'receita_robo_caotico': receitaMock},
         );
+
+        AppLogger.resetForTesting();
+        Object? erroCapturadoHook;
+        String? msgCapturadaHook;
+        bool? fatalCapturadoHook;
+        AppLogger.instance.aoRegistrarErroOuCrash = (
+          erro,
+          stackTrace,
+          mensagem, {
+          required fatal,
+        }) {
+          erroCapturadoHook = erro;
+          msgCapturadaHook = mensagem;
+          fatalCapturadoHook = fatal;
+        };
+
+        AppLogger.instance.logError(
+          'Erro monitorado pelo hook',
+          error: const FormatException('Formato inválido'),
+          stackTrace: StackTrace.fromString('stack hook'),
+        );
+        expect(erroCapturadoHook, isA<FormatException>());
+        expect(msgCapturadaHook, 'Erro monitorado pelo hook');
+        expect(fatalCapturadoHook, isFalse);
       },
     );
   });
