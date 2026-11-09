@@ -1,6 +1,6 @@
 # Princípios de Engenharia Aresta (`aresta_app`)
 
-Para garantir que o nosso código, seja ele escrito por humanos ou por agentes autônomos de IA (como Google Antigravity e OPSX), se mantenha coeso, testável, sustentável e simples, adotamos oito princípios basilares e inegociáveis.
+Para garantir que o nosso código, seja ele escrito por humanos ou por agentes autônomos de IA (como Google Antigravity e OPSX), se mantenha coeso, testável, sustentável e simples, adotamos nove princípios basilares e inegociáveis.
 
 Estes princípios devem guiar toda e qualquer nova implementação, revisão ou refatoração no repositório do aplicativo.
 
@@ -48,6 +48,11 @@ A existência de código ou testes legados no repositório que ainda não sigam 
 - **Testes de Widget em Primeiro Lugar na UI**: Priorize `testWidgets` para validar os fluxos visuais e interações reais do usuário de ponta a ponta na interface.
 - **Fidelidade em Isolates e Sincronização**: Testes de sincronização em background (`SyncService` / `SyncIsolate`) devem utilizar micro-servidores HTTP locais em `localhost` e arquivos temporários reais para atravessar fronteiras de memória de `Isolate` com fidelidade de produção.
 - **Navegação em Árvore e Estado Reativo**: Respeite a arquitetura de navegação baseada em árvore de nós (`AppNav` / `PageListenableBuilder`) e modelos Protobuf imutáveis/reativos sem introduzir estado global acoplado.
+
+## IX. Responsividade Inegociável da UI e Execução Pesada em Background (Orçamento de Meio Frame)
+O Isolate principal de interface gráfica (UI Isolate do Flutter) **JAMAIS** deve executar trabalho síncrono que exceda o orçamento de **meio frame (`~8ms` a 60fps / `~4ms` a 120fps)**, mantendo margem folgada abaixo do limite de um frame para evitar *jank* ou congelamento de animações e gestos.
+- **Execução Pesada Fora do UI Isolate**: Qualquer operação computacionalmente intensiva ou de I/O pesado — como desserialização/serialização de grandes árvores Protobuf, descompressão de pacotes, indexação de busca textual, decodificação/processamento de imagens ou sincronização de deltas — DEVE obrigatoriamente ser delegada para `Isolate.run` / `SyncIsolate` ou fluxos assíncronos não bloqueantes em background.
+- **Coalescência de Notificações**: Atualizações de estado provenientes de operações em lote em background devem notificar os `ValueNotifier`s / listeners de UI de forma atômica e coalescida, evitando múltiplos rebuilds consecutivos no mesmo ciclo de quadros.
 
 ---
 > **Nota para Agentes Autônomos**: Vocês estão estritamente obrigados a considerar este documento como diretriz de mais alta prioridade ao planejar arquitetura, sugerir refatorações, ou implementar novas rotinas (incluindo o uso do OpenSpec).

@@ -9,7 +9,7 @@ context: |
 rules:
   proposal:
     - OBRIGATÓRIO estar escrito em português brasileiro (PT-BR).
-    - Considerar integralmente os 8 princípios do AGENTS.md em qualquer proposição.
+    - Considerar integralmente os 9 princípios do AGENTS.md em qualquer proposição.
   tasks:
     - OBRIGATÓRIO estar escrito em português brasileiro (PT-BR).
     - Seguir a arquitetura modular, TDD com espelhamento 1:1, testes orientados a comportamento e Fakes determinísticos conforme AGENTS.md.
