@@ -7,7 +7,7 @@ import 'package:frontend/data/modelos/tipo_feedback.dart';
 
 void main() {
   group('FeedbackMetadata', () {
-    test('toJson converte FeedbackMetadata para Map corretamente', () {
+    test('toJson converte FeedbackMetadata para Map corretamente incluindo app=arestaclimb', () {
       const metadata = FeedbackMetadata(
         navigationTree: 'Home -> Settings',
         submittedAt: '16 de junho de 2026 às 09:00:00 (GMT-3)',
@@ -35,6 +35,7 @@ void main() {
 
       final json = metadata.toJson();
 
+      expect(json['app'], 'arestaclimb');
       expect(json['navigationTree'], 'Home -> Settings');
       expect(json['submittedAt'], '16 de junho de 2026 às 09:00:00 (GMT-3)');
       expect(json['submittedAtTimestamp'], '2026-06-16T09:00:00.000-03:00');
@@ -61,6 +62,7 @@ void main() {
 
     test('fromJson converte Map para FeedbackMetadata corretamente', () {
       final json = {
+        'app': 'arestaclimb',
         'navigationTree': 'Home -> Settings',
         'submittedAt': '16 de junho de 2026 às 09:00:00 (GMT-3)',
         'submittedAtTimestamp': '2026-06-16T09:00:00.000-03:00',
@@ -87,6 +89,7 @@ void main() {
 
       final metadata = FeedbackMetadata.fromJson(json);
 
+      expect(metadata.app, 'arestaclimb');
       expect(metadata.navigationTree, 'Home -> Settings');
       expect(metadata.submittedAt, '16 de junho de 2026 às 09:00:00 (GMT-3)');
       expect(metadata.submittedAtTimestamp, '2026-06-16T09:00:00.000-03:00');
@@ -116,6 +119,7 @@ void main() {
 
       final metadata = FeedbackMetadata.fromJson(json);
 
+      expect(metadata.app, 'arestaclimb');
       expect(metadata.navigationTree, 'unknown');
       expect(metadata.submittedAt, 'unknown');
       expect(metadata.submittedAtTimestamp, 'unknown');
@@ -161,12 +165,14 @@ void main() {
       );
 
       final alterado = original.copyWith(
+        app: 'arestaclimb',
         tipoFeedback: TipoFeedback.croqui,
         modoAcessoCroqui: 'online',
         breadcrumbs: [
           {'evento': 'acao_croqui', 'timestamp': '2026-10-05T00:00:00Z'},
         ],
       );
+      expect(alterado.app, 'arestaclimb');
       expect(alterado.tipoFeedback, TipoFeedback.croqui);
       expect(alterado.modoAcessoCroqui, 'online');
       expect(alterado.feedbackId, 'id');

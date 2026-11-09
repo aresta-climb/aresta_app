@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'tipo_feedback.dart';
 
 class FeedbackMetadata {
+  /// Identificador canônico do aplicativo de origem ('arestaclimb').
+  final String app;
   final String navigationTree;
   final String submittedAt;
   final String submittedAtTimestamp;
@@ -57,6 +59,7 @@ class FeedbackMetadata {
   final List<Map<String, dynamic>> breadcrumbs;
 
   const FeedbackMetadata({
+    this.app = 'arestaclimb',
     required this.navigationTree,
     required this.submittedAt,
     required this.submittedAtTimestamp,
@@ -86,6 +89,7 @@ class FeedbackMetadata {
   /// Reconstrói uma instância de [FeedbackMetadata] a partir do mapa [json].
   factory FeedbackMetadata.fromJson(Map<String, dynamic> json) {
     return FeedbackMetadata(
+      app: json['app'] as String? ?? 'arestaclimb',
       navigationTree: json['navigationTree'] as String? ?? 'unknown',
       submittedAt: json['submittedAt'] as String? ?? 'unknown',
       submittedAtTimestamp: json['submittedAtTimestamp'] as String? ?? 'unknown',
@@ -121,6 +125,7 @@ class FeedbackMetadata {
   /// Converte a instância de [FeedbackMetadata] em mapa serializável para JSON.
   Map<String, dynamic> toJson() {
     return {
+      'app': app,
       'navigationTree': navigationTree,
       'submittedAt': submittedAt,
       'submittedAtTimestamp': submittedAtTimestamp,
@@ -150,6 +155,7 @@ class FeedbackMetadata {
 
   /// Retorna uma nova instância de [FeedbackMetadata] substituindo os campos especificados.
   FeedbackMetadata copyWith({
+    String? app,
     String? navigationTree,
     String? submittedAt,
     String? submittedAtTimestamp,
@@ -176,6 +182,7 @@ class FeedbackMetadata {
     List<Map<String, dynamic>>? breadcrumbs,
   }) {
     return FeedbackMetadata(
+      app: app ?? this.app,
       navigationTree: navigationTree ?? this.navigationTree,
       submittedAt: submittedAt ?? this.submittedAt,
       submittedAtTimestamp: submittedAtTimestamp ?? this.submittedAtTimestamp,
@@ -207,6 +214,7 @@ class FeedbackMetadata {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is FeedbackMetadata &&
+        other.app == app &&
         other.navigationTree == navigationTree &&
         other.submittedAt == submittedAt &&
         other.submittedAtTimestamp == submittedAtTimestamp &&
@@ -235,6 +243,7 @@ class FeedbackMetadata {
 
   @override
   int get hashCode => Object.hashAll([
+        app,
         navigationTree,
         submittedAt,
         submittedAtTimestamp,
