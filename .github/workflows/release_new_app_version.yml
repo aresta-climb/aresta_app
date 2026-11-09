@@ -33,6 +33,11 @@ on:
         required: true
         type: boolean
         default: true
+      executar_robo_caotico:
+        description: 'Executar campanha de fuzzing do Robô Caótico (5 min)?'
+        required: true
+        type: boolean
+        default: true
       release_notes:
         description: 'Notas de lançamento (máx. 500 caracteres)'
         required: true
@@ -89,13 +94,19 @@ jobs:
           flutter pub get
           flutter analyze --fatal-infos --fatal-warnings
 
-      - name: Executar Suíte Completa de Testes e Campanha do Robô Caótico (5 min)
+      - name: Executar Suíte de Testes (TDD & Regressão)
         working-directory: ./frontend
         run: |
-          flutter test --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --dart-define=REPORTAR_SENTRY_CAOS=true --timeout=10m
+          flutter test
+
+      - name: Executar Campanha do Robô Caótico (5 min)
+        if: ${{ inputs.executar_robo_caotico }}
+        working-directory: ./frontend
+        run: |
+          flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --dart-define=REPORTAR_SENTRY_CAOS=true --timeout=10m
 
       - name: Publicar Receitas de Crash do Robô Caótico
-        if: failure()
+        if: ${{ failure() && inputs.executar_robo_caotico }}
         uses: actions/upload-artifact@v7
         with:
           name: receitas-crash-robo-caotico
