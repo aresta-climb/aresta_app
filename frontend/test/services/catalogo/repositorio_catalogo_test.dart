@@ -620,5 +620,66 @@ void main() {
         );
       },
     );
+
+    test(
+      'deve migrar catalogo_distancias_estrada legado para WITHOUT ROWID e remover idx_catalogo_distancias_estrada_no ao abrir o banco',
+      () async {
+        final caminhoLegado = '${dirTemp.path}/catalogo_dist_legado.db';
+        final dbLegado = await databaseFactoryFfi.openDatabase(caminhoLegado);
+        await dbLegado.execute('''
+          CREATE TABLE catalogo_nos_estrada (
+            no_osm_id INTEGER PRIMARY KEY,
+            latitude_e7 INTEGER NOT NULL,
+            longitude_e7 INTEGER NOT NULL
+          )
+        ''');
+        await dbLegado.execute('''
+          CREATE TABLE catalogo_distancias_estrada (
+            croqui_uid TEXT NOT NULL,
+            no_osm_id INTEGER NOT NULL,
+            distancia_metros INTEGER NOT NULL,
+            na_borda INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (croqui_uid, no_osm_id)
+          )
+        ''');
+        await dbLegado.execute(
+          'CREATE INDEX idx_catalogo_distancias_estrada_no ON catalogo_distancias_estrada(no_osm_id)',
+        );
+        await dbLegado.insert('catalogo_nos_estrada', {
+          'no_osm_id': 777,
+          'latitude_e7': -195600000,
+          'longitude_e7': -439600000,
+        });
+        await dbLegado.insert('catalogo_distancias_estrada', {
+          'croqui_uid': 'uid_lapinha',
+          'no_osm_id': 777,
+          'distancia_metros': 12300,
+          'na_borda': 1,
+        });
+        await dbLegado.close();
+
+        final repoMigrado = RepositorioCatalogo(
+          provedorCaminhoBanco: () async => caminhoLegado,
+          fabricaBanco: databaseFactoryFfi,
+        );
+        final calc = await repoMigrado.carregarMalhaEstrada();
+        expect(calc.possuiMalha, isTrue);
+        await repoMigrado.fechar();
+
+        final dbInspecao = await databaseFactoryFfi.openDatabase(caminhoLegado);
+        final linhaTable = await dbInspecao.rawQuery(
+          "SELECT sql FROM sqlite_master WHERE type='table' AND name='catalogo_distancias_estrada'",
+        );
+        expect(
+          (linhaTable.single['sql'] as String).toUpperCase(),
+          contains('WITHOUT ROWID'),
+        );
+        final linhasIdx = await dbInspecao.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_catalogo_distancias_estrada_no'",
+        );
+        expect(linhasIdx, isEmpty);
+        await dbInspecao.close();
+      },
+    );
   });
 }

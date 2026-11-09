@@ -271,8 +271,35 @@ class RepositorioCatalogo {
               'ALTER TABLE catalogo_croquis DROP COLUMN atualizado_em',
             );
           }
+          final ddlDistancias = await db.rawQuery(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='catalogo_distancias_estrada'",
+          );
+          final precisaMigrarDistancias = ddlDistancias.isNotEmpty &&
+              !(ddlDistancias.first['sql'] as String)
+                  .toUpperCase()
+                  .contains('WITHOUT ROWID');
+          List<Map<String, Object?>> distanciasLegadas = const [];
+          if (precisaMigrarDistancias) {
+            distanciasLegadas =
+                await db.query('catalogo_distancias_estrada');
+            await db.execute('DROP TABLE catalogo_distancias_estrada');
+          }
+          await db.execute(
+            'DROP INDEX IF EXISTS idx_catalogo_distancias_estrada_no',
+          );
           for (final ddl in comandosDdlCatalogo) {
             await db.execute(ddl);
+          }
+          if (distanciasLegadas.isNotEmpty) {
+            final lote = db.batch();
+            for (final linha in distanciasLegadas) {
+              lote.insert(
+                'catalogo_distancias_estrada',
+                linha,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+            await lote.commit(noResult: true);
           }
         },
       ),
