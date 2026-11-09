@@ -3,28 +3,27 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:app_links/app_links.dart';
-import 'package:crypto/crypto.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/modelos/perfil_escalador.dart';
-import '../../utils/gerador_uid.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
 import 'autenticador_nativo.dart';
 import 'servico_autenticacao.dart';
+import 'sincronizador_perfil_supabase.dart';
+import 'tradutor_erros_autenticacao.dart';
 
-/// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit) com o Supabase.
+/// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit/id_token) com o Supabase GoTrue.
 ///
-/// Isola os protocolos de rede do GoTrue (`/auth/v1`), PostgREST (`/rest/v1/perfis`)
-/// e Supabase Storage (`/storage/v1/object/avatars`) das regras de negócio locais
-/// de domínio do [ServicoAutenticacaoLocal].
+/// Isola os protocolos de autenticação do GoTrue (`/auth/v1`), delegando a sincronização
+/// de perfil e avatar ao [SincronizadorPerfilSupabase] e a tradução de erros ao
+/// módulo `tradutor_erros_autenticacao.dart`.
 class ClienteSupabaseAutenticacao {
   /// URL oficial de redirecionamento OAuth registrada nos esquemas nativos Android e iOS.
   static const String urlRedirecionamentoOAuth =
       'aresta://app.arestaclimb.com/auth-callback';
 
   final ClienteHttpAresta _clienteHttp;
+  final SincronizadorPerfilSupabase _sincronizadorPerfil;
   final String Function() _obterUrlSupabase;
   final AutenticadorNativo _autenticadorNativo;
   final String _idClienteWebGoogle;
@@ -37,6 +36,7 @@ class ClienteSupabaseAutenticacao {
   /// Cria uma instância de [ClienteSupabaseAutenticacao].
   ClienteSupabaseAutenticacao({
     ClienteHttpAresta? clienteHttp,
+    SincronizadorPerfilSupabase? sincronizadorPerfil,
     String Function()? obterUrlSupabase,
     AutenticadorNativo? autenticadorNativo,
     String idClienteWebGoogle =
@@ -45,6 +45,11 @@ class ClienteSupabaseAutenticacao {
     Stream<Uri>? fluxoLinksOAuth,
     Duration timeoutOAuth = const Duration(minutes: 3),
   }) : _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia,
+       _sincronizadorPerfil =
+           sincronizadorPerfil ??
+           SincronizadorPerfilSupabase(
+             clienteHttp: clienteHttp ?? ClienteHttpAresta.instancia,
+           ),
        _obterUrlSupabase =
            obterUrlSupabase ?? (() => RemoteConfigService.instance.supabaseUrl),
        _autenticadorNativo =
@@ -83,13 +88,13 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'E-mail ou senha incorretos.'),
+        extrairMensagemErroAutenticacao(mapa, 'E-mail ou senha incorretos.'),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -100,7 +105,7 @@ class ClienteSupabaseAutenticacao {
   }
 
   /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados públicos do escalador
-  /// e garante o espelhamento em `public.perfis`.
+  /// e garante o espelhamento em `public.perfis` (ou sinaliza `requerConfirmacaoEmail`).
   Future<ResultadoProvedorAutenticacao> criarConta({
     required String nome,
     required String email,
@@ -130,13 +135,29 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Não foi possível criar a conta.'),
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Não foi possível criar a conta.',
+        ),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    final identidades = usuario['identities'];
+    if (identidades is List && identidades.isEmpty) {
+      throw const ExcecaoAutenticacao('Este e-mail já está cadastrado.');
+    }
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      return ResultadoProvedorAutenticacao(
+        userId: usuario['id'].toString(),
+        nomeExibicao: nome,
+        fotoUrl: fotoUrlAtual,
+        autorIdPublicoRemoto: autorIdPublico,
+        requerConfirmacaoEmail: true,
+      );
+    }
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -151,29 +172,13 @@ class ClienteSupabaseAutenticacao {
   Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) async {
-    final credencialNativa = await _autenticadorNativo.solicitarCredencialGoogle(
-      webClientId: _idClienteWebGoogle,
-    );
-    if (credencialNativa != null) {
-      if (credencialNativa.cancelado) {
-        throw const ExcecaoAutenticacao('Login com o Google cancelado.');
-      }
-      return autenticarComIdToken(
-        provedor: 'google',
-        idToken: credencialNativa.idToken!,
-        nonce: credencialNativa.nonce,
-        nomeSugeridoNativo: credencialNativa.nomeExibicao,
-        fotoSugeridaNativa: credencialNativa.fotoUrl,
-        nomeFallback: 'Escalador Google',
-        autorIdPublicoLocal: autorIdPublicoLocal,
-        anonKey: anonKey,
-      );
-    }
-
-    return autenticarProvedorOAuth(
+  }) {
+    return _autenticarComPrioridadeNativa(
       provedor: 'google',
       nomeFallback: 'Escalador Google',
+      mensagemCancelamento: 'Login com o Google cancelado.',
+      solicitarCredencialNativa: () => _autenticadorNativo
+          .solicitarCredencialGoogle(webClientId: _idClienteWebGoogle),
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
@@ -184,27 +189,46 @@ class ClienteSupabaseAutenticacao {
   Future<ResultadoProvedorAutenticacao> autenticarAppleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
+  }) {
+    return _autenticarComPrioridadeNativa(
+      provedor: 'apple',
+      nomeFallback: 'Escalador Apple',
+      mensagemCancelamento: 'Login com a Apple cancelado.',
+      solicitarCredencialNativa: _autenticadorNativo.solicitarCredencialApple,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      anonKey: anonKey,
+    );
+  }
+
+  Future<ResultadoProvedorAutenticacao> _autenticarComPrioridadeNativa({
+    required String provedor,
+    required String nomeFallback,
+    required String mensagemCancelamento,
+    required Future<CredencialNativaOAuth?> Function()
+    solicitarCredencialNativa,
+    required String autorIdPublicoLocal,
+    required String anonKey,
   }) async {
-    final credencialNativa = await _autenticadorNativo.solicitarCredencialApple();
+    final credencialNativa = await solicitarCredencialNativa();
     if (credencialNativa != null) {
       if (credencialNativa.cancelado) {
-        throw const ExcecaoAutenticacao('Login com a Apple cancelado.');
+        throw ExcecaoAutenticacao(mensagemCancelamento);
       }
       return autenticarComIdToken(
-        provedor: 'apple',
+        provedor: provedor,
         idToken: credencialNativa.idToken!,
         nonce: credencialNativa.nonce,
         nomeSugeridoNativo: credencialNativa.nomeExibicao,
         fotoSugeridaNativa: credencialNativa.fotoUrl,
-        nomeFallback: 'Escalador Apple',
+        nomeFallback: nomeFallback,
         autorIdPublicoLocal: autorIdPublicoLocal,
         anonKey: anonKey,
       );
     }
 
     return autenticarProvedorOAuth(
-      provedor: 'apple',
-      nomeFallback: 'Escalador Apple',
+      provedor: provedor,
+      nomeFallback: nomeFallback,
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
@@ -239,7 +263,10 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Falha ao validar credencial nativa.'),
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Falha ao validar credencial nativa.',
+        ),
       );
     }
 
@@ -259,7 +286,7 @@ class ClienteSupabaseAutenticacao {
       'user_metadata': metadadosAtuais,
     };
 
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -278,8 +305,8 @@ class ClienteSupabaseAutenticacao {
     required String anonKey,
   }) async {
     final baseUrl = _baseUrl;
-    final codeVerifier = _gerarCodeVerifierPkce();
-    final codeChallenge = _calcularCodeChallengeS256(codeVerifier);
+    final codeVerifier = gerarCodeVerifierPkce();
+    final codeChallenge = calcularCodeChallengeS256(codeVerifier);
 
     final uriAutorizacao = Uri.parse('$baseUrl/auth/v1/authorize').replace(
       queryParameters: {
@@ -305,12 +332,12 @@ class ClienteSupabaseAutenticacao {
       }
 
       final uriRetorno = await completer.future.timeout(_timeoutOAuth);
-      final params = _extrairParametrosCallback(uriRetorno);
+      final params = extrairParametrosCallbackOAuth(uriRetorno);
 
       final erroOAuth = params['error_description'] ?? params['error'];
       if (erroOAuth != null && erroOAuth.trim().isNotEmpty) {
         throw ExcecaoAutenticacao(
-          _traduzirMensagemServidor(
+          traduzirMensagemServidorAutenticacao(
             erroOAuth.replaceAll('+', ' '),
             'Não foi possível concluir a autenticação.',
           ),
@@ -357,8 +384,6 @@ class ClienteSupabaseAutenticacao {
 
   /// Sincroniza alterações de nome e foto de perfil com o Supabase Storage (`avatars`),
   /// GoTrue (`PUT /auth/v1/user`) e PostgREST (`public.perfis`).
-  ///
-  /// Retorna a URL pública definitiva da foto (ou a [fotoFinal] original em fallback).
   Future<String?> sincronizarPerfilAtualizado({
     required String anonKey,
     required String accessToken,
@@ -366,43 +391,16 @@ class ClienteSupabaseAutenticacao {
     required String autorIdPublico,
     required String nomeFinal,
     required String? fotoFinal,
-  }) async {
-    final baseUrl = _baseUrl;
-    var urlFotoResolvida = fotoFinal;
-
-    if (fotoFinal != null && fotoFinal.startsWith('data:image/')) {
-      final urlStorage = await _enviarAvatarParaStorage(
-        baseUrl: baseUrl,
-        anonKey: anonKey,
-        accessToken: accessToken,
-        userId: userId,
-        dataUri: fotoFinal,
-      );
-      if (urlStorage != null) {
-        urlFotoResolvida = urlStorage;
-      }
-    }
-
-    await _atualizarMetadadosAuthUsuario(
-      baseUrl: baseUrl,
-      anonKey: anonKey,
-      accessToken: accessToken,
-      autorIdPublico: autorIdPublico,
-      nomePublico: nomeFinal,
-      fotoUrl: urlFotoResolvida,
-    );
-
-    await _upsertLinhaPerfis(
-      baseUrl: baseUrl,
+  }) {
+    return _sincronizadorPerfil.sincronizarPerfilAtualizado(
+      baseUrl: _baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
       userId: userId,
       autorIdPublico: autorIdPublico,
-      nomePublico: nomeFinal,
-      fotoUrl: urlFotoResolvida,
+      nomeFinal: nomeFinal,
+      fotoFinal: fotoFinal,
     );
-
-    return urlFotoResolvida;
   }
 
   /// Intercepta um deep link de retorno do fluxo OAuth (`aresta://app.arestaclimb.com/auth-callback`).
@@ -444,13 +442,13 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Falha ao validar login OAuth.'),
+        extrairMensagemErroAutenticacao(mapa, 'Falha ao validar login OAuth.'),
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
@@ -478,11 +476,11 @@ class ClienteSupabaseAutenticacao {
     final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
-        _extrairMensagemErro(mapa, 'Sessão OAuth inválida.'),
+        extrairMensagemErroAutenticacao(mapa, 'Sessão OAuth inválida.'),
       );
     }
 
-    return _extrairESincronizarUsuario(
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: tokenImplicito,
@@ -491,278 +489,4 @@ class ClienteSupabaseAutenticacao {
       nomeFallback: nomeFallback,
     );
   }
-
-  Future<ResultadoProvedorAutenticacao> _extrairESincronizarUsuario({
-    required String baseUrl,
-    required String anonKey,
-    required String? accessToken,
-    required Map<String, dynamic> usuario,
-    required String autorIdPublicoLocal,
-    required String nomeFallback,
-  }) async {
-    final userId = usuario['id'].toString();
-    final metadados = usuario['user_metadata'] as Map<String, dynamic>?;
-    var nomeEfetivo =
-        (metadados?['autor_nome_publico'] ??
-                metadados?['full_name'] ??
-                metadados?['name'])
-            as String? ??
-        nomeFallback;
-    var fotoEfetiva =
-        (metadados?['foto_url'] ??
-                metadados?['avatar_url'] ??
-                metadados?['picture'])
-            as String?;
-    var autorIdEfetivo = validarUid(metadados?['autor_id_publico'] as String?)
-        ? (metadados!['autor_id_publico'] as String)
-        : autorIdPublicoLocal;
-
-    if (accessToken != null && accessToken.isNotEmpty) {
-      final sincronizado = await _sincronizarLinhaPerfis(
-        baseUrl: baseUrl,
-        anonKey: anonKey,
-        accessToken: accessToken,
-        userId: userId,
-        autorIdPublico: autorIdEfetivo,
-        nomePublico: nomeEfetivo,
-        fotoUrl: fotoEfetiva,
-      );
-      autorIdEfetivo = sincronizado.autorIdPublico;
-      nomeEfetivo = sincronizado.nomePublico;
-      fotoEfetiva = sincronizado.fotoUrl ?? fotoEfetiva;
-    }
-
-    return ResultadoProvedorAutenticacao(
-      userId: userId,
-      nomeExibicao: nomeEfetivo,
-      fotoUrl: fotoEfetiva,
-      accessToken: accessToken,
-      autorIdPublicoRemoto: autorIdEfetivo,
-    );
-  }
-
-  Future<({String autorIdPublico, String nomePublico, String? fotoUrl})>
-  _sincronizarLinhaPerfis({
-    required String baseUrl,
-    required String anonKey,
-    required String accessToken,
-    required String userId,
-    required String autorIdPublico,
-    required String nomePublico,
-    required String? fotoUrl,
-  }) async {
-    var idFinal = autorIdPublico;
-    var nomeFinal = nomePublico;
-    var fotoFinal = fotoUrl;
-
-    try {
-      final consulta = await _clienteHttp.get(
-        Uri.parse(
-          '$baseUrl/rest/v1/perfis?user_id=eq.$userId&select=autor_id_publico,autor_nome_publico,avatar_url',
-        ),
-        headers: {
-          'apikey': anonKey,
-          'Authorization': 'Bearer $accessToken',
-        },
-      );
-
-      if (consulta.statusCode >= 200 && consulta.statusCode < 300) {
-        final lista = jsonDecode(consulta.body) as List<dynamic>;
-        if (lista.isNotEmpty) {
-          final linha = lista.first as Map<String, dynamic>;
-          final idBanco = linha['autor_id_publico'] as String?;
-          final nomeBanco = linha['autor_nome_publico'] as String?;
-          final fotoBanco = linha['avatar_url'] as String?;
-          if (validarUid(idBanco)) {
-            idFinal = idBanco!;
-          }
-          if (nomeBanco != null &&
-              nomeBanco.trim().isNotEmpty &&
-              nomeBanco != PerfilEscalador.apelidoPadrao) {
-            nomeFinal = nomeBanco.trim();
-          }
-          if (fotoBanco != null && fotoBanco.trim().isNotEmpty) {
-            fotoFinal = fotoBanco.trim();
-          }
-        } else {
-          await _upsertLinhaPerfis(
-            baseUrl: baseUrl,
-            anonKey: anonKey,
-            accessToken: accessToken,
-            userId: userId,
-            autorIdPublico: idFinal,
-            nomePublico: nomeFinal,
-            fotoUrl: fotoFinal,
-          );
-        }
-      }
-    } catch (_) {}
-
-    return (
-      autorIdPublico: idFinal,
-      nomePublico: nomeFinal,
-      fotoUrl: fotoFinal,
-    );
-  }
-
-  Future<String?> _enviarAvatarParaStorage({
-    required String baseUrl,
-    required String anonKey,
-    required String accessToken,
-    required String userId,
-    required String dataUri,
-  }) async {
-    final indiceVirgula = dataUri.indexOf(',');
-    if (indiceVirgula == -1) return null;
-    try {
-      final bytesImagem = base64Decode(dataUri.substring(indiceVirgula + 1));
-      final caminhoObjeto = '$userId/avatar.jpg';
-      final respStorage = await _clienteHttp.post(
-        Uri.parse('$baseUrl/storage/v1/object/avatars/$caminhoObjeto'),
-        headers: {
-          'apikey': anonKey,
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'image/jpeg',
-          'x-upsert': 'true',
-        },
-        body: bytesImagem,
-      );
-      if (respStorage.statusCode >= 200 && respStorage.statusCode < 300) {
-        return '$baseUrl/storage/v1/object/public/avatars/$caminhoObjeto?t=${DateTime.now().millisecondsSinceEpoch}';
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  Future<void> _atualizarMetadadosAuthUsuario({
-    required String baseUrl,
-    required String anonKey,
-    required String accessToken,
-    required String autorIdPublico,
-    required String nomePublico,
-    required String? fotoUrl,
-  }) async {
-    try {
-      final reqPut = Request('PUT', Uri.parse('$baseUrl/auth/v1/user'))
-        ..headers.addAll({
-          'apikey': anonKey,
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-        })
-        ..body = jsonEncode({
-          'data': {
-            'autor_id_publico': autorIdPublico,
-            'autor_nome_publico': nomePublico,
-            'avatar_url': ?fotoUrl,
-          },
-        });
-      await _clienteHttp.send(reqPut);
-    } catch (_) {}
-  }
-
-  Future<void> _upsertLinhaPerfis({
-    required String baseUrl,
-    required String anonKey,
-    required String accessToken,
-    required String userId,
-    required String autorIdPublico,
-    required String nomePublico,
-    required String? fotoUrl,
-  }) async {
-    try {
-      await _clienteHttp.post(
-        Uri.parse('$baseUrl/rest/v1/perfis?on_conflict=user_id'),
-        headers: {
-          'apikey': anonKey,
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: jsonEncode({
-          'user_id': userId,
-          'autor_id_publico': autorIdPublico,
-          'autor_nome_publico': nomePublico,
-          'avatar_url': ?fotoUrl,
-        }),
-      );
-    } catch (_) {}
-  }
-
-  static const Map<String, String> _traducoesErrosServidor = {
-    'invalid api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-    'no api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-    'invalid login credentials': 'E-mail ou senha incorretos.',
-    'email not confirmed': 'Confirme seu endereço de e-mail antes de entrar.',
-    'already registered': 'Este e-mail já está cadastrado.',
-    'user_already_exists': 'Este e-mail já está cadastrado.',
-    'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
-    'unable to validate email': 'Informe um endereço de e-mail válido.',
-    'unacceptable audience':
-        'Não foi possível validar a credencial nativa no servidor.',
-    'bad_jwt': 'Não foi possível validar a credencial nativa no servidor.',
-    'invalid_grant':
-        'Não foi possível validar a credencial nativa no servidor.',
-    'nonce': 'Não foi possível validar a credencial nativa no servidor.',
-    'rate limit':
-        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
-    'for security purposes':
-        'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
-    'expired': 'Sua sessão expirou. Faça login novamente.',
-    'invalid token': 'Sua sessão expirou. Faça login novamente.',
-    'access_denied': 'Autenticação cancelada pelo escalador.',
-  };
-
-  static String _traduzirMensagemServidor(
-    String textoBruto,
-    String mensagemPadrao,
-  ) {
-    final limpo = textoBruto.trim();
-    final minusculo = limpo.toLowerCase();
-    for (final entrada in _traducoesErrosServidor.entries) {
-      if (minusculo.contains(entrada.key)) {
-        return entrada.value;
-      }
-    }
-    return limpo;
-  }
-
-  static String _extrairMensagemErro(
-    Map<String, dynamic> mapa,
-    String mensagemPadrao,
-  ) {
-    final msg =
-        mapa['error_description'] ??
-        mapa['msg'] ??
-        mapa['message'] ??
-        mapa['error'];
-    return msg != null
-        ? _traduzirMensagemServidor(msg.toString(), mensagemPadrao)
-        : mensagemPadrao;
-  }
-
-  static String _gerarCodeVerifierPkce() {
-    const caracteres =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-    final random = Random.secure();
-    return List.generate(
-      56,
-      (_) => caracteres[random.nextInt(caracteres.length)],
-    ).join();
-  }
-
-  static String _calcularCodeChallengeS256(String codeVerifier) {
-    final digest = sha256.convert(utf8.encode(codeVerifier));
-    return base64UrlEncode(digest.bytes).replaceAll('=', '');
-  }
-
-  static Map<String, String> _extrairParametrosCallback(Uri uri) {
-    final resultado = <String, String>{...uri.queryParameters};
-    if (uri.fragment.isNotEmpty) {
-      try {
-        resultado.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (_) {}
-    }
-    return resultado;
-  }
 }
-

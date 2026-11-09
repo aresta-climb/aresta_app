@@ -194,12 +194,29 @@ import workmanager
       callback?(nil)
       return
     }
+    let largura = img.size.width
+    let altura = img.size.height
+    let lado = min(largura, altura)
+    guard lado > 0 else {
+      callback?(nil)
+      return
+    }
+    let origemX = (largura - lado) / 2.0
+    let origemY = (altura - lado) / 2.0
+    let escala = 256.0 / lado
     let tamanho = CGSize(width: 256, height: 256)
     UIGraphicsBeginImageContextWithOptions(tamanho, true, 1.0)
-    img.draw(in: CGRect(origin: .zero, size: tamanho))
+    img.draw(
+      in: CGRect(
+        x: -origemX * escala,
+        y: -origemY * escala,
+        width: largura * escala,
+        height: altura * escala
+      )
+    )
     let redimensionada = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
-    if let dados = redimensionada?.jpegData(compressionQuality: 0.82) {
+    if let dados = redimensionada?.jpegData(compressionQuality: 0.88) {
       callback?(FlutterStandardTypedData(bytes: dados))
     } else {
       callback?(nil)

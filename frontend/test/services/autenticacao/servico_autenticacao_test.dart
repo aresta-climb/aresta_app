@@ -797,7 +797,7 @@ void main() {
       final bytesBase64 = base64Encode([0xFF, 0xD8, 0xFF, 0xD9]);
       final dataUri = 'data:image/jpeg;base64,$bytesBase64';
 
-      // 1. Quando o bucket avatars existe no Supabase Storage, converte Data URI para URL pública do Storage
+      // 1. Quando o bucket avatars existe no Supabase Storage, converte Data URI para URL pública WebP do Storage
       final atualizadoStorage = await servico.atualizarPerfilRemoto(
         novoNome: 'Novo Nome Supabase',
         novaFotoUrl: dataUri,
@@ -806,7 +806,7 @@ void main() {
       expect(
         atualizadoStorage.fotoUrl,
         startsWith(
-          'https://yzkhiaoqtxvvcyyuwmqg.supabase.co/storage/v1/object/public/avatars/usr-1/avatar.jpg',
+          'https://yzkhiaoqtxvvcyyuwmqg.supabase.co/storage/v1/object/public/avatars/usr-1/avatar.webp',
         ),
       );
       expect(
@@ -831,6 +831,28 @@ void main() {
       );
       expect(atualizadoApenasNome.autorNomePublico, equals('Apenas Nome'));
       expect(atualizadoApenasNome.fotoUrl, equals(dataUri));
+
+      // 4. Quando criarContaComEmailSenha retorna requerConfirmacaoEmail: true, salva o nome mas mantém o usuário desautenticado até confirmar o e-mail
+      await servico.encerrarSessao();
+      final servicoConfirmacaoPendente = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+        provedorCriarConta: (nome, email, senha) async =>
+            ResultadoProvedorAutenticacao(
+              userId: 'usr-pendente-1',
+              nomeExibicao: nome,
+              requerConfirmacaoEmail: true,
+            ),
+      );
+      final perfilPendente = await servicoConfirmacaoPendente
+          .criarContaComEmailSenha(
+            nome: 'Atleta Pendente',
+            email: 'pendente@gmail.com',
+            senha: '123456',
+          );
+      expect(perfilPendente.autorNomePublico, equals('Atleta Pendente'));
+      expect(perfilPendente.estaAutenticado, isFalse);
+      expect(servicoConfirmacaoPendente.estaAutenticado, isFalse);
     });
   });
 }

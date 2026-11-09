@@ -93,6 +93,25 @@ void main() {
             if (body['email'] == 'erro@gmail.com') {
               return http.Response(jsonEncode({}), 500);
             }
+            if (body['email'] == 'ofuscado@gmail.com') {
+              return http.Response(
+                jsonEncode({
+                  'id': 'uuid-ofuscado',
+                  'identities': <dynamic>[],
+                }),
+                200,
+              );
+            }
+            if (body['email'] == 'pendente@gmail.com') {
+              return http.Response(
+                jsonEncode({
+                  'id': 'uuid-pendente',
+                  'confirmation_sent_at': '2026-11-08T12:00:00Z',
+                  'user_metadata': body['data'],
+                }),
+                200,
+              );
+            }
             return http.Response(
               jsonEncode({
                 'access_token': 'jwt-signup',
@@ -179,6 +198,37 @@ void main() {
       expect(resSignup.userId, equals('uuid-signup'));
       expect(resSignup.nomeExibicao, equals('Escaladora'));
       expect(resSignup.accessToken, equals('jwt-signup'));
+      expect(resSignup.requerConfirmacaoEmail, isFalse);
+
+      final resPendente = await cliente.criarConta(
+        nome: 'Escaladora Pendente',
+        email: 'pendente@gmail.com',
+        senha: 'correta',
+        autorIdPublico: idPublicoLocal,
+        fotoUrlAtual: null,
+        anonKey: anonKey,
+      );
+      expect(resPendente.userId, equals('uuid-pendente'));
+      expect(resPendente.accessToken, isNull);
+      expect(resPendente.requerConfirmacaoEmail, isTrue);
+
+      await expectLater(
+        () => cliente.criarConta(
+          nome: 'Escaladora',
+          email: 'ofuscado@gmail.com',
+          senha: 'correta',
+          autorIdPublico: idPublicoLocal,
+          fotoUrlAtual: null,
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>().having(
+            (e) => e.mensagem,
+            'mensagem',
+            'Este e-mail já está cadastrado.',
+          ),
+        ),
+      );
 
       await expectLater(
         () => cliente.criarConta(
@@ -379,11 +429,13 @@ void main() {
       );
     });
 
-    test('sincronizarPerfilAtualizado envia avatar ao Storage (quando disponível) e atualiza Auth e public.perfis', () async {
+    test('sincronizarPerfilAtualizado envia avatar WebP ao Storage (quando disponível) e atualiza Auth e public.perfis', () async {
       var storageOk = true;
+      http.Request? requisicaoStorage;
       final clienteHttp = ClienteHttpAresta.paraTestes(
         MockClient((request) async {
           if (request.url.path.contains('/storage/v1/object/avatars/')) {
+            requisicaoStorage = request;
             return storageOk
                 ? http.Response('{}', 200)
                 : http.Response('{}', 404);
@@ -397,7 +449,7 @@ void main() {
         obterUrlSupabase: () => urlBase,
       );
 
-      final dataUri = 'data:image/jpeg;base64,${base64Encode([1, 2, 3])}';
+      final dataUri = 'data:image/webp;base64,${base64Encode([1, 2, 3])}';
       final urlStorage = await cliente.sincronizarPerfilAtualizado(
         anonKey: anonKey,
         accessToken: 'jwt-1',
@@ -408,8 +460,9 @@ void main() {
       );
       expect(
         urlStorage,
-        startsWith('$urlBase/storage/v1/object/public/avatars/usr-1/avatar.jpg'),
+        startsWith('$urlBase/storage/v1/object/public/avatars/usr-1/avatar.webp'),
       );
+      expect(requisicaoStorage?.headers['Content-Type'], startsWith('image/webp'));
 
       storageOk = false;
       final urlFallback = await cliente.sincronizarPerfilAtualizado(

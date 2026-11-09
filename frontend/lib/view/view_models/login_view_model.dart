@@ -26,6 +26,7 @@ class LoginViewModel extends ChangeNotifier {
   bool _ocultarSenha = true;
   bool _carregando = false;
   String? _mensagemErro;
+  String? _mensagemConfirmacaoEmail;
 
   /// Cria uma instância de [LoginViewModel].
   LoginViewModel({
@@ -56,6 +57,9 @@ class LoginViewModel extends ChangeNotifier {
   /// Mensagem de erro de validação ou falha de autenticação a ser exibida na interface.
   String? get mensagemErro => _mensagemErro;
 
+  /// Mensagem informativa exibida após o cadastro quando o servidor exige confirmação por e-mail antes do primeiro login.
+  String? get mensagemConfirmacaoEmail => _mensagemConfirmacaoEmail;
+
   /// Título principal exibido no cabeçalho da tela de login.
   String get tituloCabecalho =>
       _modoCriarConta ? 'Criar conta Aresta' : 'Entrar na sua conta';
@@ -73,37 +77,37 @@ class LoginViewModel extends ChangeNotifier {
       ? 'Já tem uma conta? Entrar'
       : 'Não tem conta? Criar agora';
 
+  void _limparAvisosAoEditar() {
+    if (_mensagemErro != null || _mensagemConfirmacaoEmail != null) {
+      _mensagemErro = null;
+      _mensagemConfirmacaoEmail = null;
+      notifyListeners();
+    }
+  }
+
   /// Atualiza o nome/apelido digitado e limpa mensagens de erro anteriores.
   void definirNome(String valor) {
     _nome = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Atualiza o e-mail digitado e limpa mensagens de erro anteriores.
   void definirEmail(String valor) {
     _email = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Atualiza a senha digitada e limpa mensagens de erro anteriores.
   void definirSenha(String valor) {
     _senha = valor;
-    if (_mensagemErro != null) {
-      _mensagemErro = null;
-      notifyListeners();
-    }
+    _limparAvisosAoEditar();
   }
 
   /// Alterna entre o modo de login (`Entrar`) e criação de conta (`Criar conta`).
   void alternarModoConta() {
     _modoCriarConta = !_modoCriarConta;
     _mensagemErro = null;
+    _mensagemConfirmacaoEmail = null;
     notifyListeners();
   }
 
@@ -116,83 +120,79 @@ class LoginViewModel extends ChangeNotifier {
   /// Submete o formulário de e-mail e senha de acordo com o [modoCriarConta] ativo.
   ///
   /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
-  Future<bool> submeterEmailSenha() async {
-    _carregando = true;
-    _mensagemErro = null;
-    notifyListeners();
-
-    try {
-      if (_modoCriarConta) {
-        await servicoAutenticacao.criarContaComEmailSenha(
+  Future<bool> submeterEmailSenha() {
+    _mensagemConfirmacaoEmail = null;
+    return _executarFluxoAutenticacao(
+      acao: () async {
+        if (!_modoCriarConta) {
+          await servicoAutenticacao.entrarComEmailSenha(
+            email: _email,
+            senha: _senha,
+          );
+          return true;
+        }
+        final perfil = await servicoAutenticacao.criarContaComEmailSenha(
           nome: _nome,
           email: _email,
           senha: _senha,
         );
-      } else {
-        await servicoAutenticacao.entrarComEmailSenha(
-          email: _email,
-          senha: _senha,
-        );
-      }
-      _carregando = false;
-      notifyListeners();
-      aoAutenticarComSucesso?.call();
-      return true;
-    } on ExcecaoAutenticacao catch (e) {
-      _carregando = false;
-      _mensagemErro = e.mensagem;
-      notifyListeners();
-      return false;
-    } catch (_) {
-      _carregando = false;
-      _mensagemErro =
-          'Não foi possível concluir a autenticação. Tente novamente.';
-      notifyListeners();
-      return false;
-    }
+        if (!perfil.estaAutenticado) {
+          _modoCriarConta = false;
+          _mensagemConfirmacaoEmail =
+              'Enviamos um link de confirmação para ${_email.trim()}. Verifique sua caixa de entrada (e a pasta de spam) antes de entrar.';
+          return false;
+        }
+        return true;
+      },
+      mensagemErroGenerico:
+          'Não foi possível concluir a autenticação. Tente novamente.',
+    );
   }
 
   /// Inicia o fluxo de autenticação via conta Google (Gmail).
   ///
   /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
-  Future<bool> entrarComGoogle() async {
-    _carregando = true;
-    _mensagemErro = null;
-    notifyListeners();
-
-    try {
-      await servicoAutenticacao.entrarComGoogle();
-      _carregando = false;
-      notifyListeners();
-      aoAutenticarComSucesso?.call();
-      return true;
-    } on ExcecaoAutenticacao catch (e) {
-      _carregando = false;
-      _mensagemErro = e.mensagem;
-      notifyListeners();
-      return false;
-    } catch (_) {
-      _carregando = false;
-      _mensagemErro = 'Não foi possível entrar com o Google. Tente novamente.';
-      notifyListeners();
-      return false;
-    }
+  Future<bool> entrarComGoogle() {
+    return _executarFluxoAutenticacao(
+      acao: () async {
+        await servicoAutenticacao.entrarComGoogle();
+        return true;
+      },
+      mensagemErroGenerico:
+          'Não foi possível entrar com o Google. Tente novamente.',
+    );
   }
 
   /// Inicia o fluxo de autenticação via conta Apple (Apple ID).
   ///
   /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
-  Future<bool> entrarComApple() async {
+  Future<bool> entrarComApple() {
+    return _executarFluxoAutenticacao(
+      acao: () async {
+        await servicoAutenticacao.entrarComApple();
+        return true;
+      },
+      mensagemErroGenerico:
+          'Não foi possível entrar com a Apple. Tente novamente.',
+    );
+  }
+
+  Future<bool> _executarFluxoAutenticacao({
+    required Future<bool> Function() acao,
+    required String mensagemErroGenerico,
+  }) async {
     _carregando = true;
     _mensagemErro = null;
     notifyListeners();
 
     try {
-      await servicoAutenticacao.entrarComApple();
+      final autenticado = await acao();
       _carregando = false;
       notifyListeners();
-      aoAutenticarComSucesso?.call();
-      return true;
+      if (autenticado) {
+        aoAutenticarComSucesso?.call();
+      }
+      return autenticado;
     } on ExcecaoAutenticacao catch (e) {
       _carregando = false;
       _mensagemErro = e.mensagem;
@@ -200,7 +200,7 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     } catch (_) {
       _carregando = false;
-      _mensagemErro = 'Não foi possível entrar com a Apple. Tente novamente.';
+      _mensagemErro = mensagemErroGenerico;
       notifyListeners();
       return false;
     }

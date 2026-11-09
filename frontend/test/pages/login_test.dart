@@ -153,6 +153,46 @@ void main() {
       );
     });
 
+    testWidgets('exibe banner de confirmação de e-mail e alterna para modo Entrar quando o servidor exige confirmação no cadastro', (tester) async {
+      final servicoPendente = ServicoAutenticacaoLocal(
+        repositorio: repositorio,
+        obterAnonKeySupabase: () => '',
+        provedorCriarConta: (nome, email, senha) async =>
+            ResultadoProvedorAutenticacao(
+              userId: 'usr-pendente',
+              nomeExibicao: nome,
+              requerConfirmacaoEmail: true,
+            ),
+      );
+      final vmPendente = LoginViewModel(servicoAutenticacao: servicoPendente);
+      await tester.pumpWidget(criarLoginWidget(viewModel: vmPendente));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_login_nome')),
+        'Helena Rocha',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_login_email')),
+        'helena@gmail.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_login_senha')),
+        'senha123456',
+      );
+      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('banner_confirmacao_email_login')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('helena@gmail.com'), findsWidgets);
+      expect(servicoPendente.estaAutenticado, isFalse);
+    });
+
     testWidgets('entrar com Google e continuar sem conta navegam para PerfilNode na árvore quando sem callbacks customizados', (tester) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final syncService = SyncService(datasetRepository: datasetRepo);

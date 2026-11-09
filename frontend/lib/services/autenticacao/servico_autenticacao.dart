@@ -39,6 +39,9 @@ class ResultadoProvedorAutenticacao {
   /// Identificador público NanoID 14c recuperado do banco remoto, quando existente.
   final String? autorIdPublicoRemoto;
 
+  /// Indica se a conta foi registrada no servidor mas aguarda confirmação de e-mail antes de liberar a sessão.
+  final bool requerConfirmacaoEmail;
+
   /// Cria uma instância imutável de [ResultadoProvedorAutenticacao].
   const ResultadoProvedorAutenticacao({
     required this.userId,
@@ -46,6 +49,7 @@ class ResultadoProvedorAutenticacao {
     this.fotoUrl,
     this.accessToken,
     this.autorIdPublicoRemoto,
+    this.requerConfirmacaoEmail = false,
   });
 }
 
@@ -223,7 +227,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
     return _repositorio.obterPerfil();
   }
 
-  String _resolverNomeParaLogin({
+  String _selecionarNomeExibicao({
     required PerfilEscalador perfilAtual,
     required String? nomeDoProvedor,
     required bool autenticouEmProvedorReal,
@@ -265,7 +269,7 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       );
     }
 
-    final nomeFinal = _resolverNomeParaLogin(
+    final nomeFinal = _selecionarNomeExibicao(
       perfilAtual: atual,
       nomeDoProvedor: resultado.nomeExibicao,
       autenticouEmProvedorReal:
@@ -316,38 +320,16 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
       );
     }
 
-    return _salvarPerfilAutenticado(
-      perfilAtual: atual,
-      resultado: resultado,
-      nomeFinal: resultado.nomeExibicao ?? nomeLimpo,
-    );
-  }
-
-  @override
-  Future<PerfilEscalador> entrarComGoogle() async {
-    final atual = _repositorio.obterPerfil();
-    final anonKey = _obterAnonKeySupabase().trim();
-
-    final ResultadoProvedorAutenticacao resultado;
-    if (_provedorGoogle != null) {
-      resultado = await _provedorGoogle();
-    } else if (anonKey.isNotEmpty) {
-      resultado = await _clienteSupabase.autenticarGoogleOAuth(
-        autorIdPublicoLocal: atual.autorIdPublico,
-        anonKey: anonKey,
+    final nomeFinal = resultado.nomeExibicao ?? nomeLimpo;
+    if (resultado.requerConfirmacaoEmail) {
+      await _repositorio.salvarPerfil(
+        atual.copyWith(
+          autorNomePublico: nomeFinal,
+          limparUserId: true,
+        ),
       );
-    } else {
-      resultado = ResultadoProvedorAutenticacao(
-        userId: 'usr_google_${gerarUid()}',
-        nomeExibicao: 'Escalador Google',
-      );
+      return _repositorio.obterPerfil();
     }
-
-    final nomeFinal = _resolverNomeParaLogin(
-      perfilAtual: atual,
-      nomeDoProvedor: resultado.nomeExibicao,
-      autenticouEmProvedorReal: _provedorGoogle != null || anonKey.isNotEmpty,
-    );
 
     return _salvarPerfilAutenticado(
       perfilAtual: atual,
@@ -357,29 +339,64 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   }
 
   @override
-  Future<PerfilEscalador> entrarComApple() async {
+  Future<PerfilEscalador> entrarComGoogle() {
+    return _entrarComProvedorSocial(
+      provedorCustomizado: _provedorGoogle,
+      autenticadorRemoto: (autorIdPublico, anonKey) =>
+          _clienteSupabase.autenticarGoogleOAuth(
+            autorIdPublicoLocal: autorIdPublico,
+            anonKey: anonKey,
+          ),
+      prefixoOffline: 'usr_google_',
+      nomePadraoOffline: 'Escalador Google',
+    );
+  }
+
+  @override
+  Future<PerfilEscalador> entrarComApple() {
+    return _entrarComProvedorSocial(
+      provedorCustomizado: _provedorApple,
+      autenticadorRemoto: (autorIdPublico, anonKey) =>
+          _clienteSupabase.autenticarAppleOAuth(
+            autorIdPublicoLocal: autorIdPublico,
+            anonKey: anonKey,
+          ),
+      prefixoOffline: 'usr_apple_',
+      nomePadraoOffline: 'Escalador Apple',
+    );
+  }
+
+  Future<PerfilEscalador> _entrarComProvedorSocial({
+    required Future<ResultadoProvedorAutenticacao> Function()?
+    provedorCustomizado,
+    required Future<ResultadoProvedorAutenticacao> Function(
+      String autorIdPublicoLocal,
+      String anonKey,
+    )
+    autenticadorRemoto,
+    required String prefixoOffline,
+    required String nomePadraoOffline,
+  }) async {
     final atual = _repositorio.obterPerfil();
     final anonKey = _obterAnonKeySupabase().trim();
 
     final ResultadoProvedorAutenticacao resultado;
-    if (_provedorApple != null) {
-      resultado = await _provedorApple();
+    if (provedorCustomizado != null) {
+      resultado = await provedorCustomizado();
     } else if (anonKey.isNotEmpty) {
-      resultado = await _clienteSupabase.autenticarAppleOAuth(
-        autorIdPublicoLocal: atual.autorIdPublico,
-        anonKey: anonKey,
-      );
+      resultado = await autenticadorRemoto(atual.autorIdPublico, anonKey);
     } else {
       resultado = ResultadoProvedorAutenticacao(
-        userId: 'usr_apple_${gerarUid()}',
-        nomeExibicao: 'Escalador Apple',
+        userId: '$prefixoOffline${gerarUid()}',
+        nomeExibicao: nomePadraoOffline,
       );
     }
 
-    final nomeFinal = _resolverNomeParaLogin(
+    final nomeFinal = _selecionarNomeExibicao(
       perfilAtual: atual,
       nomeDoProvedor: resultado.nomeExibicao,
-      autenticouEmProvedorReal: _provedorApple != null || anonKey.isNotEmpty,
+      autenticouEmProvedorReal:
+          provedorCustomizado != null || anonKey.isNotEmpty,
     );
 
     return _salvarPerfilAutenticado(

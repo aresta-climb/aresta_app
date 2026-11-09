@@ -35,7 +35,7 @@ Este diretório contém os artefatos executáveis de banco de dados para habilit
   * Se o escalador já usava o app offline antes de criar conta, o `autor_id_publico` (NanoID 14c), o `autor_nome_publico` e a foto (`avatar_url` / `picture` / `foto_url`) enviados em `raw_user_meta_data` são preservados automaticamente na criação da conta.
   * Política RLS: `auth.uid() = user_id` (`SELECT`, `INSERT`, `UPDATE`).
 * **Bucket `avatars` no Supabase Storage (`storage.buckets` / `storage.objects`):**
-  * Bucket público para leitura de avatares (`avatars/<user_id>/avatar.jpg`), com políticas RLS que restringem `INSERT`, `UPDATE` e `DELETE` exclusivamente à pasta do próprio usuário autenticado (`(storage.foldername(name))[1] = auth.uid()::text`).
+  * Bucket público para leitura de avatares (`avatars/<user_id>/avatar.webp`), com políticas RLS que restringem `INSERT`, `UPDATE` e `DELETE` exclusivamente à pasta do próprio usuário autenticado (`(storage.foldername(name))[1] = auth.uid()::text`).
 * **`public.cadenas` (Backup Estritamente Privado):**
   * Nenhuma leitura pública é permitida (`REVOKE ALL FROM anon`). Apenas o próprio atleta (`auth.uid() = user_id`) lê, insere, edita ou exclui suas ascensões e `notas_privadas`.
 * **`public.fila_interacoes` (Duas Camadas de Permissão):**
