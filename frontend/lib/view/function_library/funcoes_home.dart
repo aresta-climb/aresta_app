@@ -32,9 +32,28 @@ String formatarDistanciaKm(double? distanciaKm) {
   return '${distanciaKm.toStringAsFixed(1)} km';
 }
 
-/// Calcula as distâncias rodoviárias estimadas (quando [calculadoraDistancia] possui malha)
+/// Compara dois [PicoProximo] aplicando a ordenação em duas faixas:
+/// 1. Picos com estimativa de tempo ([PicoProximo.duracaoMinutos] != `null`) vêm sempre primeiro,
+///    ordenados por minutos crescentes (e desempatados por distância em km e nome);
+/// 2. Demais picos vêm em seguida, ordenados por distância em km crescente (e desempatados por nome).
+int compararPicosPorProximidade(PicoProximo a, PicoProximo b) {
+  final aTemTempo = a.duracaoMinutos != null;
+  final bTemTempo = b.duracaoMinutos != null;
+  if (aTemTempo != bTemTempo) {
+    return aTemTempo ? -1 : 1;
+  }
+  if (aTemTempo && bTemTempo) {
+    final cmpTempo = a.duracaoMinutos!.compareTo(b.duracaoMinutos!);
+    if (cmpTempo != 0) return cmpTempo;
+  }
+  final cmpDist = a.distanciaKm.compareTo(b.distanciaKm);
+  if (cmpDist != 0) return cmpDist;
+  return a.nome.compareTo(b.nome);
+}
+
+/// Calcula o tempo estimado sem trânsito e as distâncias rodoviárias (quando [calculadoraDistancia] possui malha)
 /// ou geodésicas entre o usuário e uma lista de picos, retornando os picos mais próximos
-/// ordenados por distância crescente.
+/// ordenados em duas faixas por [compararPicosPorProximidade].
 ///
 /// Quando [limite] é informado (padrão `6`), retorna no máximo [limite] picos.
 /// Quando [limite] é `null`, retorna todos os picos com coordenadas válidas ordenados.
@@ -78,36 +97,40 @@ List<PicoProximo> calcularPicosMaisProximos({
     }
 
     if (picoLat != null && picoLon != null) {
-      final double distanceInMeters = usarMalha
-          ? calculadoraDistancia.calcularDistanciaMetros(
-              latitudeUsuario: userLat,
-              longitudeUsuario: userLon,
-              identificadorCroqui: idCroqui,
-              latitudePico: picoLat,
-              longitudePico: picoLon,
-              nosProximosPrecalculados: nosProximos,
-            )
-          : Geolocator.distanceBetween(
-              userLat,
-              userLon,
-              picoLat,
-              picoLon,
-            );
-
-      picosComDistancia.add(
-        PicoProximo(
-          pico: item,
-          distanciaKm: distanceInMeters / 1000,
-        ),
-      );
+      if (usarMalha) {
+        final estimativa = calculadoraDistancia.calcularEstimativaViagem(
+          latitudeUsuario: userLat,
+          longitudeUsuario: userLon,
+          identificadorCroqui: idCroqui,
+          latitudePico: picoLat,
+          longitudePico: picoLon,
+          nosProximosPrecalculados: nosProximos,
+        );
+        picosComDistancia.add(
+          PicoProximo(
+            pico: item,
+            distanciaKm: estimativa.distanciaMetros / 1000,
+            duracaoMinutos: estimativa.duracaoMinutos,
+          ),
+        );
+      } else {
+        final double distanceInMeters = Geolocator.distanceBetween(
+          userLat,
+          userLon,
+          picoLat,
+          picoLon,
+        );
+        picosComDistancia.add(
+          PicoProximo(
+            pico: item,
+            distanciaKm: distanceInMeters / 1000,
+          ),
+        );
+      }
     }
   }
 
-  picosComDistancia.sort((a, b) {
-    final cmp = a.distanciaKm.compareTo(b.distanciaKm);
-    if (cmp != 0) return cmp;
-    return a.nome.compareTo(b.nome);
-  });
+  picosComDistancia.sort(compararPicosPorProximidade);
 
   if (limite == null) {
     return picosComDistancia;

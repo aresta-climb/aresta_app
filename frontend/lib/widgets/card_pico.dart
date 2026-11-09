@@ -58,8 +58,53 @@ class CragCard extends StatelessWidget {
     final String statsText = dados.textoEstatisticas;
     final bool isDownloaded = dados.salvoOffline;
     final String? distanceStr = dados.textoDistancia;
+    final String? tooltipDistancia = dados.tooltipDistancia;
     final String? capaPath = dados.caminhoCapa;
     final String? checksumSha256 = dados.checksumSha256;
+
+    Widget? badgeDistancia;
+    if (distanceStr != null) {
+      final conteudoBadge = Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.brandColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.place,
+              color: Colors.white,
+              size: 12,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              distanceStr,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      );
+      badgeDistancia =
+          (tooltipDistancia != null && tooltipDistancia.isNotEmpty)
+              ? Tooltip(
+                  message: tooltipDistancia,
+                  child: conteudoBadge,
+                )
+              : conteudoBadge;
+    }
 
     return GestureDetector(
       onTap: () {
@@ -118,40 +163,7 @@ class CragCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      if (distanceStr != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.brandColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.place,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                distanceStr,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      if (badgeDistancia != null) badgeDistancia,
                       if (isDownloaded)
                         Container(
                           padding: const EdgeInsets.symmetric(

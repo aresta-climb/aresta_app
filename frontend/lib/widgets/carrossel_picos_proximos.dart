@@ -13,14 +13,16 @@ import '../view/view_models/card_croqui_view_model.dart';
 import '../view/function_library/funcoes_home.dart' as home_functions;
 import 'card_pico.dart';
 
-/// Representa um pico de escalada com distância calculada para exibição no carrossel.
+/// Representa um pico de escalada com distância e duração opcional calculadas para exibição no carrossel.
 class PicoProximo {
   final dynamic pico;
   final double distanciaKm;
+  final int? duracaoMinutos;
 
   const PicoProximo({
     required this.pico,
     required this.distanciaKm,
+    this.duracaoMinutos,
   });
 
   String get id {
@@ -66,10 +68,12 @@ class PicoProximo {
   PicoProximo copyWith({
     dynamic pico,
     double? distanciaKm,
+    int? duracaoMinutos,
   }) {
     return PicoProximo(
       pico: pico ?? this.pico,
       distanciaKm: distanciaKm ?? this.distanciaKm,
+      duracaoMinutos: duracaoMinutos ?? this.duracaoMinutos,
     );
   }
 }

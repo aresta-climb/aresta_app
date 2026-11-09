@@ -271,17 +271,28 @@ void main() {
               latitude: -20.001,
               longitude: -44.000,
               distanciasPorCroquiMetros: <String, int>{
-                'pico_serra': 58000,
-                'pico_BR': 24000,
+                'pico_serra': 35000,
+                'pico_BR': 48000,
+              },
+              duracoesPorCroquiMinutos: <String, int>{
+                'pico_serra': 65,
+                'pico_BR': 34,
               },
             ),
           ],
         );
 
+        // Embora pico_BR seja mais longo em km (48 km vs 35 km), ele é mais rápido (34 min vs 65 min)
         expect(vm.picosProximos.first.id, equals('pico_BR'));
-        expect(vm.picosProximos.first.distanciaKm, closeTo(24.14, 0.2));
+        expect(vm.picosProximos.first.distanciaKm, closeTo(48.14, 0.2));
+        expect(vm.picosProximos.first.distanciaFormatada, equals('~35 min'));
+        expect(
+          vm.picosProximos.first.tooltipDistancia,
+          contains('Estimativa sem trânsito: ~35 min'),
+        );
         expect(vm.picosProximos.last.id, equals('pico_serra'));
-        expect(vm.picosProximos.last.distanciaKm, closeTo(58.14, 0.2));
+        expect(vm.picosProximos.last.distanciaKm, closeTo(35.14, 0.2));
+        expect(vm.picosProximos.last.distanciaFormatada, equals('~1h 10min'));
         vm.dispose();
       },
     );

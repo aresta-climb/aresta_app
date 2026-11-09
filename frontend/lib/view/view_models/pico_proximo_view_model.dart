@@ -3,13 +3,14 @@
 
 import '../../aresta_api/proto/generated/indice.pb.dart';
 import '../../services/dataset/modelos/metadados_indice.dart';
+import '../../utils/calculadora_distancia_estrada.dart';
 import '../function_library/funcoes_home.dart';
 import 'card_croqui_view_model.dart';
 
 /// ViewModel de item que representa um pico próximo ao usuário para carrosséis ou listas (Dumb UI).
 ///
 /// Encapsula a mensagem Protobuf [ResumoCroqui] através de getters diretos,
-/// calculando e formatando a distância sob demanda para a camada de apresentação.
+/// calculando e formatando o tempo (sem trânsito) ou a distância sob demanda para a camada de apresentação.
 abstract class PicoProximoViewModel {
   /// Identificador único do pico.
   String get id;
@@ -22,6 +23,9 @@ abstract class PicoProximoViewModel {
 
   /// Distância calculada em quilômetros em relação ao usuário.
   double? get distanciaKm;
+
+  /// Duração estimada em minutos (sem trânsito) quando dentro da malha local, ou `null` quando fora.
+  int? get duracaoMinutos;
 
   /// Caminho relativo ou URL da miniatura visual.
   String get caminhoMiniatura;
@@ -46,6 +50,7 @@ abstract class PicoProximoViewModel {
     required String nome,
     required String localizacao,
     double? distanciaKm,
+    int? duracaoMinutos,
     required String caminhoMiniatura,
     bool estaBaixado,
     int totalSetores,
@@ -53,8 +58,27 @@ abstract class PicoProximoViewModel {
     String? checksumSha256,
   }) = _PicoProximoValores;
 
-  /// Retorna a distância formatada para leitura humana (ex: '450 m' ou '12.3 km').
-  String get distanciaFormatada => formatarDistanciaKm(distanciaKm);
+  /// Retorna a proximidade formatada para leitura humana (ex: `'~40 min'`, `'450 m'` ou `'12.3 km'`).
+  String get distanciaFormatada {
+    if (duracaoMinutos != null) {
+      return EstimativaViagemPico(
+        distanciaMetros: (distanciaKm ?? 0) * 1000.0,
+        duracaoMinutos: duracaoMinutos,
+      ).formatarTempoArredondado();
+    }
+    return formatarDistanciaKm(distanciaKm);
+  }
+
+  /// Retorna o texto do tooltip explicativo quando há estimativa de tempo sem trânsito, ou `null` caso contrário.
+  String? get tooltipDistancia {
+    if (duracaoMinutos == null || distanciaKm == null) {
+      return null;
+    }
+    return EstimativaViagemPico(
+      distanciaMetros: distanciaKm! * 1000.0,
+      duracaoMinutos: duracaoMinutos,
+    ).formatarTooltip();
+  }
 
   /// Converte o [PicoProximoViewModel] para o [CardCroquiViewModel] para exibição no [CragCard].
   CardCroquiViewModel paraCardCroquiViewModel();
@@ -63,6 +87,7 @@ abstract class PicoProximoViewModel {
   factory PicoProximoViewModel.deMetadados({
     required ResumoCroqui metadados,
     double? distanciaKm,
+    int? duracaoMinutos,
     bool estaBaixado,
   }) = _PicoProximoMetadados;
 
@@ -72,6 +97,7 @@ abstract class PicoProximoViewModel {
     required String nome,
     required String localizacao,
     double? distanciaKm,
+    int? duracaoMinutos,
     required String caminhoMiniatura,
     bool estaBaixado,
     int totalSetores,
@@ -88,11 +114,15 @@ class _PicoProximoMetadados extends PicoProximoViewModel {
   final double? distanciaKm;
 
   @override
+  final int? duracaoMinutos;
+
+  @override
   final bool estaBaixado;
 
   _PicoProximoMetadados({
     required ResumoCroqui metadados,
     this.distanciaKm,
+    this.duracaoMinutos,
     this.estaBaixado = false,
   })  : _metadados = metadados,
         super._();
@@ -128,6 +158,7 @@ class _PicoProximoMetadados extends PicoProximoViewModel {
       _metadados,
       salvoOffline: estaBaixado,
       textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
+      tooltipDistancia: tooltipDistancia,
     );
   }
 }
@@ -142,6 +173,8 @@ class _PicoProximoValores extends PicoProximoViewModel {
   final String localizacao;
   @override
   final double? distanciaKm;
+  @override
+  final int? duracaoMinutos;
   @override
   final String caminhoMiniatura;
   @override
@@ -158,6 +191,7 @@ class _PicoProximoValores extends PicoProximoViewModel {
     required this.nome,
     required this.localizacao,
     this.distanciaKm,
+    this.duracaoMinutos,
     required this.caminhoMiniatura,
     this.estaBaixado = false,
     this.totalSetores = 0,
@@ -174,6 +208,7 @@ class _PicoProximoValores extends PicoProximoViewModel {
       caminhoMiniatura: caminhoMiniatura,
       salvoOffline: estaBaixado,
       textoDistancia: distanciaFormatada.isNotEmpty ? distanciaFormatada : null,
+      tooltipDistancia: tooltipDistancia,
       textoEstatisticas: '$totalSetores setores • $totalEscaladas vias',
       checksumSha256: checksumSha256,
     );

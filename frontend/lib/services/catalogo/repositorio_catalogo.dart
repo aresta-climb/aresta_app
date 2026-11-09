@@ -186,7 +186,7 @@ class RepositorioCatalogo {
     ORDER BY e.nome COLLATE NOCASE ASC
   ''';
 
-  /// Query estática para carregar as distâncias rodoviárias associadas tanto ao `croqui_uid`
+  /// Query estática para carregar as distâncias e durações rodoviárias associadas tanto ao `croqui_uid`
   /// quanto ao `id_slug` correspondente.
   static const String _sqlCarregarDistanciasEstrada = '''
     SELECT
@@ -194,7 +194,8 @@ class RepositorioCatalogo {
       c.id_slug,
       d.no_osm_id,
       d.distancia_metros,
-      d.na_borda
+      d.na_borda,
+      d.duracao_minutos
     FROM catalogo_distancias_estrada d
     LEFT JOIN catalogo_croquis c ON c.croqui_uid = d.croqui_uid
   ''';
@@ -274,10 +275,12 @@ class RepositorioCatalogo {
           final ddlDistancias = await db.rawQuery(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='catalogo_distancias_estrada'",
           );
+          final sqlDistancias = ddlDistancias.isNotEmpty
+              ? (ddlDistancias.first['sql'] as String).toUpperCase()
+              : '';
           final precisaMigrarDistancias = ddlDistancias.isNotEmpty &&
-              !(ddlDistancias.first['sql'] as String)
-                  .toUpperCase()
-                  .contains('WITHOUT ROWID');
+              (!sqlDistancias.contains('WITHOUT ROWID') ||
+                  !sqlDistancias.contains('DURACAO_MINUTOS'));
           List<Map<String, Object?>> distanciasLegadas = const [];
           if (precisaMigrarDistancias) {
             distanciasLegadas =
@@ -388,6 +391,16 @@ class RepositorioCatalogo {
           );
         }
 
+        final distanciasEstradaRemover =
+            delta.deletes?.distanciasEstrada ?? const <String>[];
+        for (final croquiUid in distanciasEstradaRemover) {
+          batch.delete(
+            'catalogo_distancias_estrada',
+            where: 'croqui_uid = ?',
+            whereArgs: [croquiUid],
+          );
+        }
+
         final croquisInserir =
             delta.upserts?.croquis ?? const <CatalogoCroqui>[];
         for (final c in croquisInserir) {
@@ -447,6 +460,7 @@ class RepositorioCatalogo {
               noOsmId: d.noOsmId,
               distanciaMetros: d.distanciaMetros,
               naBorda: d.naBorda ?? 0,
+              duracaoMinutos: d.duracaoMinutos ?? 0,
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
@@ -577,6 +591,7 @@ class RepositorioCatalogo {
 
       final coordenadasPorNo = <int, (double, double)>{};
       final distanciasPorNo = <int, Map<String, int>>{};
+      final duracoesPorNo = <int, Map<String, int>>{};
       for (final linha in linhasNos) {
         final no = LinhaCatalogoNosEstrada.fromMap(linha);
         coordenadasPorNo[no.noOsmId] = (
@@ -584,6 +599,7 @@ class RepositorioCatalogo {
           no.longitudeE7 / 1e7,
         );
         distanciasPorNo[no.noOsmId] = <String, int>{};
+        duracoesPorNo[no.noOsmId] = <String, int>{};
       }
 
       final portaisPorCroqui = <String, List<PortalBordaPico>>{};
@@ -594,13 +610,17 @@ class RepositorioCatalogo {
         final noOsmId = linha['no_osm_id'] as int;
         final distanciaMetros = linha['distancia_metros'] as int;
         final naBorda = ((linha['na_borda'] as int?) ?? 0) != 0;
+        final duracaoMinutos = (linha['duracao_minutos'] as int?) ?? 0;
 
         final mapaDistanciasNo = distanciasPorNo[noOsmId];
+        final mapaDuracoesNo = duracoesPorNo[noOsmId];
         final coords = coordenadasPorNo[noOsmId];
-        if (mapaDistanciasNo != null && coords != null) {
+        if (mapaDistanciasNo != null && mapaDuracoesNo != null && coords != null) {
           mapaDistanciasNo[croquiUid] = distanciaMetros;
+          mapaDuracoesNo[croquiUid] = duracaoMinutos;
           if (idSlug != null && idSlug.isNotEmpty) {
             mapaDistanciasNo[idSlug] = distanciaMetros;
+            mapaDuracoesNo[idSlug] = duracaoMinutos;
           }
 
           if (naBorda) {
@@ -629,6 +649,7 @@ class RepositorioCatalogo {
             latitude: entry.value.$1,
             longitude: entry.value.$2,
             distanciasPorCroquiMetros: distanciasPorNo[entry.key]!,
+            duracoesPorCroquiMinutos: duracoesPorNo[entry.key]!,
           ),
       ];
 

@@ -19,7 +19,7 @@ void main() {
       );
     });
 
-    test('encontra até 3 nós mais próximos ordenados por distância dentro do raio de 15 km', () {
+    test('encontra até 6 nós mais próximos ordenados por distância dentro do raio padrão de 25 km', () {
       final nos = <NoEstrada>[
         const NoEstrada(
           noOsmId: 101,
@@ -41,20 +41,32 @@ void main() {
         ),
         const NoEstrada(
           noOsmId: 104,
-          latitude: -20.0800, // ~8.9 km ao sul (4º mais próximo, deve ficar de fora do top 3)
+          latitude: -20.0800, // ~9.1 km ao sul
           longitude: -43.9800,
           distanciasPorCroquiMetros: <String, int>{'pico_a': 20000},
         ),
         const NoEstrada(
           noOsmId: 105,
-          latitude: -20.3000, // ~33 km ao sul (fora do raio de 15 km)
-          longitude: -44.3000,
-          distanciasPorCroquiMetros: <String, int>{'pico_a': 5000},
+          latitude: -20.1200, // ~13.3 km ao sul
+          longitude: -44.0000,
+          distanciasPorCroquiMetros: <String, int>{'pico_a': 22000},
         ),
         const NoEstrada(
           noOsmId: 106,
-          latitude: -19.7000, // ~33 km ao norte (fora do raio de 15 km)
-          longitude: -43.7000,
+          latitude: -20.1700, // ~18.9 km ao sul (dentro do novo raio de 25 km!)
+          longitude: -44.0000,
+          distanciasPorCroquiMetros: <String, int>{'pico_a': 25000},
+        ),
+        const NoEstrada(
+          noOsmId: 107,
+          latitude: -20.2000, // ~22.2 km ao sul (7º mais próximo, deve ficar de fora do top 6)
+          longitude: -44.0000,
+          distanciasPorCroquiMetros: <String, int>{'pico_a': 27000},
+        ),
+        const NoEstrada(
+          noOsmId: 108,
+          latitude: -20.3000, // ~33 km ao sul (fora do raio de 25 km)
+          longitude: -44.3000,
           distanciasPorCroquiMetros: <String, int>{'pico_a': 5000},
         ),
       ];
@@ -62,27 +74,30 @@ void main() {
       final arvore = ArvoreKdNosEstrada(nos);
 
       expect(arvore.estaVazia, isFalse);
-      expect(arvore.tamanho, 6);
+      expect(arvore.tamanho, 8);
 
       final vizinhos = arvore.buscarMaisProximos(
         latitude: -20.0000,
         longitude: -44.0000,
       );
 
-      expect(vizinhos.map((n) => n.noOsmId).toList(), <int>[102, 101, 103]);
+      expect(
+        vizinhos.map((n) => n.noOsmId).toList(),
+        <int>[102, 101, 103, 104, 105, 106],
+      );
     });
 
-    test('ignora nós além do raio de captura de 15 km mesmo quando há menos de 3 nós próximos', () {
+    test('ignora nós além do raio de captura de 25 km mesmo quando há menos de 6 nós próximos', () {
       final nos = <NoEstrada>[
         const NoEstrada(
           noOsmId: 201,
-          latitude: -20.0100, // ~1.1 km
+          latitude: -20.1700, // ~18.9 km (<= 25 km)
           longitude: -44.0000,
           distanciasPorCroquiMetros: <String, int>{'pico_a': 8000},
         ),
         const NoEstrada(
           noOsmId: 202,
-          latitude: -20.2000, // ~22 km (> 15 km)
+          latitude: -20.2600, // ~28.8 km (> 25 km)
           longitude: -44.0000,
           distanciasPorCroquiMetros: <String, int>{'pico_a': 4000},
         ),
@@ -98,8 +113,6 @@ void main() {
     });
 
     test('explora ambos os ramos da árvore quando a linha divisória está próxima do ponto de consulta', () {
-      // Malha distribuída nos 4 quadrantes ao redor de (-20.0, -44.0) para exercitar
-      // cortes alternados em latitude e longitude e poda/inspeção do ramo oposto.
       final nos = <NoEstrada>[
         const NoEstrada(
           noOsmId: 1,
@@ -149,17 +162,124 @@ void main() {
       final vizinhos = arvore.buscarMaisProximos(
         latitude: -20.001,
         longitude: -43.999,
+        limite: 3,
       );
 
       expect(vizinhos.map((n) => n.noOsmId).toList(), <int>[5, 6, 7]);
     });
   });
 
+  group('EstimativaViagemPico', () {
+    test('arredonda durações abaixo de 60 min em múltiplos de 5 min (mínimo 5 min) e >= 60 min em múltiplos de 10 min', () {
+      expect(EstimativaViagemPico.arredondarMinutos(2), 5);
+      expect(EstimativaViagemPico.arredondarMinutos(38), 40);
+      expect(EstimativaViagemPico.arredondarMinutos(58), 60);
+      expect(EstimativaViagemPico.arredondarMinutos(74), 70);
+      expect(EstimativaViagemPico.arredondarMinutos(75), 80);
+      expect(EstimativaViagemPico.arredondarMinutos(120), 120);
+    });
+
+    test('formata badge e tooltip com tempo arredondado quando possui duracaoMinutos e apenas km quando não possui', () {
+      const comMenosDeUmaHora = EstimativaViagemPico(
+        distanciaMetros: 51400,
+        duracaoMinutos: 38,
+      );
+      expect(comMenosDeUmaHora.possuiEstimativaTempo, isTrue);
+      expect(comMenosDeUmaHora.formatarBadge(), '~40 min');
+      expect(
+        comMenosDeUmaHora.formatarTooltip(),
+        'Estimativa sem trânsito: ~40 min (51.4 km)',
+      );
+
+      const comMaisDeUmaHora = EstimativaViagemPico(
+        distanciaMetros: 88200,
+        duracaoMinutos: 74,
+      );
+      expect(comMaisDeUmaHora.formatarBadge(), '~1h 10min');
+      expect(
+        comMaisDeUmaHora.formatarTooltip(),
+        'Estimativa sem trânsito: ~1h 10min (88.2 km)',
+      );
+
+      const comHoraExata = EstimativaViagemPico(
+        distanciaMetros: 150000,
+        duracaoMinutos: 118,
+      );
+      expect(comHoraExata.formatarBadge(), '~2h');
+      expect(
+        comHoraExata.formatarTooltip(),
+        'Estimativa sem trânsito: ~2h (150.0 km)',
+      );
+
+      const apenasDistancia = EstimativaViagemPico(
+        distanciaMetros: 245600,
+      );
+      expect(apenasDistancia.possuiEstimativaTempo, isFalse);
+      expect(apenasDistancia.formatarBadge(), '245.6 km');
+      expect(apenasDistancia.formatarTooltip(), isNull);
+    });
+  });
+
   group('CalculadoraDistanciaEstrada', () {
-    test('escolhe o nó vizinho na direção favorável que minimiza a distância total até o pico', () {
-      // Usuário em (-20.000, -44.000).
-      // Nó 1 está muito perto (500m ao norte), mas antes de um retorno rodoviário (distância ao pico = 28 km).
-      // Nó 2 está a 2 km ao sul, já na direção do pico (distância ao pico = 23 km).
+    test('calcula tempo de acesso U -> K (30 km/h até 3 km e 50 km/h acima de 3 km) e escolhe o nó que minimiza o tempo total', () {
+      // Testa diretamente o cálculo de tempo de acesso:
+      // 8000 m de estrada (3 km a 30 km/h = 6 min + 5 km a 50 km/h = 6 min -> 12 min)
+      expect(
+        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(8000.0),
+        closeTo(12.0, 1e-6),
+      );
+      // 1500 m de estrada (1.5 km a 30 km/h = 3 min)
+      expect(
+        CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(1500.0),
+        closeTo(3.0, 1e-6),
+      );
+
+      // Usuário em (-20.0000, -44.0000).
+      // Nó 10 (estrada secundária lenta): mais curto em distância (32 km), porém leva 58 min.
+      // Nó 20 (rodovia rápida): mais longo em distância (44 km), porém leva 33 min!
+      const noSecundarioCurtoLento = NoEstrada(
+        noOsmId: 10,
+        latitude: -20.0050,
+        longitude: -44.0000,
+        distanciasPorCroquiMetros: <String, int>{'serra_cipo': 32000},
+        duracoesPorCroquiMinutos: <String, int>{'serra_cipo': 58},
+      );
+      const noRodoviaLongoRapido = NoEstrada(
+        noOsmId: 20,
+        latitude: -20.0100,
+        longitude: -44.0000,
+        distanciasPorCroquiMetros: <String, int>{'serra_cipo': 44000},
+        duracoesPorCroquiMinutos: <String, int>{'serra_cipo': 33},
+      );
+
+      final calculadora = CalculadoraDistanciaEstrada(
+        nos: const <NoEstrada>[noSecundarioCurtoLento, noRodoviaLongoRapido],
+      );
+
+      final estimativa = calculadora.calcularEstimativaViagem(
+        latitudeUsuario: -20.0000,
+        longitudeUsuario: -44.0000,
+        identificadorCroqui: 'serra_cipo',
+        latitudePico: -19.3500,
+        longitudePico: -43.6000,
+      );
+
+      final distRetaNo20 = Geolocator.distanceBetween(
+        -20.0000,
+        -44.0000,
+        noRodoviaLongoRapido.latitude,
+        noRodoviaLongoRapido.longitude,
+      );
+      final distAcessoNo20 = distRetaNo20 * 1.25;
+      final tempoAcessoNo20 =
+          CalculadoraDistanciaEstrada.calcularTempoAcessoMinutos(distAcessoNo20);
+
+      expect(estimativa.possuiEstimativaTempo, isTrue);
+      expect(estimativa.duracaoMinutos, (tempoAcessoNo20 + 33).round());
+      expect(estimativa.distanciaMetros, closeTo(distAcessoNo20 + 44000, 0.01));
+    });
+
+    test('escolhe o nó vizinho que minimiza a distância quando duracoesPorCroquiMinutos não está preenchido', () {
       const noAntesDoRetorno = NoEstrada(
         noOsmId: 10,
         latitude: -19.9955,
@@ -196,13 +316,13 @@ void main() {
       expect(resultado, closeTo(esperado, 0.01));
     });
 
-    test('calcula apenas o trecho inicial quando o usuário está próximo ao nó do próprio estacionamento', () {
-      // Nó do estacionamento possui distancia_metros = 0 para o pico.
+    test('calcula apenas o trecho inicial e duração mínima quando o usuário está próximo ao nó do próprio estacionamento', () {
       const noEstacionamento = NoEstrada(
         noOsmId: 99,
         latitude: -20.0030,
         longitude: -44.0030,
         distanciasPorCroquiMetros: <String, int>{'pedra_grande': 0},
+        duracoesPorCroquiMinutos: <String, int>{'pedra_grande': 0},
       );
 
       final calculadora = CalculadoraDistanciaEstrada(
@@ -216,7 +336,7 @@ void main() {
         noEstacionamento.longitude,
       );
 
-      final resultado = calculadora.calcularDistanciaMetros(
+      final estimativa = calculadora.calcularEstimativaViagem(
         latitudeUsuario: -20.0000,
         longitudeUsuario: -44.0000,
         identificadorCroqui: 'pedra_grande',
@@ -224,20 +344,21 @@ void main() {
         longitudePico: -44.0030,
       );
 
-      expect(resultado, closeTo(distRetaEstacionamento * 1.25, 0.01));
+      expect(
+        estimativa.distanciaMetros,
+        closeTo(distRetaEstacionamento * 1.25, 0.01),
+      );
+      expect(estimativa.duracaoMinutos, 1);
+      expect(estimativa.formatarBadge(), '~5 min');
     });
 
-    test('utiliza portais de borda quando o usuário está a mais de 180 km do pico fora da malha local', () {
-      // Usuário em São Paulo (-23.55, -46.63), longe da malha local de Minas Gerais.
-      // Há um nó local em SP que só conhece picos de SP ('pedra_bau').
-      // O pico de MG ('serra_cipo') possui 2 portais de borda:
-      // - Portal Sul (Fernão Dias / BR-381), na direção de SP, a 160 km de estrada do pico.
-      // - Portal Norte (BR-040), na direção oposta, a 175 km de estrada do pico.
+    test('utiliza portais de borda (sem estimativa de tempo) quando o usuário está a mais de 180 km do pico fora da malha local', () {
       const noLocalSp = NoEstrada(
         noOsmId: 500,
         latitude: -23.5510,
         longitude: -46.6310,
         distanciasPorCroquiMetros: <String, int>{'pedra_bau': 140000},
+        duracoesPorCroquiMinutos: <String, int>{'pedra_bau': 125},
       );
       const portalSulBr381 = PortalBordaPico(
         noOsmId: 601,
@@ -267,7 +388,7 @@ void main() {
       );
       final esperado = distRetaPortalSul * 1.25 + 160000;
 
-      final resultado = calculadora.calcularDistanciaMetros(
+      final estimativa = calculadora.calcularEstimativaViagem(
         latitudeUsuario: -23.5500,
         longitudeUsuario: -46.6300,
         identificadorCroqui: 'serra_cipo',
@@ -275,7 +396,8 @@ void main() {
         longitudePico: -43.6000,
       );
 
-      expect(resultado, closeTo(esperado, 0.01));
+      expect(estimativa.distanciaMetros, closeTo(esperado, 0.01));
+      expect(estimativa.duracaoMinutos, isNull);
     });
 
     test('aplica fallback geodésico com fator 1.25 quando a malha está ativa mas o croqui não possui nós nem portais', () {
@@ -305,12 +427,12 @@ void main() {
         longitudePico: -44.1000,
       );
 
-      expect( calculadora.possuiMalha, isTrue);
+      expect(calculadora.possuiMalha, isTrue);
       expect(resultado, closeTo(distRetaPico * 1.25, 0.01));
     });
 
     test('retorna distância geodésica direta quando a calculadora está vazia sem malha carregada', () {
-      final calculadora = CalculadoraDistanciaEstrada.vazia();
+      const calculadora = CalculadoraDistanciaEstrada.vazia();
 
       final distRetaPico = Geolocator.distanceBetween(
         -20.0000,
@@ -340,6 +462,10 @@ void main() {
           'pico_perto_estrada': 14000,
           'pico_atras_serra': 62000,
         },
+        duracoesPorCroquiMinutos: <String, int>{
+          'pico_perto_estrada': 15,
+          'pico_atras_serra': 75,
+        },
       );
 
       final calculadora = CalculadoraDistanciaEstrada(
@@ -364,7 +490,7 @@ void main() {
         latitudeUsuario: -20.0000,
         longitudeUsuario: -44.0000,
         identificadorCroqui: 'pico_atras_serra',
-        latitudePico: -20.0500, // Mais perto em linha reta, mas muito mais longe por estrada!
+        latitudePico: -20.0500,
         longitudePico: -44.0500,
         nosProximosPrecalculados: nosProximos,
       );

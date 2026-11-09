@@ -32,8 +32,11 @@ abstract class CardCroquiViewModel {
   /// Indica se os dados do croqui já foram baixados para acesso offline.
   bool get salvoOffline;
 
-  /// Texto formatado de distância relativa do usuário (ex: '350m' ou '12.4km'), se disponível.
+  /// Texto formatado de distância relativa ou estimativa de tempo do usuário (ex: '~40 min' ou '12.4 km'), se disponível.
   String? get textoDistancia;
+
+  /// Texto explicativo do tooltip da estimativa de tempo (ex: 'Estimativa sem trânsito: ~40 min (42.0 km)'), se disponível.
+  String? get tooltipDistancia;
 
   /// Caminho opcional da imagem de capa local ou remota.
   String? get caminhoCapa;
@@ -69,6 +72,8 @@ abstract class CardCroquiViewModel {
         return caminhoMiniatura;
       case 'distance':
         return textoDistancia;
+      case 'tooltipDistancia':
+        return tooltipDistancia;
       case 'checksum':
         return checksumSha256;
       default:
@@ -88,6 +93,7 @@ abstract class CardCroquiViewModel {
     required String caminhoMiniatura,
     bool salvoOffline,
     String? textoDistancia,
+    String? tooltipDistancia,
     String? caminhoCapa,
     String? checksumSha256,
   }) = _CardCroquiValores;
@@ -97,6 +103,7 @@ abstract class CardCroquiViewModel {
     ResumoCroqui metadados, {
     bool salvoOffline,
     String? textoDistancia,
+    String? tooltipDistancia,
     bool estatisticasDetalhadas,
   }) = _CardCroquiMetadados;
 
@@ -104,6 +111,7 @@ abstract class CardCroquiViewModel {
   factory CardCroquiViewModel.deCroqui(
     Croqui croqui, {
     String? textoDistancia,
+    String? tooltipDistancia,
   }) = _CardCroquiCroqui;
 
   /// Cria um [CardCroquiViewModel] com valores primitivos explícitos (útil para testes unitários).
@@ -116,6 +124,7 @@ abstract class CardCroquiViewModel {
     required String caminhoMiniatura,
     bool salvoOffline,
     String? textoDistancia,
+    String? tooltipDistancia,
     String? caminhoCapa,
     String? checksumSha256,
   }) = _CardCroquiValores;
@@ -137,12 +146,16 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
   @override
   final String? textoDistancia;
 
+  @override
+  final String? tooltipDistancia;
+
   final bool estatisticasDetalhadas;
 
   _CardCroquiMetadados(
     this._metadados, {
     this.salvoOffline = false,
     this.textoDistancia,
+    this.tooltipDistancia,
     this.estatisticasDetalhadas = false,
   }) : super._();
 
@@ -201,6 +214,7 @@ class _CardCroquiMetadados extends CardCroquiViewModel {
       _metadados,
       salvoOffline: novoSalvoOffline,
       textoDistancia: textoDistancia,
+      tooltipDistancia: tooltipDistancia,
       estatisticasDetalhadas: estatisticasDetalhadas,
     );
   }
@@ -213,7 +227,14 @@ class _CardCroquiCroqui extends CardCroquiViewModel {
   @override
   final String? textoDistancia;
 
-  _CardCroquiCroqui(this._croqui, {this.textoDistancia}) : super._();
+  @override
+  final String? tooltipDistancia;
+
+  _CardCroquiCroqui(
+    this._croqui, {
+    this.textoDistancia,
+    this.tooltipDistancia,
+  }) : super._();
 
   @override
   String get id => _croqui.id;
@@ -318,6 +339,8 @@ class _CardCroquiValores extends CardCroquiViewModel {
   @override
   final String? textoDistancia;
   @override
+  final String? tooltipDistancia;
+  @override
   final String? caminhoCapa;
   @override
   final String? checksumSha256;
@@ -331,6 +354,7 @@ class _CardCroquiValores extends CardCroquiViewModel {
     required this.caminhoMiniatura,
     this.salvoOffline = false,
     this.textoDistancia,
+    this.tooltipDistancia,
     this.caminhoCapa,
     this.checksumSha256,
   }) : super._();
@@ -347,6 +371,7 @@ class _CardCroquiValores extends CardCroquiViewModel {
       caminhoMiniatura: caminhoMiniatura,
       salvoOffline: novoSalvoOffline,
       textoDistancia: textoDistancia,
+      tooltipDistancia: tooltipDistancia,
       caminhoCapa: caminhoCapa,
       checksumSha256: checksumSha256,
     );
@@ -396,6 +421,9 @@ class _CardCroquiMapa extends CardCroquiViewModel {
   String? get textoDistancia => _mapa['distance']?.toString();
 
   @override
+  String? get tooltipDistancia => _mapa['tooltipDistancia']?.toString();
+
+  @override
   String? get caminhoCapa => _mapa['capaPath']?.toString();
 
   @override
@@ -407,6 +435,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
   dynamic metadados, {
   bool salvoOffline = false,
   String? textoDistancia,
+  String? tooltipDistancia,
   bool estatisticasDetalhadas = false,
 }) {
   if (metadados is CardCroquiViewModel) return metadados;
@@ -415,6 +444,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
       metadados,
       salvoOffline: salvoOffline,
       textoDistancia: textoDistancia,
+      tooltipDistancia: tooltipDistancia,
       estatisticasDetalhadas: estatisticasDetalhadas,
     );
   }
@@ -422,6 +452,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
     return CardCroquiViewModel.deCroqui(
       metadados,
       textoDistancia: textoDistancia,
+      tooltipDistancia: tooltipDistancia,
     );
   }
   if (metadados is Map) {
@@ -440,6 +471,7 @@ CardCroquiViewModel mapearMetadadosParaCard(
     caminhoMiniatura: '',
     salvoOffline: salvoOffline,
     textoDistancia: textoDistancia,
+    tooltipDistancia: tooltipDistancia,
   );
 }
 
@@ -447,9 +479,11 @@ CardCroquiViewModel mapearMetadadosParaCard(
 CardCroquiViewModel mapearCroquiParaCard(
   Croqui croqui, {
   String? textoDistancia,
+  String? tooltipDistancia,
 }) {
   return CardCroquiViewModel.deCroqui(
     croqui,
     textoDistancia: textoDistancia,
+    tooltipDistancia: tooltipDistancia,
   );
 }

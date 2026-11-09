@@ -229,20 +229,26 @@ void main() {
     });
 
     test(
-      'picosFiltrados e picosCards utilizam distância rodoviária da malha do catálogo e atualizam badges reativamente',
+      'picosFiltrados e picosCards ordenam em 2 faixas (1º com estimativa de tempo por minutos, 2º demais por km) e propagam badge e tooltip',
       () {
         repositorio.activeDataset.value = TopoDataset(
           availablePicos: [
             {
-              'id': 'pico_serra',
+              'id': 'pico_serra_lento',
               'nome': 'Pico Atrás da Serra',
               'latitude': -20.10,
               'longitude': -44.00,
             },
             {
-              'id': 'pico_rodovia',
+              'id': 'pico_rodovia_rapido',
               'nome': 'Pico Acesso BR',
               'latitude': -20.20,
+              'longitude': -44.00,
+            },
+            {
+              'id': 'pico_sem_malha_local',
+              'nome': 'Pico Sem Malha Local',
+              'latitude': -20.05,
               'longitude': -44.00,
             },
           ],
@@ -250,8 +256,6 @@ void main() {
         );
 
         viewModel.atualizarLocalizacaoUsuario(-20.00, -44.00);
-
-        expect(viewModel.picosFiltrados.first.id, equals('pico_serra'));
 
         repositorio.calculadoraDistanciaEstrada.value =
             CalculadoraDistanciaEstrada(
@@ -261,18 +265,42 @@ void main() {
               latitude: -20.001,
               longitude: -44.000,
               distanciasPorCroquiMetros: <String, int>{
-                'pico_serra': 65000,
-                'pico_rodovia': 25000,
+                'pico_serra_lento': 35000,
+                'pico_rodovia_rapido': 48000,
+              },
+              duracoesPorCroquiMinutos: <String, int>{
+                'pico_serra_lento': 65,
+                'pico_rodovia_rapido': 34,
               },
             ),
           ],
         );
 
-        expect(viewModel.picosFiltrados.first.id, equals('pico_rodovia'));
-        expect(viewModel.picosCards.first.id, equals('pico_rodovia'));
-        expect(viewModel.picosCards.first.textoDistancia, equals('25.1 km'));
-        expect(viewModel.picosCards.last.id, equals('pico_serra'));
-        expect(viewModel.picosCards.last.textoDistancia, equals('65.1 km'));
+        // Faixa 1: pico_rodovia_rapido (~35 min, 48.1 km) antes de pico_serra_lento (~1h 10min, 35.1 km)
+        // Faixa 2: pico_sem_malha_local (sem estimativa de tempo, ordenado por km ao final)
+        expect(
+          viewModel.picosFiltrados.map((p) => p.id).toList(),
+          equals(<String>[
+            'pico_rodovia_rapido',
+            'pico_serra_lento',
+            'pico_sem_malha_local',
+          ]),
+        );
+        expect(viewModel.picosCards[0].id, equals('pico_rodovia_rapido'));
+        expect(viewModel.picosCards[0].textoDistancia, equals('~35 min'));
+        expect(
+          viewModel.picosCards[0].tooltipDistancia,
+          equals('Estimativa sem trânsito: ~35 min (48.1 km)'),
+        );
+        expect(viewModel.picosCards[1].id, equals('pico_serra_lento'));
+        expect(viewModel.picosCards[1].textoDistancia, equals('~1h 10min'));
+        expect(
+          viewModel.picosCards[1].tooltipDistancia,
+          equals('Estimativa sem trânsito: ~1h 10min (35.1 km)'),
+        );
+        expect(viewModel.picosCards[2].id, equals('pico_sem_malha_local'));
+        expect(viewModel.picosCards[2].textoDistancia, contains('km'));
+        expect(viewModel.picosCards[2].tooltipDistancia, isNull);
       },
     );
 

@@ -544,17 +544,20 @@ void main() {
                   noOsmId: 1001,
                   distanciaMetros: 95000,
                   naBorda: 0,
+                  duracaoMinutos: 80,
                 ),
                 CatalogoDistanciaEstrada(
                   croquiUid: 'uid_cipo',
                   noOsmId: 2002,
                   distanciaMetros: 175000,
                   naBorda: 1,
+                  duracaoMinutos: 145,
                 ),
                 CatalogoDistanciaEstrada(
                   croquiUid: 'uid_lapinha',
                   noOsmId: 1001,
                   distanciaMetros: 132000,
+                  duracaoMinutos: 110,
                 ),
               ],
             ),
@@ -565,26 +568,28 @@ void main() {
         final calculadora = await repositorio.carregarMalhaEstrada();
         expect(calculadora.possuiMalha, isTrue);
 
-        // Deve resolver distância tanto pelo croqui_uid quanto pelo id_slug
-        final distPorUid = calculadora.calcularDistanciaMetros(
+        // Deve resolver distância e duração tanto pelo croqui_uid quanto pelo id_slug
+        final estPorUid = calculadora.calcularEstimativaViagem(
           latitudeUsuario: -20.0000,
           longitudeUsuario: -44.0000,
           identificadorCroqui: 'uid_cipo',
           latitudePico: -19.3500,
           longitudePico: -43.6000,
         );
-        final distPorSlug = calculadora.calcularDistanciaMetros(
+        final estPorSlug = calculadora.calcularEstimativaViagem(
           latitudeUsuario: -20.0000,
           longitudeUsuario: -44.0000,
           identificadorCroqui: 'br_mg_santana_serra_cipo',
           latitudePico: -19.3500,
           longitudePico: -43.6000,
         );
-        expect(distPorUid, closeTo(distPorSlug, 0.001));
-        expect(distPorSlug, greaterThan(95000));
-        expect(distPorSlug, lessThan(96000));
+        expect(estPorUid.distanciaMetros, closeTo(estPorSlug.distanciaMetros, 0.001));
+        expect(estPorSlug.distanciaMetros, greaterThan(95000));
+        expect(estPorSlug.distanciaMetros, lessThan(96000));
+        expect(estPorUid.duracaoMinutos, equals(estPorSlug.duracaoMinutos));
+        expect(estPorSlug.duracaoMinutos, greaterThanOrEqualTo(80));
 
-        // Usuário longe (> 180 km, sem nós num raio de 15 km) utiliza o portal de borda 2002
+        // Usuário longe (> 180 km, sem nós num raio de 25 km) utiliza o portal de borda 2002
         final distViaPortal = calculadora.calcularDistanciaMetros(
           latitudeUsuario: -22.0000,
           longitudeUsuario: -44.5000,
@@ -593,6 +598,32 @@ void main() {
           longitudePico: -43.6000,
         );
         expect(distViaPortal, greaterThan(175000));
+
+        // 2b. Limpa apenas distancias_estrada de uid_cipo via deletes.distanciasEstrada
+        await repositorio.aplicarDelta(
+          const RespostaSyncCatalogo(
+            acao: 'apply_delta',
+            versaoAtual: 'v_com_malha_1b',
+            deletes: DeletesSyncCatalogo(
+              croquis: [],
+              entidades: [],
+              distanciasEstrada: ['uid_cipo'],
+            ),
+          ),
+        );
+        final calcAposDeleteDist = await repositorio.carregarMalhaEstrada();
+        final nosAposDeleteDist = calcAposDeleteDist.buscarNosProximos(
+          latitudeUsuario: -20.0000,
+          longitudeUsuario: -44.0000,
+        );
+        expect(
+          nosAposDeleteDist.single.distanciasPorCroquiMetros.containsKey('uid_cipo'),
+          isFalse,
+        );
+        expect(
+          nosAposDeleteDist.single.distanciasPorCroquiMetros.containsKey('uid_lapinha'),
+          isTrue,
+        );
 
         // 3. Remove uid_lapinha e o nó 2002 via deletes
         await repositorio.aplicarDelta(
@@ -640,7 +671,7 @@ void main() {
             distancia_metros INTEGER NOT NULL,
             na_borda INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (croqui_uid, no_osm_id)
-          )
+          ) WITHOUT ROWID
         ''');
         await dbLegado.execute(
           'CREATE INDEX idx_catalogo_distancias_estrada_no ON catalogo_distancias_estrada(no_osm_id)',
@@ -670,10 +701,13 @@ void main() {
         final linhaTable = await dbInspecao.rawQuery(
           "SELECT sql FROM sqlite_master WHERE type='table' AND name='catalogo_distancias_estrada'",
         );
-        expect(
-          (linhaTable.single['sql'] as String).toUpperCase(),
-          contains('WITHOUT ROWID'),
-        );
+        final sqlTabela = (linhaTable.single['sql'] as String).toUpperCase();
+        expect(sqlTabela, contains('WITHOUT ROWID'));
+        expect(sqlTabela, contains('DURACAO_MINUTOS'));
+        final linhasPreservadas =
+            await dbInspecao.query('catalogo_distancias_estrada');
+        expect(linhasPreservadas.single['distancia_metros'], equals(12300));
+        expect(linhasPreservadas.single['duracao_minutos'], equals(0));
         final linhasIdx = await dbInspecao.rawQuery(
           "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_catalogo_distancias_estrada_no'",
         );

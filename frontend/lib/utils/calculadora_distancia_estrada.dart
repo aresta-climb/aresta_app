@@ -6,7 +6,7 @@ import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 
 /// Representa um nó compartilhado da malha viária do OpenStreetMap (`catalogo_nos_estrada`)
-/// contendo as distâncias rodoviárias pré-computadas em metros até os croquis que o alcançam.
+/// contendo as distâncias rodoviárias pré-computadas em metros e durações em minutos até os croquis que o alcançam.
 ///
 /// Reutilizar o mesmo nó entre múltiplos croquis vizinhos evita duplicação espacial na
 /// árvore de busca 2D e permite avaliar todos os picos locais em uma única consulta.
@@ -24,13 +24,78 @@ class NoEstrada {
   /// rodoviária em metros deste nó até o estacionamento principal do croqui.
   final Map<String, int> distanciasPorCroquiMetros;
 
-  /// Cria um nó rodoviário imutável com suas distâncias pré-computadas por croqui.
+  /// Mapa associando o identificador do croqui (`croqui_uid` ou `id_slug`) ao tempo
+  /// estimado de direção sem trânsito em minutos deste nó até o estacionamento principal do croqui.
+  final Map<String, int> duracoesPorCroquiMinutos;
+
+  /// Cria um nó rodoviário imutável com suas distâncias e durações pré-computadas por croqui.
   const NoEstrada({
     required this.noOsmId,
     required this.latitude,
     required this.longitude,
     required this.distanciasPorCroquiMetros,
+    this.duracoesPorCroquiMinutos = const <String, int>{},
   });
+}
+
+/// Representa a estimativa de viagem rodoviária (distância em metros e, quando dentro da
+/// malha local de até 200 km, duração estimada sem trânsito em minutos) entre o usuário e um pico.
+class EstimativaViagemPico {
+  /// Distância rodoviária estimada em metros até o pico.
+  final double distanciaMetros;
+
+  /// Duração estimada em minutos (sem trânsito) quando o pico é alcançado pela malha local,
+  /// ou `null` quando o pico está fora da malha local (> 200 km ou sem malha compilada).
+  final int? duracaoMinutos;
+
+  /// Cria uma estimativa imutável de viagem até um pico.
+  const EstimativaViagemPico({
+    required this.distanciaMetros,
+    this.duracaoMinutos,
+  });
+
+  /// Indica se esta estimativa possui duração de viagem em minutos pela malha local.
+  bool get possuiEstimativaTempo => duracaoMinutos != null;
+
+  /// Arredonda [minutos] para múltiplos de 5 min quando `< 60 min` (mínimo de `5 min`)
+  /// e para múltiplos de 10 min quando `>= 60 min`.
+  static int arredondarMinutos(int minutos) {
+    if (minutos < 60) {
+      return math.max(5, ((minutos + 2) ~/ 5) * 5);
+    }
+    return ((minutos + 5) ~/ 10) * 10;
+  }
+
+  /// Formata a duração arredondada para exibição em badge (ex: `'~40 min'`, `'~1h 10min'`, `'~2h'`).
+  String formatarTempoArredondado() {
+    final arredondado = arredondarMinutos(duracaoMinutos!);
+    if (arredondado < 60) {
+      return '~$arredondado min';
+    }
+    final horas = arredondado ~/ 60;
+    final restoMin = arredondado % 60;
+    if (restoMin == 0) {
+      return '~${horas}h';
+    }
+    return '~${horas}h ${restoMin}min';
+  }
+
+  /// Formata a distância estimada em quilômetros com uma casa decimal (ex: `'51.4 km'`).
+  String formatarDistanciaKm() =>
+      '${(distanciaMetros / 1000.0).toStringAsFixed(1)} km';
+
+  /// Retorna o texto do badge de proximidade: tempo arredondado quando disponível, ou quilômetros.
+  String formatarBadge() => duracaoMinutos != null
+      ? formatarTempoArredondado()
+      : formatarDistanciaKm();
+
+  /// Retorna o texto explicativo do `Tooltip` quando há estimativa de tempo, ou `null` caso contrário.
+  String? formatarTooltip() {
+    if (duracaoMinutos == null) {
+      return null;
+    }
+    return 'Estimativa sem trânsito: ${formatarTempoArredondado()} (${formatarDistanciaKm()})';
+  }
 }
 
 /// Representa um portal de borda (`na_borda = 1`) na fronteira da malha de 180 km
@@ -145,8 +210,8 @@ class ArvoreKdNosEstrada {
   List<NoEstrada> buscarMaisProximos({
     required double latitude,
     required double longitude,
-    int limite = 3,
-    double raioMaximoMetros = 15000.0,
+    int limite = 6,
+    double raioMaximoMetros = 25000.0,
   }) {
     final melhores = <_CandidatoVizinho>[];
     _buscarRecursivo(
@@ -236,22 +301,23 @@ class ArvoreKdNosEstrada {
   }
 }
 
-/// Calculadora offline de distância rodoviária estimada entre a posição do usuário e os croquis.
+/// Calculadora offline de tempo (sem trânsito) e distância rodoviária estimada entre a posição do usuário e os croquis.
 ///
-/// Combina a busca logarítmica dos $k = 3$ nós mais próximos na [ArvoreKdNosEstrada] (para
-/// picos a até 180 km), a avaliação de portais de borda (`na_borda = 1`) para picos
+/// Combina a busca logarítmica dos até $k = 6$ nós mais próximos num raio de 25 km na [ArvoreKdNosEstrada]
+/// (para picos na malha local de até ~200 km), a avaliação de portais de borda (`na_borda = 1`) para picos
 /// distantes ($> 180\text{ km}$) e o fallback geodésico para croquis sem malha pré-computada.
 class CalculadoraDistanciaEstrada {
   /// Fator médio de tortuosidade rodoviária aplicado a trechos estimados em linha reta
   /// (conexão inicial do usuário até a malha ou aproximação inter-regional até portais de borda).
   static const double fatorTortuosidade = 1.25;
 
-  /// Raio máximo em metros (15 km) para capturar nós da malha rodoviária ao redor do usuário.
-  static const double raioCapturaMalhaMetros = 15000.0;
+  /// Raio máximo em metros (25 km) para capturar nós da malha rodoviária ao redor do usuário,
+  /// garantindo cobertura contínua inclusive na diagonal das células de `0.18°` do Anel 3.
+  static const double raioCapturaMalhaMetros = 25000.0;
 
-  /// Quantidade de nós vizinhos avaliados ao redor do usuário para evitar escolher um nó
-  /// na direção contrária ao fluxo da rodovia.
-  static const int quantidadeVizinhos = 3;
+  /// Quantidade máxima de nós vizinhos avaliados ao redor do usuário para escolher o ponto de entrada
+  /// que minimiza o tempo total de direção até o pico.
+  static const int quantidadeVizinhos = 6;
 
   final ArvoreKdNosEstrada _arvoreNos;
   final Map<String, List<PortalBordaPico>> _portaisPorCroqui;
@@ -273,6 +339,17 @@ class CalculadoraDistanciaEstrada {
   bool get possuiMalha =>
       !_arvoreNos.estaVazia || _portaisPorCroqui.isNotEmpty;
 
+  /// Calcula o tempo estimado de acesso inicial em minutos para percorrer [distanciaEstradaMetros]
+  /// do usuário até o nó de entrada $K$ da malha:
+  /// - Primeiros `3 km` (`3000 m`) a `30 km/h` (saída urbana/local);
+  /// - Distância excedente acima de `3 km` a `50 km/h` (via coletora/acesso regional).
+  static double calcularTempoAcessoMinutos(double distanciaEstradaMetros) {
+    final trechoUrbanoMetros = math.min(distanciaEstradaMetros, 3000.0);
+    final trechoColetorMetros = math.max(0.0, distanciaEstradaMetros - 3000.0);
+    return (trechoUrbanoMetros / 30000.0 + trechoColetorMetros / 50000.0) *
+        60.0;
+  }
+
   /// Busca uma única vez os até [quantidadeVizinhos] nós rodoviários mais próximos do usuário
   /// dentro de [raioCapturaMalhaMetros] para reutilização no cálculo de múltiplos picos.
   List<NoEstrada> buscarNosProximos({
@@ -287,15 +364,9 @@ class CalculadoraDistanciaEstrada {
     );
   }
 
-  /// Calcula a distância rodoviária estimada em metros entre o usuário e o croqui.
-  ///
-  /// - Se a calculadora estiver vazia ([possuiMalha] == `false`), retorna a distância geodésica direta.
-  /// - Se algum dos nós vizinhos do usuário contiver [identificadorCroqui], retorna a menor soma
-  ///   `dist_geodesica(U, K) * 1.25 + dist_estrada(K -> P)`.
-  /// - Caso contrário, se o croqui possuir portais de borda (`na_borda = 1`), retorna a menor soma
-  ///   `dist_geodesica(U, B) * 1.25 + dist_estrada(B -> P)`.
-  /// - Como último recurso para croquis ainda sem malha compilada, retorna `dist_geodesica(U, P) * 1.25`.
-  double calcularDistanciaMetros({
+  /// Calcula a estimativa completa de viagem ([EstimativaViagemPico], com tempo sem trânsito quando
+  /// alcançável pela malha local e distância em metros) entre o usuário e o croqui.
+  EstimativaViagemPico calcularEstimativaViagem({
     required double latitudeUsuario,
     required double longitudeUsuario,
     required String identificadorCroqui,
@@ -304,11 +375,13 @@ class CalculadoraDistanciaEstrada {
     List<NoEstrada>? nosProximosPrecalculados,
   }) {
     if (!possuiMalha) {
-      return Geolocator.distanceBetween(
-        latitudeUsuario,
-        longitudeUsuario,
-        latitudePico,
-        longitudePico,
+      return EstimativaViagemPico(
+        distanciaMetros: Geolocator.distanceBetween(
+          latitudeUsuario,
+          longitudeUsuario,
+          latitudePico,
+          longitudePico,
+        ),
       );
     }
 
@@ -318,7 +391,10 @@ class CalculadoraDistanciaEstrada {
           longitudeUsuario: longitudeUsuario,
         );
 
-    double? menorDistanciaMalha;
+    double? menorTempoMalha;
+    double? distanciaDoMenorTempo;
+    double? menorDistanciaSemTempo;
+
     for (final no in nosProximos) {
       final distanciaEstradaAtePico =
           no.distanciasPorCroquiMetros[identificadorCroqui];
@@ -329,17 +405,36 @@ class CalculadoraDistanciaEstrada {
           no.latitude,
           no.longitude,
         );
-        final distanciaTotal =
-            distanciaAteNo * fatorTortuosidade + distanciaEstradaAtePico;
-        if (menorDistanciaMalha == null ||
-            distanciaTotal < menorDistanciaMalha) {
-          menorDistanciaMalha = distanciaTotal;
+        final distanciaAcesso = distanciaAteNo * fatorTortuosidade;
+        final distanciaTotal = distanciaAcesso + distanciaEstradaAtePico;
+        final duracaoEstradaAtePico =
+            no.duracoesPorCroquiMinutos[identificadorCroqui] ?? 0;
+
+        if (duracaoEstradaAtePico > 0 || distanciaEstradaAtePico == 0) {
+          final tempoTotal =
+              calcularTempoAcessoMinutos(distanciaAcesso) + duracaoEstradaAtePico;
+          if (menorTempoMalha == null || tempoTotal < menorTempoMalha) {
+            menorTempoMalha = tempoTotal;
+            distanciaDoMenorTempo = distanciaTotal;
+          }
+        } else if (menorDistanciaSemTempo == null ||
+            distanciaTotal < menorDistanciaSemTempo) {
+          menorDistanciaSemTempo = distanciaTotal;
         }
       }
     }
 
-    if (menorDistanciaMalha != null) {
-      return menorDistanciaMalha;
+    if (menorTempoMalha != null) {
+      return EstimativaViagemPico(
+        distanciaMetros: distanciaDoMenorTempo!,
+        duracaoMinutos: math.max(1, menorTempoMalha.round()),
+      );
+    }
+
+    if (menorDistanciaSemTempo != null) {
+      return EstimativaViagemPico(
+        distanciaMetros: menorDistanciaSemTempo,
+      );
     }
 
     final portais = _portaisPorCroqui[identificadorCroqui];
@@ -358,15 +453,38 @@ class CalculadoraDistanciaEstrada {
           menorDistanciaPortal = distanciaTotal;
         }
       }
-      return menorDistanciaPortal;
+      return EstimativaViagemPico(
+        distanciaMetros: menorDistanciaPortal,
+      );
     }
 
-    return Geolocator.distanceBetween(
-          latitudeUsuario,
-          longitudeUsuario,
-          latitudePico,
-          longitudePico,
-        ) *
-        fatorTortuosidade;
+    return EstimativaViagemPico(
+      distanciaMetros: Geolocator.distanceBetween(
+            latitudeUsuario,
+            longitudeUsuario,
+            latitudePico,
+            longitudePico,
+          ) *
+          fatorTortuosidade,
+    );
+  }
+
+  /// Calcula a distância rodoviária estimada em metros entre o usuário e o croqui.
+  double calcularDistanciaMetros({
+    required double latitudeUsuario,
+    required double longitudeUsuario,
+    required String identificadorCroqui,
+    required double latitudePico,
+    required double longitudePico,
+    List<NoEstrada>? nosProximosPrecalculados,
+  }) {
+    return calcularEstimativaViagem(
+      latitudeUsuario: latitudeUsuario,
+      longitudeUsuario: longitudeUsuario,
+      identificadorCroqui: identificadorCroqui,
+      latitudePico: latitudePico,
+      longitudePico: longitudePico,
+      nosProximosPrecalculados: nosProximosPrecalculados,
+    ).distanciaMetros;
   }
 }

@@ -88,6 +88,58 @@ void main() {
       );
 
       expect(vm.distanciaFormatada, isEmpty);
+      expect(vm.tooltipDistancia, isNull);
+    });
+
+    test('formata badge de tempo arredondado e tooltip sem trânsito quando duracaoMinutos está presente', () {
+      const vmValores = PicoProximoViewModel(
+        id: 'lapinha',
+        nome: 'Gruta da Lapinha',
+        localizacao: 'Lagoa Santa - MG',
+        distanciaKm: 42.3,
+        duracaoMinutos: 38,
+        caminhoMiniatura: 'thumbnails/lapinha.webp',
+        estaBaixado: true,
+      );
+
+      expect(vmValores.duracaoMinutos, equals(38));
+      expect(vmValores.distanciaFormatada, equals('~40 min'));
+      expect(
+        vmValores.tooltipDistancia,
+        equals('Estimativa sem trânsito: ~40 min (42.3 km)'),
+      );
+      final cardValores = vmValores.paraCardCroquiViewModel();
+      expect(cardValores.textoDistancia, equals('~40 min'));
+      expect(
+        cardValores.tooltipDistancia,
+        equals('Estimativa sem trânsito: ~40 min (42.3 km)'),
+      );
+
+      final metadados = ResumoCroqui(
+        id: 'cipo',
+        nome: 'Serra do Cipó',
+        caminhoRelativo: 'mg/serra_do_cipo',
+        checksumSha256Thumbnail: 'sha256_cipo',
+      );
+      final vmMetadados = PicoProximoViewModel.deMetadados(
+        metadados: metadados,
+        distanciaKm: 98.4,
+        duracaoMinutos: 74,
+        estaBaixado: false,
+      );
+      expect(vmMetadados.duracaoMinutos, equals(74));
+      expect(vmMetadados.checksumSha256, equals('sha256_cipo'));
+      expect(vmMetadados.distanciaFormatada, equals('~1h 10min'));
+      expect(
+        vmMetadados.tooltipDistancia,
+        equals('Estimativa sem trânsito: ~1h 10min (98.4 km)'),
+      );
+      final cardMeta = vmMetadados.paraCardCroquiViewModel();
+      expect(cardMeta.textoDistancia, equals('~1h 10min'));
+      expect(
+        cardMeta.tooltipDistancia,
+        equals('Estimativa sem trânsito: ~1h 10min (98.4 km)'),
+      );
     });
   });
 }

@@ -26,6 +26,28 @@ void main() {
       expect(vm.caminhoMiniatura, equals('thumbnails/pico_1.webp'));
       expect(vm.salvoOffline, isFalse);
       expect(vm.textoDistancia, isNull);
+      expect(vm.tooltipDistancia, isNull);
+
+      const vmComTooltip = CardCroquiViewModel(
+        id: 'pico_2',
+        titulo: 'PICO COM TEMPO',
+        textoEstatisticas: '1 setor • 5 escaladas',
+        caminhoMiniatura: 'thumbnails/pico_2.webp',
+        textoDistancia: '~40 min',
+        tooltipDistancia: 'Estimativa sem trânsito: ~40 min (42.0 km)',
+      );
+      expect(
+        vmComTooltip.tooltipDistancia,
+        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+      );
+      expect(
+        vmComTooltip['tooltipDistancia'],
+        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+      );
+      expect(
+        vmComTooltip.comSalvoOffline(true).tooltipDistancia,
+        equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+      );
     });
   });
 

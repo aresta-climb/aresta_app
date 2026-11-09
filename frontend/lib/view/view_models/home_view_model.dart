@@ -141,6 +141,7 @@ class HomeViewModel extends ChangeNotifier {
       return PicoProximoViewModel.deMetadados(
         metadados: pico,
         distanciaKm: item.distanciaKm,
+        duracaoMinutos: item.duracaoMinutos,
         estaBaixado: estaBaixado(pico.id),
       );
     }).toList();

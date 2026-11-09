@@ -310,7 +310,48 @@ void main() {
       expect(find.text('5 setores • 40 escaladas'), findsOneWidget);
       expect(find.text('SALVO OFFLINE'), findsOneWidget);
       expect(find.text('500m'), findsOneWidget);
+      expect(find.byType(Tooltip), findsNothing);
     });
+
+    testWidgets(
+      'exibe Tooltip explicativo sobre o badge de tempo quando tooltipDistancia está preenchido',
+      (WidgetTester tester) async {
+        const viewModelComTempo = CardCroquiViewModel(
+          id: 'pico_tempo',
+          titulo: 'GRUTA DA LAPINHA',
+          localizacao: 'LAGOA SANTA',
+          textoEstatisticas: '6 setores • 90 escaladas',
+          caminhoMiniatura: 'thumbnails/pico_tempo.webp',
+          salvoOffline: false,
+          textoDistancia: '~40 min',
+          tooltipDistancia: 'Estimativa sem trânsito: ~40 min (42.0 km)',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Theme(
+              data: ThemeData(extensions: [AppColors.dark]),
+              child: Scaffold(
+                body: CragCard(
+                  dados: viewModelComTempo,
+                  downloadingCrags: ValueNotifier(const {}),
+                  onDownload: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('~40 min'), findsOneWidget);
+        final tooltipFinder = find.byType(Tooltip);
+        expect(tooltipFinder, findsOneWidget);
+        final tooltipWidget = tester.widget<Tooltip>(tooltipFinder);
+        expect(
+          tooltipWidget.message,
+          equals('Estimativa sem trânsito: ~40 min (42.0 km)'),
+        );
+      },
+    );
 
     testWidgets(
       'exibe logo_in_app.jpg sobre fundo Colors.black sem padding quando croqui não possui thumbnail nem capa no Protobuf',

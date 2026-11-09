@@ -14,6 +14,7 @@ import '../../services/firebase/telemetria.dart';
 import '../function_library/biblioteca_funcoes_comuns.dart';
 import '../function_library/funcoes_home.dart';
 import '../function_library/funcoes_configuracoes.dart';
+import '../../widgets/carrossel_picos_proximos.dart';
 
 /// Critério de ordenação da listagem de picos na exploração.
 enum OrdemOrdenacaoPico {
@@ -46,7 +47,7 @@ class BrowseViewModel extends ChangeNotifier {
   OrdemOrdenacaoPico _ordem = OrdemOrdenacaoPico.proximidade;
   double? _userLat;
   double? _userLon;
-  Map<String, double>? _cacheDistanciasPorId;
+  Map<String, PicoProximo>? _cacheProximidadePorId;
   final ValueNotifier<int> _solicitacaoScrollSetimoPico = ValueNotifier<int>(0);
   Timer? _timerDebounce;
 
@@ -62,7 +63,7 @@ class BrowseViewModel extends ChangeNotifier {
   }
 
   void _aoAtualizarDataset() {
-    _cacheDistanciasPorId = null;
+    _cacheProximidadePorId = null;
     notifyListeners();
   }
 
@@ -101,12 +102,12 @@ class BrowseViewModel extends ChangeNotifier {
   void atualizarLocalizacaoUsuario(double lat, double lon) {
     _userLat = lat;
     _userLon = lon;
-    _cacheDistanciasPorId = null;
+    _cacheProximidadePorId = null;
     notifyListeners();
   }
 
-  Map<String, double> _obterDistanciasPorId(List<MetadadosIndice> todosPicos) {
-    final existente = _cacheDistanciasPorId;
+  Map<String, PicoProximo> _obterProximidadePorId(List<MetadadosIndice> todosPicos) {
+    final existente = _cacheProximidadePorId;
     if (existente != null) {
       return existente;
     }
@@ -117,10 +118,10 @@ class BrowseViewModel extends ChangeNotifier {
       limite: null,
       calculadoraDistancia: datasetRepo.calculadoraDistanciaEstrada.value,
     );
-    final mapa = <String, double>{
-      for (final item in calculados) item.id: item.distanciaKm,
+    final mapa = <String, PicoProximo>{
+      for (final item in calculados) item.id: item,
     };
-    _cacheDistanciasPorId = mapa;
+    _cacheProximidadePorId = mapa;
     return mapa;
   }
 
@@ -186,17 +187,18 @@ class BrowseViewModel extends ChangeNotifier {
 
     if (_ordem == OrdemOrdenacaoPico.proximidade) {
       if (_userLat != null && _userLon != null) {
-        final distanciasPorId = _obterDistanciasPorId(todosPicos);
+        final proximidadePorId = _obterProximidadePorId(todosPicos);
         final comCoordenadas = resultado
-            .where((m) => distanciasPorId.containsKey(m.id))
+            .where((m) => proximidadePorId.containsKey(m.id))
             .toList()
-          ..sort((a, b) {
-            final cmp =
-                distanciasPorId[a.id]!.compareTo(distanciasPorId[b.id]!);
-            return cmp != 0 ? cmp : a.nome.compareTo(b.nome);
-          });
+          ..sort(
+            (a, b) => compararPicosPorProximidade(
+              proximidadePorId[a.id]!,
+              proximidadePorId[b.id]!,
+            ),
+          );
         final semCoordenadas = resultado
-            .where((m) => !distanciasPorId.containsKey(m.id))
+            .where((m) => !proximidadePorId.containsKey(m.id))
             .toList()
           ..sort((a, b) => a.nome.compareTo(b.nome));
         resultado = [...comCoordenadas, ...semCoordenadas];
@@ -221,19 +223,34 @@ class BrowseViewModel extends ChangeNotifier {
   List<CardCroquiViewModel> get picosCards {
     final dataset = datasetRepo.activeDataset.value;
     final filtrados = picosFiltrados;
-    final Map<String, double> distanciasPorId = (_userLat != null &&
+    final Map<String, PicoProximo> proximidadePorId = (_userLat != null &&
             _userLon != null &&
             dataset != null &&
             filtrados.isNotEmpty)
-        ? _obterDistanciasPorId(dataset.metadadosDisponiveis)
-        : const <String, double>{};
+        ? _obterProximidadePorId(dataset.metadadosDisponiveis)
+        : const <String, PicoProximo>{};
 
     return filtrados.map((m) {
-      final textoDist = formatarDistanciaKm(distanciasPorId[m.id]);
+      final prox = proximidadePorId[m.id];
+      String textoDist = '';
+      String? tooltipDist;
+      if (prox != null) {
+        if (prox.duracaoMinutos != null) {
+          final estimativa = EstimativaViagemPico(
+            distanciaMetros: prox.distanciaKm * 1000.0,
+            duracaoMinutos: prox.duracaoMinutos,
+          );
+          textoDist = estimativa.formatarBadge();
+          tooltipDist = estimativa.formatarTooltip();
+        } else {
+          textoDist = formatarDistanciaKm(prox.distanciaKm);
+        }
+      }
       return mapearMetadadosParaCard(
         m,
         salvoOffline: estaBaixado(m.id),
         textoDistancia: textoDist.isNotEmpty ? textoDist : null,
+        tooltipDistancia: tooltipDist,
       );
     }).toList();
   }
