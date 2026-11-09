@@ -194,7 +194,7 @@ class RepositorioCatalogo {
       c.id_slug,
       d.no_osm_id,
       d.distancia_metros,
-      d.e_portal_borda
+      d.na_borda
     FROM catalogo_distancias_estrada d
     LEFT JOIN catalogo_croquis c ON c.croqui_uid = d.croqui_uid
   ''';
@@ -419,7 +419,7 @@ class RepositorioCatalogo {
               croquiUid: d.croquiUid,
               noOsmId: d.noOsmId,
               distanciaMetros: d.distanciaMetros,
-              ePortalBorda: d.ePortalBorda ?? 0,
+              naBorda: d.naBorda ?? 0,
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
@@ -566,7 +566,7 @@ class RepositorioCatalogo {
         final idSlug = linha['id_slug'] as String?;
         final noOsmId = linha['no_osm_id'] as int;
         final distanciaMetros = linha['distancia_metros'] as int;
-        final ePortalBorda = ((linha['e_portal_borda'] as int?) ?? 0) != 0;
+        final naBorda = ((linha['na_borda'] as int?) ?? 0) != 0;
 
         final mapaDistanciasNo = distanciasPorNo[noOsmId];
         final coords = coordenadasPorNo[noOsmId];
@@ -576,7 +576,7 @@ class RepositorioCatalogo {
             mapaDistanciasNo[idSlug] = distanciaMetros;
           }
 
-          if (ePortalBorda) {
+          if (naBorda) {
             final portal = PortalBordaPico(
               noOsmId: noOsmId,
               latitude: coords.$1,

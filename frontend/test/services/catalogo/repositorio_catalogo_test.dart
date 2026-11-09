@@ -543,13 +543,13 @@ void main() {
                   croquiUid: 'uid_cipo',
                   noOsmId: 1001,
                   distanciaMetros: 95000,
-                  ePortalBorda: 0,
+                  naBorda: 0,
                 ),
                 CatalogoDistanciaEstrada(
                   croquiUid: 'uid_cipo',
                   noOsmId: 2002,
                   distanciaMetros: 175000,
-                  ePortalBorda: 1,
+                  naBorda: 1,
                 ),
                 CatalogoDistanciaEstrada(
                   croquiUid: 'uid_lapinha',

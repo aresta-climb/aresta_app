@@ -7,7 +7,7 @@ Atualmente, a descoberta e a ordenação de picos por proximidade na página ini
 ## What Changes
 
 - **Extensão do Esquema SQLite e Delta Sync do Catálogo (`aresta_api` e `RepositorioCatalogo`)**:
-  - Adição das tabelas `catalogo_nos_estrada` (nós únicos compartilhados da malha viária do OpenStreetMap com `no_osm_id`, `latitude_e7` e `longitude_e7`) e `catalogo_distancias_estrada` (lista esparsa associando `(croqui_uid, no_osm_id)` à `distancia_metros` pré-computada via Dijkstra e flag `e_portal_borda` indicando os portais cardeais/colaterais de entrada na borda da malha do pico).
+  - Adição das tabelas `catalogo_nos_estrada` (nós únicos compartilhados da malha viária do OpenStreetMap com `no_osm_id`, `latitude_e7` e `longitude_e7`) e `catalogo_distancias_estrada` (lista esparsa associando `(croqui_uid, no_osm_id)` à `distancia_metros` pré-computada via Dijkstra e flag `na_borda` indicando os portais cardeais/colaterais de entrada na borda da malha do pico).
   - Atualização do contrato OpenAPI (`catalogo.yaml`) e da sincronização incremental (`apply_delta` no `RepositorioCatalogo`) para suportar `upserts` e `deletes` das novas tabelas sem invalidar nem retransmitir a malha quando apenas vias ou textos de um croqui forem editados.
 - **Geração Pré-Computada em 3 Anéis Concêntricos com Deduplicação Determinística**:
   - Definição do contrato de geração da malha por coordenada de estacionamento num raio de até 180 km dividido em 3 anéis concêntricos sobre o OpenStreetMap (Anel 1 de 0–15 km com todas as vias dirigíveis e grade global de `0.02°`; Anel 2 de 15–60 km com vias até `tertiary` e grade global de `0.06°`; Anel 3 de 60–180 km com rodovias `motorway`/`trunk`/`primary`/`secondary` e grade global de `0.18°`, mais até 8 portais de borda).

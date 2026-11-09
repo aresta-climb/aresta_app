@@ -45,7 +45,7 @@ Precisamos introduzir o cálculo de distância por estrada 100% offline mantendo
       croqui_uid TEXT NOT NULL,
       no_osm_id INTEGER NOT NULL,
       distancia_metros INTEGER NOT NULL,
-      e_portal_borda INTEGER NOT NULL DEFAULT 0,
+      na_borda INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (croqui_uid, no_osm_id)
   );
 
@@ -65,7 +65,7 @@ Precisamos introduzir o cálculo de distância por estrada 100% offline mantendo
 - **Nó do Estacionamento e Dijkstra Invertido**:
   - O grafo extraído via Overpass API é filtrado pelo seu maior componente fortemente/fracamente conexo antes de localizar o nó mais próximo do estacionamento (`no_pico`), evitando ilhas de trilhas desconectadas no OSM.
   - Um único Dijkstra invertido a partir de `no_pico` calcula simultaneamente a distância de estrada de todos os nós até o estacionamento, e o próprio `no_pico` é incluído com `distancia_metros = 0`.
-  - Na borda externa da malha (8 octantes: N, NE, L, SE, S, SO, O, NO), o nó rodoviário principal mais externo de cada direção recebe `e_portal_borda = 1`.
+  - Na borda externa da malha (8 octantes: N, NE, L, SE, S, SO, O, NO), o nó rodoviário principal mais externo de cada direção recebe `na_borda = 1`.
 
 ### 3. Busca Espacial 2D via KD-Tree em Memória e Fórmula Híbrida de Distância
 - **Decisão**: Implementar um módulo puro e independente em `frontend/lib/utils/calculadora_distancia_estrada.dart` contendo a `ArvoreKdNosEstrada` (2D KD-Tree alternando cortes em latitude e longitude pela mediana) e o cálculo híbrido de distância.
@@ -74,7 +74,7 @@ Precisamos introduzir o cálculo de distância por estrada 100% offline mantendo
   2. **Para cada pico $P$**:
      - **Caso 1 — Pico presente em pelo menos um dos nós vizinhos ($\le 180\text{ km}$)**:
        $$\text{dist}(U, P) = \min_{K \in \text{vizinhos com } P} \Big(\text{dist\_geodesica}(U, K) \times 1{,}25 + \text{dist\_estrada}(K \to P)\Big)$$
-     - **Caso 2 — Pico ausente nos nós vizinhos, mas possui Portais de Borda (`e_portal_borda = 1`)**:
+     - **Caso 2 — Pico ausente nos nós vizinhos, mas possui Portais de Borda (`na_borda = 1`)**:
        $$\text{dist}(U, P) = \min_{B \in \text{Portais}(P)} \Big(\text{dist\_geodesica}(U, B) \times 1{,}25 + \text{dist\_estrada}(B \to P)\Big)$$
        *(Avalia os até 8 portais de borda em $O(1)$, preservando os quilômetros finais sinuosos da serra e descartando automaticamente portais bloqueados por barreiras cujo `dist_estrada(B -> P)` seja alto).*
      - **Caso 3 — Fallback (Croqui sem malha cadastrada ou catálogo ainda vazio)**:

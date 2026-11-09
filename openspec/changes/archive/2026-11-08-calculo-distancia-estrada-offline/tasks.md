@@ -7,7 +7,7 @@
 
 ## 2. Motor de Busca Espacial 2D (KD-Tree) e Calculadora de Distância Rodoviária
 
-- [x] 2.1 Criar a suíte de testes orientados a comportamento em `frontend/test/utils/calculadora_distancia_estrada_test.dart` cobrindo: busca $O(\log N)$ dos 3 vizinhos mais próximos na KD-Tree dentro do raio de 15 km, escolha do nó na direção favorável, nó do próprio estacionamento com distância zero, cálculo para picos distantes ($> 180\text{ km}$) via portais de borda (`e_portal_borda = 1`) evitando barreiras geográficas, e fallback geodésico ($\times 1{,}25$ ou direto), verificando a falha inicial (Red)
+- [x] 2.1 Criar a suíte de testes orientados a comportamento em `frontend/test/utils/calculadora_distancia_estrada_test.dart` cobrindo: busca $O(\log N)$ dos 3 vizinhos mais próximos na KD-Tree dentro do raio de 15 km, escolha do nó na direção favorável, nó do próprio estacionamento com distância zero, cálculo para picos distantes ($> 180\text{ km}$) via portais de borda (`na_borda = 1`) evitando barreiras geográficas, e fallback geodésico ($\times 1{,}25$ ou direto), verificando a falha inicial (Red)
 - [x] 2.2 Implementar `NoEstrada`, `PortalBordaPico`, `ArvoreKdNosEstrada` e `CalculadoraDistanciaEstrada` em `frontend/lib/utils/calculadora_distancia_estrada.dart` com docstrings em português e verificar que `flutter test test/utils/calculadora_distancia_estrada_test.dart --coverage` passa com 100% de cobertura das linhas do arquivo
 
 ## 3. Persistência, Delta Sync e Carregamento da Malha no `RepositorioCatalogo` e `DatasetRepository`

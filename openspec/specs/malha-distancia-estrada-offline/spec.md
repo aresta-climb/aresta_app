@@ -6,7 +6,7 @@ Define o contrato de armazenamento relacional esparso, deduplicação determiní
 ## Requirements
 
 ### Requirement: Armazenamento Esparso de Nós Rodoviários e Distâncias no Catálogo SQLite
-O banco SQLite do catálogo (`catalogo.db`) DEVE (MUST) armazenar os nós rodoviários compartilhados em `catalogo_nos_estrada` (`no_osm_id`, `latitude_e7`, `longitude_e7`) e as distâncias pré-computadas por croqui em `catalogo_distancias_estrada` (`croqui_uid`, `no_osm_id`, `distancia_metros`, `e_portal_borda`), permitindo atualização incremental isolada por `croqui_uid`.
+O banco SQLite do catálogo (`catalogo.db`) DEVE (MUST) armazenar os nós rodoviários compartilhados em `catalogo_nos_estrada` (`no_osm_id`, `latitude_e7`, `longitude_e7`) e as distâncias pré-computadas por croqui em `catalogo_distancias_estrada` (`croqui_uid`, `no_osm_id`, `distancia_metros`, `na_borda`), permitindo atualização incremental isolada por `croqui_uid`.
 
 #### Scenario: Deduplicação automática de nó compartilhado entre dois croquis
 - **WHEN** dois croquis distintos da mesma região possuem distâncias pré-computadas a partir do mesmo `no_osm_id`
@@ -39,7 +39,7 @@ O aplicativo DEVE (MUST) indexar os nós de `catalogo_nos_estrada` em uma árvor
 - **THEN** a minimização entre os 3 nós mais próximos seleciona $K_{\text{sul}}$ por produzir a menor soma total até o pico ao sul, evitando retorno em sentido contrário.
 
 ### Requirement: Estimativa de Longa Distância via Portais de Borda e Fallback Geodésico
-Quando um pico não constar na lista esparsa dos nós vizinhos do usuário (distância $> 180\text{ km}$ ou usuário fora da malha), o sistema DEVE (MUST) estimar a distância minimizando $\text{dist\_reta}(U, B) \times 1{,}25 + \text{dist\_estrada}(B \to P)$ sobre os portais de borda (`e_portal_borda = 1`) do pico, ou aplicar o fallback $\text{dist\_reta}(U, P) \times 1{,}25$ caso o pico ainda não possua malha cadastrada.
+Quando um pico não constar na lista esparsa dos nós vizinhos do usuário (distância $> 180\text{ km}$ ou usuário fora da malha), o sistema DEVE (MUST) estimar a distância minimizando $\text{dist\_reta}(U, B) \times 1{,}25 + \text{dist\_estrada}(B \to P)$ sobre os portais de borda (`na_borda = 1`) do pico, ou aplicar o fallback $\text{dist\_reta}(U, P) \times 1{,}25$ caso o pico ainda não possua malha cadastrada.
 
 #### Scenario: Escolha do portal de borda ótimo evitando ponto bloqueado por serra ou represa
 - **WHEN** o usuário está a mais de 180 km de um pico que possui um portal de borda $B_1$ (a 110 km em linha reta do usuário, mas a 95 km de volta sinuosa até o pico) e um portal $B_2$ (a 125 km em linha reta do usuário e a 35 km diretos de estrada até o pico)

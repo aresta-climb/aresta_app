@@ -33,7 +33,7 @@ class NoEstrada {
   });
 }
 
-/// Representa um portal de borda (`e_portal_borda = 1`) na fronteira da malha de 180 km
+/// Representa um portal de borda (`na_borda = 1`) na fronteira da malha de 180 km
 /// de um croqui.
 ///
 /// Quando o usuário está a mais de 180 km de um pico (fora da malha local do croqui),
@@ -239,7 +239,7 @@ class ArvoreKdNosEstrada {
 /// Calculadora offline de distância rodoviária estimada entre a posição do usuário e os croquis.
 ///
 /// Combina a busca logarítmica dos $k = 3$ nós mais próximos na [ArvoreKdNosEstrada] (para
-/// picos a até 180 km), a avaliação de portais de borda (`e_portal_borda = 1`) para picos
+/// picos a até 180 km), a avaliação de portais de borda (`na_borda = 1`) para picos
 /// distantes ($> 180\text{ km}$) e o fallback geodésico para croquis sem malha pré-computada.
 class CalculadoraDistanciaEstrada {
   /// Fator médio de tortuosidade rodoviária aplicado a trechos estimados em linha reta
@@ -292,7 +292,7 @@ class CalculadoraDistanciaEstrada {
   /// - Se a calculadora estiver vazia ([possuiMalha] == `false`), retorna a distância geodésica direta.
   /// - Se algum dos nós vizinhos do usuário contiver [identificadorCroqui], retorna a menor soma
   ///   `dist_geodesica(U, K) * 1.25 + dist_estrada(K -> P)`.
-  /// - Caso contrário, se o croqui possuir portais de borda (`e_portal_borda = 1`), retorna a menor soma
+  /// - Caso contrário, se o croqui possuir portais de borda (`na_borda = 1`), retorna a menor soma
   ///   `dist_geodesica(U, B) * 1.25 + dist_estrada(B -> P)`.
   /// - Como último recurso para croquis ainda sem malha compilada, retorna `dist_geodesica(U, P) * 1.25`.
   double calcularDistanciaMetros({
