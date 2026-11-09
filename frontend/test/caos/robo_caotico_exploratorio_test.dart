@@ -16,10 +16,12 @@ const int kDuracaoCampanhaCaosSegundos = int.fromEnvironment(
   defaultValue: 0,
 );
 
-/// Define se crashes inéditos encontrados pelo robô devem ser enviados ao Sentry (`AppLogger.logCrash`).
+/// Define se o Sentry deve permanecer liberado e receber falhas e receitas geradas (`AppLogger.logCrash`).
+///
+/// Habilitado por padrão (`true`) nas campanhas exploratórias usando o `kSentryDsn` já configurado no app.
 const bool kReportarSentryCaos = bool.fromEnvironment(
   'REPORTAR_SENTRY_CAOS',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 /// Semente inicial opcional (`--dart-define=SEED_INICIAL_CAOS=...`).

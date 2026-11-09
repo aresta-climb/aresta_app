@@ -46,11 +46,14 @@ flutter test test/pages/
 # Rodar apenas a suíte permanente de receitas JSON de regressão de caos (< 1s)
 flutter test test/caos/regressao_caminhos_test.dart
 
-# Rodar campanha prolongada do Robô Caótico localmente (ex: 60 segundos)
+# Rodar campanha do Robô Caótico no terminal (ex: 60s; SENTRY_DSN e REPORTAR_SENTRY_CAOS=true já ficam ativos por padrão)
 flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=60
 
-# Rodar campanha de release (5 minutos com envio de crashes inéditos ao Sentry)
-flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --dart-define=REPORTAR_SENTRY_CAOS=true --timeout=10m
+# Assistir o Robô Caótico agindo ao vivo na tela (emulador ou celular conectado, padrão 60s)
+flutter test integration_test/robo_caotico_dispositivo_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=60
+
+# Rodar campanha de release (5 minutos)
+flutter test test/caos/robo_caotico_exploratorio_test.dart --dart-define=DURACAO_CAMPANHA_CAOS_SEGUNDOS=300 --timeout=10m
 
 # Rodar um arquivo específico
 flutter test test/services/editor_croqui_test.dart
