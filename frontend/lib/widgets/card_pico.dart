@@ -163,7 +163,7 @@ class CragCard extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      if (badgeDistancia != null) badgeDistancia,
+                      ?badgeDistancia,
                       if (isDownloaded)
                         Container(
                           padding: const EdgeInsets.symmetric(

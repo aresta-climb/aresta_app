@@ -871,7 +871,12 @@ void main() {
         // Toca na via sem conexão (e sem croqui em cache)
         await tester.runAsync(() async {
           await tester.tap(find.widgetWithText(ListTile, 'Chaminé Stop'));
-          await Future.delayed(const Duration(milliseconds: 100));
+          final cronometro = Stopwatch()..start();
+          while (find.byType(ModalCroquiSemConexao).evaluate().isEmpty &&
+              cronometro.elapsed < const Duration(seconds: 5)) {
+            await Future.delayed(const Duration(milliseconds: 20));
+            await tester.pump();
+          }
         });
         await tester.pumpAndSettle();
 
@@ -1051,7 +1056,12 @@ void main() {
         // Libera a consulta e verifica que o diálogo de loading fecha e apenas 1 ModalCroquiSemConexao abre
         await tester.runAsync(() async {
           travaConsulta!.complete();
-          await Future.delayed(const Duration(milliseconds: 80));
+          final cronometro = Stopwatch()..start();
+          while (find.byType(ModalCroquiSemConexao).evaluate().isEmpty &&
+              cronometro.elapsed < const Duration(seconds: 5)) {
+            await Future.delayed(const Duration(milliseconds: 20));
+            await tester.pump();
+          }
         });
         await tester.pumpAndSettle();
 

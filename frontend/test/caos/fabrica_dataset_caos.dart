@@ -15,6 +15,7 @@ import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/navigation/wrapper_navegacao_arvore.dart';
+import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
@@ -394,6 +395,9 @@ class AmbienteAppCaos {
   static Future<AmbienteAppCaos> inicializar() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
+    ServicoAutenticacaoLocal.instancia = ServicoAutenticacaoLocal(
+      obterAnonKeySupabase: () => '',
+    );
     final tempDir = Directory.systemTemp.createTempSync('aresta_caos_app_');
     PathProviderPlatform.instance = _FakePathProviderCaos(tempDir.path);
     GeolocatorPlatform.instance = MockGeolocatorPlatform();
@@ -459,6 +463,7 @@ class AmbienteAppCaos {
   /// Remove o diretório temporário criado para a sessão.
   Future<void> limpar() async {
     FeedbackOrchestrator.debugIsConfiguredOverride = null;
+    ServicoAutenticacaoLocal.redefinirParaTestes();
     if (diretorioTemporario.existsSync()) {
       diretorioTemporario.deleteSync(recursive: true);
     }

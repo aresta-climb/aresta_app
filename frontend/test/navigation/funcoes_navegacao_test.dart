@@ -446,7 +446,10 @@ void main() {
         final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
         await repoCaderneta.inicializar();
         RepositorioCadernetaLocal.instancia = repoCaderneta;
-        final servicoAuth = ServicoAutenticacaoLocal(repositorio: repoCaderneta);
+        final servicoAuth = ServicoAutenticacaoLocal(
+          repositorio: repoCaderneta,
+          obterAnonKeySupabase: () => '',
+        );
         ServicoAutenticacaoLocal.instancia = servicoAuth;
 
         await tester.pumpWidget(

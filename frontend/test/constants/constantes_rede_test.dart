@@ -11,7 +11,10 @@ void main() {
         NetworkConstants.kDefaultSupabaseUrl,
         'https://yzkhiaoqtxvvcyyuwmqg.supabase.co',
       );
-      expect(NetworkConstants.kDefaultSupabaseAnonKey, isEmpty);
+      expect(
+        NetworkConstants.kDefaultSupabaseAnonKey,
+        'sb_publishable_dHPpa5I1hOmKQ9RiNcaXWA_TP5edNam',
+      );
       expect(NetworkConstants.kDataVersion, isPositive);
       expect(
         NetworkConstants.kDefaultServingBaseUrl,
