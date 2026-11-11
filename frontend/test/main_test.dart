@@ -1070,7 +1070,7 @@ void main() {
 
   group('Gestão de Memória e Vitals Tests', () {
     test('configurarGestaoMemoria deve definir teto LRU do imageCache para 100 MB por padrão', () {
-      configurarGestaoMemoria();
+      configurarGestaoMemoria(caminhoMeminfo: '/caminho/inexistente/meminfo');
       expect(
         PaintingBinding.instance.imageCache.maximumSizeBytes,
         equals(100 * 1024 * 1024),
