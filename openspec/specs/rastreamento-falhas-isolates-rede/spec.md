@@ -22,6 +22,21 @@ O sistema SHALL capturar e transportar o rastreamento de pilha original de falha
 - **WHEN** ocorre uma falha definitiva de download no `sync_isolate`
 - **THEN** o `DownloadIsolateResult` retornado DEVE conter o campo `rastreamentoPilha` preenchido com os frames exatos de execução do isolate e o `SyncService` DEVE reconstruí-lo e repassá-lo ao `AppLogger`.
 
+### Requirement: Propagação de Erros de Isolates de Sincronização para o Logger Principal
+O sistema DEVE capturar e registrar no `AppLogger` principal qualquer falha reportada pelos isolates de download (`DownloadIsolateResult.error`) ou de verificação de cache (`CacheCheckResponse`), preservando os detalhes da exceção subjacente (tanto no download do `compilado.binarypb` quanto no download das mídias) e classificando falhas de conectividade ou timeout como avisos (`logAviso`) e falhas de integridade ou corrupção como erros fatais (`logCrash`).
+
+#### Scenario: Falha de rede ou timeout dentro do isolate de download de imagens ou de binarypb
+- **WHEN** o isolate de download (`downloadIsolateMain`) retornar `DownloadIsolateResult` com `success: false` devido a timeout ou queda de conexão (`SocketException` / `ClientException` / `TimeoutException`), seja durante o download inicial do `compilado.binarypb` ou durante o download das imagens
+- **THEN** o `DownloadIsolateResult.error` inclui o detalhe da exceção capturada em `errosDownloads` e o `SyncService` registra os detalhes via `AppLogger.instance.logAviso` sem reportar crash fatal (`fatal: true`)
+
+#### Scenario: Falha de integridade ou parsing dentro do isolate de download
+- **WHEN** o isolate de download (`downloadIsolateMain`) retornar `DownloadIsolateResult` com `success: false` devido a falha de decodificação Protobuf, tamanho inválido ou erro HTTP inesperado (ex: HTTP 404/500)
+- **THEN** o `SyncService` DEVE registrar os detalhes do erro no `AppLogger.instance.logCrash` (`fatal: true`) antes de prosseguir com a limpeza de diretórios temporários
+
+#### Scenario: Falha na leitura ou parsing no isolate de verificação de cache
+- **WHEN** o isolate de verificação de cache (`verificarCacheIsolate`) encontrar uma exceção ao ler ou decodificar arquivos locais
+- **THEN** o erro DEVE ser propagado na resposta do isolate e registrado via `AppLogger.instance.logError` na thread principal
+
 ### Requirement: Classificação de Erros HTTP Transitórios como Não-Fatais
 O `AppLogger` SHALL identificar códigos de erro HTTP transitórios (502, 503, 504) e expressões de timeout de gateway como falhas transitórias de conexão.
 
@@ -40,5 +55,3 @@ O sistema SHALL registrar falhas HTTP (`404`, `5xx`, etc.) originadas de URLs ef
 #### Scenario: Servidor oficial de produção retorna HTTP 404 na busca do índice
 - **WHEN** `SyncNetwork.fetchIndiceWithRetries` recebe HTTP 404 da CDN oficial de produção (`serving.arestaclimb.com`)
 - **THEN** o sistema DEVE invocar `AppLogger.instance.logError` com o `StackTrace` correspondente para alertar a equipe no Firebase Crashlytics.
-
-

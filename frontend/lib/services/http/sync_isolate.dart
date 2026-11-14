@@ -213,11 +213,13 @@ Future<void> downloadIsolateMain(DownloadIsolateArgs args) async {
       newResumo.checksumSha256Croqui,
     );
     if (!mainFileSuccess) {
+      final detalhe =
+          errosDownloads.isNotEmpty ? ': ${errosDownloads.join("; ")}' : '';
       args.sendPort.send(
         DownloadIsolateResult(
           filesToDelete: [],
           filesToRename: {},
-          error: 'Falha ao baixar binarypb de $url',
+          error: 'Falha ao baixar binarypb de $url$detalhe',
           rastreamentoPilha:
               ultimoRastreamentoPilha ?? StackTrace.current.toString(),
         ),

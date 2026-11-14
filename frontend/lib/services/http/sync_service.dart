@@ -695,9 +695,8 @@ class SyncService {
         qtdThumbs: qtdThumbs,
       );
     } else {
-      AppLogger.instance.logError(
+      AppLogger.instance.logAviso(
         '[SyncService] Falha na atualização de ${failedPicos.length} picos ou nas thumbnails. O índice não será sobrescrito.',
-        stackTrace: StackTrace.current,
       );
       if (!forceBypassCache) {
         AppLogger.instance.logAviso(
@@ -711,9 +710,8 @@ class SyncService {
         failedPicos.clear();
         failedPicos.addAll(fallbackFailedPicos);
       } else {
-        AppLogger.instance.logError(
+        AppLogger.instance.logAviso(
           '[SyncService] Falha definitiva na sincronização após tentativa de bypass de cache.',
-          stackTrace: StackTrace.current,
         );
         syncStatus.value = SyncStatus.error;
         TelemetryService.instance.logResultadoSincronizacao('erro');
@@ -1269,9 +1267,8 @@ class SyncService {
       final bytes = await _network.downloadFile(cacheBustingUrl);
 
       if (bytes == null) {
-        AppLogger.instance.logError(
+        AppLogger.instance.logAviso(
           'Failed to download $fileUrl (null returned)',
-          stackTrace: StackTrace.current,
         );
         return false;
       }
@@ -1288,7 +1285,7 @@ class SyncService {
 
       return true;
     } catch (e, stackTrace) {
-      AppLogger.instance.logError(
+      AppLogger.instance.logFalhaSyncOuDownload(
         'Exception downloading file $fileUrl',
         error: e,
         stackTrace: stackTrace,

@@ -9,6 +9,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/http/sync_isolate.dart';
 
 void main() {
@@ -74,6 +75,13 @@ void main() {
 
         expect(result.error, isNotNull);
         expect(result.error, contains('Falha ao baixar binarypb'));
+        expect(result.error, contains('Exceção ao baixar'));
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(result.error!),
+          isTrue,
+          reason:
+              'A mensagem de erro do binarypb deve preservar a exceção de rede/timeout para ser classificada como falha de conexão',
+        );
       },
     );
 

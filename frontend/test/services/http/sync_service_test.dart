@@ -376,6 +376,98 @@ void main() {
         );
       },
     );
+
+    test(
+      'syncIndex na Fase 2 quando picos e miniaturas falham por queda de conexão registra apenas logAviso e não gera recordedErrors',
+      () async {
+        final mockLogger = MockAppLogger();
+        AppLogger.instance = mockLogger;
+
+        final editor = EditorDeCroqui();
+        const picoId = 'pico_bg_queda_rede';
+
+        // Prepara índice e pico locais com hash antigo para forçar atualização na Fase 2
+        final indiceFile = File(editor.indicePath(tempDir.path));
+        await indiceFile.parent.create(recursive: true);
+        await indiceFile.writeAsBytes(
+          (Indice()
+                ..croquis.add(
+                  ResumoCroqui()
+                    ..id = picoId
+                    ..checksumSha256Croqui = 'OLD_HASH',
+                ))
+              .writeToBuffer(),
+        );
+
+        final picoDir = Directory(
+          '${editor.downloadsPath(tempDir.path)}/$picoId',
+        );
+        await picoDir.create(recursive: true);
+        await File('${picoDir.path}/compilado.binarypb').writeAsBytes(
+          Croqui().writeToBuffer(),
+        );
+
+        final novoIndice = Indice()
+          ..croquis.add(
+            ResumoCroqui()
+              ..id = picoId
+              ..nome = 'Pico Queda Rede'
+              ..caminhoRelativo = 'croquis/$picoId/compilado.binarypb'
+              ..checksumSha256Croqui = 'NEW_HASH'
+              ..checksumSha256Thumbnail = 'NEW_THUMB_HASH',
+          );
+
+        final clienteQuedaRede = _SyncTestFakeClient(
+          novoIndice,
+          falharMidiaComSocketException: true,
+        );
+        final clienteHttp = ClienteHttpAresta.paraTestes(clienteQuedaRede);
+        final testSyncService = SyncService(
+          datasetRepository: datasetRepository,
+          storage: storage,
+          client: clienteHttp,
+          network: SyncNetwork(clienteHttp, Duration.zero),
+        );
+
+        testSyncService.mockIsolateSpawn = (mainFunc, args) async {
+          args.sendPort.send(
+            DownloadIsolateResult(
+              filesToDelete: [],
+              filesToRename: {},
+              error:
+                  'Falha ao baixar binarypb de https://serving.arestaclimb.com/croquis/$picoId/compilado.binarypb: Exceção ao baixar https://serving.arestaclimb.com/croquis/$picoId/compilado.binarypb (tentativa 2): ClientException with SocketException: Connection timed out',
+              rastreamentoPilha: 'sync_isolate.dart:218',
+            ),
+          );
+        };
+
+        await testSyncService.syncIndex(auto: true);
+        await testSyncService.tarefaMidiasEmSegundoPlano;
+
+        expect(
+          mockLogger.recordedErrors,
+          isEmpty,
+          reason:
+              'Queda de conexão em segundo plano na Fase 2 não deve gerar eventos de erro ou crash no AppLogger',
+        );
+        expect(
+          mockLogger.recordedWarnings.any(
+            (w) => w.contains(
+              '[SyncService] Falha na atualização de 1 picos ou nas thumbnails. O índice não será sobrescrito.',
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          mockLogger.recordedWarnings.any(
+            (w) => w.contains(
+              '[SyncService] Falha definitiva na sincronização após tentativa de bypass de cache.',
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('Sincronização Assíncrona do Catálogo SQLite (catalogo.db)', () {
@@ -915,7 +1007,11 @@ void main() {
 
 class _SyncTestFakeClient extends http.BaseClient {
   final Indice indice;
-  _SyncTestFakeClient(this.indice);
+  final bool falharMidiaComSocketException;
+  _SyncTestFakeClient(
+    this.indice, {
+    this.falharMidiaComSocketException = false,
+  });
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -926,6 +1022,9 @@ class _SyncTestFakeClient extends http.BaseClient {
         200,
         headers: {'etag': 'TEST_ETAG'},
       );
+    }
+    if (falharMidiaComSocketException) {
+      throw const SocketException('Connection timed out');
     }
     return http.StreamedResponse(Stream.value([]), 404);
   }
