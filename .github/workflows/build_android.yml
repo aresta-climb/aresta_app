@@ -1,4 +1,4 @@
-﻿name: Android Release Sub-Workflow 
+name: Android Release Sub-Workflow 
 
 on:
   workflow_call:
@@ -50,6 +50,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.8'
           channel: 'stable'
           cache: true
           
