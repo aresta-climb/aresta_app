@@ -262,15 +262,33 @@ class RepositorioCatalogo {
               await db.rawQuery('PRAGMA table_info(catalogo_croquis)');
           final nomesColunas =
               infoCroquis.map((c) => c['name'] as String?).toSet();
-          if (nomesColunas.contains('uf') && !nomesColunas.contains('estado')) {
-            await db.execute(
-              'ALTER TABLE catalogo_croquis RENAME COLUMN uf TO estado',
-            );
-          }
-          if (nomesColunas.contains('atualizado_em')) {
-            await db.execute(
-              'ALTER TABLE catalogo_croquis DROP COLUMN atualizado_em',
-            );
+          if (nomesColunas.isNotEmpty) {
+            if (nomesColunas.contains('uf') &&
+                !nomesColunas.contains('estado')) {
+              await db.execute(
+                'ALTER TABLE catalogo_croquis RENAME COLUMN uf TO estado',
+              );
+            }
+            if (nomesColunas.contains('atualizado_em')) {
+              await db.execute(
+                'ALTER TABLE catalogo_croquis DROP COLUMN atualizado_em',
+              );
+            }
+            if (!nomesColunas.contains('latitude_e7')) {
+              await db.execute(
+                'ALTER TABLE catalogo_croquis ADD COLUMN latitude_e7 INTEGER',
+              );
+            }
+            if (!nomesColunas.contains('longitude_e7')) {
+              await db.execute(
+                'ALTER TABLE catalogo_croquis ADD COLUMN longitude_e7 INTEGER',
+              );
+            }
+            if (!nomesColunas.contains('url_google_maps')) {
+              await db.execute(
+                'ALTER TABLE catalogo_croquis ADD COLUMN url_google_maps TEXT',
+              );
+            }
           }
           final ddlDistancias = await db.rawQuery(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='catalogo_distancias_estrada'",
@@ -412,6 +430,9 @@ class RepositorioCatalogo {
               nome: c.nome,
               cidade: c.cidade,
               estado: c.estado,
+              latitudeE7: c.latitudeE7,
+              longitudeE7: c.longitudeE7,
+              urlGoogleMaps: c.urlGoogleMaps,
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );

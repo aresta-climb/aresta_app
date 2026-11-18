@@ -5,6 +5,8 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:aresta.cc</string>
+		<string>applinks:arestaclimb.com</string>
+		<string>applinks:www.arestaclimb.com</string>
 		<string>applinks:app.arestaclimb.com</string>
 		<string>applinks:previa.arestaclimb.com</string>
 	</array>

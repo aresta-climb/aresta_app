@@ -185,5 +185,82 @@ void main() {
       expect(r1 == r5, isFalse);
       expect(r1.toString(), contains('sQ7YgEG6ONsPXt'));
     });
+
+    test('faz parsing de rotas canonicas da vitrine /croquis/<uid> e /croquis/<uid>/<slug> preservando CGI args', () {
+      const uid = 'x8siJek3FiG3aB';
+
+      final rotaSemSlug = DeepLinkRouteParser.parse(
+        'https://arestaclimb.com/croquis/$uid',
+      );
+      expect(rotaSemSlug, isNotNull);
+      expect(rotaSemSlug!.uid, equals(uid));
+      expect(rotaSemSlug.abrirMapa, isFalse);
+      expect(rotaSemSlug.origemLink, isNull);
+      expect(rotaSemSlug.parametros, isEmpty);
+
+      final rotaComSlugMapa = DeepLinkRouteParser.parse(
+        'https://arestaclimb.com/croquis/$uid/mg-pedra-rachada-feijao-com-linguica?mapa=1&utm_source=compartilhamento&utm_medium=app&ref=grupo_wpp',
+      );
+      expect(rotaComSlugMapa, isNotNull);
+      expect(rotaComSlugMapa!.uid, equals(uid));
+      expect(rotaComSlugMapa.abrirMapa, isTrue);
+      expect(rotaComSlugMapa.origemLink, equals('compartilhamento'));
+      expect(
+        rotaComSlugMapa.parametros,
+        equals({
+          'mapa': '1',
+          'utm_source': 'compartilhamento',
+          'utm_medium': 'app',
+          'ref': 'grupo_wpp',
+        }),
+      );
+
+      final rotaQrPlaca = DeepLinkRouteParser.parse(
+        'https://www.arestaclimb.com/croquis/$uid/mg-igarape-pedra-grande?mapa=true&utm_source=placa_rocha&utm_medium=qrcode',
+      );
+      expect(rotaQrPlaca, isNotNull);
+      expect(rotaQrPlaca!.uid, equals(uid));
+      expect(rotaQrPlaca.abrirMapa, isTrue);
+      expect(rotaQrPlaca.origemLink, equals('qrcode'));
+
+      final rotaCustomScheme = DeepLinkRouteParser.parse(
+        'aresta://arestaclimb.com/croquis/$uid/mg-igarape-pedra-grande?utm_medium=qrcode',
+      );
+      expect(rotaCustomScheme, isNotNull);
+      expect(rotaCustomScheme!.uid, equals(uid));
+      expect(rotaCustomScheme.abrirMapa, isFalse);
+      expect(rotaCustomScheme.origemLink, equals('qrcode'));
+    });
+
+    test('retorna null para paginas institucionais e rotas de indice/arquivos em arestaclimb.com', () {
+      expect(DeepLinkRouteParser.parse('https://arestaclimb.com/'), isNull);
+      expect(DeepLinkRouteParser.parse('https://arestaclimb.com/croquis'), isNull);
+      expect(DeepLinkRouteParser.parse('https://arestaclimb.com/croquis/'), isNull);
+      expect(
+        DeepLinkRouteParser.parse('https://arestaclimb.com/croquis/busca.json'),
+        isNull,
+      );
+      expect(
+        DeepLinkRouteParser.parse('https://arestaclimb.com/croquis/sitemap.xml'),
+        isNull,
+      );
+      expect(DeepLinkRouteParser.parse('https://arestaclimb.com/editor'), isNull);
+      expect(
+        DeepLinkRouteParser.parse('https://arestaclimb.com/termos-de-uso'),
+        isNull,
+      );
+      expect(
+        DeepLinkRouteParser.parse(
+          'https://arestaclimb.com/croquis/uid_curto/slug-qualquer',
+        ),
+        isNull,
+      );
+      expect(
+        DeepLinkRouteParser.parse(
+          'https://arestaclimb.com/croquis/x8siJek3FiG3aB/slug/segmento-extra',
+        ),
+        isNull,
+      );
+    });
   });
 }

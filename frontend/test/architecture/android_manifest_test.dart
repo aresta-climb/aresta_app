@@ -24,5 +24,14 @@ void main() {
                 'during the drawing phase on Android 14+ devices.',
       );
     });
+
+    test('deve registrar App Links da vitrine /croquis/ em arestaclimb.com e www.arestaclimb.com', () {
+      final manifestFile = File('android/app/src/main/AndroidManifest.xml');
+      final manifestContent = manifestFile.readAsStringSync();
+
+      expect(manifestContent, contains('android:host="arestaclimb.com"'));
+      expect(manifestContent, contains('android:host="www.arestaclimb.com"'));
+      expect(manifestContent, contains('android:pathPrefix="/croquis/"'));
+    });
   });
 }

@@ -67,6 +67,31 @@
                     android:host="aresta.cc" />
             </intent-filter>
 
+            <!-- Android App Links para Vitrine de Croquis em arestaclimb.com/croquis/* -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="arestaclimb.com"
+                    android:pathPrefix="/croquis/" />
+                <data
+                    android:scheme="https"
+                    android:host="www.arestaclimb.com"
+                    android:pathPrefix="/croquis/" />
+            </intent-filter>
+
+            <!-- Custom Scheme Deep Link aresta://arestaclimb.com/croquis/* -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="aresta"
+                    android:host="arestaclimb.com" />
+            </intent-filter>
+
             <!-- Android App Links para app.arestaclimb.com (Setores, Vias e Picos) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

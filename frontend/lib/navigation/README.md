@@ -40,10 +40,11 @@ Em conformidade com a especificação da **Arquitetura Unificada de Identificado
 - **Interceptação de Callback OAuth (`DeepLinkNavigatorService`)**:
   - Antes de analisar rotas de conteúdo, `DeepLinkNavigatorService.navigateToUri` (em `servico_navegacao_deep_link.dart`) verifica se o URI recebido é um retorno do fluxo OAuth 2.0 do Supabase (`aresta://app.arestaclimb.com/auth-callback`) através de `ServicoAutenticacao.processarCallbackOAuth(uri)`.
   - Quando positivo, entrega os parâmetros de sessão (`code` PKCE ou `access_token` Implicit) ao `ClienteSupabaseAutenticacao` e encerra o processamento sem alterar a rota da árvore de navegação nem emitir telemetria de deep link de croqui.
-- **Protocolo Compacto (`≤ 35 chars`):**
+- **Protocolo Compacto (`≤ 35 chars`) e Vitrine Pública (`/croquis`):**
   - `https://aresta.cc/<uid>` (padrão) e `https://aresta.cc/m/<uid>` (abre o mapa interativo).
   - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (ou `/ms/<uid>`): links de compartilhamento (`origem_link: 'compartilhamento'`).
   - `https://aresta.cc/q/<uid>` e `https://aresta.cc/qm/<uid>` (ou `/mq/<uid>`): placas físicas QR Code Versão 3 Nível H (`origem_link: 'qrcode'`).
+  - `https://arestaclimb.com/croquis/<uid>` e `https://arestaclimb.com/croquis/<uid>/<slug>` (e esquema `aresta://arestaclimb.com/croquis/...`): URLs canônicas da vitrine pública SSR (destino dos redirects `301` de `aresta.cc`), suportando `?mapa=1` e inferência de `origem_link` via `utm_source` / `utm_medium` com preservação integral de todos os argumentos CGI.
   - Tabela estática de compatibilidade para as 8 placas físicas legadas já instaladas em `app.arestaclimb.com/br_mg_igarape_pedra_grande/...`.
 - **NanoID 14c Universal:** Identificadores estáveis Base62 de 14 caracteres (`[0-9a-zA-Z]`), imunes a colisões e conflitos de merge.
 - **Localização em Cascata (`LocalizadorDestinoUid`):** Mapeia o NanoID 14c instantaneamente para o nó correto (`ViaNode`, `SetorNode`, `GrupoNode`, `PicoNode` ou `MapasCarrosselNode` quando `abrirMapa: true`), consultando o índice em memória, os croquis offline locais (`/downloads`), o cache temporário (`/temp_cache`), as sessões online ativas e o banco SQLite local (`catalogo.db`) com carregamento sob demanda do croqui (aplicando curto-circuito imediato sem segunda requisição ou reconsulta quando `syncIndex()` resulta em `SyncStatus.offline`). Quando o UID pertence a um croqui ainda não baixado e sem cache local durante operação offline, `localizarComDiagnostico` retorna `itemSemConexao` enriquecido (via `RepositorioCatalogo.obterItemPorUid` ou `indice.binarypb`), permitindo que o `DeepLinkNavigatorService` e o `GlobalSearch` apresentem o bottom sheet `ModalCroquiSemConexao` com botão `"Tentar novamente"`.
@@ -137,10 +138,12 @@ Quando o usuário está na tela de um Setor, o atributo `parent` desse nó é a 
 ### 2. Hierarquia de Herança (Código Orientado a Objetos)
 No código físico em Dart, a classe `SetorNode` **não herda** da classe `PicoNode`. Na verdade, ambas são classes irmãs que herdam do mesmo modelo base abstrato: `PicoContextNode`.
 
-```text
-       PicoContextNode (Molde Abstrato)
-        /          |          \
-PicoNode       SetorNode       ViaNode
+```mermaid
+flowchart TD
+    Base["PicoContextNode (Molde Abstrato)"]
+    Base --> Pico["PicoNode"]
+    Base --> Setor["SetorNode"]
+    Base --> Via["ViaNode"]
 ```
 
 O `PicoContextNode` não representa uma tela do app; ele é apenas um molde que obriga as classes filhas a carregarem sempre o ID do contexto atual: o `cragId`. Os nós **não armazenam os dados instanciados** (o objeto `Setor` ou `Pico`), apenas seus identificadores em string. Isso garante que a árvore não trave a memória retendo versões velhas e dessincronizadas de informações caso o usuário edite o croqui ativamente. O `PageListenableBuilder` cuida de traduzir o identificador salvo no nó (como `setorNome`) para a versão em memória correta no instante do frame visual.

@@ -64,7 +64,8 @@ class RotaDeepLink {
 
 /// Analisador e normalizador de URLs de Deep Links e QR Codes para o Aresta Climb.
 ///
-/// Suporta o protocolo compacto `https://aresta.cc` ($\le 35$ caracteres para QR Code Version 3-H)
+/// Suporta o protocolo compacto `https://aresta.cc` ($\le 35$ caracteres para QR Code Version 3-H),
+/// as URLs canônicas da vitrine pública `https://arestaclimb.com/croquis/<uid>[/<slug>]`
 /// e o mapeamento estático das 8 placas físicas legadas em `app.arestaclimb.com`.
 class DeepLinkRouteParser {
   // coverage:ignore-start
@@ -74,14 +75,24 @@ class DeepLinkRouteParser {
   /// Domínio oficial encurtador e canônico para QR Codes físicos e compartilhamentos.
   static const String dominioCanonico = 'aresta.cc';
 
+  /// Domínio institucional e da vitrine pública de croquis (`/croquis/<uid>/<slug>`).
+  static const String dominioVitrine = 'arestaclimb.com';
+
   /// Domínio legado mantido para as 8 placas físicas de Igarapé.
   static const String dominioLegado = 'app.arestaclimb.com';
+
+  /// Domínios da vitrine pública onde apenas rotas sob `/croquis/<uid>` constituem deep links.
+  static const Set<String> dominiosVitrine = {
+    dominioVitrine,
+    'www.arestaclimb.com',
+  };
 
   /// Domínios válidos reconhecidos para deep links.
   static const Set<String> dominiosValidos = {
     dominioCanonico,
     'www.aresta.cc',
     dominioLegado,
+    ...dominiosVitrine,
   };
 
   /// Domínio oficial mantido para retrocompatibilidade de referência pública.
@@ -134,6 +145,31 @@ class DeepLinkRouteParser {
     }
 
     final parametros = Map<String, String>.from(uri.queryParameters);
+
+    // Rotas canônicas da vitrine pública: /croquis/<uid> ou /croquis/<uid>/<slug>
+    if (dominiosVitrine.contains(host)) {
+      if ((segments.length == 2 || segments.length == 3) &&
+          segments[0].toLowerCase() == 'croquis' &&
+          validarUid(segments[1])) {
+        final valorMapa = parametros['mapa']?.toLowerCase();
+        final abrirMapa = valorMapa == '1' || valorMapa == 'true';
+        final utmSource = parametros['utm_source']?.toLowerCase();
+        final utmMedium = parametros['utm_medium']?.toLowerCase();
+        String? origemLink;
+        if (utmSource == 'compartilhamento') {
+          origemLink = 'compartilhamento';
+        } else if (utmSource == 'placa_rocha' || utmMedium == 'qrcode') {
+          origemLink = 'qrcode';
+        }
+        return RotaDeepLink(
+          uid: segments[1],
+          abrirMapa: abrirMapa,
+          origemLink: origemLink,
+          parametros: parametros,
+        );
+      }
+      return null;
+    }
 
     // Caso 1: /<uid> direto (sem prefixo de fonte e sem modo mapa)
     if (segments.length == 1 && validarUid(segments.first)) {

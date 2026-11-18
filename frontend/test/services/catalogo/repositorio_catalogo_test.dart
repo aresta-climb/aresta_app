@@ -81,6 +81,9 @@ void main() {
                 nome: 'Pedra Grande de Igarapé',
                 cidade: 'Igarapé',
                 estado: 'MG',
+                latitudeE7: -200512345,
+                longitudeE7: -443212345,
+                urlGoogleMaps: 'https://maps.app.goo.gl/pedragrande',
               ),
               CatalogoCroqui(
                 croquiUid: 'croqui_uid_2',
@@ -138,7 +141,16 @@ void main() {
         final croquis = await repositorio.listarCroquis();
         expect(croquis.length, equals(2));
         expect(croquis.first.nome, equals('Morro da Urca'));
+        expect(croquis.first.latitudeE7, isNull);
+        expect(croquis.first.longitudeE7, isNull);
+        expect(croquis.first.urlGoogleMaps, isNull);
         expect(croquis.last.nome, equals('Pedra Grande de Igarapé'));
+        expect(croquis.last.latitudeE7, equals(-200512345));
+        expect(croquis.last.longitudeE7, equals(-443212345));
+        expect(
+          croquis.last.urlGoogleMaps,
+          equals('https://maps.app.goo.gl/pedragrande'),
+        );
 
         // Verifica resolução de id_slug tanto por croqui_uid quanto por uid de entidade
         expect(
@@ -486,6 +498,9 @@ void main() {
             await dbInspecao.rawQuery('PRAGMA table_info(catalogo_croquis)');
         final nomesColunas = colunas.map((c) => c['name'] as String?).toSet();
         expect(nomesColunas.contains('atualizado_em'), isFalse);
+        expect(nomesColunas.contains('latitude_e7'), isTrue);
+        expect(nomesColunas.contains('longitude_e7'), isTrue);
+        expect(nomesColunas.contains('url_google_maps'), isTrue);
         await dbInspecao.close();
       },
     );
