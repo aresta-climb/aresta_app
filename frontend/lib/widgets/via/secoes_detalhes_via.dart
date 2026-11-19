@@ -783,6 +783,90 @@ class SecaoEnfiadasVia extends StatelessWidget {
   }
 }
 
+/// Lista de cartões clicáveis para vídeos e postagens curadas de beta (`escalada.betas` e `urlVideoBeta`).
+class SecaoBetasMidiaVia extends StatelessWidget {
+  /// Mídias disponíveis para a escalada.
+  final List<ItemMidiaBetaVia> midias;
+
+  /// Callback acionado ao tocar em um vídeo ou post de beta.
+  final ValueChanged<String> aoAbrirMidia;
+
+  /// Cria uma instância de [SecaoBetasMidiaVia].
+  const SecaoBetasMidiaVia({
+    super.key,
+    required this.midias,
+    required this.aoAbrirMidia,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (midias.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _TituloSecaoVia(titulo: 'Vídeos & Betas'),
+          const SizedBox(height: 10),
+          ...midias.map((item) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => aoAbrirMidia(item.url),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cores.caveShadow,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cores.graniteEdge),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: cores.rustIron,
+                        size: 26,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.titulo,
+                              style: TextStyle(
+                                color: cores.chalkWhite,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.origemRotulo,
+                              style: TextStyle(
+                                color: cores.ashGrey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.open_in_new_rounded, size: 18, color: cores.ashGrey),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
 
 class _TituloSecaoVia extends StatelessWidget {
   final String titulo;
