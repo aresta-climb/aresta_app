@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import '../aresta_api/proto/generated/croqui.pbenum.dart';
+import '../data/modelos/interacao_via.dart';
 import 'formatador_escalada.dart';
 
 /// Escada ordenada de graus inteiros brasileiros de vias (excluindo `INDEFINIDO`, `PROJETO` e graus com `_BARRA_`).
@@ -97,3 +98,115 @@ int _limitarIndice(int indice, int tamanho) {
   return indice;
 }
 
+/// Formata o rótulo legível de um [codigo] Protobuf de grau (`'6ºsup'`, `'7b'`, `'v5'`),
+/// retornando `null` quando indefinido ou `PROJETO`.
+String? formatarGrauPorCodigo(int? codigo, {required bool ehBoulder}) {
+  if (codigo == null) return null;
+  if (ehBoulder) {
+    final enumBoulder = GrauBoulder_GrauBoulder.valueOf(codigo);
+    if (enumBoulder == null ||
+        enumBoulder == GrauBoulder_GrauBoulder.INDEFINIDO ||
+        enumBoulder == GrauBoulder_GrauBoulder.PROJETO) {
+      return null;
+    }
+    return formatarTextoGrau(enumBoulder.name);
+  }
+
+  final enumVia = GrauVia_GrauVia.valueOf(codigo);
+  if (enumVia == null ||
+      enumVia == GrauVia_GrauVia.INDEFINIDO ||
+      enumVia == GrauVia_GrauVia.PROJETO) {
+    return null;
+  }
+  return formatarTextoGrau(enumVia.name);
+}
+
+/// Constrói o rótulo compacto exibido nos botões de avaliação de grau (`-2` a `+2`).
+String rotuloOpcaoDeltaGrau(
+  int delta, {
+  int? codigoOficial,
+  required bool ehBoulder,
+}) {
+  final codigoAlvo = deslocarCodigoGrau(
+    codigoOficial,
+    delta,
+    ehBoulder: ehBoulder,
+  );
+  final textoGrau = formatarGrauPorCodigo(codigoAlvo, ehBoulder: ehBoulder);
+
+  if (delta == 0) {
+    return textoGrau != null ? 'Justo ($textoGrau)' : 'Grau Justo (0)';
+  }
+  final prefixo = delta > 0 ? '+$delta' : '$delta';
+  return textoGrau != null ? '$prefixo ($textoGrau)' : prefixo;
+}
+
+/// Consolida uma coleção de votos (`deltaGrau` e/ou `grauSugerido`) em [ConsensoGrauVia].
+ConsensoGrauVia consolidarConsensoDeVotos({
+  required List<({int? deltaGrau, int? grauSugerido})> votos,
+  int? codigoGrauOficial,
+  required bool ehBoulder,
+}) {
+  if (votos.isEmpty) {
+    return const ConsensoGrauVia.vazio();
+  }
+
+  final contagemDeltas = <int, int>{};
+  final contagemCodigos = <int, int>{};
+
+  for (final v in votos) {
+    if (v.deltaGrau != null) {
+      contagemDeltas[v.deltaGrau!] = (contagemDeltas[v.deltaGrau!] ?? 0) + 1;
+    }
+    final codEfetivo =
+        v.grauSugerido ??
+        (v.deltaGrau != null
+            ? deslocarCodigoGrau(
+                codigoGrauOficial,
+                v.deltaGrau!,
+                ehBoulder: ehBoulder,
+              )
+            : null);
+    if (codEfetivo != null) {
+      contagemCodigos[codEfetivo] = (contagemCodigos[codEfetivo] ?? 0) + 1;
+    }
+  }
+
+  String? grauConsensoTexto;
+  if (codigoGrauOficial != null && contagemDeltas.isNotEmpty) {
+    var deltaModa = 0;
+    var maiorFreq = -1;
+    for (final entrada in contagemDeltas.entries) {
+      if (entrada.value > maiorFreq) {
+        maiorFreq = entrada.value;
+        deltaModa = entrada.key;
+      }
+    }
+    final codigoModa = deslocarCodigoGrau(
+      codigoGrauOficial,
+      deltaModa,
+      ehBoulder: ehBoulder,
+    );
+    grauConsensoTexto = formatarGrauPorCodigo(codigoModa, ehBoulder: ehBoulder);
+  } else if (contagemCodigos.isNotEmpty) {
+    var codigoModa = contagemCodigos.keys.first;
+    var maiorFreq = -1;
+    for (final entrada in contagemCodigos.entries) {
+      if (entrada.value > maiorFreq) {
+        maiorFreq = entrada.value;
+        codigoModa = entrada.key;
+      }
+    }
+    grauConsensoTexto = formatarGrauPorCodigo(codigoModa, ehBoulder: ehBoulder);
+  }
+
+  if (grauConsensoTexto == null) {
+    return const ConsensoGrauVia.vazio();
+  }
+
+  return ConsensoGrauVia(
+    grauSugerido: grauConsensoTexto,
+    totalVotos: votos.length,
+    distribuicaoDeltas: Map.unmodifiable(contagemDeltas),
+  );
+}
