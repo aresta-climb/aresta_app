@@ -423,6 +423,86 @@ class ViaViewModel extends ChangeNotifier {
     return List.unmodifiable(itens);
   }
 
+  /// Seções textuais e de equipamento recomendadas para a escalada.
+  List<SecaoTextoVia> get secoesTexto {
+    final secoes = <SecaoTextoVia>[];
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        _adicionarTexto(secoes, 'Descrição', escalada.viaEsportiva.descricao, true);
+      case Escalada_Tipo.viaMovel:
+        _adicionarTexto(secoes, 'Descrição', escalada.viaMovel.descricao, true);
+        _adicionarTexto(
+          secoes,
+          'Peças Móveis',
+          escalada.viaMovel.protecoesMoveis,
+          false,
+        );
+      case Escalada_Tipo.boulder:
+        _adicionarTexto(secoes, 'Descrição', escalada.boulder.descricao, true);
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        _adicionarTexto(
+          secoes,
+          'Descrição',
+          escalada.viaMultiplasEnfiadas.descricao,
+          true,
+        );
+        _adicionarTexto(
+          secoes,
+          'Rack & Equipamento',
+          escalada.viaMultiplasEnfiadas.equipamentoRecomendado,
+          false,
+        );
+      case Escalada_Tipo.highline:
+        _adicionarTexto(
+          secoes,
+          'Descrição do Acesso',
+          escalada.highline.descricaoAcesso,
+          true,
+        );
+        _adicionarTexto(
+          secoes,
+          'Descrição da Ancoragem',
+          escalada.highline.descricaoAncoragem,
+          true,
+        );
+        _adicionarTexto(secoes, 'Descrição', escalada.highline.descricao, true);
+      case Escalada_Tipo.notSet:
+        break;
+    }
+    return List.unmodifiable(secoes);
+  }
+
+  /// Lista estruturada das enfiadas em vias de múltiplas enfiadas.
+  List<ResumoEnfiadaVia> get enfiadas {
+    if (escalada.whichTipo() != Escalada_Tipo.viaMultiplasEnfiadas) {
+      return const [];
+    }
+    final brutas = escalada.viaMultiplasEnfiadas.enfiadas;
+    final resultado = <ResumoEnfiadaVia>[];
+    for (var i = 0; i < brutas.length; i++) {
+      final enf = brutas[i];
+      final numero = i + 1;
+      final nome = obterNomeEscalada(enf, padrao: '').trim();
+      final titulo = nome.isNotEmpty ? 'Enfiada $numero • $nome' : 'Enfiada $numero';
+      final grau = obterTextoGrauEscalada(enf);
+      resultado.add(
+        ResumoEnfiadaVia(
+          numero: numero,
+          titulo: titulo,
+          grau: grau.isNotEmpty ? grau : null,
+          extensao: _extrairExtensaoEnfiada(enf),
+          protecoes: _extrairProtecoesEnfiada(enf),
+          equipamentoMovel: enf.whichTipo() == Escalada_Tipo.viaMovel &&
+                  enf.viaMovel.protecoesMoveis.trim().isNotEmpty
+              ? enf.viaMovel.protecoesMoveis.trim()
+              : null,
+          descricao: _extrairDescricaoSimples(enf),
+        ),
+      );
+    }
+    return List.unmodifiable(resultado);
+  }
+
 
   String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
     return switch (alvo.whichTipo()) {
@@ -501,6 +581,24 @@ class ViaViewModel extends ChangeNotifier {
     }
   }
 
+  static void _adicionarTexto(
+    List<SecaoTextoVia> secoes,
+    String titulo,
+    String conteudo,
+    bool ehMarkdown,
+  ) {
+    final limpo = conteudo.trim();
+    if (limpo.isNotEmpty) {
+      secoes.add(
+        SecaoTextoVia(
+          titulo: titulo,
+          conteudo: limpo,
+          ehMarkdown: ehMarkdown,
+        ),
+      );
+    }
+  }
+
   static String _formatarEnumSimples(String nome) {
     if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
     final minusculo = nome.replaceAll('_', ' ').toLowerCase();
@@ -510,5 +608,38 @@ class ViaViewModel extends ChangeNotifier {
   static String _formatarEnumCodigo(String nome) {
     if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
     return nome;
+  }
+
+  static String? _extrairExtensaoEnfiada(Escalada enf) {
+    final metros = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.extensao,
+      Escalada_Tipo.viaMovel => enf.viaMovel.extensao,
+      _ => 0,
+    };
+    return metros > 0 ? '${metros}m' : null;
+  }
+
+  static String? _extrairProtecoesEnfiada(Escalada enf) {
+    final (inter, par) = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => (
+        enf.viaEsportiva.quantidadeProtecoesIntermediarias,
+        enf.viaEsportiva.quantidadeProtecoesParada,
+      ),
+      Escalada_Tipo.viaMovel => (
+        enf.viaMovel.quantidadeProtecoesIntermediarias,
+        enf.viaMovel.quantidadeProtecoesParada,
+      ),
+      _ => (0, 0),
+    };
+    return (inter > 0 || par > 0) ? '$inter+$par' : null;
+  }
+
+  static String? _extrairDescricaoSimples(Escalada enf) {
+    final texto = switch (enf.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => enf.viaEsportiva.descricao.trim(),
+      Escalada_Tipo.viaMovel => enf.viaMovel.descricao.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
   }
 }
