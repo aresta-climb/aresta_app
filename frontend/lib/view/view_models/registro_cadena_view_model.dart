@@ -268,6 +268,22 @@ class RegistroCadenaViewModel extends ChangeNotifier {
           );
 
     await repositorio.salvarCadena(cadena);
+
+    if (!editando &&
+        exibirContribuicaoPublica &&
+        estaAutenticadoParaComunidade &&
+        escaladaUid.trim().isNotEmpty) {
+      await repositorioInteracoes.registrarAvaliacaoAscensao(
+        escaladaUid: escaladaUid,
+        deltaGrau: _deltaGrau,
+        codigoGrauOficial: codigoGrauOficial,
+        grauSugerido: _grauSugerido,
+        ehBoulder: ehBoulder,
+        estiloAscensao: _tipoAscensao,
+        comentarioPublico: _comentarioPublico,
+      );
+    }
+
     return cadena;
   }
 }

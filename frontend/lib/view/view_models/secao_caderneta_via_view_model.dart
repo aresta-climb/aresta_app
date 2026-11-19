@@ -6,6 +6,7 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/cadena.dart';
 import '../../data/modelos/tipo_escalada.dart';
 import '../../services/caderneta/repositorio_caderneta.dart';
+import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../services/controlador_interacoes_usuario.dart';
 import '../../utils/formatador_escalada.dart';
 import 'registro_cadena_view_model.dart';
@@ -22,6 +23,9 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
   /// Repositório local-first da caderneta esportiva.
   final RepositorioCaderneta repositorio;
 
+  /// Repositório comunitário encaminhado ao modal de registro de ascensão.
+  final RepositorioInteracoesVia repositorioInteracoes;
+
   /// Controlador reativo de visibilidade das interações de perfil e caderneta.
   final ControladorInteracoesUsuario controladorInteracoes;
 
@@ -29,8 +33,11 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
   SecaoCadernetaViaViewModel({
     required this.escalada,
     RepositorioCaderneta? repositorio,
+    RepositorioInteracoesVia? repositorioInteracoes,
     ControladorInteracoesUsuario? controladorInteracoes,
   }) : repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
+       repositorioInteracoes =
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
        controladorInteracoes =
            controladorInteracoes ?? ControladorInteracoesUsuario.instancia {
     this.repositorio.cadenasNotifier.addListener(_aoAtualizar);
@@ -90,16 +97,22 @@ class SecaoCadernetaViaViewModel extends ChangeNotifier {
 
   /// Constrói um [RegistroCadenaViewModel] pré-configurado com os metadados da [escalada].
   RegistroCadenaViewModel criarViewModelRegistro() {
-    final tipoEscalada = escalada.whichTipo() == Escalada_Tipo.boulder
-        ? TipoEscalada.boulder
-        : TipoEscalada.guiado;
+    final ehBoulder = escalada.whichTipo() == Escalada_Tipo.boulder;
+    final ehHighline = escalada.whichTipo() == Escalada_Tipo.highline;
+    final tipoEscalada = ehBoulder ? TipoEscalada.boulder : TipoEscalada.guiado;
+    final codigoOficial = obterCodigoGrauOficial(escalada);
 
     return RegistroCadenaViewModel(
       escaladaUid: escalada.uid,
       nomeEscalada: obterNomeEscalada(escalada),
       tipoEscaladaPadrao: tipoEscalada,
-      grauSugerido: obterCodigoGrauOficial(escalada),
+      grauSugerido: codigoOficial,
+      codigoGrauOficial: codigoOficial,
+      ehBoulder: ehBoulder,
+      exibirContribuicaoPublica:
+          !ehHighline && escalada.hasUid() && escalada.uid.trim().isNotEmpty,
       repositorio: repositorio,
+      repositorioInteracoes: repositorioInteracoes,
     );
   }
 }
