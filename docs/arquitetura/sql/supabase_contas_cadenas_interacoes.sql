@@ -245,13 +245,29 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
     grau_sugerido SMALLINT,
     delta_grau SMALLINT
         CONSTRAINT chk_fila_delta_grau CHECK (delta_grau IS NULL OR delta_grau BETWEEN -2 AND 2),
+    -- 1: À Vista, 2: Flash, 3: Trabalhado, 4: Tentativa (estilo associado ao voto/comentário)
+    tipo_ascensao SMALLINT
+        CONSTRAINT chk_fila_tipo_ascensao CHECK (tipo_ascensao IS NULL OR tipo_ascensao BETWEEN 1 AND 4),
     texto_comentario VARCHAR(280),
     status TEXT NOT NULL DEFAULT 'PENDENTE'
         CONSTRAINT chk_fila_status CHECK (status IN ('PENDENTE', 'PROCESSADO')),
-    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-    -- Validação estrutural dos campos obrigatórios por tipo de interação
-    CONSTRAINT chk_fila_interacoes_payload_por_tipo CHECK (
+ALTER TABLE public.fila_interacoes
+    ADD COLUMN IF NOT EXISTS tipo_ascensao SMALLINT;
+
+ALTER TABLE public.fila_interacoes
+    DROP CONSTRAINT IF EXISTS chk_fila_tipo_ascensao;
+ALTER TABLE public.fila_interacoes
+    ADD CONSTRAINT chk_fila_tipo_ascensao
+    CHECK (tipo_ascensao IS NULL OR tipo_ascensao BETWEEN 1 AND 4);
+
+-- Validação estrutural dos campos obrigatórios por tipo de interação
+ALTER TABLE public.fila_interacoes
+    DROP CONSTRAINT IF EXISTS chk_fila_interacoes_payload_por_tipo;
+ALTER TABLE public.fila_interacoes
+    ADD CONSTRAINT chk_fila_interacoes_payload_por_tipo CHECK (
         (
             tipo = 'VOTO_GRAU'
             AND (grau_sugerido IS NOT NULL OR delta_grau IS NOT NULL)
@@ -264,6 +280,7 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
         OR (
             tipo = 'ALERTA_SEGURANCA'
             AND categoria_alerta IS NOT NULL
+            AND alerta_alvo_uid IS NOT NULL
             AND (texto_comentario IS NULL OR char_length(texto_comentario) <= 100)
         )
         OR (
@@ -271,8 +288,7 @@ CREATE TABLE IF NOT EXISTS public.fila_interacoes (
             AND alerta_alvo_uid IS NOT NULL
             AND alerta_ativo IS NOT NULL
         )
-    )
-);
+    );
 
 COMMENT ON TABLE public.fila_interacoes IS
     'Buffer transitório de votos de grau, comentários e alertas de segurança estilo Waze.';
