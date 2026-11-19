@@ -81,7 +81,10 @@ int? obterCodigoGrauOficial(Escalada escalada) {
       return grau.value >= 2 ? grau.value : null;
     case Escalada_Tipo.boulder:
       final grau = escalada.boulder.dificuldade;
-      return grau.value >= 1 ? grau.value : null;
+      return (grau != GrauBoulder_GrauBoulder.INDEFINIDO &&
+              grau != GrauBoulder_GrauBoulder.PROJETO)
+          ? grau.value
+          : null;
     case Escalada_Tipo.highline:
     case Escalada_Tipo.notSet:
       return null;
