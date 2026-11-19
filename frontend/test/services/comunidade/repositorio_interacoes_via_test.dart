@@ -59,4 +59,72 @@ void main() {
     expect(dados.alertasAtivos.first.uid, alerta.uid);
   });
 
+  test('reportarAlerta na mesma categoria incrementa confirmações sem duplicar bolha', () async {
+    final repo = RepositorioInteracoesViaMemoria();
+    await repo.reportarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      categoria: CategoriaAlertaSeguranca.viaMolhada,
+    );
+    final atualizado = await repo.reportarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      categoria: CategoriaAlertaSeguranca.viaMolhada,
+      detalhe: 'Ainda escorrendo água',
+    );
+
+    final alertas = repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos;
+    expect(alertas, hasLength(1));
+    expect(atualizado.confirmacoesAtivas, 2);
+    expect(atualizado.detalhe, 'Ainda escorrendo água');
+
+    final semNovoDetalhe = await repo.reportarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      categoria: CategoriaAlertaSeguranca.viaMolhada,
+    );
+    expect(semNovoDetalhe.confirmacoesAtivas, 3);
+    expect(semNovoDetalhe.detalhe, 'Ainda escorrendo água');
+  });
+
+  test('confirmarAlerta incrementa contagem quando ativo e remove alerta quando resolvido', () async {
+    final repo = RepositorioInteracoesViaMemoria();
+    final alerta = await repo.reportarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      categoria: CategoriaAlertaSeguranca.protecaoPrecaria,
+    );
+
+    await repo.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: alerta.uid,
+      aindaEstaLa: true,
+    );
+    expect(
+      repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos.single.confirmacoesAtivas,
+      2,
+    );
+
+    // Confirmar alerta inexistente não corrompe estado
+    await repo.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: 'inexistente0001',
+      aindaEstaLa: true,
+    );
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos, hasLength(1));
+
+    await repo.confirmarAlerta(
+      escaladaUid: 'x8siJek3FiG3aB',
+      alertaUid: alerta.uid,
+      aindaEstaLa: false,
+    );
+    expect(repo.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos, isEmpty);
+  });
+
+  test('rejeita escaladaUid vazio sob filosofia Fail-Fast', () async {
+    final repo = RepositorioInteracoesViaMemoria();
+    await expectLater(
+      () => repo.reportarAlerta(
+        escaladaUid: '  ',
+        categoria: CategoriaAlertaSeguranca.riscoExposicao,
+      ),
+      throwsArgumentError,
+    );
+  });
 }
