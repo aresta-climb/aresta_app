@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
+import 'package:frontend/data/modelos/tipo_ascensao.dart';
 
 void main() {
   group('CategoriaAlertaSeguranca', () {
@@ -126,6 +127,62 @@ void main() {
       const semVotos = ConsensoGrauVia.vazio();
       expect(semVotos.possuiVotos, isFalse);
       expect(semVotos.resumoTendencia, isNull);
+    });
+  });
+
+  group('ComentarioComunidadeVia e DadosComunidadeVia', () {
+    test('armazena metadados públicos imutáveis e agrega estado comunitário da via', () {
+      final data = DateTime.utc(2026, 11, 18, 9, 30);
+      final comentario = ComentarioComunidadeVia(
+        uid: 'm8Kq2L1x9Y7zWq',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Carlos Lagartixa',
+        criadoEm: data,
+        estiloAscensao: TipoAscensao.flash,
+        texto: 'Costura 4 fica tranquila se clipar da orelha à esquerda.',
+      );
+
+      expect(comentario.rotuloEstilo, 'FLASH ★');
+
+      final comentarioTrabalhado = ComentarioComunidadeVia(
+        uid: 'n9Lr3M2y8Z6xVp',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Ana',
+        criadoEm: data,
+        estiloAscensao: TipoAscensao.trabalhado,
+        texto: 'Crux técnico de pé.',
+      );
+      expect(comentarioTrabalhado.rotuloEstilo, 'TRABALHADO');
+
+      final comentarioSemEstilo = ComentarioComunidadeVia(
+        uid: 'p1Ms4N3z7A5wUo',
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Pedro',
+        criadoEm: data,
+        texto: ' Boa sombra à tarde. ',
+      );
+      expect(comentarioSemEstilo.rotuloEstilo, isNull);
+      expect(comentarioSemEstilo.texto, 'Boa sombra à tarde.');
+
+      expect(
+        () => ComentarioComunidadeVia(
+          uid: 'p1Ms4N3z7A5wUo',
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Pedro',
+          criadoEm: data,
+          texto: '   ',
+        ),
+        throwsArgumentError,
+      );
+
+      const vazio = DadosComunidadeVia.vazio();
+      expect(vazio.alertasAtivos, isEmpty);
+      expect(vazio.comentarios, isEmpty);
+      expect(vazio.consensoGrau.possuiVotos, isFalse);
+
+      final preenchido = vazio.copyWith(comentarios: [comentario]);
+      expect(preenchido.comentarios, hasLength(1));
+      expect(preenchido.consensoGrau.possuiVotos, isFalse);
     });
   });
 }
