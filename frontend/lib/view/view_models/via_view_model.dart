@@ -226,4 +226,112 @@ class ViaViewModel extends ChangeNotifier {
     }
   }
 
+  /// Rótulo do bloco de grau oficial do conquistador.
+  String get rotuloGrauOficial =>
+      escalada.whichTipo() == Escalada_Tipo.viaMultiplasEnfiadas
+      ? 'GRAU MÁXIMO'
+      : 'GRAU OFICIAL';
+
+  /// Grau oficial formatado (ou `'Projeto'`), retornando `null` quando indefinido ou em highline.
+  String? get grauOficialExibicao {
+    final bruto = _extrairNomeEnumGrauPrincipal(escalada);
+    if (bruto == null || bruto.isEmpty || bruto.contains('INDEFINIDO')) {
+      return null;
+    }
+    if (bruto == 'PROJETO') {
+      return 'Projeto';
+    }
+    final formatado = formatarTextoGrau(bruto);
+    return formatado.isNotEmpty ? formatado : null;
+  }
+
+  /// Linha complementar abaixo do grau oficial (grau médio em multienfiadas e artificial).
+  String get complementoGrauOficial {
+    final partes = <String>[];
+    if (escalada.whichTipo() == Escalada_Tipo.viaMultiplasEnfiadas) {
+      final media = formatarTextoGrau(
+        escalada.viaMultiplasEnfiadas.dificuldadeMedia.name,
+      );
+      if (media.isNotEmpty && media != 'projeto') {
+        partes.add('Média $media');
+      }
+    }
+    final artificial = _extrairArtificialFormatado();
+    if (artificial != null) {
+      final livre = _extrairArtificialEmLivreFormatado();
+      partes.add(
+        livre != null
+            ? 'Artificial $artificial ($livre em livre)'
+            : 'Artificial $artificial',
+      );
+    }
+    return partes.isEmpty ? 'Guia Oficial / Conquistador' : partes.join(' • ');
+  }
+
+  /// Indica se o cartão comparativo de grau deve ser exibido na tela.
+  bool get exibirCartaoGrau =>
+      !ehHighline &&
+      (grauOficialExibicao != null || (exibirRecursosComunidade && possuiUid));
+
+  /// Consenso democrático de grau da comunidade (exposto apenas quando [exibirRecursosComunidade] está ativo).
+  ConsensoGrauVia? get consensoGrau {
+    if (!exibirRecursosComunidade || ehHighline || !possuiUid) {
+      return null;
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).consensoGrau;
+  }
+
+  /// Lista de alertas de segurança estilo Waze ativos para renderização das bolhas vermelhas flutuantes.
+  List<AlertaSegurancaVia> get alertasAtivos {
+    if (!exibirRecursosComunidade || !possuiUid) {
+      return const [];
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).alertasAtivos;
+  }
+
+  /// Lista de comentários e notas de beta públicas da comunidade.
+  List<ComentarioComunidadeVia> get comentariosComunidade {
+    if (!exibirRecursosComunidade || !possuiUid) {
+      return const [];
+    }
+    return repositorioInteracoes.obterDadosEscalada(escalada.uid).comentarios;
+  }
+
+
+  String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
+    return switch (alvo.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => alvo.viaEsportiva.dificuldade.name,
+      Escalada_Tipo.viaMovel => alvo.viaMovel.dificuldade.name,
+      Escalada_Tipo.boulder => alvo.boulder.dificuldade.name,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        alvo.viaMultiplasEnfiadas.dificuldadeMaxima.name,
+      _ => null,
+    };
+  }
+
+  String? _extrairArtificialFormatado() {
+    final nome = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva =>
+        escalada.viaEsportiva.dificuldadeArtificial.name,
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dificuldadeArtificial.name,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dificuldadeArtificial.name,
+      _ => '',
+    };
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return null;
+    return nome.replaceAll('_MAIS', '+');
+  }
+
+  String? _extrairArtificialEmLivreFormatado() {
+    final nome = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaMovel =>
+        escalada.viaMovel.dificuldadeArtificialEmLivre.name,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dificuldadeArtificialEmLivre.name,
+      _ => '',
+    };
+    final formatado = formatarTextoGrau(nome);
+    return formatado.isNotEmpty ? formatado : null;
+  }
+
 }
