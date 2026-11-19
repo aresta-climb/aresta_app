@@ -218,5 +218,132 @@ void main() {
     );
     addTearDown(movelPura.dispose);
     expect(movelPura.modalidade, 'Móvel');
+
+    // 2. Boulder
+    final boulder = ViaViewModel(
+      escalada: Escalada(
+        boulder: Boulder(
+          nome: 'Ovo da Serpente',
+          destaque: true,
+          dificuldade: GrauBoulder_GrauBoulder.V8,
+          tipoParede: TipoParede_TipoParede.POSITIVO,
+          conquistadores: ['Pedro'],
+          dataAbertura: '2019',
+          descricao: 'Saída sentada em reglete.',
+          chavePixManutencao: 'pix-boulder',
+          urlVideoBeta: 'https://youtu.be/boulder',
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(boulder.dispose);
+    expect(boulder.modalidade, 'Boulder');
+    expect(boulder.ehDestaque, isTrue);
+    expect(boulder.grauOficialExibicao, 'v8');
+    expect(boulder.complementoGrauOficial, 'Guia Oficial / Conquistador');
+    expect(boulder.atributosTecnicos.single.rotulo, 'PAREDE');
+
+    // 3. Via Múltiplas Enfiadas com enfiadas filhas
+    final multi = ViaViewModel(
+      escalada: Escalada(
+        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(
+          nome: 'Parede Sul',
+          dificuldadeMaxima: GrauVia_GrauVia.BR_7B,
+          dificuldadeMedia: GrauVia_GrauVia.BR_6,
+          dificuldadeArtificial: GrauArtificial_GrauArtificial.A1,
+          dificuldadeArtificialEmLivre: GrauVia_GrauVia.BR_7C,
+          exposicao: GrauExposicao_GrauExposicao.E3,
+          duracao: GrauDuracao_GrauDuracao.D3,
+          numeroEnfiadas: 4,
+          comprimentoTotal: 140,
+          comprimentoMaiorEnfiada: 45,
+          quantidadeCosturasIntermediarias: 12,
+          quantidadeEquipamentosParada: 2,
+          tipoViaMultiplasEnfiadas:
+              ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA,
+          equipamentoRecomendado: '1 jogo de friends',
+          descricao: 'Via alpina clássica.',
+          conquistadores: ['Equipe Sul'],
+          dataAbertura: '1988',
+          dataManutencao: '2020',
+          chavePixManutencao: 'pix-multi',
+          urlVideoBeta: 'https://youtu.be/multi',
+          enfiadas: [
+            Escalada(
+              viaEsportiva: ViaEsportiva(
+                nome: 'Diedro Inicial',
+                dificuldade: GrauVia_GrauVia.BR_6,
+                extensao: 35,
+                quantidadeProtecoesIntermediarias: 8,
+                quantidadeProtecoesParada: 2,
+                descricao: 'Subir pelo diedro evidente.',
+              ),
+            ),
+            Escalada(
+              viaMovel: ViaMovel(
+                nome: '',
+                extensao: 45,
+                protecoesMoveis: 'Friends médios',
+              ),
+            ),
+            Escalada(
+              boulder: Boulder(
+                nome: 'Saída de Bloco',
+                dificuldade: GrauBoulder_GrauBoulder.V2,
+              ),
+            ),
+          ],
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(multi.dispose);
+    expect(multi.modalidade, 'Mista');
+    expect(multi.ehDestaque, isFalse);
+    expect(multi.rotuloGrauOficial, 'GRAU MÁXIMO');
+    expect(multi.grauOficialExibicao, '7b');
+    expect(multi.complementoGrauOficial, contains('Média 6º'));
+    expect(multi.enfiadas, hasLength(3));
+    expect(multi.enfiadas[0].titulo, 'Enfiada 1 • Diedro Inicial');
+    expect(multi.enfiadas[0].grau, '6º');
+    expect(multi.enfiadas[0].extensao, '35m');
+    expect(multi.enfiadas[0].protecoes, '8+2');
+    expect(multi.enfiadas[1].titulo, 'Enfiada 2');
+    expect(multi.enfiadas[1].equipamentoMovel, 'Friends médios');
+    expect(multi.enfiadas[2].grau, 'v2');
+    expect(multi.enfiadas[2].extensao, isNull);
+    expect(multi.enfiadas[2].protecoes, isNull);
+    expect(multi.enfiadas[2].descricao, isNull);
+    expect(
+      multi.atributosTecnicos.map((a) => a.rotulo),
+      containsAll([
+        'ENFIADAS',
+        'COMPRIMENTO',
+        'MAIOR ENFIADA',
+        'PROTEÇÕES',
+        'DURAÇÃO',
+        'EXPOSIÇÃO',
+        'TIPO',
+      ]),
+    );
+    expect(multi.secoesTexto.map((s) => s.titulo), equals(['Descrição', 'Rack & Equipamento']));
+    expect(multi.conquistadoresTexto, 'Equipe Sul');
+    expect(multi.dataAbertura, '1988');
+    expect(multi.dataManutencao, '2020');
+    expect(multi.chavePixManutencao, 'pix-multi');
+    expect(multi.midiasBeta.single.url, 'https://youtu.be/multi');
+
+    final multiFixa = ViaViewModel(
+      escalada: Escalada(
+        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(
+          nome: 'Parede Norte Fixa',
+          tipoViaMultiplasEnfiadas:
+              ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.TODA_FIXA,
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(multiFixa.dispose);
+    expect(multiFixa.modalidade, 'Multienfiada');
   });
 }
