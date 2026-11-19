@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../aresta_api/proto/generated/beta.pb.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
@@ -503,6 +504,101 @@ class ViaViewModel extends ChangeNotifier {
     return List.unmodifiable(resultado);
   }
 
+  /// Vídeos e postagens curadas de beta (`escalada.betas` + `urlVideoBeta`).
+  List<ItemMidiaBetaVia> get midiasBeta {
+    final itens = <ItemMidiaBetaVia>[];
+    final urlsVistas = <String>{};
+
+    for (final beta in escalada.betas) {
+      final url = beta.url.trim();
+      if (url.isEmpty || !urlsVistas.add(url)) continue;
+      final origem = _rotuloFonteMidia(beta.fonte);
+      final tituloLimpo = beta.titulo.trim();
+      itens.add(
+        ItemMidiaBetaVia(
+          titulo: tituloLimpo.isNotEmpty ? tituloLimpo : 'Beta em $origem',
+          url: url,
+          origemRotulo: origem,
+        ),
+      );
+    }
+
+    final urlDireta = _extrairUrlVideoBeta();
+    if (urlDireta != null && urlsVistas.add(urlDireta)) {
+      itens.add(
+        ItemMidiaBetaVia(
+          titulo: 'Assistir Vídeo Beta',
+          url: urlDireta,
+          origemRotulo: 'Vídeo',
+        ),
+      );
+    }
+    return List.unmodifiable(itens);
+  }
+
+  /// Nomes dos conquistadores unidos por vírgula, ou `null` quando ausentes.
+  String? get conquistadoresTexto {
+    final lista = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.conquistadores,
+      Escalada_Tipo.viaMovel => escalada.viaMovel.conquistadores,
+      Escalada_Tipo.boulder => escalada.boulder.conquistadores,
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.conquistadores,
+      Escalada_Tipo.highline => escalada.highline.conquistadores,
+      Escalada_Tipo.notSet => const <String>[],
+    };
+    final limpos = lista.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+    return limpos.isEmpty ? null : limpos.join(', ');
+  }
+
+  /// Data de conquista/abertura, quando preenchida.
+  String? get dataAbertura {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.dataAbertura.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dataAbertura.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.dataAbertura.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dataAbertura.trim(),
+      Escalada_Tipo.highline => escalada.highline.dataAbertura.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Data da última manutenção registrada, quando preenchida.
+  String? get dataManutencao {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.dataManutencao.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.dataManutencao.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.dataManutencao.trim(),
+      Escalada_Tipo.highline => escalada.highline.dataManutencao.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Indica se há informações de conquista ou manutenção a exibir.
+  bool get possuiHistorico =>
+      conquistadoresTexto != null ||
+      dataAbertura != null ||
+      dataManutencao != null;
+
+  /// Chave Pix para apoio à manutenção da via, quando cadastrada.
+  String? get chavePixManutencao {
+    final chave = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva =>
+        escalada.viaEsportiva.chavePixManutencao.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.chavePixManutencao.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.chavePixManutencao.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.chavePixManutencao.trim(),
+      Escalada_Tipo.highline => escalada.highline.chavePixManutencao.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return chave.isNotEmpty ? chave : null;
+  }
+
 
   String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
     return switch (alvo.whichTipo()) {
@@ -540,6 +636,18 @@ class ViaViewModel extends ChangeNotifier {
     return formatado.isNotEmpty ? formatado : null;
   }
 
+  String? _extrairUrlVideoBeta() {
+    final url = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.urlVideoBeta.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.urlVideoBeta.trim(),
+      Escalada_Tipo.boulder => escalada.boulder.urlVideoBeta.trim(),
+      Escalada_Tipo.viaMultiplasEnfiadas =>
+        escalada.viaMultiplasEnfiadas.urlVideoBeta.trim(),
+      Escalada_Tipo.highline => escalada.highline.urlVideoBeta.trim(),
+      Escalada_Tipo.notSet => '',
+    };
+    return url.isNotEmpty ? url : null;
+  }
 
   static void _adicionarMetros(
     List<AtributoTecnicoVia> itens,
@@ -641,5 +749,15 @@ class ViaViewModel extends ChangeNotifier {
       _ => '',
     };
     return texto.isNotEmpty ? texto : null;
+  }
+
+  static String _rotuloFonteMidia(FonteMidia_Enum fonte) {
+    return switch (fonte) {
+      FonteMidia_Enum.YOUTUBE => 'YouTube',
+      FonteMidia_Enum.INSTAGRAM => 'Instagram',
+      FonteMidia_Enum.BLOG => 'Blog',
+      FonteMidia_Enum.TIKTOK => 'TikTok',
+      _ => 'Beta',
+    };
   }
 }
