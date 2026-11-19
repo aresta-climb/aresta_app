@@ -288,4 +288,82 @@ void main() {
     expect(textoCompartilhado, contains('https://aresta.cc/s/uidViaCompleta1'));
   });
 
+  testWidgets('ViaPage recria ViewModel interno ao receber nova escalada em didUpdateWidget e renderiza Highline mapeado sem overflow em 320x568 @ 1.5x', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final highline = Escalada(
+      uid: 'uidHighline001',
+      highline: Highline(
+        nome: 'Travessia Aérea do Abismo',
+        distancia: 90,
+        altura: 150,
+      ),
+    );
+    final mapaSetor = Mapa(
+      caminhoImagemMapa: 'mapas/highline.png',
+      larguraMapa: 800,
+      alturaMapa: 600,
+      referencias: [
+        Mapa_Referencia(alvoUid: 'uidHighline001', pontosUids: ['h1']),
+      ],
+    );
+    final setor = Setor(
+      uid: 'set-hl',
+      nome: 'Cânion',
+      escaladas: [highline],
+      mapas: [mapaSetor],
+    );
+    final pico = Pico(
+      nome: 'Pico Alto',
+      setoresOuGrupos: [SetorOuGrupo(setor: ArquivoSetor(conteudo: setor))],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.5),
+          ),
+          child: child!,
+        ),
+        home: ViaPage(
+          escalada: Escalada(viaEsportiva: ViaEsportiva(nome: 'Via Inicial')),
+          cragId: 'crag1',
+        ),
+      ),
+    );
+    expect(find.text('Via Inicial'), findsOneWidget);
+
+    // Atualiza escalada para o Highline mapeado
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.5),
+          ),
+          child: child!,
+        ),
+        home: ViaPage(
+          escalada: highline,
+          cragId: 'crag1',
+          pico: pico,
+          setor: setor,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Travessia Aérea do Abismo'), findsOneWidget);
+    expect(find.text('HIGHLINE'), findsOneWidget);
+    expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
+    expect(find.text('90m'), findsOneWidget);
+  });
 }
