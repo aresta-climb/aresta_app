@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
+// SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
@@ -83,27 +83,33 @@ class LinhaLocalizacaoSetor extends StatelessWidget {
               color: context.colors.mossRock.withValues(alpha: 0.35),
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(
-                Icons.location_on,
-                size: 16,
-                color: context.colors.mossRock,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  _textoHierarquia,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: context.colors.mossRock,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      _textoHierarquia,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -113,12 +119,15 @@ class LinhaLocalizacaoSetor extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Ver no croqui',
-                      style: TextStyle(
-                        color: context.colors.mossRock,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Ver no croqui',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.colors.mossRock,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 2),
