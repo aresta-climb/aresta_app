@@ -290,3 +290,42 @@ class ComentarioComunidadeVia {
     return mereceEstrela ? '$textoCaixaAlta ★' : textoCaixaAlta;
   }
 }
+
+/// Agregado imutável com todos os dados comunitários e de segurança de uma escalada.
+@immutable
+class DadosComunidadeVia {
+  /// Estatística consolidada de avaliação de grau da comunidade.
+  final ConsensoGrauVia consensoGrau;
+
+  /// Lista de alertas de segurança estilo Waze atualmente ativos na via.
+  final List<AlertaSegurancaVia> alertasAtivos;
+
+  /// Lista cronológica reversa de notas e betas públicos da comunidade.
+  final List<ComentarioComunidadeVia> comentarios;
+
+  /// Cria uma instância imutável de [DadosComunidadeVia].
+  const DadosComunidadeVia({
+    this.consensoGrau = const ConsensoGrauVia.vazio(),
+    this.alertasAtivos = const [],
+    this.comentarios = const [],
+  });
+
+  /// Estado comunitário vazio padrão quando não há interações registradas.
+  const DadosComunidadeVia.vazio()
+    : consensoGrau = const ConsensoGrauVia.vazio(),
+      alertasAtivos = const [],
+      comentarios = const [];
+
+  /// Retorna uma nova instância substituindo seletivamente os campos desejados.
+  DadosComunidadeVia copyWith({
+    ConsensoGrauVia? consensoGrau,
+    List<AlertaSegurancaVia>? alertasAtivos,
+    List<ComentarioComunidadeVia>? comentarios,
+  }) {
+    return DadosComunidadeVia(
+      consensoGrau: consensoGrau ?? this.consensoGrau,
+      alertasAtivos: alertasAtivos ?? this.alertasAtivos,
+      comentarios: comentarios ?? this.comentarios,
+    );
+  }
+}
