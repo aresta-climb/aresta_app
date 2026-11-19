@@ -7,23 +7,39 @@ import '../services/compartilhamento/servico_compartilhamento.dart';
 import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
+import '../view/view_models/via_view_model.dart';
 
-/// Uma página que exibe informações detalhadas sobre uma via de escalada específica.
-///
-/// Ela ajusta dinamicamente seu conteúdo com base no tipo de rota para mostrar as propriedades relevantes,
-/// como dificuldade, proteções e descrições.
-class ViaPage extends StatelessWidget {
+/// Página declarativa (MVVM) que exibe os detalhes técnicos, croqui interativo,
+/// consenso comunitário de grau, bolhas de alerta estilo Waze e caderneta de uma [Escalada].
+class ViaPage extends StatefulWidget {
+  /// Escalada Protobuf exibida.
   final Escalada escalada;
+
+  /// Identificador do croqui pai.
   final String cragId;
+
+  /// Pico pai opcional para resolução de mapas.
   final Pico? pico;
+
+  /// Setor pai opcional.
   final Setor? setor;
+
+  /// Grupo pai opcional.
   final Grupo? grupo;
-  final bool
-  fromSetorPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da SetorPage
-  final bool
-  fromMapaPage; // FIXME: Hack "band-aid" para evitar loop infinito de navegação ao apertar "go back" vindo da MapaPage
+
+  /// Preserva compatibilidade com chamadas vindas diretamente da `SetorPage`.
+  final bool fromSetorPage;
+
+  /// Preserva compatibilidade com chamadas vindas diretamente da `MapaPage`.
+  final bool fromMapaPage;
+
+  /// ViewModel principal opcional para injeção em testes.
+  final ViaViewModel? viewModel;
+
+  /// ViewModel opcional da seção de caderneta esportiva.
   final SecaoCadernetaViaViewModel? cadernetaViewModel;
 
+  /// Cria uma instância de [ViaPage].
   const ViaPage({
     super.key,
     required this.escalada,
@@ -33,53 +49,101 @@ class ViaPage extends StatelessWidget {
     this.grupo,
     this.fromSetorPage = false,
     this.fromMapaPage = false,
+    this.viewModel,
     this.cadernetaViewModel,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Extrai o nome dinamicamente com base no tipo
-    final String nome = getEscaladaNome(escalada);
+  State<ViaPage> createState() => _ViaPageState();
+}
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: buildCommonAppBar(
-        context,
-        nome.toUpperCase(),
-        actions: [
-          if (escalada.uid.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.share_outlined),
-              tooltip: 'Compartilhar escalada',
-              onPressed: () {
-                ServicoCompartilhamento.instancia.compartilharEscalada(
-                  idCroqui: cragId,
-                  uid: escalada.uid,
-                  nomeEscalada: nome,
-                  grau: getGrauString(escalada),
-                  nomeSetor: setor?.nome ?? grupo?.nome ?? 'Geral',
-                  nomePico: pico?.nome ?? cragId,
-                );
-              },
+class _ViaPageState extends State<ViaPage> {
+  late ViaViewModel _viewModel;
+  bool _gerenciaCicloVida = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _inicializarViewModel();
+  }
+
+  @override
+  void didUpdateWidget(covariant ViaPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewModel != oldWidget.viewModel ||
+        (_gerenciaCicloVida && widget.escalada != oldWidget.escalada)) {
+      if (_gerenciaCicloVida) {
+        _viewModel.dispose();
+      }
+      _inicializarViewModel();
+    }
+  }
+
+  void _inicializarViewModel() {
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+      _gerenciaCicloVida = false;
+    } else {
+      _viewModel = ViaViewModel(escalada: widget.escalada);
+      _gerenciaCicloVida = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_gerenciaCicloVida) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final nome = _viewModel.nomeEscalada;
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: buildCommonAppBar(
+            context,
+            nome.toUpperCase(),
+            actions: [
+              if (_viewModel.possuiUid)
+                IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  tooltip: 'Compartilhar escalada',
+                  onPressed: () {
+                    ServicoCompartilhamento.instancia.compartilharEscalada(
+                      idCroqui: widget.cragId,
+                      uid: widget.escalada.uid,
+                      nomeEscalada: nome,
+                      grau: getGrauString(widget.escalada),
+                      nomeSetor:
+                          widget.setor?.nome ?? widget.grupo?.nome ?? 'Geral',
+                      nomePico: widget.pico?.nome ?? widget.cragId,
+                    );
+                  },
+                ),
+            ],
+          ),
+          body: SafeArea(
+            bottom: true,
+            child: CorpoDetalhesVia(
+              escalada: widget.escalada,
+              cragId: widget.cragId,
+              pico: widget.pico,
+              setor: widget.setor,
+              grupo: widget.grupo,
+              fromMapaPage: widget.fromMapaPage,
+              viewModel: _viewModel,
+              cadernetaViewModel: widget.cadernetaViewModel,
             ),
-        ],
-      ),
-      body: SafeArea(
-        bottom: true,
-        child: buildViaBody(
-          context,
-          escalada,
-          cragId,
-          pico: pico,
-          setor: setor,
-          grupo: grupo,
-          fromSetorPage: fromSetorPage,
-          fromMapaPage: fromMapaPage,
-          cadernetaViewModel: cadernetaViewModel,
-        ),
-      ),
-      // bottomNavigationBar: buildSecondaryBottomNav(context),
+          ),
+        );
+      },
     );
   }
 }
-
