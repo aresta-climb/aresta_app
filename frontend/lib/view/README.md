@@ -35,8 +35,9 @@ lib/view/
     ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google e Apple OAuth, e-mail/senha, criação de conta e modo offline)
     ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão e métricas
     ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
-    ├── via_view_model.dart       - Estado reativo da ViaPage (extração Protobuf unificada, consenso de grau, alertas estilo Waze, enfiadas, betas e cópia Pix)
+    ├── via_view_model.dart       - Estado reativo da ViaPage (extração Protobuf unificada, sincronização comunitária, consenso de grau, alertas estilo Waze, enfiadas, betas e cópia Pix)
     ├── secao_caderneta_via_view_model.dart - Estado reativo do bloco pessoal de ascensões dentro da ViaPage
+    ├── registro_cadena_view_model.dart - Estado unificado de registro/edição de cadena pessoal + votação pública de grau (`-2..+2`) e comentário de beta
     ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
     ├── comunidade_view_model.dart - Estado de links e mídias sociais comunitárias

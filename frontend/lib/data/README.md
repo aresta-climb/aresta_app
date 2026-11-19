@@ -16,7 +16,8 @@ lib/data/
     ├── tipo_escalada.dart         - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
     ├── cadena.dart                - Entidade imutável de registro de ascensão na caderneta
     ├── perfil_escalador.dart      - Entidade do perfil, sessão autenticada, foto e identificador público do atleta
-    └── interacao_via.dart         - Modelos imutáveis de alertas estilo Waze, consenso de grau e notas comunitárias da via
+    ├── interacao_via.dart         - Modelos imutáveis de alertas estilo Waze, consenso de grau e notas comunitárias da via
+    └── item_fila_interacao.dart   - Modelo validado e redutor de eventos da tabela `public.fila_interacoes` (PostgREST + fila offline)
 ```
 
 ---
@@ -49,6 +50,7 @@ Estruturas imutáveis e validadas sob filosofia *Fail-Fast* para a experiência 
 - `ConsensoGrauVia`: Agregado de avaliação democrática de grau (`grauSugerido`, `totalVotos`, `distribuicaoDeltas` de `-2` a `+2`) coexistindo com o grau oficial do conquistador e gerando `resumoTendencia`.
 - `ComentarioComunidadeVia`: Nota pública desacoplada de dados pessoais sensíveis (expondo apenas `autorIdPublico`, `autorNomePublico`, `estiloAscensao` e `texto` validado até 280 caracteres).
 - `DadosComunidadeVia`: Agregado raiz combinando `consensoGrau`, `alertasAtivos` e `comentarios`.
+- `ItemFilaInteracao` e `TipoFilaInteracao` (`modelos/item_fila_interacao.dart`): Representação imutável das linhas de `public.fila_interacoes` (`VOTO_GRAU`, `COMENTARIO`, `ALERTA_SEGURANCA`, `CONFIRMACAO_ALERTA`), com validação NanoID 14c e redutor puro `consolidarItensFilaEmDadosComunidade`.
 
 ### `FeedbackMetadata` (`modelos/metadados_feedback.dart`)
 Representa o pacote completo de informações contextuais do dispositivo capturadas no momento em que um usuário abre ou submete um reporte de in-app feedback:

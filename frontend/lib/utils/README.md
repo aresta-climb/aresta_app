@@ -46,7 +46,8 @@ O `FormatadorCreditos` centraliza a lógica de validação, filtragem e formata�
 ## 3. Gerador e Validador de Identificadores (`gerador_uid.dart`) e Formatação de Escaladas (`formatador_escalada.dart`)
 
 - **`gerador_uid.dart`**: Gera e valida identificadores públicos estáveis `NanoID 14c` em alfabeto Base62 (`[0-9a-zA-Z]`, como `autorIdPublico` do `PerfilEscalador` e `escaladaUid` de vias) e identificadores `UUID v4` (`Cadena.id`).
-- **`formatador_escalada.dart`**: Concentra a formatação de texto de graus (`formatarTextoGrau`, `obterTextoGrauEscalada`), nomes (`obterNomeEscalada`) e a localização de escaladas por UID (`localizarEscaladaPorUidEmCroquis`).
+- **`formatador_escalada.dart`**: Concentra a formatação de texto de graus (`formatarTextoGrau`, `obterTextoGrauEscalada`), nomes (`obterNomeEscalada`), códigos numéricos oficiais (`obterCodigoGrauOficial`, ignorando `INDEFINIDO` e `PROJETO` tanto em vias quanto em boulders) e a localização de escaladas por UID (`localizarEscaladaPorUidEmCroquis`).
+- **`calculadora_delta_grau.dart`**: Desloca graus brasileiros e escala V por deltas inteiros (`-2` a `+2`) tratando graus inteiros e com barra (`deslocarCodigoGrau`), gera rótulos compactos de votação (`rotuloOpcaoDeltaGrau`) e consolida coleções de votos democráticos em `ConsensoGrauVia` (`consolidarConsensoDeVotos`).
 
 ---
 
