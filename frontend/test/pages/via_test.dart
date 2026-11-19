@@ -1,256 +1,187 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/pages/via.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/beta.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
+import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/services/compartilhamento/servico_compartilhamento.dart';
+import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 import 'package:frontend/services/configuracao_recursos.dart';
+import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/secao_caderneta_via_view_model.dart';
+import 'package:frontend/view/view_models/via_view_model.dart';
+import 'package:frontend/widgets/caderneta/modal_registro_cadena.dart';
+import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    ConfiguracaoRecursos.redefinirParaTestes();
+    ControladorInteracoesUsuario.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
+  });
+
   tearDown(() {
     ConfiguracaoRecursos.redefinirParaTestes();
+    ControladorInteracoesUsuario.redefinirParaTestes();
+    RepositorioInteracoesViaMemoria.redefinirParaTestes();
     ServicoCompartilhamento.restaurarPadrao();
   });
 
-  testWidgets('ViaPage should wrap body in SafeArea', (tester) async {
+  Widget envolver(Widget pagina) {
+    return MaterialApp(
+      theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+      home: pagina,
+    );
+  }
+
+  testWidgets('ViaPage envolve o corpo em SafeArea inferior e expõe hierarquia de localização', (tester) async {
+    final pico = Pico(nome: 'Pedra do Baú');
+    final grupo = Grupo(nome: 'Face Leste');
+    final setor = Setor(nome: 'Setor da Divisa');
+    final escalada = Escalada(
+      viaEsportiva: ViaEsportiva(
+        nome: 'Sol e Chuva',
+        destaque: true,
+        dificuldade: GrauVia_GrauVia.BR_7A,
+      ),
+    );
+
     await tester.pumpWidget(
-      MaterialApp(
-        home: ViaPage(
-          escalada: Escalada()
-            ..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste'),
+      envolver(
+        ViaPage(
+          escalada: escalada,
           cragId: 'crag1',
+          pico: pico,
+          setor: setor,
+          grupo: grupo,
         ),
       ),
     );
 
-    final scaffoldFinder = find.byType(Scaffold);
-    expect(scaffoldFinder, findsOneWidget);
-
-    final Scaffold scaffold = tester.widget(scaffoldFinder);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.body, isA<SafeArea>());
+    expect((scaffold.body as SafeArea).bottom, isTrue);
 
-    final SafeArea safeArea = scaffold.body as SafeArea;
-    expect(safeArea.bottom, isTrue);
+    expect(find.text('Sol e Chuva'), findsOneWidget);
+    expect(find.text('ESPORTIVA'), findsOneWidget);
+    expect(find.text('CLÁSSICA'), findsOneWidget);
+    expect(find.textContaining('Face Leste > Setor da Divisa'), findsOneWidget);
+    expect(find.text('Ver no croqui'), findsOneWidget);
+    expect(find.text('GRAU OFICIAL'), findsOneWidget);
+    expect(find.text('7a'), findsOneWidget);
   });
 
-  testWidgets(
-    'ViaPage should correctly receive and expose pico, setor, and grupo parameters',
-    (tester) async {
-      final pico = Pico()..nome = 'Pico Teste';
-      final setor = Setor()..nome = 'Setor Teste';
-      final grupo = Grupo()..nome = 'Grupo Teste';
-      final escalada = Escalada()
-        ..viaEsportiva = (ViaEsportiva()..nome = 'Via Teste');
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ViaPage(
-            escalada: escalada,
-            cragId: 'crag1',
-            pico: pico,
-            setor: setor,
-            grupo: grupo,
-          ),
-        ),
-      );
-
-      final scaffoldFinder = find.byType(Scaffold);
-      expect(scaffoldFinder, findsOneWidget);
-
-      final viaPageFinder = find.byType(ViaPage);
-      expect(viaPageFinder, findsOneWidget);
-
-      final ViaPage page = tester.widget(viaPageFinder);
-      expect(page.pico?.nome, 'Pico Teste');
-      expect(page.setor?.nome, 'Setor Teste');
-      expect(page.grupo?.nome, 'Grupo Teste');
-    },
-  );
-
-  testWidgets(
-    'ViaPage exibe LinhaLocalizacaoSetor com hierarquia Grupo > Setor e botão de salto',
-    (tester) async {
-      final pico = Pico()..nome = 'Pedra do Baú';
-      final grupo = Grupo(nome: 'Face Leste');
-      final setor = Setor(nome: 'Setor da Divisa');
-      final escalada = Escalada()
-        ..viaEsportiva = (ViaEsportiva()..nome = 'Sol e Chuva');
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ViaPage(
-            escalada: escalada,
-            cragId: 'crag1',
-            pico: pico,
-            setor: setor,
-            grupo: grupo,
-          ),
-        ),
-      );
-
-      expect(find.textContaining('Face Leste > Setor da Divisa'), findsOneWidget);
-      expect(find.text('Ver no croqui'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'ViaPage exibe LinhaLocalizacaoSetor apenas com Setor quando grupo for nulo',
-    (tester) async {
-      final pico = Pico()..nome = 'Pedra do Baú';
-      final setor = Setor(nome: 'Setor Principal');
-      final escalada = Escalada()
-        ..viaEsportiva = (ViaEsportiva()..nome = 'Normal do Baú');
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ViaPage(
-            escalada: escalada,
-            cragId: 'crag1',
-            pico: pico,
-            setor: setor,
-          ),
-        ),
-      );
-
-      expect(find.textContaining('Setor Principal'), findsOneWidget);
-      expect(find.text('Ver no croqui'), findsOneWidget);
-    },
-  );
-
-  testWidgets('ViaPage oculta botão de registrar cadena quando perfilHabilitado for false', (tester) async {
+  testWidgets('ViaPage oculta alertas, consenso, caderneta e notas quando perfilHabilitado for false', (tester) async {
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+    final repoFake = RepositorioInteracoesViaFake()
+      ..semearDados(
+        'via-uid-123',
+        DadosComunidadeVia(
+          consensoGrau: const ConsensoGrauVia(grauSugerido: '7b', totalVotos: 5),
+          alertasAtivos: [
+            AlertaSegurancaVia.criar(
+              escaladaUid: 'via-uid-123',
+              categoria: CategoriaAlertaSeguranca.abelhasInsetos,
+            ),
+          ],
+        ),
+      );
 
-    final escalada = Escalada()
-      ..uid = 'via-uid-123'
-      ..viaEsportiva = (ViaEsportiva()..nome = 'Fenda da Esperança');
+    final escalada = Escalada(
+      uid: 'via-uid-123',
+      viaEsportiva: ViaEsportiva(
+        nome: 'Fenda da Esperança',
+        dificuldade: GrauVia_GrauVia.BR_7A,
+      ),
+    );
+    final vm = ViaViewModel(
+      escalada: escalada,
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(vm.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-        home: ViaPage(
+      envolver(
+        ViaPage(
           escalada: escalada,
           cragId: 'crag1',
+          viewModel: vm,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('btn_reportar_alerta_via')), findsNothing);
+    expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
+    expect(find.text('CONSENSO DA COMUNIDADE'), findsNothing);
     expect(find.text('Registrar Cadena / Tentativa'), findsNothing);
   });
 
-  testWidgets('ViaPage exibe botão de registrar cadena e abre modal ao ser clicado', (tester) async {
+  testWidgets('ViaPage permite reportar alerta pelo AppBar, exibe bolha vermelha flutuante e confirma Ainda está lá?', (tester) async {
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-
-    final escalada = Escalada()
-      ..uid = 'via-uid-123'
-      ..viaEsportiva = (ViaEsportiva()..nome = 'Fenda da Esperança');
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-        home: ViaPage(
-          escalada: escalada,
-          cragId: 'crag1',
-        ),
+    final repoFake = RepositorioInteracoesViaFake();
+    final escalada = Escalada(
+      uid: 'via-uid-alerta1',
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via das Abelhas',
+        dificuldade: GrauVia_GrauVia.BR_6SUP,
       ),
     );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Registrar Cadena / Tentativa'), findsOneWidget);
-    expect(find.textContaining('Encadenada'), findsNothing);
-
-    await tester.tap(find.text('Registrar Cadena / Tentativa'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Registrar Ascensão'), findsOneWidget);
-    expect(find.text('Fenda da Esperança'), findsOneWidget);
-  });
-
-  testWidgets('ViaPage exibe selo esportivo com estilo Flash quando há ascensão registrada', (tester) async {
-    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
-
-    final escalada = Escalada()
-      ..uid = 'via-uid-encadenada'
-      ..viaEsportiva = (ViaEsportiva()..nome = 'Via Master');
-
-    final cadena = Cadena.criar(
-      escaladaUid: 'via-uid-encadenada',
-      dataAscensao: DateTime(2026, 9, 14),
-      tipoAscensao: TipoAscensao.flash,
-      notasPrivadas: 'Costurou leve e rápido',
-    );
-
-    final repo = RepositorioCadernetaLocal();
-    await repo.salvarCadena(cadena);
-    final cadernetaVm = SecaoCadernetaViaViewModel(
+    final vm = ViaViewModel(
       escalada: escalada,
-      repositorio: repo,
+      repositorioInteracoes: repoFake,
     );
-    addTearDown(cadernetaVm.dispose);
+    addTearDown(vm.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-        home: ViaPage(
+      envolver(
+        ViaPage(
           escalada: escalada,
           cragId: 'crag1',
-          cadernetaViewModel: cadernetaVm,
+          viewModel: vm,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Encadenada'), findsOneWidget);
-    expect(find.textContaining('Flash'), findsOneWidget);
-    expect(find.textContaining('Costurou leve e rápido'), findsOneWidget);
-    expect(find.text('Nova Ascensão / Tentativa'), findsOneWidget);
-  });
-
-  testWidgets('ViaPage exibe botão de compartilhamento quando escalada possui uid e dispara ServicoCompartilhamento', (tester) async {
-    String? textoCompartilhado;
-    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
-      executorCompartilhamento: (texto) async {
-        textoCompartilhado = texto;
-      },
-    );
-
-    final pico = Pico()..nome = 'Serra do Cipó';
-    final setor = Setor()..nome = 'Fenda';
-    final escalada = Escalada()
-      ..uid = 'uidViaShare123'
-      ..viaEsportiva = (ViaEsportiva()
-        ..nome = 'Via do Meio'
-        ..dificuldade = GrauVia_GrauVia.BR_7A);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-        home: ViaPage(
-          escalada: escalada,
-          cragId: 'br_mg_serra_do_cipo',
-          pico: pico,
-          setor: setor,
-        ),
-      ),
-    );
+    // 1. Reportar novo alerta pela barra superior
+    await tester.tap(find.byKey(const Key('btn_reportar_alerta_via')));
     await tester.pumpAndSettle();
 
-    final botaoShare = find.byIcon(Icons.share_outlined);
-    expect(botaoShare, findsOneWidget);
-
-    await tester.tap(botaoShare);
+    await tester.enterText(
+      find.byKey(const Key('campo_detalhe_alerta_via')),
+      'Colmeia ativa no diedro',
+    );
+    await tester.tap(find.byKey(const Key('btn_enviar_alerta_via')));
     await tester.pumpAndSettle();
 
-    expect(textoCompartilhado, isNotNull);
-    expect(textoCompartilhado, contains('Via do Meio'));
-    expect(textoCompartilhado, contains('https://aresta.cc/s/uidViaShare123'));
+    expect(find.text('Alerta de segurança registrado!'), findsOneWidget);
+    expect(find.byType(BolhaEmojiAlertaVia), findsOneWidget);
+    expect(find.text('🐝'), findsOneWidget);
+
+    ScaffoldMessenger.of(tester.element(find.byType(ViaPage))).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    // 2. Tocar na bolha vermelha e confirmar que o risco já foi resolvido
+    await tester.tap(find.byKey(const Key('bolha_alerta_ABELHAS_INSETOS')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ainda está lá?'), findsOneWidget);
+    expect(find.textContaining('Colmeia ativa no diedro'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('btn_confirmar_alerta_resolvido')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
   });
 }
-
