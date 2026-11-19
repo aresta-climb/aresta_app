@@ -12,6 +12,7 @@ import '../../theme/cores_app.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../utils/formatador_escalada.dart';
 import '../../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../../view/function_library/markdown_offline.dart';
 import '../../view/view_models/via_view_model.dart';
 import '../linha_localizacao_setor.dart';
 import '../mapa_thumbnail.dart';
@@ -657,3 +658,81 @@ class GradeAtributosTecnicosVia extends StatelessWidget {
   }
 }
 
+/// Seções textuais de descrição oficial, peças móveis, rack e acesso.
+class SecaoTextosETecnicasVia extends StatelessWidget {
+  /// Identificador do croqui para resolução de imagens locais no `OfflineMarkdown`.
+  final String cragId;
+
+  /// Lista de seções textuais não vazias.
+  final List<SecaoTextoVia> secoes;
+
+  /// Cria uma instância de [SecaoTextosETecnicasVia].
+  const SecaoTextosETecnicasVia({
+    super.key,
+    required this.cragId,
+    required this.secoes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (secoes.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: secoes.map((secao) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _TituloSecaoVia(titulo: secao.titulo),
+              const SizedBox(height: 10),
+              secao.ehMarkdown
+                  ? OfflineMarkdown(data: secao.conteudo, cragId: cragId)
+                  : Text(
+                      secao.conteudo,
+                      style: TextStyle(
+                        color: cores.chalkWhite,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+
+class _TituloSecaoVia extends StatelessWidget {
+  final String titulo;
+
+  const _TituloSecaoVia({required this.titulo});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            color: cores.beastHide,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 2,
+          width: 36,
+          color: cores.beastHide.withValues(alpha: 0.5),
+        ),
+      ],
+    );
+  }
+}
