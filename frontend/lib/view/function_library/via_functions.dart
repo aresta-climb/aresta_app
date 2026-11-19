@@ -1,30 +1,32 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'package:flutter/material.dart';
-import '../../theme/cores_app.dart';
-
-import '../../aresta_api/proto/generated/croqui.pb.dart';
-import 'biblioteca_funcoes_comuns.dart';
-import 'markdown_offline.dart';
-import '../../widgets/mapa_thumbnail.dart';
-import '../../widgets/linha_localizacao_setor.dart';
-import '../../navigation/funcoes_navegacao.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
-import '../../utils/consulta_dataset.dart';
-import '../../utils/formatador_escalada.dart';
-import '../../navigation/construtor_reativo_pagina.dart';
-import '../../navigation/arvore_navegacao.dart';
-import '../view_models/secao_caderneta_via_view_model.dart';
-import '../../widgets/caderneta/secao_caderneta_via.dart';
 
 export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/modelos/interacao_via.dart';
+import '../../navigation/arvore_navegacao.dart';
+import '../../navigation/construtor_reativo_pagina.dart';
+import '../../navigation/funcoes_navegacao.dart';
+import '../../theme/cores_app.dart';
+import '../../utils/consulta_dataset.dart';
+import '../../utils/formatador_escalada.dart';
+import '../../widgets/caderneta/secao_caderneta_via.dart';
+import '../../widgets/linha_localizacao_setor.dart';
+import '../../widgets/mapa_thumbnail.dart';
+import '../../widgets/via/bolha_alerta_seguranca_via.dart';
+import '../../widgets/via/secoes_detalhes_via.dart';
+import '../view_models/secao_caderneta_via_view_model.dart';
+import '../view_models/via_view_model.dart';
+import 'biblioteca_funcoes_comuns.dart';
+import 'markdown_offline.dart';
+import 'package:flutter/material.dart';
+import 'package:frontend/services/firebase/telemetria.dart';
 
-/// Retorna o nome da escalada com base em seu tipo.
+/// Retorna o nome da escalada com base em sua modalidade ativa.
 String getEscaladaNome(Escalada escalada) => obterNomeEscalada(escalada);
 
-/// Retorna o rótulo da modalidade da escalada (ex: 'Esportiva', 'Mista', 'Móvel', 'Boulder', 'Multienfiada', 'Highline').
-/// Vias móveis que possuam proteções intermediárias fixas são identificadas como 'Mista'.
+/// Retorna o rótulo da modalidade da escalada (`'Esportiva'`, `'Mista'`, `'Móvel'`, `'Boulder'`, `'Multienfiada'`, `'Highline'`).
 String getModalidadeEscalada(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
@@ -49,26 +51,22 @@ String getModalidadeEscalada(Escalada escalada) {
   }
 }
 
-/// Retorna a string formatada de proteções na notação X+Y (`<intermediárias>+<parada>`).
-/// Retorna string vazia se nenhuma proteção for cadastrada.
+/// Retorna a string formatada de proteções na notação `X+Y` (`<intermediárias>+<parada>`).
 String getProtecoesString(Escalada escalada) {
-  int intermediarias = 0;
-  int parada = 0;
+  var intermediarias = 0;
+  var parada = 0;
 
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
       intermediarias = escalada.viaEsportiva.quantidadeProtecoesIntermediarias;
       parada = escalada.viaEsportiva.quantidadeProtecoesParada;
-      break;
     case Escalada_Tipo.viaMovel:
       intermediarias = escalada.viaMovel.quantidadeProtecoesIntermediarias;
       parada = escalada.viaMovel.quantidadeProtecoesParada;
-      break;
     case Escalada_Tipo.viaMultiplasEnfiadas:
       intermediarias =
           escalada.viaMultiplasEnfiadas.quantidadeCosturasIntermediarias;
       parada = escalada.viaMultiplasEnfiadas.quantidadeEquipamentosParada;
-      break;
     default:
       return '';
   }
@@ -82,41 +80,40 @@ String getProtecoesString(Escalada escalada) {
 /// Retorna a string formatada do grau/dificuldade da escalada.
 String getGrauString(Escalada escalada) => obterTextoGrauEscalada(escalada);
 
-/// Formata uma string de dificuldade (ex: BR_4, BR_4_sup) adicionando 'º'.
-/// Retorna string vazia se o grau for indefinido ou não informado.
+/// Formata uma string de dificuldade (`BR_4`, `BR_6SUP`, `V4`) adicionando `'º'` quando aplicável.
 String formatGradeString(String name) => formatarTextoGrau(name);
 
+/// Calcula um peso inteiro monotônico para ordenação numérica de graus brasileiros e escala V.
 int getGradeSortWeight(String gradeName) {
   if (gradeName.contains('INDEFINIDO')) return 9998;
   if (gradeName.contains('PROJETO')) return 9999;
 
-  String g = gradeName.replaceAll('BR_', '').replaceAll('V', '');
+  final limpo = gradeName.replaceAll('BR_', '').replaceAll('V', '');
+  final partes = limpo.split('_BARRA_');
+  final primeiro = partes[0];
 
-  List<String> parts = g.split('_BARRA_');
-  String first = parts[0];
-
-  if (first == 'B') {
-    return 10 + (parts.length > 1 ? 2 : 0);
+  if (primeiro == 'B') {
+    return 10 + (partes.length > 1 ? 2 : 0);
   }
 
-  int num = int.tryParse(first.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-  int letterWeight = 0;
-  if (first.endsWith('A')) {
-    letterWeight = 10;
-  } else if (first.endsWith('B')) {
-    letterWeight = 20;
-  } else if (first.endsWith('C')) {
-    letterWeight = 30;
-  } else if (first.endsWith('SUP')) {
-    letterWeight = 5;
+  final numero =
+      int.tryParse(primeiro.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  var pesoLetra = 0;
+  if (primeiro.endsWith('A')) {
+    pesoLetra = 10;
+  } else if (primeiro.endsWith('B')) {
+    pesoLetra = 20;
+  } else if (primeiro.endsWith('C')) {
+    pesoLetra = 30;
+  } else if (primeiro.endsWith('SUP')) {
+    pesoLetra = 5;
   }
 
-  int barraWeight = parts.length > 1 ? 2 : 0;
-
-  return (num + 1) * 100 + letterWeight + barraWeight;
+  final pesoBarra = partes.length > 1 ? 2 : 0;
+  return (numero + 1) * 100 + pesoLetra + pesoBarra;
 }
 
-/// Retorna um valor numérico representando a dificuldade para fins de ordenação.
+/// Retorna um valor numérico representando a dificuldade da [escalada] para ordenação em listas.
 int getGrauValue(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
@@ -127,13 +124,14 @@ int getGrauValue(Escalada escalada) {
       return getGradeSortWeight(escalada.boulder.dificuldade.name);
     case Escalada_Tipo.viaMultiplasEnfiadas:
       return getGradeSortWeight(
-          escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name);
+        escalada.viaMultiplasEnfiadas.dificuldadeMaxima.name,
+      );
     default:
       return 9998;
   }
 }
 
-/// Retorna a quantidade de proteções (fixas + móveis) para fins de ordenação.
+/// Retorna a soma de proteções fixas intermediárias e de parada para ordenação.
 int getProtecoesValue(Escalada escalada) {
   switch (escalada.whichTipo()) {
     case Escalada_Tipo.viaEsportiva:
@@ -142,15 +140,12 @@ int getProtecoesValue(Escalada escalada) {
     case Escalada_Tipo.viaMovel:
       return escalada.viaMovel.quantidadeProtecoesIntermediarias +
           escalada.viaMovel.quantidadeProtecoesParada;
-    case Escalada_Tipo.viaMultiplasEnfiadas:
-      // Multi-pitch might not have simple protections count at the top level
-      return 0;
     default:
       return 0;
   }
 }
 
-/// Constrói o corpo rolável principal da página da Via.
+
 Widget buildViaBody(
   BuildContext context,
   Escalada escalada,
