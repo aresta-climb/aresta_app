@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
+import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/item_fila_interacao.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 
@@ -113,6 +114,97 @@ void main() {
         'delta_grau': 0,
       });
       expect(semCriadoEm.autorNomePublico, 'Escalador Aresta');
+    });
+
+    test('consolidarItensFilaEmDadosComunidade agrega votos, comentários reversos e ciclo de alertas Waze', () {
+      final t1 = DateTime.utc(2026, 11, 19, 10, 0);
+      final t2 = DateTime.utc(2026, 11, 19, 11, 0);
+      final t3 = DateTime.utc(2026, 11, 19, 12, 0);
+
+      final itens = [
+        ItemFilaInteracao.votoGrau(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          deltaGrau: 1,
+          grauSugerido: GrauVia_GrauVia.BR_7B.value,
+          criadoEm: t1,
+        ),
+        ItemFilaInteracao.comentario(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          textoComentario: 'Primeiro comentário',
+          tipoAscensao: TipoAscensao.trabalhado,
+          criadoEm: t1,
+        ),
+        ItemFilaInteracao.comentario(
+          autorIdPublico: 'd4Ml0Q2y5Wx9No',
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'x8siJek3FiG3aB',
+          textoComentario: 'Comentário mais recente',
+          tipoAscensao: TipoAscensao.flash,
+          criadoEm: t2,
+        ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaAbelha01',
+          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          detalhe: 'Enxame no diedro',
+          criadoEm: t1,
+        ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: 'd4Ml0Q2y5Wx9No',
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaAbelha02',
+          categoriaAlerta: CategoriaAlertaSeguranca.abelhasInsetos,
+          detalhe: 'Continua ativo',
+          criadoEm: t1,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: 'd4Ml0Q2y5Wx9No',
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaAbelha01',
+          alertaAtivo: true,
+          criadoEm: t2,
+        ),
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: 'd4Ml0Q2y5Wx9No',
+          autorNomePublico: 'Pedro',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaMolhada1',
+          categoriaAlerta: CategoriaAlertaSeguranca.viaMolhada,
+          criadoEm: t2,
+        ),
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Mariana',
+          escaladaUid: 'x8siJek3FiG3aB',
+          alertaAlvoUid: 'alertaMolhada1',
+          alertaAtivo: false,
+          criadoEm: t3,
+        ),
+      ];
+
+      final dados = consolidarItensFilaEmDadosComunidade(
+        itens,
+        codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+        ehBoulder: false,
+      );
+
+      expect(dados.consensoGrau.grauSugerido, '7b');
+      expect(dados.consensoGrau.totalVotos, 1);
+      expect(dados.comentarios.map((c) => c.autorNomePublico), equals(['Pedro', 'Mariana']));
+      expect(dados.comentarios.first.rotuloEstilo, 'FLASH ★');
+
+      expect(dados.alertasAtivos, hasLength(1));
+      expect(dados.alertasAtivos.single.uid, 'alertaAbelha01');
+      expect(dados.alertasAtivos.single.confirmacoesAtivas, 3);
+      expect(dados.alertasAtivos.single.detalhe, 'Continua ativo');
     });
   });
 }
