@@ -358,11 +358,71 @@ class ViaViewModel extends ChangeNotifier {
           'PAREDE',
           _formatarEnumSimples(escalada.boulder.tipoParede.name),
         );
-      default:
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        final v = escalada.viaMultiplasEnfiadas;
+        if (v.numeroEnfiadas > 0) {
+          itens.add(
+            AtributoTecnicoVia(
+              icone: TipoIconeAtributoVia.enfiadas,
+              rotulo: 'ENFIADAS',
+              valor: '${v.numeroEnfiadas}',
+            ),
+          );
+        }
+        _adicionarMetros(
+          itens,
+          TipoIconeAtributoVia.extensao,
+          'COMPRIMENTO',
+          v.comprimentoTotal,
+        );
+        _adicionarMetros(
+          itens,
+          TipoIconeAtributoVia.distancia,
+          'MAIOR ENFIADA',
+          v.comprimentoMaiorEnfiada,
+        );
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeCosturasIntermediarias,
+          v.quantidadeEquipamentosParada,
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.duracao,
+          'DURAÇÃO',
+          _formatarEnumCodigo(v.duracao.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.modalidade,
+          'TIPO',
+          _formatarEnumSimples(v.tipoViaMultiplasEnfiadas.name),
+        );
+      case Escalada_Tipo.highline:
+        final v = escalada.highline;
+        _adicionarMetros(itens, TipoIconeAtributoVia.distancia, 'DISTÂNCIA', v.distancia);
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'ALTURA', v.altura);
+        if (v.exposicao > 0) {
+          itens.add(
+            AtributoTecnicoVia(
+              icone: TipoIconeAtributoVia.exposicao,
+              rotulo: 'EXPOSIÇÃO',
+              valor: '${v.exposicao}',
+            ),
+          );
+        }
+      case Escalada_Tipo.notSet:
         break;
     }
     return List.unmodifiable(itens);
   }
+
 
   String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
     return switch (alvo.whichTipo()) {
