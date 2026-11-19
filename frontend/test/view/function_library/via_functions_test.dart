@@ -209,9 +209,46 @@ void main() {
       expect(getProtecoesString(escalada), '');
     });
 
-    test('deve retornar string vazia para boulder', () {
+    test('deve retornar string vazia para boulder e formatar X+Y para multienfiada', () {
       final escalada = Escalada()..boulder = Boulder();
       expect(getProtecoesString(escalada), '');
+
+      final multi = Escalada()
+        ..viaMultiplasEnfiadas = ViaMultiplasEnfiadas(
+          nome: 'Parede Sul',
+          quantidadeCosturasIntermediarias: 14,
+          quantidadeEquipamentosParada: 2,
+        );
+      expect(getEscaladaNome(multi), 'Parede Sul');
+      expect(getProtecoesString(multi), '14+2');
+    });
+  });
+
+  group('getProtecoesValue', () {
+    test('soma proteções fixas intermediárias e de parada em esportiva, móvel e demais tipos', () {
+      expect(
+        getProtecoesValue(
+          Escalada(
+            viaEsportiva: ViaEsportiva(
+              quantidadeProtecoesIntermediarias: 8,
+              quantidadeProtecoesParada: 2,
+            ),
+          ),
+        ),
+        10,
+      );
+      expect(
+        getProtecoesValue(
+          Escalada(
+            viaMovel: ViaMovel(
+              quantidadeProtecoesIntermediarias: 2,
+              quantidadeProtecoesParada: 2,
+            ),
+          ),
+        ),
+        4,
+      );
+      expect(getProtecoesValue(Escalada(boulder: Boulder())), 0);
     });
   });
 
@@ -268,22 +305,36 @@ void main() {
       expect(valMedio < valDificil, isTrue);
     });
 
-    test('deve retornar valores ordenáveis corretos para boulders', () {
+    test('deve retornar valores ordenáveis corretos para boulders, móveis e multienfiadas', () {
+      final vb = Escalada()
+        ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.VB);
+      final vbBarra = Escalada()
+        ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.VB_BARRA_V0);
       final facil = Escalada()
         ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.V1);
-
       final medio = Escalada()
         ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.V5);
-
       final dificil = Escalada()
         ..boulder = (Boulder()..dificuldade = GrauBoulder_GrauBoulder.V12);
 
-      final valFacil = getGrauValue(facil);
-      final valMedio = getGrauValue(medio);
-      final valDificil = getGrauValue(dificil);
+      expect(getGrauValue(vb) < getGrauValue(vbBarra), isTrue);
+      expect(getGrauValue(vbBarra) < getGrauValue(facil), isTrue);
+      expect(getGrauValue(facil) < getGrauValue(medio), isTrue);
+      expect(getGrauValue(medio) < getGrauValue(dificil), isTrue);
 
-      expect(valFacil < valMedio, isTrue);
-      expect(valMedio < valDificil, isTrue);
+      final movelSup = Escalada(
+        viaMovel: ViaMovel(dificuldade: GrauVia_GrauVia.BR_6SUP),
+      );
+      final esportiva7a = Escalada(
+        viaEsportiva: ViaEsportiva(dificuldade: GrauVia_GrauVia.BR_7A),
+      );
+      final multi7b = Escalada(
+        viaMultiplasEnfiadas: ViaMultiplasEnfiadas(
+          dificuldadeMaxima: GrauVia_GrauVia.BR_7B,
+        ),
+      );
+      expect(getGrauValue(movelSup) < getGrauValue(esportiva7a), isTrue);
+      expect(getGrauValue(esportiva7a) < getGrauValue(multi7b), isTrue);
     });
 
     test('deve retornar 9998 (INDEFINIDO) para tipos não suportados ou sem grau', () {
