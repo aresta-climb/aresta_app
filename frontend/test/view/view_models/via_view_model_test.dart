@@ -389,4 +389,87 @@ void main() {
     expect(vazia.possuiHistorico, isFalse);
     expect(await vazia.copiarChavePix(), isFalse);
   });
+
+  test('respeita ConfiguracaoRecursos.perfilHabilitado e gerencia alertas e consenso reativamente', () async {
+    const uidVia = 'x8siJek3FiG3aB';
+    repoFake.semearDados(
+      uidVia,
+      DadosComunidadeVia(
+        consensoGrau: const ConsensoGrauVia(
+          grauSugerido: '7b',
+          totalVotos: 12,
+          distribuicaoDeltas: {0: 3, 1: 9},
+        ),
+        comentarios: [
+          ComentarioComunidadeVia(
+            uid: 'c1Kq2L1x9Y7zWq',
+            autorIdPublico: 'a1Lk9P1x4Vw8Mn',
+            autorNomePublico: 'Mariana',
+            criadoEm: DateTime.utc(2026, 11, 19),
+            estiloAscensao: TipoAscensao.flash,
+            texto: 'Chapeleta 3 com leve giro.',
+          ),
+        ],
+      ),
+    );
+
+    // Flag desabilitada: oculta alertas, consenso e comentários
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(false);
+    final vm = ViaViewModel(
+      escalada: Escalada(
+        uid: uidVia,
+        viaEsportiva: ViaEsportiva(
+          nome: 'Via Comunitária',
+          dificuldade: GrauVia_GrauVia.BR_7A,
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+
+    expect(vm.exibirRecursosComunidade, isFalse);
+    expect(vm.podeReportarAlerta, isFalse);
+    expect(vm.consensoGrau, isNull);
+    expect(vm.alertasAtivos, isEmpty);
+    expect(vm.comentariosComunidade, isEmpty);
+
+    // Ativar flag expõe consenso, comentários e permite reportar/confirmar alertas
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
+
+    expect(vm.exibirRecursosComunidade, isTrue);
+    expect(vm.podeReportarAlerta, isTrue);
+    expect(vm.consensoGrau?.grauSugerido, '7b');
+    expect(vm.comentariosComunidade, hasLength(1));
+
+    expect(
+      await vm.reportarAlerta(
+        CategoriaAlertaSeguranca.abelhasInsetos,
+        detalhe: 'Enxame no diedro',
+      ),
+      isTrue,
+    );
+    expect(vm.alertasAtivos, hasLength(1));
+    final alertaId = vm.alertasAtivos.single.uid;
+
+    expect(
+      await vm.confirmarAlerta(alertaId, aindaEstaLa: false),
+      isTrue,
+    );
+    expect(vm.alertasAtivos, isEmpty);
+
+    // Simulação de falha determinística retorna false sem quebrar estado
+    repoFake.erroSimulado = StateError('Erro simulado');
+    expect(
+      await vm.reportarAlerta(CategoriaAlertaSeguranca.viaMolhada),
+      isFalse,
+    );
+    expect(
+      await vm.confirmarAlerta(alertaId, aindaEstaLa: true),
+      isFalse,
+    );
+
+    vm.dispose();
+    // Notificação após dispose não lança FlutterError
+    repoFake.semearDados(uidVia, const DadosComunidadeVia.vazio());
+  });
 }
