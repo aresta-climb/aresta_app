@@ -167,6 +167,120 @@ class ItemFilaInteracao {
     );
   }
 
+  /// Constrói um evento validado de `ALERTA_SEGURANCA` estilo Waze.
+  factory ItemFilaInteracao.alertaSeguranca({
+    String? id,
+    required String autorIdPublico,
+    required String autorNomePublico,
+    required String escaladaUid,
+    required String alertaAlvoUid,
+    required CategoriaAlertaSeguranca categoriaAlerta,
+    String? detalhe,
+    DateTime? criadoEm,
+  }) {
+    _exigirUidValido(autorIdPublico, 'autorIdPublico');
+    _exigirUidValido(escaladaUid, 'escaladaUid');
+    _exigirUidValido(alertaAlvoUid, 'alertaAlvoUid');
+    final detalheLimpo = detalhe?.trim();
+    if (detalheLimpo != null &&
+        detalheLimpo.length > AlertaSegurancaVia.limiteCaracteresDetalhe) {
+      throw ArgumentError.value(
+        detalheLimpo.length,
+        'detalhe',
+        'O detalhe do alerta deve ter no máximo ${AlertaSegurancaVia.limiteCaracteresDetalhe} caracteres.',
+      );
+    }
+    return ItemFilaInteracao._(
+      id: id ?? alertaAlvoUid,
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: _normalizarNome(autorNomePublico),
+      escaladaUid: escaladaUid,
+      tipo: TipoFilaInteracao.alertaSeguranca,
+      categoriaAlerta: categoriaAlerta,
+      alertaAlvoUid: alertaAlvoUid,
+      textoComentario: (detalheLimpo != null && detalheLimpo.isNotEmpty)
+          ? detalheLimpo
+          : null,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Constrói um evento validado de `CONFIRMACAO_ALERTA` (*"Ainda está lá?"*).
+  factory ItemFilaInteracao.confirmacaoAlerta({
+    String? id,
+    required String autorIdPublico,
+    required String autorNomePublico,
+    required String escaladaUid,
+    required String alertaAlvoUid,
+    required bool alertaAtivo,
+    DateTime? criadoEm,
+  }) {
+    _exigirUidValido(autorIdPublico, 'autorIdPublico');
+    _exigirUidValido(escaladaUid, 'escaladaUid');
+    _exigirUidValido(alertaAlvoUid, 'alertaAlvoUid');
+    return ItemFilaInteracao._(
+      id: id ?? gerarUid(),
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: _normalizarNome(autorNomePublico),
+      escaladaUid: escaladaUid,
+      tipo: TipoFilaInteracao.confirmacaoAlerta,
+      alertaAlvoUid: alertaAlvoUid,
+      alertaAtivo: alertaAtivo,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Reconstrói [ItemFilaInteracao] a partir de JSON PostgREST ou cache local.
+  factory ItemFilaInteracao.fromJson(Map<String, dynamic> json) {
+    final tipo = TipoFilaInteracao.deCodigoBanco(json['tipo'] as String);
+    final catTexto = json['categoria_alerta'] as String?;
+    final codAscensao = json['tipo_ascensao'] as int?;
+    final criadoTexto = json['criado_em'] as String?;
+    final idBruto = json['id']?.toString();
+
+    return ItemFilaInteracao._(
+      id: (idBruto != null && idBruto.isNotEmpty) ? idBruto : gerarUid(),
+      autorIdPublico: json['autor_id_publico'] as String,
+      autorNomePublico: _normalizarNome(json['autor_nome_publico'] as String?),
+      escaladaUid: json['escalada_uid'] as String,
+      tipo: tipo,
+      categoriaAlerta: catTexto != null
+          ? CategoriaAlertaSeguranca.deCodigoBanco(catTexto)
+          : null,
+      alertaAlvoUid: json['alerta_alvo_uid'] as String?,
+      alertaAtivo: json['alerta_ativo'] as bool?,
+      grauSugerido: json['grau_sugerido'] as int?,
+      deltaGrau: json['delta_grau'] as int?,
+      tipoAscensao: codAscensao != null
+          ? TipoAscensao.fromCodigo(codAscensao)
+          : null,
+      textoComentario: json['texto_comentario'] as String?,
+      criadoEm: criadoTexto != null
+          ? DateTime.parse(criadoTexto).toUtc()
+          : DateTime.now().toUtc(),
+    );
+  }
+
+  /// Converte para o payload exato aceito por `INSERT INTO public.fila_interacoes`.
+  Map<String, dynamic> toJson({bool incluirId = true}) {
+    return <String, dynamic>{
+      if (incluirId) 'id': id,
+      'autor_id_publico': autorIdPublico,
+      'autor_nome_publico': autorNomePublico,
+      'escalada_uid': escaladaUid,
+      'tipo': tipo.codigoBanco,
+      if (categoriaAlerta != null)
+        'categoria_alerta': categoriaAlerta!.codigoBanco,
+      if (alertaAlvoUid != null) 'alerta_alvo_uid': alertaAlvoUid,
+      if (alertaAtivo != null) 'alerta_ativo': alertaAtivo,
+      if (grauSugerido != null) 'grau_sugerido': grauSugerido,
+      if (deltaGrau != null) 'delta_grau': deltaGrau,
+      if (tipoAscensao != null) 'tipo_ascensao': tipoAscensao!.codigo,
+      if (textoComentario != null) 'texto_comentario': textoComentario,
+      'status': 'PENDENTE',
+      'criado_em': criadoEm.toUtc().toIso8601String(),
+    };
+  }
 
   static void _exigirUidValido(String valor, String campo) {
     if (!validarUid(valor)) {
