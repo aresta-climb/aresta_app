@@ -9,6 +9,7 @@ import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../services/comunidade/repositorio_interacoes_via.dart';
 import '../../services/controlador_interacoes_usuario.dart';
+import '../../services/firebase/app_logger.dart';
 import '../../utils/formatador_escalada.dart';
 
 /// Identificadores semânticos de ícones técnicos desacoplados de `Icons` concretos no ViewModel.
@@ -599,6 +600,66 @@ class ViaViewModel extends ChangeNotifier {
     return chave.isNotEmpty ? chave : null;
   }
 
+  /// Copia [chavePixManutencao] para a área de transferência do dispositivo.
+  Future<bool> copiarChavePix() async {
+    final chave = chavePixManutencao;
+    if (chave == null) return false;
+    await _copiadorAreaTransferencia(chave);
+    return true;
+  }
+
+  /// Abre uma mídia externa de beta no aplicativo ou navegador correspondente.
+  Future<bool> abrirMidiaBeta(String url) async {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+      return false;
+    }
+    return _lancadorUrlExterna(uri);
+  }
+
+  /// Registra um novo alerta de segurança estilo Waze para a escalada atual.
+  Future<bool> reportarAlerta(
+    CategoriaAlertaSeguranca categoria, {
+    String? detalhe,
+  }) async {
+    try {
+      await repositorioInteracoes.reportarAlerta(
+        escaladaUid: escalada.uid,
+        categoria: categoria,
+        detalhe: detalhe,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao reportar alerta de segurança na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Confirma se um alerta ativo ainda está presente na via ou se já foi resolvido.
+  Future<bool> confirmarAlerta(
+    String alertaUid, {
+    required bool aindaEstaLa,
+  }) async {
+    try {
+      await repositorioInteracoes.confirmarAlerta(
+        escaladaUid: escalada.uid,
+        alertaUid: alertaUid,
+        aindaEstaLa: aindaEstaLa,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao confirmar alerta de segurança $alertaUid na via ${escalada.uid}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
 
   String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
     return switch (alvo.whichTipo()) {
