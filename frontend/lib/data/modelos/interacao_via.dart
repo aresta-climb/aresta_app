@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import '../../utils/gerador_uid.dart';
 import 'perfil_escalador.dart';
+import 'tipo_ascensao.dart';
 
 /// Categorias canônicas de alerta de segurança estilo Waze nas vias e setores.
 ///
@@ -175,5 +176,117 @@ class AlertaSegurancaVia {
       criadoEm: criadoEm,
       confirmacoesAtivas: confirmacoesAtivas ?? this.confirmacoesAtivas,
     );
+  }
+}
+
+/// Consolida a percepção democrática da comunidade sobre o grau técnico de uma escalada,
+/// coexistindo lado a lado com o grau oficial atribuído pelo conquistador.
+@immutable
+class ConsensoGrauVia {
+  /// Grau sugerido pela mediana/moda dos votos comunitários (ex.: `'7b'`, `'v5'`).
+  final String? grauSugerido;
+
+  /// Quantidade total de votos computados para a escalada.
+  final int totalVotos;
+
+  /// Contagem de votos por delta relativo ao grau oficial (`-2` a `+2`).
+  final Map<int, int> distribuicaoDeltas;
+
+  /// Cria uma instância imutável de [ConsensoGrauVia].
+  const ConsensoGrauVia({
+    required this.grauSugerido,
+    required this.totalVotos,
+    this.distribuicaoDeltas = const {},
+  });
+
+  /// Representa o estado inicial de uma escalada ainda sem avaliações de grau.
+  const ConsensoGrauVia.vazio()
+    : grauSugerido = null,
+      totalVotos = 0,
+      distribuicaoDeltas = const {};
+
+  /// Indica se há ao menos um voto comunitário registrado para exibição estatística.
+  bool get possuiVotos =>
+      totalVotos > 0 && grauSugerido != null && grauSugerido!.isNotEmpty;
+
+  /// Texto sintético destacando a tendência majoritária (ex.: `'75% sugerem +1'`).
+  String? get resumoTendencia {
+    if (!possuiVotos || distribuicaoDeltas.isEmpty) {
+      return null;
+    }
+    var deltaDominante = 0;
+    var maiorContagem = -1;
+    for (final entrada in distribuicaoDeltas.entries) {
+      if (entrada.value > maiorContagem) {
+        maiorContagem = entrada.value;
+        deltaDominante = entrada.key;
+      }
+    }
+    final percentual = ((maiorContagem / totalVotos) * 100).round();
+    if (deltaDominante == 0) {
+      return '$percentual% confirmam o grau';
+    }
+    final sinal = deltaDominante > 0 ? '+$deltaDominante' : '$deltaDominante';
+    return '$percentual% sugerem $sinal';
+  }
+}
+
+/// Comentário público de beta, leitura de movimentos ou equipamento deixado na via.
+///
+/// Desacoplado de dados pessoais privados (LGPD), expondo apenas o `autorIdPublico`
+/// (NanoID 14c) e o apelido público do escalador.
+@immutable
+class ComentarioComunidadeVia {
+  /// Limite máximo de caracteres permitido para comentários públicos (`VARCHAR(280)`).
+  static const int limiteCaracteres = 280;
+
+  /// Identificador único NanoID 14c do comentário.
+  final String uid;
+
+  /// Identificador público NanoID 14c do autor.
+  final String autorIdPublico;
+
+  /// Nome ou apelido esportivo exibido junto à nota.
+  final String autorNomePublico;
+
+  /// Data e hora de publicação do comentário.
+  final DateTime criadoEm;
+
+  /// Estilo esportivo da ascensão associada ao comentário, quando informado.
+  final TipoAscensao? estiloAscensao;
+
+  /// Conteúdo textual validado e sem espaços excedentes nas extremidades.
+  final String texto;
+
+  /// Cria uma instância validada de [ComentarioComunidadeVia].
+  ComentarioComunidadeVia({
+    required this.uid,
+    required this.autorIdPublico,
+    required this.autorNomePublico,
+    required this.criadoEm,
+    this.estiloAscensao,
+    required String texto,
+  }) : texto = _validarTexto(texto);
+
+  static String _validarTexto(String bruto) {
+    final limpo = bruto.trim();
+    if (limpo.isEmpty || limpo.length > limiteCaracteres) {
+      throw ArgumentError.value(
+        bruto,
+        'texto',
+        'O comentário deve conter entre 1 e $limiteCaracteres caracteres.',
+      );
+    }
+    return limpo;
+  }
+
+  /// Selo visual em caixa alta do estilo esportivo (destacando À Vista e Flash com `★`).
+  String? get rotuloEstilo {
+    final estilo = estiloAscensao;
+    if (estilo == null) return null;
+    final textoCaixaAlta = estilo.rotulo.toUpperCase();
+    final mereceEstrela =
+        estilo == TipoAscensao.aVista || estilo == TipoAscensao.flash;
+    return mereceEstrela ? '$textoCaixaAlta ★' : textoCaixaAlta;
   }
 }
