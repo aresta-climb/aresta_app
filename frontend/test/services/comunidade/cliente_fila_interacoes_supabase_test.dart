@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/item_fila_interacao.dart';
 import 'package:frontend/services/comunidade/cliente_fila_interacoes_supabase.dart';
+import 'package:frontend/services/http/cliente_http_aresta.dart';
+import 'package:http/testing.dart';
 
 void main() {
   late HttpServer servidor;
@@ -75,5 +77,59 @@ void main() {
     await cliente.inserirInteracao(alerta);
     expect(ultimoAuthHeader, 'Bearer anon-key-teste');
     expect(ultimoPayloadRecebido!['alerta_alvo_uid'], 'alertaAbelha01');
+  });
+
+  test('busca interações pendentes via PostgREST e lança HttpException em erro HTTP', () async {
+    corpoRespostaGet = [
+      {
+        'id': 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        'autor_id_publico': 'c3Lk9P1x4Vw8Mn',
+        'autor_nome_publico': 'Mariana',
+        'escalada_uid': 'x8siJek3FiG3aB',
+        'tipo': 'COMENTARIO',
+        'texto_comentario': 'Ótimo crux!',
+        'tipo_ascensao': 2,
+        'status': 'PENDENTE',
+        'criado_em': '2026-11-19T18:00:00Z',
+      },
+    ];
+
+    final cliente = ClienteFilaInteracoesSupabase(
+      resolvedorBaseUrl: () => baseUrl,
+      resolvedorAnonKey: () => 'anon-key-teste',
+    );
+
+    final lista = await cliente.buscarInteracoesPendentes(
+      'x8siJek3FiG3aB',
+      accessToken: 'jwt-leitura',
+    );
+    expect(ultimoAuthHeader, 'Bearer jwt-leitura');
+    expect(lista, hasLength(1));
+    expect(lista.single.textoComentario, 'Ótimo crux!');
+
+    expect(await cliente.buscarInteracoesPendentes('   '), isEmpty);
+
+    statusResposta = 500;
+    await expectLater(
+      () => cliente.buscarInteracoesPendentes('x8siJek3FiG3aB'),
+      throwsA(isA<HttpException>()),
+    );
+    await expectLater(
+      () => cliente.inserirInteracao(lista.single),
+      throwsA(isA<HttpException>()),
+    );
+
+    // Valida resolvedores padrão do RemoteConfig usando ClienteHttpAresta.paraTestes
+    Uri? uriPadraoConsultada;
+    final clientePadrao = ClienteFilaInteracoesSupabase(
+      clienteHttp: ClienteHttpAresta.paraTestes(
+        MockClient((req) async {
+          uriPadraoConsultada = req.url;
+          return Response('[]', 200);
+        }),
+      ),
+    );
+    expect(await clientePadrao.buscarInteracoesPendentes('x8siJek3FiG3aB'), isEmpty);
+    expect(uriPadraoConsultada?.path, '/rest/v1/fila_interacoes');
   });
 }
