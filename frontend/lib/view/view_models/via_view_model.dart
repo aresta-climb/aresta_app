@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/modelos/interacao_via.dart';
+import '../../services/comunidade/repositorio_interacoes_via.dart';
+import '../../services/controlador_interacoes_usuario.dart';
+import '../../utils/formatador_escalada.dart';
 
 /// Identificadores semânticos de ícones técnicos desacoplados de `Icons` concretos no ViewModel.
 enum TipoIconeAtributoVia {
@@ -111,3 +118,112 @@ class ItemMidiaBetaVia {
   });
 }
 
+/// ViewModel (MVVM) responsável por toda a lógica de apresentação, extração técnica Protobuf,
+/// consenso de graduação e alertas de segurança estilo Waze da `ViaPage`.
+class ViaViewModel extends ChangeNotifier {
+  /// Escalada Protobuf exibida na página.
+  final Escalada escalada;
+
+  /// Repositório reativo de interações comunitárias e alertas de segurança.
+  final RepositorioInteracoesVia repositorioInteracoes;
+
+  /// Controlador de visibilidade dos recursos de perfil/comunidade.
+  final ControladorInteracoesUsuario controladorInteracoes;
+
+  final Future<void> Function(String texto) _copiadorAreaTransferencia;
+  final Future<bool> Function(Uri uri) _lancadorUrlExterna;
+  bool _descartado = false;
+
+  /// Cria uma instância de [ViaViewModel].
+  ViaViewModel({
+    required this.escalada,
+    RepositorioInteracoesVia? repositorioInteracoes,
+    ControladorInteracoesUsuario? controladorInteracoes,
+    Future<void> Function(String texto)? copiadorAreaTransferencia,
+    Future<bool> Function(Uri uri)? lancadorUrlExterna,
+  }) : repositorioInteracoes =
+           repositorioInteracoes ?? RepositorioInteracoesViaMemoria.instancia,
+       controladorInteracoes =
+           controladorInteracoes ?? ControladorInteracoesUsuario.instancia,
+       _copiadorAreaTransferencia =
+           copiadorAreaTransferencia ??
+           ((texto) => Clipboard.setData(ClipboardData(text: texto))),
+       _lancadorUrlExterna =
+           lancadorUrlExterna ??
+           ((uri) => launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    this.repositorioInteracoes.alteracoesListenable.addListener(_notificar);
+    this.controladorInteracoes.interacoesAtivasNotifier.addListener(_notificar);
+  }
+
+  void _notificar() {
+    if (!_descartado) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
+    controladorInteracoes.interacoesAtivasNotifier.removeListener(_notificar);
+    super.dispose();
+  }
+
+  /// Nome legível da escalada.
+  String get nomeEscalada => obterNomeEscalada(escalada);
+
+  /// Indica se a escalada possui um `uid` NanoID válido para compartilhamento e interações.
+  bool get possuiUid => escalada.hasUid() && escalada.uid.trim().isNotEmpty;
+
+  /// Indica se a modalidade é um Highline (sem grau esportivo de escalada).
+  bool get ehHighline => escalada.whichTipo() == Escalada_Tipo.highline;
+
+  /// Indica se os recursos interativos (alertas Waze, consenso, caderneta e notas) estão ativos.
+  bool get exibirRecursosComunidade =>
+      controladorInteracoes.exibirElementosInterativos;
+
+  /// Indica se o botão de reportar alerta deve aparecer na barra superior da página.
+  bool get podeReportarAlerta => exibirRecursosComunidade && possuiUid;
+
+  /// Modalidade formatada em português (`'Esportiva'`, `'Móvel'`, `'Mista'`, `'Boulder'`, `'Multienfiada'`, `'Highline'`).
+  String get modalidade {
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        return 'Esportiva';
+      case Escalada_Tipo.viaMovel:
+        return escalada.viaMovel.quantidadeProtecoesIntermediarias > 0
+            ? 'Mista'
+            : 'Móvel';
+      case Escalada_Tipo.boulder:
+        return 'Boulder';
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        return escalada.viaMultiplasEnfiadas.tipoViaMultiplasEnfiadas ==
+                ViaMultiplasEnfiadas_TipoViaMultiplasEnfiadas.MISTA
+            ? 'Mista'
+            : 'Multienfiada';
+      case Escalada_Tipo.highline:
+        return 'Highline';
+      case Escalada_Tipo.notSet:
+        return '';
+    }
+  }
+
+  /// Indica se a linha é marcada como clássica/destaque do setor.
+  bool get ehDestaque {
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        return escalada.viaEsportiva.destaque;
+      case Escalada_Tipo.viaMovel:
+        return escalada.viaMovel.destaque;
+      case Escalada_Tipo.boulder:
+        return escalada.boulder.destaque;
+      case Escalada_Tipo.viaMultiplasEnfiadas:
+        return escalada.viaMultiplasEnfiadas.destaque;
+      case Escalada_Tipo.highline:
+        return escalada.highline.destaque;
+      case Escalada_Tipo.notSet:
+        return false;
+    }
+  }
+
+}
