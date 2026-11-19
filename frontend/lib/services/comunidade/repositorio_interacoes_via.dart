@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/item_fila_interacao.dart';
+import '../../data/modelos/tipo_ascensao.dart';
 import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
 import '../caderneta/repositorio_caderneta.dart';
@@ -28,6 +29,17 @@ abstract interface class RepositorioInteracoesVia {
     String escaladaUid, {
     int? codigoGrauOficial,
     bool ehBoulder = false,
+  });
+
+  /// Registra a avaliação de grau (`-2` a `+2`) e eventual dica pública submetida junto a uma ascensão.
+  Future<void> registrarAvaliacaoAscensao({
+    required String escaladaUid,
+    required int deltaGrau,
+    int? codigoGrauOficial,
+    int? grauSugerido,
+    bool ehBoulder = false,
+    TipoAscensao? estiloAscensao,
+    String? comentarioPublico,
   });
 
   /// Registra um novo alerta de segurança na via (ou reforça alerta ativo da mesma categoria).
@@ -76,6 +88,8 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   bool _filaCarregada = false;
 
   final Map<String, DadosComunidadeVia> _dadosPorEscalada = {};
+  final Map<String, List<({int? deltaGrau, int? grauSugerido})>> _votosLocais =
+      {};
   final List<ItemFilaInteracao> _filaPendente = [];
   final ValueNotifier<int> _versaoNotifier = ValueNotifier<int>(0);
 
@@ -134,7 +148,115 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     }
   }
 
+  @override
+  Future<void> registrarAvaliacaoAscensao({
+    required String escaladaUid,
+    required int deltaGrau,
+    int? codigoGrauOficial,
+    int? grauSugerido,
+    bool ehBoulder = false,
+    TipoAscensao? estiloAscensao,
+    String? comentarioPublico,
+  }) async {
+    final uidVia = escaladaUid.trim();
+    if (uidVia.isEmpty) {
+      throw ArgumentError.value(
+        escaladaUid,
+        'escaladaUid',
+        'O identificador da escalada não pode ser vazio ao registrar avaliação.',
+      );
+    }
+    if (deltaGrau < -2 || deltaGrau > 2) {
+      throw ArgumentError.value(
+        deltaGrau,
+        'deltaGrau',
+        'O delta de grau deve estar entre -2 e +2.',
+      );
+    }
 
+    final perfil = _repositorioCaderneta.obterPerfil();
+    final codEfetivo =
+        grauSugerido ??
+        deslocarCodigoGrau(codigoGrauOficial, deltaGrau, ehBoulder: ehBoulder);
+
+    final atual = obterDadosEscalada(uidVia);
+    final votos = List<({int? deltaGrau, int? grauSugerido})>.from(
+      _votosLocais[uidVia] ?? const [],
+    );
+    if (votos.isEmpty && atual.consensoGrau.possuiVotos) {
+      atual.consensoGrau.distribuicaoDeltas.forEach((delta, qtd) {
+        for (var i = 0; i < qtd; i++) {
+          votos.add((
+            deltaGrau: delta,
+            grauSugerido: deslocarCodigoGrau(
+              codigoGrauOficial,
+              delta,
+              ehBoulder: ehBoulder,
+            ),
+          ));
+        }
+      });
+    }
+    votos.add((deltaGrau: deltaGrau, grauSugerido: codEfetivo));
+    _votosLocais[uidVia] = votos;
+
+    final comentarios = List<ComentarioComunidadeVia>.from(atual.comentarios);
+    final textoLimpo = comentarioPublico?.trim();
+    ComentarioComunidadeVia? novoComentario;
+    if (textoLimpo != null && textoLimpo.isNotEmpty) {
+      novoComentario = ComentarioComunidadeVia(
+        uid: gerarUid(),
+        autorIdPublico: perfil.autorIdPublico,
+        autorNomePublico: perfil.autorNomePublico,
+        criadoEm: DateTime.now().toUtc(),
+        estiloAscensao: estiloAscensao,
+        texto: textoLimpo,
+      );
+      comentarios.insert(0, novoComentario);
+    }
+
+    _dadosPorEscalada[uidVia] = atual.copyWith(
+      consensoGrau: consolidarConsensoDeVotos(
+        votos: votos,
+        codigoGrauOficial: codigoGrauOficial,
+        ehBoulder: ehBoulder,
+      ),
+      comentarios: List.unmodifiable(comentarios),
+    );
+    _versaoNotifier.value++;
+
+    if (_clienteFila != null &&
+        perfil.estaAutenticado &&
+        validarUid(uidVia) &&
+        validarUid(perfil.autorIdPublico)) {
+      final itensParaEnviar = <ItemFilaInteracao>[
+        ItemFilaInteracao.votoGrau(
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          escaladaUid: uidVia,
+          deltaGrau: deltaGrau,
+          grauSugerido: codEfetivo,
+          tipoAscensao: estiloAscensao,
+        ),
+        if (novoComentario != null)
+          ItemFilaInteracao.comentario(
+            id: novoComentario.uid,
+            autorIdPublico: perfil.autorIdPublico,
+            autorNomePublico: perfil.autorNomePublico,
+            escaladaUid: uidVia,
+            textoComentario: novoComentario.texto,
+            tipoAscensao: estiloAscensao,
+            criadoEm: novoComentario.criadoEm,
+          ),
+      ];
+      await _enfileirarEDespachar(
+        itensParaEnviar,
+        accessToken: perfil.accessToken,
+      );
+    }
+  }
+
+  @override
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
     required CategoriaAlertaSeguranca categoria,

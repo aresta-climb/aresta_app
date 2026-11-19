@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
+import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 
 /// Biblioteca `test-only` de Fake determinístico em memória para [RepositorioInteracoesVia].
@@ -45,6 +46,20 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
     escaladasSincronizadas.add(escaladaUid);
   }
 
+  @override
+  Future<void> registrarAvaliacaoAscensao({
+    required String escaladaUid,
+    required int deltaGrau,
+    int? codigoGrauOficial,
+    int? grauSugerido,
+    bool ehBoulder = false,
+    TipoAscensao? estiloAscensao,
+    String? comentarioPublico,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+  }
 
   @override
   Future<AlertaSegurancaVia> reportarAlerta({
