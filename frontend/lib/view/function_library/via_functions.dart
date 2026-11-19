@@ -1,27 +1,17 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-
-export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
+import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
-import '../../navigation/arvore_navegacao.dart';
-import '../../navigation/construtor_reativo_pagina.dart';
-import '../../navigation/funcoes_navegacao.dart';
-import '../../theme/cores_app.dart';
-import '../../utils/consulta_dataset.dart';
 import '../../utils/formatador_escalada.dart';
 import '../../widgets/caderneta/secao_caderneta_via.dart';
-import '../../widgets/linha_localizacao_setor.dart';
-import '../../widgets/mapa_thumbnail.dart';
 import '../../widgets/via/bolha_alerta_seguranca_via.dart';
 import '../../widgets/via/secoes_detalhes_via.dart';
 import '../view_models/secao_caderneta_via_view_model.dart';
 import '../view_models/via_view_model.dart';
-import 'biblioteca_funcoes_comuns.dart';
-import 'markdown_offline.dart';
-import 'package:flutter/material.dart';
-import 'package:frontend/services/firebase/telemetria.dart';
+
+export '../../utils/formatador_escalada.dart' show obterCodigoGrauOficial;
 
 /// Retorna o nome da escalada com base em sua modalidade ativa.
 String getEscaladaNome(Escalada escalada) => obterNomeEscalada(escalada);
@@ -350,136 +340,4 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
       },
     );
   }
-}
-
-Widget _buildTopBadges(
-  BuildContext context,
-  Escalada escalada,
-  String cragId,
-  Pico? pico,
-  Setor? setor,
-  Grupo? grupo,
-  bool fromSetorPage,
-  bool fromMapaPage,
-  bool isDestaque,
-) {
-  List<Widget> badges = [];
-
-  if (setor != null && setor.nome.isNotEmpty) {
-    badges.add(
-      LinhaLocalizacaoSetor(
-        cragId: cragId,
-        setor: setor,
-        grupo: grupo,
-        escalada: escalada,
-      ),
-    );
-  }
-
-  if (isDestaque) {
-    badges.add(
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.amber.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.star, size: 14, color: Colors.amber),
-            const SizedBox(width: 6),
-            const Text(
-              'CLÁSSICA',
-              style: TextStyle(
-                color: Colors.amber,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  if (badges.isEmpty) return const SizedBox.shrink();
-
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 20, top: 10),
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: badges,
-    ),
-  );
-}
-
-Widget _buildStatCard(
-  BuildContext context,
-  String label,
-  String value,
-  IconData icon,
-) {
-  return buildOutlineStatCard(context, label, value, icon);
-}
-
-Widget _buildActionButton(
-  String label,
-  IconData icon,
-  VoidCallback onTap, {
-  Color? color,
-}) {
-  color ??= beastHide;
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8.0),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(color: color, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-Widget _buildHistoryRow(String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: slateStone,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: fishBone, fontSize: 14)),
-      ],
-    ),
-  );
 }
