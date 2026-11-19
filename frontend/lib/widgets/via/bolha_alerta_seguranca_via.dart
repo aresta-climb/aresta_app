@@ -7,6 +7,44 @@ import '../../data/modelos/interacao_via.dart';
 /// Cor vermelha de alta visibilidade usada nas bolhas de alerta estilo Waze sobre rocha e cartões escuros.
 const Color _corVermelhoAlerta = Color(0xFFD93829);
 
+/// Conjunto compacto de bolhas vermelhas em formato de balão de fala com emojis de risco (`🐝`, `🪨`, `🔩`, `💧`, `⚠️`),
+/// posicionado sobre o canto superior direito da área de croqui/grau da `ViaPage`.
+class BolhasFlutuantesAlertaVia extends StatelessWidget {
+  /// Lista de alertas ativos a exibir como bolhas clicáveis.
+  final List<AlertaSegurancaVia> alertas;
+
+  /// Callback acionado ao tocar em uma bolha para abrir o modal *"Ainda está lá?"*.
+  final ValueChanged<AlertaSegurancaVia> aoSelecionarAlerta;
+
+  /// Cria uma instância de [BolhasFlutuantesAlertaVia].
+  const BolhasFlutuantesAlertaVia({
+    super.key,
+    required this.alertas,
+    required this.aoSelecionarAlerta,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (alertas.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: alertas
+          .map(
+            (alerta) => BolhaEmojiAlertaVia(
+              key: Key('bolha_alerta_${alerta.categoria.codigoBanco}'),
+              alerta: alerta,
+              aoTocar: () => aoSelecionarAlerta(alerta),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
 /// Balão vermelho estilo chat/Waze contendo o emoji da categoria de risco e contador de confirmações.
 class BolhaEmojiAlertaVia extends StatelessWidget {
   /// Alerta de segurança associado a esta bolha.
