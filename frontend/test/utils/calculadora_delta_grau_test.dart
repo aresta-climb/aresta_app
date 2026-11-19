@@ -106,4 +106,65 @@ void main() {
       );
     });
   });
+
+  group('rotuloOpcaoDeltaGrau e consolidarConsensoDeVotos', () {
+    test('gera rótulos de opção e consolida moda/mediana dos votos em ConsensoGrauVia', () {
+      final cod7a = GrauVia_GrauVia.BR_7A.value;
+      expect(rotuloOpcaoDeltaGrau(0, codigoOficial: cod7a, ehBoulder: false), 'Justo (7a)');
+      expect(rotuloOpcaoDeltaGrau(1, codigoOficial: cod7a, ehBoulder: false), '+1 (7b)');
+      expect(rotuloOpcaoDeltaGrau(-1, codigoOficial: cod7a, ehBoulder: false), '-1 (6ºsup)');
+      expect(rotuloOpcaoDeltaGrau(0, codigoOficial: null, ehBoulder: false), 'Grau Justo (0)');
+      expect(rotuloOpcaoDeltaGrau(2, codigoOficial: null, ehBoulder: false), '+2');
+      expect(rotuloOpcaoDeltaGrau(-2, codigoOficial: null, ehBoulder: false), '-2');
+
+      final vazio = consolidarConsensoDeVotos(
+        votos: const [],
+        codigoGrauOficial: cod7a,
+        ehBoulder: false,
+      );
+      expect(vazio.possuiVotos, isFalse);
+
+      final consenso = consolidarConsensoDeVotos(
+        votos: [
+          (deltaGrau: 1, grauSugerido: GrauVia_GrauVia.BR_7B.value),
+          (deltaGrau: 1, grauSugerido: GrauVia_GrauVia.BR_7B.value),
+          (deltaGrau: 1, grauSugerido: GrauVia_GrauVia.BR_7B.value),
+          (deltaGrau: 0, grauSugerido: GrauVia_GrauVia.BR_7A.value),
+        ],
+        codigoGrauOficial: cod7a,
+        ehBoulder: false,
+      );
+      expect(consenso.totalVotos, 4);
+      expect(consenso.grauSugerido, '7b');
+      expect(consenso.resumoTendencia, '75% sugerem +1');
+
+      // Via projeto (sem grau oficial): consolida diretamente a moda de grauSugerido
+      final consensoProjeto = consolidarConsensoDeVotos(
+        votos: [
+          (deltaGrau: 0, grauSugerido: GrauVia_GrauVia.BR_8A.value),
+          (deltaGrau: 0, grauSugerido: GrauVia_GrauVia.BR_8A.value),
+        ],
+        codigoGrauOficial: null,
+        ehBoulder: false,
+      );
+      expect(consensoProjeto.totalVotos, 2);
+      expect(consensoProjeto.grauSugerido, '8a');
+
+      // Voto apenas com deltaGrau sem grauSugerido explícito deriva o código pelo oficial
+      final apenasDelta = consolidarConsensoDeVotos(
+        votos: [(deltaGrau: 1, grauSugerido: null)],
+        codigoGrauOficial: cod7a,
+        ehBoulder: false,
+      );
+      expect(apenasDelta.grauSugerido, '7b');
+
+      // Votos sem código resolvível nem grau oficial retornam consenso vazio
+      final semResolucao = consolidarConsensoDeVotos(
+        votos: [(deltaGrau: 0, grauSugerido: null)],
+        codigoGrauOficial: null,
+        ehBoulder: false,
+      );
+      expect(semResolucao.possuiVotos, isFalse);
+    });
+  });
 }
