@@ -128,7 +128,76 @@ class SecaoContribuicaoPublicaAscensao extends StatelessWidget {
               );
             }).toList(),
           ),
-          if (estaAutenticado) const SizedBox.shrink(),
+          const SizedBox(height: 14),
+          if (estaAutenticado) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Dica Pública / Beta (opcional)',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: cores.chalkWhite,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  contadorComentarioTexto,
+                  style: TextStyle(
+                    color: atingiuLimiteComentario
+                        ? cores.rustIron
+                        : cores.ashGrey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              key: const Key('campo_comentario_publico_cadena'),
+              controller: controladorComentario,
+              maxLength: limiteCaracteresComentario,
+              maxLines: 2,
+              buildCounter:
+                  (
+                    context, {
+                    required currentLength,
+                    required isFocused,
+                    maxLength,
+                  }) => null,
+              style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+              decoration: InputDecoration(
+                hintText:
+                    'Ex.: Costura 3 longa; boa leitura pela esquerda no crux.',
+                hintStyle: TextStyle(
+                  color: cores.ashGrey.withValues(alpha: 0.7),
+                  fontSize: 13,
+                ),
+                filled: true,
+                fillColor: cores.deepBasalt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: cores.graniteEdge),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: cores.graniteEdge),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: cores.rustIron),
+                ),
+              ),
+            ),
+          ] else
+            Text(
+              'Conecte sua conta na aba Perfil para enviar votos e dicas públicas ao guia comunitário.',
+              style: TextStyle(color: cores.ashGrey, fontSize: 12, height: 1.35),
+            ),
         ],
       ),
     );
