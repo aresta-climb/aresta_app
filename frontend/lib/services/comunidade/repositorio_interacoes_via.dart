@@ -1,14 +1,20 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../data/modelos/item_fila_interacao.dart';
+import '../../utils/gerador_uid.dart';
 import '../caderneta/repositorio_caderneta.dart';
+import '../firebase/app_logger.dart';
+import 'cliente_fila_interacoes_supabase.dart';
 
 /// Contrato reativo da camada de dados comunitários e alertas de segurança estilo Waze por via.
 ///
-/// Desacopla o `ViaViewModel` e os componentes visuais da `ViaPage` da origem física
-/// dos dados (memória local na Fase 1 e fusão Protobuf + `public.fila_interacoes` na Fase 2).
+/// Une leitura/escrita em memória de resposta instantânea (`0ms`) na `ViaPage` com
+/// sincronização PostgREST (`public.fila_interacoes`) e fila local offline (*outbox*).
 abstract interface class RepositorioInteracoesVia {
   /// Notificador que incrementa sempre que alertas, votos ou comentários sofrem alteração.
   ValueListenable<int> get alteracoesListenable;
@@ -16,6 +22,7 @@ abstract interface class RepositorioInteracoesVia {
   /// Retorna o agregado comunitário atual ([DadosComunidadeVia]) para [escaladaUid].
   DadosComunidadeVia obterDadosEscalada(String escaladaUid);
 
+  /// Drena interações offline pendentes e sincroniza o estado ativo de [escaladaUid] com o Supabase.
   /// Registra um novo alerta de segurança na via (ou reforça alerta ativo da mesma categoria).
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
@@ -31,16 +38,18 @@ abstract interface class RepositorioInteracoesVia {
   });
 }
 
-/// Implementação reativa local em memória de [RepositorioInteracoesVia].
-///
-/// Garante responsividade imediata na `ViaPage` e funcionamento offline na base da falésia,
-/// utilizando o apelido configurado no [RepositorioCaderneta] para identificar relatos.
+/// Implementação reativa local-first de [RepositorioInteracoesVia] integrada ao Supabase e fila offline.
 class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
+  /// Chave usada no `SharedPreferences` para persistir a fila de envio offline (*outbox*).
+  static const String chaveFilaPendente = 'fila_pendente_interacoes_via_v1';
+
   static RepositorioInteracoesVia? _instanciaCompartilhada;
 
-  /// Instância singleton padrão compartilhada na aplicação.
+  /// Instância singleton padrão conectada ao [ClienteFilaInteracoesSupabase].
   static RepositorioInteracoesVia get instancia =>
-      _instanciaCompartilhada ??= RepositorioInteracoesViaMemoria();
+      _instanciaCompartilhada ??= RepositorioInteracoesViaMemoria(
+        clienteFila: ClienteFilaInteracoesSupabase(),
+      );
 
   /// Permite injetar instância substituta em testes de integração.
   @visibleForTesting
@@ -55,13 +64,23 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   final RepositorioCaderneta _repositorioCaderneta;
+  final ClienteFilaInteracoes? _clienteFila;
+  SharedPreferences? _preferencias;
+  bool _filaCarregada = false;
+
   final Map<String, DadosComunidadeVia> _dadosPorEscalada = {};
+  final List<ItemFilaInteracao> _filaPendente = [];
   final ValueNotifier<int> _versaoNotifier = ValueNotifier<int>(0);
 
   /// Cria uma instância de [RepositorioInteracoesViaMemoria].
-  RepositorioInteracoesViaMemoria({RepositorioCaderneta? repositorioCaderneta})
-    : _repositorioCaderneta =
-          repositorioCaderneta ?? RepositorioCadernetaLocal.instancia;
+  RepositorioInteracoesViaMemoria({
+    RepositorioCaderneta? repositorioCaderneta,
+    ClienteFilaInteracoes? clienteFila,
+    SharedPreferences? preferencias,
+  }) : _repositorioCaderneta =
+           repositorioCaderneta ?? RepositorioCadernetaLocal.instancia,
+       _clienteFila = clienteFila,
+       _preferencias = preferencias;
 
   @override
   ValueListenable<int> get alteracoesListenable => _versaoNotifier;
@@ -72,6 +91,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   @override
+
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
     required CategoriaAlertaSeguranca categoria,
@@ -86,6 +106,7 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       );
     }
 
+    final perfil = _repositorioCaderneta.obterPerfil();
     final atual = obterDadosEscalada(uidVia);
     final alertas = List<AlertaSegurancaVia>.from(atual.alertasAtivos);
     final indiceExistente = alertas.indexWhere((a) => a.categoria == categoria);
@@ -102,7 +123,6 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       );
       alertas[indiceExistente] = resultado;
     } else {
-      final perfil = _repositorioCaderneta.obterPerfil();
       resultado = AlertaSegurancaVia.criar(
         escaladaUid: uidVia,
         categoria: categoria,
@@ -116,6 +136,23 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       alertasAtivos: List.unmodifiable(alertas),
     );
     _versaoNotifier.value++;
+
+    if (_clienteFila != null &&
+        validarUid(uidVia) &&
+        validarUid(perfil.autorIdPublico) &&
+        validarUid(resultado.uid)) {
+      await _enfileirarEDespachar([
+        ItemFilaInteracao.alertaSeguranca(
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          escaladaUid: uidVia,
+          alertaAlvoUid: resultado.uid,
+          categoriaAlerta: categoria,
+          detalhe: detalhe,
+        ),
+      ], accessToken: perfil.accessToken);
+    }
+
     return resultado;
   }
 
@@ -144,5 +181,103 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
       alertasAtivos: List.unmodifiable(alertas),
     );
     _versaoNotifier.value++;
+
+    final perfil = _repositorioCaderneta.obterPerfil();
+    if (_clienteFila != null &&
+        validarUid(uidVia) &&
+        validarUid(perfil.autorIdPublico) &&
+        validarUid(alertaUid)) {
+      await _enfileirarEDespachar([
+        ItemFilaInteracao.confirmacaoAlerta(
+          autorIdPublico: perfil.autorIdPublico,
+          autorNomePublico: perfil.autorNomePublico,
+          escaladaUid: uidVia,
+          alertaAlvoUid: alertaUid,
+          alertaAtivo: aindaEstaLa,
+        ),
+      ], accessToken: perfil.accessToken);
+    }
+  }
+
+  Future<void> _carregarFilaPendenteSeNecessario() async {
+    if (_filaCarregada) return;
+    _filaCarregada = true;
+    final prefs = _preferencias ??= await SharedPreferences.getInstance();
+    final bruto = prefs.getString(chaveFilaPendente);
+    if (bruto == null || bruto.isEmpty) return;
+
+    final lista = jsonDecode(bruto) as List<dynamic>;
+    _filaPendente
+      ..clear()
+      ..addAll(
+        lista.whereType<Map<String, dynamic>>().map(ItemFilaInteracao.fromJson),
+      );
+  }
+
+  Future<void> _persistirFilaPendente() async {
+    final prefs = _preferencias ??= await SharedPreferences.getInstance();
+    if (_filaPendente.isEmpty) {
+      await prefs.remove(chaveFilaPendente);
+      return;
+    }
+    final serializado = jsonEncode(
+      _filaPendente.map((i) => i.toJson()).toList(growable: false),
+    );
+    await prefs.setString(chaveFilaPendente, serializado);
+  }
+
+  Future<void> _enfileirarEDespachar(
+    List<ItemFilaInteracao> novosItens, {
+    String? accessToken,
+  }) async {
+    final cliente = _clienteFila;
+    if (cliente == null) return;
+    await _carregarFilaPendenteSeNecessario();
+    _filaPendente.addAll(novosItens);
+    await _drenarFilaPendente(cliente, accessToken: accessToken);
+  }
+
+  Future<void> _drenarFilaPendente(
+    ClienteFilaInteracoes cliente, {
+    String? accessToken,
+  }) async {
+    if (_filaPendente.isEmpty) return;
+
+    final restantes = <ItemFilaInteracao>[];
+    for (var i = 0; i < _filaPendente.length; i++) {
+      final item = _filaPendente[i];
+      try {
+        await cliente.inserirInteracao(item, accessToken: accessToken);
+      } catch (e, stackTrace) {
+        _registrarFalhaRede(
+          'Interação retida na fila offline (${item.tipo.codigoBanco})',
+          e,
+          stackTrace,
+        );
+        restantes.addAll(_filaPendente.sublist(i));
+        break;
+      }
+    }
+
+    _filaPendente
+      ..clear()
+      ..addAll(restantes);
+    await _persistirFilaPendente();
+  }
+
+  static void _registrarFalhaRede(
+    String contexto,
+    Object erro,
+    StackTrace stackTrace,
+  ) {
+    if (AppLogger.isFalhaConexaoOuTimeout(erro)) {
+      AppLogger.instance.logAviso('$contexto: $erro');
+    } else {
+      AppLogger.instance.logError(
+        contexto,
+        error: erro,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }
