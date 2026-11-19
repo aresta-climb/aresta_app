@@ -11,6 +11,8 @@ import '../../services/firebase/telemetria.dart';
 import '../../theme/cores_app.dart';
 import '../../utils/consulta_dataset.dart';
 import '../../utils/formatador_escalada.dart';
+import '../../view/function_library/biblioteca_funcoes_comuns.dart';
+import '../../view/view_models/via_view_model.dart';
 import '../linha_localizacao_setor.dart';
 import '../mapa_thumbnail.dart';
 import 'bolha_alerta_seguranca_via.dart';
@@ -557,3 +559,101 @@ class SecaoMapaCroquiVia extends StatelessWidget {
     );
   }
 }
+
+/// Grade responsiva de especificações técnicas (`EXTENSÃO`, `PROTEÇÕES`, `PAREDE`, etc.) + tipo de ancoragem.
+class GradeAtributosTecnicosVia extends StatelessWidget {
+  /// Lista de atributos técnicos extraídos pelo `ViaViewModel`.
+  final List<AtributoTecnicoVia> atributos;
+
+  /// Descrição textual da parada/ancoragem, quando presente.
+  final String? tipoAncoragem;
+
+  /// Cria uma instância de [GradeAtributosTecnicosVia].
+  const GradeAtributosTecnicosVia({
+    super.key,
+    required this.atributos,
+    this.tipoAncoragem,
+  });
+
+  static IconData _resolverIcone(TipoIconeAtributoVia tipo) {
+    return switch (tipo) {
+      TipoIconeAtributoVia.extensao => Icons.height_rounded,
+      TipoIconeAtributoVia.protecoes => Icons.shield_outlined,
+      TipoIconeAtributoVia.parede => Icons.terrain_rounded,
+      TipoIconeAtributoVia.exposicao => Icons.warning_amber_rounded,
+      TipoIconeAtributoVia.enfiadas => Icons.format_list_numbered_rounded,
+      TipoIconeAtributoVia.duracao => Icons.timer_outlined,
+      TipoIconeAtributoVia.modalidade => Icons.merge_type_rounded,
+      TipoIconeAtributoVia.distancia => Icons.straighten_rounded,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (atributos.isEmpty && tipoAncoragem == null) {
+      return const SizedBox.shrink();
+    }
+    final cores = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (atributos.isNotEmpty)
+            LayoutBuilder(
+              builder: (context, restricoes) {
+                final larguraTotal = restricoes.maxWidth;
+                final usarDuasColunas = larguraTotal >= 250;
+                final larguraItem = usarDuasColunas
+                    ? (larguraTotal - 12) / 2
+                    : larguraTotal;
+
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: atributos
+                      .map(
+                        (a) => SizedBox(
+                          width: larguraItem,
+                          child: buildOutlineStatCard(
+                            context,
+                            a.rotulo,
+                            a.valor,
+                            _resolverIcone(a.icone),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          if (tipoAncoragem != null) ...[
+            if (atributos.isNotEmpty) const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: cores.caveShadow,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cores.graniteEdge),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.anchor_rounded, size: 18, color: cores.beastHide),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Ancoragem: $tipoAncoragem',
+                      style: TextStyle(color: cores.chalkWhite, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
