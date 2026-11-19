@@ -23,6 +23,12 @@ abstract interface class RepositorioInteracoesVia {
     String? detalhe,
   });
 
+  /// Registra a resposta do escalador à pergunta *"Ainda está lá?"* sobre [alertaUid].
+  Future<void> confirmarAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+    required bool aindaEstaLa,
+  });
 }
 
 /// Implementação reativa local em memória de [RepositorioInteracoesVia].
@@ -111,5 +117,32 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
     );
     _versaoNotifier.value++;
     return resultado;
+  }
+
+  @override
+  Future<void> confirmarAlerta({
+    required String escaladaUid,
+    required String alertaUid,
+    required bool aindaEstaLa,
+  }) async {
+    final uidVia = escaladaUid.trim();
+    final atual = obterDadosEscalada(uidVia);
+    final alertas = List<AlertaSegurancaVia>.from(atual.alertasAtivos);
+    final indice = alertas.indexWhere((a) => a.uid == alertaUid);
+    if (indice < 0) return;
+
+    if (aindaEstaLa) {
+      final existente = alertas[indice];
+      alertas[indice] = existente.copyWith(
+        confirmacoesAtivas: existente.confirmacoesAtivas + 1,
+      );
+    } else {
+      alertas.removeAt(indice);
+    }
+
+    _dadosPorEscalada[uidVia] = atual.copyWith(
+      alertasAtivos: List.unmodifiable(alertas),
+    );
+    _versaoNotifier.value++;
   }
 }
