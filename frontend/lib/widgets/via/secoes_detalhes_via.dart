@@ -706,6 +706,83 @@ class SecaoTextosETecnicasVia extends StatelessWidget {
   }
 }
 
+/// Linha do tempo vertical detalhando cada enfiada de uma via de múltiplas enfiadas.
+class SecaoEnfiadasVia extends StatelessWidget {
+  /// Lista de enfiadas resumidas pelo `ViaViewModel`.
+  final List<ResumoEnfiadaVia> enfiadas;
+
+  /// Cria uma instância de [SecaoEnfiadasVia].
+  const SecaoEnfiadasVia({super.key, required this.enfiadas});
+
+  @override
+  Widget build(BuildContext context) {
+    if (enfiadas.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _TituloSecaoVia(titulo: 'Enfiadas'),
+          const SizedBox(height: 12),
+          ...enfiadas.map((enf) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cores.caveShadow,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cores.graniteEdge),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        enf.titulo,
+                        style: TextStyle(
+                          color: cores.chalkWhite,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (enf.grau != null)
+                        _PilulaDetalheCurto(texto: enf.grau!),
+                      if (enf.extensao != null)
+                        _PilulaDetalheCurto(texto: enf.extensao!),
+                      if (enf.protecoes != null)
+                        _PilulaDetalheCurto(texto: '${enf.protecoes} prot.'),
+                    ],
+                  ),
+                  if (enf.equipamentoMovel != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Móvel: ${enf.equipamentoMovel}',
+                      style: TextStyle(color: cores.ashGrey, fontSize: 12),
+                    ),
+                  ],
+                  if (enf.descricao != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      enf.descricao!,
+                      style: TextStyle(color: cores.chalkWhite, fontSize: 13),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
 
 class _TituloSecaoVia extends StatelessWidget {
   final String titulo;
@@ -733,6 +810,33 @@ class _TituloSecaoVia extends StatelessWidget {
           color: cores.beastHide.withValues(alpha: 0.5),
         ),
       ],
+    );
+  }
+}
+
+class _PilulaDetalheCurto extends StatelessWidget {
+  final String texto;
+
+  const _PilulaDetalheCurto({required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cores.deepBasalt,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: Text(
+        texto,
+        style: TextStyle(
+          color: cores.beastHide,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
