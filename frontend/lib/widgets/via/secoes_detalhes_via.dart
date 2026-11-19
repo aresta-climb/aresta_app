@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
+import '../../data/modelos/interacao_via.dart';
 import '../../theme/cores_app.dart';
 import '../linha_localizacao_setor.dart';
 
@@ -128,6 +129,151 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Cartão de destaque exibindo o Grau Oficial do Conquistador em harmonia com o Consenso da Comunidade.
+class CartaoGrauVia extends StatelessWidget {
+  /// Rótulo superior da coluna oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
+  final String rotuloGrauOficial;
+
+  /// Valor textual do grau oficial, ou `null` quando indefinido.
+  final String? grauOficial;
+
+  /// Subtítulo contextual do grau oficial.
+  final String complementoGrauOficial;
+
+  /// Dados do consenso comunitário (quando habilitado).
+  final ConsensoGrauVia? consensoGrau;
+
+  /// Cria uma instância de [CartaoGrauVia].
+  const CartaoGrauVia({
+    super.key,
+    required this.rotuloGrauOficial,
+    required this.grauOficial,
+    required this.complementoGrauOficial,
+    this.consensoGrau,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    final consenso = consensoGrau;
+
+    final blocoOficial = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          rotuloGrauOficial,
+          style: TextStyle(
+            color: cores.ashGrey,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          grauOficial ?? '—',
+          style: TextStyle(
+            color: cores.chalkWhite,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          complementoGrauOficial,
+          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cores.caveShadow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cores.graniteEdge),
+      ),
+      child: consenso == null
+          ? blocoOficial
+          : LayoutBuilder(
+              builder: (context, restricoes) {
+                final empilhar = restricoes.maxWidth < 260;
+                final blocoComunidade = _BlocoConsensoComunidade(
+                  consenso: consenso,
+                );
+                if (empilhar) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      blocoOficial,
+                      Divider(color: cores.graniteEdge, height: 24),
+                      blocoComunidade,
+                    ],
+                  );
+                }
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: blocoOficial),
+                      VerticalDivider(
+                        color: cores.graniteEdge,
+                        width: 24,
+                        thickness: 1,
+                      ),
+                      Expanded(child: blocoComunidade),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _BlocoConsensoComunidade extends StatelessWidget {
+  final ConsensoGrauVia consenso;
+
+  const _BlocoConsensoComunidade({required this.consenso});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    final possuiVotos = consenso.possuiVotos;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'CONSENSO DA COMUNIDADE',
+          style: TextStyle(
+            color: cores.rustIron,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          possuiVotos ? consenso.grauSugerido! : 'Sem votos',
+          style: TextStyle(
+            color: possuiVotos ? cores.chalkWhite : cores.ashGrey,
+            fontSize: possuiVotos ? 28 : 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          possuiVotos
+              ? (consenso.resumoTendencia ?? '${consenso.totalVotos} avaliações')
+              : 'Registre sua ascensão para avaliar',
+          style: TextStyle(color: cores.ashGrey, fontSize: 12),
+        ),
+      ],
     );
   }
 }
