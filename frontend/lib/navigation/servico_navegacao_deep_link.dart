@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/autenticacao/servico_autenticacao.dart';
 import '../services/editor_croqui.dart';
 import '../services/firebase/app_logger.dart';
 import '../services/firebase/performance_telemetria.dart';
@@ -129,10 +128,6 @@ class DeepLinkNavigatorService {
         context != null ? Theme.of(context).colorScheme.error : null;
 
     final uri = _converterParaUri(link);
-    if (uri != null &&
-        ServicoAutenticacaoLocal.instancia.processarCallbackOAuth(uri)) {
-      return false;
-    }
     if (uri != null &&
         uri.host.toLowerCase() == EditorDeCroqui.dominioPrevia &&
         uri.pathSegments.isNotEmpty &&

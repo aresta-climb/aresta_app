@@ -18,8 +18,8 @@ O gerenciador de estado central do aplicativo (Singleton), orquestrando o fluxo 
 ### Autenticação, Mídia Nativa e Caderneta (`autenticacao/`, `midia/` e `caderneta/`)
 Subsistema responsável pela identidade esportiva do escalador, autenticação com o Supabase e gestão local-first da caderneta de ascensões:
 
-- **`ServicoAutenticacaoLocal` (`autenticacao/servico_autenticacao.dart`)**: Valida credenciais locais, coordena os fluxos de entrada por e-mail/senha, criação de conta, login Google OAuth e atualização remota de perfil, e persiste o `PerfilEscalador` no `RepositorioCaderneta` preservando o `autorIdPublico` (NanoID 14c) e as cadenas registradas offline.
-- **`ClienteSupabaseAutenticacao` (`autenticacao/cliente_supabase_autenticacao.dart`)**: Isola os protocolos HTTP e OAuth 2.0 (PKCE `S256` e `Implicit`) com o Supabase GoTrue (`/auth/v1/token`, `/auth/v1/signup`, `/auth/v1/authorize`, `/auth/v1/user`), o espelhamento em `public.perfis` via PostgREST (`/rest/v1/perfis`) e o upload de fotos de perfil para o bucket `avatars` no Supabase Storage (`/storage/v1/object/avatars/<userId>/avatar.webp`).
+- **`ServicoAutenticacaoLocal` (`autenticacao/servico_autenticacao.dart`)**: Opera exclusivamente sem senha e sob filosofia *Fail-Fast* (sem contas fictícias em produção), coordenando Magic Code OTP de 6 dígitos por e-mail, login in-app Google/Apple e atualização remota de perfil, e persistindo o `PerfilEscalador` no `RepositorioCaderneta` preservando o `autorIdPublico` (NanoID 14c) e as cadenas registradas offline.
+- **`ClienteSupabaseAutenticacao` (`autenticacao/cliente_supabase_autenticacao.dart`)**: Isola os protocolos sem senha com o Supabase GoTrue (`/auth/v1/otp`, `/auth/v1/verify`, `/auth/v1/token?grant_type=id_token`, `/auth/v1/token?grant_type=pkce` via `ASWebAuthenticationSession` e `/auth/v1/user`), o espelhamento em `public.perfis` via PostgREST (`/rest/v1/perfis`) e o upload de fotos de perfil para o bucket `avatars` no Supabase Storage (`/storage/v1/object/avatars/<userId>/avatar.webp`).
 - **`SeletorFotoPerfilNativo` (`midia/seletor_foto_perfil.dart`)**: Aciona o canal nativo `app.escalada.croquis/seletor_midia` (implementado em Kotlin no Android via `GetContent` + `ExifInterface` + `Bitmap` e em Swift no iOS via `UIImagePickerController`) para selecionar uma imagem da galeria, corrigir sua orientação EXIF, recortá-la em quadrado central `256x256` e comprimi-la em WebP (`data:image/webp;base64,...`).
 - **`RepositorioCadernetaLocal` e `CatalogoViasCaderneta` (`caderneta/`)**: Gerenciam a persistência local de ascensões (`Cadena`) e perfil (`PerfilEscalador`), a compilação da pirâmide de graus (`CompiladorEstatisticasCaderneta`) e a resolução reativa de nomes de vias, graus e picos a partir do `catalogo.db` e dos croquis em memória.
 
@@ -59,7 +59,7 @@ Inicializa os bindings do Flutter, executa tarefas independentes de *bootstrap* 
 - **`explorar.dart`**: Lista todos os guias disponíveis no índice mestre com thumbnails dinâmicos, indicadores de download e ações de download inline.
 - **`mapa_global.dart`**: O "Mapa Global", uma visão 2D no Google Maps exibindo todos os croquis disponíveis com marcadores escalonados por faixas de zoom (Macro, Regional e Local), balões compactos com truncamento automático de texto e interações de bottom sheet.
 - **`comunidade.dart`**: Hub central com mídias, apoios e links interativos (WhatsApp, Instagram, Discord, GitHub).
-- **`login.dart`**: Tela de entrada e criação de conta com suporte a Google OAuth, e-mail/senha e opção de continuar sem conta no modo offline.
+- **`login.dart`**: Tela de autenticação sem senha protegida atrás de `ConfiguracaoRecursos.perfilHabilitado`, com Google (Android/iOS), Apple (apenas iOS), código OTP de 6 dígitos por e-mail e opção de continuar sem conta no modo offline.
 - **`hub_perfil_caderneta.dart`**: Hub do Perfil do Escalador, exibindo foto de perfil com botão de câmera para atualização instantânea, nome esportivo, 4 cartões de métricas rápidas (`CADENAS`, `TENTATIVAS`, `PICOS`, `VIAS`) e menu de ações (entrar na conta, minha caderneta, configurações, dados/privacidade e sair).
 - **`caderneta.dart`**: Página detalhada da caderneta esportiva pessoal com pirâmide de graduação (vias e boulders), estatísticas e histórico cronológico de ascensões.
 - **`configuracoes.dart`**: Gerenciamento do aplicativo, preferência de visibilidade da caderneta, cache e ferramentas de editor experimental.
@@ -113,7 +113,7 @@ Reúne os construtores visuais, componentes de layout específicos de cada tela 
 
 ### Subcamada de Modelos de Apresentação (`lib/view/view_models/`)
 Encapsula o estado da interface, cálculos visuais derivados (como distâncias geográficas de picos próximos e status de download) e prepara os dados de domínio para renderização passiva:
-- **`login_view_model.dart`**: Orquestra os modos de entrada/criação de conta por e-mail e senha, login com Google OAuth e estados de carregamento/erro.
+- **`login_view_model.dart`**: Orquestra o fluxo sem senha de código OTP de 6 dígitos por e-mail (janela deslizante 6/min), login in-app Google/Apple, cancelamento silencioso e estados de carregamento/erro.
 - **`hub_perfil_caderneta_view_model.dart`**: Orquestra os dados do `PerfilEscalador` (nome, `fotoUrl`, `autorIdPublico`, `estaAutenticado`), métricas rápidas e sincronização de nome e foto de perfil com o Supabase.
 - **`perfil_view_model.dart`**: Gerencia o histórico de ascensões e estatísticas da caderneta esportiva.
 - **`card_croqui_view_model.dart`**: Modela a apresentação de cartões de croqui na Home e na Busca Global, expondo getters tipados para contagem de vias, setores, download e identificadores.

@@ -18,6 +18,7 @@ import 'package:frontend/services/configuracao_recursos.dart';
 import 'package:frontend/services/controlador_interacoes_usuario.dart';
 import 'package:frontend/services/firebase/telemetria.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/autenticacao/servico_autenticacao_fake.dart';
 import '../mocks/mock_telemetria.dart';
 
 void main() {
@@ -229,9 +230,8 @@ void main() {
       final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
       await repoCaderneta.inicializar();
       RepositorioCadernetaLocal.instancia = repoCaderneta;
-      final servicoAuth = ServicoAutenticacaoLocal(
+      final servicoAuth = ServicoAutenticacaoFake(
         repositorio: repoCaderneta,
-        obterAnonKeySupabase: () => '',
       );
       ServicoAutenticacaoLocal.instancia = servicoAuth;
 

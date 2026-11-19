@@ -75,7 +75,7 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 - **Isolamento e Segurança de Tipos**: Protegem a interface de variações na estrutura de dados subjacente, fornecendo contratos claros e testáveis.
 
 ### Principais View Models
-- **`LoginViewModel`**: Coordena a alternância entre login e criação de conta, validação de campos e chamadas a `ServicoAutenticacao.entrarComEmailSenha`, `criarContaComEmailSenha`, `entrarComGoogle` e `entrarComApple`.
+- **`LoginViewModel`**: Coordena o fluxo sem senha em duas etapas de código OTP de 6 dígitos por e-mail (com janela deslizante de 6 envios por 60 segundos), autenticação in-app com Google e Apple, tratamento silencioso de cancelamento voluntário, roteamento de falhas reais ao `AppLogger` e proteção contra notificações pós-`dispose`.
 - **`HubPerfilCadernetaViewModel`**: Expõe reativamente os dados do `PerfilEscalador` (`nomeAtleta`, `fotoUrl`, `autorIdPublico`, `estaAutenticado`), métricas rápidas (`totalCadenas`, `totalTentativas`, `totalPicos`, `totalVias`) e comandos de atualização de nome e foto (`atualizarNome`, `atualizarFotoPerfil`, `selecionarEAtualizarFoto`, `selecionarEObterNovaFoto`, `copiarIdPublico`, `encerrarSessao`).
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.

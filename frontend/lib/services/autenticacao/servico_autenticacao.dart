@@ -4,30 +4,58 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../data/modelos/perfil_escalador.dart';
-import '../../utils/gerador_uid.dart';
 import '../caderneta/repositorio_caderneta.dart';
+import '../firebase/app_logger.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
 import 'cliente_supabase_autenticacao.dart';
 
-/// Exceção de domínio lançada quando uma operação de autenticação ou validação falha.
-class ExcecaoAutenticacao implements Exception {
-  /// Mensagem descritiva em português destinada à exibição ao escalador.
-  final String mensagem;
-
-  /// Cria uma instância de [ExcecaoAutenticacao] com a [mensagem] informada.
-  const ExcecaoAutenticacao(this.mensagem);
+/// Exceção lançada quando o escalador fecha ou cancela voluntariamente o modal de autenticação.
+class ExcecaoAutenticacaoCancelada implements Exception {
+  /// Cria uma instância constante de [ExcecaoAutenticacaoCancelada].
+  const ExcecaoAutenticacaoCancelada();
 
   @override
-  String toString() => 'ExcecaoAutenticacao: $mensagem';
+  String toString() =>
+      'ExcecaoAutenticacaoCancelada: Operação cancelada voluntariamente pelo escalador.';
 }
 
-/// Representa a resposta de um provedor de autenticação externo (ex: Google / Supabase Auth).
+/// Exceção de domínio lançada quando uma operação de autenticação ou validação falha.
+class ExcecaoAutenticacao implements Exception, ExcecaoComStatusHttp {
+  /// Mensagem descritiva amigável em português destinada à exibição ao escalador.
+  final String mensagem;
+
+  /// Código de status HTTP retornado pelo servidor, quando aplicável.
+  @override
+  final int? codigoStatusHttp;
+
+  /// Indica se a falha decorre de entrada inválida do usuário (ex.: formato de e-mail,
+  /// código OTP incorreto/expirado ou limite de frequência) e portanto não deve abrir erro no Sentry.
+  final bool ehErroUsuario;
+
+  /// Detalhe técnico interno para diagnóstico em observabilidade (nunca exibido cru na interface).
+  final String? causaTecnica;
+
+  /// Cria uma instância imutável de [ExcecaoAutenticacao].
+  const ExcecaoAutenticacao(
+    this.mensagem, {
+    this.codigoStatusHttp,
+    this.ehErroUsuario = true,
+    this.causaTecnica,
+  });
+
+  @override
+  String toString() => causaTecnica != null
+      ? 'ExcecaoAutenticacao($causaTecnica): $mensagem'
+      : 'ExcecaoAutenticacao: $mensagem';
+}
+
+/// Representa a resposta validada de um provedor de autenticação (OTP de e-mail, Google ou Apple).
 class ResultadoProvedorAutenticacao {
-  /// Identificador único do usuário retornado pelo provedor de autenticação.
+  /// Identificador único do usuário retornado pelo Supabase Auth.
   final String userId;
 
-  /// Nome de exibição retornado pelo provedor, quando disponível.
+  /// Nome de exibição retornado pelo provedor ou tabela `public.perfis`, quando disponível.
   final String? nomeExibicao;
 
   /// URL ou Data URI da foto de perfil retornada pelo provedor, quando disponível.
@@ -39,9 +67,6 @@ class ResultadoProvedorAutenticacao {
   /// Identificador público NanoID 14c recuperado do banco remoto, quando existente.
   final String? autorIdPublicoRemoto;
 
-  /// Indica se a conta foi registrada no servidor mas aguarda confirmação de e-mail antes de liberar a sessão.
-  final bool requerConfirmacaoEmail;
-
   /// Cria uma instância imutável de [ResultadoProvedorAutenticacao].
   const ResultadoProvedorAutenticacao({
     required this.userId,
@@ -49,30 +74,10 @@ class ResultadoProvedorAutenticacao {
     this.fotoUrl,
     this.accessToken,
     this.autorIdPublicoRemoto,
-    this.requerConfirmacaoEmail = false,
   });
 }
 
-/// Assinatura para provedor de login via e-mail e senha.
-typedef ProvedorLoginEmailSenha = Future<ResultadoProvedorAutenticacao> Function(
-  String email,
-  String senha,
-);
-
-/// Assinatura para provedor de criação de conta via nome, e-mail e senha.
-typedef ProvedorCriarContaEmailSenha = Future<ResultadoProvedorAutenticacao> Function(
-  String nome,
-  String email,
-  String senha,
-);
-
-/// Assinatura para provedor de login via conta Google (Gmail).
-typedef ProvedorLoginGoogle = Future<ResultadoProvedorAutenticacao> Function();
-
-/// Assinatura para provedor de login via conta Apple (Apple ID).
-typedef ProvedorLoginApple = Future<ResultadoProvedorAutenticacao> Function();
-
-/// Contrato da camada de serviço responsável pela autenticação e vínculo do [PerfilEscalador].
+/// Contrato da camada de serviço responsável pela autenticação sem senha e vínculo do [PerfilEscalador].
 abstract class ServicoAutenticacao {
   /// Notificador reativo do perfil atual do escalador.
   ValueListenable<PerfilEscalador> get perfilListenable;
@@ -83,23 +88,19 @@ abstract class ServicoAutenticacao {
   /// Indica se há um usuário autenticado vinculado ao perfil atual.
   bool get estaAutenticado;
 
-  /// Autentica o escalador utilizando [email] e [senha].
-  Future<PerfilEscalador> entrarComEmailSenha({
+  /// Solicita o envio de um código OTP numérico de 6 dígitos para o [email] informado.
+  Future<void> solicitarCodigoOtpEmail({required String email});
+
+  /// Valida o [codigo] OTP numérico de 6 dígitos enviado para [email] e vincula a sessão ao perfil local.
+  Future<PerfilEscalador> verificarCodigoOtpEmail({
     required String email,
-    required String senha,
+    required String codigo,
   });
 
-  /// Cria uma nova conta de escalador com [nome], [email] e [senha] e vincula ao perfil local.
-  Future<PerfilEscalador> criarContaComEmailSenha({
-    required String nome,
-    required String email,
-    required String senha,
-  });
-
-  /// Autentica o escalador utilizando sua conta Google (Gmail) via Supabase OAuth.
+  /// Autentica o escalador utilizando sua conta Google (Gmail) in-app via Supabase.
   Future<PerfilEscalador> entrarComGoogle();
 
-  /// Autentica o escalador utilizando sua conta Apple (Apple ID) via Supabase OAuth.
+  /// Autentica o escalador utilizando sua conta Apple (Apple ID) nativa via Supabase.
   Future<PerfilEscalador> entrarComApple();
 
   /// Atualiza o nome e/ou a foto de perfil localmente e sincroniza com o Supabase (Auth, Storage e `public.perfis`).
@@ -108,24 +109,17 @@ abstract class ServicoAutenticacao {
     String? novaFotoUrl,
   });
 
-  /// Intercepta um deep link de retorno do fluxo OAuth (`aresta://app.arestaclimb.com/auth-callback`).
-  ///
-  /// Retorna `true` se o link era um callback de autenticação OAuth.
-  bool processarCallbackOAuth(Uri uri);
-
   /// Encerra a sessão autenticada, limpando o `userId` e preservando os dados offline locais.
   Future<void> encerrarSessao();
 }
 
-/// Implementação offline-first de [ServicoAutenticacao] integrada ao [RepositorioCaderneta] e ao Supabase.
+/// Implementação de produção de [ServicoAutenticacao] integrada ao [RepositorioCaderneta] e ao Supabase.
 ///
 /// Mantém o `autorIdPublico` (NanoID 14c) e as cadenas registradas offline intactos ao
-/// vincular ou desvincular uma conta Google ou de e-mail/senha, delegando os detalhes de
-/// protocolo HTTP e OAuth ao [ClienteSupabaseAutenticacao].
+/// vincular ou desvincular uma conta Google, Apple ou código OTP de e-mail, operando sob
+/// filosofia *Fail-Fast* (sem contas fictícias de fallback em produção).
 class ServicoAutenticacaoLocal implements ServicoAutenticacao {
-  /// URL oficial de redirecionamento OAuth registrada nos esquemas nativos Android e iOS.
-  static const String urlRedirecionamentoOAuth =
-      ClienteSupabaseAutenticacao.urlRedirecionamentoOAuth;
+  static final RegExp _regexCodigoSeisDigitos = RegExp(r'^\d{6}$');
 
   static ServicoAutenticacao? _instanciaCompartilhada;
 
@@ -146,10 +140,6 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   final RepositorioCaderneta _repositorio;
   final ClienteSupabaseAutenticacao _clienteSupabase;
   final String Function() _obterAnonKeySupabase;
-  final ProvedorLoginEmailSenha? _provedorEmailSenha;
-  final ProvedorCriarContaEmailSenha? _provedorCriarConta;
-  final ProvedorLoginGoogle? _provedorGoogle;
-  final ProvedorLoginApple? _provedorApple;
 
   /// Cria uma instância de [ServicoAutenticacaoLocal].
   ServicoAutenticacaoLocal({
@@ -158,30 +148,16 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
     ClienteHttpAresta? clienteHttp,
     String Function()? obterUrlSupabase,
     String Function()? obterAnonKeySupabase,
-    ProvedorLoginEmailSenha? provedorEmailSenha,
-    ProvedorCriarContaEmailSenha? provedorCriarConta,
-    ProvedorLoginGoogle? provedorGoogle,
-    ProvedorLoginApple? provedorApple,
-    Future<bool> Function(Uri uri)? lancadorUrlOAuth,
-    Stream<Uri>? fluxoLinksOAuth,
-    Duration timeoutOAuth = const Duration(minutes: 3),
   }) : _repositorio = repositorio ?? RepositorioCadernetaLocal.instancia,
        _clienteSupabase =
            clienteSupabase ??
            ClienteSupabaseAutenticacao(
              clienteHttp: clienteHttp,
              obterUrlSupabase: obterUrlSupabase,
-             lancadorUrlOAuth: lancadorUrlOAuth,
-             fluxoLinksOAuth: fluxoLinksOAuth,
-             timeoutOAuth: timeoutOAuth,
            ),
        _obterAnonKeySupabase =
            obterAnonKeySupabase ??
-           (() => RemoteConfigService.instance.supabaseAnonKey),
-       _provedorEmailSenha = provedorEmailSenha,
-       _provedorCriarConta = provedorCriarConta,
-       _provedorGoogle = provedorGoogle,
-       _provedorApple = provedorApple;
+           (() => RemoteConfigService.instance.supabaseAnonKey);
 
   @override
   ValueListenable<PerfilEscalador> get perfilListenable =>
@@ -193,7 +169,8 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
   @override
   bool get estaAutenticado => _repositorio.obterPerfil().estaAutenticado;
 
-  void _validarEmailESenha(String email, String senha) {
+  /// Valida sintaticamente um endereço de [email], lançando [ExcecaoAutenticacao] de entrada de usuário.
+  static String validarFormatoEmail(String email) {
     final emailLimpo = email.trim();
     final partes = emailLimpo.split('@');
     if (partes.length != 2 ||
@@ -201,20 +178,66 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
         !partes[1].contains('.') ||
         partes[1].startsWith('.') ||
         partes[1].endsWith('.')) {
-      throw const ExcecaoAutenticacao('Informe um endereço de e-mail válido.');
-    }
-    if (senha.length < 6) {
       throw const ExcecaoAutenticacao(
-        'A senha deve ter pelo menos 6 caracteres.',
+        'Informe um endereço de e-mail válido.',
+        ehErroUsuario: true,
       );
     }
+    return emailLimpo;
+  }
+
+  /// Normaliza e valida um [codigo] OTP numérico de 6 dígitos.
+  static String validarFormatoCodigoOtp(String codigo) {
+    final normalizado = codigo.replaceAll(RegExp(r'\s+'), '');
+    if (!_regexCodigoSeisDigitos.hasMatch(normalizado)) {
+      throw const ExcecaoAutenticacao(
+        'Informe o código numérico de 6 dígitos enviado por e-mail.',
+        ehErroUsuario: true,
+      );
+    }
+    return normalizado;
+  }
+
+  String _exigirAnonKey() {
+    final anonKey = _obterAnonKeySupabase().trim();
+    if (anonKey.isEmpty) {
+      throw const ExcecaoAutenticacao(
+        'Serviço de autenticação indisponível no momento.',
+        ehErroUsuario: false,
+        causaTecnica: 'supabaseAnonKey vazia em ServicoAutenticacaoLocal',
+      );
+    }
+    return anonKey;
+  }
+
+  String _selecionarNomeExibicao({
+    required PerfilEscalador perfilAtual,
+    required String? nomeDoProvedor,
+    required String? nomeFallbackGenerico,
+  }) {
+    if (nomeDoProvedor == null || nomeDoProvedor.trim().isEmpty) {
+      return perfilAtual.autorNomePublico;
+    }
+    final ehApelidoPadraoLocal =
+        perfilAtual.autorNomePublico == PerfilEscalador.apelidoPadrao;
+    final ehApenasFallbackGenerico =
+        nomeFallbackGenerico != null && nomeDoProvedor == nomeFallbackGenerico;
+    if (!ehApelidoPadraoLocal && ehApenasFallbackGenerico) {
+      return perfilAtual.autorNomePublico;
+    }
+    return nomeDoProvedor;
   }
 
   Future<PerfilEscalador> _salvarPerfilAutenticado({
     required PerfilEscalador perfilAtual,
     required ResultadoProvedorAutenticacao resultado,
-    required String nomeFinal,
+    required String? nomeFallbackGenerico,
   }) async {
+    final nomeFinal = _selecionarNomeExibicao(
+      perfilAtual: perfilAtual,
+      nomeDoProvedor: resultado.nomeExibicao,
+      nomeFallbackGenerico: nomeFallbackGenerico,
+    );
     final novoPerfil = perfilAtual.copyWith(
       autorIdPublico:
           resultado.autorIdPublicoRemoto ?? perfilAtual.autorIdPublico,
@@ -227,182 +250,68 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
     return _repositorio.obterPerfil();
   }
 
-  String _selecionarNomeExibicao({
-    required PerfilEscalador perfilAtual,
-    required String? nomeDoProvedor,
-    required bool autenticouEmProvedorReal,
-  }) {
-    final podeAdotarNomeSugerido =
-        autenticouEmProvedorReal ||
-        perfilAtual.autorNomePublico == PerfilEscalador.apelidoPadrao;
-    if (podeAdotarNomeSugerido && nomeDoProvedor != null) {
-      return nomeDoProvedor;
-    }
-    return perfilAtual.autorNomePublico;
+  @override
+  Future<void> solicitarCodigoOtpEmail({required String email}) async {
+    final emailLimpo = validarFormatoEmail(email);
+    final anonKey = _exigirAnonKey();
+    await _clienteSupabase.solicitarCodigoOtpEmail(
+      email: emailLimpo,
+      anonKey: anonKey,
+    );
   }
 
   @override
-  Future<PerfilEscalador> entrarComEmailSenha({
+  Future<PerfilEscalador> verificarCodigoOtpEmail({
     required String email,
-    required String senha,
+    required String codigo,
   }) async {
-    final emailLimpo = email.trim();
-    _validarEmailESenha(emailLimpo, senha);
-
+    final emailLimpo = validarFormatoEmail(email);
+    final codigoLimpo = validarFormatoCodigoOtp(codigo);
+    final anonKey = _exigirAnonKey();
     final atual = _repositorio.obterPerfil();
-    final anonKey = _obterAnonKeySupabase().trim();
+    final prefixoEmail = emailLimpo.split('@').first;
 
-    final ResultadoProvedorAutenticacao resultado;
-    if (_provedorEmailSenha != null) {
-      resultado = await _provedorEmailSenha(emailLimpo, senha);
-    } else if (anonKey.isNotEmpty) {
-      resultado = await _clienteSupabase.autenticarEmailSenha(
-        email: emailLimpo,
-        senha: senha,
-        autorIdPublicoLocal: atual.autorIdPublico,
-        anonKey: anonKey,
-      );
-    } else {
-      resultado = ResultadoProvedorAutenticacao(
-        userId: 'usr_email_${gerarUid()}',
-        nomeExibicao: emailLimpo.split('@').first,
-      );
-    }
-
-    final nomeFinal = _selecionarNomeExibicao(
-      perfilAtual: atual,
-      nomeDoProvedor: resultado.nomeExibicao,
-      autenticouEmProvedorReal:
-          _provedorEmailSenha != null || anonKey.isNotEmpty,
+    final resultado = await _clienteSupabase.verificarCodigoOtpEmail(
+      email: emailLimpo,
+      codigo: codigoLimpo,
+      autorIdPublicoLocal: atual.autorIdPublico,
+      anonKey: anonKey,
     );
 
     return _salvarPerfilAutenticado(
       perfilAtual: atual,
       resultado: resultado,
-      nomeFinal: nomeFinal,
+      nomeFallbackGenerico: prefixoEmail,
     );
   }
 
   @override
-  Future<PerfilEscalador> criarContaComEmailSenha({
-    required String nome,
-    required String email,
-    required String senha,
-  }) async {
-    final nomeLimpo = nome.trim();
-    if (nomeLimpo.isEmpty) {
-      throw const ExcecaoAutenticacao(
-        'Informe seu nome ou apelido de escalador.',
-      );
-    }
-    final emailLimpo = email.trim();
-    _validarEmailESenha(emailLimpo, senha);
-
+  Future<PerfilEscalador> entrarComGoogle() async {
+    final anonKey = _exigirAnonKey();
     final atual = _repositorio.obterPerfil();
-    final anonKey = _obterAnonKeySupabase().trim();
-
-    final ResultadoProvedorAutenticacao resultado;
-    if (_provedorCriarConta != null) {
-      resultado = await _provedorCriarConta(nomeLimpo, emailLimpo, senha);
-    } else if (anonKey.isNotEmpty) {
-      resultado = await _clienteSupabase.criarConta(
-        nome: nomeLimpo,
-        email: emailLimpo,
-        senha: senha,
-        autorIdPublico: atual.autorIdPublico,
-        fotoUrlAtual: atual.fotoUrl,
-        anonKey: anonKey,
-      );
-    } else {
-      resultado = ResultadoProvedorAutenticacao(
-        userId: 'usr_conta_${gerarUid()}',
-        nomeExibicao: nomeLimpo,
-      );
-    }
-
-    final nomeFinal = resultado.nomeExibicao ?? nomeLimpo;
-    if (resultado.requerConfirmacaoEmail) {
-      await _repositorio.salvarPerfil(
-        atual.copyWith(
-          autorNomePublico: nomeFinal,
-          limparUserId: true,
-        ),
-      );
-      return _repositorio.obterPerfil();
-    }
-
+    final resultado = await _clienteSupabase.autenticarGoogleOAuth(
+      autorIdPublicoLocal: atual.autorIdPublico,
+      anonKey: anonKey,
+    );
     return _salvarPerfilAutenticado(
       perfilAtual: atual,
       resultado: resultado,
-      nomeFinal: nomeFinal,
+      nomeFallbackGenerico: 'Escalador Google',
     );
   }
 
   @override
-  Future<PerfilEscalador> entrarComGoogle() {
-    return _entrarComProvedorSocial(
-      provedorCustomizado: _provedorGoogle,
-      autenticadorRemoto: (autorIdPublico, anonKey) =>
-          _clienteSupabase.autenticarGoogleOAuth(
-            autorIdPublicoLocal: autorIdPublico,
-            anonKey: anonKey,
-          ),
-      prefixoOffline: 'usr_google_',
-      nomePadraoOffline: 'Escalador Google',
-    );
-  }
-
-  @override
-  Future<PerfilEscalador> entrarComApple() {
-    return _entrarComProvedorSocial(
-      provedorCustomizado: _provedorApple,
-      autenticadorRemoto: (autorIdPublico, anonKey) =>
-          _clienteSupabase.autenticarAppleOAuth(
-            autorIdPublicoLocal: autorIdPublico,
-            anonKey: anonKey,
-          ),
-      prefixoOffline: 'usr_apple_',
-      nomePadraoOffline: 'Escalador Apple',
-    );
-  }
-
-  Future<PerfilEscalador> _entrarComProvedorSocial({
-    required Future<ResultadoProvedorAutenticacao> Function()?
-    provedorCustomizado,
-    required Future<ResultadoProvedorAutenticacao> Function(
-      String autorIdPublicoLocal,
-      String anonKey,
-    )
-    autenticadorRemoto,
-    required String prefixoOffline,
-    required String nomePadraoOffline,
-  }) async {
+  Future<PerfilEscalador> entrarComApple() async {
+    final anonKey = _exigirAnonKey();
     final atual = _repositorio.obterPerfil();
-    final anonKey = _obterAnonKeySupabase().trim();
-
-    final ResultadoProvedorAutenticacao resultado;
-    if (provedorCustomizado != null) {
-      resultado = await provedorCustomizado();
-    } else if (anonKey.isNotEmpty) {
-      resultado = await autenticadorRemoto(atual.autorIdPublico, anonKey);
-    } else {
-      resultado = ResultadoProvedorAutenticacao(
-        userId: '$prefixoOffline${gerarUid()}',
-        nomeExibicao: nomePadraoOffline,
-      );
-    }
-
-    final nomeFinal = _selecionarNomeExibicao(
-      perfilAtual: atual,
-      nomeDoProvedor: resultado.nomeExibicao,
-      autenticouEmProvedorReal:
-          provedorCustomizado != null || anonKey.isNotEmpty,
+    final resultado = await _clienteSupabase.autenticarAppleOAuth(
+      autorIdPublicoLocal: atual.autorIdPublico,
+      anonKey: anonKey,
     );
-
     return _salvarPerfilAutenticado(
       perfilAtual: atual,
       resultado: resultado,
-      nomeFinal: nomeFinal,
+      nomeFallbackGenerico: 'Escalador Apple',
     );
   }
 
@@ -442,10 +351,6 @@ class ServicoAutenticacaoLocal implements ServicoAutenticacao {
     await _repositorio.salvarPerfil(atualizado);
     return _repositorio.obterPerfil();
   }
-
-  @override
-  bool processarCallbackOAuth(Uri uri) =>
-      _clienteSupabase.processarCallbackOAuth(uri);
 
   @override
   Future<void> encerrarSessao() async {

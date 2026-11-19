@@ -1,207 +1,291 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../services/autenticacao/servico_autenticacao.dart';
+import '../../services/firebase/app_logger.dart';
 
-/// ViewModel responsável pelo estado e regras de negócio da tela de Login e Criação de Conta (MVVM).
+/// ViewModel responsável pelo estado e regras de negócio da tela de Login sem senha (MVVM).
 ///
-/// Gerencia a alternância entre os modos de entrada e cadastro, validação de credenciais
-/// via [ServicoAutenticacao], autenticação com Google (Gmail) e opção de continuar
-/// sem conta (modo offline).
+/// Orquestra o fluxo em duas etapas de Magic Code (OTP numérico de 6 dígitos por e-mail)
+/// com controle de frequência por janela deslizante (6 envios a cada 60s), autenticação
+/// in-app com Google e Apple, tratamento silencioso de cancelamento voluntário, roteamento
+/// de falhas reais para o [AppLogger] e proteção contra uso após [dispose].
 class LoginViewModel extends ChangeNotifier {
+  /// Quantidade máxima de solicitações de código OTP permitidas por janela móvel.
+  static const int limiteEnviosPorJanela = 6;
+
+  /// Duração da janela móvel de controle de frequência para reenvio de código OTP.
+  static const Duration duracaoJanelaOtp = Duration(seconds: 60);
+
   /// Serviço de autenticação subjacente.
   final ServicoAutenticacao servicoAutenticacao;
 
-  /// Callback opcional invocado após autenticação ou criação de conta bem-sucedida.
+  /// Callback opcional invocado após autenticação bem-sucedida.
   final VoidCallback? aoAutenticarComSucesso;
 
   /// Callback opcional invocado quando o escalador opta por continuar sem conta (offline).
   final VoidCallback? aoContinuarSemConta;
 
-  bool _modoCriarConta = false;
-  String _nome = '';
+  final DateTime Function() _obterAgora;
+  final List<DateTime> _historicoEnviosOtp = <DateTime>[];
+  Timer? _timerContagemRegressiva;
+
+  bool _descartado = false;
   String _email = '';
-  String _senha = '';
-  bool _ocultarSenha = true;
+  String _codigoOtp = '';
+  bool _aguardandoCodigoOtp = false;
   bool _carregando = false;
   String? _mensagemErro;
-  String? _mensagemConfirmacaoEmail;
+  String? _mensagemInfoOtp;
 
   /// Cria uma instância de [LoginViewModel].
   LoginViewModel({
     ServicoAutenticacao? servicoAutenticacao,
     this.aoAutenticarComSucesso,
     this.aoContinuarSemConta,
+    DateTime Function()? obterAgora,
   }) : servicoAutenticacao =
-           servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia;
-
-  /// Indica se o formulário está no modo de criação de nova conta (`true`) ou login (`false`).
-  bool get modoCriarConta => _modoCriarConta;
-
-  /// Nome ou apelido informado pelo escalador no modo de criação de conta.
-  String get nome => _nome;
+           servicoAutenticacao ?? ServicoAutenticacaoLocal.instancia,
+       _obterAgora = obterAgora ?? DateTime.now;
 
   /// Endereço de e-mail informado pelo escalador.
   String get email => _email;
 
-  /// Senha informada pelo escalador.
-  String get senha => _senha;
+  /// Código OTP numérico de 6 dígitos digitado pelo escalador.
+  String get codigoOtp => _codigoOtp;
 
-  /// Indica se os caracteres do campo de senha devem permanecer ocultos.
-  bool get ocultarSenha => _ocultarSenha;
+  /// Indica se a interface está na Etapa 2 aguardando a digitação do código de 6 dígitos.
+  bool get aguardandoCodigoOtp => _aguardandoCodigoOtp;
 
-  /// Indica se uma operação de autenticação está em andamento.
+  /// Indica se uma operação de rede/autenticação está em andamento.
   bool get carregando => _carregando;
 
-  /// Mensagem de erro de validação ou falha de autenticação a ser exibida na interface.
+  /// Mensagem de erro amigável a ser exibida na interface, quando presente.
   String? get mensagemErro => _mensagemErro;
 
-  /// Mensagem informativa exibida após o cadastro quando o servidor exige confirmação por e-mail antes do primeiro login.
-  String? get mensagemConfirmacaoEmail => _mensagemConfirmacaoEmail;
+  /// Mensagem informativa indicando o envio do código de 6 dígitos para o e-mail.
+  String? get mensagemInfoOtp => _mensagemInfoOtp;
 
   /// Título principal exibido no cabeçalho da tela de login.
-  String get tituloCabecalho =>
-      _modoCriarConta ? 'Criar conta Aresta' : 'Entrar na sua conta';
+  String get tituloCabecalho => 'Entrar na sua conta';
 
   /// Subtítulo explicativo exibido abaixo do título principal.
-  String get subtituloCabecalho => _modoCriarConta
-      ? 'Sincronize sua caderneta esportiva na nuvem e acesse seus registros em qualquer dispositivo.'
-      : 'Entre com sua conta Google ou e-mail para sincronizar sua caderneta na nuvem.';
+  String get subtituloCabecalho =>
+      'Entre sem senha usando sua conta social ou um código de 6 dígitos enviado por e-mail para sincronizar sua caderneta.';
 
-  /// Rótulo do botão primário de submissão do formulário de e-mail e senha.
-  String get rotuloBotaoPrincipal => _modoCriarConta ? 'Criar conta' : 'Entrar';
+  /// Segundos restantes até liberar um novo envio de código OTP quando o limite de
+  /// [limiteEnviosPorJanela] em [duracaoJanelaOtp] foi atingido (`0` quando liberado).
+  int get segundosRestantesReenvio {
+    final agora = _obterAgora();
+    _podarHistoricoJanelaOtp(agora);
+    if (_historicoEnviosOtp.length < limiteEnviosPorJanela) {
+      return 0;
+    }
+    final liberacao = _historicoEnviosOtp.first.add(duracaoJanelaOtp);
+    final restanteMs = liberacao.difference(agora).inMilliseconds;
+    if (restanteMs <= 0) {
+      return 0;
+    }
+    return (restanteMs / 1000).ceil();
+  }
 
-  /// Rótulo do botão de alternância entre os modos de login e criação de conta.
-  String get rotuloAlternarModo => _modoCriarConta
-      ? 'Já tem uma conta? Entrar'
-      : 'Não tem conta? Criar agora';
+  /// Indica se o escalador pode disparar uma nova solicitação de código OTP neste instante.
+  bool get podeSolicitarCodigoOtp =>
+      !_carregando && segundosRestantesReenvio == 0;
 
-  void _limparAvisosAoEditar() {
-    if (_mensagemErro != null || _mensagemConfirmacaoEmail != null) {
-      _mensagemErro = null;
-      _mensagemConfirmacaoEmail = null;
+  void _podarHistoricoJanelaOtp(DateTime agora) {
+    final limiteAntigo = agora.subtract(duracaoJanelaOtp);
+    _historicoEnviosOtp.removeWhere((instante) => !instante.isAfter(limiteAntigo));
+  }
+
+  void _iniciarMonitoramentoContagemSeNecessario() {
+    if (segundosRestantesReenvio <= 0) {
+      _timerContagemRegressiva?.cancel();
+      _timerContagemRegressiva = null;
+      return;
+    }
+    _timerContagemRegressiva ??= Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        if (segundosRestantesReenvio <= 0) {
+          _timerContagemRegressiva?.cancel();
+          _timerContagemRegressiva = null;
+        }
+        _notificarOuvintes();
+      },
+    );
+  }
+
+  void _notificarOuvintes() {
+    if (!_descartado) {
       notifyListeners();
     }
   }
 
-  /// Atualiza o nome/apelido digitado e limpa mensagens de erro anteriores.
-  void definirNome(String valor) {
-    _nome = valor;
-    _limparAvisosAoEditar();
+  void _limparErroAoEditar() {
+    if (_mensagemErro != null) {
+      _mensagemErro = null;
+      _notificarOuvintes();
+    }
   }
 
-  /// Atualiza o e-mail digitado e limpa mensagens de erro anteriores.
+  /// Atualiza o e-mail digitado e limpa alertas de erro anteriores.
   void definirEmail(String valor) {
     _email = valor;
-    _limparAvisosAoEditar();
+    _limparErroAoEditar();
   }
 
-  /// Atualiza a senha digitada e limpa mensagens de erro anteriores.
-  void definirSenha(String valor) {
-    _senha = valor;
-    _limparAvisosAoEditar();
+  /// Atualiza o código OTP de 6 dígitos digitado e limpa alertas de erro anteriores.
+  void definirCodigoOtp(String valor) {
+    _codigoOtp = valor;
+    _limparErroAoEditar();
   }
 
-  /// Alterna entre o modo de login (`Entrar`) e criação de conta (`Criar conta`).
-  void alternarModoConta() {
-    _modoCriarConta = !_modoCriarConta;
+  /// Retorna à Etapa 1 permitindo corrigir ou trocar o endereço de e-mail informado.
+  void alterarEmailOtp() {
+    _aguardandoCodigoOtp = false;
+    _codigoOtp = '';
     _mensagemErro = null;
-    _mensagemConfirmacaoEmail = null;
-    notifyListeners();
+    _mensagemInfoOtp = null;
+    _notificarOuvintes();
   }
 
-  /// Alterna a visibilidade do texto da senha no campo de entrada.
-  void alternarVisibilidadeSenha() {
-    _ocultarSenha = !_ocultarSenha;
-    notifyListeners();
-  }
-
-  /// Submete o formulário de e-mail e senha de acordo com o [modoCriarConta] ativo.
+  /// Solicita o envio do código OTP de 6 dígitos para o [email] atual.
   ///
-  /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
-  Future<bool> submeterEmailSenha() {
-    _mensagemConfirmacaoEmail = null;
-    return _executarFluxoAutenticacao(
+  /// Retorna `true` quando o código foi disparado e a tela avançou para a Etapa 2.
+  Future<bool> solicitarCodigoEmail() async {
+    final espera = segundosRestantesReenvio;
+    if (espera > 0) {
+      _mensagemErro =
+          'Limite temporário atingido. Aguarde ${espera}s para solicitar outro código.';
+      _notificarOuvintes();
+      return false;
+    }
+
+    return _executarOperacaoAssincrona(
       acao: () async {
-        if (!_modoCriarConta) {
-          await servicoAutenticacao.entrarComEmailSenha(
-            email: _email,
-            senha: _senha,
-          );
-          return true;
-        }
-        final perfil = await servicoAutenticacao.criarContaComEmailSenha(
-          nome: _nome,
-          email: _email,
-          senha: _senha,
-        );
-        if (!perfil.estaAutenticado) {
-          _modoCriarConta = false;
-          _mensagemConfirmacaoEmail =
-              'Enviamos um link de confirmação para ${_email.trim()}. Verifique sua caixa de entrada (e a pasta de spam) antes de entrar.';
-          return false;
-        }
+        await servicoAutenticacao.solicitarCodigoOtpEmail(email: _email);
+        _historicoEnviosOtp.add(_obterAgora());
+        _iniciarMonitoramentoContagemSeNecessario();
+        _aguardandoCodigoOtp = true;
+        _codigoOtp = '';
+        _mensagemInfoOtp =
+            'Enviamos um código de 6 dígitos para ${_email.trim()}. Verifique sua caixa de entrada e spam.';
         return true;
       },
+      notificarAutenticacaoConcluida: false,
+      contextoLogErro: 'Erro inesperado ao solicitar código OTP por e-mail',
       mensagemErroGenerico:
-          'Não foi possível concluir a autenticação. Tente novamente.',
+          'Não foi possível enviar o código de acesso. Tente novamente.',
     );
   }
 
-  /// Inicia o fluxo de autenticação via conta Google (Gmail).
-  ///
-  /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
+  /// Reenvia um novo código OTP de 6 dígitos para o [email] atual respeitando a janela deslizante.
+  Future<bool> reenviarCodigoEmail() => solicitarCodigoEmail();
+
+  /// Valida o [codigoOtp] de 6 dígitos informado e conclui a sessão autenticada.
+  Future<bool> confirmarCodigoEmail() {
+    return _executarOperacaoAssincrona(
+      acao: () async {
+        await servicoAutenticacao.verificarCodigoOtpEmail(
+          email: _email,
+          codigo: _codigoOtp,
+        );
+        _aguardandoCodigoOtp = false;
+        _codigoOtp = '';
+        _mensagemInfoOtp = null;
+        return true;
+      },
+      notificarAutenticacaoConcluida: true,
+      contextoLogErro: 'Erro inesperado ao verificar código OTP por e-mail',
+      mensagemErroGenerico:
+          'Não foi possível validar o código de acesso. Tente novamente.',
+    );
+  }
+
+  /// Inicia o fluxo de autenticação in-app via conta Google (Gmail).
   Future<bool> entrarComGoogle() {
-    return _executarFluxoAutenticacao(
+    return _executarOperacaoAssincrona(
       acao: () async {
         await servicoAutenticacao.entrarComGoogle();
         return true;
       },
+      notificarAutenticacaoConcluida: true,
+      contextoLogErro: 'Erro inesperado no login com Google',
       mensagemErroGenerico:
           'Não foi possível entrar com o Google. Tente novamente.',
     );
   }
 
-  /// Inicia o fluxo de autenticação via conta Apple (Apple ID).
-  ///
-  /// Retorna `true` se a autenticação ocorrer com sucesso e aciona [aoAutenticarComSucesso].
+  /// Inicia o fluxo de autenticação nativa via conta Apple (Apple ID).
   Future<bool> entrarComApple() {
-    return _executarFluxoAutenticacao(
+    return _executarOperacaoAssincrona(
       acao: () async {
         await servicoAutenticacao.entrarComApple();
         return true;
       },
+      notificarAutenticacaoConcluida: true,
+      contextoLogErro: 'Erro inesperado no login com Apple',
       mensagemErroGenerico:
           'Não foi possível entrar com a Apple. Tente novamente.',
     );
   }
 
-  Future<bool> _executarFluxoAutenticacao({
+  Future<bool> _executarOperacaoAssincrona({
     required Future<bool> Function() acao,
+    required bool notificarAutenticacaoConcluida,
+    required String contextoLogErro,
     required String mensagemErroGenerico,
   }) async {
     _carregando = true;
     _mensagemErro = null;
-    notifyListeners();
+    _notificarOuvintes();
 
     try {
-      final autenticado = await acao();
+      final sucesso = await acao();
       _carregando = false;
-      notifyListeners();
-      if (autenticado) {
+      _notificarOuvintes();
+      if (sucesso && notificarAutenticacaoConcluida && !_descartado) {
         aoAutenticarComSucesso?.call();
       }
-      return autenticado;
-    } on ExcecaoAutenticacao catch (e) {
+      return sucesso;
+    } on ExcecaoAutenticacaoCancelada {
+      _carregando = false;
+      _notificarOuvintes();
+      return false;
+    } on ExcecaoAutenticacao catch (e, stackTrace) {
       _carregando = false;
       _mensagemErro = e.mensagem;
-      notifyListeners();
+      if (!e.ehErroUsuario) {
+        if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+          AppLogger.instance.logAviso('$contextoLogErro ($e)');
+        } else {
+          AppLogger.instance.logError(
+            contextoLogErro,
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      }
+      _notificarOuvintes();
       return false;
-    } catch (_) {
+    } catch (e, stackTrace) {
       _carregando = false;
-      _mensagemErro = mensagemErroGenerico;
-      notifyListeners();
+      if (AppLogger.isFalhaConexaoOuTimeout(e)) {
+        AppLogger.instance.logAviso('$contextoLogErro ($e)');
+        _mensagemErro =
+            'Sem conexão com a internet. Verifique o sinal e tente novamente.';
+      } else {
+        AppLogger.instance.logError(
+          contextoLogErro,
+          error: e,
+          stackTrace: stackTrace,
+        );
+        _mensagemErro = mensagemErroGenerico;
+      }
+      _notificarOuvintes();
       return false;
     }
   }
@@ -210,5 +294,13 @@ class LoginViewModel extends ChangeNotifier {
   void continuarSemConta() {
     _mensagemErro = null;
     aoContinuarSemConta?.call();
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    _timerContagemRegressiva?.cancel();
+    _timerContagemRegressiva = null;
+    super.dispose();
   }
 }

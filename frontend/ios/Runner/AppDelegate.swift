@@ -11,10 +11,11 @@ import workmanager
 #endif
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding, ASWebAuthenticationPresentationContextProviding {
   private var resultadoPendenteFoto: FlutterResult?
   private var resultadoPendenteApple: FlutterResult?
   private var nonceBrutoAppleAtual: String?
+  private var sessaoWebAuthGoogle: ASWebAuthenticationSession?
 
   override func application(
     _ application: UIApplication,
@@ -57,13 +58,67 @@ import workmanager
         result(nil)
         return
       }
+      let args = call.arguments as? [String: Any]
       switch call.method {
       case "solicitarIdTokenApple":
         self.iniciarLoginNativoApple(result: result)
       case "solicitarIdTokenGoogle":
-        result(nil)
+        let urlAutorizacao = (args?["urlAutorizacaoPkce"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let esquemaCallback = (args?["esquemaCallback"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "aresta"
+        self.iniciarSessaoWebGooglePkce(
+          urlAutorizacao: urlAutorizacao,
+          esquemaCallback: esquemaCallback,
+          result: result
+        )
       default:
         result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func iniciarSessaoWebGooglePkce(
+    urlAutorizacao: String,
+    esquemaCallback: String,
+    result: @escaping FlutterResult
+  ) {
+    guard !urlAutorizacao.isEmpty,
+          let urlAuth = URL(string: urlAutorizacao),
+          !esquemaCallback.isEmpty else {
+      result(["erro": "URL de autorização PKCE ausente ou inválida."])
+      return
+    }
+
+    DispatchQueue.main.async {
+      self.sessaoWebAuthGoogle?.cancel()
+      let sessao = ASWebAuthenticationSession(
+        url: urlAuth,
+        callbackURLScheme: esquemaCallback
+      ) { [weak self] callbackURL, error in
+        self?.sessaoWebAuthGoogle = nil
+        if let erroSessao = error as? ASWebAuthenticationSessionError,
+           erroSessao.code == .canceledLogin {
+          result(["cancelado": true])
+          return
+        }
+        if let error = error {
+          result(["erro": error.localizedDescription])
+          return
+        }
+        guard let callbackURL = callbackURL else {
+          result(["erro": "Retorno vazio na sessão web de autenticação."])
+          return
+        }
+        result([
+          "callbackUrl": callbackURL.absoluteString,
+          "cancelado": false
+        ])
+      }
+      sessao.presentationContextProvider = self
+      sessao.prefersEphemeralWebBrowserSession = false
+      self.sessaoWebAuthGoogle = sessao
+      if !sessao.start() {
+        self.sessaoWebAuthGoogle = nil
+        result(["erro": "Não foi possível iniciar ASWebAuthenticationSession."])
       }
     }
   }
@@ -91,6 +146,10 @@ import workmanager
     return self.window ?? UIWindow()
   }
 
+  func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+    return self.window ?? UIWindow()
+  }
+
   func authorizationController(
     controller: ASAuthorizationController,
     didCompleteWithAuthorization authorization: ASAuthorization
@@ -103,7 +162,7 @@ import workmanager
     guard let credencial = authorization.credential as? ASAuthorizationAppleIDCredential,
           let dadosToken = credencial.identityToken,
           let idToken = String(data: dadosToken, encoding: .utf8) else {
-      callback?(nil)
+      callback?(["erro": "Credencial Apple sem identityToken válido."])
       return
     }
 
@@ -135,7 +194,7 @@ import workmanager
     if let erroAuth = error as? ASAuthorizationError, erroAuth.code == .canceled {
       callback?(["cancelado": true])
     } else {
-      callback?(nil)
+      callback?(["erro": error.localizedDescription])
     }
   }
 

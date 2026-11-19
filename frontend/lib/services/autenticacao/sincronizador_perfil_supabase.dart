@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:convert';
+import 'dart:io';
 import '../../data/modelos/perfil_escalador.dart';
 import '../../utils/gerador_uid.dart';
+import '../firebase/app_logger.dart';
 import '../http/cliente_http_aresta.dart';
 import 'servico_autenticacao.dart';
 
@@ -16,6 +18,22 @@ class SincronizadorPerfilSupabase {
   /// Cria uma instância de [SincronizadorPerfilSupabase].
   SincronizadorPerfilSupabase({ClienteHttpAresta? clienteHttp})
     : _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia;
+
+  void _registrarFalhaSincronizacao(
+    String contexto,
+    Object erro,
+    StackTrace stackTrace,
+  ) {
+    if (AppLogger.isFalhaConexaoOuTimeout(erro)) {
+      AppLogger.instance.logAviso('$contexto ($erro)');
+    } else {
+      AppLogger.instance.logError(
+        contexto,
+        error: erro,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   /// Extrai os campos de identidade do payload `user` retornado pelo GoTrue e
   /// sincroniza com a tabela `public.perfis` quando há um [accessToken] ativo.
@@ -132,12 +150,13 @@ class SincronizadorPerfilSupabase {
     var idFinal = autorIdPublico;
     var nomeFinal = nomePublico;
     var fotoFinal = fotoUrl;
+    final uri = Uri.parse(
+      '$baseUrl/rest/v1/perfis?user_id=eq.$userId&select=autor_id_publico,autor_nome_publico,avatar_url',
+    );
 
     try {
       final consulta = await _clienteHttp.get(
-        Uri.parse(
-          '$baseUrl/rest/v1/perfis?user_id=eq.$userId&select=autor_id_publico,autor_nome_publico,avatar_url',
-        ),
+        uri,
         headers: {
           'apikey': anonKey,
           'Authorization': 'Bearer $accessToken',
@@ -173,8 +192,19 @@ class SincronizadorPerfilSupabase {
             fotoUrl: fotoFinal,
           );
         }
+      } else {
+        throw HttpException(
+          'HTTP ${consulta.statusCode}: ${consulta.body}',
+          uri: uri,
+        );
       }
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      _registrarFalhaSincronizacao(
+        'Falha ao consultar public.perfis no Supabase',
+        e,
+        stackTrace,
+      );
+    }
 
     return (
       autorIdPublico: idFinal,
@@ -193,11 +223,12 @@ class SincronizadorPerfilSupabase {
   }) async {
     final indiceVirgula = dataUri.indexOf(',');
     if (indiceVirgula == -1) return null;
+    final caminhoObjeto = '$userId/avatar.webp';
+    final uri = Uri.parse('$baseUrl/storage/v1/object/avatars/$caminhoObjeto');
     try {
       final bytesImagem = base64Decode(dataUri.substring(indiceVirgula + 1));
-      final caminhoObjeto = '$userId/avatar.webp';
       final respStorage = await _clienteHttp.post(
-        Uri.parse('$baseUrl/storage/v1/object/avatars/$caminhoObjeto'),
+        uri,
         headers: {
           'apikey': anonKey,
           'Authorization': 'Bearer $accessToken',
@@ -209,7 +240,17 @@ class SincronizadorPerfilSupabase {
       if (respStorage.statusCode >= 200 && respStorage.statusCode < 300) {
         return '$baseUrl/storage/v1/object/public/avatars/$caminhoObjeto?t=${DateTime.now().millisecondsSinceEpoch}';
       }
-    } catch (_) {}
+      throw HttpException(
+        'HTTP ${respStorage.statusCode}: ${respStorage.body}',
+        uri: uri,
+      );
+    } catch (e, stackTrace) {
+      _registrarFalhaSincronizacao(
+        'Falha ao enviar avatar para o Supabase Storage',
+        e,
+        stackTrace,
+      );
+    }
     return null;
   }
 
@@ -222,8 +263,9 @@ class SincronizadorPerfilSupabase {
     required String nomePublico,
     required String? fotoUrl,
   }) async {
+    final uri = Uri.parse('$baseUrl/auth/v1/user');
     try {
-      final reqPut = Request('PUT', Uri.parse('$baseUrl/auth/v1/user'))
+      final reqPut = Request('PUT', uri)
         ..headers.addAll({
           'apikey': anonKey,
           'Authorization': 'Bearer $accessToken',
@@ -236,8 +278,18 @@ class SincronizadorPerfilSupabase {
             'avatar_url': ?fotoUrl,
           },
         });
-      await _clienteHttp.send(reqPut);
-    } catch (_) {}
+      final resposta = await _clienteHttp.send(reqPut);
+      final corpo = await resposta.stream.bytesToString();
+      if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+        throw HttpException('HTTP ${resposta.statusCode}: $corpo', uri: uri);
+      }
+    } catch (e, stackTrace) {
+      _registrarFalhaSincronizacao(
+        'Falha ao atualizar metadados do usuário no Supabase Auth',
+        e,
+        stackTrace,
+      );
+    }
   }
 
   /// Realiza upsert da linha do escalador na tabela `public.perfis` via PostgREST.
@@ -250,9 +302,10 @@ class SincronizadorPerfilSupabase {
     required String nomePublico,
     required String? fotoUrl,
   }) async {
+    final uri = Uri.parse('$baseUrl/rest/v1/perfis?on_conflict=user_id');
     try {
-      await _clienteHttp.post(
-        Uri.parse('$baseUrl/rest/v1/perfis?on_conflict=user_id'),
+      final resposta = await _clienteHttp.post(
+        uri,
         headers: {
           'apikey': anonKey,
           'Authorization': 'Bearer $accessToken',
@@ -266,6 +319,18 @@ class SincronizadorPerfilSupabase {
           'avatar_url': ?fotoUrl,
         }),
       );
-    } catch (_) {}
+      if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+        throw HttpException(
+          'HTTP ${resposta.statusCode}: ${resposta.body}',
+          uri: uri,
+        );
+      }
+    } catch (e, stackTrace) {
+      _registrarFalhaSincronizacao(
+        'Falha ao realizar upsert em public.perfis no Supabase',
+        e,
+        stackTrace,
+      );
+    }
   }
 }

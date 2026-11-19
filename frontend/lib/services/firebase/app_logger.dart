@@ -19,6 +19,15 @@ const bool kModoReleaseOficial = kReleaseMode && !kReleaseLocal;
 /// Indica se o aplicativo está em modo de desenvolvimento ou validação local (`!kReleaseMode` ou [kReleaseLocal]).
 const bool kModoDesenvolvimento = !kModoReleaseOficial;
 
+/// Contrato para exceções de domínio ou transporte que transportam o código de status HTTP
+/// retornado pelo servidor, permitindo que [AppLogger.isFalhaConexaoOuTimeout] diferencie
+/// indisponibilidades transitórias (`408`, `429`, `502`, `503`, `504`) de falhas definitivas
+/// (`400`, `401`, `403`, `404`, `422`, `500`).
+abstract interface class ExcecaoComStatusHttp {
+  /// Código de status HTTP retornado pelo servidor, quando aplicável.
+  int? get codigoStatusHttp;
+}
+
 /// Serviço para centralizar logs de erro silenciosos, falhas críticas e mensagens informativas do aplicativo.
 /// No modo de debug, as mensagens e erros são impressos no console local para facilidade de diagnóstico.
 /// Tanto em desenvolvimento quanto em produção (release):
@@ -247,8 +256,21 @@ class AppLogger {
     }
   }
 
+  static final RegExp _padraoCodigoStatusHttp = RegExp(
+    r'(?:\b(?:http|status)\s*[:/]?\s*|\()([1-5]\d{2})\b',
+    caseSensitive: false,
+  );
+
+  /// Indica se [codigo] representa uma falha HTTP transitória de gateway, timeout ou rate-limit.
+  static bool isCodigoHttpTransitorio(int codigo) =>
+      codigo == 408 ||
+      codigo == 429 ||
+      codigo == 502 ||
+      codigo == 503 ||
+      codigo == 504;
+
   /// Verifica se o erro ou mensagem descreve uma falha transitória de conectividade,
-  /// timeout de socket, instabilidade de gateway/servidor (HTTP 502, 503, 504, 429) ou
+  /// timeout de socket, instabilidade de gateway/servidor (HTTP 408, 429, 502, 503, 504) ou
   /// falha de transporte nos SDKs nativos do Firebase (Installations, Remote Config e App Check)
   /// quando o dispositivo encontra-se offline.
   static bool isFalhaConexaoOuTimeout(dynamic error) {
@@ -256,13 +278,26 @@ class AppLogger {
 
     // 1. Códigos numéricos diretos de status HTTP transitório
     if (error is int) {
-      return error == 502 || error == 503 || error == 504 || error == 429;
+      return isCodigoHttpTransitorio(error);
     }
 
-    // 2. Tipos de exceção conhecidos do Dart/HTTP
+    // 2. Exceções tipadas que carregam código de status HTTP explícito
+    if (error is ExcecaoComStatusHttp && error.codigoStatusHttp != null) {
+      return isCodigoHttpTransitorio(error.codigoStatusHttp!);
+    }
+
+    // 3. HttpException: inspeciona se há código HTTP na mensagem antes de tratar como transporte puro
+    if (error is HttpException) {
+      final correspondencia = _padraoCodigoStatusHttp.firstMatch(error.message);
+      if (correspondencia != null) {
+        return isCodigoHttpTransitorio(int.parse(correspondencia.group(1)!));
+      }
+      return true;
+    }
+
+    // 4. Tipos de exceção conhecidos de transporte/socket do Dart/HTTP
     if (error is TimeoutException ||
         error is SocketException ||
-        error is HttpException ||
         error is HandshakeException ||
         error is CertificateException ||
         error is ClientException) {

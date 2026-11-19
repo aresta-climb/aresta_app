@@ -20,6 +20,7 @@ import 'package:frontend/services/editor_croqui.dart';
 import 'package:frontend/services/http/sync_service.dart';
 import 'package:frontend/services/repositorio_dataset.dart';
 import '../mocks/mock_geolocator_platform.dart';
+import '../services/autenticacao/servico_autenticacao_fake.dart';
 import 'motor_robo_caotico.dart';
 import 'receita_crash_robo.dart';
 
@@ -395,9 +396,7 @@ class AmbienteAppCaos {
   static Future<AmbienteAppCaos> inicializar() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     FeedbackOrchestrator.debugIsConfiguredOverride = false;
-    ServicoAutenticacaoLocal.instancia = ServicoAutenticacaoLocal(
-      obterAnonKeySupabase: () => '',
-    );
+    ServicoAutenticacaoLocal.instancia = ServicoAutenticacaoFake();
     final tempDir = Directory.systemTemp.createTempSync('aresta_caos_app_');
     PathProviderPlatform.instance = _FakePathProviderCaos(tempDir.path);
     GeolocatorPlatform.instance = MockGeolocatorPlatform();

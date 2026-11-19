@@ -832,5 +832,102 @@ void main() {
         expect(fatalCapturadoHook, isFalse);
       },
     );
+
+    test(
+      'isFalhaConexaoOuTimeout inspeciona código HTTP em HttpException e ExcecaoComStatusHttp sem rebaixar 400/401/403/404/422/500',
+      () {
+        expect(AppLogger.isCodigoHttpTransitorio(408), isTrue);
+        expect(AppLogger.isCodigoHttpTransitorio(429), isTrue);
+        expect(AppLogger.isCodigoHttpTransitorio(502), isTrue);
+        expect(AppLogger.isCodigoHttpTransitorio(503), isTrue);
+        expect(AppLogger.isCodigoHttpTransitorio(504), isTrue);
+        expect(AppLogger.isCodigoHttpTransitorio(400), isFalse);
+        expect(AppLogger.isCodigoHttpTransitorio(401), isFalse);
+        expect(AppLogger.isCodigoHttpTransitorio(403), isFalse);
+        expect(AppLogger.isCodigoHttpTransitorio(404), isFalse);
+        expect(AppLogger.isCodigoHttpTransitorio(422), isFalse);
+        expect(AppLogger.isCodigoHttpTransitorio(500), isFalse);
+
+        // HttpException com status definitivos NÃO pode ser rebaixada para aviso offline
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            HttpException(
+              'Falha ao autenticar no Supabase (400): {"code":400,"error_code":"provider_disabled"}',
+              uri: Uri.parse('https://yzkhiaoqtxvvcyyuwmqg.supabase.co/auth/v1/token'),
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('HTTP 401 Unauthorized'),
+          ),
+          isFalse,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('Status 403 Forbidden'),
+          ),
+          isFalse,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('Erro HTTP 500 no servidor'),
+          ),
+          isFalse,
+        );
+
+        // HttpException pura de transporte ou com código transitório retorna true
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('Connection closed before full header was received'),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('HTTP 503 Service Unavailable'),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const HttpException('Falha temporária (408)'),
+          ),
+          isTrue,
+        );
+
+        // ExcecaoComStatusHttp tipada respeita o status HTTP antes do texto
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const _ExcecaoHttpTeste(400, 'provider_disabled unavailable'),
+          ),
+          isFalse,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const _ExcecaoHttpTeste(503, 'Indisponível'),
+          ),
+          isTrue,
+        );
+        expect(
+          AppLogger.isFalhaConexaoOuTimeout(
+            const _ExcecaoHttpTeste(null, 'Falha de rede local'),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
+}
+
+class _ExcecaoHttpTeste implements Exception, ExcecaoComStatusHttp {
+  @override
+  final int? codigoStatusHttp;
+  final String mensagem;
+
+  const _ExcecaoHttpTeste(this.codigoStatusHttp, this.mensagem);
+
+  @override
+  String toString() => mensagem;
 }

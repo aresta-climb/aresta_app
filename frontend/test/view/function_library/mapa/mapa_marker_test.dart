@@ -4,7 +4,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/view/function_library/mapa/mapa_marker.dart';
+import '../../../mocks/mock_app_logger.dart';
 
 /// Testes unitários para validar a criação e conversão resiliente de marcadores do mapa,
 /// garantindo ausência de force-unwraps (!) e proteção contra falhas de buffer de GPU.
@@ -122,6 +124,36 @@ void main() {
         expect(bitmapRotulo, isNotNull);
         expect(bitmapCurto, isNotNull);
       });
+    });
+
+    testWidgets('registra logError com StackTrace quando o carregamento do asset de imagem do marcador falha', (tester) async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      addTearDown(AppLogger.resetForTesting);
+
+      await tester.runAsync(() async {
+        final bundleComErro = MockAssetBundle();
+        final bitmapSemAsset = await createCustomMarkerBitmap(
+          'assets/inexistente.png',
+          size: 40,
+          pixelRatio: 2.0,
+          bundle: bundleComErro,
+        );
+        final bitmapTextoSemAsset = await createCustomMarkerBitmapWithText(
+          'assets/inexistente.png',
+          'Pico',
+          size: 65,
+          pixelRatio: 2.0,
+          bundle: bundleComErro,
+        );
+        expect(bitmapSemAsset, isNotNull);
+        expect(bitmapTextoSemAsset, isNotNull);
+      });
+
+      expect(mockLogger.recordedErrors.length, equals(2));
+      for (final erro in mockLogger.recordedErrors) {
+        expect(erro['stackTrace'], isNotNull);
+      }
     });
   });
 }

@@ -33,13 +33,10 @@ lib/navigation/
 └── gerenciador_deep_links.dart          - Gerenciador de ciclo de vida de links externos do sistema (Cold e Warm Start)
 ```
 
-## Deep Links, Placas Físicas nas Falésias (`aresta.cc`) e Callbacks OAuth (`aresta://`)
+## Deep Links e Placas Físicas nas Falésias (`aresta.cc`)
 
-Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte à navegação por placas físicas, links compartilháveis e retornos de autenticação externa:
+Em conformidade com a especificação da **Arquitetura Unificada de Identificadores Estáveis**, o aplicativo oferece suporte à navegação por placas físicas e links compartilháveis (enquanto callbacks OAuth in-app são capturados diretamente pelo `ASWebAuthenticationSession` sem atravessar o roteador de conteúdo):
 
-- **Interceptação de Callback OAuth (`DeepLinkNavigatorService`)**:
-  - Antes de analisar rotas de conteúdo, `DeepLinkNavigatorService.navigateToUri` (em `servico_navegacao_deep_link.dart`) verifica se o URI recebido é um retorno do fluxo OAuth 2.0 do Supabase (`aresta://app.arestaclimb.com/auth-callback`) através de `ServicoAutenticacao.processarCallbackOAuth(uri)`.
-  - Quando positivo, entrega os parâmetros de sessão (`code` PKCE ou `access_token` Implicit) ao `ClienteSupabaseAutenticacao` e encerra o processamento sem alterar a rota da árvore de navegação nem emitir telemetria de deep link de croqui.
 - **Protocolo Compacto (`≤ 35 chars`) e Vitrine Pública (`/croquis`):**
   - `https://aresta.cc/<uid>` (padrão) e `https://aresta.cc/m/<uid>` (abre o mapa interativo).
   - `https://aresta.cc/s/<uid>` e `https://aresta.cc/sm/<uid>` (ou `/ms/<uid>`): links de compartilhamento (`origem_link: 'compartilhamento'`).

@@ -7,11 +7,11 @@ import '../theme/cores_app.dart';
 import '../view/view_models/login_view_model.dart';
 import '../widgets/autenticacao/componentes_login.dart';
 
-/// Página de autenticação e criação de conta do escalador (Dumb UI / MVVM).
+/// Página de autenticação sem senha do escalador (Dumb UI / MVVM).
 ///
-/// Apresenta opções de login via conta Google (Gmail) ou Apple, autenticação/cadastro
-/// por e-mail e senha e atalho para continuar sem conta (modo offline), delegando
-/// estado, validações e persistência ao [LoginViewModel].
+/// Apresenta provedores sociais in-app adequados à plataforma atual (Google em Android e iOS;
+/// Apple exclusivamente em iOS), autenticação por código OTP numérico de 6 dígitos enviado por e-mail
+/// e atalho explícito para continuar sem conta (modo offline), delegando estado ao [LoginViewModel].
 class LoginPage extends StatefulWidget {
   /// ViewModel opcional injetado para testes ou controle externo.
   final LoginViewModel? viewModel;
@@ -36,9 +36,8 @@ typedef PaginaLogin = LoginPage;
 class _LoginPageState extends State<LoginPage> {
   late final LoginViewModel _vm;
   late final bool _possuiViewModelProprio;
-  late final TextEditingController _nomeController;
   late final TextEditingController _emailController;
-  late final TextEditingController _senhaController;
+  late final TextEditingController _codigoOtpController;
 
   @override
   void initState() {
@@ -46,16 +45,14 @@ class _LoginPageState extends State<LoginPage> {
     _possuiViewModelProprio = widget.viewModel == null;
     _vm =
         widget.viewModel ?? (widget.construtorViewModel?.call() ?? LoginViewModel());
-    _nomeController = TextEditingController(text: _vm.nome);
     _emailController = TextEditingController(text: _vm.email);
-    _senhaController = TextEditingController(text: _vm.senha);
+    _codigoOtpController = TextEditingController(text: _vm.codigoOtp);
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
     _emailController.dispose();
-    _senhaController.dispose();
+    _codigoOtpController.dispose();
     if (_possuiViewModelProprio) {
       _vm.dispose();
     }
@@ -76,11 +73,30 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _executarSubmissaoEmailSenha() async {
-    final autenticado = await _vm.submeterEmailSenha();
+  Future<void> _executarEnvioCodigoOtp() async {
+    final enviado = await _vm.solicitarCodigoEmail();
+    if (enviado && mounted) {
+      _codigoOtpController.clear();
+    }
+  }
+
+  Future<void> _executarReenvioCodigoOtp() async {
+    final enviado = await _vm.reenviarCodigoEmail();
+    if (enviado && mounted) {
+      _codigoOtpController.clear();
+    }
+  }
+
+  Future<void> _executarConfirmacaoCodigoOtp() async {
+    final autenticado = await _vm.confirmarCodigoEmail();
     if (autenticado && mounted && _vm.aoAutenticarComSucesso == null) {
       AppNav.toPerfil(context);
     }
+  }
+
+  void _executarAlterarEmailOtp() {
+    _codigoOtpController.clear();
+    _vm.alterarEmailOtp();
   }
 
   void _executarContinuarSemConta() {
@@ -93,6 +109,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
+    final exibirBotaoApple = Theme.of(context).platform == TargetPlatform.iOS;
+
     return Scaffold(
       backgroundColor: cores.deepBasalt,
       body: SafeArea(
@@ -113,6 +131,15 @@ class _LoginPageState extends State<LoginPage> {
                           titulo: _vm.tituloCabecalho,
                           subtitulo: _vm.subtituloCabecalho,
                         ),
+                        if (_vm.mensagemErro != null) ...[
+                          const SizedBox(height: 10),
+                          BannerAvisoLogin(
+                            key: const Key('banner_erro_login'),
+                            mensagem: _vm.mensagemErro!,
+                            icone: Icons.error_outline,
+                            corDestaque: cores.rustIron,
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         BotaoProvedorOAuthLogin(
                           key: const Key('btn_login_google'),
@@ -129,41 +156,40 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        BotaoProvedorOAuthLogin(
-                          key: const Key('btn_login_apple'),
-                          rotulo: 'Continuar com a Apple',
-                          aoPressionar: _vm.carregando
-                              ? null
-                              : _executarLoginApple,
-                          distintivo: const Icon(
-                            Icons.apple,
-                            color: Colors.black,
-                            size: 18,
+                        if (exibirBotaoApple) ...[
+                          const SizedBox(height: 8),
+                          BotaoProvedorOAuthLogin(
+                            key: const Key('btn_login_apple'),
+                            rotulo: 'Continuar com a Apple',
+                            aoPressionar: _vm.carregando
+                                ? null
+                                : _executarLoginApple,
+                            distintivo: const Icon(
+                              Icons.apple,
+                              color: Colors.black,
+                              size: 18,
+                            ),
                           ),
+                        ],
+                        const SizedBox(height: 10),
+                        const DivisorSecaoLogin(
+                          texto: 'ou receba um código por e-mail',
                         ),
                         const SizedBox(height: 10),
-                        const DivisorSecaoLogin(texto: 'ou use seu e-mail'),
-                        const SizedBox(height: 10),
-                        CartaoFormularioEmailLogin(
-                          modoCriarConta: _vm.modoCriarConta,
-                          ocultarSenha: _vm.ocultarSenha,
+                        CartaoCodigoEmailLogin(
+                          aguardandoCodigoOtp: _vm.aguardandoCodigoOtp,
                           carregando: _vm.carregando,
-                          rotuloBotaoPrincipal: _vm.rotuloBotaoPrincipal,
-                          rotuloAlternarModo: _vm.rotuloAlternarModo,
-                          mensagemConfirmacaoEmail:
-                              _vm.mensagemConfirmacaoEmail,
-                          mensagemErro: _vm.mensagemErro,
-                          nomeController: _nomeController,
+                          segundosRestantesReenvio:
+                              _vm.segundosRestantesReenvio,
+                          mensagemInfoOtp: _vm.mensagemInfoOtp,
                           emailController: _emailController,
-                          senhaController: _senhaController,
-                          aoAlterarNome: _vm.definirNome,
+                          codigoController: _codigoOtpController,
                           aoAlterarEmail: _vm.definirEmail,
-                          aoAlterarSenha: _vm.definirSenha,
-                          aoAlternarVisibilidadeSenha:
-                              _vm.alternarVisibilidadeSenha,
-                          aoSubmeter: _executarSubmissaoEmailSenha,
-                          aoAlternarModoConta: _vm.alternarModoConta,
+                          aoAlterarCodigo: _vm.definirCodigoOtp,
+                          aoSolicitarCodigo: _executarEnvioCodigoOtp,
+                          aoConfirmarCodigo: _executarConfirmacaoCodigoOtp,
+                          aoReenviarCodigo: _executarReenvioCodigoOtp,
+                          aoAlterarEmailOtp: _executarAlterarEmailOtp,
                         ),
                         const SizedBox(height: 10),
                         BotaoContinuarSemContaLogin(

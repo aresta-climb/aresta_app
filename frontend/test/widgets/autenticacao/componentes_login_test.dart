@@ -14,8 +14,8 @@ void main() {
     );
   }
 
-  group('Componentes declarativos da tela de Login (Dumb UI)', () {
-    testWidgets('BarraTopoLogin, CabecalhoTelaLogin, DivisorSecaoLogin e BotaoContinuarSemContaLogin renderizam e acionam callbacks', (tester) async {
+  group('Componentes declarativos da tela de Login Sem Senha (Dumb UI)', () {
+    testWidgets('BarraTopoLogin, CabecalhoTelaLogin, DivisorSecaoLogin, BannerAvisoLogin e BotaoContinuarSemContaLogin renderizam e acionam callbacks', (tester) async {
       var voltou = false;
       var continuouOffline = false;
 
@@ -26,9 +26,15 @@ void main() {
               BarraTopoLogin(aoVoltar: () => voltou = true),
               const CabecalhoTelaLogin(
                 titulo: 'Entrar na sua conta',
-                subtitulo: 'Subtítulo de teste',
+                subtitulo: 'Subtítulo sem senha',
               ),
-              const DivisorSecaoLogin(texto: 'ou use seu e-mail'),
+              const DivisorSecaoLogin(texto: 'ou receba um código por e-mail'),
+              const BannerAvisoLogin(
+                key: Key('banner_teste'),
+                mensagem: 'Mensagem de alerta',
+                icone: Icons.info_outline,
+                corDestaque: Colors.orange,
+              ),
               BotaoContinuarSemContaLogin(
                 aoPressionar: () => continuouOffline = true,
               ),
@@ -39,8 +45,9 @@ void main() {
 
       expect(find.text('ARESTA CLIMB'), findsOneWidget);
       expect(find.text('Entrar na sua conta'), findsOneWidget);
-      expect(find.text('Subtítulo de teste'), findsOneWidget);
-      expect(find.text('ou use seu e-mail'), findsOneWidget);
+      expect(find.text('Subtítulo sem senha'), findsOneWidget);
+      expect(find.text('ou receba um código por e-mail'), findsOneWidget);
+      expect(find.text('Mensagem de alerta'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('btn_voltar_login')));
       expect(voltou, isTrue);
@@ -70,126 +77,142 @@ void main() {
       expect(acionado, equals(1));
     });
 
-    testWidgets('CartaoFormularioEmailLogin renderiza campos, banners de confirmação e erro e aciona callbacks de edição e submissão', (tester) async {
-      final nomeCtrl = TextEditingController();
+    testWidgets('CartaoCodigoEmailLogin renderiza Etapa 1 (e-mail sem senha) e Etapa 2 (código OTP de 6 dígitos com reenvio e troca de e-mail)', (tester) async {
       final emailCtrl = TextEditingController();
-      final senhaCtrl = TextEditingController();
+      final codigoCtrl = TextEditingController();
       addTearDown(() {
-        nomeCtrl.dispose();
         emailCtrl.dispose();
-        senhaCtrl.dispose();
+        codigoCtrl.dispose();
       });
 
-      String? nomeDigitado;
       String? emailDigitado;
-      String? senhaDigitada;
-      var alternouSenha = false;
-      var submeteu = false;
-      var alternouModo = false;
+      String? codigoDigitado;
+      var solicitouCodigo = false;
+      var confirmouCodigo = false;
+      var reenviouCodigo = false;
+      var alterouEmail = false;
 
+      // Etapa 1: solicitação do código por e-mail (zero campos de senha)
       await tester.pumpWidget(
         envolverComTema(
-          CartaoFormularioEmailLogin(
-            modoCriarConta: true,
-            ocultarSenha: true,
+          CartaoCodigoEmailLogin(
+            aguardandoCodigoOtp: false,
             carregando: false,
-            rotuloBotaoPrincipal: 'Criar conta',
-            rotuloAlternarModo: 'Já tem uma conta? Entrar',
-            mensagemConfirmacaoEmail: 'Confirme seu e-mail na caixa de entrada.',
-            mensagemErro: 'Erro de validação.',
-            nomeController: nomeCtrl,
+            segundosRestantesReenvio: 0,
             emailController: emailCtrl,
-            senhaController: senhaCtrl,
-            aoAlterarNome: (v) => nomeDigitado = v,
+            codigoController: codigoCtrl,
             aoAlterarEmail: (v) => emailDigitado = v,
-            aoAlterarSenha: (v) => senhaDigitada = v,
-            aoAlternarVisibilidadeSenha: () => alternouSenha = true,
-            aoSubmeter: () => submeteu = true,
-            aoAlternarModoConta: () => alternouModo = true,
+            aoAlterarCodigo: (v) => codigoDigitado = v,
+            aoSolicitarCodigo: () => solicitouCodigo = true,
+            aoConfirmarCodigo: () => confirmouCodigo = true,
+            aoReenviarCodigo: () => reenviouCodigo = true,
+            aoAlterarEmailOtp: () => alterouEmail = true,
           ),
         ),
       );
 
-      expect(
-        find.byKey(const Key('banner_confirmacao_email_login')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('banner_erro_login')), findsOneWidget);
+      expect(find.byKey(const Key('campo_login_email')), findsOneWidget);
+      expect(find.byKey(const Key('campo_login_codigo_otp')), findsNothing);
+      expect(find.textContaining('Senha'), findsNothing);
 
-      await tester.enterText(
-        find.byKey(const Key('campo_login_nome')),
-        'Escalador',
-      );
       await tester.enterText(
         find.byKey(const Key('campo_login_email')),
         'atleta@aresta.com',
       );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_senha')),
-        '123456',
-      );
-      expect(nomeDigitado, equals('Escalador'));
       expect(emailDigitado, equals('atleta@aresta.com'));
-      expect(senhaDigitada, equals('123456'));
 
-      await tester.tap(
-        find.byKey(const Key('btn_alternar_visibilidade_senha')),
-      );
-      expect(alternouSenha, isTrue);
+      await tester.tap(find.byKey(const Key('btn_enviar_codigo_otp')));
+      expect(solicitouCodigo, isTrue);
 
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
-      expect(submeteu, isTrue);
-
-      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
-      expect(alternouModo, isTrue);
-    });
-
-    testWidgets('CartaoFormularioEmailLogin oculta campo de nome no modo Entrar, exibe ícone de senha visível e desabilita botões quando carregando', (tester) async {
-      final nomeCtrl = TextEditingController();
-      final emailCtrl = TextEditingController();
-      final senhaCtrl = TextEditingController();
-      addTearDown(() {
-        nomeCtrl.dispose();
-        emailCtrl.dispose();
-        senhaCtrl.dispose();
-      });
-
-      var submeteu = false;
-      var alternouModo = false;
-
+      // Etapa 2: digitação do código de 6 dígitos com banner informativo
       await tester.pumpWidget(
         envolverComTema(
-          CartaoFormularioEmailLogin(
-            modoCriarConta: false,
-            ocultarSenha: false,
-            carregando: true,
-            rotuloBotaoPrincipal: 'Entrar',
-            rotuloAlternarModo: 'Não tem conta? Criar agora',
-            nomeController: nomeCtrl,
+          CartaoCodigoEmailLogin(
+            aguardandoCodigoOtp: true,
+            carregando: false,
+            segundosRestantesReenvio: 0,
+            mensagemInfoOtp: 'Enviamos um código de 6 dígitos para atleta@aresta.com.',
             emailController: emailCtrl,
-            senhaController: senhaCtrl,
-            aoAlterarNome: (_) {},
-            aoAlterarEmail: (_) {},
-            aoAlterarSenha: (_) {},
-            aoAlternarVisibilidadeSenha: () {},
-            aoSubmeter: () => submeteu = true,
-            aoAlternarModoConta: () => alternouModo = true,
+            codigoController: codigoCtrl,
+            aoAlterarEmail: (v) => emailDigitado = v,
+            aoAlterarCodigo: (v) => codigoDigitado = v,
+            aoSolicitarCodigo: () => solicitouCodigo = true,
+            aoConfirmarCodigo: () => confirmouCodigo = true,
+            aoReenviarCodigo: () => reenviouCodigo = true,
+            aoAlterarEmailOtp: () => alterouEmail = true,
           ),
         ),
       );
 
-      expect(find.byKey(const Key('campo_login_nome')), findsNothing);
-      expect(
-        find.byKey(const Key('banner_confirmacao_email_login')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('banner_erro_login')), findsNothing);
-      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+      expect(find.byKey(const Key('banner_info_otp_login')), findsOneWidget);
+      expect(find.byKey(const Key('campo_login_codigo_otp')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
-      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
-      expect(submeteu, isFalse);
-      expect(alternouModo, isFalse);
+      await tester.enterText(
+        find.byKey(const Key('campo_login_codigo_otp')),
+        '123456',
+      );
+      expect(codigoDigitado, equals('123456'));
+
+      await tester.tap(find.byKey(const Key('btn_confirmar_codigo_otp')));
+      expect(confirmouCodigo, isTrue);
+
+      await tester.tap(find.byKey(const Key('btn_reenviar_codigo_otp')));
+      expect(reenviouCodigo, isTrue);
+
+      await tester.tap(find.byKey(const Key('btn_alterar_email_otp')));
+      expect(alterouEmail, isTrue);
+    });
+
+    testWidgets('CartaoCodigoEmailLogin desabilita ações durante carregamento e exibe contagem regressiva de cooldown no reenvio', (tester) async {
+      final emailCtrl = TextEditingController();
+      final codigoCtrl = TextEditingController();
+      addTearDown(() {
+        emailCtrl.dispose();
+        codigoCtrl.dispose();
+      });
+
+      var reenviou = false;
+      await tester.pumpWidget(
+        envolverComTema(
+          CartaoCodigoEmailLogin(
+            aguardandoCodigoOtp: true,
+            carregando: false,
+            segundosRestantesReenvio: 42,
+            emailController: emailCtrl,
+            codigoController: codigoCtrl,
+            aoAlterarEmail: (_) {},
+            aoAlterarCodigo: (_) {},
+            aoSolicitarCodigo: () {},
+            aoConfirmarCodigo: () {},
+            aoReenviarCodigo: () => reenviou = true,
+            aoAlterarEmailOtp: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Reenviar código (42s)'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('btn_reenviar_codigo_otp')));
+      expect(reenviou, isFalse);
+
+      // Etapa 1 durante cooldown exibe contagem regressiva no botão principal
+      await tester.pumpWidget(
+        envolverComTema(
+          CartaoCodigoEmailLogin(
+            aguardandoCodigoOtp: false,
+            carregando: false,
+            segundosRestantesReenvio: 15,
+            emailController: emailCtrl,
+            codigoController: codigoCtrl,
+            aoAlterarEmail: (_) {},
+            aoAlterarCodigo: (_) {},
+            aoSolicitarCodigo: () {},
+            aoConfirmarCodigo: () {},
+            aoReenviarCodigo: () {},
+            aoAlterarEmailOtp: () {},
+          ),
+        ),
+      );
+      expect(find.text('Aguarde 15s'), findsOneWidget);
     });
   });
 }

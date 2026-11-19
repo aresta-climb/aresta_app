@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/cores_app.dart';
 
 /// Barra superior declarativa da tela de login com botão de retorno e marca.
@@ -48,12 +49,12 @@ class BarraTopoLogin extends StatelessWidget {
   }
 }
 
-/// Cabeçalho textual da tela de login exibindo título e subtítulo do modo atual.
+/// Cabeçalho textual da tela de login exibindo título e subtítulo explicativo.
 class CabecalhoTelaLogin extends StatelessWidget {
-  /// Título de destaque (ex.: entrar ou criar conta).
+  /// Título de destaque da tela de autenticação.
   final String titulo;
 
-  /// Subtítulo explicativo sobre sincronização de cadenas e interações.
+  /// Subtítulo explicativo sobre sincronização sem senha da caderneta.
   final String subtitulo;
 
   /// Cria uma instância de [CabecalhoTelaLogin].
@@ -157,7 +158,7 @@ class BotaoProvedorOAuthLogin extends StatelessWidget {
   }
 }
 
-/// Divisor horizontal com rótulo centralizado entre login social e e-mail.
+/// Divisor horizontal com rótulo centralizado entre login social e código por e-mail.
 class DivisorSecaoLogin extends StatelessWidget {
   /// Texto exibido ao centro do divisor.
   final String texto;
@@ -196,7 +197,7 @@ class DivisorSecaoLogin extends StatelessWidget {
   }
 }
 
-/// Banner informativo ou de erro exibido dentro do formulário de autenticação.
+/// Banner informativo ou de erro exibido na tela de autenticação.
 class BannerAvisoLogin extends StatelessWidget {
   /// Texto da mensagem exibida ao escalador.
   final String mensagem;
@@ -247,80 +248,69 @@ class BannerAvisoLogin extends StatelessWidget {
   }
 }
 
-/// Cartão de formulário declarativo para autenticação ou cadastro por e-mail e senha.
-class CartaoFormularioEmailLogin extends StatelessWidget {
-  /// Indica se o formulário deve exibir o campo adicional de nome/apelido.
-  final bool modoCriarConta;
+/// Cartão declarativo para autenticação sem senha via código numérico de 6 dígitos (Magic Code OTP).
+class CartaoCodigoEmailLogin extends StatelessWidget {
+  /// Indica se o cartão está na Etapa 2 aguardando a digitação do código de 6 dígitos.
+  final bool aguardandoCodigoOtp;
 
-  /// Indica se os caracteres da senha devem permanecer ocultos.
-  final bool ocultarSenha;
-
-  /// Indica se há uma operação de rede em andamento (desabilitando ações).
+  /// Indica se há uma operação de rede em andamento (desabilitando botões).
   final bool carregando;
 
-  /// Rótulo do botão principal de submissão.
-  final String rotuloBotaoPrincipal;
+  /// Segundos restantes de bloqueio de reenvio na janela deslizante (`0` quando disponível).
+  final int segundosRestantesReenvio;
 
-  /// Rótulo do botão secundário que alterna entre entrar e criar conta.
-  final String rotuloAlternarModo;
-
-  /// Mensagem de confirmação de e-mail pendente, quando existente.
-  final String? mensagemConfirmacaoEmail;
-
-  /// Mensagem de erro de validação ou autenticação, quando existente.
-  final String? mensagemErro;
-
-  /// Controlador do campo de nome ou apelido.
-  final TextEditingController nomeController;
+  /// Mensagem informativa após o envio do código OTP, quando presente.
+  final String? mensagemInfoOtp;
 
   /// Controlador do campo de e-mail.
   final TextEditingController emailController;
 
-  /// Controlador do campo de senha.
-  final TextEditingController senhaController;
-
-  /// Callback acionado ao alterar o texto do nome.
-  final ValueChanged<String> aoAlterarNome;
+  /// Controlador do campo do código numérico de 6 dígitos.
+  final TextEditingController codigoController;
 
   /// Callback acionado ao alterar o texto do e-mail.
   final ValueChanged<String> aoAlterarEmail;
 
-  /// Callback acionado ao alterar o texto da senha.
-  final ValueChanged<String> aoAlterarSenha;
+  /// Callback acionado ao alterar o código OTP digitado.
+  final ValueChanged<String> aoAlterarCodigo;
 
-  /// Callback acionado ao alternar a visibilidade da senha.
-  final VoidCallback aoAlternarVisibilidadeSenha;
+  /// Callback acionado para enviar o código de 6 dígitos na Etapa 1.
+  final VoidCallback aoSolicitarCodigo;
 
-  /// Callback acionado ao tocar no botão principal de submissão.
-  final VoidCallback aoSubmeter;
+  /// Callback acionado para validar o código de 6 dígitos na Etapa 2.
+  final VoidCallback aoConfirmarCodigo;
 
-  /// Callback acionado ao tocar no botão de alternância de modo da conta.
-  final VoidCallback aoAlternarModoConta;
+  /// Callback acionado para solicitar o reenvio do código na Etapa 2.
+  final VoidCallback aoReenviarCodigo;
 
-  /// Cria uma instância de [CartaoFormularioEmailLogin].
-  const CartaoFormularioEmailLogin({
+  /// Callback acionado para retornar à Etapa 1 e alterar o endereço de e-mail.
+  final VoidCallback aoAlterarEmailOtp;
+
+  /// Cria uma instância de [CartaoCodigoEmailLogin].
+  const CartaoCodigoEmailLogin({
     super.key,
-    required this.modoCriarConta,
-    required this.ocultarSenha,
+    required this.aguardandoCodigoOtp,
     required this.carregando,
-    required this.rotuloBotaoPrincipal,
-    required this.rotuloAlternarModo,
-    this.mensagemConfirmacaoEmail,
-    this.mensagemErro,
-    required this.nomeController,
+    required this.segundosRestantesReenvio,
+    this.mensagemInfoOtp,
     required this.emailController,
-    required this.senhaController,
-    required this.aoAlterarNome,
+    required this.codigoController,
     required this.aoAlterarEmail,
-    required this.aoAlterarSenha,
-    required this.aoAlternarVisibilidadeSenha,
-    required this.aoSubmeter,
-    required this.aoAlternarModoConta,
+    required this.aoAlterarCodigo,
+    required this.aoSolicitarCodigo,
+    required this.aoConfirmarCodigo,
+    required this.aoReenviarCodigo,
+    required this.aoAlterarEmailOtp,
   });
 
   @override
   Widget build(BuildContext context) {
     final cores = context.colors;
+    final bloqueadoReenvio = carregando || segundosRestantesReenvio > 0;
+    final rotuloReenvio = segundosRestantesReenvio > 0
+        ? 'Reenviar código (${segundosRestantesReenvio}s)'
+        : 'Reenviar código';
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -331,111 +321,136 @@ class CartaoFormularioEmailLogin extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (modoCriarConta) ...[
+          if (!aguardandoCodigoOtp) ...[
             TextField(
-              key: const Key('campo_login_nome'),
-              controller: nomeController,
-              onChanged: aoAlterarNome,
+              key: const Key('campo_login_email'),
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              onChanged: aoAlterarEmail,
               style: TextStyle(color: cores.chalkWhite, fontSize: 14),
               decoration: _decoracaoCampo(
                 cores: cores,
-                rotulo: 'Nome ou apelido',
-                icone: Icons.person_outline,
+                rotulo: 'E-mail',
+                icone: Icons.alternate_email,
               ),
             ),
-            const SizedBox(height: 10),
-          ],
-          TextField(
-            key: const Key('campo_login_email'),
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            onChanged: aoAlterarEmail,
-            style: TextStyle(color: cores.chalkWhite, fontSize: 14),
-            decoration: _decoracaoCampo(
-              cores: cores,
-              rotulo: 'E-mail',
-              icone: Icons.alternate_email,
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            key: const Key('campo_login_senha'),
-            controller: senhaController,
-            obscureText: ocultarSenha,
-            onChanged: aoAlterarSenha,
-            style: TextStyle(color: cores.chalkWhite, fontSize: 14),
-            decoration: _decoracaoCampo(
-              cores: cores,
-              rotulo: 'Senha',
-              icone: Icons.lock_outline,
-              sufixo: IconButton(
-                key: const Key('btn_alternar_visibilidade_senha'),
-                icon: Icon(
-                  ocultarSenha
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: cores.ashGrey,
-                  size: 20,
+            const SizedBox(height: 12),
+            ElevatedButton(
+              key: const Key('btn_enviar_codigo_otp'),
+              onPressed: bloqueadoReenvio ? null : aoSolicitarCodigo,
+              style: _estiloBotaoPrimario(cores),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  segundosRestantesReenvio > 0
+                      ? 'Aguarde ${segundosRestantesReenvio}s'
+                      : 'Receber código por e-mail',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                onPressed: aoAlternarVisibilidadeSenha,
               ),
             ),
-          ),
-          if (mensagemConfirmacaoEmail != null) ...[
-            const SizedBox(height: 10),
-            BannerAvisoLogin(
-              key: const Key('banner_confirmacao_email_login'),
-              mensagem: mensagemConfirmacaoEmail!,
-              icone: Icons.mark_email_read_outlined,
-              corDestaque: cores.dryMoss,
-            ),
-          ],
-          if (mensagemErro != null) ...[
-            const SizedBox(height: 10),
-            BannerAvisoLogin(
-              key: const Key('banner_erro_login'),
-              mensagem: mensagemErro!,
-              icone: Icons.error_outline,
-              corDestaque: cores.rustIron,
-            ),
-          ],
-          const SizedBox(height: 12),
-          ElevatedButton(
-            key: const Key('btn_submeter_email_senha'),
-            onPressed: carregando ? null : aoSubmeter,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cores.rustIron,
-              foregroundColor: cores.chalkWhite,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          ] else ...[
+            if (mensagemInfoOtp != null) ...[
+              BannerAvisoLogin(
+                key: const Key('banner_info_otp_login'),
+                mensagem: mensagemInfoOtp!,
+                icone: Icons.mark_email_read_outlined,
+                corDestaque: cores.dryMoss,
               ),
-              elevation: 0,
-            ),
-            child: Text(
-              rotuloBotaoPrincipal,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          TextButton(
-            key: const Key('btn_alternar_modo_conta'),
-            onPressed: carregando ? null : aoAlternarModoConta,
-            child: Text(
-              rotuloAlternarModo,
-              textAlign: TextAlign.center,
+              const SizedBox(height: 10),
+            ],
+            TextField(
+              key: const Key('campo_login_codigo_otp'),
+              controller: codigoController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              onChanged: aoAlterarCodigo,
               style: TextStyle(
-                color: cores.chalkWhite.withValues(alpha: 0.85),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+                color: cores.chalkWhite,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 3,
+              ),
+              decoration: _decoracaoCampo(
+                cores: cores,
+                rotulo: 'Código de 6 dígitos',
+                icone: Icons.pin_outlined,
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              key: const Key('btn_confirmar_codigo_otp'),
+              onPressed: carregando ? null : aoConfirmarCodigo,
+              style: _estiloBotaoPrimario(cores),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'Confirmar código',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                TextButton(
+                  key: const Key('btn_reenviar_codigo_otp'),
+                  onPressed: bloqueadoReenvio ? null : aoReenviarCodigo,
+                  child: Text(
+                    rotuloReenvio,
+                    style: TextStyle(
+                      color: bloqueadoReenvio
+                          ? cores.ashGrey
+                          : cores.chalkWhite.withValues(alpha: 0.9),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  key: const Key('btn_alterar_email_otp'),
+                  onPressed: carregando ? null : aoAlterarEmailOtp,
+                  child: Text(
+                    'Usar outro e-mail',
+                    style: TextStyle(
+                      color: cores.ashGrey,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  ButtonStyle _estiloBotaoPrimario(AppColors cores) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: cores.rustIron,
+      foregroundColor: cores.chalkWhite,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 0,
     );
   }
 
@@ -443,13 +458,11 @@ class CartaoFormularioEmailLogin extends StatelessWidget {
     required AppColors cores,
     required String rotulo,
     required IconData icone,
-    Widget? sufixo,
   }) {
     return InputDecoration(
       labelText: rotulo,
       labelStyle: TextStyle(color: cores.ashGrey, fontSize: 13),
       prefixIcon: Icon(icone, color: cores.ashGrey, size: 20),
-      suffixIcon: sufixo,
       filled: true,
       fillColor: cores.deepBasalt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

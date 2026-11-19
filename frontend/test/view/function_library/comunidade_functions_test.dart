@@ -197,10 +197,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(mockLauncher.lastLaunchedUrl, equals('https://example.com/test'));
 
-      // Teste de falha
+      // Teste de falha booleana (fallback para external)
       mockLauncher.shouldFail = true;
       await tester.tap(find.text('Test Launch'));
       await tester.pumpAndSettle();
+
+      // Teste de exceção nativa -> registra no AppLogger com StackTrace e exibe SnackBar
+      mockLauncher.shouldThrow = true;
+      await tester.tap(find.text('Test Launch'));
+      await tester.pumpAndSettle();
+      expect(find.text('Erro ao abrir o link.'), findsOneWidget);
+      expect(mockLogger.recordedErrors.length, equals(1));
+      expect(mockLogger.recordedErrors.single['stackTrace'], isNotNull);
     });
 
     testWidgets('showTermsBottomSheet abre modal e renderiza header', (WidgetTester tester) async {

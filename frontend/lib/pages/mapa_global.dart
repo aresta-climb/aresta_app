@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../services/firebase/app_logger.dart';
 import '../view/view_models/mapa_pico_view_model.dart';
 import '../view/function_library/mapa/mapa_global_functions.dart';
 import '../view/function_library/mapa/mapa_marker.dart';
@@ -155,8 +156,12 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           );
         }
       }
-    } catch (e) {
-      // Ignora falhas ao pegar localização
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao consultar localização no Mapa Global',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -182,8 +187,12 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
           });
         }
       }
-    } catch (e) {
-      // Silently fall back to default marker
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao carregar ícones customizados no Mapa Global',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -259,15 +268,13 @@ class _MapaGlobalPageState extends State<MapaGlobalPage> {
             },
             onCameraMove: (CameraPosition position) {
               if (mounted) {
-                try {
-                  final novaFaixa = obterFaixaZoom(position.zoom);
-                  _currentZoom = position.zoom;
-                  if (_currentFaixaZoom != novaFaixa) {
-                    setState(() {
-                      _currentFaixaZoom = novaFaixa;
-                    });
-                  }
-                } catch (_) {}
+                final novaFaixa = obterFaixaZoom(position.zoom);
+                _currentZoom = position.zoom;
+                if (_currentFaixaZoom != novaFaixa) {
+                  setState(() {
+                    _currentFaixaZoom = novaFaixa;
+                  });
+                }
               }
             },
           );

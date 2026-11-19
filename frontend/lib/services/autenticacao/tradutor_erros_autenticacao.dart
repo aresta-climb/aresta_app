@@ -5,31 +5,43 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 
-/// Mapa de traduções amigáveis para mensagens de erro retornadas pelo servidor GoTrue / OAuth.
+final RegExp _regexCooldownAposSegundos = RegExp(
+  r'for security purposes,\s*you can only request this after (\d+) seconds?',
+  caseSensitive: false,
+);
+
+final RegExp _regexCooldownCadaSegundos = RegExp(
+  r'for security purposes,\s*you can only request this once every (\d+) seconds?',
+  caseSensitive: false,
+);
+
+/// Mapa de traduções amigáveis para mensagens de erro retornadas pelo servidor GoTrue / OAuth / OTP.
 const Map<String, String> _traducoesErrosServidorAutenticacao = {
   'invalid api key': 'Chave de acesso do servidor inválida. Tente novamente.',
   'no api key': 'Chave de acesso do servidor inválida. Tente novamente.',
-  'invalid login credentials': 'E-mail ou senha incorretos.',
-  'invalid_credentials': 'E-mail ou senha incorretos.',
-  'email not confirmed': 'Confirme seu endereço de e-mail antes de entrar.',
-  'email_not_confirmed': 'Confirme seu endereço de e-mail antes de entrar.',
-  'already registered': 'Este e-mail já está cadastrado.',
-  'user_already_exists': 'Este e-mail já está cadastrado.',
-  'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
-  'weak_password': 'A senha deve ter pelo menos 6 caracteres.',
+  'token has expired or is invalid':
+      'O código de acesso expirou ou é inválido.',
+  'otp_expired': 'O código de acesso expirou ou é inválido.',
   'unable to validate email': 'Informe um endereço de e-mail válido.',
   'invalid_email': 'Informe um endereço de e-mail válido.',
+  'provider_disabled':
+      'Provedor de autenticação não está habilitado no servidor.',
+  'provider is not enabled':
+      'Provedor de autenticação não está habilitado no servidor.',
+  'otp_disabled': 'Provedor de autenticação não está habilitado no servidor.',
   'unacceptable audience':
       'Não foi possível validar a credencial nativa no servidor.',
   'bad_jwt': 'Não foi possível validar a credencial nativa no servidor.',
   'invalid_grant': 'Não foi possível validar a credencial nativa no servidor.',
   'nonce': 'Não foi possível validar a credencial nativa no servidor.',
-  'rate limit':
-      'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
+  'email rate limit exceeded':
+      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
   'over_email_send_rate_limit':
-      'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
+      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
+  'rate limit':
+      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
   'for security purposes':
-      'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.',
+      'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
   'expired': 'Sua sessão expirou. Faça login novamente.',
   'invalid token': 'Sua sessão expirou. Faça login novamente.',
   'refresh_token_not_found': 'Sua sessão expirou. Faça login novamente.',
@@ -37,7 +49,19 @@ const Map<String, String> _traducoesErrosServidorAutenticacao = {
   'user_cancelled': 'Autenticação cancelada pelo escalador.',
 };
 
-/// Traduz uma mensagem de erro bruta retornada pelo servidor GoTrue/OAuth para português.
+const List<String> _padroesErroEntradaUsuario = [
+  'token has expired or is invalid',
+  'otp_expired',
+  'unable to validate email',
+  'invalid_email',
+  'validation_failed',
+  'for security purposes',
+  'over_email_send_rate_limit',
+  'email rate limit exceeded',
+  'over_request_rate_limit',
+];
+
+/// Traduz uma mensagem de erro bruta retornada pelo servidor GoTrue/OAuth/OTP para português.
 String traduzirMensagemServidorAutenticacao(
   String textoBruto,
   String mensagemPadrao,
@@ -46,6 +70,21 @@ String traduzirMensagemServidorAutenticacao(
   if (limpo.isEmpty) {
     return mensagemPadrao;
   }
+
+  final matchApos = _regexCooldownAposSegundos.firstMatch(limpo);
+  if (matchApos != null) {
+    final segundos = int.parse(matchApos.group(1)!);
+    final unidade = segundos == 1 ? 'segundo' : 'segundos';
+    return 'Por motivos de segurança, você só pode solicitar um novo código após $segundos $unidade.';
+  }
+
+  final matchCada = _regexCooldownCadaSegundos.firstMatch(limpo);
+  if (matchCada != null) {
+    final segundos = int.parse(matchCada.group(1)!);
+    final unidade = segundos == 1 ? 'segundo' : 'segundos';
+    return 'Por motivos de segurança, você só pode solicitar um novo código a cada $segundos $unidade.';
+  }
+
   final minusculo = limpo.toLowerCase();
   for (final entrada in _traducoesErrosServidorAutenticacao.entries) {
     if (minusculo.contains(entrada.key)) {
@@ -55,19 +94,47 @@ String traduzirMensagemServidorAutenticacao(
   return limpo;
 }
 
-/// Extrai e traduz a mensagem de erro de um payload JSON do GoTrue (`error_description`, `msg`, `message` ou `error`).
+/// Extrai e traduz a mensagem de erro de um payload JSON do GoTrue (`error_description`, `msg`, `message`, `error_code` ou `error`).
 String extrairMensagemErroAutenticacao(
   Map<String, dynamic> mapa,
   String mensagemPadrao,
 ) {
-  final msg =
-      mapa['error_description'] ??
-      mapa['msg'] ??
-      mapa['message'] ??
-      mapa['error'];
-  return msg != null
-      ? traduzirMensagemServidorAutenticacao(msg.toString(), mensagemPadrao)
-      : mensagemPadrao;
+  final candidatos = [
+    mapa['error_description'],
+    mapa['msg'],
+    mapa['message'],
+    mapa['error_code'],
+    mapa['error'],
+  ];
+  for (final candidato in candidatos) {
+    final texto = candidato?.toString().trim() ?? '';
+    if (texto.isNotEmpty) {
+      return traduzirMensagemServidorAutenticacao(texto, mensagemPadrao);
+    }
+  }
+  return mensagemPadrao;
+}
+
+/// Indica se o payload JSON de erro retornado pelo GoTrue decorre de entrada inválida do usuário
+/// (e-mail inválido, código OTP expirado/incorreto ou limite de reenvio OTP) em vez de falha operacional/configuração.
+bool ehErroEntradaUsuarioServidor(Map<String, dynamic> mapa) {
+  final consolidado = [
+    mapa['error_code'],
+    mapa['error'],
+    mapa['error_description'],
+    mapa['msg'],
+    mapa['message'],
+  ].where((v) => v != null).map((v) => v.toString().toLowerCase()).join(' | ');
+
+  if (consolidado.isEmpty) {
+    return false;
+  }
+  for (final padrao in _padroesErroEntradaUsuario) {
+    if (consolidado.contains(padrao)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /// Gera um `code_verifier` criptograficamente seguro de 56 caracteres para o fluxo OAuth 2.0 PKCE.

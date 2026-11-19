@@ -6,37 +6,96 @@ import 'package:frontend/services/autenticacao/tradutor_erros_autenticacao.dart'
 
 void main() {
   group('tradutor_erros_autenticacao', () {
-    test('traduz mensagens de erro conhecidas do servidor GoTrue para português e preserva mensagens desconhecidas', () {
+    test('traduz mensagens de OTP, cooldown em segundos, provedor desabilitado e OAuth para português', () {
       expect(
-        traduzirMensagemServidorAutenticacao('Invalid login credentials', 'Padrão'),
-        equals('E-mail ou senha incorretos.'),
+        traduzirMensagemServidorAutenticacao(
+          'For security purposes, you can only request this after 1 second.',
+          'Padrão',
+        ),
+        equals(
+          'Por motivos de segurança, você só pode solicitar um novo código após 1 segundo.',
+        ),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('Email not confirmed', 'Padrão'),
-        equals('Confirme seu endereço de e-mail antes de entrar.'),
+        traduzirMensagemServidorAutenticacao(
+          'For security purposes, you can only request this after 45 seconds.',
+          'Padrão',
+        ),
+        equals(
+          'Por motivos de segurança, você só pode solicitar um novo código após 45 segundos.',
+        ),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('email_not_confirmed', 'Padrão'),
-        equals('Confirme seu endereço de e-mail antes de entrar.'),
+        traduzirMensagemServidorAutenticacao(
+          'For security purposes, you can only request this once every 1 second.',
+          'Padrão',
+        ),
+        equals(
+          'Por motivos de segurança, você só pode solicitar um novo código a cada 1 segundo.',
+        ),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('User already registered', 'Padrão'),
-        equals('Este e-mail já está cadastrado.'),
+        traduzirMensagemServidorAutenticacao(
+          'For security purposes, you can only request this once every 60 seconds.',
+          'Padrão',
+        ),
+        equals(
+          'Por motivos de segurança, você só pode solicitar um novo código a cada 60 segundos.',
+        ),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('Password should be at least 6 characters', 'Padrão'),
-        equals('A senha deve ter pelo menos 6 caracteres.'),
+        traduzirMensagemServidorAutenticacao(
+          'Token has expired or is invalid',
+          'Padrão',
+        ),
+        equals('O código de acesso expirou ou é inválido.'),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('Unable to validate email address', 'Padrão'),
+        traduzirMensagemServidorAutenticacao('otp_expired', 'Padrão'),
+        equals('O código de acesso expirou ou é inválido.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao(
+          'Unable to validate email address',
+          'Padrão',
+        ),
         equals('Informe um endereço de e-mail válido.'),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('Email rate limit exceeded', 'Padrão'),
-        equals('Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.'),
+        traduzirMensagemServidorAutenticacao('invalid_email', 'Padrão'),
+        equals('Informe um endereço de e-mail válido.'),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('Token has expired', 'Padrão'),
+        traduzirMensagemServidorAutenticacao(
+          'Email rate limit exceeded',
+          'Padrão',
+        ),
+        equals(
+          'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
+        ),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao(
+          'OVER_EMAIL_SEND_RATE_LIMIT',
+          'Padrão',
+        ),
+        equals(
+          'Limite de envio de códigos atingido. Aguarde alguns instantes e tente novamente.',
+        ),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao(
+          'Unsupported provider: provider is not enabled',
+          'Padrão',
+        ),
+        equals('Provedor de autenticação não está habilitado no servidor.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('provider_disabled', 'Padrão'),
+        equals('Provedor de autenticação não está habilitado no servidor.'),
+      );
+      expect(
+        traduzirMensagemServidorAutenticacao('refresh_token_not_found', 'Padrão'),
         equals('Sua sessão expirou. Faça login novamente.'),
       );
       expect(
@@ -44,52 +103,28 @@ void main() {
         equals('Autenticação cancelada pelo escalador.'),
       );
       expect(
-        traduzirMensagemServidorAutenticacao('  Erro customizado em português  ', 'Padrão'),
+        traduzirMensagemServidorAutenticacao(
+          '  Erro customizado em português  ',
+          'Padrão',
+        ),
         equals('Erro customizado em português'),
       );
     });
 
-    test('traduz códigos alternativos do GoTrue ignorando caixa alta/baixa', () {
-      expect(
-        traduzirMensagemServidorAutenticacao('INVALID_CREDENTIALS', 'Padrão'),
-        equals('E-mail ou senha incorretos.'),
-      );
-      expect(
-        traduzirMensagemServidorAutenticacao('OVER_EMAIL_SEND_RATE_LIMIT', 'Padrão'),
-        equals('Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.'),
-      );
-      expect(
-        traduzirMensagemServidorAutenticacao('refresh_token_not_found', 'Padrão'),
-        equals('Sua sessão expirou. Faça login novamente.'),
-      );
-      expect(
-        traduzirMensagemServidorAutenticacao('USER_CANCELLED', 'Padrão'),
-        equals('Autenticação cancelada pelo escalador.'),
-      );
-      expect(
-        traduzirMensagemServidorAutenticacao('invalid_email', 'Padrão'),
-        equals('Informe um endereço de e-mail válido.'),
-      );
-      expect(
-        traduzirMensagemServidorAutenticacao('weak_password', 'Padrão'),
-        equals('A senha deve ter pelo menos 6 caracteres.'),
-      );
-    });
-
-    test('extrairMensagemErroAutenticacao prioriza error_description, msg, message e error ou usa mensagem padrão', () {
+    test('extrairMensagemErroAutenticacao prioriza error_description, msg, message, error_code e error ou usa mensagem padrão', () {
       expect(
         extrairMensagemErroAutenticacao(
-          {'error_description': 'invalid login credentials'},
+          {'error_description': 'Token has expired or is invalid'},
           'Falha padrão',
         ),
-        equals('E-mail ou senha incorretos.'),
+        equals('O código de acesso expirou ou é inválido.'),
       );
       expect(
         extrairMensagemErroAutenticacao(
-          {'msg': 'user_already_exists'},
+          {'error_code': 'provider_disabled', 'msg': 'Provider is not enabled'},
           'Falha padrão',
         ),
-        equals('Este e-mail já está cadastrado.'),
+        equals('Provedor de autenticação não está habilitado no servidor.'),
       );
       expect(
         extrairMensagemErroAutenticacao(
@@ -118,6 +153,48 @@ void main() {
       );
     });
 
+    test('ehErroEntradaUsuarioServidor distingue erros de digitação/cooldown OTP de erros de configuração/servidor', () {
+      expect(
+        ehErroEntradaUsuarioServidor({
+          'error_code': 'otp_expired',
+          'msg': 'Token has expired or is invalid',
+        }),
+        isTrue,
+      );
+      expect(
+        ehErroEntradaUsuarioServidor({
+          'msg': 'For security purposes, you can only request this after 30 seconds.',
+        }),
+        isTrue,
+      );
+      expect(
+        ehErroEntradaUsuarioServidor({'error_code': 'invalid_email'}),
+        isTrue,
+      );
+      expect(
+        ehErroEntradaUsuarioServidor({'error_code': 'over_email_send_rate_limit'}),
+        isTrue,
+      );
+
+      // Erros de servidor / configuração DEVEM retornar false para acionar Sentry
+      expect(
+        ehErroEntradaUsuarioServidor({
+          'error_code': 'provider_disabled',
+          'msg': 'Provider (issuer "https://appleid.apple.com") is not enabled',
+        }),
+        isFalse,
+      );
+      expect(
+        ehErroEntradaUsuarioServidor({'msg': 'Invalid API key'}),
+        isFalse,
+      );
+      expect(
+        ehErroEntradaUsuarioServidor({'error': 'unacceptable audience'}),
+        isFalse,
+      );
+      expect(ehErroEntradaUsuarioServidor(<String, dynamic>{}), isFalse);
+    });
+
     test('gera code_verifier PKCE de 56 caracteres, calcula code_challenge S256 (vetor RFC 7636) e extrai parâmetros de callback OAuth', () {
       final verifier1 = gerarCodeVerifierPkce();
       final verifier2 = gerarCodeVerifierPkce();
@@ -126,7 +203,6 @@ void main() {
       expect(verifier1, isNot(equals(verifier2)));
       expect(RegExp(r'^[A-Za-z0-9._~-]+$').hasMatch(verifier1), isTrue);
 
-      // Vetor oficial da RFC 7636 Apêndice B para S256
       expect(
         calcularCodeChallengeS256('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'),
         equals('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'),
@@ -140,7 +216,6 @@ void main() {
       expect(params['access_token'], equals('jwt999'));
       expect(params['token_type'], equals('bearer'));
 
-      // Quando o fragmento não possui pares chave=valor, preserva apenas queryParameters
       final uriSemParFragmento = Uri.parse(
         'aresta://app.arestaclimb.com/auth-callback?error=access_denied#ancora',
       );

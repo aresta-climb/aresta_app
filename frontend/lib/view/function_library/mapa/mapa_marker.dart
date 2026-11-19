@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../../services/firebase/app_logger.dart';
 import '../../../theme/cores_app.dart';
 
 /// Converte um [ByteData] gerado a partir de um canvas em um [BitmapDescriptor] com fallback seguro
@@ -150,8 +151,12 @@ Future<BitmapDescriptor> createCustomMarkerBitmap(
         Paint()..filterQuality = FilterQuality.high,
       );
       canvas.restore();
-    } catch (e) {
-      // Silently continue se a imagem falhar
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao renderizar asset no marcador do mapa ($caminhoImagem)',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -444,8 +449,12 @@ Future<BitmapDescriptor> createCustomMarkerBitmapWithText(
         Paint()..filterQuality = FilterQuality.high,
       );
       canvas.restore();
-    } catch (e) {
-      // Silently continue
+    } catch (e, stackTrace) {
+      AppLogger.instance.logError(
+        'Falha ao renderizar asset no marcador textual ($caminhoImagem)',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

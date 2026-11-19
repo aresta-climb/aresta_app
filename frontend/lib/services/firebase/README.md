@@ -55,8 +55,8 @@ O aplicativo adota a regra arquitetural estrita de que nenhum código em `lib/` 
   - *Release*: Envia simultaneamente ao Crashlytics (`recordError`) e ao Sentry (`Sentry.captureException`) com o `stackTrace` de origem obrigatório para permitir agrupamento correto, abertura automática de issue deduplicada no GitHub e alertas no WhatsApp.
 - **`logCrash(String contextMessage, {error, required StackTrace stackTrace})`**:
   - Registra falhas severas com nível crítico (`fatal: true` / `SentryLevel.fatal`), acionando alertas imediatos de emergência.
-- **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`** e **`isFalhaConexaoOuTimeout(dynamic error)`**:
-  - Analisa inteligentemente se a falha é decorrente de instabilidade transitória de rede (timeout, socket, HTTP 502/503/504/429 ou erros nativos de transporte de `FirebaseException` no Installations, Remote Config e App Check), registrando apenas como breadcrumb (`logAviso`) em ambos os provedores, ou se é falha de integridade/corrupção de dados (`fatal: true`).
+- **`logFalhaSyncOuDownload(String contextMessage, {error, required StackTrace stackTrace})`**, **`isCodigoHttpTransitorio(int codigo)`** e **`isFalhaConexaoOuTimeout(dynamic error)`**:
+  - Inspeciona códigos de status HTTP em exceções tipadas (`ExcecaoComStatusHttp`) e mensagens de `HttpException` antes de rebaixar falhas: apenas códigos transitórios (`408`, `429`, `502`, `503`, `504`), falhas puras de transporte/socket sem código HTTP ou erros nativos de transporte de `FirebaseException` (Installations, Remote Config e App Check) são rebaixados para breadcrumb (`logAviso`), garantindo que erros definitivos (`400`, `401`, `403`, `404`, `422`, `500`) sejam reportados como erros reais no Sentry e no Crashlytics.
 
 ### 6. Desofuscação e Símbolos no Crashlytics (CI/CD)
 Para que os relatórios de crash no painel do Firebase Crashlytics exibam os nomes de funções, arquivos e linhas de código (ao invés de ponteiros hexadecimais *unsymbolicated*), a pipeline do GitHub Actions realiza o upload automático de dois tipos de símbolos a cada release:

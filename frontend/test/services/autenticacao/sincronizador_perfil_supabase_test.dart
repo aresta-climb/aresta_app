@@ -4,9 +4,11 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/autenticacao/sincronizador_perfil_supabase.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import '../../mocks/mock_app_logger.dart';
 
 void main() {
   group('SincronizadorPerfilSupabase', () {
@@ -229,7 +231,11 @@ void main() {
       expect(urlSemVirgula, equals('data:image/webp;base64_invalido'));
     });
 
-    test('operações de sincronização toleram falhas de rede em PostgREST, Storage e GoTrue sem interromper o fluxo offline-first', () async {
+    test('rejeita falhas de rede transitórias com logAviso e reporta erros HTTP definitivos/exceções com StackTrace em logError', () async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      addTearDown(AppLogger.resetForTesting);
+
       final clienteComFalhaRede = ClienteHttpAresta.paraTestes(
         MockClient((_) async => throw Exception('Sem conexão com a internet')),
       );
@@ -259,6 +265,58 @@ void main() {
         fotoFinal: dataUri,
       );
       expect(fotoMantida, equals(dataUri));
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedErrors, isEmpty);
+
+      // Agora simula erros HTTP definitivos (403/500) nas 4 fronteiras (GET perfis, Storage, PUT user e POST perfis)
+      mockLogger.recordedWarnings.clear();
+      final clienteErroServidor = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/rest/v1/perfis') &&
+              request.method == 'GET') {
+            return http.Response('{"message":"RLS denied"}', 403);
+          }
+          if (request.url.path.contains('/storage/v1/object/avatars/')) {
+            return http.Response('{"error":"Bucket policy error"}', 403);
+          }
+          if (request.url.path.endsWith('/auth/v1/user') &&
+              request.method == 'PUT') {
+            return http.Response('{"msg":"Internal error"}', 500);
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis') &&
+              request.method == 'POST') {
+            return http.Response('{"message":"Constraint violation"}', 400);
+          }
+          return http.Response('{}', 500);
+        }),
+      );
+      final sincronizadorErro = SincronizadorPerfilSupabase(
+        clienteHttp: clienteErroServidor,
+      );
+
+      await sincronizadorErro.extrairESincronizarUsuario(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-valido',
+        usuario: {'id': 'usr-1'},
+        autorIdPublicoLocal: idLocal,
+        nomeFallback: 'Atleta Local',
+      );
+      await sincronizadorErro.sincronizarPerfilAtualizado(
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        accessToken: 'jwt-valido',
+        userId: 'usr-1',
+        autorIdPublico: idLocal,
+        nomeFinal: 'Atleta Local',
+        fotoFinal: dataUri,
+      );
+
+      expect(mockLogger.recordedErrors.length, equals(4));
+      for (final registro in mockLogger.recordedErrors) {
+        expect(registro['stackTrace'], isNotNull);
+      }
+      expect(mockLogger.recordedWarnings, isEmpty);
     });
   });
 }

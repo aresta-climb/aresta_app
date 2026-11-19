@@ -223,7 +223,12 @@ Future<void> launchURL(BuildContext context, String url) async {
       // Fallback para external
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
+    AppLogger.instance.logError(
+      'Falha ao abrir link externo ($url)',
+      error: e,
+      stackTrace: stackTrace,
+    );
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,

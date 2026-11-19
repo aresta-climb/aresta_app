@@ -1,17 +1,37 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
+import 'dart:io';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
 import 'package:frontend/view/view_models/login_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../mocks/mock_app_logger.dart';
+import '../../services/autenticacao/servico_autenticacao_fake.dart';
+
+class _ServicoAutenticacaoLento extends ServicoAutenticacaoFake {
+  final Completer<void> liberador = Completer<void>();
+
+  _ServicoAutenticacaoLento({required super.repositorio});
+
+  @override
+  Future<PerfilEscalador> entrarComApple() async {
+    await liberador.future;
+    return super.entrarComApple();
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RepositorioCadernetaLocal repositorio;
-  late ServicoAutenticacaoLocal servicoAutenticacao;
+  late ServicoAutenticacaoFake servicoFake;
+  late MockAppLogger mockLogger;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -19,281 +39,212 @@ void main() {
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
     await repositorio.inicializar();
     RepositorioCadernetaLocal.instancia = repositorio;
-    servicoAutenticacao = ServicoAutenticacaoLocal(
-      repositorio: repositorio,
-      obterAnonKeySupabase: () => '',
-    );
-    ServicoAutenticacaoLocal.instancia = servicoAutenticacao;
+
+    servicoFake = ServicoAutenticacaoFake(repositorio: repositorio);
+    ServicoAutenticacaoLocal.instancia = servicoFake;
+
+    mockLogger = MockAppLogger();
+    AppLogger.instance = mockLogger;
   });
 
   tearDown(() {
     ServicoAutenticacaoLocal.redefinirParaTestes();
+    AppLogger.resetForTesting();
   });
 
-  group('LoginViewModel', () {
-    test('inicia no modo Entrar com textos correspondentes e alterna modos e visibilidade de senha', () {
-      final vm = LoginViewModel();
+  group('LoginViewModel (Sem Senha / OTP 6 dígitos)', () {
+    test('executa fluxo de Magic Code em 2 etapas, limpa avisos ao editar, permite alterar e-mail e autentica com sucesso', () async {
+      var autenticado = 0;
+      final vm = LoginViewModel(
+        aoAutenticarComSucesso: () => autenticado++,
+      );
 
-      expect(vm.modoCriarConta, isFalse);
-      expect(vm.ocultarSenha, isTrue);
+      expect(vm.aguardandoCodigoOtp, isFalse);
       expect(vm.carregando, isFalse);
       expect(vm.mensagemErro, isNull);
       expect(vm.tituloCabecalho, equals('Entrar na sua conta'));
-      expect(
-        vm.subtituloCabecalho,
-        contains('Entre com sua conta Google ou e-mail'),
-      );
-      expect(vm.rotuloBotaoPrincipal, equals('Entrar'));
-      expect(vm.rotuloAlternarModo, equals('Não tem conta? Criar agora'));
+      expect(vm.subtituloCabecalho, contains('sem senha'));
 
-      vm.alternarModoConta();
-      expect(vm.modoCriarConta, isTrue);
-      expect(vm.tituloCabecalho, equals('Criar conta Aresta'));
-      expect(
-        vm.subtituloCabecalho,
-        contains('Sincronize sua caderneta esportiva na nuvem'),
-      );
-      expect(vm.rotuloBotaoPrincipal, equals('Criar conta'));
-      expect(vm.rotuloAlternarModo, equals('Já tem uma conta? Entrar'));
-
-      vm.alternarVisibilidadeSenha();
-      expect(vm.ocultarSenha, isFalse);
-
-      vm.dispose();
-    });
-
-    test('submeterEmailSenha no modo Entrar valida erros, limpa erro ao editar campos e autentica com sucesso', () async {
-      var sucessoAcionado = 0;
-      final vm = LoginViewModel(
-        servicoAutenticacao: servicoAutenticacao,
-        aoAutenticarComSucesso: () => sucessoAcionado++,
-      );
-
-      vm.definirEmail('invalido');
-      vm.definirSenha('123');
-
-      final resultadoFalha = await vm.submeterEmailSenha();
-      expect(resultadoFalha, isFalse);
+      // 1. E-mail inválido gera mensagem amigável sem enviar erro ao Sentry
+      vm.definirEmail('email-invalido');
+      expect(await vm.solicitarCodigoEmail(), isFalse);
       expect(vm.mensagemErro, equals('Informe um endereço de e-mail válido.'));
-      expect(sucessoAcionado, equals(0));
+      expect(mockLogger.recordedErrors, isEmpty);
 
-      // Editar qualquer campo limpa a mensagem de erro automaticamente
-      vm.definirEmail('pedro@gmail.com');
+      // Editar o e-mail limpa o erro automaticamente
+      vm.definirEmail('escalador@aresta.com');
       expect(vm.mensagemErro, isNull);
 
-      final resultadoSenhaCurta = await vm.submeterEmailSenha();
-      expect(resultadoSenhaCurta, isFalse);
+      // 2. Solicitar OTP avança para a etapa de código de 6 dígitos
+      expect(await vm.solicitarCodigoEmail(), isTrue);
+      expect(vm.aguardandoCodigoOtp, isTrue);
+      expect(vm.mensagemInfoOtp, contains('escalador@aresta.com'));
+      expect(autenticado, equals(0));
+
+      // 3. Código incorreto exibe erro amigável sem alertar Sentry e limpa ao digitar
+      vm.definirCodigoOtp('000000');
+      expect(await vm.confirmarCodigoEmail(), isFalse);
       expect(
         vm.mensagemErro,
-        equals('A senha deve ter pelo menos 6 caracteres.'),
+        equals('O código de acesso expirou ou é inválido.'),
       );
+      expect(mockLogger.recordedErrors, isEmpty);
 
-      vm.definirSenha('senhaForte123');
+      vm.definirCodigoOtp('123456');
       expect(vm.mensagemErro, isNull);
 
-      final resultadoSucesso = await vm.submeterEmailSenha();
-      expect(resultadoSucesso, isTrue);
-      expect(vm.mensagemErro, isNull);
-      expect(sucessoAcionado, equals(1));
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
+      // 4. Alterar e-mail retorna à etapa 1 limpando código e mensagens
+      vm.alterarEmailOtp();
+      expect(vm.aguardandoCodigoOtp, isFalse);
+      expect(vm.codigoOtp, isEmpty);
+      expect(vm.mensagemInfoOtp, isNull);
 
-      vm.dispose();
-    });
-
-    test('submeterEmailSenha no modo Criar Conta valida nome, cria conta autenticada ou exibe aviso de confirmação de e-mail quando pendente', () async {
-      var sucessoAcionado = 0;
-      final vm = LoginViewModel(
-        servicoAutenticacao: servicoAutenticacao,
-        aoAutenticarComSucesso: () => sucessoAcionado++,
-      );
-
-      vm.alternarModoConta();
-      vm.definirEmail('clara@gmail.com');
-      vm.definirSenha('123456');
-
-      final semNome = await vm.submeterEmailSenha();
-      expect(semNome, isFalse);
-      expect(
-        vm.mensagemErro,
-        equals('Informe seu nome ou apelido de escalador.'),
-      );
-
-      vm.definirNome('Clara Escaladora');
-      expect(vm.mensagemErro, isNull);
-
-      final criado = await vm.submeterEmailSenha();
-      expect(criado, isTrue);
-      expect(vm.mensagemConfirmacaoEmail, isNull);
-      expect(sucessoAcionado, equals(1));
-      expect(repositorio.obterPerfil().autorNomePublico, equals('Clara Escaladora'));
-      expect(repositorio.obterPerfil().estaAutenticado, isTrue);
-      vm.dispose();
-
-      // Cenário em que o servidor exige confirmação de e-mail antes de liberar a sessão
-      await servicoAutenticacao.encerrarSessao();
-      var sucessoPendente = 0;
-      final servicoPendente = ServicoAutenticacaoLocal(
-        repositorio: repositorio,
-        obterAnonKeySupabase: () => '',
-        provedorCriarConta: (nome, email, senha) async =>
-            ResultadoProvedorAutenticacao(
-              userId: 'usr-pendente',
-              nomeExibicao: nome,
-              requerConfirmacaoEmail: true,
-            ),
-      );
-      final vmPendente = LoginViewModel(
-        servicoAutenticacao: servicoPendente,
-        aoAutenticarComSucesso: () => sucessoPendente++,
-      );
-      vmPendente.alternarModoConta();
-      vmPendente.definirNome('Bruno Escalador');
-      vmPendente.definirEmail('bruno@gmail.com');
-      vmPendente.definirSenha('123456');
-
-      final submissaoPendente = await vmPendente.submeterEmailSenha();
-      expect(submissaoPendente, isFalse);
-      expect(sucessoPendente, equals(0));
-      expect(vmPendente.modoCriarConta, isFalse);
-      expect(vmPendente.mensagemErro, isNull);
-      expect(
-        vmPendente.mensagemConfirmacaoEmail,
-        contains('bruno@gmail.com'),
-      );
-      expect(
-        vmPendente.mensagemConfirmacaoEmail,
-        contains('Verifique sua caixa de entrada'),
-      );
-
-      // Editar campos ou alternar modo limpa o aviso de confirmação
-      vmPendente.definirSenha('novaSenha123');
-      expect(vmPendente.mensagemConfirmacaoEmail, isNull);
-      vmPendente.dispose();
-    });
-
-    test('entrarComGoogle, entrarComApple e continuarSemConta acionam callbacks e tratam exceções', () async {
-      var autenticado = 0;
-      var continuouSemConta = 0;
-      final vm = LoginViewModel(
-        servicoAutenticacao: servicoAutenticacao,
-        aoAutenticarComSucesso: () => autenticado++,
-        aoContinuarSemConta: () => continuouSemConta++,
-      );
-
-      final logouGoogle = await vm.entrarComGoogle();
-      expect(logouGoogle, isTrue);
+      // 5. Reenvia código e confirma 6 dígitos -> autentica com sucesso
+      expect(await vm.solicitarCodigoEmail(), isTrue);
+      vm.definirCodigoOtp('123456');
+      expect(await vm.confirmarCodigoEmail(), isTrue);
       expect(autenticado, equals(1));
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
-
-      await servicoAutenticacao.encerrarSessao();
-      final logouApple = await vm.entrarComApple();
-      expect(logouApple, isTrue);
-      expect(autenticado, equals(2));
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
-
-      vm.continuarSemConta();
-      expect(continuouSemConta, equals(1));
+      expect(servicoFake.estaAutenticado, isTrue);
+      expect(vm.aguardandoCodigoOtp, isFalse);
 
       vm.dispose();
     });
 
-    test('captura ExcecaoAutenticacao e exceções inesperadas do provedor no e-mail, Google e Apple', () async {
-      final servicoComFalhaDominio = ServicoAutenticacaoLocal(
-        repositorio: repositorio,
-        provedorGoogle: () async =>
-            throw const ExcecaoAutenticacao('Login com Google cancelado.'),
-        provedorApple: () async =>
-            throw const ExcecaoAutenticacao('Login com Apple cancelado.'),
-        provedorEmailSenha: (email, senha) async =>
-            throw Exception('Falha de rede'),
+    test('aplica janela deslizante de 6 envios de código OTP por 60 segundos com contagem regressiva', () {
+      fakeAsync((async) {
+        var agora = DateTime.utc(2026, 11, 19, 12, 0, 0);
+        final vm = LoginViewModel(
+          servicoAutenticacao: servicoFake,
+          obterAgora: () => agora,
+        );
+        vm.definirEmail('janela@aresta.com');
+
+        for (var i = 0; i < 6; i++) {
+          expect(vm.podeSolicitarCodigoOtp, isTrue);
+          bool? enviado;
+          vm.reenviarCodigoEmail().then((v) => enviado = v);
+          async.flushMicrotasks();
+          expect(enviado, isTrue);
+          agora = agora.add(const Duration(seconds: 5));
+        }
+
+        // Após 6 envios em 30s, restam 30s até liberar a vaga mais antiga
+        expect(vm.segundosRestantesReenvio, equals(30));
+        expect(vm.podeSolicitarCodigoOtp, isFalse);
+
+        // Avança 1s no Timer.periodic para validar atualização ao vivo e cancelamento automático ao zerar
+        agora = agora.add(const Duration(seconds: 1));
+        async.elapse(const Duration(seconds: 1));
+        expect(vm.segundosRestantesReenvio, equals(29));
+
+        // Tentativa durante o bloqueio informa contagem regressiva sem acionar rede nem Sentry
+        bool? bloqueado;
+        vm.reenviarCodigoEmail().then((v) => bloqueado = v);
+        async.flushMicrotasks();
+        expect(bloqueado, isFalse);
+        expect(vm.mensagemErro, contains('29s'));
+        expect(servicoFake.totalEnviosOtp, equals(6));
+        expect(mockLogger.recordedErrors, isEmpty);
+
+        // Avança o relógio além de 60s da primeira solicitação -> timer encerra e libera novo envio
+        agora = agora.add(const Duration(seconds: 30));
+        async.elapse(const Duration(seconds: 1));
+        expect(vm.segundosRestantesReenvio, equals(0));
+        expect(vm.podeSolicitarCodigoOtp, isTrue);
+
+        bool? reenviadoAposJanela;
+        vm.reenviarCodigoEmail().then((v) => reenviadoAposJanela = v);
+        async.flushMicrotasks();
+        expect(reenviadoAposJanela, isTrue);
+        expect(servicoFake.totalEnviosOtp, equals(7));
+
+        vm.dispose();
+      });
+    });
+
+    test('trata ExcecaoAutenticacaoCancelada silenciosamente e diferencia offline (logAviso) de erro real (logError)', () async {
+      var continuouOffline = 0;
+      final vm = LoginViewModel(
+        servicoAutenticacao: servicoFake,
+        aoContinuarSemConta: () => continuouOffline++,
       );
 
-      final vm1 = LoginViewModel(
-        servicoAutenticacao: servicoComFalhaDominio,
-      );
-      vm1.definirEmail('teste@gmail.com');
-      vm1.definirSenha('123456');
+      // 1. Cancelamento voluntário no Google/Apple: sem mensagemErro e sem logError
+      servicoFake.cancelarProximoLoginSocial = true;
+      expect(await vm.entrarComGoogle(), isFalse);
+      expect(vm.mensagemErro, isNull);
+      expect(mockLogger.recordedErrors, isEmpty);
 
-      expect(await vm1.submeterEmailSenha(), isFalse);
+      expect(await vm.entrarComApple(), isFalse);
+      expect(vm.mensagemErro, isNull);
+      expect(mockLogger.recordedErrors, isEmpty);
+
+      // 2. Queda de conexão (SocketException): mensagem offline amigável + logAviso
+      servicoFake.cancelarProximoLoginSocial = false;
+      servicoFake.erroNoLoginSocial = const SocketException('Failed host lookup');
+      expect(await vm.entrarComGoogle(), isFalse);
+      expect(vm.mensagemErro, contains('Sem conexão com a internet'));
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedErrors, isEmpty);
+
+      // 3. ExcecaoAutenticacao operacional (ex.: HTTP 400 provider_disabled): registra logError com StackTrace
+      servicoFake.erroNoLoginSocial = const ExcecaoAutenticacao(
+        'Provedor de autenticação não está habilitado no servidor.',
+        codigoStatusHttp: 400,
+        ehErroUsuario: false,
+        causaTecnica: 'HTTP 400 provider_disabled',
+      );
+      expect(await vm.entrarComApple(), isFalse);
       expect(
-        vm1.mensagemErro,
-        equals('Não foi possível concluir a autenticação. Tente novamente.'),
+        vm.mensagemErro,
+        equals('Provedor de autenticação não está habilitado no servidor.'),
       );
+      expect(mockLogger.recordedErrors.length, equals(1));
+      expect(mockLogger.recordedErrors.single['stackTrace'], isNotNull);
 
-      expect(await vm1.entrarComGoogle(), isFalse);
-      expect(vm1.mensagemErro, equals('Login com Google cancelado.'));
-
-      expect(await vm1.entrarComApple(), isFalse);
-      expect(vm1.mensagemErro, equals('Login com Apple cancelado.'));
-      vm1.dispose();
-
-      final servicoComFalhaGenerica = ServicoAutenticacaoLocal(
-        repositorio: repositorio,
-        provedorGoogle: () async => throw Exception('Erro OAuth'),
-        provedorApple: () async => throw Exception('Erro Apple OAuth'),
+      // 4. ExcecaoAutenticacao com status HTTP transitório 503: registra logAviso sem abrir erro no Sentry
+      mockLogger.recordedWarnings.clear();
+      servicoFake.erroNoLoginSocial = const ExcecaoAutenticacao(
+        'Serviço temporariamente indisponível.',
+        codigoStatusHttp: 503,
+        ehErroUsuario: false,
       );
-      final vm2 = LoginViewModel(
-        servicoAutenticacao: servicoComFalhaGenerica,
-      );
-      expect(await vm2.entrarComGoogle(), isFalse);
+      expect(await vm.entrarComGoogle(), isFalse);
+      expect(mockLogger.recordedWarnings, isNotEmpty);
+      expect(mockLogger.recordedErrors.length, equals(1));
+
+      // 5. Exceção inesperada genérica: registra logError com StackTrace e exibe mensagem genérica
+      servicoFake.erroNoLoginSocial = StateError('Falha inesperada');
+      expect(await vm.entrarComGoogle(), isFalse);
       expect(
-        vm2.mensagemErro,
+        vm.mensagemErro,
         equals('Não foi possível entrar com o Google. Tente novamente.'),
       );
+      expect(mockLogger.recordedErrors.length, equals(2));
 
-      expect(await vm2.entrarComApple(), isFalse);
-      expect(
-        vm2.mensagemErro,
-        equals('Não foi possível entrar com a Apple. Tente novamente.'),
-      );
-      vm2.dispose();
-    });
-
-    test('notifica transições de carregamento durante chamadas assíncronas e limpa confirmação pendente ao editar nome/e-mail ou alternar modo', () async {
-      final estadosCarregando = <bool>[];
-      final servicoPendente = ServicoAutenticacaoLocal(
-        repositorio: repositorio,
-        obterAnonKeySupabase: () => '',
-        provedorCriarConta: (nome, email, senha) async =>
-            ResultadoProvedorAutenticacao(
-              userId: 'usr-pendente-2',
-              nomeExibicao: nome,
-              requerConfirmacaoEmail: true,
-            ),
-      );
-
-      final vm = LoginViewModel(servicoAutenticacao: servicoPendente);
-      vm.addListener(() {
-        estadosCarregando.add(vm.carregando);
-      });
-
-      vm.alternarModoConta();
-      vm.definirNome('Marina');
-      vm.definirEmail('marina@aresta.com');
-      vm.definirSenha('123456');
-      estadosCarregando.clear();
-
-      await vm.submeterEmailSenha();
-      expect(estadosCarregando, containsAllInOrder([true, false]));
-      expect(vm.mensagemConfirmacaoEmail, isNotNull);
-
-      // Alternar modo limpa o banner de confirmação de e-mail
-      vm.alternarModoConta();
-      expect(vm.mensagemConfirmacaoEmail, isNull);
-
-      // Gerar novamente e limpar via edição de nome e e-mail
-      await vm.submeterEmailSenha();
-      expect(vm.mensagemConfirmacaoEmail, isNotNull);
-      vm.definirNome('Marina Silva');
-      expect(vm.mensagemConfirmacaoEmail, isNull);
-
-      vm.alternarModoConta();
-      await vm.submeterEmailSenha();
-      expect(vm.mensagemConfirmacaoEmail, isNotNull);
-      vm.definirEmail('marina.silva@aresta.com');
-      expect(vm.mensagemConfirmacaoEmail, isNull);
+      vm.continuarSemConta();
+      expect(continuouOffline, equals(1));
+      expect(vm.mensagemErro, isNull);
 
       vm.dispose();
+    });
+
+    test('não lança FlutterError quando entrarComApple conclui após dispose do LoginViewModel (Fixes ARESTA-APP-G)', () async {
+      final servicoLento = _ServicoAutenticacaoLento(repositorio: repositorio);
+      final vm = LoginViewModel(servicoAutenticacao: servicoLento);
+      var notificacoes = 0;
+      vm.addListener(() => notificacoes++);
+
+      final futuroApple = vm.entrarComApple();
+      expect(notificacoes, equals(1));
+
+      // Descarta o ViewModel enquanto o modal nativo da Apple ainda está aberto
+      vm.dispose();
+
+      // Conclui a operação assíncrona após o dispose -> NÃO deve chamar notifyListeners()
+      servicoLento.liberador.complete();
+      await expectLater(futuroApple, completes);
+      expect(notificacoes, equals(1));
     });
   });
 }

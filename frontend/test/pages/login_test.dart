@@ -16,12 +16,13 @@ import 'package:frontend/services/repositorio_dataset.dart';
 import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/login_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/autenticacao/servico_autenticacao_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RepositorioCadernetaLocal repositorio;
-  late ServicoAutenticacaoLocal servicoAutenticacao;
+  late ServicoAutenticacaoFake servicoFake;
 
   setUp(() async {
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
@@ -31,11 +32,8 @@ void main() {
     repositorio = RepositorioCadernetaLocal(preferencias: prefs);
     await repositorio.inicializar();
     RepositorioCadernetaLocal.instancia = repositorio;
-    servicoAutenticacao = ServicoAutenticacaoLocal(
-      repositorio: repositorio,
-      obterAnonKeySupabase: () => '',
-    );
-    ServicoAutenticacaoLocal.instancia = servicoAutenticacao;
+    servicoFake = ServicoAutenticacaoFake(repositorio: repositorio);
+    ServicoAutenticacaoLocal.instancia = servicoFake;
   });
 
   tearDown(() {
@@ -47,9 +45,13 @@ void main() {
   Widget criarLoginWidget({
     LoginViewModel? viewModel,
     LoginViewModel Function()? construtorViewModel,
+    TargetPlatform plataforma = TargetPlatform.android,
   }) {
     return MaterialApp(
-      theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+      theme: ThemeData.dark().copyWith(
+        platform: plataforma,
+        extensions: const [AppColors.dark],
+      ),
       home: LoginPage(
         viewModel: viewModel,
         construtorViewModel: construtorViewModel,
@@ -57,143 +59,101 @@ void main() {
     );
   }
 
-  group('LoginPage', () {
-    testWidgets('renderiza elementos principais de login via Google, e-mail e modo offline', (tester) async {
+  group('LoginPage (Sem Senha e Por Plataforma)', () {
+    testWidgets('no Android exibe Google, código OTP por e-mail e modo offline, ocultando o botão da Apple e qualquer campo de senha', (tester) async {
       await tester.pumpWidget(
         criarLoginWidget(
-          viewModel: LoginViewModel(servicoAutenticacao: servicoAutenticacao),
+          plataforma: TargetPlatform.android,
+          viewModel: LoginViewModel(servicoAutenticacao: servicoFake),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.text('Entrar na sua conta'), findsOneWidget);
-      expect(find.text('Continuar com o Google'), findsOneWidget);
-      expect(find.text('Continuar com a Apple'), findsOneWidget);
+      expect(find.byKey(const Key('btn_login_google')), findsOneWidget);
+      expect(find.byKey(const Key('btn_login_apple')), findsNothing);
       expect(find.byKey(const Key('campo_login_email')), findsOneWidget);
-      expect(find.byKey(const Key('campo_login_senha')), findsOneWidget);
-      expect(find.byKey(const Key('campo_login_nome')), findsNothing);
-      expect(find.text('Entrar'), findsOneWidget);
-      expect(find.text('Não tem conta? Criar agora'), findsOneWidget);
+      expect(find.textContaining('Senha'), findsNothing);
       expect(find.text('Continuar sem conta / Offline'), findsOneWidget);
     });
 
-    testWidgets('valida erro no login por e-mail, alterna visibilidade da senha e autentica com sucesso', (tester) async {
+    testWidgets('no iOS exibe tanto Continuar com o Google quanto Continuar com a Apple e não exibe alerta quando cancelado', (tester) async {
+      servicoFake.cancelarProximoLoginSocial = true;
+      final vm = LoginViewModel(servicoAutenticacao: servicoFake);
+
+      await tester.pumpWidget(
+        criarLoginWidget(
+          plataforma: TargetPlatform.iOS,
+          viewModel: vm,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_login_google')), findsOneWidget);
+      expect(find.byKey(const Key('btn_login_apple')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_login_apple')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('banner_erro_login')), findsNothing);
+    });
+
+    testWidgets('realiza fluxo completo de Magic Code OTP de 6 dígitos por e-mail e exibe erros globais no BannerAvisoLogin', (tester) async {
       var autenticadoCallback = false;
       final vm = LoginViewModel(
-        servicoAutenticacao: servicoAutenticacao,
+        servicoAutenticacao: servicoFake,
         aoAutenticarComSucesso: () => autenticadoCallback = true,
       );
 
       await tester.pumpWidget(criarLoginWidget(viewModel: vm));
       await tester.pumpAndSettle();
 
-      // Tenta submeter vazio -> exibe banner de erro
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
+      // 1. Submissão com e-mail vazio exibe banner_erro_login
+      await tester.tap(find.byKey(const Key('btn_enviar_codigo_otp')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('banner_erro_login')), findsOneWidget);
       expect(find.text('Informe um endereço de e-mail válido.'), findsOneWidget);
 
-      // Alterna visibilidade da senha
-      await tester.tap(find.byKey(const Key('btn_alternar_visibilidade_senha')));
-      await tester.pumpAndSettle();
-      expect(vm.ocultarSenha, isFalse);
-
-      // Preenche credenciais válidas e submete
+      // 2. Digita e-mail válido e solicita o código OTP
       await tester.enterText(
         find.byKey(const Key('campo_login_email')),
-        'escalador@gmail.com',
-      );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_senha')),
-        'minhaSenha123',
+        'escalador@aresta.com',
       );
       await tester.pumpAndSettle();
-
       expect(find.byKey(const Key('banner_erro_login')), findsNothing);
 
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
+      await tester.tap(find.byKey(const Key('btn_enviar_codigo_otp')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('banner_info_otp_login')), findsOneWidget);
+      expect(find.byKey(const Key('campo_login_codigo_otp')), findsOneWidget);
+
+      // Reenvia o código e testa retorno à Etapa 1 ("Usar outro e-mail") antes de confirmar
+      await tester.enterText(
+        find.byKey(const Key('campo_login_codigo_otp')),
+        '999',
+      );
+      await tester.tap(find.byKey(const Key('btn_reenviar_codigo_otp')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_alterar_email_otp')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('campo_login_codigo_otp')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('btn_enviar_codigo_otp')));
+      await tester.pumpAndSettle();
+
+      // 3. Digita o código de 6 dígitos correto e confirma
+      await tester.enterText(
+        find.byKey(const Key('campo_login_codigo_otp')),
+        '123456',
+      );
+      await tester.tap(find.byKey(const Key('btn_confirmar_codigo_otp')));
       await tester.pumpAndSettle();
 
       expect(autenticadoCallback, isTrue);
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
+      expect(servicoFake.estaAutenticado, isTrue);
     });
 
-    testWidgets('alterna para modo Criar Conta, preenche nome, e-mail e senha e cria conta', (tester) async {
-      final vm = LoginViewModel(servicoAutenticacao: servicoAutenticacao);
-
-      await tester.pumpWidget(criarLoginWidget(viewModel: vm));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Criar conta Aresta'), findsOneWidget);
-      expect(find.byKey(const Key('campo_login_nome')), findsOneWidget);
-      expect(find.text('Criar conta'), findsOneWidget);
-
-      await tester.enterText(
-        find.byKey(const Key('campo_login_nome')),
-        'Rafael Montanha',
-      );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_email')),
-        'rafael@gmail.com',
-      );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_senha')),
-        'senha123456',
-      );
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
-      await tester.pumpAndSettle();
-
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
-      expect(
-        repositorio.obterPerfil().autorNomePublico,
-        equals('Rafael Montanha'),
-      );
-    });
-
-    testWidgets('exibe banner de confirmação de e-mail e alterna para modo Entrar quando o servidor exige confirmação no cadastro', (tester) async {
-      final servicoPendente = ServicoAutenticacaoLocal(
-        repositorio: repositorio,
-        obterAnonKeySupabase: () => '',
-        provedorCriarConta: (nome, email, senha) async =>
-            ResultadoProvedorAutenticacao(
-              userId: 'usr-pendente',
-              nomeExibicao: nome,
-              requerConfirmacaoEmail: true,
-            ),
-      );
-      final vmPendente = LoginViewModel(servicoAutenticacao: servicoPendente);
-      await tester.pumpWidget(criarLoginWidget(viewModel: vmPendente));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('btn_alternar_modo_conta')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('campo_login_nome')),
-        'Helena Rocha',
-      );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_email')),
-        'helena@gmail.com',
-      );
-      await tester.enterText(
-        find.byKey(const Key('campo_login_senha')),
-        'senha123456',
-      );
-      await tester.tap(find.byKey(const Key('btn_submeter_email_senha')));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const Key('banner_confirmacao_email_login')),
-        findsOneWidget,
-      );
-      expect(find.textContaining('helena@gmail.com'), findsWidgets);
-      expect(servicoPendente.estaAutenticado, isFalse);
-    });
-
-    testWidgets('entrar com Google e continuar sem conta navegam para PerfilNode na árvore quando sem callbacks customizados', (tester) async {
+    testWidgets('navega para PerfilNode ao autenticar via Google, Apple (iOS) ou OTP e ao continuar sem conta', (tester) async {
       final datasetRepo = DatasetRepository(editorDeCroqui: EditorDeCroqui());
       final syncService = SyncService(datasetRepository: datasetRepo);
       final treeController = TreeNavigationController(
@@ -204,7 +164,10 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          theme: ThemeData.dark().copyWith(
+            platform: TargetPlatform.iOS,
+            extensions: const [AppColors.dark],
+          ),
           home: TreeNavigationWrapper(
             key: TreeNavigationWrapper.navKey,
             datasetRepo: datasetRepo,
@@ -212,47 +175,63 @@ void main() {
             treeController: treeController,
             child: LoginPage(
               construtorViewModel: () =>
-                  LoginViewModel(servicoAutenticacao: servicoAutenticacao),
+                  LoginViewModel(servicoAutenticacao: servicoFake),
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // 1. Toca em Continuar sem conta / Offline -> navega para PerfilNode(HomeNode)
+      // 1. Continuar sem conta / Offline
       await tester.ensureVisible(find.byKey(const Key('btn_continuar_sem_conta')));
       await tester.tap(find.byKey(const Key('btn_continuar_sem_conta')));
       await tester.pumpAndSettle();
-
       expect(treeController.currentNode, isA<PerfilNode>());
-      expect(treeController.currentNode.parent, isA<HomeNode>());
-      expect(servicoAutenticacao.estaAutenticado, isFalse);
+      expect(servicoFake.estaAutenticado, isFalse);
 
-      // 2. Volta para LoginNode e toca em Continuar com o Google -> autentica e navega para PerfilNode(HomeNode)
+      // 2. Google -> PerfilNode
       treeController.navigateTo(const LoginNode(HomeNode()));
       await tester.pumpAndSettle();
-
       await tester.tap(find.byKey(const Key('btn_login_google')));
       await tester.pumpAndSettle();
-
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
+      expect(servicoFake.estaAutenticado, isTrue);
       expect(treeController.currentNode, isA<PerfilNode>());
-      expect(treeController.currentNode.parent, isA<HomeNode>());
 
-      // 3. Encerra sessão, volta para LoginNode e toca em Continuar com a Apple -> autentica e navega para PerfilNode(HomeNode)
-      await servicoAutenticacao.encerrarSessao();
+      // 3. Apple -> PerfilNode
+      await servicoFake.encerrarSessao();
       treeController.navigateTo(const LoginNode(HomeNode()));
       await tester.pumpAndSettle();
-
       await tester.tap(find.byKey(const Key('btn_login_apple')));
       await tester.pumpAndSettle();
-
-      expect(servicoAutenticacao.estaAutenticado, isTrue);
+      expect(servicoFake.estaAutenticado, isTrue);
       expect(treeController.currentNode, isA<PerfilNode>());
-      expect(treeController.currentNode.parent, isA<HomeNode>());
+
+      // 4. Código OTP -> PerfilNode
+      await servicoFake.encerrarSessao();
+      treeController.navigateTo(const LoginNode(HomeNode()));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_login_email')),
+        'montanha@aresta.com',
+      );
+      await tester.tap(find.byKey(const Key('btn_enviar_codigo_otp')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_login_codigo_otp')),
+        '123456',
+      );
+      await tester.tap(find.byKey(const Key('btn_confirmar_codigo_otp')));
+      await tester.pumpAndSettle();
+      expect(servicoFake.estaAutenticado, isTrue);
+      expect(treeController.currentNode, isA<PerfilNode>());
     });
 
-    testWidgets('botão voltar desempilha a LoginPage e LoginPage gerencia ciclo de vida de ViewModel interno', (tester) async {
+    testWidgets('botão voltar desempilha a LoginPage, gerencia ViewModel interno e preserva feature flag perfilHabilitado inativa por padrão', (tester) async {
+      // Confirma que fora do override de teste, a flag perfilHabilitado segue inativa por padrão
+      ConfiguracaoRecursos.redefinirParaTestes();
+      expect(ConfiguracaoRecursos.perfilHabilitado, isFalse);
+      ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -277,10 +256,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginPage), findsNothing);
-      expect(find.text('Abrir Login'), findsOneWidget);
     });
 
-    testWidgets('não causa overflow em tela ultracompacta (320x568) com escala de texto 1.5x', (tester) async {
+    testWidgets('não causa overflow em tela ultracompacta (320x568) com escala de texto 1.5x nas duas etapas do OTP', (tester) async {
       tester.view.physicalSize = const Size(320, 568);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -288,10 +266,13 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final vm = LoginViewModel(servicoAutenticacao: servicoAutenticacao);
+      final vm = LoginViewModel(servicoAutenticacao: servicoFake);
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          theme: ThemeData.dark().copyWith(
+            platform: TargetPlatform.iOS,
+            extensions: const [AppColors.dark],
+          ),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: const TextScaler.linear(1.5),
@@ -302,14 +283,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
 
-      // Alterna para Criar Conta e força erro para validar ausência de overflow com todos os elementos visíveis
-      vm.alternarModoConta();
-      await vm.submeterEmailSenha();
+      vm.definirEmail('compacto@aresta.com');
+      await vm.solicitarCodigoEmail();
+      await vm.confirmarCodigoEmail();
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
     });
   });

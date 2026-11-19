@@ -20,6 +20,8 @@ import 'package:frontend/view/view_models/mapa_global_view_model.dart';
 import 'package:frontend/view/view_models/card_croqui_view_model.dart';
 import 'package:frontend/aresta_api/proto/generated/indice.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
+import 'package:frontend/services/firebase/app_logger.dart';
+import '../mocks/mock_app_logger.dart';
 import '../mocks/mock_geolocator_platform.dart';
 
 class FakeDatasetRepository extends DatasetRepository {
@@ -224,4 +226,45 @@ void main() {
       expect(mapWidget.padding, equals(const EdgeInsets.only(bottom: 34)));
     },
   );
+
+  testWidgets(
+    'MapaGlobalPage encaminha falha inesperada de geolocalização ao AppLogger com StackTrace',
+    (WidgetTester tester) async {
+      final mockLogger = MockAppLogger();
+      AppLogger.instance = mockLogger;
+      addTearDown(AppLogger.resetForTesting);
+
+      GeolocatorPlatform.instance = _GeolocatorComFalhaDupla();
+      final mockEditor = EditorDeCroqui();
+      final mockRepo = FakeDatasetRepository(mockEditor);
+      final mockSync = FakeSyncService(mockRepo);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MapaGlobalPage(
+            viewModel: MapaGlobalViewModel(
+              datasetRepo: mockRepo,
+              syncService: mockSync,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(mockLogger.recordedErrors, isNotEmpty);
+      expect(mockLogger.recordedErrors.first['stackTrace'], isNotNull);
+    },
+  );
+}
+
+class _GeolocatorComFalhaDupla extends MockGeolocatorPlatform {
+  @override
+  Future<Position> getCurrentPosition({LocationSettings? locationSettings}) async {
+    throw StateError('Falha em getCurrentPosition');
+  }
+
+  @override
+  Future<Position?> getLastKnownPosition({bool forceLocationManager = false}) async {
+    throw StateError('Falha em getLastKnownPosition');
+  }
 }

@@ -3,8 +3,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:app_links/app_links.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../firebase/remote_config.dart';
 import '../http/cliente_http_aresta.dart';
 import 'autenticador_nativo.dart';
@@ -12,13 +10,13 @@ import 'servico_autenticacao.dart';
 import 'sincronizador_perfil_supabase.dart';
 import 'tradutor_erros_autenticacao.dart';
 
-/// Cliente modular dedicado à comunicação HTTP e OAuth 2.0 (PKCE/Implicit/id_token) com o Supabase GoTrue.
+/// Cliente modular dedicado à comunicação HTTP sem senha (OTP de 6 dígitos e OAuth in-app `id_token`/PKCE) com o Supabase GoTrue.
 ///
 /// Isola os protocolos de autenticação do GoTrue (`/auth/v1`), delegando a sincronização
-/// de perfil e avatar ao [SincronizadorPerfilSupabase] e a tradução de erros ao
+/// de perfil e avatar ao [SincronizadorPerfilSupabase] e a tradução/classificação de erros ao
 /// módulo `tradutor_erros_autenticacao.dart`.
 class ClienteSupabaseAutenticacao {
-  /// URL oficial de redirecionamento OAuth registrada nos esquemas nativos Android e iOS.
+  /// URL oficial de redirecionamento OAuth registrada para sessão PKCE in-app (`ASWebAuthenticationSession`).
   static const String urlRedirecionamentoOAuth =
       'aresta://app.arestaclimb.com/auth-callback';
 
@@ -27,11 +25,6 @@ class ClienteSupabaseAutenticacao {
   final String Function() _obterUrlSupabase;
   final AutenticadorNativo _autenticadorNativo;
   final String _idClienteWebGoogle;
-  final Future<bool> Function(Uri uri) _lancadorUrlOAuth;
-  final Stream<Uri>? _fluxoLinksOAuth;
-  final Duration _timeoutOAuth;
-
-  Completer<Uri>? _aguardandoCallbackOAuth;
 
   /// Cria uma instância de [ClienteSupabaseAutenticacao].
   ClienteSupabaseAutenticacao({
@@ -41,9 +34,6 @@ class ClienteSupabaseAutenticacao {
     AutenticadorNativo? autenticadorNativo,
     String idClienteWebGoogle =
         AutenticadorNativoCanal.idClienteWebGooglePadrao,
-    Future<bool> Function(Uri uri)? lancadorUrlOAuth,
-    Stream<Uri>? fluxoLinksOAuth,
-    Duration timeoutOAuth = const Duration(minutes: 3),
   }) : _clienteHttp = clienteHttp ?? ClienteHttpAresta.instancia,
        _sincronizadorPerfil =
            sincronizadorPerfil ??
@@ -54,188 +44,212 @@ class ClienteSupabaseAutenticacao {
            obterUrlSupabase ?? (() => RemoteConfigService.instance.supabaseUrl),
        _autenticadorNativo =
            autenticadorNativo ?? AutenticadorNativoCanal.instancia,
-       _idClienteWebGoogle = idClienteWebGoogle,
-       _lancadorUrlOAuth =
-           lancadorUrlOAuth ??
-           ((uri) => launchUrl(uri, mode: LaunchMode.externalApplication)),
-       _fluxoLinksOAuth = fluxoLinksOAuth,
-       _timeoutOAuth = timeoutOAuth;
+       _idClienteWebGoogle = idClienteWebGoogle;
 
   String get _baseUrl =>
       _obterUrlSupabase().trim().replaceAll(RegExp(r'/+$'), '');
 
-  /// Autentica um escalador existente via GoTrue (`/auth/v1/token?grant_type=password`)
-  /// e sincroniza seus metadados com `public.perfis`.
-  Future<ResultadoProvedorAutenticacao> autenticarEmailSenha({
+  static Map<String, dynamic> _decodificarJsonSeguro(String corpo) {
+    final limpo = corpo.trim();
+    if (limpo.isEmpty) {
+      return const <String, dynamic>{};
+    }
+    try {
+      final decodificado = jsonDecode(limpo);
+      if (decodificado is Map<String, dynamic>) {
+        return decodificado;
+      }
+      return <String, dynamic>{'msg': limpo};
+    } catch (_) {
+      return <String, dynamic>{'msg': limpo};
+    }
+  }
+
+  /// Solicita ao Supabase Auth (`/auth/v1/otp`) o envio de um código OTP numérico de 6 dígitos
+  /// via Resend SMTP para [email] (criando a conta automaticamente quando inexistente).
+  Future<void> solicitarCodigoOtpEmail({
     required String email,
-    required String senha,
+    required String anonKey,
+  }) async {
+    final baseUrl = _baseUrl;
+    final resposta = await _clienteHttp.post(
+      Uri.parse('$baseUrl/auth/v1/otp'),
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer $anonKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email.trim(),
+        'create_user': true,
+      }),
+    );
+
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      final mapa = _decodificarJsonSeguro(resposta.body);
+      throw ExcecaoAutenticacao(
+        extrairMensagemErroAutenticacao(
+          mapa,
+          'Não foi possível enviar o código de acesso.',
+        ),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: ehErroEntradaUsuarioServidor(mapa),
+        causaTecnica: 'HTTP ${resposta.statusCode} /auth/v1/otp: ${resposta.body}',
+      );
+    }
+  }
+
+  /// Valida o código numérico de 6 dígitos [codigo] informado para [email] em `/auth/v1/verify`
+  /// (`type: "email"`) e sincroniza os metadados do escalador com `public.perfis`.
+  Future<ResultadoProvedorAutenticacao> verificarCodigoOtpEmail({
+    required String email,
+    required String codigo,
     required String autorIdPublicoLocal,
     required String anonKey,
   }) async {
     final baseUrl = _baseUrl;
+    final emailLimpo = email.trim();
     final resposta = await _clienteHttp.post(
-      Uri.parse('$baseUrl/auth/v1/token?grant_type=password'),
+      Uri.parse('$baseUrl/auth/v1/verify'),
       headers: {
         'apikey': anonKey,
+        'Authorization': 'Bearer $anonKey',
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        'email': email,
-        'password': senha,
+        'type': 'email',
+        'email': emailLimpo,
+        'token': codigo.trim(),
       }),
     );
 
-    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
-    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw ExcecaoAutenticacao(
-        extrairMensagemErroAutenticacao(mapa, 'E-mail ou senha incorretos.'),
-      );
-    }
-
-    final accessToken = mapa['access_token'] as String?;
-    final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _sincronizadorPerfil.extrairESincronizarUsuario(
-      baseUrl: baseUrl,
-      anonKey: anonKey,
-      accessToken: accessToken,
-      usuario: usuario,
-      autorIdPublicoLocal: autorIdPublicoLocal,
-      nomeFallback: email.split('@').first,
-    );
-  }
-
-  /// Cria uma nova conta no GoTrue (`/auth/v1/signup`) com os metadados públicos do escalador
-  /// e garante o espelhamento em `public.perfis` (ou sinaliza `requerConfirmacaoEmail`).
-  Future<ResultadoProvedorAutenticacao> criarConta({
-    required String nome,
-    required String email,
-    required String senha,
-    required String autorIdPublico,
-    required String? fotoUrlAtual,
-    required String anonKey,
-  }) async {
-    final baseUrl = _baseUrl;
-    final resposta = await _clienteHttp.post(
-      Uri.parse('$baseUrl/auth/v1/signup'),
-      headers: {
-        'apikey': anonKey,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'password': senha,
-        'data': {
-          'autor_id_publico': autorIdPublico,
-          'autor_nome_publico': nome,
-          'avatar_url': ?fotoUrlAtual,
-        },
-      }),
-    );
-
-    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
+    final mapa = _decodificarJsonSeguro(resposta.body);
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
         extrairMensagemErroAutenticacao(
           mapa,
-          'Não foi possível criar a conta.',
+          'O código de acesso expirou ou é inválido.',
         ),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: ehErroEntradaUsuarioServidor(mapa),
+        causaTecnica:
+            'HTTP ${resposta.statusCode} /auth/v1/verify: ${resposta.body}',
       );
     }
 
     final accessToken = mapa['access_token'] as String?;
     final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    final identidades = usuario['identities'];
-    if (identidades is List && identidades.isEmpty) {
-      throw const ExcecaoAutenticacao('Este e-mail já está cadastrado.');
-    }
-    if (accessToken == null || accessToken.trim().isEmpty) {
-      return ResultadoProvedorAutenticacao(
-        userId: usuario['id'].toString(),
-        nomeExibicao: nome,
-        fotoUrl: fotoUrlAtual,
-        autorIdPublicoRemoto: autorIdPublico,
-        requerConfirmacaoEmail: true,
-      );
-    }
     return _sincronizadorPerfil.extrairESincronizarUsuario(
       baseUrl: baseUrl,
       anonKey: anonKey,
       accessToken: accessToken,
       usuario: usuario,
-      autorIdPublicoLocal: autorIdPublico,
-      nomeFallback: nome,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      nomeFallback: emailLimpo.split('@').first,
     );
   }
 
-  /// Autentica com o Google priorizando o seletor nativo de contas do sistema operacional
-  /// (`grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
+  /// Autentica com o Google 100% dentro do aplicativo:
+  /// - No Android: recebe `id_token` emitido pelo `CredentialManager` (`grant_type=id_token`).
+  /// - No iOS: recebe `callbackUri` capturada em `ASWebAuthenticationSession` com PKCE (`grant_type=pkce`).
   Future<ResultadoProvedorAutenticacao> autenticarGoogleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) {
-    return _autenticarComPrioridadeNativa(
+  }) async {
+    final baseUrl = _baseUrl;
+    final codeVerifier = gerarCodeVerifierPkce();
+    final codeChallenge = calcularCodeChallengeS256(codeVerifier);
+    final uriAutorizacao = Uri.parse('$baseUrl/auth/v1/authorize').replace(
+      queryParameters: {
+        'provider': 'google',
+        'redirect_to': urlRedirecionamentoOAuth,
+        'code_challenge': codeChallenge,
+        'code_challenge_method': 's256',
+      },
+    );
+
+    final credencial = await _autenticadorNativo.solicitarCredencialGoogle(
+      webClientId: _idClienteWebGoogle,
+      uriAutorizacaoPkce: uriAutorizacao,
+      esquemaCallback: 'aresta',
+    );
+    if (credencial == null) {
+      throw const ExcecaoAutenticacao(
+        'Não foi possível iniciar o login com o Google neste dispositivo.',
+        ehErroUsuario: false,
+        causaTecnica: 'Canal nativo Google retornou nulo',
+      );
+    }
+    if (credencial.cancelado) {
+      throw const ExcecaoAutenticacaoCancelada();
+    }
+    if (credencial.erroNativo != null) {
+      throw ExcecaoAutenticacao(
+        'Não foi possível entrar com o Google. Tente novamente.',
+        ehErroUsuario: false,
+        causaTecnica: 'Canal nativo Google: ${credencial.erroNativo}',
+      );
+    }
+    if (credencial.possuiCallbackUri) {
+      return _processarRetornoPkceInApp(
+        uriRetorno: credencial.callbackUri!,
+        baseUrl: baseUrl,
+        anonKey: anonKey,
+        codeVerifier: codeVerifier,
+        autorIdPublicoLocal: autorIdPublicoLocal,
+        nomeFallback: 'Escalador Google',
+      );
+    }
+    return autenticarComIdToken(
       provedor: 'google',
+      idToken: credencial.idToken!,
+      nonce: credencial.nonce,
+      nomeSugeridoNativo: credencial.nomeExibicao,
+      fotoSugeridaNativa: credencial.fotoUrl,
       nomeFallback: 'Escalador Google',
-      mensagemCancelamento: 'Login com o Google cancelado.',
-      solicitarCredencialNativa: () => _autenticadorNativo
-          .solicitarCredencialGoogle(webClientId: _idClienteWebGoogle),
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
   }
 
-  /// Autentica com a Apple priorizando o modal nativo do sistema operacional (Face ID / Touch ID
-  /// via `grant_type=id_token`) e utilizando o fluxo OAuth 2.0 via navegador como fallback.
+  /// Autentica com a Apple exclusivamente pelo modal nativo do iOS (`ASAuthorizationAppleIDProvider`
+  /// via `grant_type=id_token`), sem fallback de navegador externo.
   Future<ResultadoProvedorAutenticacao> autenticarAppleOAuth({
     required String autorIdPublicoLocal,
     required String anonKey,
-  }) {
-    return _autenticarComPrioridadeNativa(
-      provedor: 'apple',
-      nomeFallback: 'Escalador Apple',
-      mensagemCancelamento: 'Login com a Apple cancelado.',
-      solicitarCredencialNativa: _autenticadorNativo.solicitarCredencialApple,
-      autorIdPublicoLocal: autorIdPublicoLocal,
-      anonKey: anonKey,
-    );
-  }
-
-  Future<ResultadoProvedorAutenticacao> _autenticarComPrioridadeNativa({
-    required String provedor,
-    required String nomeFallback,
-    required String mensagemCancelamento,
-    required Future<CredencialNativaOAuth?> Function()
-    solicitarCredencialNativa,
-    required String autorIdPublicoLocal,
-    required String anonKey,
   }) async {
-    final credencialNativa = await solicitarCredencialNativa();
-    if (credencialNativa != null) {
-      if (credencialNativa.cancelado) {
-        throw ExcecaoAutenticacao(mensagemCancelamento);
-      }
-      return autenticarComIdToken(
-        provedor: provedor,
-        idToken: credencialNativa.idToken!,
-        nonce: credencialNativa.nonce,
-        nomeSugeridoNativo: credencialNativa.nomeExibicao,
-        fotoSugeridaNativa: credencialNativa.fotoUrl,
-        nomeFallback: nomeFallback,
-        autorIdPublicoLocal: autorIdPublicoLocal,
-        anonKey: anonKey,
+    final credencial = await _autenticadorNativo.solicitarCredencialApple();
+    if (credencial == null) {
+      throw const ExcecaoAutenticacao(
+        'Não foi possível iniciar o login com a Apple neste dispositivo.',
+        ehErroUsuario: false,
+        causaTecnica: 'Canal nativo Apple retornou nulo',
       );
     }
-
-    return autenticarProvedorOAuth(
-      provedor: provedor,
-      nomeFallback: nomeFallback,
+    if (credencial.cancelado) {
+      throw const ExcecaoAutenticacaoCancelada();
+    }
+    if (credencial.erroNativo != null) {
+      throw ExcecaoAutenticacao(
+        'Não foi possível entrar com a Apple. Tente novamente.',
+        ehErroUsuario: false,
+        causaTecnica: 'Canal nativo Apple: ${credencial.erroNativo}',
+      );
+    }
+    return autenticarComIdToken(
+      provedor: 'apple',
+      idToken: credencial.idToken!,
+      nonce: credencial.nonce,
+      nomeSugeridoNativo: credencial.nomeExibicao,
+      fotoSugeridaNativa: credencial.fotoUrl,
+      nomeFallback: 'Escalador Apple',
       autorIdPublicoLocal: autorIdPublicoLocal,
       anonKey: anonKey,
     );
   }
 
   /// Autentica diretamente no GoTrue (`/auth/v1/token?grant_type=id_token`) utilizando
-  /// um `id_token` emitido pelo modal nativo do sistema operacional (sem abrir o navegador).
+  /// um `id_token` emitido pelo modal nativo do sistema operacional.
   Future<ResultadoProvedorAutenticacao> autenticarComIdToken({
     required String provedor,
     required String idToken,
@@ -251,6 +265,7 @@ class ClienteSupabaseAutenticacao {
       Uri.parse('$baseUrl/auth/v1/token?grant_type=id_token'),
       headers: {
         'apikey': anonKey,
+        'Authorization': 'Bearer $anonKey',
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
@@ -260,13 +275,17 @@ class ClienteSupabaseAutenticacao {
       }),
     );
 
-    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
+    final mapa = _decodificarJsonSeguro(resposta.body);
     if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
       throw ExcecaoAutenticacao(
         extrairMensagemErroAutenticacao(
           mapa,
           'Falha ao validar credencial nativa.',
         ),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: false,
+        causaTecnica:
+            'HTTP ${resposta.statusCode} /auth/v1/token?grant_type=id_token ($provedor): ${resposta.body}',
       );
     }
 
@@ -296,90 +315,75 @@ class ClienteSupabaseAutenticacao {
     );
   }
 
-  /// Inicia o fluxo OAuth 2.0 com o [provedor] (`'google'` ou `'apple'`) via navegador externo
-  /// e aguarda o callback (`PKCE` ou `Implicit`) para concluir a sessão no Supabase.
-  Future<ResultadoProvedorAutenticacao> autenticarProvedorOAuth({
-    required String provedor,
-    required String nomeFallback,
-    required String autorIdPublicoLocal,
+  Future<ResultadoProvedorAutenticacao> _processarRetornoPkceInApp({
+    required Uri uriRetorno,
+    required String baseUrl,
     required String anonKey,
+    required String codeVerifier,
+    required String autorIdPublicoLocal,
+    required String nomeFallback,
   }) async {
-    final baseUrl = _baseUrl;
-    final codeVerifier = gerarCodeVerifierPkce();
-    final codeChallenge = calcularCodeChallengeS256(codeVerifier);
+    final params = extrairParametrosCallbackOAuth(uriRetorno);
+    final codigoErro = (params['error'] ?? '').toLowerCase();
+    if (codigoErro == 'access_denied' || codigoErro == 'user_cancelled') {
+      throw const ExcecaoAutenticacaoCancelada();
+    }
 
-    final uriAutorizacao = Uri.parse('$baseUrl/auth/v1/authorize').replace(
-      queryParameters: {
-        'provider': provedor,
-        'redirect_to': urlRedirecionamentoOAuth,
-        'code_challenge': codeChallenge,
-        'code_challenge_method': 's256',
-      },
-    );
+    final erroOAuth = params['error_description'] ?? params['error'];
+    if (erroOAuth != null && erroOAuth.trim().isNotEmpty) {
+      throw ExcecaoAutenticacao(
+        traduzirMensagemServidorAutenticacao(
+          erroOAuth.replaceAll('+', ' '),
+          'Não foi possível concluir a autenticação.',
+        ),
+        ehErroUsuario: false,
+        causaTecnica: 'Callback OAuth in-app com erro: $erroOAuth',
+      );
+    }
 
-    final completer = Completer<Uri>();
-    _aguardandoCallbackOAuth = completer;
-
-    final fluxo = _fluxoLinksOAuth ?? AppLinks().uriLinkStream;
-    final inscricao = fluxo.listen(processarCallbackOAuth);
-
-    try {
-      final abriu = await _lancadorUrlOAuth(uriAutorizacao);
-      if (!abriu) {
-        throw const ExcecaoAutenticacao(
-          'Não foi possível abrir o navegador para concluir a autenticação.',
-        );
-      }
-
-      final uriRetorno = await completer.future.timeout(_timeoutOAuth);
-      final params = extrairParametrosCallbackOAuth(uriRetorno);
-
-      final erroOAuth = params['error_description'] ?? params['error'];
-      if (erroOAuth != null && erroOAuth.trim().isNotEmpty) {
-        throw ExcecaoAutenticacao(
-          traduzirMensagemServidorAutenticacao(
-            erroOAuth.replaceAll('+', ' '),
-            'Não foi possível concluir a autenticação.',
-          ),
-        );
-      }
-
-      final codigoPkce = params['code'];
-      if (codigoPkce != null && codigoPkce.isNotEmpty) {
-        return await _trocarCodigoPkcePorSessao(
-          baseUrl: baseUrl,
-          anonKey: anonKey,
-          codigoPkce: codigoPkce,
-          codeVerifier: codeVerifier,
-          autorIdPublicoLocal: autorIdPublicoLocal,
-          nomeFallback: nomeFallback,
-        );
-      }
-
-      final tokenImplicito = params['access_token'];
-      if (tokenImplicito != null && tokenImplicito.isNotEmpty) {
-        return await _consultarUsuarioComTokenImplicito(
-          baseUrl: baseUrl,
-          anonKey: anonKey,
-          tokenImplicito: tokenImplicito,
-          autorIdPublicoLocal: autorIdPublicoLocal,
-          nomeFallback: nomeFallback,
-        );
-      }
-
+    final codigoPkce = params['code'];
+    if (codigoPkce == null || codigoPkce.isEmpty) {
       throw const ExcecaoAutenticacao(
         'Resposta de autenticação OAuth incompleta.',
+        ehErroUsuario: false,
+        causaTecnica: 'Callback OAuth in-app sem parâmetro code',
       );
-    } on TimeoutException {
-      throw const ExcecaoAutenticacao(
-        'Tempo esgotado ao aguardar o retorno da autenticação.',
-      );
-    } finally {
-      await inscricao.cancel();
-      if (identical(_aguardandoCallbackOAuth, completer)) {
-        _aguardandoCallbackOAuth = null;
-      }
     }
+
+    final resposta = await _clienteHttp.post(
+      Uri.parse('$baseUrl/auth/v1/token?grant_type=pkce'),
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer $anonKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'auth_code': codigoPkce,
+        'code_verifier': codeVerifier,
+      }),
+    );
+
+    final mapa = _decodificarJsonSeguro(resposta.body);
+    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
+      throw ExcecaoAutenticacao(
+        extrairMensagemErroAutenticacao(mapa, 'Falha ao validar login OAuth.'),
+        codigoStatusHttp: resposta.statusCode,
+        ehErroUsuario: false,
+        causaTecnica:
+            'HTTP ${resposta.statusCode} /auth/v1/token?grant_type=pkce: ${resposta.body}',
+      );
+    }
+
+    final accessToken = mapa['access_token'] as String?;
+    final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
+    return _sincronizadorPerfil.extrairESincronizarUsuario(
+      baseUrl: baseUrl,
+      anonKey: anonKey,
+      accessToken: accessToken,
+      usuario: usuario,
+      autorIdPublicoLocal: autorIdPublicoLocal,
+      nomeFallback: nomeFallback,
+    );
   }
 
   /// Sincroniza alterações de nome e foto de perfil com o Supabase Storage (`avatars`),
@@ -400,93 +404,6 @@ class ClienteSupabaseAutenticacao {
       autorIdPublico: autorIdPublico,
       nomeFinal: nomeFinal,
       fotoFinal: fotoFinal,
-    );
-  }
-
-  /// Intercepta um deep link de retorno do fluxo OAuth (`aresta://app.arestaclimb.com/auth-callback`).
-  ///
-  /// Retorna `true` se o link era um callback de autenticação OAuth.
-  bool processarCallbackOAuth(Uri uri) {
-    final caminho = uri.path.toLowerCase();
-    final host = uri.host.toLowerCase();
-    if (host != 'auth-callback' && !caminho.contains('auth-callback')) {
-      return false;
-    }
-    final pendente = _aguardandoCallbackOAuth;
-    if (pendente != null && !pendente.isCompleted) {
-      pendente.complete(uri);
-    }
-    return true;
-  }
-
-  Future<ResultadoProvedorAutenticacao> _trocarCodigoPkcePorSessao({
-    required String baseUrl,
-    required String anonKey,
-    required String codigoPkce,
-    required String codeVerifier,
-    required String autorIdPublicoLocal,
-    required String nomeFallback,
-  }) async {
-    final resposta = await _clienteHttp.post(
-      Uri.parse('$baseUrl/auth/v1/token?grant_type=pkce'),
-      headers: {
-        'apikey': anonKey,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'auth_code': codigoPkce,
-        'code_verifier': codeVerifier,
-      }),
-    );
-
-    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
-    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw ExcecaoAutenticacao(
-        extrairMensagemErroAutenticacao(mapa, 'Falha ao validar login OAuth.'),
-      );
-    }
-
-    final accessToken = mapa['access_token'] as String?;
-    final usuario = (mapa['user'] as Map<String, dynamic>?) ?? mapa;
-    return _sincronizadorPerfil.extrairESincronizarUsuario(
-      baseUrl: baseUrl,
-      anonKey: anonKey,
-      accessToken: accessToken,
-      usuario: usuario,
-      autorIdPublicoLocal: autorIdPublicoLocal,
-      nomeFallback: nomeFallback,
-    );
-  }
-
-  Future<ResultadoProvedorAutenticacao> _consultarUsuarioComTokenImplicito({
-    required String baseUrl,
-    required String anonKey,
-    required String tokenImplicito,
-    required String autorIdPublicoLocal,
-    required String nomeFallback,
-  }) async {
-    final resposta = await _clienteHttp.get(
-      Uri.parse('$baseUrl/auth/v1/user'),
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $tokenImplicito',
-      },
-    );
-
-    final mapa = jsonDecode(resposta.body) as Map<String, dynamic>;
-    if (resposta.statusCode < 200 || resposta.statusCode >= 300) {
-      throw ExcecaoAutenticacao(
-        extrairMensagemErroAutenticacao(mapa, 'Sessão OAuth inválida.'),
-      );
-    }
-
-    return _sincronizadorPerfil.extrairESincronizarUsuario(
-      baseUrl: baseUrl,
-      anonKey: anonKey,
-      accessToken: tokenImplicito,
-      usuario: mapa,
-      autorIdPublicoLocal: autorIdPublicoLocal,
-      nomeFallback: nomeFallback,
     );
   }
 }

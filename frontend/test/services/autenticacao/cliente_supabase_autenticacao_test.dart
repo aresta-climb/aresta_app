@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/services/autenticacao/autenticador_nativo.dart';
@@ -10,37 +9,29 @@ import 'package:frontend/services/autenticacao/servico_autenticacao.dart';
 import 'package:frontend/services/http/cliente_http_aresta.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:url_launcher_platform_interface/link.dart';
-import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 class _FakeAutenticadorNativo implements AutenticadorNativo {
   CredencialNativaOAuth? respostaGoogle;
   CredencialNativaOAuth? respostaApple;
+  Uri? ultimaUriPkceGoogle;
+  String? ultimoEsquemaGoogle;
 
   _FakeAutenticadorNativo({this.respostaGoogle, this.respostaApple});
 
   @override
   Future<CredencialNativaOAuth?> solicitarCredencialGoogle({
     required String webClientId,
-  }) async => respostaGoogle;
+    Uri? uriAutorizacaoPkce,
+    String esquemaCallback = 'aresta',
+  }) async {
+    ultimaUriPkceGoogle = uriAutorizacaoPkce;
+    ultimoEsquemaGoogle = esquemaCallback;
+    return respostaGoogle;
+  }
 
   @override
   Future<CredencialNativaOAuth?> solicitarCredencialApple() async =>
       respostaApple;
-}
-
-class _FakeUrlLauncherOAuth extends UrlLauncherPlatform {
-  final void Function(String url) aoAbrir;
-  _FakeUrlLauncherOAuth(this.aoAbrir);
-
-  @override
-  LinkDelegate? get linkDelegate => null;
-
-  @override
-  Future<bool> launchUrl(String url, LaunchOptions options) async {
-    aoAbrir(url);
-    return true;
-  }
 }
 
 void main() {
@@ -48,95 +39,69 @@ void main() {
 
   group('ClienteSupabaseAutenticacao', () {
     const urlBase = 'https://yzkhiaoqtxvvcyyuwmqg.supabase.co';
-    const anonKey = 'anon-key-teste';
+    const anonKey = 'sb_publishable_teste';
     const idPublicoLocal = 'x8siJek3FiG3aB';
 
-    test('autenticarEmailSenha e criarConta sincronizam metadados com Supabase Auth e public.perfis', () async {
+    test('solicitarCodigoOtpEmail e verificarCodigoOtpEmail realizam fluxo Magic Code 6 dígitos e classificam erros HTTP', () async {
       final requisicoes = <http.Request>[];
       final clienteHttp = ClienteHttpAresta.paraTestes(
         MockClient((request) async {
           requisicoes.add(request);
-          if (request.url.path.endsWith('/auth/v1/token') &&
-              request.url.queryParameters['grant_type'] == 'password') {
+          if (request.url.path.endsWith('/auth/v1/otp')) {
             final body = jsonDecode(request.body) as Map<String, dynamic>;
-            if (body['password'] == 'errada') {
-              return http.Response(
-                jsonEncode({'error_description': 'Senha inválida.'}),
-                400,
-              );
-            }
-            if (body['email'] == 'novo@gmail.com') {
+            if (body['email'] == 'cooldown@aresta.com') {
               return http.Response(
                 jsonEncode({
-                  'access_token': 'jwt-novo',
-                  'user': {'id': 'uuid-novo'},
+                  'msg':
+                      'For security purposes, you can only request this after 25 seconds.',
                 }),
-                200,
+                429,
               );
+            }
+            if (body['email'] == 'desabilitado@aresta.com') {
+              return http.Response(
+                jsonEncode({
+                  'error_code': 'otp_disabled',
+                  'msg': 'Signups not allowed for otp',
+                }),
+                422,
+              );
+            }
+            // Corpo vazio para validar decodificação segura em 200 OK
+            return http.Response('', 200);
+          }
+
+          if (request.url.path.endsWith('/auth/v1/verify')) {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['token'] == '000000') {
+              return http.Response(
+                jsonEncode({
+                  'error_code': 'otp_expired',
+                  'msg': 'Token has expired or is invalid',
+                }),
+                403,
+              );
+            }
+            if (body['token'] == '999999') {
+              return http.Response('Erro interno de gateway HTML', 500);
+            }
+            if (body['token'] == '888888') {
+              return http.Response('["erro_em_array_json"]', 500);
             }
             return http.Response(
               jsonEncode({
-                'access_token': 'jwt-1',
+                'access_token': 'jwt-otp-1',
                 'user': {
-                  'id': 'uuid-1',
-                  'user_metadata': {
-                    'autor_id_publico': 'm9siJek3FiG3aZ',
-                    'autor_nome_publico': 'Nome Meta',
-                  },
+                  'id': 'uuid-otp-1',
+                  'user_metadata': <String, dynamic>{},
                 },
               }),
               200,
             );
           }
-          if (request.url.path.endsWith('/auth/v1/signup')) {
-            final body = jsonDecode(request.body) as Map<String, dynamic>;
-            if (body['email'] == 'erro@gmail.com') {
-              return http.Response(jsonEncode({}), 500);
-            }
-            if (body['email'] == 'ofuscado@gmail.com') {
-              return http.Response(
-                jsonEncode({
-                  'id': 'uuid-ofuscado',
-                  'identities': <dynamic>[],
-                }),
-                200,
-              );
-            }
-            if (body['email'] == 'pendente@gmail.com') {
-              return http.Response(
-                jsonEncode({
-                  'id': 'uuid-pendente',
-                  'confirmation_sent_at': '2026-11-08T12:00:00Z',
-                  'user_metadata': body['data'],
-                }),
-                200,
-              );
-            }
-            return http.Response(
-              jsonEncode({
-                'access_token': 'jwt-signup',
-                'user': {
-                  'id': 'uuid-signup',
-                  'user_metadata': body['data'],
-                },
-              }),
-              200,
-            );
-          }
+
           if (request.url.path.endsWith('/rest/v1/perfis')) {
             if (request.method == 'GET') {
-              if (request.url.queryParameters['user_id'] == 'eq.uuid-1') {
-                return http.Response(
-                  jsonEncode([
-                    {
-                      'autor_id_publico': 'r9siJek3FiG3aZ',
-                      'autor_nome_publico': 'Nome Perfis',
-                      'avatar_url': 'https://supabase.co/f1.jpg',
-                    },
-                  ]),
-                  200,
-                );
-              }
               return http.Response(jsonEncode([]), 200);
             }
             return http.Response(jsonEncode([{}]), 201);
@@ -147,342 +112,115 @@ void main() {
 
       final cliente = ClienteSupabaseAutenticacao(
         clienteHttp: clienteHttp,
-        obterUrlSupabase: () => urlBase,
+        obterUrlSupabase: () => '$urlBase///',
       );
 
+      await cliente.solicitarCodigoOtpEmail(
+        email: '  atleta@aresta.com  ',
+        anonKey: anonKey,
+      );
+      final reqOtp = requisicoes.first;
+      expect(reqOtp.url.toString(), equals('$urlBase/auth/v1/otp'));
+      expect(reqOtp.headers['apikey'], equals(anonKey));
+      expect(reqOtp.headers['Authorization'], equals('Bearer $anonKey'));
+      expect(
+        jsonDecode(reqOtp.body),
+        equals({'email': 'atleta@aresta.com', 'create_user': true}),
+      );
+
+      // Cooldown OTP -> ehErroUsuario = true e codigoStatusHttp = 429
       await expectLater(
-        () => cliente.autenticarEmailSenha(
-          email: 'a@b.com',
-          senha: 'errada',
+        () => cliente.solicitarCodigoOtpEmail(
+          email: 'cooldown@aresta.com',
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isTrue)
+              .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 429)
+              .having(
+                (e) => e.mensagem,
+                'mensagem',
+                contains('25 segundos'),
+              ),
+        ),
+      );
+
+      // Erro de configuração OTP -> ehErroUsuario = false e codigoStatusHttp = 422
+      await expectLater(
+        () => cliente.solicitarCodigoOtpEmail(
+          email: 'desabilitado@aresta.com',
+          anonKey: anonKey,
+        ),
+        throwsA(
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isFalse)
+              .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 422),
+        ),
+      );
+
+      // Verificação de código OTP inválido -> ehErroUsuario = true
+      await expectLater(
+        () => cliente.verificarCodigoOtpEmail(
+          email: 'atleta@aresta.com',
+          codigo: '000000',
           autorIdPublicoLocal: idPublicoLocal,
           anonKey: anonKey,
         ),
         throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            'Senha inválida.',
-          ),
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isTrue)
+              .having(
+                (e) => e.mensagem,
+                'mensagem',
+                'O código de acesso expirou ou é inválido.',
+              ),
         ),
       );
 
-      final resExistente = await cliente.autenticarEmailSenha(
-        email: 'a@b.com',
-        senha: 'correta',
-        autorIdPublicoLocal: idPublicoLocal,
-        anonKey: anonKey,
-      );
-      expect(resExistente.userId, equals('uuid-1'));
-      expect(resExistente.autorIdPublicoRemoto, equals('r9siJek3FiG3aZ'));
-      expect(resExistente.nomeExibicao, equals('Nome Perfis'));
-      expect(resExistente.fotoUrl, equals('https://supabase.co/f1.jpg'));
-      expect(resExistente.accessToken, equals('jwt-1'));
-
-      final resNovo = await cliente.autenticarEmailSenha(
-        email: 'novo@gmail.com',
-        senha: 'correta',
-        autorIdPublicoLocal: idPublicoLocal,
-        anonKey: anonKey,
-      );
-      expect(resNovo.userId, equals('uuid-novo'));
-      expect(resNovo.nomeExibicao, equals('novo'));
-
-      final resSignup = await cliente.criarConta(
-        nome: 'Escaladora',
-        email: 'nova@gmail.com',
-        senha: 'correta',
-        autorIdPublico: idPublicoLocal,
-        fotoUrlAtual: 'https://supabase.co/f0.jpg',
-        anonKey: anonKey,
-      );
-      expect(resSignup.userId, equals('uuid-signup'));
-      expect(resSignup.nomeExibicao, equals('Escaladora'));
-      expect(resSignup.accessToken, equals('jwt-signup'));
-      expect(resSignup.requerConfirmacaoEmail, isFalse);
-
-      final resPendente = await cliente.criarConta(
-        nome: 'Escaladora Pendente',
-        email: 'pendente@gmail.com',
-        senha: 'correta',
-        autorIdPublico: idPublicoLocal,
-        fotoUrlAtual: null,
-        anonKey: anonKey,
-      );
-      expect(resPendente.userId, equals('uuid-pendente'));
-      expect(resPendente.accessToken, isNull);
-      expect(resPendente.requerConfirmacaoEmail, isTrue);
-
+      // Resposta não-JSON 500 -> ehErroUsuario = false e codigoStatusHttp = 500
       await expectLater(
-        () => cliente.criarConta(
-          nome: 'Escaladora',
-          email: 'ofuscado@gmail.com',
-          senha: 'correta',
-          autorIdPublico: idPublicoLocal,
-          fotoUrlAtual: null,
+        () => cliente.verificarCodigoOtpEmail(
+          email: 'atleta@aresta.com',
+          codigo: '999999',
+          autorIdPublicoLocal: idPublicoLocal,
           anonKey: anonKey,
         ),
         throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            'Este e-mail já está cadastrado.',
-          ),
+          isA<ExcecaoAutenticacao>()
+              .having((e) => e.ehErroUsuario, 'ehErroUsuario', isFalse)
+              .having((e) => e.codigoStatusHttp, 'codigoStatusHttp', 500),
         ),
       );
 
+      // Resposta JSON que não é objeto (lista JSON) 500 -> decodificada com segurança
       await expectLater(
-        () => cliente.criarConta(
-          nome: 'Escaladora',
-          email: 'erro@gmail.com',
-          senha: 'correta',
-          autorIdPublico: idPublicoLocal,
-          fotoUrlAtual: null,
-          anonKey: anonKey,
-        ),
-        throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            'Não foi possível criar a conta.',
-          ),
-        ),
-      );
-    });
-
-    test('autenticarGoogleOAuth suporta fluxos PKCE e Implicit e trata falhas e timeout', () async {
-      final controladorLinks = StreamController<Uri>.broadcast();
-      addTearDown(controladorLinks.close);
-
-      final clienteHttp = ClienteHttpAresta.paraTestes(
-        MockClient((request) async {
-          if (request.url.path.endsWith('/auth/v1/token') &&
-              request.url.queryParameters['grant_type'] == 'pkce') {
-            final body = jsonDecode(request.body) as Map<String, dynamic>;
-            if (body['auth_code'] == 'invalido') {
-              return http.Response(
-                jsonEncode({'error_description': 'Código PKCE expirado.'}),
-                400,
-              );
-            }
-            return http.Response(
-              jsonEncode({
-                'access_token': 'jwt-pkce',
-                'user': {
-                  'id': 'uuid-pkce',
-                  'user_metadata': {
-                    'full_name': 'Atleta PKCE',
-                    'avatar_url': 'https://lh3.googleusercontent.com/a/pkce.jpg',
-                  },
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/auth/v1/user') &&
-              request.method == 'GET') {
-            if (request.headers['Authorization'] == 'Bearer tok-erro') {
-              return http.Response(jsonEncode({'msg': 'Token inválido.'}), 401);
-            }
-            return http.Response(
-              jsonEncode({
-                'id': 'uuid-imp',
-                'user_metadata': {
-                  'name': 'Atleta Implicit',
-                  'picture': 'https://lh3.googleusercontent.com/a/imp.jpg',
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/rest/v1/perfis')) {
-            return http.Response(jsonEncode([]), 200);
-          }
-          return http.Response('{}', 200);
-        }),
-      );
-
-      // 1. Sucesso PKCE via stream de links
-      final clientePkce = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        obterUrlSupabase: () => urlBase,
-        fluxoLinksOAuth: controladorLinks.stream,
-        lancadorUrlOAuth: (_) async {
-          Future<void>.microtask(() {
-            controladorLinks.add(
-              Uri.parse('aresta://app.arestaclimb.com/auth-callback?code=ok'),
-            );
-          });
-          return true;
-        },
-      );
-      final resPkce = await clientePkce.autenticarGoogleOAuth(
-        autorIdPublicoLocal: idPublicoLocal,
-        anonKey: anonKey,
-      );
-      expect(resPkce.userId, equals('uuid-pkce'));
-      expect(resPkce.nomeExibicao, equals('Atleta PKCE'));
-      expect(resPkce.fotoUrl, equals('https://lh3.googleusercontent.com/a/pkce.jpg'));
-
-      // 1b. Sucesso PKCE com Apple OAuth (provider=apple)
-      Uri? uriAutorizacaoApple;
-      final clienteApple = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        obterUrlSupabase: () => urlBase,
-        fluxoLinksOAuth: controladorLinks.stream,
-        lancadorUrlOAuth: (uri) async {
-          uriAutorizacaoApple = uri;
-          Future<void>.microtask(() {
-            controladorLinks.add(
-              Uri.parse('aresta://app.arestaclimb.com/auth-callback?code=ok'),
-            );
-          });
-          return true;
-        },
-      );
-      final resApple = await clienteApple.autenticarAppleOAuth(
-        autorIdPublicoLocal: idPublicoLocal,
-        anonKey: anonKey,
-      );
-      expect(uriAutorizacaoApple?.queryParameters['provider'], equals('apple'));
-      expect(resApple.userId, equals('uuid-pkce'));
-      expect(resApple.nomeExibicao, equals('Atleta PKCE'));
-
-      // 2. Sucesso Implicit via lancadorUrlOAuth padrão e processarCallbackOAuth
-      late ClienteSupabaseAutenticacao clienteImp;
-      UrlLauncherPlatform.instance = _FakeUrlLauncherOAuth((_) {
-        Future<void>.microtask(() {
-          clienteImp.processarCallbackOAuth(
-            Uri.parse(
-              'aresta://app.arestaclimb.com/auth-callback#access_token=jwt-imp',
+        () => ClienteSupabaseAutenticacao(clienteHttp: clienteHttp)
+            .verificarCodigoOtpEmail(
+              email: 'atleta@aresta.com',
+              codigo: '888888',
+              autorIdPublicoLocal: idPublicoLocal,
+              anonKey: anonKey,
             ),
-          );
-        });
-      });
-      clienteImp = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        obterUrlSupabase: () => urlBase,
-        fluxoLinksOAuth: const Stream<Uri>.empty(),
+        throwsA(isA<ExcecaoAutenticacao>()),
       );
-      final resImp = await clienteImp.autenticarGoogleOAuth(
+
+      // Sucesso na verificação do código de 6 dígitos
+      final resOtp = await cliente.verificarCodigoOtpEmail(
+        email: 'atleta@aresta.com',
+        codigo: '123456',
         autorIdPublicoLocal: idPublicoLocal,
         anonKey: anonKey,
       );
-      expect(resImp.userId, equals('uuid-imp'));
-      expect(resImp.nomeExibicao, equals('Atleta Implicit'));
-      expect(
-        clienteImp.processarCallbackOAuth(Uri.parse('https://aresta.cc/abc')),
-        isFalse,
-      );
-
-      // 3. Erros de navegador, retorno OAuth com erro, retorno vazio, falha PKCE, falha /user e timeout
-      final clienteFalhaNav = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        fluxoLinksOAuth: const Stream<Uri>.empty(),
-        lancadorUrlOAuth: (_) async => false,
-      );
-      await expectLater(
-        () => clienteFalhaNav.autenticarGoogleOAuth(
-          autorIdPublicoLocal: idPublicoLocal,
-          anonKey: anonKey,
-        ),
-        throwsA(isA<ExcecaoAutenticacao>()),
-      );
-
-      for (final uriErro in [
-        'aresta://app.arestaclimb.com/auth-callback?error_description=Cancelado',
-        'aresta://app.arestaclimb.com/auth-callback',
-        'aresta://app.arestaclimb.com/auth-callback?code=invalido',
-        'aresta://app.arestaclimb.com/auth-callback#access_token=tok-erro',
-      ]) {
-        late ClienteSupabaseAutenticacao c;
-        c = ClienteSupabaseAutenticacao(
-          clienteHttp: clienteHttp,
-          fluxoLinksOAuth: const Stream<Uri>.empty(),
-          lancadorUrlOAuth: (_) async {
-            Future<void>.microtask(() {
-              c.processarCallbackOAuth(Uri.parse(uriErro));
-            });
-            return true;
-          },
-        );
-        await expectLater(
-          () => c.autenticarGoogleOAuth(
-            autorIdPublicoLocal: idPublicoLocal,
-            anonKey: anonKey,
-          ),
-          throwsA(isA<ExcecaoAutenticacao>()),
-        );
-      }
-
-      final clienteTimeout = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        fluxoLinksOAuth: const Stream<Uri>.empty(),
-        lancadorUrlOAuth: (_) async => true,
-        timeoutOAuth: const Duration(milliseconds: 15),
-      );
-      await expectLater(
-        () => clienteTimeout.autenticarGoogleOAuth(
-          autorIdPublicoLocal: idPublicoLocal,
-          anonKey: anonKey,
-        ),
-        throwsA(isA<ExcecaoAutenticacao>()),
-      );
+      expect(resOtp.userId, equals('uuid-otp-1'));
+      expect(resOtp.accessToken, equals('jwt-otp-1'));
+      expect(resOtp.nomeExibicao, equals('atleta'));
+      expect(resOtp.autorIdPublicoRemoto, equals(idPublicoLocal));
     });
 
-    test('sincronizarPerfilAtualizado envia avatar WebP ao Storage (quando disponível) e atualiza Auth e public.perfis', () async {
-      var storageOk = true;
-      http.Request? requisicaoStorage;
+    test('autenticarGoogleOAuth suporta id_token nativo (Android) e callbackUri PKCE in-app (iOS) sem navegador externo', () async {
       final clienteHttp = ClienteHttpAresta.paraTestes(
         MockClient((request) async {
-          if (request.url.path.contains('/storage/v1/object/avatars/')) {
-            requisicaoStorage = request;
-            return storageOk
-                ? http.Response('{}', 200)
-                : http.Response('{}', 404);
-          }
-          return http.Response('{}', 200);
-        }),
-      );
-
-      final cliente = ClienteSupabaseAutenticacao(
-        clienteHttp: clienteHttp,
-        obterUrlSupabase: () => urlBase,
-      );
-
-      final dataUri = 'data:image/webp;base64,${base64Encode([1, 2, 3])}';
-      final urlStorage = await cliente.sincronizarPerfilAtualizado(
-        anonKey: anonKey,
-        accessToken: 'jwt-1',
-        userId: 'usr-1',
-        autorIdPublico: idPublicoLocal,
-        nomeFinal: 'Atleta',
-        fotoFinal: dataUri,
-      );
-      expect(
-        urlStorage,
-        startsWith('$urlBase/storage/v1/object/public/avatars/usr-1/avatar.webp'),
-      );
-      expect(requisicaoStorage?.headers['Content-Type'], startsWith('image/webp'));
-
-      storageOk = false;
-      final urlFallback = await cliente.sincronizarPerfilAtualizado(
-        anonKey: anonKey,
-        accessToken: 'jwt-1',
-        userId: 'usr-1',
-        autorIdPublico: idPublicoLocal,
-        nomeFinal: 'Atleta',
-        fotoFinal: dataUri,
-      );
-      expect(urlFallback, equals(dataUri));
-    });
-
-    test('autenticarGoogleOAuth e autenticarAppleOAuth priorizam modal nativo (grant_type=id_token) sem abrir navegador e tratam cancelamento e erro', () async {
-      var abriuNavegador = false;
-      final requisicoes = <http.Request>[];
-
-      final clienteHttp = ClienteHttpAresta.paraTestes(
-        MockClient((request) async {
-          requisicoes.add(request);
           if (request.url.path.endsWith('/auth/v1/token') &&
               request.url.queryParameters['grant_type'] == 'id_token') {
             final body = jsonDecode(request.body) as Map<String, dynamic>;
@@ -492,30 +230,35 @@ void main() {
                 400,
               );
             }
-            if (body['id_token'] == 'token-apikey-invalida') {
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-google-android',
+                'user': {
+                  'id': 'uuid-google-android',
+                  'user_metadata': <String, dynamic>{},
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'pkce') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['auth_code'] == 'codigo-expirado') {
               return http.Response(
-                jsonEncode({'message': 'Invalid API key'}),
-                401,
-              );
-            }
-            if (body['provider'] == 'apple') {
-              return http.Response(
-                jsonEncode({
-                  'access_token': 'jwt-supabase-apple',
-                  'user': {
-                    'id': 'uuid-apple-nativo',
-                    'user_metadata': <String, dynamic>{},
-                  },
-                }),
-                200,
+                jsonEncode({'error_description': 'Código PKCE expirado.'}),
+                400,
               );
             }
             return http.Response(
               jsonEncode({
-                'access_token': 'jwt-supabase-google',
+                'access_token': 'jwt-google-ios-pkce',
                 'user': {
-                  'id': 'uuid-google-nativo',
-                  'user_metadata': <String, dynamic>{},
+                  'id': 'uuid-google-ios',
+                  'user_metadata': {
+                    'full_name': 'Atleta iOS PKCE',
+                    'avatar_url': 'https://lh3.googleusercontent.com/a/ios.jpg',
+                  },
                 },
               }),
               200,
@@ -531,117 +274,218 @@ void main() {
       final fakeNativo = _FakeAutenticadorNativo(
         respostaGoogle: const CredencialNativaOAuth(
           idToken: 'id-token-google-valido',
-          nomeExibicao: 'Eduardo Nativo Google',
-          fotoUrl: 'https://lh3.googleusercontent.com/a/nativo.jpg',
-        ),
-        respostaApple: const CredencialNativaOAuth(
-          idToken: 'id-token-apple-valido',
-          nonce: 'nonce-apple-123',
-          nomeExibicao: 'Eduardo Nativo Apple',
+          nomeExibicao: 'Eduardo Android',
+          fotoUrl: 'https://lh3.googleusercontent.com/a/android.jpg',
         ),
       );
-
       final cliente = ClienteSupabaseAutenticacao(
         clienteHttp: clienteHttp,
         obterUrlSupabase: () => urlBase,
         autenticadorNativo: fakeNativo,
-        lancadorUrlOAuth: (_) async {
-          abriuNavegador = true;
-          return true;
-        },
       );
 
-      // 1. Login nativo com Google envia grant_type=id_token sem abrir navegador
-      final resGoogle = await cliente.autenticarGoogleOAuth(
+      // 1. Android: id_token via CredentialManager
+      final resAndroid = await cliente.autenticarGoogleOAuth(
         autorIdPublicoLocal: idPublicoLocal,
         anonKey: anonKey,
       );
-      expect(abriuNavegador, isFalse);
-      expect(resGoogle.userId, equals('uuid-google-nativo'));
-      expect(resGoogle.nomeExibicao, equals('Eduardo Nativo Google'));
+      expect(resAndroid.userId, equals('uuid-google-android'));
+      expect(resAndroid.nomeExibicao, equals('Eduardo Android'));
       expect(
-        resGoogle.fotoUrl,
-        equals('https://lh3.googleusercontent.com/a/nativo.jpg'),
+        resAndroid.fotoUrl,
+        equals('https://lh3.googleusercontent.com/a/android.jpg'),
       );
-      expect(resGoogle.accessToken, equals('jwt-supabase-google'));
+      expect(
+        fakeNativo.ultimaUriPkceGoogle?.queryParameters['provider'],
+        equals('google'),
+      );
+      expect(fakeNativo.ultimoEsquemaGoogle, equals('aresta'));
 
-      // 2. Login nativo com Apple envia grant_type=id_token + nonce sem abrir navegador
-      final resApple = await cliente.autenticarAppleOAuth(
+      // 2. iOS: callbackUri via ASWebAuthenticationSession + PKCE
+      fakeNativo.respostaGoogle = CredencialNativaOAuth(
+        callbackUri: Uri.parse(
+          'aresta://app.arestaclimb.com/auth-callback?code=codigo-ios-ok',
+        ),
+      );
+      final resIos = await cliente.autenticarGoogleOAuth(
         autorIdPublicoLocal: idPublicoLocal,
         anonKey: anonKey,
       );
-      expect(abriuNavegador, isFalse);
-      expect(resApple.userId, equals('uuid-apple-nativo'));
-      expect(resApple.nomeExibicao, equals('Eduardo Nativo Apple'));
-      expect(resApple.accessToken, equals('jwt-supabase-apple'));
+      expect(resIos.userId, equals('uuid-google-ios'));
+      expect(resIos.nomeExibicao, equals('Atleta iOS PKCE'));
+      expect(resIos.accessToken, equals('jwt-google-ios-pkce'));
 
-      // 3. Cancelamento explícito no modal nativo lança ExcecaoAutenticacao sem abrir navegador
+      // 3. Cancelamento voluntário (cancelado: true ou access_denied no callback) -> ExcecaoAutenticacaoCancelada
       fakeNativo.respostaGoogle = const CredencialNativaOAuth(cancelado: true);
-      fakeNativo.respostaApple = const CredencialNativaOAuth(cancelado: true);
-
       await expectLater(
         () => cliente.autenticarGoogleOAuth(
           autorIdPublicoLocal: idPublicoLocal,
           anonKey: anonKey,
         ),
-        throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            contains('cancelado'),
-          ),
+        throwsA(isA<ExcecaoAutenticacaoCancelada>()),
+      );
+
+      fakeNativo.respostaGoogle = CredencialNativaOAuth(
+        callbackUri: Uri.parse(
+          'aresta://app.arestaclimb.com/auth-callback?error=access_denied',
         ),
       );
+      await expectLater(
+        () => cliente.autenticarGoogleOAuth(
+          autorIdPublicoLocal: idPublicoLocal,
+          anonKey: anonKey,
+        ),
+        throwsA(isA<ExcecaoAutenticacaoCancelada>()),
+      );
+
+      // 4. Erros operacionais: canal nulo, erroNativo, callback com erro, callback vazio, erro PKCE e erro id_token
+      for (final credencialFalha in <CredencialNativaOAuth?>[
+        null,
+        const CredencialNativaOAuth(erroNativo: 'Play Services indisponível'),
+        CredencialNativaOAuth(
+          callbackUri: Uri.parse(
+            'aresta://app.arestaclimb.com/auth-callback?error_description=Server+error',
+          ),
+        ),
+        CredencialNativaOAuth(
+          callbackUri: Uri.parse('aresta://app.arestaclimb.com/auth-callback'),
+        ),
+        CredencialNativaOAuth(
+          callbackUri: Uri.parse(
+            'aresta://app.arestaclimb.com/auth-callback?code=codigo-expirado',
+          ),
+        ),
+        const CredencialNativaOAuth(idToken: 'token-invalido'),
+      ]) {
+        fakeNativo.respostaGoogle = credencialFalha;
+        await expectLater(
+          () => cliente.autenticarGoogleOAuth(
+            autorIdPublicoLocal: idPublicoLocal,
+            anonKey: anonKey,
+          ),
+          throwsA(
+            isA<ExcecaoAutenticacao>().having(
+              (e) => e.ehErroUsuario,
+              'ehErroUsuario',
+              isFalse,
+            ),
+          ),
+        );
+      }
+    });
+
+    test('autenticarAppleOAuth valida id_token nativo + nonce, trata cancelamento silencioso e falha rápido sem navegador', () async {
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/auth/v1/token') &&
+              request.url.queryParameters['grant_type'] == 'id_token') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['id_token'] == 'apple-provider-disabled') {
+              return http.Response(
+                jsonEncode({
+                  'code': 400,
+                  'error_code': 'provider_disabled',
+                  'msg':
+                      'Provider (issuer "https://appleid.apple.com") is not enabled',
+                }),
+                400,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'access_token': 'jwt-supabase-apple',
+                'user': {
+                  'id': 'uuid-apple-nativo',
+                  'user_metadata': <String, dynamic>{},
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/rest/v1/perfis')) {
+            return http.Response(jsonEncode([]), 200);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
+
+      final fakeNativo = _FakeAutenticadorNativo(
+        respostaApple: const CredencialNativaOAuth(
+          idToken: 'id-token-apple-valido',
+          nonce: 'nonce-apple-123',
+          nomeExibicao: 'Escalador Apple',
+        ),
+      );
+      final cliente = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+        autenticadorNativo: fakeNativo,
+      );
+
+      final resApple = await cliente.autenticarAppleOAuth(
+        autorIdPublicoLocal: idPublicoLocal,
+        anonKey: anonKey,
+      );
+      expect(resApple.userId, equals('uuid-apple-nativo'));
+      expect(resApple.nomeExibicao, equals('Escalador Apple'));
+
+      // Cancelamento voluntário no Face ID
+      fakeNativo.respostaApple = const CredencialNativaOAuth(cancelado: true);
       await expectLater(
         () => cliente.autenticarAppleOAuth(
           autorIdPublicoLocal: idPublicoLocal,
           anonKey: anonKey,
         ),
-        throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            contains('cancelado'),
-          ),
-        ),
-      );
-      expect(abriuNavegador, isFalse);
-
-      // 4. Erro HTTP em inglês no Supabase é traduzido para português na ExcecaoAutenticacao
-      fakeNativo.respostaGoogle = const CredencialNativaOAuth(
-        idToken: 'token-invalido',
-      );
-      await expectLater(
-        () => cliente.autenticarGoogleOAuth(
-          autorIdPublicoLocal: idPublicoLocal,
-          anonKey: anonKey,
-        ),
-        throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            'Não foi possível validar a credencial nativa no servidor.',
-          ),
-        ),
+        throwsA(isA<ExcecaoAutenticacaoCancelada>()),
       );
 
-      fakeNativo.respostaGoogle = const CredencialNativaOAuth(
-        idToken: 'token-apikey-invalida',
-      );
-      await expectLater(
-        () => cliente.autenticarGoogleOAuth(
-          autorIdPublicoLocal: idPublicoLocal,
-          anonKey: anonKey,
-        ),
-        throwsA(
-          isA<ExcecaoAutenticacao>().having(
-            (e) => e.mensagem,
-            'mensagem',
-            'Chave de acesso do servidor inválida. Tente novamente.',
+      // Canal nulo, erroNativo e provider_disabled 400 -> ExcecaoAutenticacao(ehErroUsuario: false)
+      for (final credencialFalha in <CredencialNativaOAuth?>[
+        null,
+        const CredencialNativaOAuth(erroNativo: 'AuthorizationError 1000'),
+        const CredencialNativaOAuth(idToken: 'apple-provider-disabled'),
+      ]) {
+        fakeNativo.respostaApple = credencialFalha;
+        await expectLater(
+          () => cliente.autenticarAppleOAuth(
+            autorIdPublicoLocal: idPublicoLocal,
+            anonKey: anonKey,
           ),
-        ),
+          throwsA(
+            isA<ExcecaoAutenticacao>().having(
+              (e) => e.ehErroUsuario,
+              'ehErroUsuario',
+              isFalse,
+            ),
+          ),
+        );
+      }
+    });
+
+    test('sincronizarPerfilAtualizado delega ao SincronizadorPerfilSupabase e construtor padrão inicializa dependências', () async {
+      final padrao = ClienteSupabaseAutenticacao();
+      expect(padrao, isNotNull);
+
+      final clienteHttp = ClienteHttpAresta.paraTestes(
+        MockClient((request) async => http.Response('{}', 200)),
+      );
+      final cliente = ClienteSupabaseAutenticacao(
+        clienteHttp: clienteHttp,
+        obterUrlSupabase: () => urlBase,
+      );
+      final dataUri = 'data:image/webp;base64,${base64Encode([1, 2, 3])}';
+      final urlStorage = await cliente.sincronizarPerfilAtualizado(
+        anonKey: anonKey,
+        accessToken: 'jwt-1',
+        userId: 'usr-1',
+        autorIdPublico: idPublicoLocal,
+        nomeFinal: 'Atleta',
+        fotoFinal: dataUri,
+      );
+      expect(
+        urlStorage,
+        startsWith('$urlBase/storage/v1/object/public/avatars/usr-1/avatar.webp'),
       );
     });
   });
 }
-

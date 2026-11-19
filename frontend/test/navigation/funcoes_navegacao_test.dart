@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/autenticacao/servico_autenticacao_fake.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/navigation/funcoes_navegacao.dart';
 import 'package:frontend/navigation/arvore_navegacao.dart';
@@ -446,9 +447,8 @@ void main() {
         final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
         await repoCaderneta.inicializar();
         RepositorioCadernetaLocal.instancia = repoCaderneta;
-        final servicoAuth = ServicoAutenticacaoLocal(
+        final servicoAuth = ServicoAutenticacaoFake(
           repositorio: repoCaderneta,
-          obterAnonKeySupabase: () => '',
         );
         ServicoAutenticacaoLocal.instancia = servicoAuth;
 
