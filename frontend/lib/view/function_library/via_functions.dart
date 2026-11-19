@@ -145,7 +145,7 @@ int getProtecoesValue(Escalada escalada) {
   }
 }
 
-
+/// Constrói o corpo rolável declarativo da página de detalhes da Via.
 Widget buildViaBody(
   BuildContext context,
   Escalada escalada,
@@ -155,51 +155,18 @@ Widget buildViaBody(
   Grupo? grupo,
   bool fromSetorPage = false,
   bool fromMapaPage = false,
+  ViaViewModel? viewModel,
   SecaoCadernetaViaViewModel? cadernetaViewModel,
 }) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SecaoCadernetaVia(
-          escalada: escalada,
-          viewModel: cadernetaViewModel,
-        ),
-        _buildContentForEscalada(
-          context,
-          escalada,
-          cragId,
-          pico: pico,
-          setor: setor,
-          grupo: grupo,
-          fromSetorPage: fromSetorPage,
-          fromMapaPage: fromMapaPage,
-        ),
-        const SizedBox(height: 32),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => AppNav.home(context),
-            icon: const Icon(Icons.home, color: Colors.white),
-            label: const Text(
-              'Voltar para o Início',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
+  return CorpoDetalhesVia(
+    escalada: escalada,
+    cragId: cragId,
+    pico: pico,
+    setor: setor,
+    grupo: grupo,
+    fromMapaPage: fromMapaPage,
+    viewModel: viewModel,
+    cadernetaViewModel: cadernetaViewModel,
   );
 }
 
@@ -316,7 +283,73 @@ class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
   }
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CabecalhoIdentidadeVia(
+                nomeEscalada: _viewModel.nomeEscalada,
+                modalidade: _viewModel.modalidade,
+                ehDestaque: _viewModel.ehDestaque,
+                cragId: widget.cragId,
+                escalada: widget.escalada,
+                setor: widget.setor,
+                grupo: widget.grupo,
+              ),
+              AreaHeroiTopoGrauVia(
+                escalada: widget.escalada,
+                cragId: widget.cragId,
+                pico: widget.pico,
+                setor: widget.setor,
+                grupo: widget.grupo,
+                fromMapaPage: widget.fromMapaPage,
+                exibirCartaoGrau: _viewModel.exibirCartaoGrau,
+                rotuloGrauOficial: _viewModel.rotuloGrauOficial,
+                grauOficial: _viewModel.grauOficialExibicao,
+                complementoGrauOficial: _viewModel.complementoGrauOficial,
+                consensoGrau: _viewModel.consensoGrau,
+                alertasAtivos: _viewModel.alertasAtivos,
+                aoTocarAlerta: (alerta) =>
+                    _abrirConfirmacaoAlerta(context, alerta),
+              ),
+              SecaoCadernetaVia(
+                escalada: widget.escalada,
+                viewModel: widget.cadernetaViewModel,
+              ),
+              GradeAtributosTecnicosVia(
+                atributos: _viewModel.atributosTecnicos,
+                tipoAncoragem: _viewModel.tipoAncoragem,
+              ),
+              SecaoTextosETecnicasVia(
+                cragId: widget.cragId,
+                secoes: _viewModel.secoesTexto,
+              ),
+              SecaoEnfiadasVia(enfiadas: _viewModel.enfiadas),
+              SecaoBetasMidiaVia(
+                midias: _viewModel.midiasBeta,
+                aoAbrirMidia: _viewModel.abrirMidiaBeta,
+              ),
+              SecaoNotasComunidadeVia(
+                comentarios: _viewModel.comentariosComunidade,
+              ),
+              SecaoHistoricoEPixVia(
+                conquistadoresTexto: _viewModel.conquistadoresTexto,
+                dataAbertura: _viewModel.dataAbertura,
+                dataManutencao: _viewModel.dataManutencao,
+                chavePixManutencao: _viewModel.chavePixManutencao,
+                aoCopiarPix: () => _copiarPix(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 Widget _buildContentForEscalada(
