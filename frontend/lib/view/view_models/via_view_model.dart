@@ -297,6 +297,72 @@ class ViaViewModel extends ChangeNotifier {
     return repositorioInteracoes.obterDadosEscalada(escalada.uid).comentarios;
   }
 
+  /// Tipo de ancoragem/parada da via, quando informado.
+  String? get tipoAncoragem {
+    final texto = switch (escalada.whichTipo()) {
+      Escalada_Tipo.viaEsportiva => escalada.viaEsportiva.tipoAncoragem.trim(),
+      Escalada_Tipo.viaMovel => escalada.viaMovel.tipoAncoragem.trim(),
+      _ => '',
+    };
+    return texto.isNotEmpty ? texto : null;
+  }
+
+  /// Lista enxuta e sem duplicações dos atributos técnicos específicos da modalidade.
+  List<AtributoTecnicoVia> get atributosTecnicos {
+    final itens = <AtributoTecnicoVia>[];
+    switch (escalada.whichTipo()) {
+      case Escalada_Tipo.viaEsportiva:
+        final v = escalada.viaEsportiva;
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeProtecoesIntermediarias,
+          v.quantidadeProtecoesParada,
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(v.tipoParede.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+      case Escalada_Tipo.viaMovel:
+        final v = escalada.viaMovel;
+        _adicionarMetros(itens, TipoIconeAtributoVia.extensao, 'EXTENSÃO', v.extensao);
+        _adicionarProtecoes(
+          itens,
+          v.quantidadeProtecoesIntermediarias,
+          v.quantidadeProtecoesParada,
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(v.tipoParede.name),
+        );
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.exposicao,
+          'EXPOSIÇÃO',
+          _formatarEnumCodigo(v.exposicao.name),
+        );
+      case Escalada_Tipo.boulder:
+        _adicionarSePreenchido(
+          itens,
+          TipoIconeAtributoVia.parede,
+          'PAREDE',
+          _formatarEnumSimples(escalada.boulder.tipoParede.name),
+        );
+      default:
+        break;
+    }
+    return List.unmodifiable(itens);
+  }
 
   String? _extrairNomeEnumGrauPrincipal(Escalada alvo) {
     return switch (alvo.whichTipo()) {
@@ -334,4 +400,55 @@ class ViaViewModel extends ChangeNotifier {
     return formatado.isNotEmpty ? formatado : null;
   }
 
+
+  static void _adicionarMetros(
+    List<AtributoTecnicoVia> itens,
+    TipoIconeAtributoVia icone,
+    String rotulo,
+    int metros,
+  ) {
+    if (metros > 0) {
+      itens.add(
+        AtributoTecnicoVia(icone: icone, rotulo: rotulo, valor: '${metros}m'),
+      );
+    }
+  }
+
+  static void _adicionarProtecoes(
+    List<AtributoTecnicoVia> itens,
+    int intermediarias,
+    int parada,
+  ) {
+    if (intermediarias > 0 || parada > 0) {
+      itens.add(
+        AtributoTecnicoVia(
+          icone: TipoIconeAtributoVia.protecoes,
+          rotulo: 'PROTEÇÕES',
+          valor: '$intermediarias+$parada',
+        ),
+      );
+    }
+  }
+
+  static void _adicionarSePreenchido(
+    List<AtributoTecnicoVia> itens,
+    TipoIconeAtributoVia icone,
+    String rotulo,
+    String valor,
+  ) {
+    if (valor.isNotEmpty) {
+      itens.add(AtributoTecnicoVia(icone: icone, rotulo: rotulo, valor: valor));
+    }
+  }
+
+  static String _formatarEnumSimples(String nome) {
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
+    final minusculo = nome.replaceAll('_', ' ').toLowerCase();
+    return minusculo[0].toUpperCase() + minusculo.substring(1);
+  }
+
+  static String _formatarEnumCodigo(String nome) {
+    if (nome.isEmpty || nome.contains('INDEFINIDO')) return '';
+    return nome;
+  }
 }
