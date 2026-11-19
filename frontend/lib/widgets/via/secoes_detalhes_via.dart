@@ -940,6 +940,128 @@ class SecaoNotasComunidadeVia extends StatelessWidget {
   }
 }
 
+/// Cartão de histórico de conquista/manutenção e botão funcional de cópia da chave Pix.
+class SecaoHistoricoEPixVia extends StatelessWidget {
+  /// Nomes dos conquistadores formatados.
+  final String? conquistadoresTexto;
+
+  /// Data de abertura da via.
+  final String? dataAbertura;
+
+  /// Data da última manutenção.
+  final String? dataManutencao;
+
+  /// Chave Pix opcional para apoio à manutenção.
+  final String? chavePixManutencao;
+
+  /// Callback acionado ao copiar a chave Pix.
+  final VoidCallback aoCopiarPix;
+
+  /// Cria uma instância de [SecaoHistoricoEPixVia].
+  const SecaoHistoricoEPixVia({
+    super.key,
+    this.conquistadoresTexto,
+    this.dataAbertura,
+    this.dataManutencao,
+    this.chavePixManutencao,
+    required this.aoCopiarPix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final temHistorico =
+        conquistadoresTexto != null ||
+        dataAbertura != null ||
+        dataManutencao != null;
+    if (!temHistorico && chavePixManutencao == null) {
+      return const SizedBox.shrink();
+    }
+    final cores = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (temHistorico)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cores.caveShadow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cores.graniteEdge),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.menu_book_rounded, color: cores.ashGrey, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'HISTÓRICO & CONQUISTA',
+                        style: TextStyle(
+                          color: cores.ashGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (conquistadoresTexto != null)
+                  _LinhaHistorico(
+                    rotulo: 'CONQUISTADORES',
+                    valor: conquistadoresTexto!,
+                  ),
+                if (dataAbertura != null)
+                  _LinhaHistorico(rotulo: 'ABERTURA', valor: dataAbertura!),
+                if (dataManutencao != null)
+                  _LinhaHistorico(rotulo: 'MANUTENÇÃO', valor: dataManutencao!),
+              ],
+            ),
+          ),
+        if (chavePixManutencao != null) ...[
+          if (temHistorico) const SizedBox(height: 12),
+          InkWell(
+            key: const Key('btn_copiar_pix_manutencao'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: aoCopiarPix,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: cores.fernGreen.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cores.fernGreen.withValues(alpha: 0.6)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.volunteer_activism_outlined,
+                    color: cores.fernGreen,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Apoie a Manutenção (Copiar Pix: $chavePixManutencao)',
+                      style: TextStyle(
+                        color: cores.chalkWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.copy_rounded, color: cores.fernGreen, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 class _TituloSecaoVia extends StatelessWidget {
   final String titulo;
@@ -993,6 +1115,39 @@ class _PilulaDetalheCurto extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+}
+
+class _LinhaHistorico extends StatelessWidget {
+  final String rotulo;
+  final String valor;
+
+  const _LinhaHistorico({required this.rotulo, required this.valor});
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            rotulo,
+            style: TextStyle(
+              color: cores.ashGrey,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valor,
+            style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+          ),
+        ],
       ),
     );
   }
