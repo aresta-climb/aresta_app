@@ -8,6 +8,7 @@ import '../../services/caderneta/repositorio_caderneta.dart';
 import '../../theme/cores_app.dart';
 import '../../view/view_models/registro_cadena_view_model.dart';
 import 'controles_formulario_cadena.dart';
+import 'secao_contribuicao_publica_cadena.dart';
 
 /// Exibe o modal de registro ou edição de cadena em formato Bottom Sheet.
 ///
@@ -95,6 +96,7 @@ class ModalRegistroCadena extends StatefulWidget {
 class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
   late final RegistroCadenaViewModel _viewModel;
   late final TextEditingController _notasController;
+  late final TextEditingController _comentarioPublicoController;
   bool _criouViewModelInterno = false;
 
   @override
@@ -117,11 +119,19 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
     _notasController.addListener(() {
       _viewModel.definirNotasPrivadas(_notasController.text);
     });
+
+    _comentarioPublicoController = TextEditingController(
+      text: _viewModel.comentarioPublico,
+    );
+    _comentarioPublicoController.addListener(() {
+      _viewModel.definirComentarioPublico(_comentarioPublicoController.text);
+    });
   }
 
   @override
   void dispose() {
     _notasController.dispose();
+    _comentarioPublicoController.dispose();
     if (_criouViewModelInterno) {
       _viewModel.dispose();
     }
@@ -166,47 +176,80 @@ class _ModalRegistroCadenaState extends State<ModalRegistroCadena> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _AlcaArrasteModal(),
-              _CabecalhoModal(
-                titulo: _viewModel.tituloModal,
-                nomeEscalada: _viewModel.nomeEscalada,
-              ),
-              const SizedBox(height: 20),
-              SeletorEstiloAscensao(
-                estiloSelecionado: _viewModel.tipoAscensao,
-                aoSelecionar: _viewModel.definirTipoAscensao,
-              ),
-              const SizedBox(height: 20),
-              ContadorTentativasAscensao(
-                tentativas: _viewModel.tentativas,
-                podeDecrementar: _viewModel.podeDecrementarTentativas,
-                aoIncrementar: _viewModel.incrementarTentativas,
-                aoDecrementar: _viewModel.decrementarTentativas,
-              ),
-              const SizedBox(height: 20),
-              SeletorDataAscensao(
-                dataTexto: _viewModel.dataAscensaoFormatada,
-                aoTocar: _abrirSeletorData,
-              ),
-              const SizedBox(height: 20),
-              CampoNotasPrivadasAscensao(
-                controlador: _notasController,
-                contadorTexto: _viewModel.contadorNotasTexto,
-                atingiuLimite: _viewModel.atingiuLimiteNotas,
-                limiteCaracteres: RegistroCadenaViewModel.limiteNotasPrivadas,
-              ),
-              const SizedBox(height: 24),
-              _BotaoSalvarCadena(
-                rotulo: _viewModel.rotuloBotaoSalvar,
-                onPressed: _salvarAscensao,
-              ),
-            ],
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _AlcaArrasteModal(),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _CabecalhoModal(
+                          titulo: _viewModel.tituloModal,
+                          nomeEscalada: _viewModel.nomeEscalada,
+                        ),
+                        const SizedBox(height: 20),
+                        SeletorEstiloAscensao(
+                          estiloSelecionado: _viewModel.tipoAscensao,
+                          aoSelecionar: _viewModel.definirTipoAscensao,
+                        ),
+                        const SizedBox(height: 20),
+                        ContadorTentativasAscensao(
+                          tentativas: _viewModel.tentativas,
+                          podeDecrementar: _viewModel.podeDecrementarTentativas,
+                          aoIncrementar: _viewModel.incrementarTentativas,
+                          aoDecrementar: _viewModel.decrementarTentativas,
+                        ),
+                        const SizedBox(height: 20),
+                        SeletorDataAscensao(
+                          dataTexto: _viewModel.dataAscensaoFormatada,
+                          aoTocar: _abrirSeletorData,
+                        ),
+                        const SizedBox(height: 20),
+                        CampoNotasPrivadasAscensao(
+                          controlador: _notasController,
+                          contadorTexto: _viewModel.contadorNotasTexto,
+                          atingiuLimite: _viewModel.atingiuLimiteNotas,
+                          limiteCaracteres:
+                              RegistroCadenaViewModel.limiteNotasPrivadas,
+                        ),
+                        if (!_viewModel.editando &&
+                            _viewModel.exibirContribuicaoPublica) ...[
+                          const SizedBox(height: 20),
+                          SecaoContribuicaoPublicaAscensao(
+                            deltaSelecionado: _viewModel.deltaGrau,
+                            aoSelecionarDelta: _viewModel.definirDeltaGrau,
+                            codigoGrauOficial: _viewModel.codigoGrauOficial,
+                            ehBoulder: _viewModel.ehBoulder,
+                            estaAutenticado:
+                                _viewModel.estaAutenticadoParaComunidade,
+                            controladorComentario: _comentarioPublicoController,
+                            contadorComentarioTexto:
+                                _viewModel.contadorComentarioPublicoTexto,
+                            atingiuLimiteComentario:
+                                _viewModel.atingiuLimiteComentarioPublico,
+                            limiteCaracteresComentario: RegistroCadenaViewModel
+                                .limiteComentarioPublico,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _BotaoSalvarCadena(
+                  rotulo: _viewModel.rotuloBotaoSalvar,
+                  onPressed: _salvarAscensao,
+                ),
+              ],
+            ),
           ),
         );
       },
