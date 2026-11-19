@@ -7,6 +7,7 @@ import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/theme/cores_app.dart';
+import 'package:frontend/view/view_models/via_view_model.dart';
 import 'package:frontend/widgets/via/bolha_alerta_seguranca_via.dart';
 import 'package:frontend/widgets/via/secoes_detalhes_via.dart';
 
@@ -101,5 +102,130 @@ void main() {
 
     expect(find.text('—'), findsOneWidget);
     expect(find.text('Sem votos'), findsOneWidget);
+  });
+
+  testWidgets('GradeAtributosTecnicosVia, SecaoEnfiadasVia, SecaoBetasMidiaVia, SecaoNotasComunidadeVia e SecaoHistoricoEPixVia renderizam e acionam callbacks sem overflow em 320x568 @ 1.5x', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    String? urlMidiaClicada;
+    var copiouPix = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.5),
+          ),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const GradeAtributosTecnicosVia(
+                  atributos: [
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.extensao,
+                      rotulo: 'EXTENSÃO',
+                      valor: '28m',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.protecoes,
+                      rotulo: 'PROTEÇÕES',
+                      valor: '11+2',
+                    ),
+                    AtributoTecnicoVia(
+                      icone: TipoIconeAtributoVia.parede,
+                      rotulo: 'PAREDE',
+                      valor: 'Negativo',
+                    ),
+                  ],
+                  tipoAncoragem: 'Dupla com argola inox',
+                ),
+                const SecaoTextosETecnicasVia(
+                  cragId: 'crag1',
+                  secoes: [
+                    SecaoTextoVia(
+                      titulo: 'Descrição',
+                      conteudo: 'Crux técnico na saída.',
+                      ehMarkdown: true,
+                    ),
+                    SecaoTextoVia(
+                      titulo: 'Peças Móveis',
+                      conteudo: 'Camalots #1 e #2',
+                      ehMarkdown: false,
+                    ),
+                  ],
+                ),
+                const SecaoEnfiadasVia(
+                  enfiadas: [
+                    ResumoEnfiadaVia(
+                      numero: 1,
+                      titulo: 'Enfiada 1 • Diedro',
+                      grau: '6ºsup',
+                      extensao: '30m',
+                      protecoes: '8+2',
+                      equipamentoMovel: 'Friends médios',
+                      descricao: 'Diedro técnico.',
+                    ),
+                  ],
+                ),
+                SecaoBetasMidiaVia(
+                  midias: const [
+                    ItemMidiaBetaVia(
+                      titulo: 'Beta Completo da Via',
+                      url: 'https://youtube.com/watch?v=abc',
+                      origemRotulo: 'YouTube',
+                    ),
+                  ],
+                  aoAbrirMidia: (url) => urlMidiaClicada = url,
+                ),
+                SecaoNotasComunidadeVia(
+                  comentarios: [
+                    ComentarioComunidadeVia(
+                      uid: 'c1Kq2L1x9Y7zWq',
+                      autorIdPublico: 'a1Lk9P1x4Vw8Mn',
+                      autorNomePublico: 'Carlos Lagartixa',
+                      criadoEm: DateTime.utc(2026, 9, 14),
+                      estiloAscensao: TipoAscensao.flash,
+                      texto: 'Costura 4 tranquila pela esquerda.',
+                    ),
+                  ],
+                ),
+                SecaoHistoricoEPixVia(
+                  conquistadoresTexto: 'Emerson Alves',
+                  dataAbertura: '1993',
+                  dataManutencao: '2024',
+                  chavePixManutencao: 'pix@aresta.cc',
+                  aoCopiarPix: () => copiouPix = true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('11+2'), findsOneWidget);
+    expect(find.textContaining('Dupla com argola inox'), findsOneWidget);
+    expect(find.text('Enfiada 1 • Diedro'), findsOneWidget);
+    expect(find.text('FLASH ★'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Beta Completo da Via'));
+    await tester.tap(find.text('Beta Completo da Via'));
+    expect(urlMidiaClicada, 'https://youtube.com/watch?v=abc');
+
+    await tester.ensureVisible(find.byKey(const Key('btn_copiar_pix_manutencao')));
+    await tester.tap(find.byKey(const Key('btn_copiar_pix_manutencao')));
+    expect(copiouPix, isTrue);
   });
 }
