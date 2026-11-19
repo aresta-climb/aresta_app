@@ -13,6 +13,7 @@ import '../../utils/consulta_dataset.dart';
 import '../../utils/formatador_escalada.dart';
 import '../linha_localizacao_setor.dart';
 import '../mapa_thumbnail.dart';
+import 'bolha_alerta_seguranca_via.dart';
 
 /// Cabeçalho de identidade da `ViaPage` apresentando o nome completo da via sem truncamento,
 /// pílulas de modalidade/`CLÁSSICA` e o atalho hierárquico `Grupo > Setor`.
@@ -136,6 +137,119 @@ class CabecalhoIdentidadeVia extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Área heroica superior combinando o croqui/mapa e o cartão de grau sob um [Stack]
+/// para ancorar as bolhas vermelhas flutuantes de alerta no canto superior direito.
+class AreaHeroiTopoGrauVia extends StatelessWidget {
+  /// Escalada Protobuf exibida.
+  final Escalada escalada;
+
+  /// Identificador do croqui.
+  final String cragId;
+
+  /// Pico pai para resolução de referências de mapa.
+  final Pico? pico;
+
+  /// Setor pai da escalada.
+  final Setor? setor;
+
+  /// Grupo pai do setor.
+  final Grupo? grupo;
+
+  /// Indica se a navegação partiu diretamente da `MapaPage`.
+  final bool fromMapaPage;
+
+  /// Indica se o cartão de grau deve ser renderizado.
+  final bool exibirCartaoGrau;
+
+  /// Rótulo do grau oficial (`'GRAU OFICIAL'` ou `'GRAU MÁXIMO'`).
+  final String rotuloGrauOficial;
+
+  /// Grau oficial formatado, ou `null` quando indefinido.
+  final String? grauOficial;
+
+  /// Subtítulo abaixo do grau oficial.
+  final String complementoGrauOficial;
+
+  /// Consenso de grau da comunidade (nulo quando a feature flag estiver desativada).
+  final ConsensoGrauVia? consensoGrau;
+
+  /// Alertas ativos exibidos como bolhas vermelhas flutuantes no canto superior direito.
+  final List<AlertaSegurancaVia> alertasAtivos;
+
+  /// Callback acionado ao tocar em uma bolha de alerta.
+  final ValueChanged<AlertaSegurancaVia> aoTocarAlerta;
+
+  /// Cria uma instância de [AreaHeroiTopoGrauVia].
+  const AreaHeroiTopoGrauVia({
+    super.key,
+    required this.escalada,
+    required this.cragId,
+    this.pico,
+    this.setor,
+    this.grupo,
+    this.fromMapaPage = false,
+    required this.exibirCartaoGrau,
+    required this.rotuloGrauOficial,
+    required this.grauOficial,
+    required this.complementoGrauOficial,
+    required this.consensoGrau,
+    required this.alertasAtivos,
+    required this.aoTocarAlerta,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final filhos = <Widget>[
+      SecaoMapaCroquiVia(
+        escalada: escalada,
+        cragId: cragId,
+        pico: pico,
+        setor: setor,
+        grupo: grupo,
+        fromMapaPage: fromMapaPage,
+      ),
+      if (exibirCartaoGrau)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: CartaoGrauVia(
+            rotuloGrauOficial: rotuloGrauOficial,
+            grauOficial: grauOficial,
+            complementoGrauOficial: complementoGrauOficial,
+            consensoGrau: consensoGrau,
+          ),
+        ),
+    ];
+
+    if (alertasAtivos.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: filhos,
+      );
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: exibirCartaoGrau ? 14 : 44),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: filhos,
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 4,
+          child: BolhasFlutuantesAlertaVia(
+            alertas: alertasAtivos,
+            aoSelecionarAlerta: aoTocarAlerta,
+          ),
+        ),
+      ],
     );
   }
 }
