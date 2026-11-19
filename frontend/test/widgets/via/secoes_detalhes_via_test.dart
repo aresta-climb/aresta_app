@@ -228,4 +228,81 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_copiar_pix_manutencao')));
     expect(copiouPix, isTrue);
   });
+
+  testWidgets('CartaoGrauVia, AreaHeroiTopoGrauVia sem cartão de grau e GradeAtributosTecnicosVia adaptam layout em larguras estreitas (<250px)', (tester) async {
+    final alerta = AlertaSegurancaVia.criar(
+      uid: 'alertaHigh0001',
+      escaladaUid: 'highlineUid001',
+      categoria: CategoriaAlertaSeguranca.riscoExposicao,
+    );
+
+    await tester.pumpWidget(
+      envolver(
+        SizedBox(
+          width: 220,
+          child: Column(
+            children: [
+              const CartaoGrauVia(
+                rotuloGrauOficial: 'GRAU OFICIAL',
+                grauOficial: '7c',
+                complementoGrauOficial: 'Guia Oficial / Conquistador',
+                consensoGrau: ConsensoGrauVia(
+                  grauSugerido: '7c',
+                  totalVotos: 5,
+                ),
+              ),
+              AreaHeroiTopoGrauVia(
+                escalada: Escalada(
+                  uid: 'highlineUid001',
+                  highline: Highline(nome: 'Fita Alta'),
+                ),
+                cragId: 'crag1',
+                exibirCartaoGrau: false,
+                rotuloGrauOficial: 'GRAU OFICIAL',
+                grauOficial: null,
+                complementoGrauOficial: '',
+                consensoGrau: null,
+                alertasAtivos: [alerta],
+                aoTocarAlerta: (_) {},
+              ),
+              const GradeAtributosTecnicosVia(
+                atributos: [
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.exposicao,
+                    rotulo: 'EXPOSIÇÃO',
+                    valor: 'E2',
+                  ),
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.enfiadas,
+                    rotulo: 'ENFIADAS',
+                    valor: '4',
+                  ),
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.duracao,
+                    rotulo: 'DURAÇÃO',
+                    valor: 'D3',
+                  ),
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.modalidade,
+                    rotulo: 'TIPO',
+                    valor: 'Mista',
+                  ),
+                  AtributoTecnicoVia(
+                    icone: TipoIconeAtributoVia.distancia,
+                    rotulo: 'DISTÂNCIA',
+                    valor: '90m',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('5 avaliações'), findsOneWidget);
+    expect(find.byType(Divider), findsOneWidget);
+    expect(find.text('⚠️'), findsOneWidget);
+    expect(find.text('90m'), findsOneWidget);
+  });
 }
