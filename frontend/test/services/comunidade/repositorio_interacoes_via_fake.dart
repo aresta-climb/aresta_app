@@ -8,12 +8,15 @@ import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
 /// Biblioteca `test-only` de Fake determinístico em memória para [RepositorioInteracoesVia].
 ///
 /// Permite semear consensos de grau, comentários comunitários e alertas ativos de segurança,
-/// além de simular falhas determinísticas de I/O sem recorrer a frameworks de mock.
+/// além de inspecionar sincronizações e simular falhas determinísticas sem frameworks de mock.
 class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   final Map<String, DadosComunidadeVia> _dados = {};
   final ValueNotifier<int> _versao = ValueNotifier<int>(0);
 
-  /// Quando preenchido, faz com que [reportarAlerta] e [confirmarAlerta] lancem este erro.
+  /// Lista de `escaladaUid` sincronizados via [sincronizarEscalada].
+  final List<String> escaladasSincronizadas = [];
+
+  /// Quando preenchido, faz com que operações mutáveis e de sincronização lancem este erro.
   Object? erroSimulado;
 
   @override
@@ -29,6 +32,19 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
   DadosComunidadeVia obterDadosEscalada(String escaladaUid) {
     return _dados[escaladaUid] ?? const DadosComunidadeVia.vazio();
   }
+
+  @override
+  Future<void> sincronizarEscalada(
+    String escaladaUid, {
+    int? codigoGrauOficial,
+    bool ehBoulder = false,
+  }) async {
+    if (erroSimulado != null) {
+      throw erroSimulado!;
+    }
+    escaladasSincronizadas.add(escaladaUid);
+  }
+
 
   @override
   Future<AlertaSegurancaVia> reportarAlerta({

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/modelos/interacao_via.dart';
 import '../../data/modelos/item_fila_interacao.dart';
+import '../../utils/calculadora_delta_grau.dart';
 import '../../utils/gerador_uid.dart';
 import '../caderneta/repositorio_caderneta.dart';
 import '../firebase/app_logger.dart';
@@ -23,6 +24,12 @@ abstract interface class RepositorioInteracoesVia {
   DadosComunidadeVia obterDadosEscalada(String escaladaUid);
 
   /// Drena interações offline pendentes e sincroniza o estado ativo de [escaladaUid] com o Supabase.
+  Future<void> sincronizarEscalada(
+    String escaladaUid, {
+    int? codigoGrauOficial,
+    bool ehBoulder = false,
+  });
+
   /// Registra um novo alerta de segurança na via (ou reforça alerta ativo da mesma categoria).
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
@@ -91,6 +98,42 @@ class RepositorioInteracoesViaMemoria implements RepositorioInteracoesVia {
   }
 
   @override
+  Future<void> sincronizarEscalada(
+    String escaladaUid, {
+    int? codigoGrauOficial,
+    bool ehBoulder = false,
+  }) async {
+    final uidVia = escaladaUid.trim();
+    final cliente = _clienteFila;
+    if (cliente == null || !validarUid(uidVia)) {
+      return;
+    }
+
+    await _carregarFilaPendenteSeNecessario();
+    final perfil = _repositorioCaderneta.obterPerfil();
+    await _drenarFilaPendente(cliente, accessToken: perfil.accessToken);
+
+    try {
+      final remotos = await cliente.buscarInteracoesPendentes(
+        uidVia,
+        accessToken: perfil.accessToken,
+      );
+      final pendentesVia = _filaPendente.where((i) => i.escaladaUid == uidVia);
+      _dadosPorEscalada[uidVia] = consolidarItensFilaEmDadosComunidade(
+        [...remotos, ...pendentesVia],
+        codigoGrauOficial: codigoGrauOficial,
+        ehBoulder: ehBoulder,
+      );
+      _versaoNotifier.value++;
+    } catch (e, stackTrace) {
+      _registrarFalhaRede(
+        'Falha ao consultar fila_interacoes para $uidVia',
+        e,
+        stackTrace,
+      );
+    }
+  }
+
 
   Future<AlertaSegurancaVia> reportarAlerta({
     required String escaladaUid,
