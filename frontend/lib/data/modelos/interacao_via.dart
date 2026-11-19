@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'package:flutter/foundation.dart';
+import '../../utils/gerador_uid.dart';
+import 'perfil_escalador.dart';
+
 /// Categorias canônicas de alerta de segurança estilo Waze nas vias e setores.
 ///
 /// Espelha exatamente os valores permitidos pela restrição `chk_fila_categoria_alerta`
@@ -77,6 +81,99 @@ enum CategoriaAlertaSeguranca {
       codigo,
       'codigo',
       'Categoria de alerta de segurança desconhecida.',
+    );
+  }
+}
+
+/// Representa um alerta ativo de segurança estilo Waze vinculado a uma escalada.
+///
+/// Projetado para ser exibido como uma bolha vermelha compacta no canto superior
+/// direito do croqui/cartão de grau e confirmado rapidamente via *"Ainda está lá?"*.
+@immutable
+class AlertaSegurancaVia {
+  /// Limite máximo de caracteres para detalhes opcionais do alerta (`chk_fila_interacoes_payload_por_tipo`).
+  static const int limiteCaracteresDetalhe = 100;
+
+  /// Identificador único NanoID 14c do alerta.
+  final String uid;
+
+  /// Identificador único NanoID 14c da escalada associada.
+  final String escaladaUid;
+
+  /// Categoria semântica do risco reportado.
+  final CategoriaAlertaSeguranca categoria;
+
+  /// Observação complementar opcional (máximo de 100 caracteres).
+  final String? detalhe;
+
+  /// Apelido público do escalador que reportou o alerta.
+  final String autorNomePublico;
+
+  /// Instante em que o alerta foi registrado.
+  final DateTime criadoEm;
+
+  /// Total acumulado de confirmações *"Ainda está lá?"* positivas.
+  final int confirmacoesAtivas;
+
+  /// Cria uma instância imutável de [AlertaSegurancaVia].
+  const AlertaSegurancaVia({
+    required this.uid,
+    required this.escaladaUid,
+    required this.categoria,
+    this.detalhe,
+    required this.autorNomePublico,
+    required this.criadoEm,
+    this.confirmacoesAtivas = 1,
+  });
+
+  /// Fábrica validada que gera um NanoID 14c e normaliza os campos textuais sob filosofia Fail-Fast.
+  factory AlertaSegurancaVia.criar({
+    String? uid,
+    required String escaladaUid,
+    required CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+    String? autorNomePublico,
+    DateTime? criadoEm,
+    int confirmacoesAtivas = 1,
+  }) {
+    final detalheLimpo = detalhe?.trim();
+    if (detalheLimpo != null && detalheLimpo.length > limiteCaracteresDetalhe) {
+      throw ArgumentError.value(
+        detalheLimpo.length,
+        'detalhe',
+        'O detalhe do alerta deve ter no máximo $limiteCaracteresDetalhe caracteres.',
+      );
+    }
+    final nomeLimpo = autorNomePublico?.trim();
+
+    return AlertaSegurancaVia(
+      uid: uid ?? gerarUid(),
+      escaladaUid: escaladaUid,
+      categoria: categoria,
+      detalhe: (detalheLimpo != null && detalheLimpo.isNotEmpty)
+          ? detalheLimpo
+          : null,
+      autorNomePublico: (nomeLimpo != null && nomeLimpo.isNotEmpty)
+          ? nomeLimpo
+          : PerfilEscalador.apelidoPadrao,
+      criadoEm: criadoEm ?? DateTime.now(),
+      confirmacoesAtivas: confirmacoesAtivas,
+    );
+  }
+
+  /// Retorna uma nova cópia com os campos informados atualizados.
+  AlertaSegurancaVia copyWith({
+    String? detalhe,
+    int? confirmacoesAtivas,
+  }) {
+    return AlertaSegurancaVia(
+      uid: uid,
+      escaladaUid: escaladaUid,
+      categoria: categoria,
+      detalhe: detalhe ?? this.detalhe,
+      autorNomePublico: autorNomePublico,
+      criadoEm: criadoEm,
+      confirmacoesAtivas: confirmacoesAtivas ?? this.confirmacoesAtivas,
     );
   }
 }
