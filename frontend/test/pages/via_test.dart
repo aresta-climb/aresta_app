@@ -184,4 +184,108 @@ void main() {
 
     expect(find.byType(BolhaEmojiAlertaVia), findsNothing);
   });
+
+  testWidgets('ViaPage abre modal de caderneta, exibe selo Flash, copia chave Pix, abre vídeo beta e compartilha via', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+
+    String? textoCompartilhado;
+    String? pixCopiado;
+    Uri? betaAberto;
+
+    ServicoCompartilhamento.instancia = ServicoCompartilhamento(
+      executorCompartilhamento: (texto) async => textoCompartilhado = texto,
+    );
+
+    final escalada = Escalada(
+      uid: 'uidViaCompleta1',
+      betas: [
+        MidiaBeta(
+          url: 'https://youtube.com/watch?v=xyz',
+          titulo: 'Beta Oficial no YouTube',
+          fonte: FonteMidia_Enum.YOUTUBE,
+        ),
+      ],
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via Master',
+        dificuldade: GrauVia_GrauVia.BR_7A,
+        chavePixManutencao: 'pix@manutencao.org',
+      ),
+    );
+
+    final repoCaderneta = RepositorioCadernetaLocal();
+    await repoCaderneta.salvarCadena(
+      Cadena.criar(
+        escaladaUid: 'uidViaCompleta1',
+        dataAscensao: DateTime(2026, 9, 14),
+        tipoAscensao: TipoAscensao.flash,
+        notasPrivadas: 'Costurou leve e rápido',
+      ),
+    );
+    final cadernetaVm = SecaoCadernetaViaViewModel(
+      escalada: escalada,
+      repositorio: repoCaderneta,
+    );
+    final viaVm = ViaViewModel(
+      escalada: escalada,
+      copiadorAreaTransferencia: (texto) async => pixCopiado = texto,
+      lancadorUrlExterna: (uri) async {
+        betaAberto = uri;
+        return true;
+      },
+    );
+    addTearDown(() {
+      cadernetaVm.dispose();
+      viaVm.dispose();
+    });
+
+    await tester.pumpWidget(
+      envolver(
+        ViaPage(
+          escalada: escalada,
+          cragId: 'br_mg_serra_do_cipo',
+          pico: Pico(nome: 'Serra do Cipó'),
+          setor: Setor(nome: 'Fenda'),
+          viewModel: viaVm,
+          cadernetaViewModel: cadernetaVm,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Encadenada'), findsOneWidget);
+    expect(find.textContaining('Flash'), findsOneWidget);
+    expect(find.textContaining('Costurou leve e rápido'), findsOneWidget);
+
+    // Abre modal de nova ascensão
+    await tester.tap(find.text('Nova Ascensão / Tentativa'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(ModalRegistroCadena),
+        matching: find.text('Via Master'),
+      ),
+      findsOneWidget,
+    );
+    Navigator.of(tester.element(find.byType(ModalRegistroCadena))).pop();
+    await tester.pumpAndSettle();
+
+    // Abre vídeo beta
+    await tester.ensureVisible(find.text('Beta Oficial no YouTube'));
+    await tester.tap(find.text('Beta Oficial no YouTube'));
+    await tester.pumpAndSettle();
+    expect(betaAberto.toString(), 'https://youtube.com/watch?v=xyz');
+
+    // Copia Pix de manutenção
+    await tester.ensureVisible(find.byKey(const Key('btn_copiar_pix_manutencao')));
+    await tester.tap(find.byKey(const Key('btn_copiar_pix_manutencao')));
+    await tester.pumpAndSettle();
+    expect(pixCopiado, 'pix@manutencao.org');
+    expect(find.text('Chave Pix copiada para a área de transferência!'), findsOneWidget);
+
+    // Compartilha via pelo AppBar
+    await tester.tap(find.byIcon(Icons.share_outlined));
+    await tester.pumpAndSettle();
+    expect(textoCompartilhado, contains('https://aresta.cc/s/uidViaCompleta1'));
+  });
+
 }
