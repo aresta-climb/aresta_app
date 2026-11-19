@@ -345,5 +345,48 @@ void main() {
     );
     addTearDown(multiFixa.dispose);
     expect(multiFixa.modalidade, 'Multienfiada');
+
+    // 4. Highline
+    final highline = ViaViewModel(
+      escalada: Escalada(
+        highline: Highline(
+          nome: 'Travessia dos Ventos',
+          destaque: true,
+          distancia: 85,
+          altura: 120,
+          exposicao: 2,
+          descricaoAcesso: 'Trilha pelo cume.',
+          descricaoAncoragem: '4 parabolts em cada lado.',
+          descricao: 'Vento constante à tarde.',
+          conquistadores: ['Slack MG'],
+          dataAbertura: '2021',
+          dataManutencao: '2025',
+          chavePixManutencao: 'pix-highline',
+          urlVideoBeta: 'https://youtu.be/highline',
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(highline.dispose);
+    expect(highline.ehHighline, isTrue);
+    expect(highline.exibirCartaoGrau, isFalse);
+    expect(highline.atributosTecnicos.map((a) => a.rotulo), containsAll(['DISTÂNCIA', 'ALTURA', 'EXPOSIÇÃO']));
+    expect(highline.secoesTexto, hasLength(3));
+
+    // 5. Escalada vazia sem chave Pix nem grau
+    final vazia = ViaViewModel(
+      escalada: Escalada(),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(vazia.dispose);
+    expect(vazia.modalidade, '');
+    expect(vazia.ehDestaque, isFalse);
+    expect(vazia.atributosTecnicos, isEmpty);
+    expect(vazia.secoesTexto, isEmpty);
+    expect(vazia.enfiadas, isEmpty);
+    expect(vazia.midiasBeta, isEmpty);
+    expect(vazia.exibirCartaoGrau, isFalse);
+    expect(vazia.possuiHistorico, isFalse);
+    expect(await vazia.copiarChavePix(), isFalse);
   });
 }
