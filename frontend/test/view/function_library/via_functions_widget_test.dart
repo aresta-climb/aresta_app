@@ -132,7 +132,7 @@ void main() {
     );
 
     testWidgets(
-      'deve posicionar Descrição antes de Informações/Histórico e ações no rodapé',
+      'deve posicionar Grau Oficial e Especificações antes da Descrição e Histórico/Pix no rodapé',
       (WidgetTester tester) async {
         final escalada = Escalada()
           ..viaEsportiva = (ViaEsportiva()
@@ -149,32 +149,27 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: SingleChildScrollView(
-                child: Builder(
-                  builder: (context) => buildViaBody(
-                    context,
-                    escalada,
-                    'crag1',
-                  ),
+              body: Builder(
+                builder: (context) => buildViaBody(
+                  context,
+                  escalada,
+                  'crag1',
                 ),
               ),
             ),
           ),
         );
 
+        final dyGrau = tester.getTopLeft(find.text('GRAU OFICIAL')).dy;
+        final dyAncoragem = tester.getTopLeft(find.textContaining('Dupla com corrente')).dy;
         final dyDescricao = tester.getTopLeft(find.text('Descrição')).dy;
-        final dyInformacoes = tester.getTopLeft(find.text('Informações')).dy;
         final dyHistorico = tester.getTopLeft(find.text('HISTÓRICO & CONQUISTA')).dy;
         final dyAcoes = tester.getTopLeft(find.textContaining('Apoie a Manutenção')).dy;
 
-        // Descrição deve vir antes de Informações e Histórico
-        expect(dyDescricao < dyInformacoes, isTrue,
-            reason: 'Descrição ($dyDescricao) deve vir antes de Informações ($dyInformacoes)');
-        expect(dyInformacoes < dyHistorico, isTrue,
-            reason: 'Informações ($dyInformacoes) deve vir antes de Histórico ($dyHistorico)');
-        // Ações devem vir após Histórico
-        expect(dyHistorico < dyAcoes, isTrue,
-            reason: 'Histórico ($dyHistorico) deve vir antes das Ações ($dyAcoes)');
+        expect(dyGrau < dyAncoragem, isTrue);
+        expect(dyAncoragem < dyDescricao, isTrue);
+        expect(dyDescricao < dyHistorico, isTrue);
+        expect(dyHistorico < dyAcoes, isTrue);
       },
     );
 
@@ -384,6 +379,52 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('btn_registrar_cadena')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'atualiza o ViewModel interno de CorpoDetalhesVia ao trocar a Escalada',
+      (WidgetTester tester) async {
+        final primeira = Escalada(
+          uid: 'viaPrimeira0001',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Alfa',
+            dificuldade: GrauVia_GrauVia.BR_6,
+          ),
+        );
+        final segunda = Escalada(
+          uid: 'viaSegunda00002',
+          viaEsportiva: ViaEsportiva(
+            nome: 'Via Beta',
+            dificuldade: GrauVia_GrauVia.BR_8A,
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(context, primeira, 'crag1'),
+              ),
+            ),
+          ),
+        );
+        expect(find.text('Via Alfa'), findsOneWidget);
+        expect(find.text('6º'), findsOneWidget);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => buildViaBody(context, segunda, 'crag1'),
+              ),
+            ),
+          ),
+        );
+        expect(find.text('Via Beta'), findsOneWidget);
+        expect(find.text('8a'), findsOneWidget);
       },
     );
   });
