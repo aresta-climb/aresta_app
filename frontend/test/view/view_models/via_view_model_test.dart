@@ -134,4 +134,89 @@ void main() {
     expect(uriAberta.toString(), 'https://youtube.com/watch?v=123');
     expect(await vm.abrirMidiaBeta('::url_invalida::'), isFalse);
   });
+
+  test('formata corretamente ViaMovel, Boulder, ViaMultiplasEnfiadas (com enfiadas), Highline e escalada vazia', () async {
+    // 1. Via Móvel / Mista com PROJETO e art. em livre + Móvel pura
+    String? textoCanalClipboard;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        textoCanalClipboard = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+
+    final movel = ViaViewModel(
+      escalada: Escalada(
+        betas: [
+          MidiaBeta(
+            url: 'https://tiktok.com/@beta/1',
+            titulo: 'Beta curto',
+            fonte: FonteMidia_Enum.TIKTOK,
+          ),
+          MidiaBeta(
+            url: 'https://facebook.com/beta/2',
+            titulo: 'Vídeo antigo',
+            fonte: FonteMidia_Enum.FACEBOOK,
+          ),
+        ],
+        viaMovel: ViaMovel(
+          nome: 'Fenda Clássica',
+          destaque: true,
+          dificuldade: GrauVia_GrauVia.PROJETO,
+          dificuldadeArtificial: GrauArtificial_GrauArtificial.A2,
+          dificuldadeArtificialEmLivre: GrauVia_GrauVia.BR_8A,
+          tipoParede: TipoParede_TipoParede.VERTICAL,
+          exposicao: GrauExposicao_GrauExposicao.E3,
+          extensao: 35,
+          quantidadeProtecoesIntermediarias: 2,
+          quantidadeProtecoesParada: 2,
+          protecoesMoveis: 'Camalots #0.5 ao #3',
+          tipoAncoragem: 'Parabolt duplo',
+          conquistadores: ['Equipe Trad'],
+          dataAbertura: '1999',
+          dataManutencao: '2023',
+          chavePixManutencao: 'pix-movel@aresta.cc',
+          urlVideoBeta: 'https://youtu.be/movel',
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(movel.dispose);
+    expect(movel.modalidade, 'Mista');
+    expect(movel.ehDestaque, isTrue);
+    expect(movel.grauOficialExibicao, 'Projeto');
+    expect(movel.complementoGrauOficial, contains('8a em livre'));
+    expect(movel.conquistadoresTexto, 'Equipe Trad');
+    expect(movel.dataAbertura, '1999');
+    expect(movel.dataManutencao, '2023');
+    expect(
+      movel.atributosTecnicos.map((a) => a.rotulo),
+      containsAll(['EXTENSÃO', 'PROTEÇÕES', 'PAREDE', 'EXPOSIÇÃO']),
+    );
+    expect(
+      movel.midiasBeta.map((m) => m.origemRotulo),
+      equals(['TikTok', 'Beta', 'Vídeo']),
+    );
+    expect(await movel.copiarChavePix(), isTrue);
+    expect(textoCanalClipboard, 'pix-movel@aresta.cc');
+    expect(await movel.abrirMidiaBeta('https://youtu.be/movel'), isTrue);
+    expect(lancadorFake.urlsAbertas, contains('https://youtu.be/movel'));
+    expect(
+      movel.secoesTexto.any((s) => s.titulo == 'Peças Móveis' && !s.ehMarkdown),
+      isTrue,
+    );
+
+    final movelPura = ViaViewModel(
+      escalada: Escalada(
+        viaMovel: ViaMovel(
+          nome: 'Fenda Limpa',
+          quantidadeProtecoesIntermediarias: 0,
+        ),
+      ),
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(movelPura.dispose);
+    expect(movelPura.modalidade, 'Móvel');
+  });
 }
