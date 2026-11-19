@@ -4,8 +4,15 @@
 import 'package:flutter/material.dart';
 import '../../aresta_api/proto/generated/croqui.pb.dart';
 import '../../data/modelos/interacao_via.dart';
+import '../../navigation/arvore_navegacao.dart';
+import '../../navigation/construtor_reativo_pagina.dart';
+import '../../navigation/funcoes_navegacao.dart';
+import '../../services/firebase/telemetria.dart';
 import '../../theme/cores_app.dart';
+import '../../utils/consulta_dataset.dart';
+import '../../utils/formatador_escalada.dart';
 import '../linha_localizacao_setor.dart';
+import '../mapa_thumbnail.dart';
 
 /// Cabeçalho de identidade da `ViaPage` apresentando o nome completo da via sem truncamento,
 /// pílulas de modalidade/`CLÁSSICA` e o atalho hierárquico `Grupo > Setor`.
@@ -274,6 +281,165 @@ class _BlocoConsensoComunidade extends StatelessWidget {
           style: TextStyle(color: cores.ashGrey, fontSize: 12),
         ),
       ],
+    );
+  }
+}
+
+/// Renderiza a miniatura interativa do croqui (`MapaThumbnail`) ou o botão `'VER NO CROQUI INTERATIVO'`
+/// para qualquer modalidade mapeada (incluindo Highlines).
+class SecaoMapaCroquiVia extends StatelessWidget {
+  /// Escalada exibida.
+  final Escalada escalada;
+
+  /// Identificador do croqui.
+  final String cragId;
+
+  /// Pico pai usado para localizar referências em mapas.
+  final Pico? pico;
+
+  /// Setor pai.
+  final Setor? setor;
+
+  /// Grupo pai.
+  final Grupo? grupo;
+
+  /// Indica se a tela atual foi aberta diretamente a partir da `MapaPage`.
+  final bool fromMapaPage;
+
+  /// Cria uma instância de [SecaoMapaCroquiVia].
+  const SecaoMapaCroquiVia({
+    super.key,
+    required this.escalada,
+    required this.cragId,
+    this.pico,
+    this.setor,
+    this.grupo,
+    this.fromMapaPage = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nome = obterNomeEscalada(escalada);
+    ResolvedDataset? resolved;
+    if (pico != null) {
+      final resolver =
+          PageListenableBuilder.resolverOf(context) ??
+          DatasetResolver(pico: pico!);
+      resolved = escalada.uid.isNotEmpty
+          ? resolver.obterPorUid(escalada.uid)
+          : resolver.buscarPorNome(
+              grupoNome: grupo?.nome,
+              setorNome: setor?.nome,
+              escaladaNome: nome,
+            );
+    }
+
+    final mapasValidos = escalada.mapas
+        .where(
+          (m) =>
+              m.caminhoImagemMapa.isNotEmpty &&
+              m.larguraMapa > 0 &&
+              m.alturaMapa > 0,
+        )
+        .toList();
+
+    if (mapasValidos.isNotEmpty) {
+      final carrosselItens = resolved != null
+          ? resolved.resolverCarrosselUnificado()
+          : mapasValidos
+                .map(
+                  (m) => CarrosselItemData(
+                    mapaCaminhoImagem: m.caminhoImagemMapa,
+                    setorContextNome: setor?.nome,
+                    grupoContextNome: grupo?.nome,
+                    escaladaContextNome: nome,
+                  ),
+                )
+                .toList();
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AspectRatio(
+            aspectRatio:
+                mapasValidos.first.larguraMapa / mapasValidos.first.alturaMapa,
+            child: MapaThumbnail(
+              mapas: mapasValidos,
+              cragId: cragId,
+              setorContext: setor,
+              grupoContext: grupo,
+              nomeContexto: nome,
+              carrosselItensOverride: carrosselItens,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final referencias = resolved?.referencias ?? const [];
+    if (referencias.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          TelemetryService.instance.logAcaoEscalada(
+            cragId,
+            setor?.nome ?? '',
+            nome,
+            'ver_no_mapa_destaque',
+            'detalhes_via',
+          );
+          if (fromMapaPage) {
+            AppNav.back(context);
+          } else {
+            final mapasData = referencias
+                .map(
+                  (refNoMapa) => CarrosselItemData(
+                    mapaCaminhoImagem: refNoMapa.mapa.caminhoImagemMapa,
+                    setorContextNome: refNoMapa.setorContexto?.nome,
+                    grupoContextNome: refNoMapa.grupoContexto?.nome,
+                    escaladaContextNome: nome,
+                    initialSelectedId:
+                        refNoMapa.referencia.pontosUids.isNotEmpty
+                        ? refNoMapa.referencia.pontosUids.first
+                        : null,
+                  ),
+                )
+                .toList();
+            AppNav.toMapas(context, cragId: cragId, mapas: mapasData);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.brandColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.explore_outlined, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'VER NO CROQUI INTERATIVO',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
