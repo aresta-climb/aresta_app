@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter/foundation.dart';
+import '../../utils/gerador_uid.dart';
 import 'interacao_via.dart';
 import 'perfil_escalador.dart';
 import 'tipo_ascensao.dart';
@@ -100,4 +101,88 @@ class ItemFilaInteracao {
     this.textoComentario,
     required this.criadoEm,
   });
+
+  /// Constrói um evento validado de `VOTO_GRAU`.
+  factory ItemFilaInteracao.votoGrau({
+    String? id,
+    required String autorIdPublico,
+    required String autorNomePublico,
+    required String escaladaUid,
+    required int deltaGrau,
+    int? grauSugerido,
+    TipoAscensao? tipoAscensao,
+    DateTime? criadoEm,
+  }) {
+    _exigirUidValido(autorIdPublico, 'autorIdPublico');
+    _exigirUidValido(escaladaUid, 'escaladaUid');
+    if (deltaGrau < -2 || deltaGrau > 2) {
+      throw ArgumentError.value(
+        deltaGrau,
+        'deltaGrau',
+        'O delta de grau deve estar entre -2 e +2.',
+      );
+    }
+    return ItemFilaInteracao._(
+      id: id ?? gerarUid(),
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: _normalizarNome(autorNomePublico),
+      escaladaUid: escaladaUid,
+      tipo: TipoFilaInteracao.votoGrau,
+      deltaGrau: deltaGrau,
+      grauSugerido: grauSugerido,
+      tipoAscensao: tipoAscensao,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+  /// Constrói um evento validado de `COMENTARIO` público (`1..280` caracteres).
+  factory ItemFilaInteracao.comentario({
+    String? id,
+    required String autorIdPublico,
+    required String autorNomePublico,
+    required String escaladaUid,
+    required String textoComentario,
+    TipoAscensao? tipoAscensao,
+    DateTime? criadoEm,
+  }) {
+    _exigirUidValido(autorIdPublico, 'autorIdPublico');
+    _exigirUidValido(escaladaUid, 'escaladaUid');
+    final limpo = textoComentario.trim();
+    if (limpo.isEmpty || limpo.length > ComentarioComunidadeVia.limiteCaracteres) {
+      throw ArgumentError.value(
+        textoComentario,
+        'textoComentario',
+        'O comentário deve ter entre 1 e ${ComentarioComunidadeVia.limiteCaracteres} caracteres.',
+      );
+    }
+    return ItemFilaInteracao._(
+      id: id ?? gerarUid(),
+      autorIdPublico: autorIdPublico,
+      autorNomePublico: _normalizarNome(autorNomePublico),
+      escaladaUid: escaladaUid,
+      tipo: TipoFilaInteracao.comentario,
+      textoComentario: limpo,
+      tipoAscensao: tipoAscensao,
+      criadoEm: (criadoEm ?? DateTime.now()).toUtc(),
+    );
+  }
+
+
+  static void _exigirUidValido(String valor, String campo) {
+    if (!validarUid(valor)) {
+      throw ArgumentError.value(
+        valor,
+        campo,
+        'Identificador deve seguir o padrão NanoID 14c Base62.',
+      );
+    }
+  }
+
+  static String _normalizarNome(String? bruto) {
+    final limpo = bruto?.trim();
+    if (limpo == null || limpo.isEmpty) {
+      return PerfilEscalador.apelidoPadrao;
+    }
+    return limpo.length > 50 ? limpo.substring(0, 50) : limpo;
+  }
 }
