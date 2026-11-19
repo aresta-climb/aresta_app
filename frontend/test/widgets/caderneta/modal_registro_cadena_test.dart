@@ -3,7 +3,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
@@ -11,6 +13,7 @@ import 'package:frontend/theme/cores_app.dart';
 import 'package:frontend/view/view_models/registro_cadena_view_model.dart';
 import 'package:frontend/widgets/caderneta/modal_registro_cadena.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -354,6 +357,64 @@ void main() {
         final atualizada = repositorio.cadenasNotifier.value.first;
         expect(atualizada.id, 'cadena-edit-99');
         expect(atualizada.tipoAscensao, TipoAscensao.trabalhado);
+      },
+    );
+
+    testWidgets(
+      'permite votar no grau (+1) e enviar dica pública unificada ao salvar cadena autenticado',
+      (tester) async {
+        final interacoesFake = RepositorioInteracoesViaFake();
+        await repositorio.salvarPerfil(
+          PerfilEscalador(
+            autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+            autorNomePublico: 'Mariana Silva',
+            userId: 'uuid-mariana',
+            accessToken: 'jwt-mariana',
+          ),
+        );
+
+        final vm = RegistroCadenaViewModel(
+          escaladaUid: 'x8siJek3FiG3aB',
+          nomeEscalada: 'Via Deslize',
+          grauSugerido: GrauVia_GrauVia.BR_7A.value,
+          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+          exibirContribuicaoPublica: true,
+          repositorio: repositorio,
+          repositorioInteracoes: interacoesFake,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+            home: Scaffold(body: ModalRegistroCadena(viewModel: vm)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('CONTRIBUIÇÃO PÚBLICA'), findsOneWidget);
+        await tester.ensureVisible(find.byKey(const Key('chip_delta_grau_1')));
+        await tester.tap(find.byKey(const Key('chip_delta_grau_1')));
+        await tester.pumpAndSettle();
+
+        final campoPublico = find.byKey(
+          const Key('campo_comentario_publico_cadena'),
+        );
+        await tester.ensureVisible(campoPublico);
+        await tester.enterText(campoPublico, 'Crux mais técnico que parece.');
+        await tester.pumpAndSettle();
+
+        final btnSalvar = find.byKey(const Key('btn_salvar_cadena'));
+        await tester.ensureVisible(btnSalvar);
+        await tester.tap(btnSalvar);
+        await tester.pumpAndSettle();
+
+        expect(
+          repositorio.cadenasNotifier.value.single.grauSugerido,
+          GrauVia_GrauVia.BR_7B.value,
+        );
+        final dados = interacoesFake.obterDadosEscalada('x8siJek3FiG3aB');
+        expect(dados.consensoGrau.grauSugerido, '7b');
+        expect(dados.comentarios.single.texto, 'Crux mais técnico que parece.');
       },
     );
   });
