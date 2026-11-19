@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/aresta_api/proto/generated/croqui.pbenum.dart';
 import 'package:frontend/data/modelos/cadena.dart';
+import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/data/modelos/tipo_escalada.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
 import 'package:frontend/view/view_models/registro_cadena_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/comunidade/repositorio_interacoes_via_fake.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -225,6 +228,65 @@ void main() {
         expect(salvas.length, 1);
         expect(salvas.first.id, 'id-original-fixo');
         expect(salvas.first.tipoAscensao, TipoAscensao.trabalhado);
+      },
+    );
+
+    test(
+      'gerencia delta de grau (-2..+2), comentário público e envia contribuição quando autenticado',
+      () async {
+        final interacoesFake = RepositorioInteracoesViaFake();
+        await repositorio.salvarPerfil(
+          PerfilEscalador(
+            autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+            autorNomePublico: 'Mariana Silva',
+            userId: 'uuid-mariana',
+            accessToken: 'jwt-mariana',
+          ),
+        );
+
+        final vm = RegistroCadenaViewModel(
+          escaladaUid: 'x8siJek3FiG3aB',
+          nomeEscalada: 'Via Deslize',
+          grauSugerido: GrauVia_GrauVia.BR_7A.value,
+          codigoGrauOficial: GrauVia_GrauVia.BR_7A.value,
+          ehBoulder: false,
+          exibirContribuicaoPublica: true,
+          repositorio: repositorio,
+          repositorioInteracoes: interacoesFake,
+        );
+
+        expect(vm.deltaGrau, 0);
+        expect(vm.estaAutenticadoParaComunidade, isTrue);
+        expect(vm.rotuloBotaoSalvar, 'Salvar Cadena & Contribuir');
+        expect(vm.contadorComentarioPublicoTexto, '0/280');
+        expect(vm.atingiuLimiteComentarioPublico, isFalse);
+
+        vm.definirDeltaGrau(1);
+        expect(vm.deltaGrau, 1);
+        expect(vm.grauSugerido, GrauVia_GrauVia.BR_7B.value);
+        // Reatribuir mesmo delta ou fora de [-2..2] limita com segurança
+        vm.definirDeltaGrau(1);
+        vm.definirDeltaGrau(9);
+        expect(vm.deltaGrau, 2);
+        vm.definirDeltaGrau(-9);
+        expect(vm.deltaGrau, -2);
+        vm.definirDeltaGrau(1);
+
+        vm.definirComentarioPublico('Z' * 310);
+        expect(vm.comentarioPublico.length, 280);
+        expect(vm.atingiuLimiteComentarioPublico, isTrue);
+        expect(vm.contadorComentarioPublicoTexto, '280/280');
+
+        vm.definirComentarioPublico('Chapeleta 3 longa, levar fita.');
+        vm.definirTipoAscensao(TipoAscensao.flash);
+
+        final salva = await vm.salvar();
+        expect(salva.grauSugerido, GrauVia_GrauVia.BR_7B.value);
+
+        final dadosVia = interacoesFake.obterDadosEscalada('x8siJek3FiG3aB');
+        expect(dadosVia.consensoGrau.grauSugerido, '7b');
+        expect(dadosVia.comentarios, hasLength(1));
+        expect(dadosVia.comentarios.single.texto, 'Chapeleta 3 longa, levar fita.');
       },
     );
   });
