@@ -15,7 +15,8 @@ lib/data/
     ├── tipo_ascensao.dart         - Enum esportivo de tipos de ascensão (À Vista, Flash, Trabalhado, Tentativa)
     ├── tipo_escalada.dart         - Enum de modalidades (Guiado, Top Rope, Boulder, Solo)
     ├── cadena.dart                - Entidade imutável de registro de ascensão na caderneta
-    └── perfil_escalador.dart      - Entidade do perfil, sessão autenticada, foto e identificador público do atleta
+    ├── perfil_escalador.dart      - Entidade do perfil, sessão autenticada, foto e identificador público do atleta
+    └── interacao_via.dart         - Modelos imutáveis de alertas estilo Waze, consenso de grau e notas comunitárias da via
 ```
 
 ---
@@ -40,6 +41,14 @@ Representa a identidade esportiva pública e o estado de autenticação do escal
 ### `TipoAscensao` e `TipoEscalada` (`modelos/tipo_ascensao.dart`, `modelos/tipo_escalada.dart`)
 Enums com rotulagem amigável em português e métodos utilitários:
 - `TipoAscensao`: define se a ascensão foi encadenada com sucesso (`isCadena`) e estabelece a prioridade esportiva visual (`prioridadeVisual`) para eleger o selo de melhor cadena alcançada em uma via.
+
+### Modelos de Comunidade e Segurança da Via (`modelos/interacao_via.dart`)
+Estruturas imutáveis e validadas sob filosofia *Fail-Fast* para a experiência comunitária da `ViaPage`:
+- `CategoriaAlertaSeguranca`: Enum canônico espelhando `chk_fila_categoria_alerta` (`ABELHAS_INSETOS` `🐝`, `ROCHA_AGARRA_INSTAVEL` `🪨`, `PROTECAO_PRECARIA` `🔩`, `VIA_MOLHADA` `💧` e `RISCO_EXPOSICAO` `⚠️`), com rótulos e descrições em português.
+- `AlertaSegurancaVia`: Alerta ativo identificado por NanoID 14c (`uid`), vinculado a `escaladaUid`, validando limite de 100 caracteres para `detalhe` e mantendo contagem de confirmações *"Ainda está lá?"* (`confirmacoesAtivas`).
+- `ConsensoGrauVia`: Agregado de avaliação democrática de grau (`grauSugerido`, `totalVotos`, `distribuicaoDeltas` de `-2` a `+2`) coexistindo com o grau oficial do conquistador e gerando `resumoTendencia`.
+- `ComentarioComunidadeVia`: Nota pública desacoplada de dados pessoais sensíveis (expondo apenas `autorIdPublico`, `autorNomePublico`, `estiloAscensao` e `texto` validado até 280 caracteres).
+- `DadosComunidadeVia`: Agregado raiz combinando `consensoGrau`, `alertasAtivos` e `comentarios`.
 
 ### `FeedbackMetadata` (`modelos/metadados_feedback.dart`)
 Representa o pacote completo de informações contextuais do dispositivo capturadas no momento em que um usuário abre ou submete um reporte de in-app feedback:

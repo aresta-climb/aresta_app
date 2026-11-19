@@ -16,7 +16,7 @@ lib/view/
 │   ├── funcoes_home.dart         - Renderizadores da tela inicial e carrossel
 │   ├── pico_functions.dart       - Cabeçalho, botões e seções da página do Pico
 │   ├── setor_functions.dart      - Listagem de vias, badges FEMEMG e itens de setor
-│   ├── via_functions.dart        - Visualizador de beta, croquis e formatação de graus
+│   ├── via_functions.dart        - Corpo declarativo da ViaPage (`CorpoDetalhesVia`) e utilitários puros de ordenação/formatação de grau e proteções
 │   ├── comunidade_functions.dart - Links e ações do hub comunitário
 │   ├── grupo_functions.dart      - Resumo e listagem de subsetores
 │   ├── meus_croquis_functions.dart - Gerenciamento e listagem de downloads locais
@@ -35,6 +35,8 @@ lib/view/
     ├── login_view_model.dart     - Estado reativo, validação e ações de autenticação (Google e Apple OAuth, e-mail/senha, criação de conta e modo offline)
     ├── hub_perfil_caderneta_view_model.dart - Orquestração reativa do Hub de Perfil, foto de perfil, sessão e métricas
     ├── perfil_view_model.dart    - Estado reativo de estatísticas e histórico da caderneta
+    ├── via_view_model.dart       - Estado reativo da ViaPage (extração Protobuf unificada, consenso de grau, alertas estilo Waze, enfiadas, betas e cópia Pix)
+    ├── secao_caderneta_via_view_model.dart - Estado reativo do bloco pessoal de ascensões dentro da ViaPage
     ├── explorar_view_model.dart  - Estado reativo de filtros, downloads e busca no Explorar
     ├── card_croqui_view_model.dart - Modelo de apresentação para cartões de croqui
     ├── comunidade_view_model.dart - Estado de links e mídias sociais comunitárias
@@ -77,6 +79,7 @@ Em versões anteriores, utilizavam-se estruturas denominadas DTOs para carregar 
 ### Principais View Models
 - **`LoginViewModel`**: Coordena o fluxo sem senha em duas etapas de código OTP de 6 dígitos por e-mail (com janela deslizante de 6 envios por 60 segundos), autenticação in-app com Google e Apple, tratamento silencioso de cancelamento voluntário, roteamento de falhas reais ao `AppLogger` e proteção contra notificações pós-`dispose`.
 - **`HubPerfilCadernetaViewModel`**: Expõe reativamente os dados do `PerfilEscalador` (`nomeAtleta`, `fotoUrl`, `autorIdPublico`, `estaAutenticado`), métricas rápidas (`totalCadenas`, `totalTentativas`, `totalPicos`, `totalVias`) e comandos de atualização de nome e foto (`atualizarNome`, `atualizarFotoPerfil`, `selecionarEAtualizarFoto`, `selecionarEObterNovaFoto`, `copiarIdPublico`, `encerrarSessao`).
+- **`ViaViewModel`**: Centraliza a extração sem duplicação das cinco modalidades Protobuf (`ViaEsportiva`, `ViaMovel`, `Boulder`, `ViaMultiplasEnfiadas`, `Highline`), unificando grau oficial do conquistador + consenso comunitário, bolhas flutuantes de alerta estilo Waze (`reportarAlerta`, `confirmarAlerta`), atributos técnicos, linha do tempo de enfiadas (`ResumoEnfiadaVia`), mídias externas (`escalada.betas` + `urlVideoBeta`), cópia funcional de chave Pix e ocultação reativa atrás de `ControladorInteracoesUsuario.exibirElementosInterativos`.
 - **`CardCroquiViewModel`**: Unifica a apresentação de picos em formato de card (usado tanto na tela inicial quanto na busca global e catálogo). Expõe contagem de vias, autores, setores e status de download.
 - **`MapaPicoViewModel`**: Fornece os pontos geográficos (latitude e longitude), título e identificador de picos para renderização nativa de marcadores no Google Maps.
 - **`MapaGlobalViewModel`**: Gerencia a conversão de identificadores de picos e cartões (`CardCroquiViewModel`) em marcadores geográficos com coordenadas (`MapaPicoViewModel`), provendo fallback transparente para o catálogo completo e monitoramento reativo de downloads.
