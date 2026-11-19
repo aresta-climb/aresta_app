@@ -203,6 +203,122 @@ Widget buildViaBody(
   );
 }
 
+/// Corpo rolável reativo (Dumb UI) que compõe todas as seções modulares da `ViaPage`
+/// a partir do estado exposto pelo [ViaViewModel].
+class CorpoDetalhesVia extends StatefulWidget {
+  /// Escalada Protobuf exibida.
+  final Escalada escalada;
+
+  /// Identificador do croqui.
+  final String cragId;
+
+  /// Pico pai opcional.
+  final Pico? pico;
+
+  /// Setor pai opcional.
+  final Setor? setor;
+
+  /// Grupo pai opcional.
+  final Grupo? grupo;
+
+  /// Indica se a navegação partiu diretamente da `MapaPage`.
+  final bool fromMapaPage;
+
+  /// ViewModel opcional injetado externamente pela `ViaPage` ou testes.
+  final ViaViewModel? viewModel;
+
+  /// ViewModel opcional da seção de caderneta pessoal.
+  final SecaoCadernetaViaViewModel? cadernetaViewModel;
+
+  /// Cria uma instância de [CorpoDetalhesVia].
+  const CorpoDetalhesVia({
+    super.key,
+    required this.escalada,
+    required this.cragId,
+    this.pico,
+    this.setor,
+    this.grupo,
+    this.fromMapaPage = false,
+    this.viewModel,
+    this.cadernetaViewModel,
+  });
+
+  @override
+  State<CorpoDetalhesVia> createState() => _CorpoDetalhesViaState();
+}
+
+class _CorpoDetalhesViaState extends State<CorpoDetalhesVia> {
+  late ViaViewModel _viewModel;
+  bool _gerenciaCicloVida = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vincularViewModel();
+  }
+
+  @override
+  void didUpdateWidget(covariant CorpoDetalhesVia oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewModel != oldWidget.viewModel ||
+        (_gerenciaCicloVida && widget.escalada != oldWidget.escalada)) {
+      if (_gerenciaCicloVida) {
+        _viewModel.dispose();
+      }
+      _vincularViewModel();
+    }
+  }
+
+  void _vincularViewModel() {
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+      _gerenciaCicloVida = false;
+    } else {
+      _viewModel = ViaViewModel(escalada: widget.escalada);
+      _gerenciaCicloVida = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_gerenciaCicloVida) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+  void _abrirConfirmacaoAlerta(
+    BuildContext context,
+    AlertaSegurancaVia alerta,
+  ) {
+    exibirModalConfirmacaoAlertaVia(
+      context,
+      alerta: alerta,
+      aoResponder: (aindaEstaLa) async {
+        await _viewModel.confirmarAlerta(
+          alerta.uid,
+          aindaEstaLa: aindaEstaLa,
+        );
+      },
+    );
+  }
+
+  Future<void> _copiarPix(BuildContext context) async {
+    final copiou = await _viewModel.copiarChavePix();
+    if (copiou && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chave Pix copiada para a área de transferência!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 Widget _buildContentForEscalada(
   BuildContext context,
   Escalada escalada,
