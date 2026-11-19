@@ -7,6 +7,7 @@ import 'package:frontend/aresta_api/proto/generated/beta.pb.dart';
 import 'package:frontend/aresta_api/proto/generated/croqui.pb.dart';
 import 'package:frontend/data/modelos/cadena.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
+import 'package:frontend/data/modelos/perfil_escalador.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/pages/via.dart';
 import 'package:frontend/services/caderneta/repositorio_caderneta.dart';
@@ -365,5 +366,88 @@ void main() {
     expect(find.text('HIGHLINE'), findsOneWidget);
     expect(find.text('VER NO CROQUI INTERATIVO'), findsOneWidget);
     expect(find.text('90m'), findsOneWidget);
+  });
+
+  testWidgets('ViaPage atualiza consenso de grau e notas da comunidade ao registrar cadena com voto e beta público', (tester) async {
+    ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    final repoFake = RepositorioInteracoesViaFake();
+    RepositorioInteracoesViaMemoria.instancia = repoFake;
+
+    final prefs = await SharedPreferences.getInstance();
+    final repoCaderneta = RepositorioCadernetaLocal(preferencias: prefs);
+    await repoCaderneta.inicializar();
+    await repoCaderneta.salvarPerfil(
+      PerfilEscalador(
+        autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+        autorNomePublico: 'Mariana Silva',
+        userId: 'uuid-mariana',
+        accessToken: 'jwt-mariana',
+      ),
+    );
+
+    final escalada = Escalada(
+      uid: 'x8siJek3FiG3aB',
+      viaEsportiva: ViaEsportiva(
+        nome: 'Via Deslize',
+        dificuldade: GrauVia_GrauVia.BR_7A,
+      ),
+    );
+    final viaVm = ViaViewModel(
+      escalada: escalada,
+      repositorioInteracoes: repoFake,
+    );
+    final cadernetaVm = SecaoCadernetaViaViewModel(
+      escalada: escalada,
+      repositorio: repoCaderneta,
+      repositorioInteracoes: repoFake,
+    );
+    addTearDown(() {
+      viaVm.dispose();
+      cadernetaVm.dispose();
+    });
+
+    await tester.pumpWidget(
+      envolver(
+        ViaPage(
+          escalada: escalada,
+          cragId: 'crag1',
+          viewModel: viaVm,
+          cadernetaViewModel: cadernetaVm,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repoFake.escaladasSincronizadas, contains('x8siJek3FiG3aB'));
+    expect(find.text('Sem votos'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('btn_registrar_cadena')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Flash'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('chip_delta_grau_1')));
+    await tester.tap(find.byKey(const Key('chip_delta_grau_1')));
+    await tester.pumpAndSettle();
+
+    final campoComentario = find.byKey(
+      const Key('campo_comentario_publico_cadena'),
+    );
+    await tester.ensureVisible(campoComentario);
+    await tester.enterText(campoComentario, 'Clipar a 3ª da orelha esquerda.');
+    await tester.pumpAndSettle();
+
+    final btnSalvar = find.byKey(const Key('btn_salvar_cadena'));
+    await tester.ensureVisible(btnSalvar);
+    await tester.tap(btnSalvar);
+    await tester.pumpAndSettle();
+
+    // ViaPage reflete consenso de grau (7b) e comentário público imediatamente
+    expect(find.text('7b'), findsOneWidget);
+    expect(find.text('100% sugerem +1'), findsOneWidget);
+    expect(find.text('Notas da Comunidade (1)'), findsOneWidget);
+    expect(find.text('Clipar a 3ª da orelha esquerda.'), findsOneWidget);
+    expect(find.text('FLASH ★'), findsOneWidget);
   });
 }
