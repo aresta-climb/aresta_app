@@ -867,6 +867,79 @@ class SecaoBetasMidiaVia extends StatelessWidget {
   }
 }
 
+/// Feed de notas e dicas públicas de beta registradas por escaladores da comunidade.
+class SecaoNotasComunidadeVia extends StatelessWidget {
+  /// Comentários públicos da via.
+  final List<ComentarioComunidadeVia> comentarios;
+
+  /// Cria uma instância de [SecaoNotasComunidadeVia].
+  const SecaoNotasComunidadeVia({super.key, required this.comentarios});
+
+  @override
+  Widget build(BuildContext context) {
+    if (comentarios.isEmpty) return const SizedBox.shrink();
+    final cores = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TituloSecaoVia(
+            titulo: 'Notas da Comunidade (${comentarios.length})',
+          ),
+          const SizedBox(height: 10),
+          ...comentarios.map((c) {
+            final dia = c.criadoEm.day.toString().padLeft(2, '0');
+            final mes = c.criadoEm.month.toString().padLeft(2, '0');
+            final estilo = c.rotuloEstilo;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cores.caveShadow,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cores.graniteEdge),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        '${c.autorNomePublico} • $dia/$mes/${c.criadoEm.year}',
+                        style: TextStyle(
+                          color: cores.ashGrey,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (estilo != null) _PilulaDetalheCurto(texto: estilo),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    c.texto,
+                    style: TextStyle(
+                      color: cores.chalkWhite,
+                      fontSize: 14,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
 
 class _TituloSecaoVia extends StatelessWidget {
   final String titulo;
