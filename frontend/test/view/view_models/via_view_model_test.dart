@@ -242,6 +242,7 @@ void main() {
     expect(boulder.grauOficialExibicao, 'v8');
     expect(boulder.complementoGrauOficial, 'Guia Oficial / Conquistador');
     expect(boulder.atributosTecnicos.single.rotulo, 'PAREDE');
+    expect(boulder.secoesTexto.single.titulo, 'Descrição');
 
     // 3. Via Múltiplas Enfiadas com enfiadas filhas
     final multi = ViaViewModel(
@@ -432,9 +433,13 @@ void main() {
     expect(vm.alertasAtivos, isEmpty);
     expect(vm.comentariosComunidade, isEmpty);
 
-    // Ativar flag expõe consenso, comentários e permite reportar/confirmar alertas
+    // Ativar flag e alternar preferência dispara sincronização (inclusive tratando falha sem crash)
     ConfiguracaoRecursos.definirSobrescritaPerfilParaTestes(true);
+    await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(false);
+    repoFake.erroSimulado = StateError('Falha inicial de sync');
     await ControladorInteracoesUsuario.instancia.definirInteracoesAtivas(true);
+    await Future<void>.delayed(Duration.zero);
+    repoFake.erroSimulado = null;
 
     expect(vm.exibirRecursosComunidade, isTrue);
     expect(vm.podeReportarAlerta, isTrue);

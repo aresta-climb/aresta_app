@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2026 Aresta Climb Contributors
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -154,7 +155,32 @@ class ViaViewModel extends ChangeNotifier {
            lancadorUrlExterna ??
            ((uri) => launchUrl(uri, mode: LaunchMode.externalApplication)) {
     this.repositorioInteracoes.alteracoesListenable.addListener(_notificar);
-    this.controladorInteracoes.interacoesAtivasNotifier.addListener(_notificar);
+    this.controladorInteracoes.interacoesAtivasNotifier.addListener(
+      _aoMudarVisibilidadeInteracoes,
+    );
+    _sincronizarInteracoesSeAtivo();
+  }
+
+  void _aoMudarVisibilidadeInteracoes() {
+    _sincronizarInteracoesSeAtivo();
+    _notificar();
+  }
+
+  void _sincronizarInteracoesSeAtivo() {
+    if (!exibirRecursosComunidade || !possuiUid) return;
+    unawaited(
+      repositorioInteracoes
+          .sincronizarEscalada(
+            escalada.uid,
+            codigoGrauOficial: obterCodigoGrauOficial(escalada),
+            ehBoulder: escalada.whichTipo() == Escalada_Tipo.boulder,
+          )
+          .catchError((Object e) {
+            AppLogger.instance.logAviso(
+              'Sincronização comunitária adiada para ${escalada.uid}: $e',
+            );
+          }),
+    );
   }
 
   void _notificar() {
@@ -167,7 +193,9 @@ class ViaViewModel extends ChangeNotifier {
   void dispose() {
     _descartado = true;
     repositorioInteracoes.alteracoesListenable.removeListener(_notificar);
-    controladorInteracoes.interacoesAtivasNotifier.removeListener(_notificar);
+    controladorInteracoes.interacoesAtivasNotifier.removeListener(
+      _aoMudarVisibilidadeInteracoes,
+    );
     super.dispose();
   }
 
