@@ -292,3 +292,181 @@ Future<void> exibirModalConfirmacaoAlertaVia(
     },
   );
 }
+
+/// Abre o modal rápido estilo Waze para reportar um novo alerta de segurança na via.
+Future<void> exibirModalReportarAlertaVia(
+  BuildContext context, {
+  required Future<void> Function(
+    CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+  ) aoReportar,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: context.colors.deepBasalt,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (modalCtx) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+        ),
+        child: _FormularioReportarAlertaVia(aoReportar: aoReportar),
+      );
+    },
+  );
+}
+
+class _FormularioReportarAlertaVia extends StatefulWidget {
+  final Future<void> Function(
+    CategoriaAlertaSeguranca categoria,
+    String? detalhe,
+  ) aoReportar;
+
+  const _FormularioReportarAlertaVia({required this.aoReportar});
+
+  @override
+  State<_FormularioReportarAlertaVia> createState() =>
+      _FormularioReportarAlertaViaState();
+}
+
+class _FormularioReportarAlertaViaState
+    extends State<_FormularioReportarAlertaVia> {
+  CategoriaAlertaSeguranca _categoriaSelecionada =
+      CategoriaAlertaSeguranca.abelhasInsetos;
+  final TextEditingController _detalheController = TextEditingController();
+
+  @override
+  void dispose() {
+    _detalheController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cores = context.colors;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Reportar Alerta na Via',
+              style: TextStyle(
+                color: cores.chalkWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Avise outros escaladores sobre riscos imediatos nesta linha.',
+              style: TextStyle(color: cores.ashGrey, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: CategoriaAlertaSeguranca.values.map((cat) {
+                final selecionado = cat == _categoriaSelecionada;
+                return InkWell(
+                  key: Key('opcao_alerta_${cat.codigoBanco}'),
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _categoriaSelecionada = cat),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selecionado
+                          ? _corVermelhoAlerta.withValues(alpha: 0.18)
+                          : cores.caveShadow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selecionado
+                            ? _corVermelhoAlerta
+                            : cores.graniteEdge,
+                        width: selecionado ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(cat.emoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            cat.rotulo,
+                            style: TextStyle(
+                              color: cores.chalkWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _categoriaSelecionada.descricaoCurta,
+              style: TextStyle(color: cores.ashGrey, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('campo_detalhe_alerta_via'),
+              controller: _detalheController,
+              maxLength: AlertaSegurancaVia.limiteCaracteresDetalhe,
+              style: TextStyle(color: cores.chalkWhite, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Detalhe rápido (opcional)',
+                labelStyle: TextStyle(color: cores.ashGrey),
+                hintText: 'Ex.: Colmeia próxima à 3ª costura',
+                hintStyle: TextStyle(color: cores.ashGrey.withValues(alpha: 0.6)),
+                filled: true,
+                fillColor: cores.caveShadow,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: cores.graniteEdge),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              key: const Key('btn_enviar_alerta_via'),
+              onPressed: () async {
+                final detalhe = _detalheController.text.trim();
+                Navigator.of(context).pop();
+                await widget.aoReportar(
+                  _categoriaSelecionada,
+                  detalhe.isNotEmpty ? detalhe : null,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _corVermelhoAlerta,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Enviar Alerta',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
