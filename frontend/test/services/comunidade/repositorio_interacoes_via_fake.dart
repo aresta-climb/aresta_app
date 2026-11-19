@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:frontend/data/modelos/interacao_via.dart';
 import 'package:frontend/data/modelos/tipo_ascensao.dart';
 import 'package:frontend/services/comunidade/repositorio_interacoes_via.dart';
+import 'package:frontend/utils/calculadora_delta_grau.dart';
+import 'package:frontend/utils/gerador_uid.dart';
 
 /// Biblioteca `test-only` de Fake determinístico em memória para [RepositorioInteracoesVia].
 ///
@@ -59,6 +61,43 @@ class RepositorioInteracoesViaFake implements RepositorioInteracoesVia {
     if (erroSimulado != null) {
       throw erroSimulado!;
     }
+    final atual = obterDadosEscalada(escaladaUid);
+    final dist = Map<int, int>.from(atual.consensoGrau.distribuicaoDeltas);
+    dist[deltaGrau] = (dist[deltaGrau] ?? 0) + 1;
+    final total = atual.consensoGrau.totalVotos + 1;
+    final codEfetivo =
+        grauSugerido ??
+        deslocarCodigoGrau(codigoGrauOficial, deltaGrau, ehBoulder: ehBoulder);
+    final textoGrau =
+        formatarGrauPorCodigo(codEfetivo, ehBoulder: ehBoulder) ??
+        atual.consensoGrau.grauSugerido ??
+        '—';
+
+    final comentarios = List<ComentarioComunidadeVia>.from(atual.comentarios);
+    final comentarioLimpo = comentarioPublico?.trim();
+    if (comentarioLimpo != null && comentarioLimpo.isNotEmpty) {
+      comentarios.insert(
+        0,
+        ComentarioComunidadeVia(
+          uid: gerarUid(),
+          autorIdPublico: 'c3Lk9P1x4Vw8Mn',
+          autorNomePublico: 'Escalador Teste',
+          criadoEm: DateTime.now().toUtc(),
+          estiloAscensao: estiloAscensao,
+          texto: comentarioLimpo,
+        ),
+      );
+    }
+
+    _dados[escaladaUid] = atual.copyWith(
+      consensoGrau: ConsensoGrauVia(
+        grauSugerido: textoGrau,
+        totalVotos: total,
+        distribuicaoDeltas: Map.unmodifiable(dist),
+      ),
+      comentarios: List.unmodifiable(comentarios),
+    );
+    _versao.value++;
   }
 
   @override

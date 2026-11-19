@@ -54,7 +54,29 @@ void main() {
     );
     expect(fake.obterDadosEscalada('x8siJek3FiG3aB').alertasAtivos, isEmpty);
 
+    await fake.sincronizarEscalada('x8siJek3FiG3aB');
+    expect(fake.escaladasSincronizadas, contains('x8siJek3FiG3aB'));
+
+    await fake.registrarAvaliacaoAscensao(
+      escaladaUid: 'x8siJek3FiG3aB',
+      deltaGrau: 1,
+      comentarioPublico: 'Crux técnico!',
+    );
+    expect(fake.obterDadosEscalada('x8siJek3FiG3aB').consensoGrau.totalVotos, 6);
+    expect(fake.obterDadosEscalada('x8siJek3FiG3aB').comentarios, hasLength(1));
+
     fake.erroSimulado = StateError('Falha determinística de rede');
+    await expectLater(
+      () => fake.sincronizarEscalada('x8siJek3FiG3aB'),
+      throwsStateError,
+    );
+    await expectLater(
+      () => fake.registrarAvaliacaoAscensao(
+        escaladaUid: 'x8siJek3FiG3aB',
+        deltaGrau: 0,
+      ),
+      throwsStateError,
+    );
     await expectLater(
       () => fake.reportarAlerta(
         escaladaUid: 'x8siJek3FiG3aB',
