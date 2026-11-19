@@ -8,6 +8,7 @@ import '../view/function_library/biblioteca_funcoes_comuns.dart';
 import '../view/function_library/via_functions.dart';
 import '../view/view_models/secao_caderneta_via_view_model.dart';
 import '../view/view_models/via_view_model.dart';
+import '../widgets/via/bolha_alerta_seguranca_via.dart';
 
 /// Página declarativa (MVVM) que exibe os detalhes técnicos, croqui interativo,
 /// consenso comunitário de grau, bolhas de alerta estilo Waze e caderneta de uma [Escalada].
@@ -97,6 +98,25 @@ class _ViaPageState extends State<ViaPage> {
     super.dispose();
   }
 
+  void _abrirModalReportarAlerta(BuildContext context) {
+    exibirModalReportarAlertaVia(
+      context,
+      aoReportar: (categoria, detalhe) async {
+        final sucesso = await _viewModel.reportarAlerta(
+          categoria,
+          detalhe: detalhe,
+        );
+        if (sucesso && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Alerta de segurança registrado!'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +131,13 @@ class _ViaPageState extends State<ViaPage> {
             context,
             nome.toUpperCase(),
             actions: [
+              if (_viewModel.podeReportarAlerta)
+                IconButton(
+                  key: const Key('btn_reportar_alerta_via'),
+                  icon: const Icon(Icons.campaign_outlined),
+                  tooltip: 'Reportar alerta de segurança',
+                  onPressed: () => _abrirModalReportarAlerta(context),
+                ),
               if (_viewModel.possuiUid)
                 IconButton(
                   icon: const Icon(Icons.share_outlined),
